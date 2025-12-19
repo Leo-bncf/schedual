@@ -307,6 +307,16 @@ export default function SuperAdmin() {
 
         <TabsContent value="users">
           <div className="space-y-4">
+            <Card className="bg-blue-50 border-blue-200">
+              <CardContent className="p-4">
+                <h4 className="font-semibold text-blue-900 mb-2">📋 How to add users to a new school:</h4>
+                <ol className="text-sm text-blue-800 space-y-1 list-decimal list-inside">
+                  <li>Create the school in the "Schools" tab</li>
+                  <li>Invite users via Base44's user invite system (Dashboard → Settings → Invite Users)</li>
+                  <li>Once invited users log in, assign them to the school using the "Assign User to School" button below</li>
+                </ol>
+              </CardContent>
+            </Card>
             <div className="flex justify-end">
               <Button onClick={() => setIsUserDialogOpen(true)} variant="outline">
                 <Users className="w-4 h-4 mr-2" />
