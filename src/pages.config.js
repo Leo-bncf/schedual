@@ -8,6 +8,7 @@ import AIAdvisor from './pages/AIAdvisor';
 import Settings from './pages/Settings';
 import Constraints from './pages/Constraints';
 import TeachingGroups from './pages/TeachingGroups';
+import Documentation from './pages/Documentation';
 import __Layout from './Layout.jsx';
 
 
@@ -22,6 +23,7 @@ export const PAGES = {
     "Settings": Settings,
     "Constraints": Constraints,
     "TeachingGroups": TeachingGroups,
+    "Documentation": Documentation,
 }
 
 export const pagesConfig = {

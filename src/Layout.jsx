@@ -31,10 +31,12 @@ import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 const navigation = [
   { name: 'Dashboard', page: 'Dashboard', icon: LayoutDashboard },
   { name: 'Schedule', page: 'Schedule', icon: Calendar },
+  { name: 'Teaching Groups', page: 'TeachingGroups', icon: Users },
   { name: 'Teachers', page: 'Teachers', icon: Users },
   { name: 'Students', page: 'Students', icon: GraduationCap },
   { name: 'Subjects', page: 'Subjects', icon: BookOpen },
   { name: 'Rooms', page: 'Rooms', icon: Building2 },
+  { name: 'Constraints', page: 'Constraints', icon: Settings },
   { name: 'AI Advisor', page: 'AIAdvisor', icon: Sparkles },
   { name: 'Settings', page: 'Settings', icon: Settings },
 ];
