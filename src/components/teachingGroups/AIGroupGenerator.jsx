@@ -75,7 +75,7 @@ export default function AIGroupGenerator({ onComplete }) {
       // Convert to array and split large groups
       const proposedGroups = [];
       const maxGroupSize = 20;
-      const minGroupSize = 3;
+      const minGroupSize = 1;
 
       Object.values(groupMap).forEach(group => {
         const studentCount = group.student_ids.length;
