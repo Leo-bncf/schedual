@@ -52,25 +52,28 @@ export default function Students() {
 
   const queryClient = useQueryClient();
 
-  const { data: schools = [] } = useQuery({
-    queryKey: ['schools'],
-    queryFn: () => base44.entities.School.list(),
+  const { data: user } = useQuery({
+    queryKey: ['currentUser'],
+    queryFn: () => base44.auth.me(),
   });
 
+  const schoolId = user?.school_id;
+
   const { data: students = [], isLoading } = useQuery({
-    queryKey: ['students'],
-    queryFn: () => base44.entities.Student.list(),
+    queryKey: ['students', schoolId],
+    queryFn: () => base44.entities.Student.filter({ school_id: schoolId }),
+    enabled: !!schoolId,
   });
 
   const { data: subjects = [] } = useQuery({
-    queryKey: ['subjects'],
-    queryFn: () => base44.entities.Subject.list(),
+    queryKey: ['subjects', schoolId],
+    queryFn: () => base44.entities.Subject.filter({ school_id: schoolId }),
+    enabled: !!schoolId,
   });
 
   const createMutation = useMutation({
     mutationFn: (data) => {
-      const schoolId = schools[0]?.id;
-      if (!schoolId) throw new Error('No school found');
+      if (!schoolId) throw new Error('No school assigned');
       return base44.entities.Student.create({ ...data, school_id: schoolId });
     },
     onSuccess: () => {

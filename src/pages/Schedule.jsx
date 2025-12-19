@@ -61,9 +61,17 @@ export default function Schedule() {
 
   const queryClient = useQueryClient();
 
+  const { data: user } = useQuery({
+    queryKey: ['currentUser'],
+    queryFn: () => base44.auth.me(),
+  });
+
+  const schoolId = user?.school_id;
+
   const { data: scheduleVersions = [], isLoading: loadingVersions } = useQuery({
-    queryKey: ['scheduleVersions'],
-    queryFn: () => base44.entities.ScheduleVersion.list('-created_date'),
+    queryKey: ['scheduleVersions', schoolId],
+    queryFn: () => base44.entities.ScheduleVersion.filter({ school_id: schoolId }, '-created_date'),
+    enabled: !!schoolId,
   });
 
   const { data: scheduleSlots = [], isLoading: loadingSlots } = useQuery({
@@ -73,39 +81,38 @@ export default function Schedule() {
   });
 
   const { data: teachingGroups = [] } = useQuery({
-    queryKey: ['teachingGroups'],
-    queryFn: () => base44.entities.TeachingGroup.list(),
+    queryKey: ['teachingGroups', schoolId],
+    queryFn: () => base44.entities.TeachingGroup.filter({ school_id: schoolId }),
+    enabled: !!schoolId,
   });
 
   const { data: rooms = [] } = useQuery({
-    queryKey: ['rooms'],
-    queryFn: () => base44.entities.Room.list(),
-  });
-
-  const { data: schools = [] } = useQuery({
-    queryKey: ['schools'],
-    queryFn: () => base44.entities.School.list(),
+    queryKey: ['rooms', schoolId],
+    queryFn: () => base44.entities.Room.filter({ school_id: schoolId }),
+    enabled: !!schoolId,
   });
 
   const { data: subjects = [] } = useQuery({
-    queryKey: ['subjects'],
-    queryFn: () => base44.entities.Subject.list(),
+    queryKey: ['subjects', schoolId],
+    queryFn: () => base44.entities.Subject.filter({ school_id: schoolId }),
+    enabled: !!schoolId,
   });
 
   const { data: teachers = [] } = useQuery({
-    queryKey: ['teachers'],
-    queryFn: () => base44.entities.Teacher.list(),
+    queryKey: ['teachers', schoolId],
+    queryFn: () => base44.entities.Teacher.filter({ school_id: schoolId }),
+    enabled: !!schoolId,
   });
 
   const { data: students = [] } = useQuery({
-    queryKey: ['students'],
-    queryFn: () => base44.entities.Student.list(),
+    queryKey: ['students', schoolId],
+    queryFn: () => base44.entities.Student.filter({ school_id: schoolId }),
+    enabled: !!schoolId,
   });
 
   const createVersionMutation = useMutation({
     mutationFn: (data) => {
-      const schoolId = schools[0]?.id;
-      if (!schoolId) throw new Error('No school found');
+      if (!schoolId) throw new Error('No school assigned');
       return base44.entities.ScheduleVersion.create({ ...data, school_id: schoolId });
     },
     onSuccess: (newVersion) => {
@@ -237,7 +244,7 @@ export default function Schedule() {
 
               if (assignedRoom) {
                 const slot = {
-                  school_id: schools[0]?.id,
+                  school_id: schoolId,
                   schedule_version: selectedVersion.id,
                   teaching_group_id: group.id,
                   room_id: assignedRoom.id,
