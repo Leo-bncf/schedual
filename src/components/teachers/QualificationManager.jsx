@@ -77,12 +77,19 @@ export default function QualificationManager({ subjects, qualifications = [], on
   return (
     <Card className="border-0 shadow-sm">
       <CardHeader>
-        <CardTitle className="flex items-center gap-2">
-          <Award className="w-5 h-5" />
-          IB Qualifications
+        <CardTitle className="flex items-center justify-between">
+          <div className="flex items-center gap-2">
+            <Award className="w-5 h-5" />
+            IB Qualifications
+          </div>
+          {qualifications.length > 0 && (
+            <Badge variant="outline" className="text-xs">
+              {qualifications.length} {qualifications.length === 1 ? 'subject' : 'subjects'}
+            </Badge>
+          )}
         </CardTitle>
         <CardDescription>
-          Specify which subjects and IB levels this teacher is qualified to teach
+          Teacher can teach multiple subjects at different IB levels - add as many as needed
         </CardDescription>
       </CardHeader>
       <CardContent className="space-y-4">
@@ -120,8 +127,10 @@ export default function QualificationManager({ subjects, qualifications = [], on
             type="button"
             onClick={addQualification}
             disabled={!selectedSubject || selectedLevels.length === 0}
+            className="bg-indigo-600 hover:bg-indigo-700"
           >
-            <Plus className="w-4 h-4" />
+            <Plus className="w-4 h-4 mr-1" />
+            Add
           </Button>
         </div>
 
@@ -151,8 +160,8 @@ export default function QualificationManager({ subjects, qualifications = [], on
         ) : (
           <div className="p-6 rounded-lg border-2 border-dashed border-slate-200 text-center">
             <AlertCircle className="w-8 h-8 text-slate-300 mx-auto mb-2" />
-            <p className="text-sm text-slate-500">No qualifications added yet</p>
-            <p className="text-xs text-slate-400 mt-1">Add subjects and IB levels this teacher can teach</p>
+            <p className="text-sm text-slate-500 font-medium">No subjects added</p>
+            <p className="text-xs text-slate-400 mt-1">Use the form above to add multiple subjects with their IB levels</p>
           </div>
         )}
 
