@@ -15,6 +15,7 @@ import { Plus, Search, Shield, Star, Filter } from 'lucide-react';
 import PageHeader from '../components/ui-custom/PageHeader';
 import ConstraintCard from '../components/constraints/ConstraintCard';
 import ConstraintBuilder from '../components/constraints/ConstraintBuilder';
+import ConstraintValidator from '../components/constraints/ConstraintValidator';
 import EmptyState from '../components/ui-custom/EmptyState';
 
 export default function Constraints() {
@@ -105,15 +106,20 @@ export default function Constraints() {
         }
       />
 
-      <div className="flex flex-col sm:flex-row gap-4">
-        <div className="relative flex-1 max-w-sm">
-          <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400" />
-          <Input 
-            placeholder="Search constraints..." 
-            className="pl-10"
-            value={searchQuery}
-            onChange={(e) => setSearchQuery(e.target.value)}
-          />
+      <div className="grid lg:grid-cols-3 gap-6">
+        <div className="lg:col-span-2">
+          <div className="relative max-w-sm">
+            <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400" />
+            <Input 
+              placeholder="Search constraints..." 
+              className="pl-10"
+              value={searchQuery}
+              onChange={(e) => setSearchQuery(e.target.value)}
+            />
+          </div>
+        </div>
+        <div className="lg:col-span-1">
+          <ConstraintValidator constraints={constraints} />
         </div>
       </div>
 

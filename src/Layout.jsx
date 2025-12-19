@@ -30,6 +30,7 @@ import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 
 const navigation = [
   { name: 'Dashboard', page: 'Dashboard', icon: LayoutDashboard },
+  { name: 'Setup Guide', page: 'Onboarding', icon: Sparkles },
   { name: 'Schedule', page: 'Schedule', icon: Calendar },
   { name: 'Teaching Groups', page: 'TeachingGroups', icon: Users },
   { name: 'Teachers', page: 'Teachers', icon: Users },
@@ -39,7 +40,6 @@ const navigation = [
   { name: 'Constraints', page: 'Constraints', icon: Settings },
   { name: 'AI Advisor', page: 'AIAdvisor', icon: Sparkles },
   { name: 'Settings', page: 'Settings', icon: Settings },
-  { name: 'Documentation', page: 'Documentation', icon: BookOpen },
 ];
 
 export default function Layout({ children, currentPageName }) {
