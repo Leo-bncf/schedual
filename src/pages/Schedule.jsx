@@ -39,6 +39,8 @@ import {
 import PageHeader from '../components/ui-custom/PageHeader';
 import TimetableGrid from '../components/schedule/TimetableGrid';
 import HoursSummary from '../components/schedule/HoursSummary';
+import StudentScheduleView from '../components/schedule/StudentScheduleView';
+import TeacherScheduleView from '../components/schedule/TeacherScheduleView';
 import ConflictAlert from '../components/schedule/ConflictAlert';
 import ConflictViewer from '../components/schedule/ConflictViewer';
 import EmptyState from '../components/ui-custom/EmptyState';
@@ -47,6 +49,8 @@ export default function Schedule() {
   const [isDialogOpen, setIsDialogOpen] = useState(false);
   const [selectedVersion, setSelectedVersion] = useState(null);
   const [isGenerating, setIsGenerating] = useState(false);
+  const [selectedStudentId, setSelectedStudentId] = useState(null);
+  const [selectedTeacherId, setSelectedTeacherId] = useState(null);
   const [formData, setFormData] = useState({
     name: '',
     academic_year: '2024-2025',
@@ -156,57 +160,99 @@ export default function Schedule() {
         await base44.entities.ScheduleSlot.delete(slot.id);
       }
 
-      // Simple scheduling algorithm
+      // Comprehensive scheduling algorithm for all students, teachers, and rooms
       const days = ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday'];
-      const periods = Array.from({ length: 12 }, (_, i) => i + 1); // 12 periods from 8 AM to 6 PM
+      const periods = Array.from({ length: 12 }, (_, i) => i + 1);
       const newSlots = [];
 
-      // Group teaching groups by student to avoid conflicts
+      // Track availability for students, teachers, and rooms
       const studentSchedules = {};
-      
-      for (const group of teachingGroups) {
-        if (!group.is_active || !group.hours_per_week) continue;
+      const teacherSchedules = {};
+      const roomSchedules = {};
 
+      // Initialize availability tracking
+      students.forEach(s => { studentSchedules[s.id] = []; });
+      teachers.forEach(t => { teacherSchedules[t.id] = []; });
+      rooms.forEach(r => { roomSchedules[r.id] = []; });
+
+      // Sort groups by priority (fewer students = harder to schedule = higher priority)
+      const sortedGroups = [...teachingGroups]
+        .filter(g => g.is_active && g.hours_per_week && g.teacher_id && g.student_ids?.length > 0)
+        .sort((a, b) => (a.student_ids?.length || 0) - (b.student_ids?.length || 0));
+
+      for (const group of sortedGroups) {
         const periodsNeeded = Math.ceil(group.hours_per_week);
         let periodsScheduled = 0;
+        const studentIds = group.student_ids || [];
+        const teacherId = group.teacher_id;
 
-        // Try to schedule this group
+        // Find suitable room
+        const subject = subjects.find(s => s.id === group.subject_id);
+        let preferredRooms = rooms.filter(r => r.is_active);
+        
+        if (subject?.requires_special_room) {
+          preferredRooms = preferredRooms.filter(r => r.room_type === subject.requires_special_room);
+        }
+        if (group.preferred_room_id) {
+          const preferred = rooms.find(r => r.id === group.preferred_room_id);
+          if (preferred) preferredRooms = [preferred, ...preferredRooms.filter(r => r.id !== preferred.id)];
+        }
+
+        // Try to schedule periods for this group
         for (const day of days) {
           if (periodsScheduled >= periodsNeeded) break;
 
           for (const period of periods) {
             if (periodsScheduled >= periodsNeeded) break;
 
-            // Check if students are available
-            const studentIds = group.student_ids || [];
+            // Check if all students are available
             const studentsFree = studentIds.every(studentId => {
               const schedule = studentSchedules[studentId] || [];
               return !schedule.some(s => s.day === day && s.period === period);
             });
 
-            if (studentsFree) {
+            // Check if teacher is available
+            const teacherFree = !teacherSchedules[teacherId]?.some(s => s.day === day && s.period === period);
+
+            // Check teacher unavailability
+            const teacher = teachers.find(t => t.id === teacherId);
+            const teacherAvailable = !teacher?.unavailable_slots?.some(u => u.day === day && u.period === period);
+
+            if (studentsFree && teacherFree && teacherAvailable) {
               // Find available room
-              const availableRoom = rooms.find(r => r.is_active) || rooms[0];
+              let assignedRoom = null;
+              for (const room of preferredRooms) {
+                const roomFree = !roomSchedules[room.id]?.some(s => s.day === day && s.period === period);
+                const hasCapacity = !room.capacity || (studentIds.length <= room.capacity);
+                
+                if (roomFree && hasCapacity) {
+                  assignedRoom = room;
+                  break;
+                }
+              }
 
-              const slot = {
-                school_id: schools[0]?.id,
-                schedule_version: selectedVersion.id,
-                teaching_group_id: group.id,
-                room_id: availableRoom?.id,
-                day,
-                period,
-                status: 'scheduled'
-              };
+              if (assignedRoom) {
+                const slot = {
+                  school_id: schools[0]?.id,
+                  schedule_version: selectedVersion.id,
+                  teaching_group_id: group.id,
+                  room_id: assignedRoom.id,
+                  day,
+                  period,
+                  status: 'scheduled'
+                };
 
-              newSlots.push(slot);
+                newSlots.push(slot);
 
-              // Mark students as busy
-              studentIds.forEach(studentId => {
-                if (!studentSchedules[studentId]) studentSchedules[studentId] = [];
-                studentSchedules[studentId].push({ day, period });
-              });
+                // Mark as busy
+                studentIds.forEach(studentId => {
+                  studentSchedules[studentId].push({ day, period });
+                });
+                teacherSchedules[teacherId].push({ day, period });
+                roomSchedules[assignedRoom.id].push({ day, period });
 
-              periodsScheduled++;
+                periodsScheduled++;
+              }
             }
           }
         }
@@ -403,7 +449,9 @@ export default function Schedule() {
               {/* Timetable */}
               <Tabs defaultValue="grid">
                 <TabsList className="bg-slate-100 mb-4">
-                  <TabsTrigger value="grid">Grid View</TabsTrigger>
+                  <TabsTrigger value="grid">Master Schedule</TabsTrigger>
+                  <TabsTrigger value="student">Student View</TabsTrigger>
+                  <TabsTrigger value="teacher">Teacher View</TabsTrigger>
                   <TabsTrigger value="list">List View</TabsTrigger>
                 </TabsList>
                 
@@ -425,6 +473,31 @@ export default function Schedule() {
                       subjects={subjects}
                     />
                   </div>
+                </TabsContent>
+
+                <TabsContent value="student">
+                  <StudentScheduleView
+                    students={students.filter(s => s.is_active)}
+                    slots={scheduleSlots}
+                    groups={teachingGroups}
+                    subjects={subjects}
+                    teachers={teachers}
+                    rooms={rooms}
+                    selectedStudentId={selectedStudentId}
+                    onStudentChange={setSelectedStudentId}
+                  />
+                </TabsContent>
+
+                <TabsContent value="teacher">
+                  <TeacherScheduleView
+                    teachers={teachers.filter(t => t.is_active)}
+                    slots={scheduleSlots}
+                    groups={teachingGroups}
+                    subjects={subjects}
+                    rooms={rooms}
+                    selectedTeacherId={selectedTeacherId}
+                    onTeacherChange={setSelectedTeacherId}
+                  />
                 </TabsContent>
                 
                 <TabsContent value="list">
