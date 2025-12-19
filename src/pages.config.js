@@ -6,6 +6,8 @@ import Rooms from './pages/Rooms';
 import Schedule from './pages/Schedule';
 import AIAdvisor from './pages/AIAdvisor';
 import Settings from './pages/Settings';
+import Constraints from './pages/Constraints';
+import TeachingGroups from './pages/TeachingGroups';
 import __Layout from './Layout.jsx';
 
 
@@ -18,6 +20,8 @@ export const PAGES = {
     "Schedule": Schedule,
     "AIAdvisor": AIAdvisor,
     "Settings": Settings,
+    "Constraints": Constraints,
+    "TeachingGroups": TeachingGroups,
 }
 
 export const pagesConfig = {
