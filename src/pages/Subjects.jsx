@@ -61,20 +61,22 @@ export default function Subjects() {
 
   const queryClient = useQueryClient();
 
-  const { data: schools = [] } = useQuery({
-    queryKey: ['schools'],
-    queryFn: () => base44.entities.School.list(),
+  const { data: user } = useQuery({
+    queryKey: ['currentUser'],
+    queryFn: () => base44.auth.me(),
   });
 
+  const schoolId = user?.school_id;
+
   const { data: subjects = [], isLoading } = useQuery({
-    queryKey: ['subjects'],
-    queryFn: () => base44.entities.Subject.list(),
+    queryKey: ['subjects', schoolId],
+    queryFn: () => schoolId ? base44.entities.Subject.filter({ school_id: schoolId }) : [],
+    enabled: !!schoolId,
   });
 
   const createMutation = useMutation({
     mutationFn: (data) => {
-      const schoolId = schools[0]?.id;
-      if (!schoolId) throw new Error('No school found');
+      if (!schoolId) throw new Error('No school assigned');
       return base44.entities.Subject.create({ ...data, school_id: schoolId, ib_level: 'DP' });
     },
     onSuccess: () => {
