@@ -33,39 +33,39 @@ export default function Dashboard() {
   const isSuperAdmin = user?.role === 'admin' && !user?.school_id;
 
   const { data: teachers = [], isLoading: loadingTeachers } = useQuery({
-    queryKey: ['teachers'],
-    queryFn: () => base44.entities.Teacher.list(),
-    enabled: !isSuperAdmin,
+    queryKey: ['teachers', user?.school_id],
+    queryFn: () => base44.entities.Teacher.filter({ school_id: user?.school_id }),
+    enabled: !isSuperAdmin && !!user?.school_id,
   });
 
   const { data: students = [], isLoading: loadingStudents } = useQuery({
-    queryKey: ['students'],
-    queryFn: () => base44.entities.Student.list(),
-    enabled: !isSuperAdmin,
+    queryKey: ['students', user?.school_id],
+    queryFn: () => base44.entities.Student.filter({ school_id: user?.school_id }),
+    enabled: !isSuperAdmin && !!user?.school_id,
   });
 
   const { data: subjects = [], isLoading: loadingSubjects } = useQuery({
-    queryKey: ['subjects'],
-    queryFn: () => base44.entities.Subject.list(),
-    enabled: !isSuperAdmin,
+    queryKey: ['subjects', user?.school_id],
+    queryFn: () => base44.entities.Subject.filter({ school_id: user?.school_id }),
+    enabled: !isSuperAdmin && !!user?.school_id,
   });
 
   const { data: rooms = [], isLoading: loadingRooms } = useQuery({
-    queryKey: ['rooms'],
-    queryFn: () => base44.entities.Room.list(),
-    enabled: !isSuperAdmin,
+    queryKey: ['rooms', user?.school_id],
+    queryFn: () => base44.entities.Room.filter({ school_id: user?.school_id }),
+    enabled: !isSuperAdmin && !!user?.school_id,
   });
 
   const { data: scheduleVersions = [], isLoading: loadingSchedules } = useQuery({
-    queryKey: ['scheduleVersions'],
-    queryFn: () => base44.entities.ScheduleVersion.list('-created_date', 5),
-    enabled: !isSuperAdmin,
+    queryKey: ['scheduleVersions', user?.school_id],
+    queryFn: () => base44.entities.ScheduleVersion.filter({ school_id: user?.school_id }, '-created_date', 5),
+    enabled: !isSuperAdmin && !!user?.school_id,
   });
 
   const { data: aiLogs = [], isLoading: loadingLogs } = useQuery({
-    queryKey: ['aiLogs'],
-    queryFn: () => base44.entities.AIAdvisorLog.filter({ status: 'pending' }, '-created_date', 5),
-    enabled: !isSuperAdmin,
+    queryKey: ['aiLogs', user?.school_id],
+    queryFn: () => base44.entities.AIAdvisorLog.filter({ school_id: user?.school_id, status: 'pending' }, '-created_date', 5),
+    enabled: !isSuperAdmin && !!user?.school_id,
   });
 
   // Super Admin Dashboard
