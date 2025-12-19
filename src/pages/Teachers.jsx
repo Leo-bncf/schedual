@@ -30,6 +30,7 @@ import {
 import PageHeader from '../components/ui-custom/PageHeader';
 import DataTable from '../components/ui-custom/DataTable';
 import EmptyState from '../components/ui-custom/EmptyState';
+import QualificationManager from '../components/teachers/QualificationManager';
 
 const DAYS = ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday'];
 
@@ -45,6 +46,7 @@ export default function Teachers() {
     max_consecutive_periods: 4,
     preferred_free_day: '',
     subjects: [],
+    qualifications: [],
     is_active: true
   });
 
@@ -90,6 +92,7 @@ export default function Teachers() {
       max_consecutive_periods: 4,
       preferred_free_day: '',
       subjects: [],
+      qualifications: [],
       is_active: true
     });
     setEditingTeacher(null);
@@ -106,6 +109,7 @@ export default function Teachers() {
       max_consecutive_periods: teacher.max_consecutive_periods || 4,
       preferred_free_day: teacher.preferred_free_day || '',
       subjects: teacher.subjects || [],
+      qualifications: teacher.qualifications || [],
       is_active: teacher.is_active !== false
     });
     setIsDialogOpen(true);
@@ -327,6 +331,12 @@ export default function Teachers() {
                 </Select>
               </div>
             </div>
+
+            <QualificationManager 
+              subjects={subjects}
+              qualifications={formData.qualifications}
+              onChange={(quals) => setFormData({ ...formData, qualifications: quals })}
+            />
 
             <DialogFooter>
               <Button type="button" variant="outline" onClick={resetForm}>

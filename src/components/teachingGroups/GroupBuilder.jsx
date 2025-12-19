@@ -76,6 +76,16 @@ export default function GroupBuilder({
 
   const filteredStudents = students.filter(s => s.year_group === formData.year_group);
   const selectedTeacher = teachers.find(t => t.id === formData.teacher_id);
+  
+  // Filter teachers by qualification for selected subject
+  const qualifiedTeachers = formData.subject_id 
+    ? teachers.filter(t => {
+        const subject = subjects.find(s => s.id === formData.subject_id);
+        if (!subject) return false;
+        const qualification = t.qualifications?.find(q => q.subject_id === formData.subject_id);
+        return qualification?.ib_levels?.includes(subject.ib_level);
+      })
+    : teachers;
 
   return (
     <form onSubmit={handleSubmit} className="space-y-6">
@@ -140,18 +150,26 @@ export default function GroupBuilder({
             value={formData.teacher_id} 
             onValueChange={(value) => setFormData({ ...formData, teacher_id: value })}
             required
+            disabled={!formData.subject_id}
           >
             <SelectTrigger>
-              <SelectValue placeholder="Select teacher" />
+              <SelectValue placeholder={formData.subject_id ? "Select qualified teacher" : "Select subject first"} />
             </SelectTrigger>
             <SelectContent>
-              {teachers.map(teacher => (
-                <SelectItem key={teacher.id} value={teacher.id}>
-                  {teacher.full_name}
-                </SelectItem>
-              ))}
+              {qualifiedTeachers.length === 0 ? (
+                <div className="p-2 text-sm text-slate-500">No qualified teachers available</div>
+              ) : (
+                qualifiedTeachers.map(teacher => (
+                  <SelectItem key={teacher.id} value={teacher.id}>
+                    {teacher.full_name}
+                  </SelectItem>
+                ))
+              )}
             </SelectContent>
           </Select>
+          {formData.subject_id && qualifiedTeachers.length === 0 && (
+            <p className="text-xs text-rose-600">⚠️ No teachers qualified for this subject/level</p>
+          )}
         </div>
       </div>
 
