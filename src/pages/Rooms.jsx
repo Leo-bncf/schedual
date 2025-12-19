@@ -60,13 +60,22 @@ export default function Rooms() {
 
   const queryClient = useQueryClient();
 
+  const { data: schools = [] } = useQuery({
+    queryKey: ['schools'],
+    queryFn: () => base44.entities.School.list(),
+  });
+
   const { data: rooms = [], isLoading } = useQuery({
     queryKey: ['rooms'],
     queryFn: () => base44.entities.Room.list(),
   });
 
   const createMutation = useMutation({
-    mutationFn: (data) => base44.entities.Room.create(data),
+    mutationFn: (data) => {
+      const schoolId = schools[0]?.id;
+      if (!schoolId) throw new Error('No school found');
+      return base44.entities.Room.create({ ...data, school_id: schoolId });
+    },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['rooms'] });
       resetForm();
