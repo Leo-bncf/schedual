@@ -379,24 +379,22 @@ export default function Schedule() {
               </Card>
 
               {/* Conflicts/Warnings */}
+              {selectedVersion.conflicts_count > 0 && (
+                <ConflictAlert 
+                  severity="error"
+                  title={`${selectedVersion.conflicts_count} Scheduling Conflicts`}
+                  description="There are unresolved conflicts that need attention before publishing."
+                />
+              )}
+              {selectedVersion.warnings_count > 0 && (
+                <ConflictAlert 
+                  severity="warning"
+                  title={`${selectedVersion.warnings_count} Warnings`}
+                  description="Review these soft constraint violations for optimal scheduling."
+                />
+              )}
               {(selectedVersion.conflicts_count > 0 || selectedVersion.warnings_count > 0) && (
-                <div className="space-y-3">
-                  {selectedVersion.conflicts_count > 0 && (
-                    <ConflictAlert 
-                      severity="error"
-                      title={`${selectedVersion.conflicts_count} Scheduling Conflicts`}
-                      description="There are unresolved conflicts that need attention before publishing."
-                    />
-                  )}
-                  {selectedVersion.warnings_count > 0 && (
-                    <ConflictAlert 
-                      severity="warning"
-                      title={`${selectedVersion.warnings_count} Warnings`}
-                      description="Review these soft constraint violations for optimal scheduling."
-                    />
-                  )}
-                  <ConflictViewer scheduleVersionId={selectedVersion.id} />
-                </div>
+                <ConflictViewer scheduleVersionId={selectedVersion.id} />
               )}
 
               {/* Timetable */}
