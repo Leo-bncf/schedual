@@ -12,7 +12,7 @@ const periodTimes = {
   7: '13:00', 8: '13:45', 9: '14:30', 10: '15:15', 11: '16:00', 12: '16:45',
 };
 
-export default function StudentScheduleView({ students, slots, groups, subjects, teachers, rooms, selectedStudentId, onStudentChange }) {
+export default function StudentScheduleView({ students, slots, groups, subjects, teachers, rooms, selectedStudentId, onStudentChange, exportId = "student-schedule" }) {
   const selectedStudent = students.find(s => s.id === selectedStudentId);
 
   const getStudentSlots = (studentId) => {
@@ -59,7 +59,7 @@ export default function StudentScheduleView({ students, slots, groups, subjects,
       </div>
 
       {selectedStudent && (
-        <Card className="overflow-hidden border-0 shadow-sm">
+        <Card className="overflow-hidden border-0 shadow-sm" id={exportId}>
           <div className="overflow-x-auto">
             <div className="min-w-[900px]">
               <div className="grid grid-cols-[80px_repeat(5,1fr)] bg-white border-b-2 border-slate-300">

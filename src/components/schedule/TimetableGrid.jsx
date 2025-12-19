@@ -29,7 +29,7 @@ const subjectColors = {
   6: 'bg-cyan-200/80 border-cyan-400',
 };
 
-export default function TimetableGrid({ slots = [], groups = [], rooms = [], subjects = [], teachers = [], onSlotClick, periodsPerDay = 12 }) {
+export default function TimetableGrid({ slots = [], groups = [], rooms = [], subjects = [], teachers = [], onSlotClick, periodsPerDay = 12, exportId = "timetable-grid" }) {
   const getSlotData = (day, period) => {
     return slots.find(s => s.day === day && s.period === period);
   };
@@ -88,7 +88,7 @@ export default function TimetableGrid({ slots = [], groups = [], rooms = [], sub
   };
 
   return (
-    <Card className="overflow-hidden border-0 shadow-sm">
+    <Card className="overflow-hidden border-0 shadow-sm" id={exportId}>
       <div className="overflow-x-auto">
         <div className="min-w-[1000px]">
           {/* Header Row */}

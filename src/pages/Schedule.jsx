@@ -41,6 +41,7 @@ import TimetableGrid from '../components/schedule/TimetableGrid';
 import HoursSummary from '../components/schedule/HoursSummary';
 import StudentScheduleView from '../components/schedule/StudentScheduleView';
 import TeacherScheduleView from '../components/schedule/TeacherScheduleView';
+import ScheduleExporter from '../components/schedule/ScheduleExporter';
 import ConflictAlert from '../components/schedule/ConflictAlert';
 import ConflictViewer from '../components/schedule/ConflictViewer';
 import EmptyState from '../components/ui-custom/EmptyState';
@@ -465,56 +466,92 @@ export default function Schedule() {
 
               {/* Timetable */}
               <Tabs defaultValue="grid">
-                <TabsList className="bg-slate-100 mb-4">
-                  <TabsTrigger value="grid">Master Schedule</TabsTrigger>
-                  <TabsTrigger value="student">Student View</TabsTrigger>
-                  <TabsTrigger value="teacher">Teacher View</TabsTrigger>
-                  <TabsTrigger value="list">List View</TabsTrigger>
-                </TabsList>
+                <div className="flex items-center justify-between mb-4">
+                  <TabsList className="bg-slate-100">
+                    <TabsTrigger value="grid">Master Schedule</TabsTrigger>
+                    <TabsTrigger value="student">Student View</TabsTrigger>
+                    <TabsTrigger value="teacher">Teacher View</TabsTrigger>
+                    <TabsTrigger value="list">List View</TabsTrigger>
+                  </TabsList>
+                </div>
                 
                 <TabsContent value="grid">
-                  <div className="grid lg:grid-cols-[1fr_320px] gap-4">
-                    <TimetableGrid 
-                      slots={scheduleSlots}
-                      groups={teachingGroups}
-                      rooms={rooms}
-                      subjects={subjects}
-                      teachers={teachers}
-                      onSlotClick={(day, period, slot) => {
-                        console.log('Clicked:', day, period, slot);
-                      }}
-                    />
-                    <HoursSummary 
-                      slots={scheduleSlots}
-                      groups={teachingGroups}
-                      subjects={subjects}
-                    />
+                  <div className="space-y-4">
+                    <div className="flex justify-end">
+                      <ScheduleExporter 
+                        elementId="master-schedule-grid"
+                        filename={`master-schedule-${selectedVersion?.name || 'schedule'}`}
+                        label="Export Master Schedule"
+                      />
+                    </div>
+                    <div className="grid lg:grid-cols-[1fr_320px] gap-4" id="master-schedule-grid">
+                      <TimetableGrid 
+                        slots={scheduleSlots}
+                        groups={teachingGroups}
+                        rooms={rooms}
+                        subjects={subjects}
+                        teachers={teachers}
+                        onSlotClick={(day, period, slot) => {
+                          console.log('Clicked:', day, period, slot);
+                        }}
+                        exportId="master-timetable"
+                      />
+                      <HoursSummary 
+                        slots={scheduleSlots}
+                        groups={teachingGroups}
+                        subjects={subjects}
+                      />
+                    </div>
                   </div>
                 </TabsContent>
 
                 <TabsContent value="student">
-                  <StudentScheduleView
-                    students={students.filter(s => s.is_active)}
-                    slots={scheduleSlots}
-                    groups={teachingGroups}
-                    subjects={subjects}
-                    teachers={teachers}
-                    rooms={rooms}
-                    selectedStudentId={selectedStudentId}
-                    onStudentChange={setSelectedStudentId}
-                  />
+                  <div className="space-y-4">
+                    {selectedStudentId && (
+                      <div className="flex justify-end">
+                        <ScheduleExporter 
+                          elementId="student-schedule"
+                          filename={`student-schedule-${students.find(s => s.id === selectedStudentId)?.full_name || 'student'}`}
+                          label="Export Student Schedule"
+                        />
+                      </div>
+                    )}
+                    <StudentScheduleView
+                      students={students.filter(s => s.is_active)}
+                      slots={scheduleSlots}
+                      groups={teachingGroups}
+                      subjects={subjects}
+                      teachers={teachers}
+                      rooms={rooms}
+                      selectedStudentId={selectedStudentId}
+                      onStudentChange={setSelectedStudentId}
+                      exportId="student-schedule"
+                    />
+                  </div>
                 </TabsContent>
 
                 <TabsContent value="teacher">
-                  <TeacherScheduleView
-                    teachers={teachers.filter(t => t.is_active)}
-                    slots={scheduleSlots}
-                    groups={teachingGroups}
-                    subjects={subjects}
-                    rooms={rooms}
-                    selectedTeacherId={selectedTeacherId}
-                    onTeacherChange={setSelectedTeacherId}
-                  />
+                  <div className="space-y-4">
+                    {selectedTeacherId && (
+                      <div className="flex justify-end">
+                        <ScheduleExporter 
+                          elementId="teacher-schedule"
+                          filename={`teacher-schedule-${teachers.find(t => t.id === selectedTeacherId)?.full_name || 'teacher'}`}
+                          label="Export Teacher Schedule"
+                        />
+                      </div>
+                    )}
+                    <TeacherScheduleView
+                      teachers={teachers.filter(t => t.is_active)}
+                      slots={scheduleSlots}
+                      groups={teachingGroups}
+                      subjects={subjects}
+                      rooms={rooms}
+                      selectedTeacherId={selectedTeacherId}
+                      onTeacherChange={setSelectedTeacherId}
+                      exportId="teacher-schedule"
+                    />
+                  </div>
                 </TabsContent>
                 
                 <TabsContent value="list">
