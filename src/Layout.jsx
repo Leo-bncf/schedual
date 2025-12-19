@@ -31,17 +31,17 @@ import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 
 const navigation = [
   { name: 'Dashboard', page: 'Dashboard', icon: LayoutDashboard },
-  { name: 'Setup Guide', page: 'Onboarding', icon: Sparkles },
-  { name: 'Schedule', page: 'Schedule', icon: Calendar },
-  { name: 'Teaching Groups', page: 'TeachingGroups', icon: Users },
-  { name: 'Teachers', page: 'Teachers', icon: Users },
-  { name: 'Students', page: 'Students', icon: GraduationCap },
-  { name: 'Subjects', page: 'Subjects', icon: BookOpen },
-  { name: 'Rooms', page: 'Rooms', icon: Building2 },
-  { name: 'Constraints', page: 'Constraints', icon: Settings, adminOnly: true },
-  { name: 'AI Advisor', page: 'AIAdvisor', icon: Sparkles },
+  { name: 'Setup Guide', page: 'Onboarding', icon: Sparkles, schoolOnly: true },
+  { name: 'Schedule', page: 'Schedule', icon: Calendar, schoolOnly: true },
+  { name: 'Teaching Groups', page: 'TeachingGroups', icon: Users, schoolOnly: true },
+  { name: 'Teachers', page: 'Teachers', icon: Users, schoolOnly: true },
+  { name: 'Students', page: 'Students', icon: GraduationCap, schoolOnly: true },
+  { name: 'Subjects', page: 'Subjects', icon: BookOpen, schoolOnly: true },
+  { name: 'Rooms', page: 'Rooms', icon: Building2, schoolOnly: true },
+  { name: 'Constraints', page: 'Constraints', icon: Settings, schoolOnly: true },
+  { name: 'AI Advisor', page: 'AIAdvisor', icon: Sparkles, schoolOnly: true },
   { name: 'Super Admin', page: 'SuperAdmin', icon: Settings, superAdminOnly: true },
-  { name: 'User Management', page: 'UserManagement', icon: Users, adminOnly: true },
+  { name: 'User Management', page: 'UserManagement', icon: Users, superAdminOnly: true },
   { name: 'Settings', page: 'Settings', icon: Settings },
 ];
 
@@ -174,7 +174,9 @@ export default function Layout({ children, currentPageName }) {
           {/* Navigation */}
           <nav className="flex-1 px-4 py-6 space-y-1 overflow-y-auto">
             {navigation.map((item) => {
-              if (item.superAdminOnly && (user?.role !== 'admin' || user?.school_id)) return null;
+              const isSuperAdmin = user?.role === 'admin' && !user?.school_id;
+              if (item.superAdminOnly && !isSuperAdmin) return null;
+              if (item.schoolOnly && isSuperAdmin) return null;
               if (item.adminOnly && user?.role !== 'admin') return null;
               const isActive = currentPageName === item.page;
               return (
