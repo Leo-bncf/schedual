@@ -38,6 +38,7 @@ import {
 import PageHeader from '../components/ui-custom/PageHeader';
 import TimetableGrid from '../components/schedule/TimetableGrid';
 import ConflictAlert from '../components/schedule/ConflictAlert';
+import ConflictViewer from '../components/schedule/ConflictViewer';
 import EmptyState from '../components/ui-custom/EmptyState';
 
 export default function Schedule() {
@@ -285,6 +286,7 @@ export default function Schedule() {
                       description="Review these soft constraint violations for optimal scheduling."
                     />
                   )}
+                  <ConflictViewer scheduleVersionId={selectedVersion.id} />
                 </div>
               )}
 
