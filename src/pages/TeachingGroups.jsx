@@ -13,7 +13,7 @@ import {
   DialogTitle,
 } from "@/components/ui/dialog";
 import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { Plus, Search, Users, MoreHorizontal, Pencil, Trash2, User, BookOpen } from 'lucide-react';
+import { Plus, Search, Users, MoreHorizontal, Pencil, Trash2, User, BookOpen, Sparkles } from 'lucide-react';
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -22,6 +22,7 @@ import {
 } from "@/components/ui/dropdown-menu";
 import PageHeader from '../components/ui-custom/PageHeader';
 import GroupBuilder from '../components/teachingGroups/GroupBuilder';
+import AIGroupGenerator from '../components/teachingGroups/AIGroupGenerator';
 import EmptyState from '../components/ui-custom/EmptyState';
 
 export default function TeachingGroups() {
@@ -123,12 +124,26 @@ export default function TeachingGroups() {
         title="Teaching Groups"
         description="Organize students into class sections by subject and level"
         actions={
-          <Button onClick={() => setIsDialogOpen(true)} className="bg-indigo-600 hover:bg-indigo-700">
-            <Plus className="w-4 h-4 mr-2" />
-            Create Group
-          </Button>
+          <div className="flex gap-2">
+            <Button 
+              onClick={() => setShowAIGenerator(!showAIGenerator)} 
+              variant="outline"
+              className="border-indigo-200 text-indigo-700 hover:bg-indigo-50"
+            >
+              <Sparkles className="w-4 h-4 mr-2" />
+              AI Generator
+            </Button>
+            <Button onClick={() => setIsDialogOpen(true)} className="bg-indigo-600 hover:bg-indigo-700">
+              <Plus className="w-4 h-4 mr-2" />
+              Create Group
+            </Button>
+          </div>
         }
       />
+
+      {showAIGenerator && (
+        <AIGroupGenerator onComplete={() => setShowAIGenerator(false)} />
+      )}
 
       <div className="flex flex-col sm:flex-row gap-4">
         <div className="relative flex-1 max-w-sm">
