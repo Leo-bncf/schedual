@@ -35,34 +35,45 @@ export default function TeachingGroups() {
 
   const queryClient = useQueryClient();
 
+  const { data: user } = useQuery({
+    queryKey: ['currentUser'],
+    queryFn: () => base44.auth.me(),
+  });
+
   const { data: schools = [] } = useQuery({
-    queryKey: ['schools'],
-    queryFn: () => base44.entities.School.list(),
+    queryKey: ['schools', user?.school_id],
+    queryFn: () => base44.entities.School.filter({ id: user?.school_id }),
+    enabled: !!user?.school_id,
   });
 
   const { data: groups = [], isLoading } = useQuery({
-    queryKey: ['teachingGroups'],
-    queryFn: () => base44.entities.TeachingGroup.list(),
+    queryKey: ['teachingGroups', user?.school_id],
+    queryFn: () => base44.entities.TeachingGroup.filter({ school_id: user?.school_id }),
+    enabled: !!user?.school_id,
   });
 
   const { data: subjects = [] } = useQuery({
-    queryKey: ['subjects'],
-    queryFn: () => base44.entities.Subject.list(),
+    queryKey: ['subjects', user?.school_id],
+    queryFn: () => base44.entities.Subject.filter({ school_id: user?.school_id }),
+    enabled: !!user?.school_id,
   });
 
   const { data: teachers = [] } = useQuery({
-    queryKey: ['teachers'],
-    queryFn: () => base44.entities.Teacher.list(),
+    queryKey: ['teachers', user?.school_id],
+    queryFn: () => base44.entities.Teacher.filter({ school_id: user?.school_id }),
+    enabled: !!user?.school_id,
   });
 
   const { data: students = [] } = useQuery({
-    queryKey: ['students'],
-    queryFn: () => base44.entities.Student.list(),
+    queryKey: ['students', user?.school_id],
+    queryFn: () => base44.entities.Student.filter({ school_id: user?.school_id }),
+    enabled: !!user?.school_id,
   });
 
   const { data: rooms = [] } = useQuery({
-    queryKey: ['rooms'],
-    queryFn: () => base44.entities.Room.list(),
+    queryKey: ['rooms', user?.school_id],
+    queryFn: () => base44.entities.Room.filter({ school_id: user?.school_id }),
+    enabled: !!user?.school_id,
   });
 
   const createMutation = useMutation({
