@@ -16,6 +16,7 @@ import Onboarding from './pages/Onboarding';
 import UserManagement from './pages/UserManagement';
 import SuperAdmin from './pages/SuperAdmin';
 import Home from './pages/Home';
+import Landing from './pages/Landing';
 import __Layout from './Layout.jsx';
 
 
@@ -38,6 +39,7 @@ export const PAGES = {
     "UserManagement": UserManagement,
     "SuperAdmin": SuperAdmin,
     "Home": Home,
+    "Landing": Landing,
 }
 
 export const pagesConfig = {
