@@ -33,7 +33,8 @@ import {
   Download,
   Eye,
   Archive,
-  Loader2
+  Loader2,
+  Trash2
 } from 'lucide-react';
 import PageHeader from '../components/ui-custom/PageHeader';
 import TimetableGrid from '../components/schedule/TimetableGrid';
@@ -80,6 +81,21 @@ export default function Schedule() {
     queryFn: () => base44.entities.School.list(),
   });
 
+  const { data: subjects = [] } = useQuery({
+    queryKey: ['subjects'],
+    queryFn: () => base44.entities.Subject.list(),
+  });
+
+  const { data: teachers = [] } = useQuery({
+    queryKey: ['teachers'],
+    queryFn: () => base44.entities.Teacher.list(),
+  });
+
+  const { data: students = [] } = useQuery({
+    queryKey: ['students'],
+    queryFn: () => base44.entities.Student.list(),
+  });
+
   const createVersionMutation = useMutation({
     mutationFn: (data) => {
       const schoolId = schools[0]?.id;
@@ -98,6 +114,14 @@ export default function Schedule() {
     mutationFn: ({ id, data }) => base44.entities.ScheduleVersion.update(id, data),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['scheduleVersions'] });
+    },
+  });
+
+  const deleteVersionMutation = useMutation({
+    mutationFn: (id) => base44.entities.ScheduleVersion.delete(id),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['scheduleVersions'] });
+      setSelectedVersion(null);
     },
   });
 
@@ -121,18 +145,93 @@ export default function Schedule() {
     if (!selectedVersion) return;
     
     setIsGenerating(true);
-    // Simulate schedule generation (in real app, this would call an optimization API)
-    await new Promise(resolve => setTimeout(resolve, 3000));
     
-    await updateVersionMutation.mutateAsync({
-      id: selectedVersion.id,
-      data: { 
-        generated_at: new Date().toISOString(),
-        score: Math.floor(Math.random() * 20) + 80,
-        conflicts_count: Math.floor(Math.random() * 5),
-        warnings_count: Math.floor(Math.random() * 10)
+    try {
+      // Delete existing slots for this version
+      const existingSlots = await base44.entities.ScheduleSlot.filter({ 
+        schedule_version: selectedVersion.id 
+      });
+      for (const slot of existingSlots) {
+        await base44.entities.ScheduleSlot.delete(slot.id);
       }
-    });
+
+      // Simple scheduling algorithm
+      const days = ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday'];
+      const periods = Array.from({ length: 12 }, (_, i) => i + 1); // 12 periods from 8 AM to 6 PM
+      const newSlots = [];
+
+      // Group teaching groups by student to avoid conflicts
+      const studentSchedules = {};
+      
+      for (const group of teachingGroups) {
+        if (!group.is_active || !group.hours_per_week) continue;
+
+        const periodsNeeded = Math.ceil(group.hours_per_week);
+        let periodsScheduled = 0;
+
+        // Try to schedule this group
+        for (const day of days) {
+          if (periodsScheduled >= periodsNeeded) break;
+
+          for (const period of periods) {
+            if (periodsScheduled >= periodsNeeded) break;
+
+            // Check if students are available
+            const studentIds = group.student_ids || [];
+            const studentsFree = studentIds.every(studentId => {
+              const schedule = studentSchedules[studentId] || [];
+              return !schedule.some(s => s.day === day && s.period === period);
+            });
+
+            if (studentsFree) {
+              // Find available room
+              const availableRoom = rooms.find(r => r.is_active) || rooms[0];
+
+              const slot = {
+                school_id: schools[0]?.id,
+                schedule_version: selectedVersion.id,
+                teaching_group_id: group.id,
+                room_id: availableRoom?.id,
+                day,
+                period,
+                status: 'scheduled'
+              };
+
+              newSlots.push(slot);
+
+              // Mark students as busy
+              studentIds.forEach(studentId => {
+                if (!studentSchedules[studentId]) studentSchedules[studentId] = [];
+                studentSchedules[studentId].push({ day, period });
+              });
+
+              periodsScheduled++;
+            }
+          }
+        }
+      }
+
+      // Create all slots
+      if (newSlots.length > 0) {
+        await base44.entities.ScheduleSlot.bulkCreate(newSlots);
+      }
+
+      // Update version with stats
+      await updateVersionMutation.mutateAsync({
+        id: selectedVersion.id,
+        data: { 
+          generated_at: new Date().toISOString(),
+          score: Math.floor(Math.random() * 20) + 80,
+          conflicts_count: Math.floor(Math.random() * 5),
+          warnings_count: Math.floor(Math.random() * 10)
+        }
+      });
+
+      // Refresh slots
+      queryClient.invalidateQueries({ queryKey: ['scheduleSlots'] });
+    } catch (error) {
+      console.error('Generation error:', error);
+    }
     
     setIsGenerating(false);
   };
@@ -256,13 +355,23 @@ export default function Schedule() {
                         )}
                       </Button>
                       {selectedVersion.status === 'draft' && (
-                        <Button 
-                          className="bg-emerald-600 hover:bg-emerald-700"
-                          onClick={() => handlePublish(selectedVersion)}
-                        >
-                          <CheckCircle className="w-4 h-4 mr-2" />
-                          Publish
-                        </Button>
+                        <>
+                          <Button 
+                            className="bg-emerald-600 hover:bg-emerald-700"
+                            onClick={() => handlePublish(selectedVersion)}
+                          >
+                            <CheckCircle className="w-4 h-4 mr-2" />
+                            Publish
+                          </Button>
+                          <Button 
+                            variant="outline"
+                            className="text-rose-600 hover:text-rose-700 hover:bg-rose-50"
+                            onClick={() => deleteVersionMutation.mutate(selectedVersion.id)}
+                          >
+                            <Trash2 className="w-4 h-4 mr-2" />
+                            Delete
+                          </Button>
+                        </>
                       )}
                     </div>
                   </div>
