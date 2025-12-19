@@ -71,27 +71,32 @@ export default function ConflictViewer({ scheduleVersionId }) {
       status: { $ne: 'resolved' }
     }),
     enabled: !!scheduleVersionId,
+    staleTime: 30000,
   });
 
   const { data: teachers = [] } = useQuery({
     queryKey: ['teachers'],
     queryFn: () => base44.entities.Teacher.list(),
+    staleTime: 60000,
   });
 
   const { data: students = [] } = useQuery({
     queryKey: ['students'],
     queryFn: () => base44.entities.Student.list(),
+    staleTime: 60000,
   });
 
   const { data: rooms = [] } = useQuery({
     queryKey: ['rooms'],
     queryFn: () => base44.entities.Room.list(),
+    staleTime: 60000,
   });
 
   const { data: scheduleSlots = [] } = useQuery({
     queryKey: ['scheduleSlots', scheduleVersionId],
     queryFn: () => base44.entities.ScheduleSlot.filter({ schedule_version: scheduleVersionId }),
     enabled: !!scheduleVersionId,
+    staleTime: 30000,
   });
 
   const getEntityName = (entityType, entityId) => {
