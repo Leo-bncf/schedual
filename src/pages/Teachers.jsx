@@ -52,6 +52,11 @@ export default function Teachers() {
 
   const queryClient = useQueryClient();
 
+  const { data: schools = [] } = useQuery({
+    queryKey: ['schools'],
+    queryFn: () => base44.entities.School.list(),
+  });
+
   const { data: teachers = [], isLoading } = useQuery({
     queryKey: ['teachers'],
     queryFn: () => base44.entities.Teacher.list(),
@@ -63,7 +68,11 @@ export default function Teachers() {
   });
 
   const createMutation = useMutation({
-    mutationFn: (data) => base44.entities.Teacher.create(data),
+    mutationFn: (data) => {
+      const schoolId = schools[0]?.id;
+      if (!schoolId) throw new Error('No school found');
+      return base44.entities.Teacher.create({ ...data, school_id: schoolId });
+    },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['teachers'] });
       resetForm();
