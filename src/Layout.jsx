@@ -39,6 +39,7 @@ const navigation = [
   { name: 'Constraints', page: 'Constraints', icon: Settings },
   { name: 'AI Advisor', page: 'AIAdvisor', icon: Sparkles },
   { name: 'Settings', page: 'Settings', icon: Settings },
+  { name: 'Documentation', page: 'Documentation', icon: BookOpen },
 ];
 
 export default function Layout({ children, currentPageName }) {

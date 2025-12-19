@@ -11,6 +11,7 @@ import TeachingGroups from './pages/TeachingGroups';
 import Documentation from './pages/Documentation';
 import DatabaseSchema from './pages/DatabaseSchema';
 import TestData from './pages/TestData';
+import OptimizationEngine from './pages/OptimizationEngine';
 import __Layout from './Layout.jsx';
 
 
@@ -28,6 +29,7 @@ export const PAGES = {
     "Documentation": Documentation,
     "DatabaseSchema": DatabaseSchema,
     "TestData": TestData,
+    "OptimizationEngine": OptimizationEngine,
 }
 
 export const pagesConfig = {
