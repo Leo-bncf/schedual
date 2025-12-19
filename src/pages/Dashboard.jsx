@@ -221,7 +221,7 @@ export default function Dashboard() {
     <div className="space-y-8">
       <PageHeader 
         title="Dashboard"
-        description="Overview of your IB Diploma Programme scheduling system"
+        description="Overview of your scheduling system"
         actions={
           <Link to={createPageUrl('Schedule')}>
             <Button className="bg-indigo-600 hover:bg-indigo-700">
