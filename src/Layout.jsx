@@ -50,13 +50,12 @@ export default function Layout({ children, currentPageName }) {
   const [user, setUser] = useState(null);
   const [isLoading, setIsLoading] = useState(true);
 
-  useEffect(() => {
-    // Skip authentication check for public pages
-    if (currentPageName === 'Landing' || currentPageName === 'Home') {
-      setIsLoading(false);
-      return;
-    }
+  // Public pages render without any authentication checks
+  if (currentPageName === 'Landing' || currentPageName === 'Home') {
+    return <>{children}</>;
+  }
 
+  useEffect(() => {
     base44.auth.me()
       .then(userData => {
         setUser(userData);
@@ -67,11 +66,6 @@ export default function Layout({ children, currentPageName }) {
         base44.auth.redirectToLogin(window.location.pathname);
       });
   }, [currentPageName]);
-
-  // Public pages don't need Layout wrapper
-  if (currentPageName === 'Landing' || currentPageName === 'Home') {
-    return children;
-  }
 
   if (isLoading) {
     return (
