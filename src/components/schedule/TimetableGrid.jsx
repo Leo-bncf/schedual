@@ -2,7 +2,7 @@ import React from 'react';
 import { Card } from "@/components/ui/card";
 
 const DAYS = ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday'];
-const PERIODS = [1, 2, 3, 4, 5, 6, 7, 8];
+const PERIODS = [1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12];
 
 const periodTimes = {
   1: '08:00 - 08:45',
@@ -13,6 +13,10 @@ const periodTimes = {
   6: '13:15 - 14:00',
   7: '14:05 - 14:50',
   8: '14:55 - 15:40',
+  9: '15:45 - 16:30',
+  10: '16:35 - 17:20',
+  11: '17:25 - 18:10',
+  12: '18:15 - 19:00',
 };
 
 const subjectColors = {
@@ -24,7 +28,7 @@ const subjectColors = {
   6: 'bg-cyan-50 border-cyan-200 text-cyan-800',
 };
 
-export default function TimetableGrid({ slots = [], groups = [], rooms = [], onSlotClick, periodsPerDay = 8 }) {
+export default function TimetableGrid({ slots = [], groups = [], rooms = [], onSlotClick, periodsPerDay = 12 }) {
   const getSlotData = (day, period) => {
     return slots.find(s => s.day === day && s.period === period);
   };
