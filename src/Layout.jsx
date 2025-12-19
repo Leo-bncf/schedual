@@ -51,8 +51,8 @@ export default function Layout({ children, currentPageName }) {
   const [isLoading, setIsLoading] = useState(true);
 
   useEffect(() => {
-    // Skip authentication check for Landing page
-    if (currentPageName === 'Landing') {
+    // Skip authentication check for public pages
+    if (currentPageName === 'Landing' || currentPageName === 'Home') {
       setIsLoading(false);
       return;
     }
@@ -68,8 +68,8 @@ export default function Layout({ children, currentPageName }) {
       });
   }, [currentPageName]);
 
-  // Landing page doesn't need Layout wrapper
-  if (currentPageName === 'Landing') {
+  // Public pages don't need Layout wrapper
+  if (currentPageName === 'Landing' || currentPageName === 'Home') {
     return children;
   }
 
