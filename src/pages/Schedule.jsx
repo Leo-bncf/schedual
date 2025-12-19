@@ -38,6 +38,7 @@ import {
 } from 'lucide-react';
 import PageHeader from '../components/ui-custom/PageHeader';
 import TimetableGrid from '../components/schedule/TimetableGrid';
+import HoursSummary from '../components/schedule/HoursSummary';
 import ConflictAlert from '../components/schedule/ConflictAlert';
 import ConflictViewer from '../components/schedule/ConflictViewer';
 import EmptyState from '../components/ui-custom/EmptyState';
@@ -407,14 +408,23 @@ export default function Schedule() {
                 </TabsList>
                 
                 <TabsContent value="grid">
-                  <TimetableGrid 
-                    slots={scheduleSlots}
-                    groups={teachingGroups}
-                    rooms={rooms}
-                    onSlotClick={(day, period, slot) => {
-                      console.log('Clicked:', day, period, slot);
-                    }}
-                  />
+                  <div className="grid lg:grid-cols-[1fr_320px] gap-4">
+                    <TimetableGrid 
+                      slots={scheduleSlots}
+                      groups={teachingGroups}
+                      rooms={rooms}
+                      subjects={subjects}
+                      teachers={teachers}
+                      onSlotClick={(day, period, slot) => {
+                        console.log('Clicked:', day, period, slot);
+                      }}
+                    />
+                    <HoursSummary 
+                      slots={scheduleSlots}
+                      groups={teachingGroups}
+                      subjects={subjects}
+                    />
+                  </div>
                 </TabsContent>
                 
                 <TabsContent value="list">
