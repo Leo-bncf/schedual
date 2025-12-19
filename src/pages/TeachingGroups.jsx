@@ -30,6 +30,7 @@ export default function TeachingGroups() {
   const [searchQuery, setSearchQuery] = useState('');
   const [levelFilter, setLevelFilter] = useState('all');
   const [yearFilter, setYearFilter] = useState('all');
+  const [showAIGenerator, setShowAIGenerator] = useState(false);
 
   const queryClient = useQueryClient();
 
