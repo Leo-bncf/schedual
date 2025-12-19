@@ -18,7 +18,9 @@ import DataTable from '../components/ui-custom/DataTable';
 export default function SuperAdmin() {
   const [isSchoolDialogOpen, setIsSchoolDialogOpen] = useState(false);
   const [isUserDialogOpen, setIsUserDialogOpen] = useState(false);
+  const [isCreateSchoolForUserOpen, setIsCreateSchoolForUserOpen] = useState(false);
   const [editingSchool, setEditingSchool] = useState(null);
+  const [selectedUser, setSelectedUser] = useState(null);
   const [schoolFormData, setSchoolFormData] = useState({
     name: '',
     code: '',
@@ -31,6 +33,16 @@ export default function SuperAdmin() {
     email: '',
     school_id: '',
     role: 'user'
+  });
+  const [newSchoolFormData, setNewSchoolFormData] = useState({
+    name: '',
+    code: '',
+    ib_school_code: '',
+    address: '',
+    timezone: 'UTC',
+    academic_year: '2024-2025',
+    user_email: '',
+    user_role: 'admin'
   });
 
   const queryClient = useQueryClient();
@@ -66,6 +78,46 @@ export default function SuperAdmin() {
       queryClient.invalidateQueries({ queryKey: ['allSchools'] });
       setIsSchoolDialogOpen(false);
       resetSchoolForm();
+    },
+  });
+
+  const createSchoolForUserMutation = useMutation({
+    mutationFn: async (data) => {
+      // Create school first
+      const school = await base44.entities.School.create({
+        name: data.name,
+        code: data.code,
+        ib_school_code: data.ib_school_code,
+        address: data.address,
+        timezone: data.timezone,
+        academic_year: data.academic_year
+      });
+      
+      // Then assign user to school
+      const user = allUsers.find(u => u.email === data.user_email);
+      if (user) {
+        await base44.entities.User.update(user.id, { 
+          school_id: school.id, 
+          role: data.user_role 
+        });
+      }
+      
+      return school;
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['allSchools'] });
+      queryClient.invalidateQueries({ queryKey: ['allUsers'] });
+      setIsCreateSchoolForUserOpen(false);
+      setNewSchoolFormData({
+        name: '',
+        code: '',
+        ib_school_code: '',
+        address: '',
+        timezone: 'UTC',
+        academic_year: '2024-2025',
+        user_email: '',
+        user_role: 'admin'
+      });
     },
   });
 
@@ -243,20 +295,39 @@ export default function SuperAdmin() {
     {
       header: '',
       cell: (row) => (
-        <Button
-          variant="outline"
-          size="sm"
-          onClick={() => {
-            setUserFormData({
-              email: row.email,
-              school_id: row.school_id || '',
-              role: row.role || 'user'
-            });
-            setIsUserDialogOpen(true);
-          }}
-        >
-          Assign
-        </Button>
+        <div className="flex gap-2">
+          {!row.school_id && (
+            <Button
+              variant="default"
+              size="sm"
+              className="bg-indigo-600 hover:bg-indigo-700"
+              onClick={() => {
+                setNewSchoolFormData({
+                  ...newSchoolFormData,
+                  user_email: row.email
+                });
+                setIsCreateSchoolForUserOpen(true);
+              }}
+            >
+              <Plus className="w-3 h-3 mr-1" />
+              Create School
+            </Button>
+          )}
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={() => {
+              setUserFormData({
+                email: row.email,
+                school_id: row.school_id || '',
+                role: row.role || 'user'
+              });
+              setIsUserDialogOpen(true);
+            }}
+          >
+            Assign
+          </Button>
+        </div>
       )
     }
   ];
@@ -309,20 +380,14 @@ export default function SuperAdmin() {
           <div className="space-y-4">
             <Card className="bg-blue-50 border-blue-200">
               <CardContent className="p-4">
-                <h4 className="font-semibold text-blue-900 mb-2">📋 How to add users to a new school:</h4>
+                <h4 className="font-semibold text-blue-900 mb-2">📋 Workflow for new clients:</h4>
                 <ol className="text-sm text-blue-800 space-y-1 list-decimal list-inside">
-                  <li>Create the school in the "Schools" tab</li>
-                  <li>Invite users via Base44's user invite system (Dashboard → Settings → Invite Users)</li>
-                  <li>Once invited users log in, assign them to the school using the "Assign User to School" button below</li>
+                  <li>Users first connect/login to the platform</li>
+                  <li>Find the user in the list below and click "Create School" next to their name</li>
+                  <li>Fill in the school details - the user will be automatically assigned as admin</li>
                 </ol>
               </CardContent>
             </Card>
-            <div className="flex justify-end">
-              <Button onClick={() => setIsUserDialogOpen(true)} variant="outline">
-                <Users className="w-4 h-4 mr-2" />
-                Assign User to School
-              </Button>
-            </div>
             <Card className="border-0 shadow-sm">
               <CardContent className="p-0">
                 <DataTable 
@@ -522,6 +587,113 @@ export default function SuperAdmin() {
               Assign
             </Button>
           </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      <Dialog open={isCreateSchoolForUserOpen} onOpenChange={setIsCreateSchoolForUserOpen}>
+        <DialogContent className="sm:max-w-lg">
+          <DialogHeader>
+            <DialogTitle>Create School for User</DialogTitle>
+            <DialogDescription>
+              Create a new school and assign {newSchoolFormData.user_email} as the admin
+            </DialogDescription>
+          </DialogHeader>
+          <form onSubmit={(e) => { e.preventDefault(); createSchoolForUserMutation.mutate(newSchoolFormData); }} className="space-y-4">
+            <div className="grid grid-cols-2 gap-4">
+              <div className="space-y-2">
+                <Label htmlFor="newName">School Name *</Label>
+                <Input 
+                  id="newName"
+                  value={newSchoolFormData.name}
+                  onChange={(e) => setNewSchoolFormData({ ...newSchoolFormData, name: e.target.value })}
+                  required
+                />
+              </div>
+              <div className="space-y-2">
+                <Label htmlFor="newCode">School Code *</Label>
+                <Input 
+                  id="newCode"
+                  value={newSchoolFormData.code}
+                  onChange={(e) => setNewSchoolFormData({ ...newSchoolFormData, code: e.target.value })}
+                  required
+                />
+              </div>
+            </div>
+            <div className="space-y-2">
+              <Label htmlFor="newIbCode">IB School Code</Label>
+              <Input 
+                id="newIbCode"
+                value={newSchoolFormData.ib_school_code}
+                onChange={(e) => setNewSchoolFormData({ ...newSchoolFormData, ib_school_code: e.target.value })}
+              />
+            </div>
+            <div className="space-y-2">
+              <Label htmlFor="newAddress">Address</Label>
+              <Input 
+                id="newAddress"
+                value={newSchoolFormData.address}
+                onChange={(e) => setNewSchoolFormData({ ...newSchoolFormData, address: e.target.value })}
+              />
+            </div>
+            <div className="grid grid-cols-2 gap-4">
+              <div className="space-y-2">
+                <Label htmlFor="newTimezone">Timezone</Label>
+                <Select 
+                  value={newSchoolFormData.timezone} 
+                  onValueChange={(value) => setNewSchoolFormData({ ...newSchoolFormData, timezone: value })}
+                >
+                  <SelectTrigger>
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="UTC">UTC</SelectItem>
+                    <SelectItem value="America/New_York">America/New_York</SelectItem>
+                    <SelectItem value="Europe/London">Europe/London</SelectItem>
+                    <SelectItem value="Europe/Paris">Europe/Paris</SelectItem>
+                    <SelectItem value="Asia/Dubai">Asia/Dubai</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+              <div className="space-y-2">
+                <Label htmlFor="newYear">Academic Year</Label>
+                <Select 
+                  value={newSchoolFormData.academic_year} 
+                  onValueChange={(value) => setNewSchoolFormData({ ...newSchoolFormData, academic_year: value })}
+                >
+                  <SelectTrigger>
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="2024-2025">2024-2025</SelectItem>
+                    <SelectItem value="2025-2026">2025-2026</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+            </div>
+            <div className="space-y-2">
+              <Label htmlFor="newUserRole">User Role</Label>
+              <Select 
+                value={newSchoolFormData.user_role} 
+                onValueChange={(value) => setNewSchoolFormData({ ...newSchoolFormData, user_role: value })}
+              >
+                <SelectTrigger>
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="admin">Admin (Recommended)</SelectItem>
+                  <SelectItem value="user">User</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+            <DialogFooter>
+              <Button type="button" variant="outline" onClick={() => setIsCreateSchoolForUserOpen(false)}>
+                Cancel
+              </Button>
+              <Button type="submit" className="bg-indigo-600 hover:bg-indigo-700" disabled={createSchoolForUserMutation.isPending}>
+                Create School & Assign User
+              </Button>
+            </DialogFooter>
+          </form>
         </DialogContent>
       </Dialog>
     </div>
