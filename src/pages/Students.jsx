@@ -31,6 +31,8 @@ import {
 import PageHeader from '../components/ui-custom/PageHeader';
 import DataTable from '../components/ui-custom/DataTable';
 import EmptyState from '../components/ui-custom/EmptyState';
+import SubjectSelector from '../components/students/SubjectSelector';
+import DPValidator from '../components/students/DPValidator';
 
 export default function Students() {
   const [isDialogOpen, setIsDialogOpen] = useState(false);
@@ -41,8 +43,10 @@ export default function Students() {
     full_name: '',
     email: '',
     student_id: '',
+    ib_programme: 'DP',
     year_group: 'DP1',
     subject_choices: [],
+    core_components: { tok_assigned: false, cas_assigned: false, ee_assigned: false },
     is_active: true
   });
 
@@ -84,8 +88,10 @@ export default function Students() {
       full_name: '',
       email: '',
       student_id: '',
+      ib_programme: 'DP',
       year_group: 'DP1',
       subject_choices: [],
+      core_components: { tok_assigned: false, cas_assigned: false, ee_assigned: false },
       is_active: true
     });
     setEditingStudent(null);
@@ -98,8 +104,10 @@ export default function Students() {
       full_name: student.full_name || '',
       email: student.email || '',
       student_id: student.student_id || '',
+      ib_programme: student.ib_programme || 'DP',
       year_group: student.year_group || 'DP1',
       subject_choices: student.subject_choices || [],
+      core_components: student.core_components || { tok_assigned: false, cas_assigned: false, ee_assigned: false },
       is_active: student.is_active !== false
     });
     setIsDialogOpen(true);
@@ -297,21 +305,78 @@ export default function Students() {
               />
             </div>
 
-            <div className="space-y-2">
-              <Label htmlFor="year_group">Year Group *</Label>
-              <Select 
-                value={formData.year_group} 
-                onValueChange={(value) => setFormData({ ...formData, year_group: value })}
-              >
-                <SelectTrigger>
-                  <SelectValue />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="DP1">DP1 (First Year)</SelectItem>
-                  <SelectItem value="DP2">DP2 (Second Year)</SelectItem>
-                </SelectContent>
-              </Select>
+            <div className="grid grid-cols-2 gap-4">
+              <div className="space-y-2">
+                <Label htmlFor="ib_programme">IB Programme *</Label>
+                <Select 
+                  value={formData.ib_programme} 
+                  onValueChange={(value) => setFormData({ ...formData, ib_programme: value })}
+                >
+                  <SelectTrigger>
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="PYP">PYP (Primary Years)</SelectItem>
+                    <SelectItem value="MYP">MYP (Middle Years)</SelectItem>
+                    <SelectItem value="DP">DP (Diploma Programme)</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+              <div className="space-y-2">
+                <Label htmlFor="year_group">Year Group *</Label>
+                <Select 
+                  value={formData.year_group} 
+                  onValueChange={(value) => setFormData({ ...formData, year_group: value })}
+                >
+                  <SelectTrigger>
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {formData.ib_programme === 'DP' && (
+                      <>
+                        <SelectItem value="DP1">DP1 (Year 1)</SelectItem>
+                        <SelectItem value="DP2">DP2 (Year 2)</SelectItem>
+                      </>
+                    )}
+                    {formData.ib_programme === 'MYP' && (
+                      <>
+                        <SelectItem value="MYP1">MYP1</SelectItem>
+                        <SelectItem value="MYP2">MYP2</SelectItem>
+                        <SelectItem value="MYP3">MYP3</SelectItem>
+                        <SelectItem value="MYP4">MYP4</SelectItem>
+                        <SelectItem value="MYP5">MYP5</SelectItem>
+                      </>
+                    )}
+                    {formData.ib_programme === 'PYP' && (
+                      <>
+                        <SelectItem value="PYP1">PYP1</SelectItem>
+                        <SelectItem value="PYP2">PYP2</SelectItem>
+                        <SelectItem value="PYP3">PYP3</SelectItem>
+                        <SelectItem value="PYP4">PYP4</SelectItem>
+                        <SelectItem value="PYP5">PYP5</SelectItem>
+                      </>
+                    )}
+                  </SelectContent>
+                </Select>
+              </div>
             </div>
+
+            <div className="space-y-2">
+              <Label>Subject Choices</Label>
+              <SubjectSelector 
+                subjects={subjects}
+                selectedSubjects={formData.subject_choices}
+                onChange={(choices) => setFormData({ ...formData, subject_choices: choices })}
+                programme={formData.ib_programme}
+              />
+            </div>
+
+            {formData.ib_programme === 'DP' && (
+              <DPValidator 
+                subjectChoices={formData.subject_choices}
+                subjects={subjects}
+              />
+            )}
 
             <DialogFooter>
               <Button type="button" variant="outline" onClick={resetForm}>
