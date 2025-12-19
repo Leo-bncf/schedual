@@ -39,6 +39,7 @@ const navigation = [
   { name: 'Rooms', page: 'Rooms', icon: Building2 },
   { name: 'Constraints', page: 'Constraints', icon: Settings },
   { name: 'AI Advisor', page: 'AIAdvisor', icon: Sparkles },
+  { name: 'Super Admin', page: 'SuperAdmin', icon: Settings, superAdminOnly: true },
   { name: 'User Management', page: 'UserManagement', icon: Users, adminOnly: true },
   { name: 'Settings', page: 'Settings', icon: Settings },
 ];
@@ -127,6 +128,7 @@ export default function Layout({ children, currentPageName }) {
           {/* Navigation */}
           <nav className="flex-1 px-4 py-6 space-y-1 overflow-y-auto">
             {navigation.map((item) => {
+              if (item.superAdminOnly && (user?.role !== 'admin' || user?.school_id)) return null;
               if (item.adminOnly && user?.role !== 'admin') return null;
               const isActive = currentPageName === item.page;
               return (

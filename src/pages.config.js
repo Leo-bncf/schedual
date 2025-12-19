@@ -14,6 +14,7 @@ import TestData from './pages/TestData';
 import OptimizationEngine from './pages/OptimizationEngine';
 import Onboarding from './pages/Onboarding';
 import UserManagement from './pages/UserManagement';
+import SuperAdmin from './pages/SuperAdmin';
 import __Layout from './Layout.jsx';
 
 
@@ -34,6 +35,7 @@ export const PAGES = {
     "OptimizationEngine": OptimizationEngine,
     "Onboarding": Onboarding,
     "UserManagement": UserManagement,
+    "SuperAdmin": SuperAdmin,
 }
 
 export const pagesConfig = {
