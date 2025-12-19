@@ -16,6 +16,13 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 
 const CONSTRAINT_TEMPLATES = {
+  teacher_qualification: {
+    name: "Teacher Qualification Match",
+    description: "Teachers must be qualified for the subject and IB level they teach",
+    category: "teacher",
+    type: "hard",
+    rule: { type: "qualification_check" }
+  },
   teacher_free_day: {
     name: "Teacher Free Day",
     description: "Ensure teacher has a specified day free from teaching",
