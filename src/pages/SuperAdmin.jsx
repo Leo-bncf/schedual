@@ -144,6 +144,11 @@ export default function SuperAdmin() {
     },
   });
 
+  const deleteUserMutation = useMutation({
+    mutationFn: (id) => base44.entities.User.delete(id),
+    onSuccess: () => queryClient.invalidateQueries({ queryKey: ['allUsers'] }),
+  });
+
   const resetSchoolForm = () => {
     setSchoolFormData({
       name: '',
@@ -313,20 +318,35 @@ export default function SuperAdmin() {
               Create School
             </Button>
           )}
-          <Button
-            variant="outline"
-            size="sm"
-            onClick={() => {
-              setUserFormData({
-                email: row.email,
-                school_id: row.school_id || '',
-                role: row.role || 'user'
-              });
-              setIsUserDialogOpen(true);
-            }}
-          >
-            Assign
-          </Button>
+          <DropdownMenu>
+            <DropdownMenuTrigger asChild>
+              <Button variant="outline" size="sm">
+                <MoreHorizontal className="w-4 h-4" />
+              </Button>
+            </DropdownMenuTrigger>
+            <DropdownMenuContent align="end">
+              <DropdownMenuItem 
+                onClick={() => {
+                  setUserFormData({
+                    email: row.email,
+                    school_id: row.school_id || '',
+                    role: row.role || 'user'
+                  });
+                  setIsUserDialogOpen(true);
+                }}
+              >
+                <Pencil className="w-4 h-4 mr-2" />
+                Assign to School
+              </DropdownMenuItem>
+              <DropdownMenuItem 
+                className="text-rose-600"
+                onClick={() => deleteUserMutation.mutate(row.id)}
+              >
+                <Trash2 className="w-4 h-4 mr-2" />
+                Delete User
+              </DropdownMenuItem>
+            </DropdownMenuContent>
+          </DropdownMenu>
         </div>
       )
     }
