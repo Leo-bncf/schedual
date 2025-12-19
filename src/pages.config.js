@@ -13,6 +13,7 @@ import DatabaseSchema from './pages/DatabaseSchema';
 import TestData from './pages/TestData';
 import OptimizationEngine from './pages/OptimizationEngine';
 import Onboarding from './pages/Onboarding';
+import UserManagement from './pages/UserManagement';
 import __Layout from './Layout.jsx';
 
 
@@ -32,6 +33,7 @@ export const PAGES = {
     "TestData": TestData,
     "OptimizationEngine": OptimizationEngine,
     "Onboarding": Onboarding,
+    "UserManagement": UserManagement,
 }
 
 export const pagesConfig = {
