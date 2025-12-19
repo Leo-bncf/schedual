@@ -352,10 +352,9 @@ export default function SuperAdmin() {
     }
   ];
 
-  const totalUsers = allUsers.length;
+  const totalUsers = allUsers.filter(u => u.school_id).length; // Only users assigned to schools
   const totalTeachers = allTeachers.length;
   const totalStudents = allStudents.length;
-  const totalSchedules = allSchedules.length;
 
   return (
     <div className="space-y-6">
