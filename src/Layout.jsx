@@ -51,6 +51,12 @@ export default function Layout({ children, currentPageName }) {
   const [isLoading, setIsLoading] = useState(true);
 
   useEffect(() => {
+    // Skip authentication check for Landing page
+    if (currentPageName === 'Landing') {
+      setIsLoading(false);
+      return;
+    }
+
     base44.auth.me()
       .then(userData => {
         setUser(userData);
@@ -60,7 +66,12 @@ export default function Layout({ children, currentPageName }) {
         // Not authenticated, redirect to login
         base44.auth.redirectToLogin(window.location.pathname);
       });
-  }, []);
+  }, [currentPageName]);
+
+  // Landing page doesn't need Layout wrapper
+  if (currentPageName === 'Landing') {
+    return children;
+  }
 
   if (isLoading) {
     return (
