@@ -176,9 +176,12 @@ export default function Schedule() {
       rooms.forEach(r => { roomSchedules[r.id] = []; });
 
       // Sort groups by priority (fewer students = harder to schedule = higher priority)
+      // Include ALL teaching groups across ALL IB levels (PYP, MYP, DP)
       const sortedGroups = [...teachingGroups]
         .filter(g => g.is_active && g.hours_per_week && g.teacher_id && g.student_ids?.length > 0)
         .sort((a, b) => (a.student_ids?.length || 0) - (b.student_ids?.length || 0));
+
+      console.log(`Scheduling ${sortedGroups.length} teaching groups across all IB levels...`);
 
       for (const group of sortedGroups) {
         const periodsNeeded = Math.ceil(group.hours_per_week);
@@ -263,14 +266,26 @@ export default function Schedule() {
         await base44.entities.ScheduleSlot.bulkCreate(newSlots);
       }
 
+      // Calculate actual stats
+      const scheduledStudents = new Set();
+      const scheduledTeachers = new Set();
+      newSlots.forEach(slot => {
+        const group = teachingGroups.find(g => g.id === slot.teaching_group_id);
+        if (group) {
+          group.student_ids?.forEach(sid => scheduledStudents.add(sid));
+          if (group.teacher_id) scheduledTeachers.add(group.teacher_id);
+        }
+      });
+
       // Update version with stats
       await updateVersionMutation.mutateAsync({
         id: selectedVersion.id,
         data: { 
           generated_at: new Date().toISOString(),
-          score: Math.floor(Math.random() * 20) + 80,
-          conflicts_count: Math.floor(Math.random() * 5),
-          warnings_count: Math.floor(Math.random() * 10)
+          score: Math.floor((newSlots.length / (sortedGroups.length * 6)) * 100),
+          conflicts_count: 0,
+          warnings_count: sortedGroups.length - new Set(newSlots.map(s => s.teaching_group_id)).size,
+          notes: `Scheduled ${scheduledStudents.size} students and ${scheduledTeachers.size} teachers across ${newSlots.length} periods`
         }
       });
 
@@ -378,10 +393,12 @@ export default function Schedule() {
                           {selectedVersion.status}
                         </Badge>
                       </div>
-                      <p className="text-slate-500">
+                      <p className="text-slate-500 text-sm">
                         {selectedVersion.academic_year} • {selectedVersion.term || 'Full Year'}
-                        {selectedVersion.score && ` • Score: ${selectedVersion.score}%`}
                       </p>
+                      {selectedVersion.notes && (
+                        <p className="text-xs text-slate-400 mt-1">{selectedVersion.notes}</p>
+                      )}
                     </div>
                     <div className="flex gap-2">
                       <Button 
@@ -552,9 +569,9 @@ export default function Schedule() {
       <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
         <DialogContent className="sm:max-w-md">
           <DialogHeader>
-            <DialogTitle>Create New Schedule Version</DialogTitle>
+            <DialogTitle>Create Master Schedule</DialogTitle>
             <DialogDescription>
-              Create a new draft schedule to work on.
+              This will create a master schedule that includes all students (PYP, MYP, DP), all teachers, and all rooms. Each student and teacher will have their own synchronized schedule.
             </DialogDescription>
           </DialogHeader>
           <form onSubmit={(e) => { e.preventDefault(); createVersionMutation.mutate(formData); }} className="space-y-4">
@@ -608,7 +625,7 @@ export default function Schedule() {
                 Cancel
               </Button>
               <Button type="submit" className="bg-indigo-600 hover:bg-indigo-700" disabled={createVersionMutation.isPending}>
-                Create Version
+                Create Master Schedule
               </Button>
             </DialogFooter>
           </form>
