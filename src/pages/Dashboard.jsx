@@ -15,7 +15,8 @@ import {
   Clock,
   ArrowRight,
   Sparkles,
-  TrendingUp
+  TrendingUp,
+  Settings
 } from 'lucide-react';
 import { Link } from 'react-router-dom';
 import { createPageUrl } from '../utils';
