@@ -117,6 +117,18 @@ export default function UserManagement() {
           >
             Edit
           </Button>
+          <Button
+            variant="outline"
+            size="sm"
+            className="text-rose-600 hover:text-rose-700 hover:bg-rose-50"
+            onClick={() => {
+              if (confirm(`Are you sure you want to delete ${user.full_name}?`)) {
+                deleteUserMutation.mutate(user.id);
+              }
+            }}
+          >
+            <Trash2 className="w-4 h-4" />
+          </Button>
         </div>
       )
     }
