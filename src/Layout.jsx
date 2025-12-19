@@ -38,7 +38,7 @@ const navigation = [
   { name: 'Students', page: 'Students', icon: GraduationCap },
   { name: 'Subjects', page: 'Subjects', icon: BookOpen },
   { name: 'Rooms', page: 'Rooms', icon: Building2 },
-  { name: 'Constraints', page: 'Constraints', icon: Settings },
+  { name: 'Constraints', page: 'Constraints', icon: Settings, adminOnly: true },
   { name: 'AI Advisor', page: 'AIAdvisor', icon: Sparkles },
   { name: 'Super Admin', page: 'SuperAdmin', icon: Settings, superAdminOnly: true },
   { name: 'User Management', page: 'UserManagement', icon: Users, adminOnly: true },
