@@ -96,11 +96,20 @@ export default function Settings() {
   });
 
   const handleSave = async () => {
+    if (!formData.name || !formData.code) {
+      alert('Please fill in School Name and School Code');
+      return;
+    }
     setIsSaving(true);
-    if (school) {
-      await updateSchoolMutation.mutateAsync({ id: school.id, data: formData });
-    } else {
-      await createSchoolMutation.mutateAsync(formData);
+    try {
+      if (school) {
+        await updateSchoolMutation.mutateAsync({ id: school.id, data: formData });
+      } else {
+        await createSchoolMutation.mutateAsync(formData);
+      }
+    } catch (error) {
+      console.error('Error saving school:', error);
+      alert('Failed to save school settings. Please try again.');
     }
     setIsSaving(false);
   };
