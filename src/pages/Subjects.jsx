@@ -1,0 +1,404 @@
+import React, { useState } from 'react';
+import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
+import { base44 } from '@/api/base44Client';
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import { Badge } from "@/components/ui/badge";
+import { Checkbox } from "@/components/ui/checkbox";
+import { Card, CardContent } from "@/components/ui/card";
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogHeader,
+  DialogTitle,
+  DialogFooter,
+} from "@/components/ui/dialog";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
+import { Plus, Search, BookOpen, MoreHorizontal, Pencil, Trash2, FlaskConical, Palette, Calculator, Globe, Languages, FileText } from 'lucide-react';
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
+import PageHeader from '../components/ui-custom/PageHeader';
+import EmptyState from '../components/ui-custom/EmptyState';
+
+const IB_GROUPS = [
+  { id: 1, name: 'Language & Literature', icon: FileText, color: 'bg-blue-500' },
+  { id: 2, name: 'Language Acquisition', icon: Languages, color: 'bg-emerald-500' },
+  { id: 3, name: 'Individuals & Societies', icon: Globe, color: 'bg-amber-500' },
+  { id: 4, name: 'Sciences', icon: FlaskConical, color: 'bg-violet-500' },
+  { id: 5, name: 'Mathematics', icon: Calculator, color: 'bg-rose-500' },
+  { id: 6, name: 'The Arts', icon: Palette, color: 'bg-cyan-500' },
+];
+
+export default function Subjects() {
+  const [isDialogOpen, setIsDialogOpen] = useState(false);
+  const [editingSubject, setEditingSubject] = useState(null);
+  const [searchQuery, setSearchQuery] = useState('');
+  const [formData, setFormData] = useState({
+    name: '',
+    code: '',
+    ib_group: 1,
+    ib_group_name: 'Language & Literature',
+    available_levels: ['HL', 'SL'],
+    hl_hours_per_week: 6,
+    sl_hours_per_week: 4,
+    requires_lab: false,
+    requires_special_room: '',
+    is_core: false,
+    is_active: true
+  });
+
+  const queryClient = useQueryClient();
+
+  const { data: subjects = [], isLoading } = useQuery({
+    queryKey: ['subjects'],
+    queryFn: () => base44.entities.Subject.list(),
+  });
+
+  const createMutation = useMutation({
+    mutationFn: (data) => base44.entities.Subject.create(data),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['subjects'] });
+      resetForm();
+    },
+  });
+
+  const updateMutation = useMutation({
+    mutationFn: ({ id, data }) => base44.entities.Subject.update(id, data),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['subjects'] });
+      resetForm();
+    },
+  });
+
+  const deleteMutation = useMutation({
+    mutationFn: (id) => base44.entities.Subject.delete(id),
+    onSuccess: () => queryClient.invalidateQueries({ queryKey: ['subjects'] }),
+  });
+
+  const resetForm = () => {
+    setFormData({
+      name: '',
+      code: '',
+      ib_group: 1,
+      ib_group_name: 'Language & Literature',
+      available_levels: ['HL', 'SL'],
+      hl_hours_per_week: 6,
+      sl_hours_per_week: 4,
+      requires_lab: false,
+      requires_special_room: '',
+      is_core: false,
+      is_active: true
+    });
+    setEditingSubject(null);
+    setIsDialogOpen(false);
+  };
+
+  const handleEdit = (subject) => {
+    setEditingSubject(subject);
+    setFormData({
+      name: subject.name || '',
+      code: subject.code || '',
+      ib_group: subject.ib_group || 1,
+      ib_group_name: subject.ib_group_name || 'Language & Literature',
+      available_levels: subject.available_levels || ['HL', 'SL'],
+      hl_hours_per_week: subject.hl_hours_per_week || 6,
+      sl_hours_per_week: subject.sl_hours_per_week || 4,
+      requires_lab: subject.requires_lab || false,
+      requires_special_room: subject.requires_special_room || '',
+      is_core: subject.is_core || false,
+      is_active: subject.is_active !== false
+    });
+    setIsDialogOpen(true);
+  };
+
+  const handleSubmit = (e) => {
+    e.preventDefault();
+    const group = IB_GROUPS.find(g => g.id === formData.ib_group);
+    const data = { ...formData, ib_group_name: group?.name || '' };
+    
+    if (editingSubject) {
+      updateMutation.mutate({ id: editingSubject.id, data });
+    } else {
+      createMutation.mutate(data);
+    }
+  };
+
+  const filteredSubjects = subjects.filter(s => 
+    s.name?.toLowerCase().includes(searchQuery.toLowerCase()) ||
+    s.code?.toLowerCase().includes(searchQuery.toLowerCase())
+  );
+
+  const groupedSubjects = IB_GROUPS.map(group => ({
+    ...group,
+    subjects: filteredSubjects.filter(s => s.ib_group === group.id)
+  }));
+
+  const coreSubjects = filteredSubjects.filter(s => s.is_core);
+
+  return (
+    <div className="space-y-6">
+      <PageHeader 
+        title="Subjects"
+        description="Manage IB Diploma Programme subjects across all groups"
+        actions={
+          <Button onClick={() => setIsDialogOpen(true)} className="bg-indigo-600 hover:bg-indigo-700">
+            <Plus className="w-4 h-4 mr-2" />
+            Add Subject
+          </Button>
+        }
+      />
+
+      <div className="flex items-center gap-4 mb-6">
+        <div className="relative flex-1 max-w-sm">
+          <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400" />
+          <Input 
+            placeholder="Search subjects..." 
+            className="pl-10"
+            value={searchQuery}
+            onChange={(e) => setSearchQuery(e.target.value)}
+          />
+        </div>
+      </div>
+
+      {subjects.length === 0 && !isLoading ? (
+        <EmptyState 
+          icon={BookOpen}
+          title="No subjects yet"
+          description="Add IB subjects to start creating teaching groups."
+          action={() => setIsDialogOpen(true)}
+          actionLabel="Add Subject"
+        />
+      ) : (
+        <div className="space-y-8">
+          {/* Core Components */}
+          {coreSubjects.length > 0 && (
+            <div>
+              <h3 className="text-sm font-semibold text-slate-500 uppercase tracking-wide mb-4">Core Components</h3>
+              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
+                {coreSubjects.map(subject => (
+                  <Card key={subject.id} className="border-0 shadow-sm hover:shadow-md transition-shadow">
+                    <CardContent className="p-4">
+                      <div className="flex items-start justify-between">
+                        <div className="flex items-center gap-3">
+                          <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-slate-700 to-slate-800 flex items-center justify-center">
+                            <BookOpen className="w-5 h-5 text-white" />
+                          </div>
+                          <div>
+                            <p className="font-semibold text-slate-900">{subject.name}</p>
+                            <p className="text-sm text-slate-500">{subject.code}</p>
+                          </div>
+                        </div>
+                        <DropdownMenu>
+                          <DropdownMenuTrigger asChild>
+                            <Button variant="ghost" size="icon" className="h-8 w-8">
+                              <MoreHorizontal className="w-4 h-4" />
+                            </Button>
+                          </DropdownMenuTrigger>
+                          <DropdownMenuContent align="end">
+                            <DropdownMenuItem onClick={() => handleEdit(subject)}>
+                              <Pencil className="w-4 h-4 mr-2" /> Edit
+                            </DropdownMenuItem>
+                            <DropdownMenuItem className="text-rose-600" onClick={() => deleteMutation.mutate(subject.id)}>
+                              <Trash2 className="w-4 h-4 mr-2" /> Delete
+                            </DropdownMenuItem>
+                          </DropdownMenuContent>
+                        </DropdownMenu>
+                      </div>
+                    </CardContent>
+                  </Card>
+                ))}
+              </div>
+            </div>
+          )}
+
+          {/* Subject Groups */}
+          {groupedSubjects.map(group => {
+            if (group.subjects.length === 0) return null;
+            const Icon = group.icon;
+            
+            return (
+              <div key={group.id}>
+                <div className="flex items-center gap-3 mb-4">
+                  <div className={`w-8 h-8 rounded-lg ${group.color} flex items-center justify-center`}>
+                    <Icon className="w-4 h-4 text-white" />
+                  </div>
+                  <h3 className="text-sm font-semibold text-slate-700">
+                    Group {group.id}: {group.name}
+                  </h3>
+                  <Badge variant="secondary" className="bg-slate-100">
+                    {group.subjects.length} subjects
+                  </Badge>
+                </div>
+                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
+                  {group.subjects.filter(s => !s.is_core).map(subject => (
+                    <Card key={subject.id} className="border-0 shadow-sm hover:shadow-md transition-shadow">
+                      <CardContent className="p-4">
+                        <div className="flex items-start justify-between mb-3">
+                          <div>
+                            <p className="font-semibold text-slate-900">{subject.name}</p>
+                            <p className="text-sm text-slate-500">{subject.code}</p>
+                          </div>
+                          <DropdownMenu>
+                            <DropdownMenuTrigger asChild>
+                              <Button variant="ghost" size="icon" className="h-8 w-8">
+                                <MoreHorizontal className="w-4 h-4" />
+                              </Button>
+                            </DropdownMenuTrigger>
+                            <DropdownMenuContent align="end">
+                              <DropdownMenuItem onClick={() => handleEdit(subject)}>
+                                <Pencil className="w-4 h-4 mr-2" /> Edit
+                              </DropdownMenuItem>
+                              <DropdownMenuItem className="text-rose-600" onClick={() => deleteMutation.mutate(subject.id)}>
+                                <Trash2 className="w-4 h-4 mr-2" /> Delete
+                              </DropdownMenuItem>
+                            </DropdownMenuContent>
+                          </DropdownMenu>
+                        </div>
+                        <div className="flex flex-wrap gap-2">
+                          {subject.available_levels?.includes('HL') && (
+                            <Badge className="bg-rose-100 text-rose-700 border-0">
+                              HL {subject.hl_hours_per_week}h
+                            </Badge>
+                          )}
+                          {subject.available_levels?.includes('SL') && (
+                            <Badge className="bg-amber-100 text-amber-700 border-0">
+                              SL {subject.sl_hours_per_week}h
+                            </Badge>
+                          )}
+                          {subject.requires_lab && (
+                            <Badge variant="outline" className="text-violet-600 border-violet-200">
+                              <FlaskConical className="w-3 h-3 mr-1" /> Lab
+                            </Badge>
+                          )}
+                        </div>
+                      </CardContent>
+                    </Card>
+                  ))}
+                </div>
+              </div>
+            );
+          })}
+        </div>
+      )}
+
+      <Dialog open={isDialogOpen} onOpenChange={(open) => { if (!open) resetForm(); }}>
+        <DialogContent className="sm:max-w-lg">
+          <DialogHeader>
+            <DialogTitle>{editingSubject ? 'Edit Subject' : 'Add New Subject'}</DialogTitle>
+            <DialogDescription>
+              {editingSubject ? 'Update subject details.' : 'Enter the details for the new subject.'}
+            </DialogDescription>
+          </DialogHeader>
+          <form onSubmit={handleSubmit} className="space-y-4">
+            <div className="grid grid-cols-2 gap-4">
+              <div className="space-y-2">
+                <Label htmlFor="name">Subject Name *</Label>
+                <Input 
+                  id="name"
+                  value={formData.name}
+                  onChange={(e) => setFormData({ ...formData, name: e.target.value })}
+                  placeholder="e.g., Physics"
+                  required
+                />
+              </div>
+              <div className="space-y-2">
+                <Label htmlFor="code">Code *</Label>
+                <Input 
+                  id="code"
+                  value={formData.code}
+                  onChange={(e) => setFormData({ ...formData, code: e.target.value })}
+                  placeholder="e.g., PHY"
+                  required
+                />
+              </div>
+            </div>
+
+            <div className="space-y-2">
+              <Label htmlFor="ib_group">IB Group</Label>
+              <Select 
+                value={String(formData.ib_group)} 
+                onValueChange={(value) => setFormData({ ...formData, ib_group: parseInt(value) })}
+              >
+                <SelectTrigger>
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  {IB_GROUPS.map(group => (
+                    <SelectItem key={group.id} value={String(group.id)}>
+                      Group {group.id}: {group.name}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+
+            <div className="grid grid-cols-2 gap-4">
+              <div className="space-y-2">
+                <Label htmlFor="hl_hours">HL Hours/Week</Label>
+                <Input 
+                  id="hl_hours"
+                  type="number"
+                  value={formData.hl_hours_per_week}
+                  onChange={(e) => setFormData({ ...formData, hl_hours_per_week: parseInt(e.target.value) })}
+                />
+              </div>
+              <div className="space-y-2">
+                <Label htmlFor="sl_hours">SL Hours/Week</Label>
+                <Input 
+                  id="sl_hours"
+                  type="number"
+                  value={formData.sl_hours_per_week}
+                  onChange={(e) => setFormData({ ...formData, sl_hours_per_week: parseInt(e.target.value) })}
+                />
+              </div>
+            </div>
+
+            <div className="flex items-center gap-6">
+              <div className="flex items-center gap-2">
+                <Checkbox 
+                  id="requires_lab"
+                  checked={formData.requires_lab}
+                  onCheckedChange={(checked) => setFormData({ ...formData, requires_lab: checked })}
+                />
+                <Label htmlFor="requires_lab" className="font-normal">Requires Lab</Label>
+              </div>
+              <div className="flex items-center gap-2">
+                <Checkbox 
+                  id="is_core"
+                  checked={formData.is_core}
+                  onCheckedChange={(checked) => setFormData({ ...formData, is_core: checked })}
+                />
+                <Label htmlFor="is_core" className="font-normal">Core Component</Label>
+              </div>
+            </div>
+
+            <DialogFooter>
+              <Button type="button" variant="outline" onClick={resetForm}>
+                Cancel
+              </Button>
+              <Button 
+                type="submit" 
+                className="bg-indigo-600 hover:bg-indigo-700"
+                disabled={createMutation.isPending || updateMutation.isPending}
+              >
+                {editingSubject ? 'Save Changes' : 'Add Subject'}
+              </Button>
+            </DialogFooter>
+          </form>
+        </DialogContent>
+      </Dialog>
+    </div>
+  );
+}
