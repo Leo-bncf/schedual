@@ -369,11 +369,10 @@ export default function SuperAdmin() {
         }
       />
 
-      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
         <StatCard title="Total Schools" value={schools.length} icon={Building2} />
         <StatCard title="Total Users" value={totalUsers} icon={Users} />
-        <StatCard title="Total Teachers" value={totalTeachers} icon={Users} />
-        <StatCard title="Total Students" value={totalStudents} icon={GraduationCap} />
+        <StatCard title="Unassigned Users" value={allUsers.filter(u => !u.school_id).length} icon={Users} />
       </div>
 
       <Tabs defaultValue="schools" className="space-y-4">
