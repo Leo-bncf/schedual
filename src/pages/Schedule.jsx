@@ -74,12 +74,22 @@ export default function Schedule() {
     queryFn: () => base44.entities.Room.list(),
   });
 
+  const { data: schools = [] } = useQuery({
+    queryKey: ['schools'],
+    queryFn: () => base44.entities.School.list(),
+  });
+
   const createVersionMutation = useMutation({
-    mutationFn: (data) => base44.entities.ScheduleVersion.create(data),
+    mutationFn: (data) => {
+      const schoolId = schools[0]?.id;
+      if (!schoolId) throw new Error('No school found');
+      return base44.entities.ScheduleVersion.create({ ...data, school_id: schoolId });
+    },
     onSuccess: (newVersion) => {
       queryClient.invalidateQueries({ queryKey: ['scheduleVersions'] });
       setIsDialogOpen(false);
       setSelectedVersion(newVersion);
+      setFormData({ name: '', academic_year: '2024-2025', term: 'Fall', status: 'draft' });
     },
   });
 
