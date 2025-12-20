@@ -17,6 +17,7 @@ import UserManagement from './pages/UserManagement';
 import SuperAdmin from './pages/SuperAdmin';
 import Home from './pages/Home';
 import Landing from './pages/Landing';
+import Subscription from './pages/Subscription';
 import __Layout from './Layout.jsx';
 
 
@@ -40,6 +41,7 @@ export const PAGES = {
     "SuperAdmin": SuperAdmin,
     "Home": Home,
     "Landing": Landing,
+    "Subscription": Subscription,
 }
 
 export const pagesConfig = {

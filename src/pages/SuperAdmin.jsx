@@ -206,7 +206,14 @@ export default function SuperAdmin() {
       header: 'School',
       cell: (row) => (
         <div>
-          <p className="font-medium text-slate-900">{row.name}</p>
+          <div className="flex items-center gap-2">
+            <p className="font-medium text-slate-900">{row.name}</p>
+            {row.subscription_status === 'active' ? (
+              <Badge className="bg-emerald-100 text-emerald-700 border-0 text-xs">Active</Badge>
+            ) : (
+              <Badge variant="outline" className="text-slate-600 text-xs">Inactive</Badge>
+            )}
+          </div>
           <p className="text-sm text-slate-500">{row.code}</p>
         </div>
       )
@@ -256,7 +263,18 @@ export default function SuperAdmin() {
           <DropdownMenuContent align="end">
             <DropdownMenuItem onClick={() => handleEditSchool(row)}>
               <Pencil className="w-4 h-4 mr-2" />
-              Edit
+              Edit Details
+            </DropdownMenuItem>
+            <DropdownMenuItem 
+              onClick={() => {
+                const newStatus = row.subscription_status === 'active' ? 'inactive' : 'active';
+                updateSchoolMutation.mutate({ 
+                  id: row.id, 
+                  data: { subscription_status: newStatus }
+                });
+              }}
+            >
+              {row.subscription_status === 'active' ? '⏸️ Deactivate' : '✓ Activate Subscription'}
             </DropdownMenuItem>
             <DropdownMenuItem 
               className="text-rose-600"

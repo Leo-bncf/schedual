@@ -15,7 +15,8 @@ import {
   X,
   ChevronDown,
   LogOut,
-  Bell
+  Bell,
+  CreditCard
 } from 'lucide-react';
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -42,6 +43,7 @@ const navigation = [
   { name: 'AI Advisor', page: 'AIAdvisor', icon: Sparkles, schoolOnly: true },
   { name: 'Super Admin', page: 'SuperAdmin', icon: Settings, superAdminOnly: true },
   { name: 'User Management', page: 'UserManagement', icon: Users, superAdminOnly: true },
+  { name: 'Subscription', page: 'Subscription', icon: CreditCard },
   { name: 'Settings', page: 'Settings', icon: Settings },
 ];
 

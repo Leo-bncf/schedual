@@ -1,37 +1,25 @@
 import React, { useState } from 'react';
+import { base44 } from '@/api/base44Client';
 import { Button } from "@/components/ui/button";
 import { CheckCircle, Loader2 } from 'lucide-react';
 
 const plans = [
   {
-    name: 'Monthly',
-    price: '$99',
-    period: 'per month',
-    description: 'Perfect for trying out the platform',
-    features: [
-      'Unlimited teachers and students',
-      'Automated schedule generation',
-      'Conflict detection & resolution',
-      'IB programme support (PYP, MYP, DP)',
-      'Export schedules',
-      'Email support',
-    ],
-    priceId: 'price_monthly', // Replace with actual Stripe price ID
-  },
-  {
-    name: 'Yearly',
-    price: '$990',
+    name: 'Yearly Subscription',
+    price: '€2,239',
     period: 'per year',
-    description: 'Save 17% with annual billing',
+    description: 'All-inclusive yearly billing with secure storage',
     features: [
-      'Everything in Monthly',
+      'Full platform access (€1,999/year)',
+      'Secure data storage included (€240/year)',
+      'Unlimited teachers and students',
+      'AI-powered scheduling',
+      'Conflict detection & resolution',
+      'IB compliance checking',
       'Priority support',
-      'Advanced AI features',
-      'Custom constraints',
-      'Dedicated account manager',
-      '2 months free',
+      'Additional users: €200/year each',
     ],
-    priceId: 'price_yearly', // Replace with actual Stripe price ID
+    priceId: 'price_yearly',
     popular: true,
   },
 ];
@@ -43,22 +31,15 @@ export default function PricingSection() {
     setLoading(priceId);
     
     try {
-      // TODO: Implement Stripe checkout
-      // This would typically call a backend endpoint that creates a Stripe checkout session
-      // For now, we'll just show a placeholder
-      alert('Stripe integration coming soon! Price ID: ' + priceId);
-      
-      // Example of what the implementation would look like:
-      // const response = await fetch('/api/create-checkout-session', {
-      //   method: 'POST',
-      //   headers: { 'Content-Type': 'application/json' },
-      //   body: JSON.stringify({ priceId }),
-      // });
-      // const { url } = await response.json();
-      // window.location.href = url;
+      // Redirect to signup/login first
+      const isAuthenticated = await base44.auth.isAuthenticated();
+      if (!isAuthenticated) {
+        base44.auth.redirectToLogin('/Subscription');
+      } else {
+        window.location.href = '/Subscription';
+      }
     } catch (error) {
-      console.error('Payment error:', error);
-      alert('Payment failed. Please try again.');
+      console.error('Navigation error:', error);
     } finally {
       setLoading(null);
     }
@@ -78,7 +59,7 @@ export default function PricingSection() {
         </div>
 
         {/* Pricing Cards */}
-        <div className="grid md:grid-cols-2 gap-8 max-w-5xl mx-auto">
+        <div className="flex justify-center max-w-2xl mx-auto">
           {plans.map((plan, index) => (
             <div 
               key={index} 
