@@ -48,37 +48,27 @@ export default function Subscription() {
   const handleCheckout = async () => {
     setIsProcessing(true);
     try {
-      // Since backend functions are not enabled, we'll show instructions
-      alert(
-        `Stripe integration requires backend setup.\n\n` +
-        `Total Amount: €${totalYearlyPrice}/year\n` +
-        `- Base: €${BASE_YEARLY_PRICE}\n` +
-        `- Storage: €${STORAGE_YEARLY_PRICE}\n` +
-        `- Additional Users (${additionalUsers}): €${additionalUsers * ADDITIONAL_USER_YEARLY_PRICE}\n\n` +
-        `Contact support@schedual.com to complete payment.`
-      );
+      // Create Stripe checkout session via backend
+      const response = await base44.functions.invoke('createCheckout', {
+        additionalUsers
+      });
 
-      // In production with backend functions, this would be:
-      // const stripe = await loadStripe(STRIPE_PUBLIC_KEY);
-      // const response = await base44.integrations.StripeCheckout.create({
-      //   priceData: {
-      //     currency: 'eur',
-      //     unit_amount: totalYearlyPrice * 100,
-      //     recurring: { interval: 'year' }
-      //   },
-      //   quantity: 1,
-      //   metadata: {
-      //     school_id: school.id,
-      //     additional_users: additionalUsers
-      //   },
-      //   success_url: window.location.origin + '/Dashboard',
-      //   cancel_url: window.location.origin + '/Subscription'
-      // });
-      // await stripe.redirectToCheckout({ sessionId: response.id });
+      if (response.data.error) {
+        throw new Error(response.data.error);
+      }
 
+      // Redirect to Stripe Checkout
+      const stripe = await loadStripe(STRIPE_PUBLIC_KEY);
+      const result = await stripe.redirectToCheckout({
+        sessionId: response.data.sessionId
+      });
+
+      if (result.error) {
+        throw new Error(result.error.message);
+      }
     } catch (error) {
       console.error('Checkout error:', error);
-      alert('Payment processing failed. Please try again.');
+      alert('Payment processing failed: ' + error.message);
     } finally {
       setIsProcessing(false);
     }
@@ -299,17 +289,19 @@ export default function Subscription() {
         </CardContent>
       </Card>
 
-      {/* Notice for Backend Setup */}
-      <Card className="border-amber-200 bg-amber-50">
+      {/* Stripe Webhook Setup Instructions */}
+      <Card className="border-blue-200 bg-blue-50">
         <CardContent className="p-6">
           <div className="flex gap-3">
-            <AlertCircle className="w-5 h-5 text-amber-600 flex-shrink-0 mt-0.5" />
-            <div className="text-sm text-amber-800">
-              <p className="font-semibold mb-1">Payment System Notice</p>
-              <p>
-                Full Stripe integration with automatic webhooks requires backend functions to be enabled. 
-                Currently, subscription status must be updated manually by administrators after payment confirmation.
-              </p>
+            <AlertCircle className="w-5 h-5 text-blue-600 flex-shrink-0 mt-0.5" />
+            <div className="text-sm text-blue-800">
+              <p className="font-semibold mb-2">📋 Stripe Webhook Setup Required</p>
+              <ol className="list-decimal list-inside space-y-1">
+                <li>Go to your Stripe Dashboard → Developers → Webhooks</li>
+                <li>Add endpoint: <code className="bg-blue-100 px-1 rounded">https://your-base44-function-url/stripeWebhook</code></li>
+                <li>Select events: <code className="bg-blue-100 px-1 rounded">checkout.session.completed</code>, <code className="bg-blue-100 px-1 rounded">customer.subscription.*</code></li>
+                <li>Copy the webhook signing secret and add it as <code className="bg-blue-100 px-1 rounded">STRIPE_WEBHOOK_SECRET</code> in your app secrets</li>
+              </ol>
             </div>
           </div>
         </CardContent>
