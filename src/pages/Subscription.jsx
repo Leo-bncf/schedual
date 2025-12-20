@@ -20,7 +20,7 @@ import {
 } from 'lucide-react';
 import PageHeader from '../components/ui-custom/PageHeader';
 
-const STRIPE_PUBLIC_KEY = import.meta.env.VITE_STRIPE_PUBLIC_KEY || 'pk_test_YOUR_KEY';
+const STRIPE_PUBLIC_KEY = import.meta.env.VITE_STRIPE_PUBLIC_KEY;
 const BASE_YEARLY_PRICE = 1999;
 const STORAGE_YEARLY_PRICE = 240;
 const ADDITIONAL_USER_YEARLY_PRICE = 200;
