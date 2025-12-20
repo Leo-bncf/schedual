@@ -16,7 +16,8 @@ import {
   Plus,
   Minus,
   Loader2,
-  Shield
+  Shield,
+  Copy
 } from 'lucide-react';
 import PageHeader from '../components/ui-custom/PageHeader';
 
@@ -28,7 +29,16 @@ const ADDITIONAL_USER_YEARLY_PRICE = 200;
 export default function Subscription() {
   const [additionalUsers, setAdditionalUsers] = useState(0);
   const [isProcessing, setIsProcessing] = useState(false);
+  const [copied, setCopied] = useState(false);
   const queryClient = useQueryClient();
+
+  const webhookUrl = `${window.location.origin.replace(/^https?:\/\//, 'https://')}/api/stripeWebhook`;
+
+  const copyToClipboard = () => {
+    navigator.clipboard.writeText(webhookUrl);
+    setCopied(true);
+    setTimeout(() => setCopied(false), 2000);
+  };
 
   const { data: user } = useQuery({
     queryKey: ['currentUser'],
@@ -292,16 +302,42 @@ export default function Subscription() {
       {/* Stripe Webhook Setup Instructions */}
       <Card className="border-blue-200 bg-blue-50">
         <CardContent className="p-6">
-          <div className="flex gap-3">
-            <AlertCircle className="w-5 h-5 text-blue-600 flex-shrink-0 mt-0.5" />
-            <div className="text-sm text-blue-800">
-              <p className="font-semibold mb-2">📋 Stripe Webhook Setup Required</p>
-              <ol className="list-decimal list-inside space-y-1">
-                <li>Go to your Stripe Dashboard → Developers → Webhooks</li>
-                <li>Add endpoint: <code className="bg-blue-100 px-1 rounded">https://your-base44-function-url/stripeWebhook</code></li>
-                <li>Select events: <code className="bg-blue-100 px-1 rounded">checkout.session.completed</code>, <code className="bg-blue-100 px-1 rounded">customer.subscription.*</code></li>
-                <li>Copy the webhook signing secret and add it as <code className="bg-blue-100 px-1 rounded">STRIPE_WEBHOOK_SECRET</code> in your app secrets</li>
-              </ol>
+          <div className="space-y-4">
+            <div className="flex gap-3">
+              <AlertCircle className="w-5 h-5 text-blue-600 flex-shrink-0 mt-0.5" />
+              <div className="text-sm text-blue-800">
+                <p className="font-semibold mb-3">📋 Stripe Webhook Setup Required</p>
+                
+                {/* Webhook URL Display with Copy Button */}
+                <div className="bg-white rounded-lg p-4 mb-4 border-2 border-blue-200">
+                  <Label className="text-blue-900 font-semibold mb-2 block">Your Webhook Endpoint URL:</Label>
+                  <div className="flex items-center gap-2">
+                    <code className="flex-1 bg-slate-100 px-3 py-2 rounded text-slate-900 text-xs break-all">
+                      {webhookUrl}
+                    </code>
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      onClick={copyToClipboard}
+                      className="flex-shrink-0"
+                    >
+                      {copied ? (
+                        <CheckCircle className="w-4 h-4 text-green-600" />
+                      ) : (
+                        <Copy className="w-4 h-4" />
+                      )}
+                    </Button>
+                  </div>
+                </div>
+
+                <ol className="list-decimal list-inside space-y-2">
+                  <li>Go to your <strong>Stripe Dashboard → Developers → Webhooks</strong></li>
+                  <li>Click <strong>"Add endpoint"</strong> and paste the URL above</li>
+                  <li>Select events: <code className="bg-blue-100 px-1 rounded">checkout.session.completed</code>, <code className="bg-blue-100 px-1 rounded">customer.subscription.updated</code>, <code className="bg-blue-100 px-1 rounded">customer.subscription.deleted</code>, <code className="bg-blue-100 px-1 rounded">invoice.payment_failed</code></li>
+                  <li>After creating the webhook, copy the <strong>signing secret</strong> (starts with whsec_)</li>
+                  <li>Add it as <code className="bg-blue-100 px-1 rounded">STRIPE_WEBHOOK_SECRET</code> in your Base44 app secrets</li>
+                </ol>
+              </div>
             </div>
           </div>
         </CardContent>
