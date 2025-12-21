@@ -1,9 +1,17 @@
-import React from 'react';
+import React, { useState, useEffect } from 'react';
+import { Link } from 'react-router-dom';
 import { Button } from "@/components/ui/button";
 import { Calendar } from 'lucide-react';
 import { base44 } from '@/api/base44Client';
+import { createPageUrl } from '../../utils';
 
 export default function LandingHeader() {
+  const [isAuthenticated, setIsAuthenticated] = useState(false);
+
+  useEffect(() => {
+    base44.auth.isAuthenticated().then(setIsAuthenticated);
+  }, []);
+
   const scrollToSection = (id) => {
     const element = document.getElementById(id);
     if (element) {
@@ -45,13 +53,32 @@ export default function LandingHeader() {
             </button>
           </nav>
 
-          {/* Login Button */}
-          <Button 
-            onClick={() => base44.auth.redirectToLogin('/Dashboard')}
-            className="bg-indigo-600 hover:bg-indigo-700"
-          >
-            Login
-          </Button>
+          {/* CTA Buttons */}
+          <div className="flex items-center gap-3">
+            {isAuthenticated ? (
+              <Link to={createPageUrl('Dashboard')}>
+                <Button className="bg-indigo-600 hover:bg-indigo-700">
+                  Go to Dashboard
+                </Button>
+              </Link>
+            ) : (
+              <>
+                <Button 
+                  variant="ghost"
+                  onClick={() => base44.auth.redirectToLogin('/Dashboard')}
+                  className="text-slate-600 hover:text-slate-900"
+                >
+                  Login
+                </Button>
+                <Button 
+                  onClick={() => base44.auth.redirectToLogin('/Dashboard')}
+                  className="bg-indigo-600 hover:bg-indigo-700"
+                >
+                  Sign Up
+                </Button>
+              </>
+            )}
+          </div>
         </div>
       </div>
     </header>
