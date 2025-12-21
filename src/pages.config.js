@@ -14,7 +14,6 @@ import TestData from './pages/TestData';
 import OptimizationEngine from './pages/OptimizationEngine';
 import Onboarding from './pages/Onboarding';
 import UserManagement from './pages/UserManagement';
-import SuperAdmin from './pages/SuperAdmin';
 import Home from './pages/Home';
 import Landing from './pages/Landing';
 import Subscription from './pages/Subscription';
@@ -22,6 +21,7 @@ import SubscriptionsOverview from './pages/SubscriptionsOverview';
 import Support from './pages/Support';
 import SupportTickets from './pages/SupportTickets';
 import NotFound from './pages/NotFound';
+import Panel from './pages/Panel';
 import __Layout from './Layout.jsx';
 
 
@@ -42,7 +42,6 @@ export const PAGES = {
     "OptimizationEngine": OptimizationEngine,
     "Onboarding": Onboarding,
     "UserManagement": UserManagement,
-    "SuperAdmin": SuperAdmin,
     "Home": Home,
     "Landing": Landing,
     "Subscription": Subscription,
@@ -50,6 +49,7 @@ export const PAGES = {
     "Support": Support,
     "SupportTickets": SupportTickets,
     "NotFound": NotFound,
+    "Panel": Panel,
 }
 
 export const pagesConfig = {

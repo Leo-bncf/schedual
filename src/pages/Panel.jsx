@@ -15,7 +15,7 @@ import PageHeader from '../components/ui-custom/PageHeader';
 import StatCard from '../components/ui-custom/StatCard';
 import DataTable from '../components/ui-custom/DataTable';
 
-export default function SuperAdmin() {
+export default function Panel() {
   const [isSchoolDialogOpen, setIsSchoolDialogOpen] = useState(false);
   const [isUserDialogOpen, setIsUserDialogOpen] = useState(false);
   const [isCreateSchoolForUserOpen, setIsCreateSchoolForUserOpen] = useState(false);
@@ -377,7 +377,7 @@ export default function SuperAdmin() {
   return (
     <div className="space-y-6">
       <PageHeader 
-        title={<div className="flex items-center gap-2"><Crown className="w-6 h-6 text-amber-500" /> Super Admin Panel</div>}
+        title={<div className="flex items-center gap-2"><Crown className="w-6 h-6 text-amber-500" /> Admin Panel</div>}
         description="Manage all schools, users, and platform-wide settings"
         actions={
           <Button onClick={() => setIsSchoolDialogOpen(true)} className="bg-indigo-600 hover:bg-indigo-700">

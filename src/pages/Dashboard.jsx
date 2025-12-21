@@ -90,7 +90,7 @@ export default function Dashboard() {
               </div>
             </CardHeader>
             <CardContent className="space-y-3">
-              <Link to={createPageUrl('SuperAdmin')}>
+              <Link to={createPageUrl('Panel')}>
                 <Button variant="outline" className="w-full justify-start text-left h-auto py-4">
                   <Settings className="w-5 h-5 mr-3" />
                   <div>

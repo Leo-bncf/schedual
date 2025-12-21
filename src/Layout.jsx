@@ -41,7 +41,7 @@ const navigation = [
   { name: 'Rooms', page: 'Rooms', icon: Building2, schoolOnly: true },
   { name: 'Constraints', page: 'Constraints', icon: Settings, schoolOnly: true },
   { name: 'AI Advisor', page: 'AIAdvisor', icon: Sparkles, schoolOnly: true },
-  { name: 'Super Admin', page: 'SuperAdmin', icon: Settings, superAdminOnly: true },
+  { name: 'Admin Panel', page: 'Panel', icon: Settings, superAdminOnly: true },
   { name: 'User Management', page: 'UserManagement', icon: Users, superAdminOnly: true },
   { name: 'Subscriptions', page: 'SubscriptionsOverview', icon: CreditCard, superAdminOnly: true },
   { name: 'Support Tickets', page: 'SupportTickets', icon: Bell, superAdminOnly: true },
