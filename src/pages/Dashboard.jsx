@@ -27,13 +27,6 @@ export default function Dashboard() {
     queryFn: () => base44.auth.me(),
   });
 
-  // Redirect super admin to Panel
-  const isSuperAdmin = user?.role === 'admin' && !user?.school_id;
-  if (isSuperAdmin && user) {
-    window.location.href = createPageUrl('Panel');
-    return null;
-  }
-
   const { data: teachers = [], isLoading: loadingTeachers } = useQuery({
     queryKey: ['teachers', user?.school_id],
     queryFn: () => base44.entities.Teacher.filter({ school_id: user?.school_id }),
@@ -69,6 +62,13 @@ export default function Dashboard() {
     queryFn: () => base44.entities.AIAdvisorLog.filter({ school_id: user?.school_id, status: 'pending' }, '-created_date', 5),
     enabled: !!user?.school_id,
   });
+
+  // Redirect super admin to Panel
+  React.useEffect(() => {
+    if (user?.role === 'admin' && !user?.school_id) {
+      window.location.href = createPageUrl('Panel');
+    }
+  }, [user]);
 
   // School dashboard
   const activeTeachers = teachers.filter(t => t.is_active !== false).length;
