@@ -29,8 +29,9 @@ export default function Dashboard() {
     queryFn: () => base44.auth.me(),
   });
 
-  // Check if super admin (admin with no school_id)
-  const isSuperAdmin = user?.role === 'admin' && !user?.school_id;
+  // Check if super admin (admin with no school_id + authorized email)
+  const SUPER_ADMIN_EMAIL = 'luc@schedual.com'; // Change this to your email
+  const isSuperAdmin = user?.role === 'admin' && !user?.school_id && user?.email === SUPER_ADMIN_EMAIL;
 
   const { data: teachers = [], isLoading: loadingTeachers } = useQuery({
     queryKey: ['teachers', user?.school_id],
