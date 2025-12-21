@@ -86,40 +86,10 @@ export default function Layout({ children, currentPageName }) {
   const isSuperAdmin = user?.role === 'admin' && !user?.school_id;
   const needsSchoolAssignment = !user?.school_id && !isSuperAdmin;
 
-  if (needsSchoolAssignment) {
-    return (
-      <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-slate-50 to-slate-100 p-4">
-        <Card className="max-w-md w-full border-0 shadow-xl">
-          <CardContent className="p-8 text-center">
-            <div className="w-16 h-16 rounded-full bg-amber-100 flex items-center justify-center mx-auto mb-4">
-              <Settings className="w-8 h-8 text-amber-600" />
-            </div>
-            <h1 className="text-2xl font-bold text-slate-900 mb-2">Account Setup in Progress</h1>
-            <p className="text-slate-600 mb-6">
-              Thank you for creating an account! Your access is pending activation.
-            </p>
-            <div className="bg-blue-50 border border-blue-200 rounded-lg p-4 mb-6">
-              <p className="text-sm text-blue-900 font-medium mb-2">📧 Next Steps:</p>
-              <p className="text-sm text-blue-800">
-                Please contact the administrator to complete your subscription and get access to your school dashboard.
-              </p>
-            </div>
-            <div className="bg-slate-50 rounded-lg p-4">
-              <p className="text-xs text-slate-500 mb-1">Contact Admin:</p>
-              <p className="text-sm font-medium text-slate-900">support@ibschedule.com</p>
-            </div>
-            <Button 
-              variant="outline" 
-              className="mt-6"
-              onClick={() => base44.auth.logout()}
-            >
-              <LogOut className="w-4 h-4 mr-2" />
-              Sign Out
-            </Button>
-          </CardContent>
-        </Card>
-      </div>
-    );
+  // Redirect to Subscription page if user has no school (unless already on Subscription page)
+  if (needsSchoolAssignment && currentPageName !== 'Subscription') {
+    window.location.href = createPageUrl('Subscription');
+    return null;
   }
 
   const getInitials = (name) => {
