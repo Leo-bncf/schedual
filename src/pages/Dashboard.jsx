@@ -14,9 +14,7 @@ import {
   CheckCircle,
   Clock,
   ArrowRight,
-  Sparkles,
-  TrendingUp,
-  Settings
+  Sparkles
 } from 'lucide-react';
 import { Link } from 'react-router-dom';
 import { createPageUrl } from '../utils';
@@ -29,186 +27,43 @@ export default function Dashboard() {
     queryFn: () => base44.auth.me(),
   });
 
-  // Check if super admin (admin with no school_id)
-  const isSuperAdmin = user?.role === 'admin' && !user?.school_id;
-
   const { data: teachers = [], isLoading: loadingTeachers } = useQuery({
     queryKey: ['teachers', user?.school_id],
     queryFn: () => base44.entities.Teacher.filter({ school_id: user?.school_id }),
-    enabled: !isSuperAdmin && !!user?.school_id,
+    enabled: !!user?.school_id,
   });
 
   const { data: students = [], isLoading: loadingStudents } = useQuery({
     queryKey: ['students', user?.school_id],
     queryFn: () => base44.entities.Student.filter({ school_id: user?.school_id }),
-    enabled: !isSuperAdmin && !!user?.school_id,
+    enabled: !!user?.school_id,
   });
 
   const { data: subjects = [], isLoading: loadingSubjects } = useQuery({
     queryKey: ['subjects', user?.school_id],
     queryFn: () => base44.entities.Subject.filter({ school_id: user?.school_id }),
-    enabled: !isSuperAdmin && !!user?.school_id,
+    enabled: !!user?.school_id,
   });
 
   const { data: rooms = [], isLoading: loadingRooms } = useQuery({
     queryKey: ['rooms', user?.school_id],
     queryFn: () => base44.entities.Room.filter({ school_id: user?.school_id }),
-    enabled: !isSuperAdmin && !!user?.school_id,
+    enabled: !!user?.school_id,
   });
 
   const { data: scheduleVersions = [], isLoading: loadingSchedules } = useQuery({
     queryKey: ['scheduleVersions', user?.school_id],
     queryFn: () => base44.entities.ScheduleVersion.filter({ school_id: user?.school_id }, '-created_date', 5),
-    enabled: !isSuperAdmin && !!user?.school_id,
+    enabled: !!user?.school_id,
   });
 
   const { data: aiLogs = [], isLoading: loadingLogs } = useQuery({
     queryKey: ['aiLogs', user?.school_id],
     queryFn: () => base44.entities.AIAdvisorLog.filter({ school_id: user?.school_id, status: 'pending' }, '-created_date', 5),
-    enabled: !isSuperAdmin && !!user?.school_id,
+    enabled: !!user?.school_id,
   });
 
-  // Super Admin Dashboard
-  if (isSuperAdmin) {
-    return (
-      <div className="space-y-8">
-        <PageHeader 
-          title="Super Admin Dashboard"
-          description="Platform administration and testing tools"
-        />
-
-        {/* Admin Sections */}
-        <div className="grid lg:grid-cols-2 gap-6">
-          {/* Super Admin Section */}
-          <Card className="border-0 shadow-lg bg-gradient-to-br from-indigo-50 to-violet-50">
-            <CardHeader>
-              <div className="flex items-center gap-3">
-                <div className="w-12 h-12 rounded-xl bg-gradient-to-br from-indigo-500 to-violet-600 flex items-center justify-center">
-                  <Settings className="w-6 h-6 text-white" />
-                </div>
-                <CardTitle className="text-xl">Super Admin</CardTitle>
-              </div>
-            </CardHeader>
-            <CardContent className="space-y-3">
-              <Link to={createPageUrl('Panel')}>
-                <Button variant="outline" className="w-full justify-start text-left h-auto py-4">
-                  <Settings className="w-5 h-5 mr-3" />
-                  <div>
-                    <div className="font-semibold">School Management</div>
-                    <div className="text-xs text-slate-500">Manage schools and platform settings</div>
-                  </div>
-                </Button>
-              </Link>
-            </CardContent>
-          </Card>
-
-          {/* User Management Section */}
-          <Card className="border-0 shadow-lg bg-gradient-to-br from-emerald-50 to-teal-50">
-            <CardHeader>
-              <div className="flex items-center gap-3">
-                <div className="w-12 h-12 rounded-xl bg-gradient-to-br from-emerald-500 to-teal-600 flex items-center justify-center">
-                  <Users className="w-6 h-6 text-white" />
-                </div>
-                <CardTitle className="text-xl">User Management</CardTitle>
-              </div>
-            </CardHeader>
-            <CardContent className="space-y-3">
-              <Link to={createPageUrl('UserManagement')}>
-                <Button variant="outline" className="w-full justify-start text-left h-auto py-4">
-                  <Users className="w-5 h-5 mr-3" />
-                  <div>
-                    <div className="font-semibold">User Administration</div>
-                    <div className="text-xs text-slate-500">Manage user accounts and permissions</div>
-                  </div>
-                </Button>
-              </Link>
-            </CardContent>
-          </Card>
-        </div>
-
-        {/* Testing Tools Section */}
-        <Card className="border-0 shadow-lg">
-          <CardHeader>
-            <div className="flex items-center gap-3">
-              <div className="w-12 h-12 rounded-xl bg-gradient-to-br from-amber-500 to-orange-600 flex items-center justify-center">
-                <Sparkles className="w-6 h-6 text-white" />
-              </div>
-              <CardTitle className="text-xl">Testing & Development</CardTitle>
-            </div>
-          </CardHeader>
-          <CardContent>
-            <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-              <Link to={createPageUrl('Schedule')}>
-                <div className="p-4 rounded-xl border-2 border-slate-200 hover:border-indigo-400 hover:bg-indigo-50 transition-all text-center group">
-                  <Calendar className="w-8 h-8 text-indigo-600 mx-auto mb-2 group-hover:scale-110 transition-transform" />
-                  <span className="text-sm font-medium text-slate-700">Schedule</span>
-                </div>
-              </Link>
-              <Link to={createPageUrl('TeachingGroups')}>
-                <div className="p-4 rounded-xl border-2 border-slate-200 hover:border-indigo-400 hover:bg-indigo-50 transition-all text-center group">
-                  <Users className="w-8 h-8 text-indigo-600 mx-auto mb-2 group-hover:scale-110 transition-transform" />
-                  <span className="text-sm font-medium text-slate-700">Teaching Groups</span>
-                </div>
-              </Link>
-              <Link to={createPageUrl('Teachers')}>
-                <div className="p-4 rounded-xl border-2 border-slate-200 hover:border-indigo-400 hover:bg-indigo-50 transition-all text-center group">
-                  <Users className="w-8 h-8 text-indigo-600 mx-auto mb-2 group-hover:scale-110 transition-transform" />
-                  <span className="text-sm font-medium text-slate-700">Teachers</span>
-                </div>
-              </Link>
-              <Link to={createPageUrl('Students')}>
-                <div className="p-4 rounded-xl border-2 border-slate-200 hover:border-indigo-400 hover:bg-indigo-50 transition-all text-center group">
-                  <GraduationCap className="w-8 h-8 text-indigo-600 mx-auto mb-2 group-hover:scale-110 transition-transform" />
-                  <span className="text-sm font-medium text-slate-700">Students</span>
-                </div>
-              </Link>
-              <Link to={createPageUrl('Subjects')}>
-                <div className="p-4 rounded-xl border-2 border-slate-200 hover:border-indigo-400 hover:bg-indigo-50 transition-all text-center group">
-                  <BookOpen className="w-8 h-8 text-indigo-600 mx-auto mb-2 group-hover:scale-110 transition-transform" />
-                  <span className="text-sm font-medium text-slate-700">Subjects</span>
-                </div>
-              </Link>
-              <Link to={createPageUrl('Rooms')}>
-                <div className="p-4 rounded-xl border-2 border-slate-200 hover:border-indigo-400 hover:bg-indigo-50 transition-all text-center group">
-                  <Building2 className="w-8 h-8 text-indigo-600 mx-auto mb-2 group-hover:scale-110 transition-transform" />
-                  <span className="text-sm font-medium text-slate-700">Rooms</span>
-                </div>
-              </Link>
-              <Link to={createPageUrl('Constraints')}>
-                <div className="p-4 rounded-xl border-2 border-slate-200 hover:border-indigo-400 hover:bg-indigo-50 transition-all text-center group">
-                  <Settings className="w-8 h-8 text-indigo-600 mx-auto mb-2 group-hover:scale-110 transition-transform" />
-                  <span className="text-sm font-medium text-slate-700">Constraints</span>
-                </div>
-              </Link>
-              <Link to={createPageUrl('AIAdvisor')}>
-                <div className="p-4 rounded-xl border-2 border-slate-200 hover:border-indigo-400 hover:bg-indigo-50 transition-all text-center group">
-                  <Sparkles className="w-8 h-8 text-indigo-600 mx-auto mb-2 group-hover:scale-110 transition-transform" />
-                  <span className="text-sm font-medium text-slate-700">AI Advisor</span>
-                </div>
-              </Link>
-            </div>
-          </CardContent>
-        </Card>
-
-        {/* Platform Overview */}
-        <Card className="border-0 shadow-lg">
-          <CardHeader>
-            <CardTitle className="text-xl flex items-center gap-2">
-              <TrendingUp className="w-5 h-5 text-indigo-600" />
-              Platform Overview
-            </CardTitle>
-          </CardHeader>
-          <CardContent>
-            <div className="text-center text-slate-500 py-8">
-              Platform statistics and overview coming soon
-            </div>
-          </CardContent>
-        </Card>
-      </div>
-    );
-  }
-
-  // Regular user dashboard
+  // School dashboard
   const activeTeachers = teachers.filter(t => t.is_active !== false).length;
   const activeStudents = students.filter(s => s.is_active !== false).length;
   const activeSubjects = subjects.filter(s => s.is_active !== false).length;
