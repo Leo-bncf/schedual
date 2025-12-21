@@ -1,7 +1,6 @@
 import React, { useState } from 'react';
-import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
+import { useQuery } from '@tanstack/react-query';
 import { base44 } from '@/api/base44Client';
-import { loadStripe } from '@stripe/stripe-js';
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
@@ -16,8 +15,7 @@ import {
   Plus,
   Minus,
   Loader2,
-  Shield,
-  Copy
+  Shield
 } from 'lucide-react';
 import PageHeader from '../components/ui-custom/PageHeader';
 
@@ -29,16 +27,6 @@ const ADDITIONAL_USER_YEARLY_PRICE = 200;
 export default function Subscription() {
   const [additionalUsers, setAdditionalUsers] = useState(0);
   const [isProcessing, setIsProcessing] = useState(false);
-  const [copied, setCopied] = useState(false);
-  const queryClient = useQueryClient();
-
-  const webhookUrl = `${window.location.origin.replace(/^https?:\/\//, 'https://')}/api/stripeWebhook`;
-
-  const copyToClipboard = () => {
-    navigator.clipboard.writeText(webhookUrl);
-    setCopied(true);
-    setTimeout(() => setCopied(false), 2000);
-  };
 
   const { data: user } = useQuery({
     queryKey: ['currentUser'],
@@ -58,7 +46,6 @@ export default function Subscription() {
   const handleCheckout = async () => {
     setIsProcessing(true);
     try {
-      // Create Stripe checkout session via backend
       const response = await base44.functions.invoke('createCheckout', {
         additionalUsers
       });
@@ -68,14 +55,7 @@ export default function Subscription() {
       }
 
       // Redirect to Stripe Checkout
-      const stripe = await loadStripe(STRIPE_PUBLIC_KEY);
-      const result = await stripe.redirectToCheckout({
-        sessionId: response.data.sessionId
-      });
-
-      if (result.error) {
-        throw new Error(result.error.message);
-      }
+      window.location.href = response.data.url;
     } catch (error) {
       console.error('Checkout error:', error);
       alert('Payment processing failed: ' + error.message);
@@ -86,6 +66,13 @@ export default function Subscription() {
 
   const isActive = school?.subscription_status === 'active';
   const isPastDue = school?.subscription_status === 'past_due';
+
+  // Auto-redirect to checkout if no school
+  React.useEffect(() => {
+    if (user && !user.school_id && !isProcessing) {
+      handleCheckout();
+    }
+  }, [user]);
 
   return (
     <div className="space-y-6">
@@ -342,14 +329,8 @@ export default function Subscription() {
             <div className="text-sm text-slate-700">
               <p className="font-semibold mb-2">Need Help?</p>
               <p className="mb-3">
-                If you have questions about your subscription, billing, or need to make changes, our support team is here to help.
+                If you have questions about your subscription, billing, or need to make changes, contact us at support@ibschedule.com
               </p>
-              <Link to={createPageUrl('Support')}>
-                <Button variant="outline" size="sm">
-                  <Bell className="w-4 h-4 mr-2" />
-                  Contact Support
-                </Button>
-              </Link>
             </div>
           </div>
         </CardContent>
