@@ -40,7 +40,7 @@ export default function SupportTickets() {
   const [filterStatus, setFilterStatus] = useState('all');
 
   // Access control - only super admin
-  const SUPER_ADMIN_EMAIL = 'luc@schedual.com';
+  const SUPER_ADMIN_EMAIL = 'Leo.bancroft34@icloud.com';
   const { data: currentUser } = useQuery({
     queryKey: ['currentUser'],
     queryFn: () => base44.auth.me(),

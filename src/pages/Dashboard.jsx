@@ -30,7 +30,7 @@ export default function Dashboard() {
   });
 
   // Check if super admin (admin with no school_id + authorized email)
-  const SUPER_ADMIN_EMAIL = 'luc@schedual.com'; // Change this to your email
+  const SUPER_ADMIN_EMAIL = 'Leo.bancroft34@icloud.com';
   const isSuperAdmin = user?.role === 'admin' && !user?.school_id && user?.email === SUPER_ADMIN_EMAIL;
 
   const { data: teachers = [], isLoading: loadingTeachers } = useQuery({

@@ -15,7 +15,7 @@ import { createPageUrl } from '../utils';
 
 export default function UserManagement() {
   // SECURITY: Only allow specific super admin email
-  const SUPER_ADMIN_EMAIL = 'luc@schedual.com';
+  const SUPER_ADMIN_EMAIL = 'Leo.bancroft34@icloud.com';
   
   const { data: currentUser } = useQuery({
     queryKey: ['currentUser'],

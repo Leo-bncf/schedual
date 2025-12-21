@@ -27,7 +27,7 @@ export default function SubscriptionsOverview() {
   const [copied, setCopied] = useState(false);
 
   // Access control - only super admin
-  const SUPER_ADMIN_EMAIL = 'luc@schedual.com';
+  const SUPER_ADMIN_EMAIL = 'Leo.bancroft34@icloud.com';
   const { data: currentUser } = useQuery({
     queryKey: ['currentUser'],
     queryFn: () => base44.auth.me(),
