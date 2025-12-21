@@ -26,18 +26,6 @@ import { format } from 'date-fns';
 export default function SubscriptionsOverview() {
   const [copied, setCopied] = useState(false);
 
-  // Access control - only super admin
-  const SUPER_ADMIN_EMAIL = 'Leo.bancroft34@icloud.com';
-  const { data: currentUser } = useQuery({
-    queryKey: ['currentUser'],
-    queryFn: () => base44.auth.me(),
-  });
-
-  if (currentUser && currentUser.email !== SUPER_ADMIN_EMAIL) {
-    window.location.href = createPageUrl('Dashboard');
-    return null;
-  }
-
   const { data: schools = [], isLoading } = useQuery({
     queryKey: ['allSchools'],
     queryFn: () => base44.entities.School.list(),

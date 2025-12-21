@@ -83,9 +83,7 @@ export default function Layout({ children, currentPageName }) {
   }
 
   // Check if user needs to wait for school assignment (not a super admin)
-  // Super admin must be admin role + no school_id + specific authorized email
-  const SUPER_ADMIN_EMAIL = 'Leo.bancroft34@icloud.com';
-  const isSuperAdmin = user?.role === 'admin' && !user?.school_id && user?.email === SUPER_ADMIN_EMAIL;
+  const isSuperAdmin = user?.role === 'admin' && !user?.school_id;
   const needsSchoolAssignment = !user?.school_id && !isSuperAdmin;
 
   if (needsSchoolAssignment) {
