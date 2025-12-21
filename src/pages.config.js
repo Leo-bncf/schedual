@@ -18,6 +18,10 @@ import SuperAdmin from './pages/SuperAdmin';
 import Home from './pages/Home';
 import Landing from './pages/Landing';
 import Subscription from './pages/Subscription';
+import SubscriptionsOverview from './pages/SubscriptionsOverview';
+import Support from './pages/Support';
+import SupportTickets from './pages/SupportTickets';
+import NotFound from './pages/NotFound';
 import __Layout from './Layout.jsx';
 
 
@@ -42,6 +46,10 @@ export const PAGES = {
     "Home": Home,
     "Landing": Landing,
     "Subscription": Subscription,
+    "SubscriptionsOverview": SubscriptionsOverview,
+    "Support": Support,
+    "SupportTickets": SupportTickets,
+    "NotFound": NotFound,
 }
 
 export const pagesConfig = {

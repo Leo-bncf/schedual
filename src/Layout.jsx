@@ -43,8 +43,10 @@ const navigation = [
   { name: 'AI Advisor', page: 'AIAdvisor', icon: Sparkles, schoolOnly: true },
   { name: 'Super Admin', page: 'SuperAdmin', icon: Settings, superAdminOnly: true },
   { name: 'User Management', page: 'UserManagement', icon: Users, superAdminOnly: true },
-  { name: 'Subscription', page: 'Subscription', icon: CreditCard },
-  { name: 'Settings', page: 'Settings', icon: Settings },
+  { name: 'Subscriptions', page: 'SubscriptionsOverview', icon: CreditCard, superAdminOnly: true },
+  { name: 'Support Tickets', page: 'SupportTickets', icon: Bell, superAdminOnly: true },
+  { name: 'Subscription', page: 'Subscription', icon: CreditCard, schoolOnly: true },
+  { name: 'Settings', page: 'Settings', icon: Settings, schoolOnly: true },
 ];
 
 export default function Layout({ children, currentPageName }) {
@@ -246,10 +248,12 @@ export default function Layout({ children, currentPageName }) {
           </Button>
 
           <div className="flex items-center gap-3 ml-auto">
-            <Button variant="ghost" size="icon" className="relative">
-              <Bell className="w-5 h-5 text-slate-500" />
-              <span className="absolute top-2 right-2 w-2 h-2 bg-rose-500 rounded-full" />
-            </Button>
+            <Link to={createPageUrl(isSuperAdmin ? 'SupportTickets' : 'Support')}>
+              <Button variant="ghost" size="icon" className="relative">
+                <Bell className="w-5 h-5 text-slate-500" />
+                <span className="absolute top-2 right-2 w-2 h-2 bg-rose-500 rounded-full" />
+              </Button>
+            </Link>
           </div>
         </header>
 

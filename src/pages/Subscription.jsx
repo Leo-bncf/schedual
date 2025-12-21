@@ -299,45 +299,57 @@ export default function Subscription() {
         </CardContent>
       </Card>
 
-      {/* Stripe Webhook Setup Instructions */}
-      <Card className="border-blue-200 bg-blue-50">
-        <CardContent className="p-6">
-          <div className="space-y-4">
-            <div className="flex gap-3">
-              <AlertCircle className="w-5 h-5 text-blue-600 flex-shrink-0 mt-0.5" />
-              <div className="text-sm text-blue-800">
-                <p className="font-semibold mb-3">📋 Stripe Webhook Setup Required</p>
-                
-                {/* Webhook URL Display with Copy Button */}
-                <div className="bg-white rounded-lg p-4 mb-4 border-2 border-blue-200">
-                  <Label className="text-blue-900 font-semibold mb-2 block">Your Webhook Endpoint URL:</Label>
-                  <div className="flex items-center gap-2">
-                    <code className="flex-1 bg-slate-100 px-3 py-2 rounded text-slate-900 text-xs break-all">
-                      {webhookUrl}
-                    </code>
-                    <Button
-                      variant="outline"
-                      size="sm"
-                      onClick={copyToClipboard}
-                      className="flex-shrink-0"
-                    >
-                      {copied ? (
-                        <CheckCircle className="w-4 h-4 text-green-600" />
-                      ) : (
-                        <Copy className="w-4 h-4" />
-                      )}
-                    </Button>
-                  </div>
+      {/* Manage Subscription for Active Users */}
+      {isActive && (
+        <Card className="border-0 shadow-sm">
+          <CardHeader>
+            <CardTitle className="flex items-center gap-2">
+              <Users className="w-5 h-5" />
+              Add More User Accounts
+            </CardTitle>
+            <CardDescription>
+              Need more team members? Add additional user accounts to your subscription.
+            </CardDescription>
+          </CardHeader>
+          <CardContent className="space-y-4">
+            <div className="p-4 rounded-lg bg-slate-50 border border-slate-200">
+              <div className="flex items-center justify-between mb-3">
+                <div>
+                  <p className="font-semibold text-slate-900">Current Additional Users</p>
+                  <p className="text-sm text-slate-500">Extra accounts beyond base subscription</p>
                 </div>
-
-                <ol className="list-decimal list-inside space-y-2">
-                  <li>Go to your <strong>Stripe Dashboard → Developers → Webhooks</strong></li>
-                  <li>Click <strong>"Add endpoint"</strong> and paste the URL above</li>
-                  <li>Select events: <code className="bg-blue-100 px-1 rounded">checkout.session.completed</code>, <code className="bg-blue-100 px-1 rounded">customer.subscription.updated</code>, <code className="bg-blue-100 px-1 rounded">customer.subscription.deleted</code>, <code className="bg-blue-100 px-1 rounded">invoice.payment_failed</code></li>
-                  <li>After creating the webhook, copy the <strong>signing secret</strong> (starts with whsec_)</li>
-                  <li>Add it as <code className="bg-blue-100 px-1 rounded">STRIPE_WEBHOOK_SECRET</code> in your Base44 app secrets</li>
-                </ol>
+                <Badge className="bg-indigo-100 text-indigo-700 border-0">
+                  {school.max_additional_users || 0} accounts
+                </Badge>
               </div>
+              <p className="text-sm text-slate-600">
+                To modify your user count, please contact support or manage your subscription through the Stripe customer portal.
+              </p>
+            </div>
+            <Button variant="outline" className="w-full" disabled>
+              <CreditCard className="w-4 h-4 mr-2" />
+              Manage via Stripe Portal (Coming Soon)
+            </Button>
+          </CardContent>
+        </Card>
+      )}
+
+      {/* Help Card */}
+      <Card className="border-slate-200 bg-slate-50">
+        <CardContent className="p-6">
+          <div className="flex gap-3">
+            <AlertCircle className="w-5 h-5 text-slate-600 flex-shrink-0 mt-0.5" />
+            <div className="text-sm text-slate-700">
+              <p className="font-semibold mb-2">Need Help?</p>
+              <p className="mb-3">
+                If you have questions about your subscription, billing, or need to make changes, our support team is here to help.
+              </p>
+              <Link to={createPageUrl('Support')}>
+                <Button variant="outline" size="sm">
+                  <Bell className="w-4 h-4 mr-2" />
+                  Contact Support
+                </Button>
+              </Link>
             </div>
           </div>
         </CardContent>
