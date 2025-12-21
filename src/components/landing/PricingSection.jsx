@@ -2,6 +2,7 @@ import React, { useState } from 'react';
 import { base44 } from '@/api/base44Client';
 import { Button } from "@/components/ui/button";
 import { CheckCircle, Loader2 } from 'lucide-react';
+import { createPageUrl } from '../../utils';
 
 const plans = [
   {
@@ -31,15 +32,27 @@ export default function PricingSection() {
     setLoading(priceId);
     
     try {
-      // Redirect to signup/login first
       const isAuthenticated = await base44.auth.isAuthenticated();
+      
       if (!isAuthenticated) {
-        base44.auth.redirectToLogin('/Subscription');
+        // Not logged in - redirect to login with subscription as next page
+        base44.auth.redirectToLogin(createPageUrl('Subscription'));
       } else {
-        window.location.href = '/Subscription';
+        // Logged in - check if user has school_id
+        const user = await base44.auth.me();
+        
+        if (!user.school_id) {
+          // No school assigned - redirect to subscription page for payment
+          window.location.href = createPageUrl('Subscription');
+        } else {
+          // Has school - redirect to dashboard
+          window.location.href = createPageUrl('Dashboard');
+        }
       }
     } catch (error) {
-      console.error('Navigation error:', error);
+      console.error('Subscription navigation error:', error);
+      // Fallback: redirect to login
+      base44.auth.redirectToLogin(createPageUrl('Subscription'));
     } finally {
       setLoading(null);
     }
