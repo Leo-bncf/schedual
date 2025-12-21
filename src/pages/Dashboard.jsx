@@ -27,6 +27,13 @@ export default function Dashboard() {
     queryFn: () => base44.auth.me(),
   });
 
+  // Redirect super admin to Panel
+  const isSuperAdmin = user?.role === 'admin' && !user?.school_id;
+  if (isSuperAdmin && user) {
+    window.location.href = createPageUrl('Panel');
+    return null;
+  }
+
   const { data: teachers = [], isLoading: loadingTeachers } = useQuery({
     queryKey: ['teachers', user?.school_id],
     queryFn: () => base44.entities.Teacher.filter({ school_id: user?.school_id }),

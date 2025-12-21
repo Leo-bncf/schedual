@@ -31,7 +31,7 @@ import {
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 
 const navigation = [
-  { name: 'Dashboard', page: 'Dashboard', icon: LayoutDashboard },
+  { name: 'Dashboard', page: 'Dashboard', icon: LayoutDashboard, schoolOnly: true },
   { name: 'Setup Guide', page: 'Onboarding', icon: Sparkles, schoolOnly: true },
   { name: 'Schedule', page: 'Schedule', icon: Calendar, schoolOnly: true },
   { name: 'Teaching Groups', page: 'TeachingGroups', icon: Users, schoolOnly: true },
