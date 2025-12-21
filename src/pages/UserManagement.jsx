@@ -11,8 +11,23 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Users, Plus, Mail, Shield, Trash2 } from 'lucide-react';
 import PageHeader from '../components/ui-custom/PageHeader';
 import DataTable from '../components/ui-custom/DataTable';
+import { createPageUrl } from '../utils';
 
 export default function UserManagement() {
+  // SECURITY: Only allow specific super admin email
+  const SUPER_ADMIN_EMAIL = 'luc@schedual.com';
+  
+  const { data: currentUser } = useQuery({
+    queryKey: ['currentUser'],
+    queryFn: () => base44.auth.me(),
+  });
+
+  // Redirect if not authorized super admin
+  if (currentUser && currentUser.email !== SUPER_ADMIN_EMAIL) {
+    window.location.href = createPageUrl('Dashboard');
+    return null;
+  }
+
   const [isDialogOpen, setIsDialogOpen] = useState(false);
   const [formData, setFormData] = useState({
     email: '',
