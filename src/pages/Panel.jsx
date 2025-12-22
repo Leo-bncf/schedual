@@ -49,12 +49,18 @@ export default function Panel() {
 
   const { data: schools = [], isLoading: loadingSchools } = useQuery({
     queryKey: ['allSchools'],
-    queryFn: () => base44.entities.School.list(),
+    queryFn: async () => {
+      const { data } = await base44.functions.invoke('adminManageSchool', { action: 'list' });
+      return data.schools || [];
+    },
   });
 
   const { data: allUsers = [] } = useQuery({
     queryKey: ['allUsers'],
-    queryFn: () => base44.entities.User.list(),
+    queryFn: async () => {
+      const { data } = await base44.functions.invoke('adminManageUser', { action: 'list' });
+      return data.users || [];
+    },
   });
 
   const { data: allTeachers = [] } = useQuery({
@@ -73,7 +79,7 @@ export default function Panel() {
   });
 
   const createSchoolMutation = useMutation({
-    mutationFn: (data) => base44.entities.School.create(data),
+    mutationFn: (data) => base44.functions.invoke('adminManageSchool', { action: 'create', data }),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['allSchools'] });
       setIsSchoolDialogOpen(false);
@@ -84,25 +90,29 @@ export default function Panel() {
   const createSchoolForUserMutation = useMutation({
     mutationFn: async (data) => {
       // Create school first
-      const school = await base44.entities.School.create({
-        name: data.name,
-        code: data.code,
-        ib_school_code: data.ib_school_code,
-        address: data.address,
-        timezone: data.timezone,
-        academic_year: data.academic_year
+      const { data: result } = await base44.functions.invoke('adminManageSchool', {
+        action: 'create',
+        data: {
+          name: data.name,
+          code: data.code,
+          ib_school_code: data.ib_school_code,
+          address: data.address,
+          timezone: data.timezone,
+          academic_year: data.academic_year
+        }
       });
       
       // Then assign user to school
       const user = allUsers.find(u => u.email === data.user_email);
-      if (user) {
-        await base44.entities.User.update(user.id, { 
-          school_id: school.id, 
-          role: data.user_role 
+      if (user && result.school) {
+        await base44.functions.invoke('adminManageUser', {
+          action: 'update',
+          userId: user.id,
+          data: { school_id: result.school.id }
         });
       }
       
-      return school;
+      return result.school;
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['allSchools'] });
@@ -122,7 +132,7 @@ export default function Panel() {
   });
 
   const updateSchoolMutation = useMutation({
-    mutationFn: ({ id, data }) => base44.entities.School.update(id, data),
+    mutationFn: ({ id, data }) => base44.functions.invoke('adminManageSchool', { action: 'update', schoolId: id, data }),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['allSchools'] });
       setIsSchoolDialogOpen(false);
@@ -131,12 +141,12 @@ export default function Panel() {
   });
 
   const deleteSchoolMutation = useMutation({
-    mutationFn: (id) => base44.entities.School.delete(id),
+    mutationFn: (id) => base44.functions.invoke('adminManageSchool', { action: 'delete', schoolId: id }),
     onSuccess: () => queryClient.invalidateQueries({ queryKey: ['allSchools'] }),
   });
 
   const updateUserMutation = useMutation({
-    mutationFn: ({ id, data }) => base44.entities.User.update(id, data),
+    mutationFn: ({ id, data }) => base44.functions.invoke('adminManageUser', { action: 'update', userId: id, data }),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['allUsers'] });
       setIsUserDialogOpen(false);
@@ -145,7 +155,7 @@ export default function Panel() {
   });
 
   const deleteUserMutation = useMutation({
-    mutationFn: (id) => base44.entities.User.delete(id),
+    mutationFn: (id) => base44.functions.invoke('adminManageUser', { action: 'delete', userId: id }),
     onSuccess: () => queryClient.invalidateQueries({ queryKey: ['allUsers'] }),
   });
 
