@@ -64,7 +64,8 @@ export default function Subscription() {
       }
     } catch (error) {
       console.error('Checkout error:', error);
-      alert('Payment processing failed: ' + error.message);
+      console.error('Full error response:', error.response?.data);
+      alert('Payment processing failed: ' + (error.response?.data?.error || error.message));
       setIsProcessing(false);
     }
   };
