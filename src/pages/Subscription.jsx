@@ -45,31 +45,29 @@ export default function Subscription() {
   const totalYearlyPrice = BASE_YEARLY_PRICE + STORAGE_YEARLY_PRICE + (additionalUsers * ADDITIONAL_USER_YEARLY_PRICE);
 
   const handleCheckout = async () => {
+    if (isProcessing) return;
+    
     setIsProcessing(true);
     try {
       const response = await base44.functions.invoke('createCheckout', {
         additionalUsers
       });
 
-      if (response.data.error) {
+      if (response.data?.error) {
         throw new Error(response.data.error);
       }
 
-      window.location.href = response.data.url;
+      if (response.data?.url) {
+        window.location.href = response.data.url;
+      } else {
+        throw new Error('No checkout URL received');
+      }
     } catch (error) {
       console.error('Checkout error:', error);
       alert('Payment processing failed: ' + error.message);
       setIsProcessing(false);
     }
   };
-
-  // Auto-redirect to checkout if no school
-  React.useEffect(() => {
-    if (!userLoading && user && !user.school_id && !hasTriedAutoCheckout && !isProcessing) {
-      setHasTriedAutoCheckout(true);
-      handleCheckout();
-    }
-  }, [user, userLoading, hasTriedAutoCheckout, isProcessing]);
 
   const isActive = school?.subscription_status === 'active';
   const isPastDue = school?.subscription_status === 'past_due';
