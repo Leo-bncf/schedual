@@ -7,9 +7,15 @@ import { createPageUrl } from '../../utils';
 
 export default function LandingHeader() {
   const [isAuthenticated, setIsAuthenticated] = useState(false);
+  const [user, setUser] = useState(null);
 
   useEffect(() => {
-    base44.auth.isAuthenticated().then(setIsAuthenticated);
+    base44.auth.isAuthenticated().then(authenticated => {
+      setIsAuthenticated(authenticated);
+      if (authenticated) {
+        base44.auth.me().then(setUser).catch(() => {});
+      }
+    });
   }, []);
 
   const scrollToSection = (id) => {
@@ -56,9 +62,9 @@ export default function LandingHeader() {
           {/* CTA Buttons */}
           <div className="flex items-center gap-3">
             {isAuthenticated ? (
-              <Link to={createPageUrl('Dashboard')}>
+              <Link to={createPageUrl(user?.role === 'admin' && !user?.school_id ? 'Panel' : 'Dashboard')}>
                 <Button className="bg-indigo-600 hover:bg-indigo-700">
-                  Go to Dashboard
+                  {user?.role === 'admin' && !user?.school_id ? 'Go to Panel' : 'Go to Dashboard'}
                 </Button>
               </Link>
             ) : (
