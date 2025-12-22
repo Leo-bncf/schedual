@@ -3,7 +3,6 @@ import Constraints from './pages/Constraints';
 import Dashboard from './pages/Dashboard';
 import DatabaseSchema from './pages/DatabaseSchema';
 import Documentation from './pages/Documentation';
-import Home from './pages/Home';
 import Landing from './pages/Landing';
 import NotFound from './pages/NotFound';
 import Onboarding from './pages/Onboarding';
@@ -31,7 +30,6 @@ export const PAGES = {
     "Dashboard": Dashboard,
     "DatabaseSchema": DatabaseSchema,
     "Documentation": Documentation,
-    "Home": Home,
     "Landing": Landing,
     "NotFound": NotFound,
     "Onboarding": Onboarding,

@@ -55,7 +55,7 @@ export default function Layout({ children, currentPageName }) {
   const [isLoading, setIsLoading] = useState(true);
 
   // Public pages render without any authentication checks
-  if (currentPageName === 'Landing' || currentPageName === 'Home') {
+  if (currentPageName === 'Landing') {
     return <>{children}</>;
   }
 
