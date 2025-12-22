@@ -64,15 +64,15 @@ export default function Subscription() {
     }
   };
 
-  const isActive = school?.subscription_status === 'active';
-  const isPastDue = school?.subscription_status === 'past_due';
-
   // Auto-redirect to checkout if no school
   React.useEffect(() => {
     if (user && !user.school_id && !isProcessing) {
       handleCheckout();
     }
-  }, [user]);
+  }, [user, isProcessing]);
+
+  const isActive = school?.subscription_status === 'active';
+  const isPastDue = school?.subscription_status === 'past_due';
 
   return (
     <div className="space-y-6">

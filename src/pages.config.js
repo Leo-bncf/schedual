@@ -1,55 +1,55 @@
-import Dashboard from './pages/Dashboard';
-import Teachers from './pages/Teachers';
-import Students from './pages/Students';
-import Subjects from './pages/Subjects';
-import Rooms from './pages/Rooms';
-import Schedule from './pages/Schedule';
 import AIAdvisor from './pages/AIAdvisor';
-import Settings from './pages/Settings';
 import Constraints from './pages/Constraints';
-import TeachingGroups from './pages/TeachingGroups';
-import Documentation from './pages/Documentation';
+import Dashboard from './pages/Dashboard';
 import DatabaseSchema from './pages/DatabaseSchema';
-import TestData from './pages/TestData';
-import OptimizationEngine from './pages/OptimizationEngine';
-import Onboarding from './pages/Onboarding';
-import UserManagement from './pages/UserManagement';
+import Documentation from './pages/Documentation';
 import Home from './pages/Home';
 import Landing from './pages/Landing';
+import NotFound from './pages/NotFound';
+import Onboarding from './pages/Onboarding';
+import OptimizationEngine from './pages/OptimizationEngine';
+import Panel from './pages/Panel';
+import Rooms from './pages/Rooms';
+import Schedule from './pages/Schedule';
+import Settings from './pages/Settings';
+import Students from './pages/Students';
+import Subjects from './pages/Subjects';
 import Subscription from './pages/Subscription';
 import SubscriptionsOverview from './pages/SubscriptionsOverview';
 import Support from './pages/Support';
 import SupportTickets from './pages/SupportTickets';
-import NotFound from './pages/NotFound';
-import Panel from './pages/Panel';
+import Teachers from './pages/Teachers';
+import TeachingGroups from './pages/TeachingGroups';
+import TestData from './pages/TestData';
+import UserManagement from './pages/UserManagement';
 import __Layout from './Layout.jsx';
 
 
 export const PAGES = {
-    "Dashboard": Dashboard,
-    "Teachers": Teachers,
-    "Students": Students,
-    "Subjects": Subjects,
-    "Rooms": Rooms,
-    "Schedule": Schedule,
     "AIAdvisor": AIAdvisor,
-    "Settings": Settings,
     "Constraints": Constraints,
-    "TeachingGroups": TeachingGroups,
-    "Documentation": Documentation,
+    "Dashboard": Dashboard,
     "DatabaseSchema": DatabaseSchema,
-    "TestData": TestData,
-    "OptimizationEngine": OptimizationEngine,
-    "Onboarding": Onboarding,
-    "UserManagement": UserManagement,
+    "Documentation": Documentation,
     "Home": Home,
     "Landing": Landing,
+    "NotFound": NotFound,
+    "Onboarding": Onboarding,
+    "OptimizationEngine": OptimizationEngine,
+    "Panel": Panel,
+    "Rooms": Rooms,
+    "Schedule": Schedule,
+    "Settings": Settings,
+    "Students": Students,
+    "Subjects": Subjects,
     "Subscription": Subscription,
     "SubscriptionsOverview": SubscriptionsOverview,
     "Support": Support,
     "SupportTickets": SupportTickets,
-    "NotFound": NotFound,
-    "Panel": Panel,
+    "Teachers": Teachers,
+    "TeachingGroups": TeachingGroups,
+    "TestData": TestData,
+    "UserManagement": UserManagement,
 }
 
 export const pagesConfig = {
