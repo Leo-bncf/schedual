@@ -33,7 +33,7 @@ Deno.serve(async (req) => {
     }
 
     // Use service role to bypass RLS
-    const records = await base44.asServiceRole.entities[entityType].filter({});
+    const records = await base44.asServiceRole.entities[entityType].list();
     
     return Response.json({ success: true, records });
   } catch (error) {
