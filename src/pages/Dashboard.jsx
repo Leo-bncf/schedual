@@ -63,9 +63,9 @@ export default function Dashboard() {
     enabled: !!user?.school_id,
   });
 
-  // Redirect super admin to Panel
+  // Strict access control: Only school admins
   React.useEffect(() => {
-    if (user?.role === 'admin' && !user?.school_id) {
+    if (user && (!user.school_id || user.role !== 'admin')) {
       window.location.href = createPageUrl('Panel');
     }
   }, [user]);

@@ -59,6 +59,10 @@ export default function Layout({ children, currentPageName }) {
     return <>{children}</>;
   }
 
+  // Role definitions
+  const isSuperAdmin = (userData) => userData?.role === 'admin' && !userData?.school_id;
+  const isSchoolAdmin = (userData) => userData?.role === 'admin' && !!userData?.school_id;
+
   useEffect(() => {
     base44.auth.me()
       .then(userData => {
@@ -66,7 +70,6 @@ export default function Layout({ children, currentPageName }) {
         setIsLoading(false);
       })
       .catch(() => {
-        // Not authenticated, redirect to login
         base44.auth.redirectToLogin(window.location.pathname);
       });
   }, [currentPageName]);
@@ -82,12 +85,23 @@ export default function Layout({ children, currentPageName }) {
     );
   }
 
-  // Check if user needs to wait for school assignment (not a super admin)
-  const isSuperAdmin = user?.role === 'admin' && !user?.school_id;
-  const needsSchoolAssignment = !user?.school_id && !isSuperAdmin;
-
-  // Redirect to Subscription page if user has no school (unless already on Subscription page)
-  if (needsSchoolAssignment && currentPageName !== 'Subscription') {
+  // Strict role enforcement
+  if (isSuperAdmin(user)) {
+    // SuperAdmin: redirect to Panel if trying to access school pages
+    const schoolOnlyPages = ['Dashboard', 'Onboarding', 'Schedule', 'TeachingGroups', 'Teachers', 'Students', 'Subjects', 'Rooms', 'Constraints', 'AIAdvisor', 'Settings', 'Support'];
+    if (schoolOnlyPages.includes(currentPageName)) {
+      window.location.href = createPageUrl('Panel');
+      return null;
+    }
+  } else if (isSchoolAdmin(user)) {
+    // School Admin: redirect to Dashboard if trying to access super admin pages
+    const superAdminPages = ['Panel', 'UserManagement', 'SubscriptionsOverview', 'SupportTickets'];
+    if (superAdminPages.includes(currentPageName)) {
+      window.location.href = createPageUrl('Dashboard');
+      return null;
+    }
+  } else if (!user?.school_id && currentPageName !== 'Subscription') {
+    // User with no role/school: redirect to subscription
     window.location.href = createPageUrl('Subscription');
     return null;
   }
@@ -148,10 +162,9 @@ export default function Layout({ children, currentPageName }) {
           {/* Navigation */}
           <nav className="flex-1 px-4 py-6 space-y-1 overflow-y-auto">
             {navigation.map((item) => {
-              const isSuperAdmin = user?.role === 'admin' && !user?.school_id;
-              if (item.superAdminOnly && !isSuperAdmin) return null;
-              if (item.schoolOnly && isSuperAdmin) return null;
-              if (item.adminOnly && user?.role !== 'admin') return null;
+              // Strict role filtering
+              if (item.superAdminOnly && !isSuperAdmin(user)) return null;
+              if (item.schoolOnly && !isSchoolAdmin(user)) return null;
               const isActive = currentPageName === item.page;
               return (
                 <Link
@@ -218,7 +231,7 @@ export default function Layout({ children, currentPageName }) {
           </Button>
 
           <div className="flex items-center gap-3 ml-auto">
-            <Link to={createPageUrl(isSuperAdmin ? 'SupportTickets' : 'Support')}>
+            <Link to={createPageUrl(isSuperAdmin(user) ? 'SupportTickets' : 'Support')}>
               <Button variant="ghost" size="icon" className="relative">
                 <Bell className="w-5 h-5 text-slate-500" />
                 <span className="absolute top-2 right-2 w-2 h-2 bg-rose-500 rounded-full" />
