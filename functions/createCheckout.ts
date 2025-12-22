@@ -67,8 +67,8 @@ Deno.serve(async (req) => {
         user_email: user.email,
       },
       customer_email: user.email,
-      success_url: `${req.headers.get('origin')}/Dashboard?subscription=success`,
-      cancel_url: `${req.headers.get('origin')}/Subscription?subscription=cancelled`,
+      success_url: `${req.headers.get('origin') || 'https://' + req.headers.get('host')}/Dashboard?subscription=success`,
+      cancel_url: `${req.headers.get('origin') || 'https://' + req.headers.get('host')}/Subscription?subscription=cancelled`,
     });
 
     return Response.json({ sessionId: session.id, url: session.url });
