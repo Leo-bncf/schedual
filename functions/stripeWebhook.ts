@@ -27,6 +27,7 @@ Deno.serve(async (req) => {
       case 'checkout.session.completed': {
         const session = event.data.object;
         const schoolId = session.metadata.school_id;
+        const userEmail = session.metadata.user_email;
         const additionalUsers = parseInt(session.metadata.additional_users || '0');
 
         // Calculate subscription end date (1 year from now)
@@ -43,6 +44,16 @@ Deno.serve(async (req) => {
           subscription_end_date: endDate.toISOString(),
           max_additional_users: additionalUsers,
         });
+
+        // Update user to have admin role and school_id
+        const users = await base44.asServiceRole.entities.User.filter({ email: userEmail });
+        if (users.length > 0) {
+          await base44.asServiceRole.entities.User.update(users[0].id, {
+            role: 'admin',
+            school_id: schoolId
+          });
+          console.log(`✅ User ${userEmail} upgraded to admin with school ${schoolId}`);
+        }
 
         console.log(`✅ Subscription activated for school ${schoolId}`);
         break;
