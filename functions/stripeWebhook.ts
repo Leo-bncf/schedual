@@ -53,21 +53,21 @@ Deno.serve(async (req) => {
           throw error;
         }
 
-        // Update user to have admin role and school_id
+        // Update user school_id (school_id is enough for access - don't update built-in role field)
         try {
           const users = await base44.asServiceRole.entities.User.filter({ email: userEmail });
           console.log(`Found ${users.length} users with email ${userEmail}`);
           
           if (users.length > 0) {
             const userId = users[0].id;
-            console.log(`Attempting to update user ${userId} with role=admin, school_id=${schoolId}`);
+            console.log(`Attempting to update user ${userId} with school_id=${schoolId}`);
             
+            // Only update school_id - role is managed by the platform
             await base44.asServiceRole.entities.User.update(userId, {
-              role: 'admin',
               school_id: schoolId
             });
             
-            console.log(`✅ User ${userEmail} (${userId}) upgraded to admin with school ${schoolId}`);
+            console.log(`✅ User ${userEmail} (${userId}) assigned to school ${schoolId}`);
           } else {
             console.warn(`⚠️ No user found with email ${userEmail}`);
           }

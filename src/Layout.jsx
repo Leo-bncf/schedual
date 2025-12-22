@@ -63,8 +63,8 @@ export default function Layout({ children, currentPageName }) {
     return <>{children}</>;
   }
 
-  // Role definitions
-  const isSchoolAdmin = (userData) => userData?.role === 'admin' && !!userData?.school_id && !isSuperAdmin;
+  // Role definitions - school_id alone determines school admin access
+  const isSchoolAdmin = (userData) => !!userData?.school_id && !isSuperAdmin;
   const isNewClient = (userData) => userData && !userData.school_id && !isSuperAdmin;
 
   useEffect(() => {
@@ -83,8 +83,8 @@ export default function Layout({ children, currentPageName }) {
         base44.auth.me()
           .then(userData => {
             console.log('User data attempt', attempts, ':', userData);
-            // Check if user has been upgraded (has admin role and school_id)
-            if (userData.role === 'admin' && userData.school_id) {
+            // Check if user has been upgraded (has school_id assigned)
+            if (userData.school_id) {
               console.log('User upgraded successfully!');
               setUser(userData);
               setIsLoading(false);
