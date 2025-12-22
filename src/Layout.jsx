@@ -69,14 +69,35 @@ export default function Layout({ children, currentPageName }) {
   const isNewClient = (userData) => userData && !userData.school_id && !isSuperAdmin(userData);
 
   useEffect(() => {
-    base44.auth.me()
-      .then(userData => {
-        setUser(userData);
-        setIsLoading(false);
-      })
-      .catch(() => {
-        base44.auth.redirectToLogin(window.location.pathname);
-      });
+    // Check if returning from successful subscription
+    const urlParams = new URLSearchParams(window.location.search);
+    const subscriptionSuccess = urlParams.get('subscription') === 'success';
+    
+    if (subscriptionSuccess) {
+      // Force refetch user data after subscription success
+      console.log('Subscription success detected, refetching user data...');
+      setTimeout(() => {
+        base44.auth.me()
+          .then(userData => {
+            setUser(userData);
+            setIsLoading(false);
+            // Clean up URL
+            window.history.replaceState({}, '', window.location.pathname);
+          })
+          .catch(() => {
+            base44.auth.redirectToLogin(window.location.pathname);
+          });
+      }, 1000); // Small delay to allow webhook to process
+    } else {
+      base44.auth.me()
+        .then(userData => {
+          setUser(userData);
+          setIsLoading(false);
+        })
+        .catch(() => {
+          base44.auth.redirectToLogin(window.location.pathname);
+        });
+    }
   }, [currentPageName]);
 
   if (isLoading) {
