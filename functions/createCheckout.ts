@@ -67,7 +67,7 @@ Deno.serve(async (req) => {
     try {
       session = await stripe.checkout.sessions.create({
         payment_method_types: ['card'],
-        mode: 'subscription',
+        mode: 'payment',
         line_items: [
           {
             price_data: {
@@ -77,9 +77,6 @@ Deno.serve(async (req) => {
                 description: `Base platform (€${BASE_PRICE}) + Secure storage (€${STORAGE_PRICE})${additionalUsers > 0 ? ` + ${additionalUsers} additional users (€${additionalUsers * ADDITIONAL_USER_PRICE})` : ''}`,
               },
               unit_amount: totalAmount * 100,
-              recurring: {
-                interval: 'year',
-              },
             },
             quantity: 1,
           },
@@ -95,8 +92,13 @@ Deno.serve(async (req) => {
         cancel_url: `${req.headers.get('origin') || 'https://' + req.headers.get('host')}/Subscription?subscription=cancelled`,
       });
     } catch (stripeError) {
-      console.error('Stripe checkout creation error:', stripeError);
-      return Response.json({ error: 'Stripe error: ' + stripeError.message }, { status: 500 });
+      console.error('Stripe error details:', stripeError);
+      console.error('Stripe error message:', stripeError.message);
+      console.error('Stripe error type:', stripeError.type);
+      return Response.json({ 
+        error: 'Stripe error: ' + stripeError.message,
+        details: stripeError.type 
+      }, { status: 500 });
     }
 
     return Response.json({ sessionId: session.id, url: session.url });
