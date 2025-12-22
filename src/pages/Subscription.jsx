@@ -27,8 +27,9 @@ const ADDITIONAL_USER_YEARLY_PRICE = 200;
 export default function Subscription() {
   const [additionalUsers, setAdditionalUsers] = useState(0);
   const [isProcessing, setIsProcessing] = useState(false);
+  const [hasTriedAutoCheckout, setHasTriedAutoCheckout] = useState(false);
 
-  const { data: user } = useQuery({
+  const { data: user, isLoading: userLoading } = useQuery({
     queryKey: ['currentUser'],
     queryFn: () => base44.auth.me(),
   });
@@ -43,31 +44,6 @@ export default function Subscription() {
 
   const totalYearlyPrice = BASE_YEARLY_PRICE + STORAGE_YEARLY_PRICE + (additionalUsers * ADDITIONAL_USER_YEARLY_PRICE);
 
-  // Auto-redirect to checkout if no school
-  React.useEffect(() => {
-    const autoCheckout = async () => {
-      if (user && !user.school_id && !isProcessing) {
-        setIsProcessing(true);
-        try {
-          const response = await base44.functions.invoke('createCheckout', {
-            additionalUsers
-          });
-
-          if (response.data.error) {
-            throw new Error(response.data.error);
-          }
-
-          window.location.href = response.data.url;
-        } catch (error) {
-          console.error('Checkout error:', error);
-          alert('Payment processing failed: ' + error.message);
-          setIsProcessing(false);
-        }
-      }
-    };
-    autoCheckout();
-  }, [user]);
-
   const handleCheckout = async () => {
     setIsProcessing(true);
     try {
@@ -79,15 +55,21 @@ export default function Subscription() {
         throw new Error(response.data.error);
       }
 
-      // Redirect to Stripe Checkout
       window.location.href = response.data.url;
     } catch (error) {
       console.error('Checkout error:', error);
       alert('Payment processing failed: ' + error.message);
-    } finally {
       setIsProcessing(false);
     }
   };
+
+  // Auto-redirect to checkout if no school
+  React.useEffect(() => {
+    if (!userLoading && user && !user.school_id && !hasTriedAutoCheckout && !isProcessing) {
+      setHasTriedAutoCheckout(true);
+      handleCheckout();
+    }
+  }, [user, userLoading, hasTriedAutoCheckout, isProcessing]);
 
   const isActive = school?.subscription_status === 'active';
   const isPastDue = school?.subscription_status === 'past_due';
