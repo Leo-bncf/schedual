@@ -52,7 +52,7 @@ export default function InfoSection() {
         {/* Problems & Solutions */}
         <div className="grid md:grid-cols-2 gap-8 mb-16">
           <div className="bg-rose-50 p-8 rounded-2xl border border-rose-100">
-            <h3 className="text-2xl font-semibold text-rose-900 mb-4">The Problem</h3>
+            <h3 className="text-2xl font-semibold text-rose-900 mb-4">Existing Solutions</h3>
             <ul className="space-y-3 text-slate-700">
               <li className="flex items-start gap-2">
                 <span className="text-rose-600 mt-1">•</span>
@@ -74,7 +74,7 @@ export default function InfoSection() {
           </div>
 
           <div className="bg-emerald-50 p-8 rounded-2xl border border-emerald-100">
-            <h3 className="text-2xl font-semibold text-emerald-900 mb-4">The Solution</h3>
+            <h3 className="text-2xl font-semibold text-emerald-900 mb-4">IB Schedual Pro</h3>
             <ul className="space-y-3 text-slate-700">
               <li className="flex items-start gap-2">
                 <span className="text-emerald-600 mt-1">✓</span>
