@@ -44,7 +44,7 @@ export default function HeroSection() {
               </div>
               <div>
                 <div className="text-3xl font-bold text-indigo-600">24/7</div>
-                <div className="text-sm text-slate-600">Access</div>
+                <div className="text-sm text-slate-600">Access & Support</div>
               </div>
             </div>
           </div>
