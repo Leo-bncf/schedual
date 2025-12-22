@@ -57,8 +57,8 @@ export default function Layout({ children, currentPageName }) {
   const [user, setUser] = useState(null);
   const [isLoading, setIsLoading] = useState(true);
 
-  // Public pages and subscription page render without strict checks
-  if (currentPageName === 'Landing' || currentPageName === 'Subscription') {
+  // Public pages render without authentication
+  if (currentPageName === 'Landing') {
     return <>{children}</>;
   }
 
@@ -66,6 +66,7 @@ export default function Layout({ children, currentPageName }) {
   const SUPER_ADMIN_EMAILS = ['leo.bancroft34@icloud.com', 'erik.gerbst@gmail.com'];
   const isSuperAdmin = (userData) => SUPER_ADMIN_EMAILS.includes(userData?.email?.toLowerCase());
   const isSchoolAdmin = (userData) => userData?.role === 'admin' && !!userData?.school_id && !isSuperAdmin(userData);
+  const isNewClient = (userData) => userData && !userData.school_id && !isSuperAdmin(userData);
 
   useEffect(() => {
     base44.auth.me()
@@ -89,7 +90,7 @@ export default function Layout({ children, currentPageName }) {
     );
   }
 
-  // Strict role enforcement - block access immediately
+  // Role-based access control
   if (isSuperAdmin(user)) {
     // SuperAdmin: ONLY access Panel and super admin pages
     const schoolOnlyPages = ['Dashboard', 'Onboarding', 'Schedule', 'TeachingGroups', 'Teachers', 'Students', 'Subjects', 'Rooms', 'Constraints', 'AIAdvisor', 'Settings', 'Support', 'Subscription'];
@@ -118,17 +119,19 @@ export default function Layout({ children, currentPageName }) {
         </div>
       );
     }
-  } else if (!user?.school_id && currentPageName !== 'Subscription') {
-    // User with no role/school: redirect to subscription
-    window.location.replace(createPageUrl('Subscription'));
-    return (
-      <div className="min-h-screen flex items-center justify-center bg-slate-50">
-        <div className="text-center">
-          <div className="w-16 h-16 border-4 border-indigo-600 border-t-transparent rounded-full animate-spin mx-auto mb-4"></div>
-          <p className="text-slate-600">Redirecting...</p>
+  } else if (isNewClient(user)) {
+    // New clients: ONLY access Subscription page
+    if (currentPageName !== 'Subscription') {
+      window.location.replace(createPageUrl('Subscription'));
+      return (
+        <div className="min-h-screen flex items-center justify-center bg-slate-50">
+          <div className="text-center">
+            <div className="w-16 h-16 border-4 border-indigo-600 border-t-transparent rounded-full animate-spin mx-auto mb-4"></div>
+            <p className="text-slate-600">Redirecting to Subscription...</p>
+          </div>
         </div>
-      </div>
-    );
+      );
+    }
   }
 
   const getInitials = (name) => {

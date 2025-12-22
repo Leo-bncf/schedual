@@ -104,6 +104,11 @@ Deno.serve(async (req) => {
     return Response.json({ sessionId: session.id, url: session.url });
   } catch (error) {
     console.error('Checkout creation error:', error);
-    return Response.json({ error: error.message }, { status: 500 });
+    console.error('Error stack:', error.stack);
+    console.error('Error details:', JSON.stringify(error, null, 2));
+    return Response.json({ 
+      error: 'Server error: ' + error.message,
+      details: error.stack 
+    }, { status: 500 });
   }
 });
