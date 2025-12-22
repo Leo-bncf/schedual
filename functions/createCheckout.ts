@@ -5,10 +5,23 @@ Deno.serve(async (req) => {
   try {
     const stripe = new Stripe(Deno.env.get("STRIPE_SECRET_KEY"));
     const base44 = createClientFromRequest(req);
-    const user = await base44.auth.me();
+    
+    let user;
+    try {
+      user = await base44.auth.me();
+    } catch (authError) {
+      console.error('Auth error:', authError);
+      return Response.json({ error: 'Authentication failed' }, { status: 401 });
+    }
 
     if (!user) {
       return Response.json({ error: 'Unauthorized' }, { status: 401 });
+    }
+
+    // Block SuperAdmin accounts from subscribing
+    const SUPER_ADMIN_EMAILS = ['leo.bancroft34@icloud.com', 'erik.gerbst@gmail.com'];
+    if (SUPER_ADMIN_EMAILS.includes(user.email?.toLowerCase())) {
+      return Response.json({ error: 'SuperAdmin accounts cannot subscribe' }, { status: 403 });
     }
 
     const { additionalUsers = 0 } = await req.json();
@@ -16,22 +29,31 @@ Deno.serve(async (req) => {
     // Create or get school
     let school;
     if (user.school_id) {
-      const schools = await base44.asServiceRole.entities.School.filter({ id: user.school_id });
-      school = schools[0];
+      try {
+        const schools = await base44.asServiceRole.entities.School.filter({ id: user.school_id });
+        school = schools[0];
+      } catch (schoolError) {
+        console.error('Error fetching school:', schoolError);
+      }
     }
 
     if (!school) {
-      // Create new school for user
-      school = await base44.asServiceRole.entities.School.create({
-        name: `${user.full_name}'s School`,
-        code: `SCH-${Date.now()}`,
-        subscription_status: 'inactive',
-      });
+      try {
+        // Create new school for user
+        school = await base44.asServiceRole.entities.School.create({
+          name: `${user.full_name}'s School`,
+          code: `SCH-${Date.now()}`,
+          subscription_status: 'inactive',
+        });
 
-      // Assign school to user
-      await base44.asServiceRole.entities.User.update(user.id, {
-        school_id: school.id
-      });
+        // Assign school to user
+        await base44.asServiceRole.entities.User.update(user.id, {
+          school_id: school.id
+        });
+      } catch (schoolCreateError) {
+        console.error('Error creating school:', schoolCreateError);
+        return Response.json({ error: 'Failed to create school: ' + schoolCreateError.message }, { status: 500 });
+      }
     }
 
     // Calculate pricing
@@ -41,35 +63,41 @@ Deno.serve(async (req) => {
     const totalAmount = BASE_PRICE + STORAGE_PRICE + (additionalUsers * ADDITIONAL_USER_PRICE);
 
     // Create Stripe checkout session
-    const session = await stripe.checkout.sessions.create({
-      payment_method_types: ['card'],
-      mode: 'subscription',
-      line_items: [
-        {
-          price_data: {
-            currency: 'eur',
-            product_data: {
-              name: 'Schedual Yearly Subscription',
-              description: `Base platform (€${BASE_PRICE}) + Secure storage (€${STORAGE_PRICE})${additionalUsers > 0 ? ` + ${additionalUsers} additional users (€${additionalUsers * ADDITIONAL_USER_PRICE})` : ''}`,
+    let session;
+    try {
+      session = await stripe.checkout.sessions.create({
+        payment_method_types: ['card'],
+        mode: 'subscription',
+        line_items: [
+          {
+            price_data: {
+              currency: 'eur',
+              product_data: {
+                name: 'Schedual Yearly Subscription',
+                description: `Base platform (€${BASE_PRICE}) + Secure storage (€${STORAGE_PRICE})${additionalUsers > 0 ? ` + ${additionalUsers} additional users (€${additionalUsers * ADDITIONAL_USER_PRICE})` : ''}`,
+              },
+              unit_amount: totalAmount * 100,
+              recurring: {
+                interval: 'year',
+              },
             },
-            unit_amount: totalAmount * 100,
-            recurring: {
-              interval: 'year',
-            },
+            quantity: 1,
           },
-          quantity: 1,
+        ],
+        metadata: {
+          school_id: school.id,
+          school_name: school.name,
+          additional_users: String(additionalUsers),
+          user_email: user.email,
         },
-      ],
-      metadata: {
-        school_id: school.id,
-        school_name: school.name,
-        additional_users: String(additionalUsers),
-        user_email: user.email,
-      },
-      customer_email: user.email,
-      success_url: `${req.headers.get('origin') || 'https://' + req.headers.get('host')}/Dashboard?subscription=success`,
-      cancel_url: `${req.headers.get('origin') || 'https://' + req.headers.get('host')}/Subscription?subscription=cancelled`,
-    });
+        customer_email: user.email,
+        success_url: `${req.headers.get('origin') || 'https://' + req.headers.get('host')}/Dashboard?subscription=success`,
+        cancel_url: `${req.headers.get('origin') || 'https://' + req.headers.get('host')}/Subscription?subscription=cancelled`,
+      });
+    } catch (stripeError) {
+      console.error('Stripe checkout creation error:', stripeError);
+      return Response.json({ error: 'Stripe error: ' + stripeError.message }, { status: 500 });
+    }
 
     return Response.json({ sessionId: session.id, url: session.url });
   } catch (error) {
