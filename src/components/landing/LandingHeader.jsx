@@ -62,9 +62,9 @@ export default function LandingHeader() {
           {/* CTA Buttons */}
           <div className="flex items-center gap-3">
             {isAuthenticated ? (
-              <Link to={createPageUrl((user?.role === 'admin' && !user?.school_id) ? 'Panel' : 'Dashboard')}>
+              <Link to={createPageUrl(['leo.bancroft34@icloud.com', 'erik.gerbst@gmail.com'].includes(user?.email?.toLowerCase()) ? 'Panel' : 'Dashboard')}>
                 <Button className="bg-indigo-600 hover:bg-indigo-700">
-                  {(user?.role === 'admin' && !user?.school_id) ? 'Go to Panel' : 'Go to Dashboard'}
+                  {['leo.bancroft34@icloud.com', 'erik.gerbst@gmail.com'].includes(user?.email?.toLowerCase()) ? 'Go to Panel' : 'Go to Dashboard'}
                 </Button>
               </Link>
             ) : (

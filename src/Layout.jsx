@@ -63,8 +63,9 @@ export default function Layout({ children, currentPageName }) {
   }
 
   // Role definitions
-  const isSuperAdmin = (userData) => userData?.role === 'admin' && !userData?.school_id;
-  const isSchoolAdmin = (userData) => userData?.role === 'admin' && !!userData?.school_id;
+  const SUPER_ADMIN_EMAILS = ['leo.bancroft34@icloud.com', 'erik.gerbst@gmail.com'];
+  const isSuperAdmin = (userData) => SUPER_ADMIN_EMAILS.includes(userData?.email?.toLowerCase());
+  const isSchoolAdmin = (userData) => userData?.role === 'admin' && !!userData?.school_id && !isSuperAdmin(userData);
 
   useEffect(() => {
     base44.auth.me()

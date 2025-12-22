@@ -64,11 +64,14 @@ export default function Dashboard() {
   });
 
   // Strict access control: Only school admins
+  const SUPER_ADMIN_EMAILS = ['leo.bancroft34@icloud.com', 'erik.gerbst@gmail.com'];
+  const isSuperAdmin = SUPER_ADMIN_EMAILS.includes(user?.email?.toLowerCase());
+  
   React.useEffect(() => {
-    if (user && (!user.school_id || user.role !== 'admin')) {
+    if (user && (isSuperAdmin || !user.school_id || user.role !== 'admin')) {
       window.location.href = createPageUrl('Panel');
     }
-  }, [user]);
+  }, [user, isSuperAdmin]);
 
   // School dashboard
   const activeTeachers = teachers.filter(t => t.is_active !== false).length;
