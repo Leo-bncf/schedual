@@ -31,6 +31,7 @@ import {
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 
 const navigation = [
+  // School Admin Pages
   { name: 'Dashboard', page: 'Dashboard', icon: LayoutDashboard, schoolOnly: true },
   { name: 'Setup Guide', page: 'Onboarding', icon: Sparkles, schoolOnly: true },
   { name: 'Schedule', page: 'Schedule', icon: Calendar, schoolOnly: true },
@@ -41,12 +42,14 @@ const navigation = [
   { name: 'Rooms', page: 'Rooms', icon: Building2, schoolOnly: true },
   { name: 'Constraints', page: 'Constraints', icon: Settings, schoolOnly: true },
   { name: 'AI Advisor', page: 'AIAdvisor', icon: Sparkles, schoolOnly: true },
+  { name: 'Subscription', page: 'Subscription', icon: CreditCard, schoolOnly: true },
+  { name: 'Settings', page: 'Settings', icon: Settings, schoolOnly: true },
+  
+  // SuperAdmin Pages
   { name: 'Admin Panel', page: 'Panel', icon: Settings, superAdminOnly: true },
   { name: 'User Management', page: 'UserManagement', icon: Users, superAdminOnly: true },
   { name: 'Subscriptions', page: 'SubscriptionsOverview', icon: CreditCard, superAdminOnly: true },
   { name: 'Support Tickets', page: 'SupportTickets', icon: Bell, superAdminOnly: true },
-  { name: 'Subscription', page: 'Subscription', icon: CreditCard, schoolOnly: true },
-  { name: 'Settings', page: 'Settings', icon: Settings, schoolOnly: true },
 ];
 
 export default function Layout({ children, currentPageName }) {
@@ -85,25 +88,46 @@ export default function Layout({ children, currentPageName }) {
     );
   }
 
-  // Strict role enforcement
+  // Strict role enforcement - block access immediately
   if (isSuperAdmin(user)) {
-    // SuperAdmin: redirect to Panel if trying to access school pages
-    const schoolOnlyPages = ['Dashboard', 'Onboarding', 'Schedule', 'TeachingGroups', 'Teachers', 'Students', 'Subjects', 'Rooms', 'Constraints', 'AIAdvisor', 'Settings', 'Support'];
+    // SuperAdmin: ONLY access Panel and super admin pages
+    const schoolOnlyPages = ['Dashboard', 'Onboarding', 'Schedule', 'TeachingGroups', 'Teachers', 'Students', 'Subjects', 'Rooms', 'Constraints', 'AIAdvisor', 'Settings', 'Support', 'Subscription'];
     if (schoolOnlyPages.includes(currentPageName)) {
-      window.location.href = createPageUrl('Panel');
-      return null;
+      window.location.replace(createPageUrl('Panel'));
+      return (
+        <div className="min-h-screen flex items-center justify-center bg-slate-50">
+          <div className="text-center">
+            <div className="w-16 h-16 border-4 border-indigo-600 border-t-transparent rounded-full animate-spin mx-auto mb-4"></div>
+            <p className="text-slate-600">Redirecting to Admin Panel...</p>
+          </div>
+        </div>
+      );
     }
   } else if (isSchoolAdmin(user)) {
-    // School Admin: redirect to Dashboard if trying to access super admin pages
+    // School Admin: ONLY access Dashboard and school pages
     const superAdminPages = ['Panel', 'UserManagement', 'SubscriptionsOverview', 'SupportTickets'];
     if (superAdminPages.includes(currentPageName)) {
-      window.location.href = createPageUrl('Dashboard');
-      return null;
+      window.location.replace(createPageUrl('Dashboard'));
+      return (
+        <div className="min-h-screen flex items-center justify-center bg-slate-50">
+          <div className="text-center">
+            <div className="w-16 h-16 border-4 border-indigo-600 border-t-transparent rounded-full animate-spin mx-auto mb-4"></div>
+            <p className="text-slate-600">Redirecting to Dashboard...</p>
+          </div>
+        </div>
+      );
     }
   } else if (!user?.school_id && currentPageName !== 'Subscription') {
     // User with no role/school: redirect to subscription
-    window.location.href = createPageUrl('Subscription');
-    return null;
+    window.location.replace(createPageUrl('Subscription'));
+    return (
+      <div className="min-h-screen flex items-center justify-center bg-slate-50">
+        <div className="text-center">
+          <div className="w-16 h-16 border-4 border-indigo-600 border-t-transparent rounded-full animate-spin mx-auto mb-4"></div>
+          <p className="text-slate-600">Redirecting...</p>
+        </div>
+      </div>
+    );
   }
 
   const getInitials = (name) => {
