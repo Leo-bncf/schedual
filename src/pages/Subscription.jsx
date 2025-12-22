@@ -65,7 +65,19 @@ export default function Subscription() {
     } catch (error) {
       console.error('Checkout error:', error);
       console.error('Full error response:', error.response?.data);
-      alert('Payment processing failed: ' + (error.response?.data?.error || error.message));
+
+      const errorData = error.response?.data;
+      let errorMessage = 'Payment processing failed: ';
+
+      if (errorData?.error) {
+        errorMessage += errorData.error;
+        if (errorData.code) errorMessage += ` (Code: ${errorData.code})`;
+        if (errorData.param) errorMessage += ` (Parameter: ${errorData.param})`;
+      } else {
+        errorMessage += error.message;
+      }
+
+      alert(errorMessage);
       setIsProcessing(false);
     }
   };

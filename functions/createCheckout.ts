@@ -92,23 +92,37 @@ Deno.serve(async (req) => {
         cancel_url: `${req.headers.get('origin') || 'https://' + req.headers.get('host')}/Subscription?subscription=cancelled`,
       });
     } catch (stripeError) {
-      console.error('Stripe error details:', stripeError);
-      console.error('Stripe error message:', stripeError.message);
-      console.error('Stripe error type:', stripeError.type);
+      console.error('Stripe API Error:', {
+        message: stripeError.message,
+        type: stripeError.type,
+        code: stripeError.code,
+        param: stripeError.param,
+        statusCode: stripeError.statusCode,
+        raw: stripeError.raw
+      });
+      
       return Response.json({ 
-        error: 'Stripe error: ' + stripeError.message,
-        details: stripeError.type 
-      }, { status: 500 });
+        error: `Stripe API Error: ${stripeError.message}`,
+        code: stripeError.code,
+        type: stripeError.type,
+        param: stripeError.param,
+        statusCode: stripeError.statusCode
+      }, { status: stripeError.statusCode || 500 });
     }
 
     return Response.json({ sessionId: session.id, url: session.url });
   } catch (error) {
-    console.error('Checkout creation error:', error);
-    console.error('Error stack:', error.stack);
-    console.error('Error details:', JSON.stringify(error, null, 2));
+    console.error('Unexpected Error:', {
+      name: error.name,
+      message: error.message,
+      stack: error.stack,
+      cause: error.cause
+    });
+    
     return Response.json({ 
-      error: 'Server error: ' + error.message,
-      details: error.stack 
+      error: `Unexpected error: ${error.message}`,
+      name: error.name,
+      stack: error.stack
     }, { status: 500 });
   }
 });
