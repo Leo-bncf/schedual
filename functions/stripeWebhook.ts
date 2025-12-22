@@ -30,29 +30,51 @@ Deno.serve(async (req) => {
         const userEmail = session.metadata.user_email;
         const additionalUsers = parseInt(session.metadata.additional_users || '0');
 
+        console.log(`🔔 Processing checkout completion for school ${schoolId}, user ${userEmail}`);
+
         // Calculate subscription end date (1 year from now)
         const endDate = new Date();
         endDate.setFullYear(endDate.getFullYear() + 1);
 
         // Update school with subscription info
-        await base44.asServiceRole.entities.School.update(schoolId, {
-          subscription_status: 'active',
-          subscription_plan: 'yearly',
-          stripe_customer_id: session.customer,
-          stripe_subscription_id: session.subscription,
-          subscription_start_date: new Date().toISOString(),
-          subscription_end_date: endDate.toISOString(),
-          max_additional_users: additionalUsers,
-        });
+        try {
+          await base44.asServiceRole.entities.School.update(schoolId, {
+            subscription_status: 'active',
+            subscription_plan: 'yearly',
+            stripe_customer_id: session.customer,
+            stripe_subscription_id: session.subscription,
+            subscription_start_date: new Date().toISOString(),
+            subscription_end_date: endDate.toISOString(),
+            max_additional_users: additionalUsers,
+          });
+          console.log(`✅ School ${schoolId} updated successfully`);
+        } catch (error) {
+          console.error(`❌ Failed to update school ${schoolId}:`, error);
+          throw error;
+        }
 
         // Update user to have admin role and school_id
-        const users = await base44.asServiceRole.entities.User.filter({ email: userEmail });
-        if (users.length > 0) {
-          await base44.asServiceRole.entities.User.update(users[0].id, {
-            role: 'admin',
-            school_id: schoolId
-          });
-          console.log(`✅ User ${userEmail} upgraded to admin with school ${schoolId}`);
+        try {
+          const users = await base44.asServiceRole.entities.User.filter({ email: userEmail });
+          console.log(`Found ${users.length} users with email ${userEmail}`);
+          
+          if (users.length > 0) {
+            const userId = users[0].id;
+            console.log(`Attempting to update user ${userId} with role=admin, school_id=${schoolId}`);
+            
+            await base44.asServiceRole.entities.User.update(userId, {
+              role: 'admin',
+              school_id: schoolId
+            });
+            
+            console.log(`✅ User ${userEmail} (${userId}) upgraded to admin with school ${schoolId}`);
+          } else {
+            console.warn(`⚠️ No user found with email ${userEmail}`);
+          }
+        } catch (error) {
+          console.error(`❌ Failed to update user ${userEmail}:`, error);
+          console.error('Error details:', error.message, error.stack);
+          // Don't throw - school is already activated, user update is secondary
         }
 
         console.log(`✅ Subscription activated for school ${schoolId}`);
