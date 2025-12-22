@@ -171,7 +171,11 @@ export default function Layout({ children, currentPageName }) {
         <div className="flex flex-col h-full">
           {/* Logo */}
           <div className="flex items-center justify-between h-16 px-6 border-b border-slate-100">
-            <Link to={createPageUrl('Dashboard')} className="flex items-center gap-3">
+            <Link to={createPageUrl(
+              isSuperAdmin(user) ? 'Panel' : 
+              isNewClient(user) ? 'Subscription' : 
+              'Dashboard'
+            )} className="flex items-center gap-3">
               <div className="w-9 h-9 rounded-xl bg-gradient-to-br from-indigo-500 to-violet-600 flex items-center justify-center">
                 <Calendar className="w-5 h-5 text-white" />
               </div>
