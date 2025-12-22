@@ -63,12 +63,12 @@ export default function Dashboard() {
     enabled: !!user?.school_id,
   });
 
-  // Strict access control: Only school admins
+  // Strict access control: Only school users
   const SUPER_ADMIN_EMAILS = ['leo.bancroft34@icloud.com', 'erik.gerbst@gmail.com'];
   const isSuperAdmin = SUPER_ADMIN_EMAILS.includes(user?.email?.toLowerCase());
   
   React.useEffect(() => {
-    if (user && (isSuperAdmin || !user.school_id || user.role !== 'admin')) {
+    if (user && (isSuperAdmin || !user.school_id)) {
       window.location.href = createPageUrl('Panel');
     }
   }, [user, isSuperAdmin]);
