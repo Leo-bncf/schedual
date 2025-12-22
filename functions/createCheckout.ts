@@ -7,18 +7,31 @@ Deno.serve(async (req) => {
     const base44 = createClientFromRequest(req);
     const user = await base44.auth.me();
 
-    if (!user || !user.school_id) {
-      return Response.json({ error: 'Unauthorized or no school assigned' }, { status: 401 });
+    if (!user) {
+      return Response.json({ error: 'Unauthorized' }, { status: 401 });
     }
 
     const { additionalUsers = 0 } = await req.json();
 
-    // Get school details
-    const schools = await base44.entities.School.filter({ id: user.school_id });
-    const school = schools[0];
+    // Create or get school
+    let school;
+    if (user.school_id) {
+      const schools = await base44.asServiceRole.entities.School.filter({ id: user.school_id });
+      school = schools[0];
+    }
 
     if (!school) {
-      return Response.json({ error: 'School not found' }, { status: 404 });
+      // Create new school for user
+      school = await base44.asServiceRole.entities.School.create({
+        name: `${user.full_name}'s School`,
+        code: `SCH-${Date.now()}`,
+        subscription_status: 'inactive',
+      });
+
+      // Assign school to user
+      await base44.asServiceRole.entities.User.update(user.id, {
+        school_id: school.id
+      });
     }
 
     // Calculate pricing
