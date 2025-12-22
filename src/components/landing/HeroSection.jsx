@@ -35,8 +35,8 @@ export default function HeroSection() {
             {/* Stats */}
             <div className="grid grid-cols-3 gap-6 mt-12">
               <div>
-                <div className="text-3xl font-bold text-indigo-600">95%</div>
-                <div className="text-sm text-slate-600">Time Saved</div>
+                <div className="text-3xl font-bold text-indigo-600">100s</div>
+                <div className="text-sm text-slate-600">Hours Saved</div>
               </div>
               <div>
                 <div className="text-3xl font-bold text-indigo-600">100%</div>
