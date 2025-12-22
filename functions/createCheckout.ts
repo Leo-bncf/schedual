@@ -46,10 +46,11 @@ Deno.serve(async (req) => {
           subscription_status: 'inactive',
         });
 
-        // Assign school to user
+        // Assign school to user (role will be upgraded after payment in webhook)
         await base44.asServiceRole.entities.User.update(user.id, {
           school_id: school.id
         });
+        console.log(`Assigned school ${school.id} to user ${user.id}`);
       } catch (schoolCreateError) {
         console.error('Error creating school:', schoolCreateError);
         return Response.json({ error: 'Failed to create school: ' + schoolCreateError.message }, { status: 500 });
