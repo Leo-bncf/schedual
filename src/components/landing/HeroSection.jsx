@@ -17,7 +17,7 @@ export default function HeroSection() {
           {/* Left Content */}
           <div>
             <h1 className="text-5xl sm:text-6xl font-bold text-slate-900 leading-tight mb-6">
-              Automated IB Schedule Generation
+              All-in-One Automated IB Schedule Generation
             </h1>
             <p className="text-xl text-slate-600 mb-8 leading-relaxed">
               Create conflict-free timetables for your IB school in minutes. 
@@ -40,7 +40,7 @@ export default function HeroSection() {
               </div>
               <div>
                 <div className="text-3xl font-bold text-indigo-600">100%</div>
-                <div className="text-sm text-slate-600">Conflict-Free</div>
+                <div className="text-sm text-slate-600">Safe & Encrypted</div>
               </div>
               <div>
                 <div className="text-3xl font-bold text-indigo-600">24/7</div>
