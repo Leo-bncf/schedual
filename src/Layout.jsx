@@ -74,20 +74,46 @@ export default function Layout({ children, currentPageName }) {
     const subscriptionSuccess = urlParams.get('subscription') === 'success';
     
     if (subscriptionSuccess) {
-      // Force refetch user data after subscription success
-      console.log('Subscription success detected, refetching user data...');
-      setTimeout(() => {
+      // Force refetch user data after subscription success with retries
+      console.log('Subscription success detected, waiting for webhook to process...');
+      let attempts = 0;
+      const maxAttempts = 10;
+      
+      const checkUserUpdate = () => {
+        attempts++;
         base44.auth.me()
           .then(userData => {
-            setUser(userData);
-            setIsLoading(false);
-            // Clean up URL
-            window.history.replaceState({}, '', window.location.pathname);
+            console.log('User data attempt', attempts, ':', userData);
+            // Check if user has been upgraded (has admin role and school_id)
+            if (userData.role === 'admin' && userData.school_id) {
+              console.log('User upgraded successfully!');
+              setUser(userData);
+              setIsLoading(false);
+              window.history.replaceState({}, '', window.location.pathname);
+            } else if (attempts < maxAttempts) {
+              // Not upgraded yet, retry after delay
+              console.log('User not upgraded yet, retrying...');
+              setTimeout(checkUserUpdate, 2000);
+            } else {
+              // Max attempts reached, show user anyway
+              console.log('Max attempts reached, showing user');
+              setUser(userData);
+              setIsLoading(false);
+              window.history.replaceState({}, '', window.location.pathname);
+            }
           })
-          .catch(() => {
-            base44.auth.redirectToLogin(window.location.pathname);
+          .catch((error) => {
+            console.error('Error fetching user:', error);
+            if (attempts < maxAttempts) {
+              setTimeout(checkUserUpdate, 2000);
+            } else {
+              base44.auth.redirectToLogin(window.location.pathname);
+            }
           });
-      }, 1000); // Small delay to allow webhook to process
+      };
+      
+      // Start checking after initial delay
+      setTimeout(checkUserUpdate, 2000);
     } else {
       base44.auth.me()
         .then(userData => {
