@@ -55,6 +55,7 @@ const navigation = [
 export default function Layout({ children, currentPageName }) {
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const [user, setUser] = useState(null);
+  const [isSuperAdmin, setIsSuperAdmin] = useState(false);
   const [isLoading, setIsLoading] = useState(true);
 
   // Public pages render without authentication
@@ -63,10 +64,8 @@ export default function Layout({ children, currentPageName }) {
   }
 
   // Role definitions
-  const SUPER_ADMIN_EMAILS = ['leo.bancroft34@icloud.com', 'erik.gerbst@gmail.com'];
-  const isSuperAdmin = (userData) => SUPER_ADMIN_EMAILS.includes(userData?.email?.toLowerCase());
-  const isSchoolAdmin = (userData) => userData?.role === 'admin' && !!userData?.school_id && !isSuperAdmin(userData);
-  const isNewClient = (userData) => userData && !userData.school_id && !isSuperAdmin(userData);
+  const isSchoolAdmin = (userData) => userData?.role === 'admin' && !!userData?.school_id && !isSuperAdmin;
+  const isNewClient = (userData) => userData && !userData.school_id && !isSuperAdmin;
 
   useEffect(() => {
     // Check if returning from successful subscription
@@ -116,8 +115,18 @@ export default function Layout({ children, currentPageName }) {
       setTimeout(checkUserUpdate, 2000);
     } else {
       base44.auth.me()
-        .then(userData => {
+        .then(async userData => {
           setUser(userData);
+          
+          // Check SuperAdmin status from backend
+          try {
+            const { data } = await base44.functions.invoke('getSuperAdminEmails');
+            setIsSuperAdmin(data?.isSuperAdmin || false);
+          } catch (error) {
+            console.error('Error checking SuperAdmin status:', error);
+            setIsSuperAdmin(false);
+          }
+          
           setIsLoading(false);
         })
         .catch(() => {
@@ -138,7 +147,7 @@ export default function Layout({ children, currentPageName }) {
   }
 
   // Role-based access control
-  if (isSuperAdmin(user)) {
+  if (isSuperAdmin) {
     // SuperAdmin: ONLY access Panel and super admin pages
     const schoolOnlyPages = ['Dashboard', 'Onboarding', 'Schedule', 'TeachingGroups', 'Teachers', 'Students', 'Subjects', 'Rooms', 'Constraints', 'AIAdvisor', 'Settings', 'Support', 'Subscription'];
     if (schoolOnlyPages.includes(currentPageName)) {
@@ -219,7 +228,7 @@ export default function Layout({ children, currentPageName }) {
           {/* Logo */}
           <div className="flex items-center justify-between h-16 px-6 border-b border-slate-100">
             <Link to={createPageUrl(
-              isSuperAdmin(user) ? 'Panel' : 
+              isSuperAdmin ? 'Panel' : 
               isNewClient(user) ? 'Subscription' : 
               'Dashboard'
             )} className="flex items-center gap-3">
@@ -242,7 +251,7 @@ export default function Layout({ children, currentPageName }) {
           <nav className="flex-1 px-4 py-6 space-y-1 overflow-y-auto">
             {navigation.map((item) => {
               // Strict role filtering
-              if (item.superAdminOnly && !isSuperAdmin(user)) return null;
+              if (item.superAdminOnly && !isSuperAdmin) return null;
               if (item.schoolOnly && !isSchoolAdmin(user)) return null;
               const isActive = currentPageName === item.page;
               return (
@@ -310,7 +319,7 @@ export default function Layout({ children, currentPageName }) {
           </Button>
 
           <div className="flex items-center gap-3 ml-auto">
-            <Link to={createPageUrl(isSuperAdmin(user) ? 'SupportTickets' : 'Support')}>
+            <Link to={createPageUrl(isSuperAdmin ? 'SupportTickets' : 'Support')}>
               <Button variant="ghost" size="icon" className="relative">
                 <Bell className="w-5 h-5 text-slate-500" />
                 <span className="absolute top-2 right-2 w-2 h-2 bg-rose-500 rounded-full" />
