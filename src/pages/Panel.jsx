@@ -65,17 +65,41 @@ export default function Panel() {
 
   const { data: allTeachers = [] } = useQuery({
     queryKey: ['allTeachers'],
-    queryFn: () => base44.entities.Teacher.list(),
+    queryFn: async () => {
+      try {
+        const { data } = await base44.functions.invoke('adminGetAllData', { entityType: 'Teacher' });
+        return data.records || [];
+      } catch (error) {
+        console.error('Error fetching teachers:', error);
+        return [];
+      }
+    },
   });
 
   const { data: allStudents = [] } = useQuery({
     queryKey: ['allStudents'],
-    queryFn: () => base44.entities.Student.list(),
+    queryFn: async () => {
+      try {
+        const { data } = await base44.functions.invoke('adminGetAllData', { entityType: 'Student' });
+        return data.records || [];
+      } catch (error) {
+        console.error('Error fetching students:', error);
+        return [];
+      }
+    },
   });
 
   const { data: allSchedules = [] } = useQuery({
     queryKey: ['allSchedules'],
-    queryFn: () => base44.entities.ScheduleVersion.list(),
+    queryFn: async () => {
+      try {
+        const { data } = await base44.functions.invoke('adminGetAllData', { entityType: 'ScheduleVersion' });
+        return data.records || [];
+      } catch (error) {
+        console.error('Error fetching schedules:', error);
+        return [];
+      }
+    },
   });
 
   const createSchoolMutation = useMutation({
