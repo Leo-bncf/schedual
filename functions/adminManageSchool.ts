@@ -40,7 +40,7 @@ Deno.serve(async (req) => {
         return Response.json({ success: true });
 
       case 'list':
-        const schools = await base44.asServiceRole.entities.School.list();
+        const schools = await base44.asServiceRole.entities.School.filter({});
         return Response.json({ success: true, schools });
 
       default:
