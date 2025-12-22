@@ -49,9 +49,14 @@ export default function Subscription() {
     
     setIsProcessing(true);
     try {
+      console.log('Starting checkout with:', { additionalUsers });
       const response = await base44.functions.invoke('createCheckout', {
         additionalUsers
       });
+
+      console.log('Checkout response:', response);
+      console.log('Response status:', response.status);
+      console.log('Response data:', response.data);
 
       if (response.data?.error) {
         throw new Error(response.data.error);
@@ -60,21 +65,39 @@ export default function Subscription() {
       if (response.data?.url) {
         window.location.href = response.data.url;
       } else {
-        throw new Error('No checkout URL received');
+        throw new Error('No checkout URL received from Stripe');
       }
     } catch (error) {
-      console.error('Checkout error:', error);
-      console.error('Full error response:', error.response?.data);
+      console.error('=== CHECKOUT ERROR DEBUG ===');
+      console.error('Error object:', error);
+      console.error('Error message:', error.message);
+      console.error('Error response:', error.response);
+      console.error('Response data:', error.response?.data);
+      console.error('Response status:', error.response?.status);
 
-      const errorData = error.response?.data;
-      let errorMessage = 'Payment processing failed: ';
+      let errorMessage = 'Payment Error:\n\n';
 
-      if (errorData?.error) {
-        errorMessage += errorData.error;
-        if (errorData.code) errorMessage += ` (Code: ${errorData.code})`;
-        if (errorData.param) errorMessage += ` (Parameter: ${errorData.param})`;
+      // Check if it's an axios response error
+      if (error.response?.data) {
+        const errorData = error.response.data;
+        console.error('Parsed error data:', errorData);
+        
+        errorMessage += errorData.error || 'Unknown error occurred';
+        
+        if (errorData.code) {
+          errorMessage += `\n\nStripe Error Code: ${errorData.code}`;
+        }
+        if (errorData.param) {
+          errorMessage += `\nProblem with: ${errorData.param}`;
+        }
+        if (errorData.type) {
+          errorMessage += `\nError Type: ${errorData.type}`;
+        }
+        if (errorData.statusCode) {
+          errorMessage += `\nStatus: ${errorData.statusCode}`;
+        }
       } else {
-        errorMessage += error.message;
+        errorMessage += error.message || 'Unknown error';
       }
 
       alert(errorMessage);
