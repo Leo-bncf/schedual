@@ -56,7 +56,7 @@ export default function HowItWorksSection() {
               )}
               
               {/* Step Card */}
-              <div className="relative bg-white/50 backdrop-blur-sm rounded-xl p-6 border border-purple-300/50 hover:border-indigo-500/50 transition-all text-center">
+              <div className="relative bg-white/50 backdrop-blur-sm rounded-xl p-6 border border-blue-300/50 hover:border-indigo-500/50 transition-all text-center">
                 <div className="w-12 h-12 rounded-full bg-gradient-to-br from-indigo-600 to-violet-600 flex items-center justify-center text-white font-bold text-lg mx-auto mb-4">
                   {step.number}
                 </div>

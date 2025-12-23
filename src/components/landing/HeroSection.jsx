@@ -59,17 +59,17 @@ export default function HeroSection() {
 
         {/* Stats */}
         <div className="grid grid-cols-1 sm:grid-cols-3 gap-8 mt-16">
-          <div className="bg-white/50 backdrop-blur-sm rounded-2xl p-6 shadow-lg border border-purple-300/50">
+          <div className="bg-white/50 backdrop-blur-sm rounded-2xl p-6 shadow-lg border border-blue-300/50">
             <Clock className="w-8 h-8 text-indigo-600 mx-auto mb-3" />
             <div className="text-3xl font-bold text-slate-900">100+</div>
             <div className="text-slate-700">Hours Saved</div>
           </div>
-          <div className="bg-white/50 backdrop-blur-sm rounded-2xl p-6 shadow-lg border border-purple-300/50">
+          <div className="bg-white/50 backdrop-blur-sm rounded-2xl p-6 shadow-lg border border-blue-300/50">
             <Zap className="w-8 h-8 text-violet-600 mx-auto mb-3" />
             <div className="text-3xl font-bold text-slate-900">AI-Powered</div>
             <div className="text-slate-700">Smart Optimization</div>
           </div>
-          <div className="bg-white/50 backdrop-blur-sm rounded-2xl p-6 shadow-lg border border-purple-300/50">
+          <div className="bg-white/50 backdrop-blur-sm rounded-2xl p-6 shadow-lg border border-blue-300/50">
             <Shield className="w-8 h-8 text-indigo-600 mx-auto mb-3" />
             <div className="text-3xl font-bold text-slate-900">Safe & Encrypted</div>
             <div className="text-slate-700">Secure Data</div>
