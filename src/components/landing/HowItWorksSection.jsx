@@ -1,71 +1,77 @@
 import React from 'react';
-import { Users, BookOpen, Settings, Sparkles, CheckCircle } from 'lucide-react';
+import { Building2, Users, Settings, Play, CheckCircle } from 'lucide-react';
 
 const steps = [
   {
-    number: 1,
-    icon: <Users className="w-6 h-6" />,
-    title: 'Add Your Data',
-    description: 'Import teachers, students, subjects, and rooms into the system.'
+    number: '1',
+    icon: Building2,
+    title: 'Create Your School Profile',
+    description: 'Set up your school details, academic year, and basic scheduling parameters like period duration and school hours.',
   },
   {
-    number: 2,
-    icon: <BookOpen className="w-6 h-6" />,
-    title: 'Set Preferences',
-    description: 'Define teacher qualifications, student choices, and scheduling constraints.'
+    number: '2',
+    icon: Users,
+    title: 'Add Teachers, Students & Subjects',
+    description: 'Import or manually add your teachers with qualifications, students with subject choices, and all your IB subjects.',
   },
   {
-    number: 3,
-    icon: <Settings className="w-6 h-6" />,
-    title: 'Configure Settings',
-    description: 'Set your school parameters like periods per day and IB requirements.'
+    number: '3',
+    icon: Settings,
+    title: 'Define Rules & Constraints',
+    description: 'Set teacher availability, room requirements, student groupings, and any special scheduling rules.',
   },
   {
-    number: 4,
-    icon: <Sparkles className="w-6 h-6" />,
+    number: '4',
+    icon: Play,
     title: 'Generate Schedule',
-    description: 'Our AI creates an optimized schedule in minutes, not weeks.'
+    description: 'Click generate and watch the AI create a complete, conflict-free timetable in seconds.',
   },
   {
-    number: 5,
-    icon: <CheckCircle className="w-6 h-6" />,
-    title: 'Review & Publish',
-    description: 'Fine-tune if needed and publish your conflict-free schedule.'
-  }
+    number: '5',
+    icon: CheckCircle,
+    title: 'Review & Export',
+    description: 'Review the schedule, make any adjustments, and export for students, teachers, and rooms.',
+  },
 ];
 
 export default function HowItWorksSection() {
   return (
-    <section id="how-it-works" className="py-24 relative">
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+    <section id="how-it-works" className="py-20 px-4 sm:px-6 lg:px-8 bg-gradient-to-br from-violet-50 via-purple-50 to-pink-50">
+      <div className="max-w-7xl mx-auto">
+        {/* Section Header */}
         <div className="text-center mb-16">
-          <h2 className="text-4xl sm:text-5xl font-bold text-white mb-6">
+          <h2 className="text-4xl font-bold text-slate-900 mb-4">
             How It Works
           </h2>
-          <p className="text-xl text-purple-200 max-w-3xl mx-auto">
-            Get started in 5 simple steps. From data import to published schedule.
+          <p className="text-xl text-slate-600 max-w-3xl mx-auto">
+            Get started in 5 simple steps. No technical knowledge required.
           </p>
         </div>
 
-        <div className="grid md:grid-cols-5 gap-8">
-          {steps.map((step, i) => (
-            <div key={i} className="relative">
-              {/* Connector Line */}
-              {i < steps.length - 1 && (
-                <div className="hidden md:block absolute top-12 left-1/2 w-full h-0.5 bg-gradient-to-r from-indigo-500/50 to-violet-500/50" />
-              )}
-              
-              {/* Step Card */}
-              <div className="relative bg-white/5 backdrop-blur-sm rounded-xl p-6 border border-purple-800/30 hover:border-indigo-500/50 transition-all text-center">
-                <div className="w-12 h-12 rounded-full bg-gradient-to-br from-indigo-600 to-violet-600 flex items-center justify-center text-white font-bold text-lg mx-auto mb-4">
+        {/* Steps */}
+        <div className="space-y-8">
+          {steps.map((step, index) => (
+            <div key={index} className="flex flex-col md:flex-row gap-6 items-start">
+              {/* Step Number & Icon */}
+              <div className="flex-shrink-0">
+                <div className="w-16 h-16 rounded-2xl bg-gradient-to-br from-indigo-500 to-violet-600 flex items-center justify-center text-2xl font-bold text-white shadow-lg">
                   {step.number}
                 </div>
-                <div className="w-10 h-10 rounded-lg bg-gradient-to-br from-indigo-600/20 to-violet-600/20 flex items-center justify-center text-indigo-400 mx-auto mb-3">
-                  {step.icon}
-                </div>
-                <h3 className="font-semibold text-white mb-2">{step.title}</h3>
-                <p className="text-sm text-purple-200">{step.description}</p>
               </div>
+
+              {/* Step Content */}
+              <div className="flex-1 bg-white p-6 rounded-xl border-2 border-purple-100 shadow-lg hover:shadow-xl transition-all">
+                <div className="flex items-center gap-3 mb-3">
+                  <step.icon className="w-6 h-6 text-indigo-600" />
+                  <h3 className="text-xl font-semibold text-slate-900">{step.title}</h3>
+                </div>
+                <p className="text-slate-600 leading-relaxed">{step.description}</p>
+              </div>
+
+              {/* Connector Line */}
+              {index < steps.length - 1 && (
+                <div className="hidden md:block w-0.5 h-8 bg-slate-200 ml-8 mt-4"></div>
+              )}
             </div>
           ))}
         </div>
