@@ -36,7 +36,7 @@ const features = [
 
 export default function InfoSection() {
   return (
-    <section id="info" className="py-20 px-4 sm:px-6 lg:px-8 bg-gradient-to-br from-slate-50 via-blue-50 to-indigo-50">
+    <section id="info" className="py-20 px-4 sm:px-6 lg:px-8 bg-gradient-to-br from-indigo-100 via-violet-100 to-purple-100">
       <div className="max-w-7xl mx-auto">
         {/* Section Header */}
         <div className="text-center mb-16">
@@ -51,7 +51,7 @@ export default function InfoSection() {
 
         {/* Problems & Solutions */}
         <div className="grid md:grid-cols-2 gap-8 mb-16">
-          <div className="bg-rose-50 p-8 rounded-2xl border border-rose-100">
+          <div className="bg-gradient-to-br from-rose-100 to-pink-100 p-8 rounded-2xl border border-rose-200">
             <h3 className="text-2xl font-semibold text-rose-900 mb-4">Existing Solutions</h3>
             <ul className="space-y-3 text-slate-700">
               <li className="flex items-start gap-2">
@@ -73,7 +73,7 @@ export default function InfoSection() {
             </ul>
           </div>
 
-          <div className="bg-emerald-50 p-8 rounded-2xl border border-emerald-100">
+          <div className="bg-gradient-to-br from-emerald-100 to-teal-100 p-8 rounded-2xl border border-emerald-200">
             <h3 className="text-2xl font-semibold text-emerald-900 mb-4">IB Schedual Pro</h3>
             <ul className="space-y-3 text-slate-700">
               <li className="flex items-start gap-2">
@@ -99,7 +99,7 @@ export default function InfoSection() {
         {/* Features Grid */}
         <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-8">
           {features.map((feature, index) => (
-            <div key={index} className="p-6 rounded-xl bg-white border-2 border-indigo-100 hover:border-indigo-300 transition-all hover:shadow-xl hover:-translate-y-1 group">
+            <div key={index} className="p-6 rounded-xl bg-gradient-to-br from-white/80 to-indigo-50/80 backdrop-blur-sm border-2 border-indigo-200 hover:border-indigo-300 transition-all hover:shadow-xl hover:-translate-y-1 group">
               <div className="w-12 h-12 rounded-lg bg-gradient-to-br from-indigo-500 to-violet-600 flex items-center justify-center mb-4 group-hover:scale-110 transition-transform shadow-lg">
                 <feature.icon className="w-6 h-6 text-white" />
               </div>

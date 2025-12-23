@@ -59,7 +59,7 @@ export default function PricingSection() {
   };
 
   return (
-    <section id="pricing" className="relative py-24 px-4 sm:px-6 lg:px-8 bg-gradient-to-br from-slate-50 via-indigo-50/30 to-violet-50/30 overflow-hidden">
+    <section id="pricing" className="relative py-24 px-4 sm:px-6 lg:px-8 bg-gradient-to-br from-violet-100 via-purple-100 to-pink-100 overflow-hidden">
       {/* Background decorations */}
       <div className="absolute inset-0 overflow-hidden pointer-events-none">
         <div className="absolute -top-40 -right-40 w-96 h-96 bg-indigo-200/20 rounded-full blur-3xl"></div>
@@ -86,13 +86,13 @@ export default function PricingSection() {
         <div className="grid lg:grid-cols-12 gap-8 items-center max-w-6xl mx-auto">
           {/* Left Stats */}
           <div className="lg:col-span-3 space-y-6">
-            <div className="bg-white/80 backdrop-blur-sm p-6 rounded-2xl border border-indigo-100 shadow-sm hover:shadow-md transition-shadow">
+            <div className="bg-gradient-to-br from-indigo-50 to-blue-100/80 backdrop-blur-sm p-6 rounded-2xl border border-indigo-200 shadow-sm hover:shadow-md transition-shadow">
               <div className="text-4xl font-bold text-indigo-600 mb-2">500+</div>
-              <p className="text-slate-600">Hours Saved Annually</p>
+              <p className="text-slate-700">Hours Saved Annually</p>
             </div>
-            <div className="bg-white/80 backdrop-blur-sm p-6 rounded-2xl border border-violet-100 shadow-sm hover:shadow-md transition-shadow">
+            <div className="bg-gradient-to-br from-violet-50 to-purple-100/80 backdrop-blur-sm p-6 rounded-2xl border border-violet-200 shadow-sm hover:shadow-md transition-shadow">
               <div className="text-4xl font-bold text-violet-600 mb-2">100%</div>
-              <p className="text-slate-600">IB Compliant</p>
+              <p className="text-slate-700">IB Compliant</p>
             </div>
           </div>
 
@@ -152,13 +152,13 @@ export default function PricingSection() {
 
           {/* Right Stats */}
           <div className="lg:col-span-3 space-y-6">
-            <div className="bg-white/80 backdrop-blur-sm p-6 rounded-2xl border border-emerald-100 shadow-sm hover:shadow-md transition-shadow">
+            <div className="bg-gradient-to-br from-emerald-50 to-green-100/80 backdrop-blur-sm p-6 rounded-2xl border border-emerald-200 shadow-sm hover:shadow-md transition-shadow">
               <div className="text-4xl font-bold text-emerald-600 mb-2">24/7</div>
-              <p className="text-slate-600">Priority Support</p>
+              <p className="text-slate-700">Priority Support</p>
             </div>
-            <div className="bg-white/80 backdrop-blur-sm p-6 rounded-2xl border border-amber-100 shadow-sm hover:shadow-md transition-shadow">
+            <div className="bg-gradient-to-br from-amber-50 to-yellow-100/80 backdrop-blur-sm p-6 rounded-2xl border border-amber-200 shadow-sm hover:shadow-md transition-shadow">
               <div className="text-4xl font-bold text-amber-600 mb-2">0</div>
-              <p className="text-slate-600">Conflicts Guaranteed</p>
+              <p className="text-slate-700">Conflicts Guaranteed</p>
             </div>
           </div>
         </div>
@@ -167,15 +167,15 @@ export default function PricingSection() {
         <div className="mt-20 text-center">
           <p className="text-slate-600 text-lg mb-6 font-medium">Trusted by IB schools worldwide 🌍</p>
           <div className="flex flex-wrap justify-center items-center gap-6 md:gap-12">
-            <div className="flex items-center gap-2 text-slate-600 bg-white/60 backdrop-blur-sm px-6 py-3 rounded-full border border-slate-200">
+            <div className="flex items-center gap-2 text-slate-700 bg-gradient-to-r from-indigo-50 to-violet-50 backdrop-blur-sm px-6 py-3 rounded-full border border-indigo-200">
               <CheckCircle className="w-5 h-5 text-emerald-600" />
               <span className="font-medium">Secure Stripe Payments</span>
             </div>
-            <div className="flex items-center gap-2 text-slate-600 bg-white/60 backdrop-blur-sm px-6 py-3 rounded-full border border-slate-200">
+            <div className="flex items-center gap-2 text-slate-700 bg-gradient-to-r from-violet-50 to-purple-50 backdrop-blur-sm px-6 py-3 rounded-full border border-violet-200">
               <CheckCircle className="w-5 h-5 text-emerald-600" />
               <span className="font-medium">Cancel Anytime</span>
             </div>
-            <div className="flex items-center gap-2 text-slate-600 bg-white/60 backdrop-blur-sm px-6 py-3 rounded-full border border-slate-200">
+            <div className="flex items-center gap-2 text-slate-700 bg-gradient-to-r from-purple-50 to-pink-50 backdrop-blur-sm px-6 py-3 rounded-full border border-purple-200">
               <CheckCircle className="w-5 h-5 text-emerald-600" />
               <span className="font-medium">30-Day Money Back</span>
             </div>
