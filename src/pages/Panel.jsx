@@ -53,6 +53,7 @@ export default function Panel() {
       const { data } = await base44.functions.invoke('adminManageSchool', { action: 'list' });
       return data.schools || [];
     },
+    refetchInterval: 5000, // Auto-refetch every 5 seconds to catch webhook updates
   });
 
   const { data: allUsers = [] } = useQuery({
