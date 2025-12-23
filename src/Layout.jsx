@@ -251,12 +251,12 @@ export default function Layout({ children, currentPageName }) {
               <DropdownMenuContent align="end" className="w-56">
                 <DropdownMenuLabel>My Account</DropdownMenuLabel>
                 <DropdownMenuSeparator />
-                <Link to={createPageUrl('AccountManager')}>
-                  <DropdownMenuItem className="cursor-pointer">
+                <DropdownMenuItem asChild>
+                  <Link to={createPageUrl('AccountManager')} className="cursor-pointer">
                     <User className="w-4 h-4 mr-2" />
                     Account Manager
-                  </DropdownMenuItem>
-                </Link>
+                  </Link>
+                </DropdownMenuItem>
                 <DropdownMenuItem onClick={() => base44.auth.logout()}>
                   <LogOut className="w-4 h-4 mr-2" />
                   Sign out
