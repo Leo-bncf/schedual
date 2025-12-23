@@ -67,13 +67,15 @@ export default function Layout({ children, currentPageName }) {
   const isNewClient = (userData) => userData && !userData.school_id && !isSuperAdmin;
 
   useEffect(() => {
-    // Check if returning from successful subscription
+    if (currentPageName === 'Landing') {
+      setIsLoading(false);
+      return;
+    }
+
     const urlParams = new URLSearchParams(window.location.search);
     const subscriptionSuccess = urlParams.get('subscription') === 'success';
     
     if (subscriptionSuccess) {
-      // Force refetch user data after subscription success with retries
-      console.log('Subscription success detected, waiting for webhook to process...');
       let attempts = 0;
       const maxAttempts = 10;
       
@@ -81,20 +83,13 @@ export default function Layout({ children, currentPageName }) {
         attempts++;
         base44.auth.me()
           .then(userData => {
-            console.log('User data attempt', attempts, ':', userData);
-            // Check if user has been upgraded (has school_id assigned)
             if (userData.school_id) {
-              console.log('User upgraded successfully!');
               setUser(userData);
               setIsLoading(false);
               window.history.replaceState({}, '', window.location.pathname);
             } else if (attempts < maxAttempts) {
-              // Not upgraded yet, retry after delay
-              console.log('User not upgraded yet, retrying...');
               setTimeout(checkUserUpdate, 2000);
             } else {
-              // Max attempts reached, show user anyway
-              console.log('Max attempts reached, showing user');
               setUser(userData);
               setIsLoading(false);
               window.history.replaceState({}, '', window.location.pathname);
@@ -110,14 +105,12 @@ export default function Layout({ children, currentPageName }) {
           });
       };
       
-      // Start checking after initial delay
       setTimeout(checkUserUpdate, 2000);
-    } else {
+    } else if (!user) {
       base44.auth.me()
         .then(async userData => {
           setUser(userData);
           
-          // Check SuperAdmin status from backend
           try {
             const { data } = await base44.functions.invoke('getSuperAdminEmails');
             setIsSuperAdmin(data?.isSuperAdmin || false);
@@ -131,8 +124,10 @@ export default function Layout({ children, currentPageName }) {
         .catch(() => {
           base44.auth.redirectToLogin(window.location.pathname);
         });
+    } else {
+      setIsLoading(false);
     }
-  }, []);
+  }, [currentPageName, user]);
 
   if (isLoading) {
     return (
@@ -146,47 +141,18 @@ export default function Layout({ children, currentPageName }) {
   }
 
   // Role-based access control
-  if (isSuperAdmin) {
-    // SuperAdmin: ONLY access Panel and super admin pages
-    const schoolOnlyPages = ['Dashboard', 'Onboarding', 'Schedule', 'TeachingGroups', 'Teachers', 'Students', 'Subjects', 'Rooms', 'Constraints', 'AIAdvisor', 'Settings', 'Support', 'Subscription'];
-    if (schoolOnlyPages.includes(currentPageName)) {
-      window.location.replace(createPageUrl('Panel'));
-      return (
-        <div className="min-h-screen flex items-center justify-center bg-slate-50">
-          <div className="text-center">
-            <div className="w-16 h-16 border-4 border-indigo-600 border-t-transparent rounded-full animate-spin mx-auto mb-4"></div>
-            <p className="text-slate-600">Redirecting to Admin Panel...</p>
-          </div>
-        </div>
-      );
-    }
-  } else if (isSchoolAdmin(user)) {
-    // School Admin: ONLY access Dashboard and school pages
-    const superAdminPages = ['Panel', 'UserManagement', 'SubscriptionsOverview', 'SupportTickets'];
-    if (superAdminPages.includes(currentPageName)) {
-      window.location.replace(createPageUrl('Dashboard'));
-      return (
-        <div className="min-h-screen flex items-center justify-center bg-slate-50">
-          <div className="text-center">
-            <div className="w-16 h-16 border-4 border-indigo-600 border-t-transparent rounded-full animate-spin mx-auto mb-4"></div>
-            <p className="text-slate-600">Redirecting to Dashboard...</p>
-          </div>
-        </div>
-      );
-    }
-  } else if (isNewClient(user)) {
-    // New clients: ONLY access Subscription page
-    if (currentPageName !== 'Subscription') {
-      window.location.replace(createPageUrl('Subscription'));
-      return (
-        <div className="min-h-screen flex items-center justify-center bg-slate-50">
-          <div className="text-center">
-            <div className="w-16 h-16 border-4 border-indigo-600 border-t-transparent rounded-full animate-spin mx-auto mb-4"></div>
-            <p className="text-slate-600">Redirecting to Subscription...</p>
-          </div>
-        </div>
-      );
-    }
+  const schoolOnlyPages = ['Dashboard', 'Onboarding', 'Schedule', 'TeachingGroups', 'Teachers', 'Students', 'Subjects', 'Rooms', 'Constraints', 'AIAdvisor', 'Settings', 'Support', 'Subscription'];
+  const superAdminPages = ['Panel', 'UserManagement', 'SubscriptionsOverview', 'SupportTickets'];
+
+  if (isSuperAdmin && schoolOnlyPages.includes(currentPageName)) {
+    window.location.href = createPageUrl('Panel');
+    return null;
+  } else if (isSchoolAdmin(user) && superAdminPages.includes(currentPageName)) {
+    window.location.href = createPageUrl('Dashboard');
+    return null;
+  } else if (isNewClient(user) && currentPageName !== 'Subscription') {
+    window.location.href = createPageUrl('Subscription');
+    return null;
   }
 
   const getInitials = (name) => {
