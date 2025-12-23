@@ -158,7 +158,7 @@ export default function Layout({ children, currentPageName }) {
   return (
     <div className="min-h-screen bg-slate-50">
       <style>{`
-        @import url('https://fonts.googleapis.com/css2?family=Outfit:wght@400;500;600;700;800&display=swap');
+        @import url('https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;600;700&display=swap');
 
         :root {
           --primary: 99 102 241;
@@ -170,7 +170,7 @@ export default function Layout({ children, currentPageName }) {
           -moz-osx-font-smoothing: grayscale;
         }
         h1, h2, h3, h4, h5, h6 {
-          font-family: 'Outfit', 'Inter', sans-serif;
+          font-family: 'Space Grotesk', 'Inter', sans-serif;
           letter-spacing: -0.02em;
         }
       `}</style>
