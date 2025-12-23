@@ -36,8 +36,12 @@ const steps = [
 
 export default function HowItWorksSection() {
   return (
-    <section id="how-it-works" className="py-20 px-4 sm:px-6 lg:px-8 bg-gradient-to-br from-blue-50 via-slate-50 to-blue-50">
-      <div className="max-w-7xl mx-auto">
+    <section id="how-it-works" className="py-20 px-4 sm:px-6 lg:px-8 bg-gradient-to-br from-blue-50 via-cyan-50 to-sky-50 relative overflow-hidden">
+      <div className="absolute inset-0 opacity-20">
+        <div className="absolute top-20 left-20 w-72 h-72 bg-blue-300 rounded-full blur-3xl"></div>
+        <div className="absolute bottom-20 right-20 w-96 h-96 bg-cyan-300 rounded-full blur-3xl"></div>
+      </div>
+      <div className="max-w-7xl mx-auto relative z-10">
         {/* Section Header */}
         <div className="text-center mb-16">
           <h2 className="text-4xl font-bold text-slate-900 mb-4">
@@ -54,7 +58,7 @@ export default function HowItWorksSection() {
             <div key={index} className="flex flex-col md:flex-row gap-6 items-start">
               {/* Step Number & Icon */}
               <div className="flex-shrink-0">
-                <div className="w-16 h-16 rounded-2xl bg-gradient-to-br from-blue-900 to-blue-800 flex items-center justify-center text-2xl font-bold text-white shadow-lg">
+                <div className="w-16 h-16 rounded-2xl bg-gradient-to-br from-blue-950 via-blue-900 to-blue-800 flex items-center justify-center text-2xl font-bold text-white shadow-lg ring-2 ring-blue-400/50">
                   {step.number}
                 </div>
               </div>

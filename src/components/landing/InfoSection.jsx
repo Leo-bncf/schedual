@@ -36,8 +36,12 @@ const features = [
 
 export default function InfoSection() {
   return (
-    <section id="info" className="py-20 px-4 sm:px-6 lg:px-8 bg-gradient-to-br from-blue-50 via-blue-100 to-blue-50">
-      <div className="max-w-7xl mx-auto">
+    <section id="info" className="py-20 px-4 sm:px-6 lg:px-8 bg-gradient-to-br from-slate-50 via-blue-50 to-slate-100 relative overflow-hidden">
+      <div className="absolute inset-0 opacity-30">
+        <div className="absolute top-0 right-0 w-96 h-96 bg-blue-200 rounded-full blur-3xl"></div>
+        <div className="absolute bottom-0 left-0 w-96 h-96 bg-sky-200 rounded-full blur-3xl"></div>
+      </div>
+      <div className="max-w-7xl mx-auto relative z-10">
         {/* Section Header */}
         <div className="text-center mb-16">
           <h2 className="text-4xl font-bold text-slate-900 mb-4">
@@ -99,8 +103,8 @@ export default function InfoSection() {
         {/* Features Grid */}
         <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-8">
           {features.map((feature, index) => (
-            <div key={index} className="p-6 rounded-xl bg-gradient-to-br from-white/80 to-blue-50/80 backdrop-blur-sm border-2 border-blue-200 hover:border-blue-300 transition-all hover:shadow-xl hover:-translate-y-1 group">
-              <div className="w-12 h-12 rounded-lg bg-gradient-to-br from-blue-900 to-blue-800 flex items-center justify-center mb-4 group-hover:scale-110 transition-transform shadow-lg">
+            <div key={index} className="p-6 rounded-xl bg-gradient-to-br from-white via-blue-50/30 to-white backdrop-blur-sm border-2 border-blue-200 hover:border-blue-400 transition-all hover:shadow-2xl hover:-translate-y-2 group">
+              <div className="w-12 h-12 rounded-lg bg-gradient-to-br from-blue-950 via-blue-900 to-blue-800 flex items-center justify-center mb-4 group-hover:scale-110 transition-transform shadow-lg">
                 <feature.icon className="w-6 h-6 text-white" />
               </div>
               <h3 className="text-lg font-semibold text-slate-900 mb-2">{feature.title}</h3>
