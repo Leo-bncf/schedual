@@ -39,10 +39,10 @@ export default function HowItWorksSection() {
     <section id="how-it-works" className="py-24 relative">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
         <div className="text-center mb-16">
-          <h2 className="text-4xl sm:text-5xl font-bold text-white mb-6">
+          <h2 className="text-4xl sm:text-5xl font-bold text-slate-900 mb-6">
             How It Works
           </h2>
-          <p className="text-xl text-purple-200 max-w-3xl mx-auto">
+          <p className="text-xl text-slate-700 max-w-3xl mx-auto">
             Get started in 5 simple steps. From data import to published schedule.
           </p>
         </div>
@@ -56,15 +56,15 @@ export default function HowItWorksSection() {
               )}
               
               {/* Step Card */}
-              <div className="relative bg-white/5 backdrop-blur-sm rounded-xl p-6 border border-purple-800/30 hover:border-indigo-500/50 transition-all text-center">
+              <div className="relative bg-white/50 backdrop-blur-sm rounded-xl p-6 border border-purple-300/50 hover:border-indigo-500/50 transition-all text-center">
                 <div className="w-12 h-12 rounded-full bg-gradient-to-br from-indigo-600 to-violet-600 flex items-center justify-center text-white font-bold text-lg mx-auto mb-4">
                   {step.number}
                 </div>
                 <div className="w-10 h-10 rounded-lg bg-gradient-to-br from-indigo-600/20 to-violet-600/20 flex items-center justify-center text-indigo-400 mx-auto mb-3">
                   {step.icon}
                 </div>
-                <h3 className="font-semibold text-white mb-2">{step.title}</h3>
-                <p className="text-sm text-purple-200">{step.description}</p>
+                <h3 className="font-semibold text-slate-900 mb-2">{step.title}</h3>
+                <p className="text-sm text-slate-700">{step.description}</p>
               </div>
             </div>
           ))}

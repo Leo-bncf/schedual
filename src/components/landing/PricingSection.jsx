@@ -49,10 +49,10 @@ export default function PricingSection() {
     <section id="pricing" className="py-24 relative">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
         <div className="text-center mb-16">
-          <h2 className="text-4xl sm:text-5xl font-bold text-white mb-6">
+          <h2 className="text-4xl sm:text-5xl font-bold text-slate-900 mb-6">
             Simple, Transparent Pricing
           </h2>
-          <p className="text-xl text-purple-200 max-w-3xl mx-auto">
+          <p className="text-xl text-slate-700 max-w-3xl mx-auto">
             One price, all features. No hidden fees or surprises.
           </p>
         </div>
@@ -63,13 +63,13 @@ export default function PricingSection() {
               {plan.highlighted && (
                 <div className="absolute -inset-1 bg-gradient-to-r from-indigo-600 to-violet-600 rounded-2xl blur opacity-75" />
               )}
-              <div className="relative bg-purple-900/50 backdrop-blur-sm rounded-2xl p-8 border border-purple-800/30">
+              <div className="relative bg-white/50 backdrop-blur-sm rounded-2xl p-8 border border-purple-300/50">
                 <div className="text-center mb-8">
-                  <h3 className="text-2xl font-bold text-white mb-2">{plan.name}</h3>
-                  <p className="text-purple-200 mb-6">{plan.description}</p>
+                  <h3 className="text-2xl font-bold text-slate-900 mb-2">{plan.name}</h3>
+                  <p className="text-slate-700 mb-6">{plan.description}</p>
                   <div className="flex items-baseline justify-center gap-2">
-                    <span className="text-5xl font-bold text-white">{plan.price}</span>
-                    <span className="text-purple-200">{plan.period}</span>
+                    <span className="text-5xl font-bold text-slate-900">{plan.price}</span>
+                    <span className="text-slate-700">{plan.period}</span>
                   </div>
                 </div>
 
@@ -77,7 +77,7 @@ export default function PricingSection() {
                   {plan.features.map((feature, j) => (
                     <li key={j} className="flex items-start gap-3">
                       <Check className="w-5 h-5 text-green-400 flex-shrink-0 mt-0.5" />
-                      <span className="text-purple-100">{feature}</span>
+                      <span className="text-slate-700">{feature}</span>
                     </li>
                   ))}
                 </ul>
@@ -97,8 +97,8 @@ export default function PricingSection() {
 
         {/* Trust Badges */}
         <div className="mt-16 text-center">
-          <p className="text-purple-200 mb-6">Trusted by IB World Schools</p>
-          <div className="flex flex-wrap justify-center gap-8 text-purple-300">
+          <p className="text-slate-700 mb-6">Trusted by IB World Schools</p>
+          <div className="flex flex-wrap justify-center gap-8 text-slate-700">
             <div className="flex items-center gap-2">
               <Check className="w-5 h-5 text-green-400" />
               <span>Secure Payments</span>

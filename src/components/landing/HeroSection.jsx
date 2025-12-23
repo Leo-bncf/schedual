@@ -39,10 +39,10 @@ export default function HeroSection() {
       <div className="relative z-10 max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 text-center">
         {/* Main Heading */}
         <div className="mb-8 animate-fadeIn">
-          <h1 className="text-5xl sm:text-6xl lg:text-7xl font-bold text-white mb-6 leading-tight">
-            AI-Powered <span className="text-transparent bg-clip-text bg-gradient-to-r from-indigo-400 to-violet-400">IB Diploma</span> Schedule Builder
+          <h1 className="text-5xl sm:text-6xl lg:text-7xl font-bold text-slate-900 mb-6 leading-tight">
+            AI-Powered <span className="text-transparent bg-clip-text bg-gradient-to-r from-indigo-600 to-violet-600">IB Diploma</span> Schedule Builder
           </h1>
-          <p className="text-xl sm:text-2xl text-purple-200 max-w-3xl mx-auto">
+          <p className="text-xl sm:text-2xl text-slate-700 max-w-3xl mx-auto">
             Intelligent scheduling for IB World Schools. Automated timetabling that respects constraints, optimizes resources, and saves countless hours.
           </p>
         </div>
@@ -59,20 +59,20 @@ export default function HeroSection() {
 
         {/* Stats */}
         <div className="grid grid-cols-1 sm:grid-cols-3 gap-8 mt-16">
-          <div className="bg-white/5 backdrop-blur-sm rounded-2xl p-6 shadow-lg border border-purple-800/30">
-            <Clock className="w-8 h-8 text-indigo-400 mx-auto mb-3" />
-            <div className="text-3xl font-bold text-white">100+</div>
-            <div className="text-purple-200">Hours Saved</div>
+          <div className="bg-white/50 backdrop-blur-sm rounded-2xl p-6 shadow-lg border border-purple-300/50">
+            <Clock className="w-8 h-8 text-indigo-600 mx-auto mb-3" />
+            <div className="text-3xl font-bold text-slate-900">100+</div>
+            <div className="text-slate-700">Hours Saved</div>
           </div>
-          <div className="bg-white/5 backdrop-blur-sm rounded-2xl p-6 shadow-lg border border-purple-800/30">
-            <Zap className="w-8 h-8 text-violet-400 mx-auto mb-3" />
-            <div className="text-3xl font-bold text-white">AI-Powered</div>
-            <div className="text-purple-200">Smart Optimization</div>
+          <div className="bg-white/50 backdrop-blur-sm rounded-2xl p-6 shadow-lg border border-purple-300/50">
+            <Zap className="w-8 h-8 text-violet-600 mx-auto mb-3" />
+            <div className="text-3xl font-bold text-slate-900">AI-Powered</div>
+            <div className="text-slate-700">Smart Optimization</div>
           </div>
-          <div className="bg-white/5 backdrop-blur-sm rounded-2xl p-6 shadow-lg border border-purple-800/30">
-            <Shield className="w-8 h-8 text-indigo-400 mx-auto mb-3" />
-            <div className="text-3xl font-bold text-white">Safe & Encrypted</div>
-            <div className="text-purple-200">Secure Data</div>
+          <div className="bg-white/50 backdrop-blur-sm rounded-2xl p-6 shadow-lg border border-purple-300/50">
+            <Shield className="w-8 h-8 text-indigo-600 mx-auto mb-3" />
+            <div className="text-3xl font-bold text-slate-900">Safe & Encrypted</div>
+            <div className="text-slate-700">Secure Data</div>
           </div>
         </div>
 
@@ -84,8 +84,8 @@ export default function HeroSection() {
             { icon: <BookOpen className="w-6 h-6" />, text: 'IB Compliance' },
             { icon: <Target className="w-6 h-6" />, text: 'Conflict Resolution' },
           ].map((feature, i) => (
-            <div key={i} className="flex items-center gap-3 text-purple-100">
-              <div className="text-indigo-400">{feature.icon}</div>
+            <div key={i} className="flex items-center gap-3 text-slate-700">
+              <div className="text-indigo-600">{feature.icon}</div>
               <span className="font-medium">{feature.text}</span>
             </div>
           ))}
