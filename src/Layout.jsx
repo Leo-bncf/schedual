@@ -288,9 +288,8 @@ export default function Layout({ children, currentPageName }) {
 
           <div className="flex items-center gap-3 ml-auto">
             <Link to={createPageUrl(isSuperAdmin ? 'SupportTickets' : 'Support')}>
-              <Button variant="ghost" size="icon" className="relative">
-                <Bell className="w-5 h-5 text-slate-500" />
-                <span className="absolute top-2 right-2 w-2 h-2 bg-rose-500 rounded-full" />
+              <Button variant="outline" size="sm">
+                Contact Us
               </Button>
             </Link>
           </div>
