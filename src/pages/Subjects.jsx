@@ -48,6 +48,7 @@ export default function Subjects() {
   const [formData, setFormData] = useState({
     name: '',
     code: '',
+    ib_level: 'DP',
     ib_group: 1,
     ib_group_name: 'Language & Literature',
     available_levels: ['HL', 'SL'],
@@ -77,7 +78,7 @@ export default function Subjects() {
   const createMutation = useMutation({
     mutationFn: (data) => {
       if (!schoolId) throw new Error('No school assigned');
-      return base44.entities.Subject.create({ ...data, school_id: schoolId, ib_level: 'DP' });
+      return base44.entities.Subject.create({ ...data, school_id: schoolId });
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['subjects'] });
@@ -102,6 +103,7 @@ export default function Subjects() {
     setFormData({
       name: '',
       code: '',
+      ib_level: 'DP',
       ib_group: 1,
       ib_group_name: 'Language & Literature',
       available_levels: ['HL', 'SL'],
@@ -121,6 +123,7 @@ export default function Subjects() {
     setFormData({
       name: subject.name || '',
       code: subject.code || '',
+      ib_level: subject.ib_level || 'DP',
       ib_group: subject.ib_group || 1,
       ib_group_name: subject.ib_group_name || 'Language & Literature',
       available_levels: subject.available_levels || ['HL', 'SL'],
@@ -334,6 +337,23 @@ export default function Subjects() {
                   required
                 />
               </div>
+            </div>
+
+            <div className="space-y-2">
+              <Label htmlFor="ib_level">IB Programme *</Label>
+              <Select 
+                value={formData.ib_level} 
+                onValueChange={(value) => setFormData({ ...formData, ib_level: value })}
+              >
+                <SelectTrigger>
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="PYP">PYP (Primary Years Programme)</SelectItem>
+                  <SelectItem value="MYP">MYP (Middle Years Programme)</SelectItem>
+                  <SelectItem value="DP">DP (Diploma Programme)</SelectItem>
+                </SelectContent>
+              </Select>
             </div>
 
             <div className="space-y-2">
