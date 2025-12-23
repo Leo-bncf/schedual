@@ -77,7 +77,7 @@ export default function HeroSection() {
           <div className="relative">
             <div className="bg-white/95 backdrop-blur-xl rounded-2xl shadow-2xl p-8 border border-white/50">
               <div className="space-y-4">
-                <div className="flex items-center gap-3 p-4 bg-gradient-to-r from-blue-600 via-blue-700 to-indigo-700 rounded-xl shadow-lg hover:shadow-xl transition-all">
+                <div className="flex items-center gap-3 p-4 bg-gradient-to-r from-blue-600 via-indigo-600 to-blue-700 rounded-xl shadow-lg hover:shadow-xl transition-all">
                   <div className="w-10 h-10 bg-white/20 rounded-lg flex items-center justify-center">
                     <Calendar className="w-6 h-6 text-white" />
                   </div>
@@ -86,22 +86,22 @@ export default function HeroSection() {
                     <div className="text-sm text-blue-100">Generate in seconds</div>
                   </div>
                 </div>
-                <div className="flex items-center gap-3 p-4 bg-gradient-to-r from-emerald-500 via-teal-600 to-cyan-600 rounded-xl shadow-lg hover:shadow-xl transition-all">
+                <div className="flex items-center gap-3 p-4 bg-gradient-to-r from-teal-500 via-cyan-600 to-sky-600 rounded-xl shadow-lg hover:shadow-xl transition-all">
                   <div className="w-10 h-10 bg-white/20 rounded-lg flex items-center justify-center">
                     <Users className="w-6 h-6 text-white" />
                   </div>
                   <div>
                     <div className="font-semibold text-white">Teacher & Student Rules</div>
-                    <div className="text-sm text-emerald-100">Constraint management</div>
+                    <div className="text-sm text-teal-100">Constraint management</div>
                   </div>
                 </div>
-                <div className="flex items-center gap-3 p-4 bg-gradient-to-r from-amber-500 via-orange-600 to-red-500 rounded-xl shadow-lg hover:shadow-xl transition-all">
+                <div className="flex items-center gap-3 p-4 bg-gradient-to-r from-indigo-600 via-violet-600 to-purple-600 rounded-xl shadow-lg hover:shadow-xl transition-all">
                   <div className="w-10 h-10 bg-white/20 rounded-lg flex items-center justify-center">
                     <BookOpen className="w-6 h-6 text-white" />
                   </div>
                   <div>
                     <div className="font-semibold text-white">IB Compliance</div>
-                    <div className="text-sm text-orange-100">PYP, MYP, DP support</div>
+                    <div className="text-sm text-indigo-100">PYP, MYP, DP support</div>
                   </div>
                 </div>
               </div>
