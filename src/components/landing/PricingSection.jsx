@@ -59,18 +59,18 @@ export default function PricingSection() {
   };
 
   return (
-    <section id="pricing" className="relative py-24 px-4 sm:px-6 lg:px-8 bg-gradient-to-br from-violet-100 via-purple-100 to-pink-100 overflow-hidden">
+    <section id="pricing" className="relative py-24 px-4 sm:px-6 lg:px-8 bg-gradient-to-br from-blue-50 via-blue-100 to-blue-50 overflow-hidden">
       {/* Background decorations */}
       <div className="absolute inset-0 overflow-hidden pointer-events-none">
-        <div className="absolute -top-40 -right-40 w-96 h-96 bg-indigo-200/20 rounded-full blur-3xl"></div>
-        <div className="absolute -bottom-40 -left-40 w-96 h-96 bg-violet-200/20 rounded-full blur-3xl"></div>
+        <div className="absolute -top-40 -right-40 w-96 h-96 bg-blue-200/20 rounded-full blur-3xl"></div>
+        <div className="absolute -bottom-40 -left-40 w-96 h-96 bg-blue-300/20 rounded-full blur-3xl"></div>
       </div>
 
       <div className="max-w-7xl mx-auto relative">
         {/* Section Header */}
         <div className="text-center mb-16">
           <div className="inline-block mb-4">
-            <span className="bg-gradient-to-r from-indigo-600 to-violet-600 text-transparent bg-clip-text text-sm font-semibold tracking-wide uppercase">
+            <span className="bg-gradient-to-r from-blue-900 to-blue-800 text-transparent bg-clip-text text-sm font-semibold tracking-wide uppercase">
               Pricing
             </span>
           </div>
@@ -86,12 +86,12 @@ export default function PricingSection() {
         <div className="grid lg:grid-cols-12 gap-8 items-center max-w-6xl mx-auto">
           {/* Left Stats */}
           <div className="lg:col-span-3 space-y-6">
-            <div className="bg-gradient-to-br from-indigo-50 to-blue-100/80 backdrop-blur-sm p-6 rounded-2xl border border-indigo-200 shadow-sm hover:shadow-md transition-shadow">
-              <div className="text-4xl font-bold text-indigo-600 mb-2">500+</div>
+            <div className="bg-gradient-to-br from-blue-50 to-blue-100/80 backdrop-blur-sm p-6 rounded-2xl border border-blue-200 shadow-sm hover:shadow-md transition-shadow">
+              <div className="text-4xl font-bold text-blue-900 mb-2">500+</div>
               <p className="text-slate-700">Hours Saved Annually</p>
             </div>
-            <div className="bg-gradient-to-br from-violet-50 to-purple-100/80 backdrop-blur-sm p-6 rounded-2xl border border-violet-200 shadow-sm hover:shadow-md transition-shadow">
-              <div className="text-4xl font-bold text-violet-600 mb-2">100%</div>
+            <div className="bg-gradient-to-br from-blue-50 to-blue-100/80 backdrop-blur-sm p-6 rounded-2xl border border-blue-200 shadow-sm hover:shadow-md transition-shadow">
+              <div className="text-4xl font-bold text-blue-900 mb-2">100%</div>
               <p className="text-slate-700">IB Compliant</p>
             </div>
           </div>
@@ -105,7 +105,7 @@ export default function PricingSection() {
               >
                 {plan.popular && (
                   <div className="absolute -top-5 left-1/2 -translate-x-1/2">
-                    <span className="bg-gradient-to-r from-indigo-600 to-violet-600 text-white px-6 py-2 rounded-full text-sm font-semibold shadow-lg">
+                    <span className="bg-gradient-to-r from-blue-900 to-blue-800 text-white px-6 py-2 rounded-full text-sm font-semibold shadow-lg">
                       ⭐ Most Popular
                     </span>
                   </div>
@@ -115,7 +115,7 @@ export default function PricingSection() {
                   <h3 className="text-3xl font-bold text-slate-900 mb-4">{plan.name}</h3>
                   <div className="mb-4">
                     <div className="flex items-baseline justify-center gap-2">
-                      <span className="text-6xl font-bold bg-gradient-to-r from-indigo-600 to-violet-600 text-transparent bg-clip-text">{plan.price}</span>
+                      <span className="text-6xl font-bold bg-gradient-to-r from-blue-900 to-blue-800 text-transparent bg-clip-text">{plan.price}</span>
                       <span className="text-slate-600 text-lg">{plan.period}</span>
                     </div>
                     <p className="text-slate-500 mt-2">≈ €186/month</p>
@@ -133,7 +133,7 @@ export default function PricingSection() {
                 </ul>
 
                 <Button 
-                  className="w-full py-7 text-lg font-semibold bg-gradient-to-r from-indigo-600 to-violet-600 hover:from-indigo-700 hover:to-violet-700 shadow-lg hover:shadow-xl transition-all"
+                  className="w-full py-7 text-lg font-semibold bg-gradient-to-r from-blue-900 to-blue-800 hover:from-blue-800 hover:to-blue-700 shadow-lg hover:shadow-xl transition-all"
                   onClick={() => handleSubscribe(plan.priceId)}
                   disabled={loading !== null}
                 >
@@ -167,15 +167,15 @@ export default function PricingSection() {
         <div className="mt-20 text-center">
           <p className="text-slate-600 text-lg mb-6 font-medium">Trusted by IB schools worldwide 🌍</p>
           <div className="flex flex-wrap justify-center items-center gap-6 md:gap-12">
-            <div className="flex items-center gap-2 text-slate-700 bg-gradient-to-r from-indigo-50 to-violet-50 backdrop-blur-sm px-6 py-3 rounded-full border border-indigo-200">
+            <div className="flex items-center gap-2 text-slate-700 bg-gradient-to-r from-blue-50 to-blue-100 backdrop-blur-sm px-6 py-3 rounded-full border border-blue-200">
               <CheckCircle className="w-5 h-5 text-emerald-600" />
               <span className="font-medium">Secure Stripe Payments</span>
             </div>
-            <div className="flex items-center gap-2 text-slate-700 bg-gradient-to-r from-violet-50 to-purple-50 backdrop-blur-sm px-6 py-3 rounded-full border border-violet-200">
+            <div className="flex items-center gap-2 text-slate-700 bg-gradient-to-r from-blue-50 to-blue-100 backdrop-blur-sm px-6 py-3 rounded-full border border-blue-200">
               <CheckCircle className="w-5 h-5 text-emerald-600" />
               <span className="font-medium">Cancel Anytime</span>
             </div>
-            <div className="flex items-center gap-2 text-slate-700 bg-gradient-to-r from-purple-50 to-pink-50 backdrop-blur-sm px-6 py-3 rounded-full border border-purple-200">
+            <div className="flex items-center gap-2 text-slate-700 bg-gradient-to-r from-blue-50 to-blue-100 backdrop-blur-sm px-6 py-3 rounded-full border border-blue-200">
               <CheckCircle className="w-5 h-5 text-emerald-600" />
               <span className="font-medium">30-Day Money Back</span>
             </div>
