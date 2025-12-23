@@ -158,6 +158,8 @@ export default function Layout({ children, currentPageName }) {
   return (
     <div className="min-h-screen bg-slate-50">
       <style>{`
+        @import url('https://fonts.googleapis.com/css2?family=Outfit:wght@400;500;600;700;800&display=swap');
+
         :root {
           --primary: 99 102 241;
           --primary-foreground: 255 255 255;
@@ -166,6 +168,10 @@ export default function Layout({ children, currentPageName }) {
           font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
           -webkit-font-smoothing: antialiased;
           -moz-osx-font-smoothing: grayscale;
+        }
+        h1, h2, h3, h4, h5, h6 {
+          font-family: 'Outfit', 'Inter', sans-serif;
+          letter-spacing: -0.02em;
         }
       `}</style>
 
