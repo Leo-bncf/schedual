@@ -132,7 +132,7 @@ export default function Layout({ children, currentPageName }) {
           base44.auth.redirectToLogin(window.location.pathname);
         });
     }
-  }, [currentPageName]);
+  }, []);
 
   if (isLoading) {
     return (
