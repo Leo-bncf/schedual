@@ -63,17 +63,7 @@ export default function Dashboard() {
     enabled: !!user?.school_id,
   });
 
-  // Strict access control: Only school users
-  const SUPER_ADMIN_EMAILS = ['leo.bancroft34@icloud.com', 'erik.gerbst@gmail.com'];
-  const isSuperAdmin = SUPER_ADMIN_EMAILS.includes(user?.email?.toLowerCase());
-  
-  React.useEffect(() => {
-    if (user && (isSuperAdmin || !user.school_id)) {
-      window.location.href = createPageUrl('Panel');
-    }
-  }, [user, isSuperAdmin]);
-
-  // School dashboard
+  // School dashboard stats
   const activeTeachers = teachers.filter(t => t.is_active !== false).length;
   const activeStudents = students.filter(s => s.is_active !== false).length;
   const activeSubjects = subjects.filter(s => s.is_active !== false).length;
