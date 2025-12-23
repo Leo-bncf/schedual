@@ -16,7 +16,8 @@ import {
   ChevronDown,
   LogOut,
   Bell,
-  CreditCard
+  CreditCard,
+  User
 } from 'lucide-react';
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
