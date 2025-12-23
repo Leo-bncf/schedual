@@ -11,7 +11,7 @@ export default function Landing() {
   return (
     <div className="min-h-screen relative">
       {/* Fixed background gradient */}
-      <div className="fixed inset-0 bg-gradient-to-b from-purple-500 via-purple-400 to-white -z-10" />
+      <div className="fixed inset-0 bg-gradient-to-b from-purple-950 via-purple-950/95 to-black -z-10" />
       
       {/* Content */}
       <div className="relative z-0">

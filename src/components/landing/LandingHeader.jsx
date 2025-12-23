@@ -26,7 +26,7 @@ export default function LandingHeader() {
   };
 
   return (
-    <header className="fixed top-0 left-0 right-0 z-50 bg-white/30 backdrop-blur-md border-b border-purple-300/30">
+    <header className="fixed top-0 left-0 right-0 z-50 bg-purple-950/30 backdrop-blur-md border-b border-purple-800/30">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
         <div className="flex items-center justify-between h-16">
           {/* Logo */}
@@ -34,26 +34,26 @@ export default function LandingHeader() {
             <div className="w-9 h-9 rounded-xl bg-gradient-to-br from-indigo-500 to-violet-600 flex items-center justify-center">
               <Calendar className="w-5 h-5 text-white" />
             </div>
-            <span className="text-lg font-semibold text-slate-900">Schedual</span>
+            <span className="text-lg font-semibold text-white">Schedual</span>
           </div>
 
           {/* Navigation */}
           <nav className="hidden md:flex items-center gap-8">
             <button 
               onClick={() => scrollToSection('info')} 
-              className="text-slate-700 hover:text-slate-900 transition-colors"
+              className="text-purple-200 hover:text-white transition-colors"
             >
               Info
             </button>
             <button 
               onClick={() => scrollToSection('how-it-works')} 
-              className="text-slate-700 hover:text-slate-900 transition-colors"
+              className="text-purple-200 hover:text-white transition-colors"
             >
               How it Works
             </button>
             <button 
               onClick={() => scrollToSection('pricing')} 
-              className="text-slate-700 hover:text-slate-900 transition-colors"
+              className="text-purple-200 hover:text-white transition-colors"
             >
               Pricing
             </button>
@@ -72,7 +72,7 @@ export default function LandingHeader() {
                 <Button 
                   variant="ghost"
                   onClick={() => base44.auth.redirectToLogin('/Dashboard')}
-                  className="text-slate-700 hover:text-slate-900 hover:bg-slate-100"
+                  className="text-purple-200 hover:text-white hover:bg-purple-800/30"
                 >
                   Login
                 </Button>
