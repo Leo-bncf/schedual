@@ -179,195 +179,148 @@ export default function Subscription() {
         </CardContent>
       </Card>
 
-      {/* Hero Section */}
-            <div className="text-center py-12 space-y-4">
-              <Badge className="bg-purple-100 text-purple-700 border-0 px-4 py-1 text-sm font-medium">
-                Most Popular
-              </Badge>
-              <h2 className="text-4xl md:text-5xl font-bold text-slate-900">
-                Simple, Transparent Pricing
-              </h2>
-              <p className="text-xl text-slate-600 max-w-2xl mx-auto">
-                Choose the plan that works best for your school. Cancel anytime.
-              </p>
+      {/* Pricing Calculator */}
+      <Card className="border-0 shadow-lg bg-gradient-to-br from-indigo-50 to-violet-50">
+        <CardHeader>
+          <CardTitle className="text-2xl">Yearly Subscription</CardTitle>
+          <CardDescription>All-inclusive pricing with secure data storage</CardDescription>
+        </CardHeader>
+        <CardContent className="space-y-6">
+          {/* Base Price Breakdown */}
+          <div className="space-y-3">
+            <div className="flex justify-between items-center p-4 rounded-lg bg-white">
+              <div className="flex items-center gap-3">
+                <div className="w-10 h-10 rounded-lg bg-indigo-100 flex items-center justify-center">
+                  <CreditCard className="w-5 h-5 text-indigo-600" />
+                </div>
+                <div>
+                  <p className="font-semibold text-slate-900">Base Platform</p>
+                  <p className="text-sm text-slate-500">Full scheduling features</p>
+                </div>
+              </div>
+              <p className="text-lg font-bold text-slate-900">€{BASE_YEARLY_PRICE}/year</p>
             </div>
 
-            {/* Pricing Calculator */}
-            <Card className="border-2 border-indigo-200 shadow-2xl bg-white max-w-2xl mx-auto">
-              <CardHeader className="text-center pb-6">
-                <Badge className="bg-indigo-600 text-white border-0 px-4 py-1.5 text-sm font-semibold mx-auto mb-4">
-                  Yearly Subscription
-                </Badge>
-                <div className="mb-2">
-                  <span className="text-5xl md:text-6xl font-bold text-slate-900">€{totalYearlyPrice}</span>
-                  <span className="text-xl text-slate-500 ml-2">/year</span>
-                </div>
-                <p className="text-slate-600 mt-2">All-inclusive yearly billing with secure storage</p>
-              </CardHeader>
-              <CardContent className="space-y-6">
-          {/* What's Included */}
-          <div className="space-y-4">
-            <h3 className="font-semibold text-slate-900 text-center text-lg mb-4">What's Included</h3>
-
-            <div className="space-y-3">
-              <div className="flex items-start gap-3 p-3 rounded-lg hover:bg-slate-50 transition-colors">
-                <div className="w-6 h-6 rounded-full bg-emerald-100 flex items-center justify-center flex-shrink-0 mt-0.5">
-                  <CheckCircle className="w-4 h-4 text-emerald-600" />
+            <div className="flex justify-between items-center p-4 rounded-lg bg-white">
+              <div className="flex items-center gap-3">
+                <div className="w-10 h-10 rounded-lg bg-violet-100 flex items-center justify-center">
+                  <Database className="w-5 h-5 text-violet-600" />
                 </div>
                 <div>
-                  <p className="font-medium text-slate-900">Full platform access (€1,999/year)</p>
-                  <p className="text-sm text-slate-600">Complete scheduling features and AI optimization</p>
+                  <p className="font-semibold text-slate-900">Secure Data Storage</p>
+                  <p className="text-sm text-slate-500">€20/month included</p>
                 </div>
               </div>
-
-              <div className="flex items-start gap-3 p-3 rounded-lg hover:bg-slate-50 transition-colors">
-                <div className="w-6 h-6 rounded-full bg-emerald-100 flex items-center justify-center flex-shrink-0 mt-0.5">
-                  <CheckCircle className="w-4 h-4 text-emerald-600" />
-                </div>
-                <div>
-                  <p className="font-medium text-slate-900">Secure data storage (€240/year)</p>
-                  <p className="text-sm text-slate-600">€20/month cloud storage included</p>
-                </div>
-              </div>
-
-              <div className="flex items-start gap-3 p-3 rounded-lg hover:bg-slate-50 transition-colors">
-                <div className="w-6 h-6 rounded-full bg-emerald-100 flex items-center justify-center flex-shrink-0 mt-0.5">
-                  <CheckCircle className="w-4 h-4 text-emerald-600" />
-                </div>
-                <div>
-                  <p className="font-medium text-slate-900">Unlimited teachers and students</p>
-                  <p className="text-sm text-slate-600">No limits on your school size</p>
-                </div>
-              </div>
-
-              <div className="flex items-start gap-3 p-3 rounded-lg hover:bg-slate-50 transition-colors">
-                <div className="w-6 h-6 rounded-full bg-emerald-100 flex items-center justify-center flex-shrink-0 mt-0.5">
-                  <CheckCircle className="w-4 h-4 text-emerald-600" />
-                </div>
-                <div>
-                  <p className="font-medium text-slate-900">AI-powered scheduling</p>
-                  <p className="text-sm text-slate-600">Smart conflict detection and resolution</p>
-                </div>
-              </div>
-
-              <div className="flex items-start gap-3 p-3 rounded-lg hover:bg-slate-50 transition-colors">
-                <div className="w-6 h-6 rounded-full bg-emerald-100 flex items-center justify-center flex-shrink-0 mt-0.5">
-                  <CheckCircle className="w-4 h-4 text-emerald-600" />
-                </div>
-                <div>
-                  <p className="font-medium text-slate-900">IB compliance checking</p>
-                  <p className="text-sm text-slate-600">Automatic validation of IB requirements</p>
-                </div>
-              </div>
-
-              <div className="flex items-start gap-3 p-3 rounded-lg hover:bg-slate-50 transition-colors">
-                <div className="w-6 h-6 rounded-full bg-emerald-100 flex items-center justify-center flex-shrink-0 mt-0.5">
-                  <CheckCircle className="w-4 h-4 text-emerald-600" />
-                </div>
-                <div>
-                  <p className="font-medium text-slate-900">Priority support</p>
-                  <p className="text-sm text-slate-600">Get help when you need it most</p>
-                </div>
-              </div>
+              <p className="text-lg font-bold text-slate-900">€{STORAGE_YEARLY_PRICE}/year</p>
             </div>
-          </div>
 
             {/* Additional Users */}
-            <div className="border-t pt-6">
-              <div className="bg-gradient-to-br from-blue-50 to-indigo-50 p-5 rounded-xl border-2 border-indigo-200">
-                <div className="flex items-center gap-3 mb-4">
-                  <div className="w-12 h-12 rounded-xl bg-indigo-600 flex items-center justify-center">
-                    <Users className="w-6 h-6 text-white" />
+            <div className="p-4 rounded-lg bg-white border-2 border-indigo-200">
+              <div className="flex justify-between items-start mb-4">
+                <div className="flex items-center gap-3">
+                  <div className="w-10 h-10 rounded-lg bg-emerald-100 flex items-center justify-center">
+                    <Users className="w-5 h-5 text-emerald-600" />
                   </div>
                   <div>
-                    <p className="font-bold text-slate-900">Additional User Accounts</p>
-                    <p className="text-sm text-slate-600">€{ADDITIONAL_USER_YEARLY_PRICE}/year per extra account</p>
+                    <p className="font-semibold text-slate-900">Additional User Accounts</p>
+                    <p className="text-sm text-slate-500">€{ADDITIONAL_USER_YEARLY_PRICE}/year per account</p>
                   </div>
                 </div>
-                <div className="flex flex-col sm:flex-row items-center gap-4 bg-white p-4 rounded-lg">
-                  <Label className="text-slate-700 font-medium whitespace-nowrap">Extra accounts needed:</Label>
-                  <div className="flex items-center gap-3">
-                    <Button
-                      variant="outline"
-                      size="icon"
-                      className="h-10 w-10"
-                      onClick={() => setAdditionalUsers(Math.max(0, additionalUsers - 1))}
-                      disabled={additionalUsers === 0}
-                    >
-                      <Minus className="w-5 h-5" />
-                    </Button>
-                    <Input
-                      type="number"
-                      min="0"
-                      value={additionalUsers}
-                      onChange={(e) => setAdditionalUsers(Math.max(0, parseInt(e.target.value) || 0))}
-                      className="w-24 text-center text-lg font-semibold"
-                    />
-                    <Button
-                      variant="outline"
-                      size="icon"
-                      className="h-10 w-10"
-                      onClick={() => setAdditionalUsers(additionalUsers + 1)}
-                    >
-                      <Plus className="w-5 h-5" />
-                    </Button>
-                  </div>
-                  {additionalUsers > 0 && (
-                    <div className="ml-auto bg-indigo-100 px-4 py-2 rounded-lg">
-                      <p className="text-sm text-indigo-600 font-medium">+€{additionalUsers * ADDITIONAL_USER_YEARLY_PRICE}/year</p>
-                    </div>
-                  )}
+              </div>
+              <div className="flex items-center gap-4">
+                <Label className="text-slate-700">Number of extra accounts:</Label>
+                <div className="flex items-center gap-2">
+                  <Button
+                    variant="outline"
+                    size="icon"
+                    onClick={() => setAdditionalUsers(Math.max(0, additionalUsers - 1))}
+                    disabled={additionalUsers === 0}
+                  >
+                    <Minus className="w-4 h-4" />
+                  </Button>
+                  <Input
+                    type="number"
+                    min="0"
+                    value={additionalUsers}
+                    onChange={(e) => setAdditionalUsers(Math.max(0, parseInt(e.target.value) || 0))}
+                    className="w-20 text-center"
+                  />
+                  <Button
+                    variant="outline"
+                    size="icon"
+                    onClick={() => setAdditionalUsers(additionalUsers + 1)}
+                  >
+                    <Plus className="w-4 h-4" />
+                  </Button>
                 </div>
+                <p className="text-lg font-bold text-slate-900 ml-auto">
+                  €{additionalUsers * ADDITIONAL_USER_YEARLY_PRICE}/year
+                </p>
               </div>
-            </div>
-
-          {/* Checkout Button */}
-          <div className="border-t-2 border-slate-200 pt-6 space-y-4">
-            <div className="flex justify-between items-center mb-2">
-              <span className="text-lg font-semibold text-slate-700">Total</span>
-              <div className="text-right">
-                <p className="text-3xl font-bold text-indigo-600">€{totalYearlyPrice}</p>
-                <p className="text-sm text-slate-500">per year, billed annually</p>
-              </div>
-            </div>
-
-            <Button
-              className="w-full py-6 text-lg font-semibold bg-gradient-to-r from-indigo-600 to-violet-600 hover:from-indigo-700 hover:to-violet-700 shadow-lg hover:shadow-xl transition-all"
-              onClick={handleCheckout}
-              disabled={isProcessing || isActive}
-            >
-              {isProcessing ? (
-                <>
-                  <Loader2 className="w-5 h-5 mr-2 animate-spin" />
-                  Processing...
-                </>
-              ) : isActive ? (
-                <>
-                  <CheckCircle className="w-5 h-5 mr-2" />
-                  Already Subscribed
-                </>
-              ) : (
-                <>
-                  <CreditCard className="w-5 h-5 mr-2" />
-                  Subscribe Now
-                </>
-              )}
-            </Button>
-
-            <div className="flex items-center justify-center gap-2 text-sm text-slate-600">
-              <Shield className="w-4 h-4 text-emerald-600" />
-              <span>Secure payment via Stripe • 30-day money-back guarantee</span>
             </div>
           </div>
+
+          {/* Total */}
+          <div className="border-t-2 border-indigo-200 pt-4">
+            <div className="flex justify-between items-center">
+              <p className="text-xl font-bold text-slate-900">Total Yearly Price</p>
+              <p className="text-3xl font-bold text-indigo-600">€{totalYearlyPrice}/year</p>
+            </div>
+            <p className="text-sm text-slate-500 text-right mt-1">
+              Billed annually • Cancel anytime
+            </p>
+          </div>
+
+          {/* Features */}
+          <div className="grid sm:grid-cols-2 gap-3 pt-4">
+            {[
+              'Unlimited teachers & students',
+              'AI-powered scheduling',
+              'Conflict resolution',
+              'IB compliance checking',
+              'Secure cloud storage',
+              'Priority support',
+              'Regular updates',
+              'Export & reporting'
+            ].map((feature, i) => (
+              <div key={i} className="flex items-center gap-2">
+                <CheckCircle className="w-4 h-4 text-emerald-600 flex-shrink-0" />
+                <span className="text-sm text-slate-700">{feature}</span>
+              </div>
+            ))}
+          </div>
+
+          {/* Checkout Button */}
+          <Button
+            className="w-full py-6 text-lg bg-gradient-to-r from-indigo-600 to-violet-600 hover:from-indigo-700 hover:to-violet-700"
+            onClick={handleCheckout}
+            disabled={isProcessing || isActive}
+          >
+            {isProcessing ? (
+              <>
+                <Loader2 className="w-5 h-5 mr-2 animate-spin" />
+                Processing...
+              </>
+            ) : isActive ? (
+              <>
+                <CheckCircle className="w-5 h-5 mr-2" />
+                Already Subscribed
+              </>
+            ) : (
+              <>
+                <CreditCard className="w-5 h-5 mr-2" />
+                Subscribe Now - €{totalYearlyPrice}/year
+              </>
+            )}
+          </Button>
+
+          <p className="text-xs text-center text-slate-500">
+            Secure payment via Stripe • 30-day money-back guarantee
+          </p>
         </CardContent>
-        </Card>
+      </Card>
 
-        {/* Trust Section */}
-        <div className="text-center py-8">
-        <p className="text-slate-600 font-medium">Trusted by IB schools worldwide</p>
-        </div>
-
-        {/* Manage Subscription for Active Users */}
+      {/* Manage Subscription for Active Users */}
       {isActive && (
         <Card className="border-0 shadow-sm">
           <CardHeader>

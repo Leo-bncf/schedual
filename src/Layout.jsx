@@ -15,9 +15,9 @@ import {
   X,
   ChevronDown,
   LogOut,
+  Bell,
   CreditCard,
-  User,
-  HeadphonesIcon
+  User
 } from 'lucide-react';
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -282,9 +282,9 @@ export default function Layout({ children, currentPageName }) {
 
           <div className="flex items-center gap-3 ml-auto">
             <Link to={createPageUrl(isSuperAdmin ? 'SupportTickets' : 'Support')}>
-              <Button className="bg-purple-600 hover:bg-purple-700 text-white">
-                <HeadphonesIcon className="w-4 h-4 mr-2" />
-                Support
+              <Button variant="ghost" size="icon" className="relative">
+                <Bell className="w-5 h-5 text-slate-500" />
+                <span className="absolute top-2 right-2 w-2 h-2 bg-rose-500 rounded-full" />
               </Button>
             </Link>
           </div>
