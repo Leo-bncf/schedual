@@ -52,26 +52,21 @@ const navigation = [
 ];
 
 export default function Layout({ children, currentPageName }) {
+  // Public pages render immediately without authentication
+  if (currentPageName === 'Landing') {
+    return <>{children}</>;
+  }
+
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const [user, setUser] = useState(null);
   const [isSuperAdmin, setIsSuperAdmin] = useState(false);
   const [isLoading, setIsLoading] = useState(true);
-
-  // Public pages render without authentication
-  if (currentPageName === 'Landing') {
-    return <>{children}</>;
-  }
 
   // Role definitions - school_id alone determines school admin access
   const isSchoolAdmin = (userData) => !!userData?.school_id && !isSuperAdmin;
   const isNewClient = (userData) => userData && !userData.school_id && !isSuperAdmin;
 
   useEffect(() => {
-    if (currentPageName === 'Landing') {
-      setIsLoading(false);
-      return;
-    }
-
     const urlParams = new URLSearchParams(window.location.search);
     const subscriptionSuccess = urlParams.get('subscription') === 'success';
     
