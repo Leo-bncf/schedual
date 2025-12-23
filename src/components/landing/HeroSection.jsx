@@ -105,7 +105,7 @@ export default function HeroSection() {
       
       {/* Gradient transition to next section - animated on scroll */}
       <div 
-        className="absolute -bottom-32 left-0 right-0 h-96 bg-gradient-to-b from-transparent via-purple-700/3 to-slate-50"
+        className="absolute -bottom-40 left-0 right-0 h-[500px] bg-gradient-to-b from-transparent via-purple-700/5 to-slate-50"
         style={{ 
           opacity: 1 - scrollProgress * 0.2,
           transition: 'opacity 0.1s ease-out'
