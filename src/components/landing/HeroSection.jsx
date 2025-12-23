@@ -25,11 +25,11 @@ export default function HeroSection() {
   };
 
   return (
-    <section className="relative min-h-screen pt-32 pb-60 px-4 sm:px-6 lg:px-8 bg-gradient-to-br from-indigo-500 via-violet-600 to-purple-700 overflow-hidden">
+    <section className="relative min-h-screen pt-32 pb-60 px-4 sm:px-6 lg:px-8 bg-gradient-to-br from-blue-900 via-blue-800 to-blue-700 overflow-hidden">
       {/* Animated background elements */}
       <div className="absolute inset-0 opacity-20">
         <div className="absolute top-20 left-10 w-72 h-72 bg-white rounded-full blur-3xl animate-pulse"></div>
-        <div className="absolute bottom-20 right-10 w-96 h-96 bg-pink-300 rounded-full blur-3xl animate-pulse"></div>
+        <div className="absolute bottom-20 right-10 w-96 h-96 bg-blue-400 rounded-full blur-3xl animate-pulse"></div>
       </div>
 
       <div className="max-w-7xl mx-auto relative z-10">
@@ -48,7 +48,7 @@ export default function HeroSection() {
             </p>
             <Button 
               size="lg" 
-              className="bg-white text-indigo-600 hover:bg-white/90 text-lg px-8 py-6 shadow-xl"
+              className="bg-white text-blue-900 hover:bg-white/90 text-lg px-8 py-6 shadow-xl"
               onClick={scrollToInfo}
             >
               Learn More
@@ -76,11 +76,11 @@ export default function HeroSection() {
           <div className="relative">
             <div className="bg-white/95 backdrop-blur-xl rounded-2xl shadow-2xl p-8 border border-white/50">
               <div className="space-y-4">
-                <div className="flex items-center gap-3 p-4 bg-gradient-to-r from-indigo-500 to-indigo-600 rounded-lg shadow-lg">
+                <div className="flex items-center gap-3 p-4 bg-gradient-to-r from-blue-900 to-blue-800 rounded-lg shadow-lg">
                   <Calendar className="w-6 h-6 text-white" />
                   <div>
                     <div className="font-semibold text-white">Automated Scheduling</div>
-                    <div className="text-sm text-indigo-100">Generate in seconds</div>
+                    <div className="text-sm text-blue-100">Generate in seconds</div>
                   </div>
                 </div>
                 <div className="flex items-center gap-3 p-4 bg-gradient-to-r from-emerald-500 to-emerald-600 rounded-lg shadow-lg">
@@ -90,11 +90,11 @@ export default function HeroSection() {
                     <div className="text-sm text-emerald-100">Constraint management</div>
                   </div>
                 </div>
-                <div className="flex items-center gap-3 p-4 bg-gradient-to-r from-violet-500 to-violet-600 rounded-lg shadow-lg">
+                <div className="flex items-center gap-3 p-4 bg-gradient-to-r from-blue-800 to-blue-700 rounded-lg shadow-lg">
                   <BookOpen className="w-6 h-6 text-white" />
                   <div>
                     <div className="font-semibold text-white">IB Compliance</div>
-                    <div className="text-sm text-violet-100">PYP, MYP, DP support</div>
+                    <div className="text-sm text-blue-100">PYP, MYP, DP support</div>
                   </div>
                 </div>
               </div>
@@ -105,7 +105,7 @@ export default function HeroSection() {
       
       {/* Gradient transition to next section - animated on scroll */}
       <div 
-        className="absolute -bottom-40 left-0 right-0 h-[500px] bg-gradient-to-b from-transparent via-purple-700/5 to-slate-50"
+        className="absolute -bottom-40 left-0 right-0 h-[500px] bg-gradient-to-b from-transparent via-blue-900/5 to-slate-50"
         style={{ 
           opacity: 1 - scrollProgress * 0.2,
           transition: 'opacity 0.1s ease-out'

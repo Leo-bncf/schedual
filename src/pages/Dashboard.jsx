@@ -79,7 +79,7 @@ export default function Dashboard() {
         description="Overview of your scheduling system"
         actions={
           <Link to={createPageUrl('Schedule')}>
-            <Button className="bg-indigo-600 hover:bg-indigo-700">
+            <Button className="bg-blue-900 hover:bg-blue-800">
               <Calendar className="w-4 h-4 mr-2" />
               View Schedule
             </Button>
@@ -123,7 +123,7 @@ export default function Dashboard() {
             <div className="flex items-center justify-between">
               <CardTitle className="text-lg font-semibold text-slate-900">Schedule Status</CardTitle>
               <Link to={createPageUrl('Schedule')}>
-                <Button variant="ghost" size="sm" className="text-indigo-600 hover:text-indigo-700">
+                <Button variant="ghost" size="sm" className="text-blue-900 hover:text-blue-800">
                   View All <ArrowRight className="w-4 h-4 ml-1" />
                 </Button>
               </Link>
@@ -183,7 +183,7 @@ export default function Dashboard() {
                 <Calendar className="w-12 h-12 text-slate-300 mx-auto mb-3" />
                 <p className="text-slate-500">No schedules created yet</p>
                 <Link to={createPageUrl('Schedule')}>
-                  <Button className="mt-4 bg-indigo-600 hover:bg-indigo-700">
+                  <Button className="mt-4 bg-blue-900 hover:bg-blue-800">
                     Create First Schedule
                   </Button>
                 </Link>
@@ -197,11 +197,11 @@ export default function Dashboard() {
           <CardHeader className="pb-4">
             <div className="flex items-center justify-between">
               <CardTitle className="text-lg font-semibold text-slate-900 flex items-center gap-2">
-                <Sparkles className="w-5 h-5 text-violet-500" />
+                <Sparkles className="w-5 h-5 text-blue-900" />
                 AI Insights
               </CardTitle>
               <Link to={createPageUrl('AIAdvisor')}>
-                <Button variant="ghost" size="sm" className="text-indigo-600 hover:text-indigo-700">
+                <Button variant="ghost" size="sm" className="text-blue-900 hover:text-blue-800">
                   View All
                 </Button>
               </Link>
@@ -211,7 +211,7 @@ export default function Dashboard() {
             {aiLogs.length > 0 ? (
               <div className="space-y-3">
                 {aiLogs.slice(0, 4).map(log => (
-                  <div key={log.id} className="p-3 rounded-lg bg-gradient-to-br from-violet-50 to-indigo-50 border border-violet-100">
+                  <div key={log.id} className="p-3 rounded-lg bg-gradient-to-br from-blue-50 to-blue-100 border border-blue-200">
                     <div className="flex items-center gap-2 mb-1">
                       <Badge className={`text-xs border-0 ${
                         log.severity === 'warning' ? 'bg-amber-100 text-amber-700' :
@@ -246,26 +246,26 @@ export default function Dashboard() {
         <CardContent>
           <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">
             <Link to={createPageUrl('Teachers')} className="block">
-              <div className="p-4 rounded-xl border border-slate-200 hover:border-indigo-300 hover:bg-indigo-50/50 transition-all text-center">
-                <Users className="w-8 h-8 text-indigo-600 mx-auto mb-2" />
+              <div className="p-4 rounded-xl border border-slate-200 hover:border-blue-900 hover:bg-blue-50/50 transition-all text-center">
+                <Users className="w-8 h-8 text-blue-900 mx-auto mb-2" />
                 <span className="text-sm font-medium text-slate-700">Add Teacher</span>
               </div>
             </Link>
             <Link to={createPageUrl('Students')} className="block">
-              <div className="p-4 rounded-xl border border-slate-200 hover:border-indigo-300 hover:bg-indigo-50/50 transition-all text-center">
-                <GraduationCap className="w-8 h-8 text-indigo-600 mx-auto mb-2" />
+              <div className="p-4 rounded-xl border border-slate-200 hover:border-blue-900 hover:bg-blue-50/50 transition-all text-center">
+                <GraduationCap className="w-8 h-8 text-blue-900 mx-auto mb-2" />
                 <span className="text-sm font-medium text-slate-700">Add Student</span>
               </div>
             </Link>
             <Link to={createPageUrl('Subjects')} className="block">
-              <div className="p-4 rounded-xl border border-slate-200 hover:border-indigo-300 hover:bg-indigo-50/50 transition-all text-center">
-                <BookOpen className="w-8 h-8 text-indigo-600 mx-auto mb-2" />
+              <div className="p-4 rounded-xl border border-slate-200 hover:border-blue-900 hover:bg-blue-50/50 transition-all text-center">
+                <BookOpen className="w-8 h-8 text-blue-900 mx-auto mb-2" />
                 <span className="text-sm font-medium text-slate-700">Add Subject</span>
               </div>
             </Link>
             <Link to={createPageUrl('Schedule')} className="block">
-              <div className="p-4 rounded-xl border border-slate-200 hover:border-indigo-300 hover:bg-indigo-50/50 transition-all text-center">
-                <Calendar className="w-8 h-8 text-indigo-600 mx-auto mb-2" />
+              <div className="p-4 rounded-xl border border-slate-200 hover:border-blue-900 hover:bg-blue-50/50 transition-all text-center">
+                <Calendar className="w-8 h-8 text-blue-900 mx-auto mb-2" />
                 <span className="text-sm font-medium text-slate-700">Generate Schedule</span>
               </div>
             </Link>

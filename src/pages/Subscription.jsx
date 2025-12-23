@@ -180,7 +180,7 @@ export default function Subscription() {
       </Card>
 
       {/* Pricing Calculator */}
-      <Card className="border-0 shadow-lg bg-gradient-to-br from-indigo-50 to-violet-50">
+      <Card className="border-0 shadow-lg bg-gradient-to-br from-blue-50 to-blue-100">
         <CardHeader>
           <CardTitle className="text-2xl">Yearly Subscription</CardTitle>
           <CardDescription>All-inclusive pricing with secure data storage</CardDescription>
@@ -190,8 +190,8 @@ export default function Subscription() {
           <div className="space-y-3">
             <div className="flex justify-between items-center p-4 rounded-lg bg-white">
               <div className="flex items-center gap-3">
-                <div className="w-10 h-10 rounded-lg bg-indigo-100 flex items-center justify-center">
-                  <CreditCard className="w-5 h-5 text-indigo-600" />
+                <div className="w-10 h-10 rounded-lg bg-blue-100 flex items-center justify-center">
+                  <CreditCard className="w-5 h-5 text-blue-900" />
                 </div>
                 <div>
                   <p className="font-semibold text-slate-900">Base Platform</p>
@@ -203,8 +203,8 @@ export default function Subscription() {
 
             <div className="flex justify-between items-center p-4 rounded-lg bg-white">
               <div className="flex items-center gap-3">
-                <div className="w-10 h-10 rounded-lg bg-violet-100 flex items-center justify-center">
-                  <Database className="w-5 h-5 text-violet-600" />
+                <div className="w-10 h-10 rounded-lg bg-blue-100 flex items-center justify-center">
+                  <Database className="w-5 h-5 text-blue-900" />
                 </div>
                 <div>
                   <p className="font-semibold text-slate-900">Secure Data Storage</p>
@@ -215,7 +215,7 @@ export default function Subscription() {
             </div>
 
             {/* Additional Users */}
-            <div className="p-4 rounded-lg bg-white border-2 border-indigo-200">
+            <div className="p-4 rounded-lg bg-white border-2 border-blue-200">
               <div className="flex justify-between items-start mb-4">
                 <div className="flex items-center gap-3">
                   <div className="w-10 h-10 rounded-lg bg-emerald-100 flex items-center justify-center">
@@ -261,10 +261,10 @@ export default function Subscription() {
           </div>
 
           {/* Total */}
-          <div className="border-t-2 border-indigo-200 pt-4">
+          <div className="border-t-2 border-blue-200 pt-4">
             <div className="flex justify-between items-center">
               <p className="text-xl font-bold text-slate-900">Total Yearly Price</p>
-              <p className="text-3xl font-bold text-indigo-600">€{totalYearlyPrice}/year</p>
+              <p className="text-3xl font-bold text-blue-900">€{totalYearlyPrice}/year</p>
             </div>
             <p className="text-sm text-slate-500 text-right mt-1">
               Billed annually • Cancel anytime
@@ -292,7 +292,7 @@ export default function Subscription() {
 
           {/* Checkout Button */}
           <Button
-            className="w-full py-6 text-lg bg-gradient-to-r from-indigo-600 to-violet-600 hover:from-indigo-700 hover:to-violet-700"
+            className="w-full py-6 text-lg bg-gradient-to-r from-blue-900 to-blue-800 hover:from-blue-800 hover:to-blue-700"
             onClick={handleCheckout}
             disabled={isProcessing || isActive}
           >
@@ -339,7 +339,7 @@ export default function Subscription() {
                   <p className="font-semibold text-slate-900">Current Additional Users</p>
                   <p className="text-sm text-slate-500">Extra accounts beyond base subscription</p>
                 </div>
-                <Badge className="bg-indigo-100 text-indigo-700 border-0">
+                <Badge className="bg-blue-100 text-blue-900 border-0">
                   {school.max_additional_users || 0} accounts
                 </Badge>
               </div>

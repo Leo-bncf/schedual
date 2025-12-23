@@ -31,7 +31,7 @@ export default function LandingHeader() {
         <div className="flex items-center justify-between h-16">
           {/* Logo */}
           <div className="flex items-center gap-3">
-            <div className="w-9 h-9 rounded-xl bg-gradient-to-br from-indigo-500 to-violet-600 flex items-center justify-center">
+            <div className="w-9 h-9 rounded-xl bg-gradient-to-br from-blue-900 to-blue-800 flex items-center justify-center">
               <Calendar className="w-5 h-5 text-white" />
             </div>
             <span className="text-lg font-semibold text-slate-900">Schedual</span>
@@ -63,7 +63,7 @@ export default function LandingHeader() {
           <div className="flex items-center gap-3">
             {isAuthenticated ? (
               <Link to={createPageUrl(['leo.bancroft34@icloud.com', 'erik.gerbst@gmail.com'].includes(user?.email?.toLowerCase()) ? 'Panel' : 'Dashboard')}>
-                <Button className="bg-indigo-600 hover:bg-indigo-700">
+                <Button className="bg-blue-900 hover:bg-blue-800">
                   {['leo.bancroft34@icloud.com', 'erik.gerbst@gmail.com'].includes(user?.email?.toLowerCase()) ? 'Go to Panel' : 'Go to Dashboard'}
                 </Button>
               </Link>
@@ -78,7 +78,7 @@ export default function LandingHeader() {
                 </Button>
                 <Button 
                   onClick={() => base44.auth.redirectToLogin('/Dashboard')}
-                  className="bg-indigo-600 hover:bg-indigo-700"
+                  className="bg-blue-900 hover:bg-blue-800"
                 >
                   Sign Up
                 </Button>
