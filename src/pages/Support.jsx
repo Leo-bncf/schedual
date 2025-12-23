@@ -58,7 +58,7 @@ export default function Support() {
   });
 
   const createTicketMutation = useMutation({
-    mutationFn: (data) => base44.entities.SupportTicket.create(data),
+    mutationFn: (data) => base44.functions.invoke('createSupportTicket', data),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['tickets'] });
       setShowNewTicket(false);
@@ -77,15 +77,7 @@ export default function Support() {
   const handleCreateTicket = () => {
     createTicketMutation.mutate({
       ...formData,
-      user_email: user.email,
-      user_name: user.full_name,
-      school_id: user.school_id,
-      messages: [{
-        sender: user.full_name,
-        message: formData.description,
-        timestamp: new Date().toISOString(),
-        is_admin: false
-      }]
+      school_id: user.school_id
     });
   };
 
