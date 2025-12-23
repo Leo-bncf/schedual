@@ -23,6 +23,7 @@ import TeachingGroups from './pages/TeachingGroups';
 import TestData from './pages/TestData';
 import UserManagement from './pages/UserManagement';
 import PrivacyPolicy from './pages/PrivacyPolicy';
+import TermsOfUse from './pages/TermsOfUse';
 import __Layout from './Layout.jsx';
 
 
@@ -52,6 +53,7 @@ export const PAGES = {
     "TestData": TestData,
     "UserManagement": UserManagement,
     "PrivacyPolicy": PrivacyPolicy,
+    "TermsOfUse": TermsOfUse,
 }
 
 export const pagesConfig = {
