@@ -363,7 +363,7 @@ export default function Subscription() {
             <div className="text-sm text-slate-700">
               <p className="font-semibold mb-2">Need Help?</p>
               <p className="mb-3">
-                If you have questions about your subscription, billing, or need to make changes, contact us at support@chedual-pro.com
+                If you have questions about your subscription, billing, or need to make changes, contact us at support@schedual-pro.com
               </p>
             </div>
           </div>
