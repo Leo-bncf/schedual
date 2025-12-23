@@ -17,10 +17,6 @@ export default function MissionSection() {
           <Heart className="w-5 h-5 text-white" />
         </div>
 
-        <h2 className="text-4xl md:text-5xl font-bold text-white mb-6">
-          Everything You Need for IB Scheduling, All in One Place
-        </h2>
-
         <p className="text-xl md:text-2xl text-white/95 leading-relaxed font-light">
           We understand the complexity of IB scheduling because we've lived it. Schedual was created by former IB students who experienced firsthand the challenges of timetabling conflicts, teacher availability issues, and the stress of manual schedule management. Our mission is to bring intelligent automation to IB schools worldwide, saving time for what truly matters—education.
         </p>
