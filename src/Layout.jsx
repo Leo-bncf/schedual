@@ -211,30 +211,44 @@ export default function Layout({ children, currentPageName }) {
 
           {/* Navigation */}
           <nav className="flex-1 px-4 py-6 space-y-1 overflow-y-auto">
-            {navigation.map((item) => {
-              // Strict role filtering
-              if (item.superAdminOnly && !isSuperAdmin) return null;
-              if (item.schoolOnly && !isSchoolAdmin(user)) return null;
-              const isActive = currentPageName === item.page;
-              return (
-                <Link
-                  key={item.name}
-                  to={createPageUrl(item.page)}
-                  className={`
-                    flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-medium
-                    transition-all duration-200
-                    ${isActive 
-                      ? 'bg-indigo-50 text-indigo-700' 
-                      : 'text-slate-600 hover:bg-slate-100 hover:text-slate-900'
-                    }
-                  `}
-                  onClick={() => setSidebarOpen(false)}
-                >
-                  <item.icon className={`w-5 h-5 ${isActive ? 'text-indigo-600' : 'text-slate-400'}`} />
-                  {item.name}
-                </Link>
-              );
-            })}
+            {navigation.filter(item => {
+              if (item.superAdminOnly && !isSuperAdmin) return false;
+              if (item.schoolOnly && !isSchoolAdmin(user)) return false;
+              return true;
+            }).length === 0 ? (
+              <div className="text-center py-12 px-4">
+                <div className="text-slate-400 mb-3">
+                  <Calendar className="w-12 h-12 mx-auto opacity-50" />
+                </div>
+                <p className="text-sm text-slate-500 font-medium mb-2">Nothing here yet</p>
+                <p className="text-xs text-slate-400">Activate a subscription to unlock all features</p>
+              </div>
+            ) : (
+              navigation.map((item) => {
+                // Strict role filtering
+                if (item.superAdminOnly && !isSuperAdmin) return null;
+                if (item.schoolOnly && !isSchoolAdmin(user)) return null;
+                const isActive = currentPageName === item.page;
+                return (
+                  <Link
+                    key={item.name}
+                    to={createPageUrl(item.page)}
+                    className={`
+                      flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-medium
+                      transition-all duration-200
+                      ${isActive 
+                        ? 'bg-indigo-50 text-indigo-700' 
+                        : 'text-slate-600 hover:bg-slate-100 hover:text-slate-900'
+                      }
+                    `}
+                    onClick={() => setSidebarOpen(false)}
+                  >
+                    <item.icon className={`w-5 h-5 ${isActive ? 'text-indigo-600' : 'text-slate-400'}`} />
+                    {item.name}
+                  </Link>
+                );
+              })
+            )}
           </nav>
 
           {/* User section */}
