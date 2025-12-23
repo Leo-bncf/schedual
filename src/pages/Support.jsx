@@ -60,7 +60,7 @@ export default function Support() {
   const createTicketMutation = useMutation({
     mutationFn: (data) => base44.entities.SupportTicket.create(data),
     onSuccess: () => {
-      queryClient.invalidateQueries(['tickets']);
+      queryClient.invalidateQueries({ queryKey: ['tickets'] });
       setShowNewTicket(false);
       setFormData({ subject: '', description: '', category: 'general', priority: 'medium' });
     },
@@ -69,7 +69,8 @@ export default function Support() {
   const updateTicketMutation = useMutation({
     mutationFn: ({ id, data }) => base44.entities.SupportTicket.update(id, data),
     onSuccess: () => {
-      queryClient.invalidateQueries(['tickets']);
+      queryClient.invalidateQueries({ queryKey: ['tickets'] });
+      setSelectedTicket(null);
     },
   });
 
