@@ -63,7 +63,7 @@ export default function PricingSection() {
               {plan.highlighted && (
                 <div className="absolute -inset-1 bg-gradient-to-r from-indigo-600 to-violet-600 rounded-2xl blur opacity-75" />
               )}
-              <div className="relative bg-white/50 backdrop-blur-sm rounded-2xl p-8 border border-blue-300/50">
+              <div className="relative bg-white/50 backdrop-blur-sm rounded-2xl p-8 border border-purple-300/50">
                 <div className="text-center mb-8">
                   <h3 className="text-2xl font-bold text-slate-900 mb-2">{plan.name}</h3>
                   <p className="text-slate-700 mb-6">{plan.description}</p>

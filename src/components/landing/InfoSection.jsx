@@ -49,7 +49,7 @@ export default function InfoSection() {
 
         <div className="grid lg:grid-cols-2 gap-12 mb-16">
           {/* Problems */}
-          <div className="bg-white/50 backdrop-blur-sm rounded-2xl p-8 border border-blue-300/50">
+          <div className="bg-white/50 backdrop-blur-sm rounded-2xl p-8 border border-purple-300/50">
             <h3 className="text-2xl font-bold text-slate-900 mb-6">Traditional Problems</h3>
             <ul className="space-y-4">
               {[
@@ -68,7 +68,7 @@ export default function InfoSection() {
           </div>
 
           {/* Solutions */}
-          <div className="bg-white/50 backdrop-blur-sm rounded-2xl p-8 border border-blue-300/50">
+          <div className="bg-white/50 backdrop-blur-sm rounded-2xl p-8 border border-purple-300/50">
             <h3 className="text-2xl font-bold text-slate-900 mb-6">Our Solutions</h3>
             <ul className="space-y-4">
               {[
@@ -90,7 +90,7 @@ export default function InfoSection() {
         {/* Features Grid */}
         <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-8">
           {features.map((feature, i) => (
-            <div key={i} className="bg-white/50 backdrop-blur-sm rounded-xl p-6 border border-blue-300/50 hover:border-indigo-500/50 transition-all">
+            <div key={i} className="bg-white/50 backdrop-blur-sm rounded-xl p-6 border border-purple-300/50 hover:border-indigo-500/50 transition-all">
               <div className="w-12 h-12 rounded-lg bg-gradient-to-br from-indigo-600 to-violet-600 flex items-center justify-center text-white mb-4">
                 {feature.icon}
               </div>

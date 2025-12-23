@@ -7,7 +7,7 @@ export default function MissionSection() {
       <div className="absolute inset-0 bg-gradient-to-b from-transparent via-indigo-950/30 to-transparent" />
       
       <div className="relative max-w-5xl mx-auto px-4 sm:px-6 lg:px-8 text-center">
-        <div className="inline-flex items-center gap-2 px-4 py-2 rounded-full bg-white/50 backdrop-blur-sm border border-blue-300/50 mb-8">
+        <div className="inline-flex items-center gap-2 px-4 py-2 rounded-full bg-white/50 backdrop-blur-sm border border-purple-300/50 mb-8">
           <Heart className="w-4 h-4 text-rose-500" />
           <span className="text-sm font-medium text-slate-700">Made for IB Schools</span>
           <Lightbulb className="w-4 h-4 text-amber-500" />
