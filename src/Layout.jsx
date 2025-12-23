@@ -43,6 +43,7 @@ const navigation = [
   { name: 'AI Advisor', page: 'AIAdvisor', icon: Sparkles, schoolOnly: true },
   { name: 'Subscription', page: 'Subscription', icon: CreditCard, schoolOnly: true },
   { name: 'Settings', page: 'Settings', icon: Settings, schoolOnly: true },
+  { name: 'Account Manager', page: 'AccountManager', icon: Users, schoolOnly: true },
   
   // SuperAdmin Pages
   { name: 'Admin Panel', page: 'Panel', icon: Settings, superAdminOnly: true },
