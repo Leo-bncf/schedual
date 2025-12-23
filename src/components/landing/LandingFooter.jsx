@@ -1,5 +1,7 @@
 import React from 'react';
+import { Link } from 'react-router-dom';
 import { Calendar } from 'lucide-react';
+import { createPageUrl } from '../../utils';
 
 export default function LandingFooter() {
   return (
@@ -43,8 +45,8 @@ export default function LandingFooter() {
           <div>
             <h4 className="font-semibold text-white mb-4">Legal</h4>
             <ul className="space-y-2 text-sm">
-              <li><a href="#" className="hover:text-white transition-colors">Privacy Policy</a></li>
-              <li><a href="#" className="hover:text-white transition-colors">Terms of Service</a></li>
+              <li><Link to={createPageUrl('PrivacyPolicy')} className="hover:text-white transition-colors">Privacy Policy</Link></li>
+              <li><Link to={createPageUrl('TermsOfUse')} className="hover:text-white transition-colors">Terms of Service</Link></li>
             </ul>
           </div>
         </div>
