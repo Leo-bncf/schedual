@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { Link } from 'react-router-dom';
+import { Link, Navigate } from 'react-router-dom';
 import { createPageUrl } from './utils';
 import { base44 } from '@/api/base44Client';
 import { 
@@ -135,19 +135,16 @@ export default function Layout({ children, currentPageName }) {
     );
   }
 
-  // Role-based access control
+  // Role-based access control with React Router navigation
   const schoolOnlyPages = ['Dashboard', 'Onboarding', 'Schedule', 'TeachingGroups', 'Teachers', 'Students', 'Subjects', 'Rooms', 'Constraints', 'AIAdvisor', 'Settings', 'Support', 'Subscription'];
   const superAdminPages = ['Panel', 'UserManagement', 'SubscriptionsOverview', 'SupportTickets'];
 
   if (isSuperAdmin && schoolOnlyPages.includes(currentPageName)) {
-    window.location.href = createPageUrl('Panel');
-    return null;
+    return <Navigate to={createPageUrl('Panel')} replace />;
   } else if (isSchoolAdmin(user) && superAdminPages.includes(currentPageName)) {
-    window.location.href = createPageUrl('Dashboard');
-    return null;
+    return <Navigate to={createPageUrl('Dashboard')} replace />;
   } else if (isNewClient(user) && currentPageName !== 'Subscription') {
-    window.location.href = createPageUrl('Subscription');
-    return null;
+    return <Navigate to={createPageUrl('Subscription')} replace />;
   }
 
   const getInitials = (name) => {
