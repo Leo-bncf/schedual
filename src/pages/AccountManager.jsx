@@ -262,7 +262,7 @@ export default function AccountManager() {
                     onChange={(e) => setFormData({ ...formData, newEmail: e.target.value })}
                   />
                   <div className="flex gap-2">
-                    <Button onClick={handleUpdateEmail} disabled={updateEmailMutation.isPending}>
+                    <Button onClick={handleUpdateEmail} disabled={updateEmailMutation.isPending} className="bg-purple-600 hover:bg-purple-700">
                       Update Email
                     </Button>
                     <Button 
@@ -330,7 +330,7 @@ export default function AccountManager() {
                   </div>
 
                   <div className="flex gap-2">
-                    <Button onClick={handleUpdatePassword} disabled={updatePasswordMutation.isPending}>
+                    <Button onClick={handleUpdatePassword} disabled={updatePasswordMutation.isPending} className="bg-purple-600 hover:bg-purple-700">
                       <KeyRound className="w-4 h-4 mr-2" />
                       Update Password
                     </Button>
