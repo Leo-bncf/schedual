@@ -303,7 +303,7 @@ export default function Layout({ children, currentPageName }) {
           <div className="flex items-center gap-3 ml-auto">
             <Link 
               to={createPageUrl(isSuperAdmin ? 'SupportTickets' : 'Support')}
-              className="px-4 py-2 text-sm font-medium text-slate-700 hover:text-slate-900 hover:bg-slate-100 rounded-lg border-2 border-purple-600 transition-colors"
+              className="px-4 py-2 text-sm font-medium text-slate-700 hover:text-slate-900 hover:bg-slate-100 rounded-lg border-2 border-blue-900 transition-colors"
             >
               Contact Us
             </Link>
