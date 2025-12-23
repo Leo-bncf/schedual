@@ -77,7 +77,7 @@ export default function LandingHeader() {
                   Login
                 </Button>
                 <Button 
-                  onClick={() => base44.auth.redirectToLogin('/Dashboard')}
+                  onClick={() => window.location.href = 'https://app.base44.com/signup?next=' + encodeURIComponent(window.location.origin + '/Dashboard')}
                   className="bg-indigo-600 hover:bg-indigo-700"
                 >
                   Sign Up
