@@ -6,21 +6,29 @@ import { ScrollArea } from "@/components/ui/scroll-area";
 import { Link } from 'react-router-dom';
 import { createPageUrl } from '../../utils';
 import { Shield, FileText } from 'lucide-react';
+import { base44 } from '@/api/base44Client';
 
 export default function TermsAcceptanceDialog() {
   const [open, setOpen] = useState(false);
   const [accepted, setAccepted] = useState(false);
 
   useEffect(() => {
-    const hasAccepted = localStorage.getItem('schedual_terms_accepted');
-    if (!hasAccepted) {
-      setOpen(true);
-    }
+    const checkAuth = async () => {
+      try {
+        const isAuth = await base44.auth.isAuthenticated();
+        if (!isAuth) {
+          setOpen(true);
+        }
+      } catch (error) {
+        setOpen(true);
+      }
+    };
+    
+    checkAuth();
   }, []);
 
   const handleAccept = () => {
     if (accepted) {
-      localStorage.setItem('schedual_terms_accepted', 'true');
       setOpen(false);
     }
   };
