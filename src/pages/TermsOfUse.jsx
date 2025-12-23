@@ -13,7 +13,7 @@ export default function TermsOfUse() {
           </div>
           <h1 className="text-4xl font-bold text-slate-900 mb-4">Schedual – Terms of Use</h1>
           <p className="text-lg text-slate-600">
-            Last updated: December 2024
+            Last updated: February 2025
           </p>
         </div>
 
