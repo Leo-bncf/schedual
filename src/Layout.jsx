@@ -303,10 +303,9 @@ export default function Layout({ children, currentPageName }) {
           <div className="flex items-center gap-3 ml-auto">
             <Link 
               to={createPageUrl(isSuperAdmin ? 'SupportTickets' : 'Support')}
-              className="relative inline-flex items-center justify-center h-10 w-10 rounded-md hover:bg-slate-100 transition-colors"
+              className="px-4 py-2 text-sm font-medium text-slate-700 hover:text-slate-900 hover:bg-slate-100 rounded-lg transition-colors"
             >
-              <Bell className="w-5 h-5 text-slate-500" />
-              <span className="absolute top-2 right-2 w-2 h-2 bg-rose-500 rounded-full" />
+              Contact Us
             </Link>
           </div>
         </header>
