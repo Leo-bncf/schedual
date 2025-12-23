@@ -9,7 +9,7 @@ export default function HeroSection() {
     const handleScroll = () => {
       const scrollPosition = window.scrollY;
       const windowHeight = window.innerHeight;
-      const progress = Math.min(scrollPosition / (windowHeight * 0.8), 1);
+      const progress = Math.min(scrollPosition / (windowHeight * 1.5), 1);
       setScrollProgress(progress);
     };
 
@@ -105,16 +105,20 @@ export default function HeroSection() {
       
       {/* Gradient transition to next section - animated on scroll */}
       <div 
-        className="absolute -bottom-32 left-0 right-0 h-96 bg-gradient-to-b from-transparent via-purple-700/3 to-slate-50 transition-opacity duration-500"
-        style={{ opacity: 1 - scrollProgress * 0.3 }}
+        className="absolute -bottom-32 left-0 right-0 h-96 bg-gradient-to-b from-transparent via-purple-700/3 to-slate-50"
+        style={{ 
+          opacity: 1 - scrollProgress * 0.2,
+          transition: 'opacity 0.1s ease-out'
+        }}
       ></div>
       
       {/* Animated overlay that grows as you scroll */}
       <div 
-        className="absolute inset-0 bg-gradient-to-b from-transparent to-slate-50 pointer-events-none transition-opacity duration-300"
+        className="absolute inset-0 bg-gradient-to-b from-transparent via-slate-50/50 to-slate-50 pointer-events-none"
         style={{ 
-          opacity: scrollProgress * 0.8,
-          transform: `translateY(${scrollProgress * 100}px)`
+          opacity: scrollProgress * 0.9,
+          transform: `translateY(${scrollProgress * 150}px)`,
+          transition: 'opacity 0.1s ease-out, transform 0.1s ease-out'
         }}
       ></div>
     </section>
