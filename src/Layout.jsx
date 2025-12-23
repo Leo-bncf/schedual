@@ -67,62 +67,59 @@ export default function Layout({ children, currentPageName }) {
   const isNewClient = (userData) => userData && !userData.school_id && !isSuperAdmin;
 
   useEffect(() => {
-    const urlParams = new URLSearchParams(window.location.search);
-    const subscriptionSuccess = urlParams.get('subscription') === 'success';
-    
-    if (subscriptionSuccess) {
-      let attempts = 0;
-      const maxAttempts = 10;
+    const loadAuth = async () => {
+      const urlParams = new URLSearchParams(window.location.search);
+      const subscriptionSuccess = urlParams.get('subscription') === 'success';
       
-      const checkUserUpdate = () => {
-        attempts++;
-        base44.auth.me()
-          .then(userData => {
-            if (userData.school_id) {
-              setUser(userData);
-              setIsLoading(false);
-              window.history.replaceState({}, '', window.location.pathname);
-            } else if (attempts < maxAttempts) {
-              setTimeout(checkUserUpdate, 2000);
-            } else {
-              setUser(userData);
-              setIsLoading(false);
-              window.history.replaceState({}, '', window.location.pathname);
-            }
-          })
-          .catch((error) => {
-            console.error('Error fetching user:', error);
-            if (attempts < maxAttempts) {
-              setTimeout(checkUserUpdate, 2000);
-            } else {
-              base44.auth.redirectToLogin(window.location.pathname);
-            }
-          });
-      };
-      
-      setTimeout(checkUserUpdate, 2000);
-    } else if (!user) {
-      base44.auth.me()
-        .then(async userData => {
+      if (subscriptionSuccess) {
+        let attempts = 0;
+        const maxAttempts = 10;
+        
+        const checkUserUpdate = () => {
+          attempts++;
+          base44.auth.me()
+            .then(userData => {
+              if (userData.school_id) {
+                setUser(userData);
+                setIsLoading(false);
+                window.history.replaceState({}, '', window.location.pathname);
+              } else if (attempts < maxAttempts) {
+                setTimeout(checkUserUpdate, 2000);
+              } else {
+                setUser(userData);
+                setIsLoading(false);
+                window.history.replaceState({}, '', window.location.pathname);
+              }
+            })
+            .catch((error) => {
+              console.error('Error fetching user:', error);
+              if (attempts < maxAttempts) {
+                setTimeout(checkUserUpdate, 2000);
+              } else {
+                base44.auth.redirectToLogin(window.location.pathname);
+              }
+            });
+        };
+        
+        setTimeout(checkUserUpdate, 2000);
+      } else {
+        try {
+          const userData = await base44.auth.me();
           setUser(userData);
           
-          try {
-            const { data } = await base44.functions.invoke('getSuperAdminEmails');
-            setIsSuperAdmin(data?.isSuperAdmin || false);
-          } catch (error) {
-            console.error('Error checking SuperAdmin status:', error);
-            setIsSuperAdmin(false);
-          }
+          const { data } = await base44.functions.invoke('getSuperAdminEmails');
+          setIsSuperAdmin(data?.isSuperAdmin || false);
           
           setIsLoading(false);
-        })
-        .catch(() => {
+        } catch (error) {
+          console.error('Auth error:', error);
           base44.auth.redirectToLogin(window.location.pathname);
-        });
-    } else {
-      setIsLoading(false);
-    }
-  }, [currentPageName, user]);
+        }
+      }
+    };
+
+    loadAuth();
+  }, []);
 
   if (isLoading) {
     return (
