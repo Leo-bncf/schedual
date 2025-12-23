@@ -344,7 +344,7 @@ export default function Panel() {
     {
       header: 'Role',
       cell: (row) => (
-        <Badge className={row.role === 'admin' ? 'bg-purple-100 text-purple-700 border-0' : 'bg-slate-100 text-slate-600 border-0'}>
+        <Badge className={row.role === 'admin' ? 'bg-blue-100 text-blue-900 border-0' : 'bg-slate-100 text-slate-600 border-0'}>
           {row.role === 'admin' ? <Crown className="w-3 h-3 mr-1" /> : null}
           {row.role}
         </Badge>
@@ -358,7 +358,7 @@ export default function Panel() {
             <Button
               variant="default"
               size="sm"
-              className="bg-indigo-600 hover:bg-indigo-700"
+              className="bg-blue-900 hover:bg-blue-800"
               onClick={() => {
                 setNewSchoolFormData({
                   ...newSchoolFormData,

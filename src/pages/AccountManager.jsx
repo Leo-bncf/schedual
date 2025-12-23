@@ -146,7 +146,7 @@ export default function AccountManager() {
   if (isLoading) {
     return (
       <div className="flex items-center justify-center min-h-screen">
-        <div className="w-16 h-16 border-4 border-indigo-600 border-t-transparent rounded-full animate-spin"></div>
+        <div className="w-16 h-16 border-4 border-blue-900 border-t-transparent rounded-full animate-spin"></div>
       </div>
     );
   }
@@ -171,7 +171,7 @@ export default function AccountManager() {
           <Card>
             <CardHeader>
               <CardTitle className="flex items-center gap-2">
-                <User className="w-5 h-5 text-indigo-600" />
+                <User className="w-5 h-5 text-blue-900" />
                 Personal Information
               </CardTitle>
               <CardDescription>Update your personal details</CardDescription>
@@ -215,7 +215,7 @@ export default function AccountManager() {
               <div className="space-y-3">
                 <Label>Role</Label>
                 <div className="flex items-center gap-3 p-3 bg-slate-50 rounded-lg">
-                  <Shield className="w-5 h-5 text-indigo-600" />
+                  <Shield className="w-5 h-5 text-blue-900" />
                   <p className="text-slate-900 font-medium capitalize">{user?.role || 'user'}</p>
                 </div>
               </div>
@@ -237,7 +237,7 @@ export default function AccountManager() {
           <Card>
             <CardHeader>
               <CardTitle className="flex items-center gap-2">
-                <Mail className="w-5 h-5 text-indigo-600" />
+                <Mail className="w-5 h-5 text-blue-900" />
                 Email Address
               </CardTitle>
               <CardDescription>Change your email address</CardDescription>
@@ -262,7 +262,7 @@ export default function AccountManager() {
                     onChange={(e) => setFormData({ ...formData, newEmail: e.target.value })}
                   />
                   <div className="flex gap-2">
-                    <Button onClick={handleUpdateEmail} disabled={updateEmailMutation.isPending} className="bg-purple-600 hover:bg-purple-700">
+                    <Button onClick={handleUpdateEmail} disabled={updateEmailMutation.isPending} className="bg-blue-900 hover:bg-blue-800">
                       Update Email
                     </Button>
                     <Button 
@@ -288,7 +288,7 @@ export default function AccountManager() {
           <Card>
             <CardHeader>
               <CardTitle className="flex items-center gap-2">
-                <Lock className="w-5 h-5 text-indigo-600" />
+                <Lock className="w-5 h-5 text-blue-900" />
                 Password
               </CardTitle>
               <CardDescription>Update your password to keep your account secure</CardDescription>
@@ -330,7 +330,7 @@ export default function AccountManager() {
                   </div>
 
                   <div className="flex gap-2">
-                    <Button onClick={handleUpdatePassword} disabled={updatePasswordMutation.isPending} className="bg-purple-600 hover:bg-purple-700">
+                    <Button onClick={handleUpdatePassword} disabled={updatePasswordMutation.isPending} className="bg-blue-900 hover:bg-blue-800">
                       <KeyRound className="w-4 h-4 mr-2" />
                       Update Password
                     </Button>
@@ -368,7 +368,7 @@ export default function AccountManager() {
             <Card>
               <CardHeader>
                 <CardTitle className="flex items-center gap-2">
-                  <Building2 className="w-5 h-5 text-indigo-600" />
+                  <Building2 className="w-5 h-5 text-blue-900" />
                   School Information
                 </CardTitle>
                 <CardDescription>Your school details</CardDescription>
