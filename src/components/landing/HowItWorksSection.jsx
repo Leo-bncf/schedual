@@ -36,7 +36,7 @@ const steps = [
 
 export default function HowItWorksSection() {
   return (
-    <section id="how-it-works" className="py-20 px-4 sm:px-6 lg:px-8 bg-gradient-to-br from-slate-50 to-white">
+    <section id="how-it-works" className="py-20 px-4 sm:px-6 lg:px-8 bg-gradient-to-br from-violet-50 via-purple-50 to-pink-50">
       <div className="max-w-7xl mx-auto">
         {/* Section Header */}
         <div className="text-center mb-16">
@@ -60,7 +60,7 @@ export default function HowItWorksSection() {
               </div>
 
               {/* Step Content */}
-              <div className="flex-1 bg-white p-6 rounded-xl border border-slate-200 shadow-sm">
+              <div className="flex-1 bg-white p-6 rounded-xl border-2 border-purple-100 shadow-lg hover:shadow-xl transition-all">
                 <div className="flex items-center gap-3 mb-3">
                   <step.icon className="w-6 h-6 text-indigo-600" />
                   <h3 className="text-xl font-semibold text-slate-900">{step.title}</h3>

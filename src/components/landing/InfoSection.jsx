@@ -36,7 +36,7 @@ const features = [
 
 export default function InfoSection() {
   return (
-    <section id="info" className="py-20 px-4 sm:px-6 lg:px-8 bg-white">
+    <section id="info" className="py-20 px-4 sm:px-6 lg:px-8 bg-gradient-to-br from-slate-50 via-blue-50 to-indigo-50">
       <div className="max-w-7xl mx-auto">
         {/* Section Header */}
         <div className="text-center mb-16">
@@ -99,8 +99,8 @@ export default function InfoSection() {
         {/* Features Grid */}
         <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-8">
           {features.map((feature, index) => (
-            <div key={index} className="p-6 rounded-xl border border-slate-200 hover:border-indigo-300 transition-all hover:shadow-lg">
-              <div className="w-12 h-12 rounded-lg bg-gradient-to-br from-indigo-500 to-violet-600 flex items-center justify-center mb-4">
+            <div key={index} className="p-6 rounded-xl bg-white border-2 border-indigo-100 hover:border-indigo-300 transition-all hover:shadow-xl hover:-translate-y-1 group">
+              <div className="w-12 h-12 rounded-lg bg-gradient-to-br from-indigo-500 to-violet-600 flex items-center justify-center mb-4 group-hover:scale-110 transition-transform shadow-lg">
                 <feature.icon className="w-6 h-6 text-white" />
               </div>
               <h3 className="text-lg font-semibold text-slate-900 mb-2">{feature.title}</h3>

@@ -11,21 +11,30 @@ export default function HeroSection() {
   };
 
   return (
-    <section className="pt-32 pb-20 px-4 sm:px-6 lg:px-8 bg-gradient-to-br from-slate-50 via-white to-indigo-50">
-      <div className="max-w-7xl mx-auto">
+    <section className="relative pt-32 pb-20 px-4 sm:px-6 lg:px-8 bg-gradient-to-br from-indigo-500 via-violet-600 to-purple-700 overflow-hidden">
+      {/* Animated background elements */}
+      <div className="absolute inset-0 opacity-20">
+        <div className="absolute top-20 left-10 w-72 h-72 bg-white rounded-full blur-3xl animate-pulse"></div>
+        <div className="absolute bottom-20 right-10 w-96 h-96 bg-pink-300 rounded-full blur-3xl animate-pulse"></div>
+      </div>
+
+      <div className="max-w-7xl mx-auto relative z-10">
         <div className="grid lg:grid-cols-2 gap-12 items-center">
           {/* Left Content */}
           <div>
-            <h1 className="text-5xl sm:text-6xl font-bold text-slate-900 leading-tight mb-6">
+            <div className="inline-block mb-4 bg-white/20 backdrop-blur-sm px-4 py-2 rounded-full">
+              <span className="text-white font-semibold">✨ AI-Powered Scheduling</span>
+            </div>
+            <h1 className="text-5xl sm:text-6xl font-bold text-white leading-tight mb-6">
               All-in-One Automated IB Schedule Generation
             </h1>
-            <p className="text-xl text-slate-600 mb-8 leading-relaxed">
+            <p className="text-xl text-white/90 mb-8 leading-relaxed">
               Create conflict-free timetables for your IB school in minutes. 
               Manage teachers, students, and constraints effortlessly with AI-powered optimization.
             </p>
             <Button 
               size="lg" 
-              className="bg-indigo-600 hover:bg-indigo-700 text-lg px-8 py-6"
+              className="bg-white text-indigo-600 hover:bg-white/90 text-lg px-8 py-6 shadow-xl"
               onClick={scrollToInfo}
             >
               Learn More
@@ -34,44 +43,44 @@ export default function HeroSection() {
 
             {/* Stats */}
             <div className="grid grid-cols-3 gap-6 mt-12">
-              <div>
-                <div className="text-3xl font-bold text-indigo-600">100s</div>
-                <div className="text-sm text-slate-600">Hours Saved</div>
+              <div className="bg-white/10 backdrop-blur-sm p-4 rounded-xl border border-white/20">
+                <div className="text-3xl font-bold text-white">500+</div>
+                <div className="text-sm text-white/80">Hours Saved</div>
               </div>
-              <div>
-                <div className="text-3xl font-bold text-indigo-600">100%</div>
-                <div className="text-sm text-slate-600">Safe & Encrypted</div>
+              <div className="bg-white/10 backdrop-blur-sm p-4 rounded-xl border border-white/20">
+                <div className="text-3xl font-bold text-white">100%</div>
+                <div className="text-sm text-white/80">Safe & Encrypted</div>
               </div>
-              <div>
-                <div className="text-3xl font-bold text-indigo-600">24/7</div>
-                <div className="text-sm text-slate-600">Access & Support</div>
+              <div className="bg-white/10 backdrop-blur-sm p-4 rounded-xl border border-white/20">
+                <div className="text-3xl font-bold text-white">24/7</div>
+                <div className="text-sm text-white/80">Access & Support</div>
               </div>
             </div>
           </div>
 
           {/* Right Content - Visual */}
           <div className="relative">
-            <div className="bg-white rounded-2xl shadow-2xl p-8 border border-slate-200">
+            <div className="bg-white/95 backdrop-blur-xl rounded-2xl shadow-2xl p-8 border border-white/50">
               <div className="space-y-4">
-                <div className="flex items-center gap-3 p-4 bg-indigo-50 rounded-lg">
-                  <Calendar className="w-6 h-6 text-indigo-600" />
+                <div className="flex items-center gap-3 p-4 bg-gradient-to-r from-indigo-500 to-indigo-600 rounded-lg shadow-lg">
+                  <Calendar className="w-6 h-6 text-white" />
                   <div>
-                    <div className="font-semibold text-slate-900">Automated Scheduling</div>
-                    <div className="text-sm text-slate-600">Generate in seconds</div>
+                    <div className="font-semibold text-white">Automated Scheduling</div>
+                    <div className="text-sm text-indigo-100">Generate in seconds</div>
                   </div>
                 </div>
-                <div className="flex items-center gap-3 p-4 bg-emerald-50 rounded-lg">
-                  <Users className="w-6 h-6 text-emerald-600" />
+                <div className="flex items-center gap-3 p-4 bg-gradient-to-r from-emerald-500 to-emerald-600 rounded-lg shadow-lg">
+                  <Users className="w-6 h-6 text-white" />
                   <div>
-                    <div className="font-semibold text-slate-900">Teacher & Student Rules</div>
-                    <div className="text-sm text-slate-600">Constraint management</div>
+                    <div className="font-semibold text-white">Teacher & Student Rules</div>
+                    <div className="text-sm text-emerald-100">Constraint management</div>
                   </div>
                 </div>
-                <div className="flex items-center gap-3 p-4 bg-violet-50 rounded-lg">
-                  <BookOpen className="w-6 h-6 text-violet-600" />
+                <div className="flex items-center gap-3 p-4 bg-gradient-to-r from-violet-500 to-violet-600 rounded-lg shadow-lg">
+                  <BookOpen className="w-6 h-6 text-white" />
                   <div>
-                    <div className="font-semibold text-slate-900">IB Compliance</div>
-                    <div className="text-sm text-slate-600">PYP, MYP, DP support</div>
+                    <div className="font-semibold text-white">IB Compliance</div>
+                    <div className="text-sm text-violet-100">PYP, MYP, DP support</div>
                   </div>
                 </div>
               </div>
