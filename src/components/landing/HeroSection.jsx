@@ -1,16 +1,15 @@
-import React, { useEffect, useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { Button } from "@/components/ui/button";
-import { ArrowRight, Calendar, Users, BookOpen } from 'lucide-react';
+import { ArrowDown, Calendar, Users, BookOpen, Target, Clock, Zap, Shield } from 'lucide-react';
 
 export default function HeroSection() {
   const [scrollProgress, setScrollProgress] = useState(0);
 
   useEffect(() => {
     const handleScroll = () => {
-      const scrollPosition = window.scrollY;
-      const windowHeight = window.innerHeight;
-      const progress = Math.min(scrollPosition / (windowHeight * 1.5), 1);
-      setScrollProgress(progress);
+      const scrolled = window.scrollY;
+      const maxScroll = 500;
+      setScrollProgress(Math.min(scrolled / maxScroll, 1));
     };
 
     window.addEventListener('scroll', handleScroll);
@@ -25,102 +24,73 @@ export default function HeroSection() {
   };
 
   return (
-    <section className="relative min-h-screen pt-32 pb-60 px-4 sm:px-6 lg:px-8 bg-gradient-to-br from-indigo-500 via-violet-600 to-purple-700 overflow-hidden">
-      {/* Animated background elements */}
-      <div className="absolute inset-0 opacity-20">
-        <div className="absolute top-20 left-10 w-72 h-72 bg-white rounded-full blur-3xl animate-pulse"></div>
-        <div className="absolute bottom-20 right-10 w-96 h-96 bg-pink-300 rounded-full blur-3xl animate-pulse"></div>
+    <section className="relative min-h-screen flex items-center justify-center overflow-hidden">
+      {/* Animated Background Elements */}
+      <div 
+        className="absolute inset-0 opacity-20"
+        style={{
+          transform: `translateY(${scrollProgress * 50}px)`,
+        }}
+      >
+        <div className="absolute top-20 left-10 w-72 h-72 bg-indigo-600/30 rounded-full blur-3xl" />
+        <div className="absolute bottom-20 right-10 w-96 h-96 bg-violet-600/30 rounded-full blur-3xl" />
       </div>
 
-      <div className="max-w-7xl mx-auto relative z-10">
-        <div className="grid lg:grid-cols-2 gap-12 items-center">
-          {/* Left Content */}
-          <div>
-            <div className="inline-block mb-4 bg-white/20 backdrop-blur-sm px-4 py-2 rounded-full">
-              <span className="text-white font-semibold">✨ AI-Powered Scheduling</span>
-            </div>
-            <h1 className="text-5xl sm:text-6xl font-bold text-white leading-tight mb-6">
-              All-in-One Automated IB Schedule Generation
-            </h1>
-            <p className="text-xl text-white/90 mb-8 leading-relaxed">
-              Create conflict-free timetables for your IB school in minutes. 
-              Manage teachers, students, and constraints effortlessly with AI-powered optimization.
-            </p>
-            <Button 
-              size="lg" 
-              className="bg-white text-indigo-600 hover:bg-white/90 text-lg px-8 py-6 shadow-xl"
-              onClick={scrollToInfo}
-            >
-              Learn More
-              <ArrowRight className="w-5 h-5 ml-2" />
-            </Button>
+      <div className="relative z-10 max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 text-center">
+        {/* Main Heading */}
+        <div className="mb-8 animate-fadeIn">
+          <h1 className="text-5xl sm:text-6xl lg:text-7xl font-bold text-white mb-6 leading-tight">
+            AI-Powered <span className="text-transparent bg-clip-text bg-gradient-to-r from-indigo-400 to-violet-400">IB Diploma</span> Schedule Builder
+          </h1>
+          <p className="text-xl sm:text-2xl text-purple-200 max-w-3xl mx-auto">
+            Intelligent scheduling for IB World Schools. Automated timetabling that respects constraints, optimizes resources, and saves countless hours.
+          </p>
+        </div>
 
-            {/* Stats */}
-            <div className="grid grid-cols-3 gap-6 mt-12">
-              <div className="bg-white/10 backdrop-blur-sm p-4 rounded-xl border border-white/20">
-                <div className="text-3xl font-bold text-white">500+</div>
-                <div className="text-sm text-white/80">Hours Saved</div>
-              </div>
-              <div className="bg-white/10 backdrop-blur-sm p-4 rounded-xl border border-white/20">
-                <div className="text-3xl font-bold text-white">100%</div>
-                <div className="text-sm text-white/80">Safe & Encrypted</div>
-              </div>
-              <div className="bg-white/10 backdrop-blur-sm p-4 rounded-xl border border-white/20">
-                <div className="text-3xl font-bold text-white">24/7</div>
-                <div className="text-sm text-white/80">Access & Support</div>
-              </div>
-            </div>
+        {/* CTA Button */}
+        <Button 
+          size="lg"
+          onClick={scrollToInfo}
+          className="bg-gradient-to-r from-indigo-600 to-violet-600 hover:from-indigo-500 hover:to-violet-500 text-lg px-8 py-6 shadow-xl hover:shadow-2xl transition-all"
+        >
+          Learn More
+          <ArrowDown className="ml-2 w-5 h-5" />
+        </Button>
+
+        {/* Stats */}
+        <div className="grid grid-cols-1 sm:grid-cols-3 gap-8 mt-16">
+          <div className="bg-white/5 backdrop-blur-sm rounded-2xl p-6 shadow-lg border border-purple-800/30">
+            <Clock className="w-8 h-8 text-indigo-400 mx-auto mb-3" />
+            <div className="text-3xl font-bold text-white">100+</div>
+            <div className="text-purple-200">Hours Saved</div>
           </div>
-
-          {/* Right Content - Visual */}
-          <div className="relative">
-            <div className="bg-white/95 backdrop-blur-xl rounded-2xl shadow-2xl p-8 border border-white/50">
-              <div className="space-y-4">
-                <div className="flex items-center gap-3 p-4 bg-gradient-to-r from-indigo-500 to-indigo-600 rounded-lg shadow-lg">
-                  <Calendar className="w-6 h-6 text-white" />
-                  <div>
-                    <div className="font-semibold text-white">Automated Scheduling</div>
-                    <div className="text-sm text-indigo-100">Generate in seconds</div>
-                  </div>
-                </div>
-                <div className="flex items-center gap-3 p-4 bg-gradient-to-r from-emerald-500 to-emerald-600 rounded-lg shadow-lg">
-                  <Users className="w-6 h-6 text-white" />
-                  <div>
-                    <div className="font-semibold text-white">Teacher & Student Rules</div>
-                    <div className="text-sm text-emerald-100">Constraint management</div>
-                  </div>
-                </div>
-                <div className="flex items-center gap-3 p-4 bg-gradient-to-r from-violet-500 to-violet-600 rounded-lg shadow-lg">
-                  <BookOpen className="w-6 h-6 text-white" />
-                  <div>
-                    <div className="font-semibold text-white">IB Compliance</div>
-                    <div className="text-sm text-violet-100">PYP, MYP, DP support</div>
-                  </div>
-                </div>
-              </div>
-            </div>
+          <div className="bg-white/5 backdrop-blur-sm rounded-2xl p-6 shadow-lg border border-purple-800/30">
+            <Zap className="w-8 h-8 text-violet-400 mx-auto mb-3" />
+            <div className="text-3xl font-bold text-white">AI-Powered</div>
+            <div className="text-purple-200">Smart Optimization</div>
+          </div>
+          <div className="bg-white/5 backdrop-blur-sm rounded-2xl p-6 shadow-lg border border-purple-800/30">
+            <Shield className="w-8 h-8 text-indigo-400 mx-auto mb-3" />
+            <div className="text-3xl font-bold text-white">Safe & Encrypted</div>
+            <div className="text-purple-200">Secure Data</div>
           </div>
         </div>
+
+        {/* Feature Highlights */}
+        <div className="grid grid-cols-2 md:grid-cols-4 gap-6 mt-12">
+          {[
+            { icon: <Calendar className="w-6 h-6" />, text: 'Auto-Scheduling' },
+            { icon: <Users className="w-6 h-6" />, text: 'Teacher Management' },
+            { icon: <BookOpen className="w-6 h-6" />, text: 'IB Compliance' },
+            { icon: <Target className="w-6 h-6" />, text: 'Conflict Resolution' },
+          ].map((feature, i) => (
+            <div key={i} className="flex items-center gap-3 text-purple-100">
+              <div className="text-indigo-400">{feature.icon}</div>
+              <span className="font-medium">{feature.text}</span>
+            </div>
+          ))}
+        </div>
       </div>
-      
-      {/* Gradient transition to next section - animated on scroll */}
-      <div 
-        className="absolute -bottom-40 left-0 right-0 h-[500px] bg-gradient-to-b from-transparent via-purple-700/5 to-slate-50"
-        style={{ 
-          opacity: 1 - scrollProgress * 0.2,
-          transition: 'opacity 0.1s ease-out'
-        }}
-      ></div>
-      
-      {/* Animated overlay that grows as you scroll */}
-      <div 
-        className="absolute inset-0 bg-gradient-to-b from-transparent via-slate-50/50 to-slate-50 pointer-events-none"
-        style={{ 
-          opacity: scrollProgress * 0.9,
-          transform: `translateY(${scrollProgress * 150}px)`,
-          transition: 'opacity 0.1s ease-out, transform 0.1s ease-out'
-        }}
-      ></div>
     </section>
   );
 }
