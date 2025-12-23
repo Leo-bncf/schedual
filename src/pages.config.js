@@ -16,7 +16,6 @@ import Students from './pages/Students';
 import Subjects from './pages/Subjects';
 import Subscription from './pages/Subscription';
 import SubscriptionsOverview from './pages/SubscriptionsOverview';
-import Support from './pages/Support';
 import SupportTickets from './pages/SupportTickets';
 import Teachers from './pages/Teachers';
 import TeachingGroups from './pages/TeachingGroups';
@@ -24,6 +23,7 @@ import TermsOfUse from './pages/TermsOfUse';
 import TestData from './pages/TestData';
 import UserManagement from './pages/UserManagement';
 import Landing from './pages/Landing';
+import Support from './pages/Support';
 import __Layout from './Layout.jsx';
 
 
@@ -46,7 +46,6 @@ export const PAGES = {
     "Subjects": Subjects,
     "Subscription": Subscription,
     "SubscriptionsOverview": SubscriptionsOverview,
-    "Support": Support,
     "SupportTickets": SupportTickets,
     "Teachers": Teachers,
     "TeachingGroups": TeachingGroups,
@@ -54,6 +53,7 @@ export const PAGES = {
     "TestData": TestData,
     "UserManagement": UserManagement,
     "Landing": Landing,
+    "Support": Support,
 }
 
 export const pagesConfig = {
