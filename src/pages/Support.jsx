@@ -17,7 +17,6 @@ import {
   X
 } from 'lucide-react';
 import PageHeader from '../components/ui-custom/PageHeader';
-import { toast } from 'sonner';
 import {
   Dialog,
   DialogContent,
@@ -61,28 +60,17 @@ export default function Support() {
   const createTicketMutation = useMutation({
     mutationFn: (data) => base44.entities.SupportTicket.create(data),
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['tickets'] });
+      queryClient.invalidateQueries(['tickets']);
       setShowNewTicket(false);
       setFormData({ subject: '', description: '', category: 'general', priority: 'medium' });
-      toast.success('Support ticket created successfully');
     },
-    onError: (error) => {
-      console.error('Error creating ticket:', error);
-      toast.error('Failed to create ticket: ' + (error.message || 'Unknown error'));
-    }
   });
 
   const updateTicketMutation = useMutation({
     mutationFn: ({ id, data }) => base44.entities.SupportTicket.update(id, data),
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['tickets'] });
-      setSelectedTicket(null);
-      toast.success('Message sent successfully');
+      queryClient.invalidateQueries(['tickets']);
     },
-    onError: (error) => {
-      console.error('Error sending message:', error);
-      toast.error('Failed to send message: ' + (error.message || 'Unknown error'));
-    }
   });
 
   const handleCreateTicket = () => {
