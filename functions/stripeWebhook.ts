@@ -26,19 +26,23 @@ Deno.serve(async (req) => {
     switch (event.type) {
       case 'checkout.session.completed': {
         const session = event.data.object;
-        const schoolId = session.metadata.school_id;
+        const userId = session.metadata.user_id;
         const userEmail = session.metadata.user_email;
+        const userName = session.metadata.user_name;
         const additionalUsers = parseInt(session.metadata.additional_users || '0');
 
-        console.log(`🔔 Processing checkout completion for school ${schoolId}, user ${userEmail}`);
+        console.log(`🔔 Processing checkout completion for user ${userEmail}`);
 
         // Calculate subscription end date (1 year from now)
         const endDate = new Date();
         endDate.setFullYear(endDate.getFullYear() + 1);
 
-        // Update school with subscription info
+        // Create new school
+        let school;
         try {
-          await base44.asServiceRole.entities.School.update(schoolId, {
+          school = await base44.asServiceRole.entities.School.create({
+            name: `${userName}'s School`,
+            code: `SCH-${Date.now()}`,
             subscription_status: 'active',
             subscription_plan: 'yearly',
             stripe_customer_id: session.customer,
@@ -47,37 +51,24 @@ Deno.serve(async (req) => {
             subscription_end_date: endDate.toISOString(),
             max_additional_users: additionalUsers,
           });
-          console.log(`✅ School ${schoolId} updated successfully`);
+          console.log(`✅ School ${school.id} created successfully`);
         } catch (error) {
-          console.error(`❌ Failed to update school ${schoolId}:`, error);
+          console.error(`❌ Failed to create school:`, error);
           throw error;
         }
 
-        // Update user school_id (school_id is enough for access - don't update built-in role field)
+        // Assign school to user
         try {
-          const users = await base44.asServiceRole.entities.User.filter({ email: userEmail });
-          console.log(`Found ${users.length} users with email ${userEmail}`);
-          
-          if (users.length > 0) {
-            const userId = users[0].id;
-            console.log(`Attempting to update user ${userId} with school_id=${schoolId}`);
-            
-            // Only update school_id - role is managed by the platform
-            await base44.asServiceRole.entities.User.update(userId, {
-              school_id: schoolId
-            });
-            
-            console.log(`✅ User ${userEmail} (${userId}) assigned to school ${schoolId}`);
-          } else {
-            console.warn(`⚠️ No user found with email ${userEmail}`);
-          }
+          await base44.asServiceRole.entities.User.update(userId, {
+            school_id: school.id
+          });
+          console.log(`✅ User ${userEmail} (${userId}) assigned to school ${school.id}`);
         } catch (error) {
           console.error(`❌ Failed to update user ${userEmail}:`, error);
-          console.error('Error details:', error.message, error.stack);
-          // Don't throw - school is already activated, user update is secondary
+          throw error;
         }
 
-        console.log(`✅ Subscription activated for school ${schoolId}`);
+        console.log(`✅ Subscription activated for school ${school.id}`);
         break;
       }
 

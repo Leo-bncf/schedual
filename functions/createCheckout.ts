@@ -26,34 +26,11 @@ Deno.serve(async (req) => {
 
     const { additionalUsers = 0 } = await req.json();
 
-    // Create or get school
-    let school;
+    // Check if user already has active subscription
     if (user.school_id) {
-      try {
-        const schools = await base44.asServiceRole.entities.School.filter({ id: user.school_id });
-        school = schools[0];
-      } catch (schoolError) {
-        console.error('Error fetching school:', schoolError);
-      }
-    }
-
-    if (!school) {
-      try {
-        // Create new school for user
-        school = await base44.asServiceRole.entities.School.create({
-          name: `${user.full_name}'s School`,
-          code: `SCH-${Date.now()}`,
-          subscription_status: 'inactive',
-        });
-
-        // Assign school to user (role will be upgraded after payment in webhook)
-        await base44.asServiceRole.entities.User.update(user.id, {
-          school_id: school.id
-        });
-        console.log(`Assigned school ${school.id} to user ${user.id}`);
-      } catch (schoolCreateError) {
-        console.error('Error creating school:', schoolCreateError);
-        return Response.json({ error: 'Failed to create school: ' + schoolCreateError.message }, { status: 500 });
+      const schools = await base44.asServiceRole.entities.School.filter({ id: user.school_id });
+      if (schools[0]?.subscription_status === 'active') {
+        return Response.json({ error: 'Already subscribed' }, { status: 400 });
       }
     }
 
@@ -83,10 +60,10 @@ Deno.serve(async (req) => {
           },
         ],
         metadata: {
-          school_id: school.id,
-          school_name: school.name,
-          additional_users: String(additionalUsers),
+          user_id: user.id,
           user_email: user.email,
+          user_name: user.full_name,
+          additional_users: String(additionalUsers),
         },
         customer_email: user.email,
         success_url: `${req.headers.get('origin') || 'https://' + req.headers.get('host')}/Dashboard?subscription=success`,
