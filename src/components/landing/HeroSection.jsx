@@ -1,8 +1,22 @@
-import React from 'react';
+import React, { useEffect, useState } from 'react';
 import { Button } from "@/components/ui/button";
 import { ArrowRight, Calendar, Users, BookOpen } from 'lucide-react';
 
 export default function HeroSection() {
+  const [scrollProgress, setScrollProgress] = useState(0);
+
+  useEffect(() => {
+    const handleScroll = () => {
+      const scrollPosition = window.scrollY;
+      const windowHeight = window.innerHeight;
+      const progress = Math.min(scrollPosition / (windowHeight * 0.8), 1);
+      setScrollProgress(progress);
+    };
+
+    window.addEventListener('scroll', handleScroll);
+    return () => window.removeEventListener('scroll', handleScroll);
+  }, []);
+
   const scrollToInfo = () => {
     const element = document.getElementById('info');
     if (element) {
@@ -89,8 +103,20 @@ export default function HeroSection() {
         </div>
       </div>
       
-      {/* Gradient transition to next section */}
-      <div className="absolute -bottom-32 left-0 right-0 h-96 bg-gradient-to-b from-transparent via-purple-700/3 to-slate-50"></div>
+      {/* Gradient transition to next section - animated on scroll */}
+      <div 
+        className="absolute -bottom-32 left-0 right-0 h-96 bg-gradient-to-b from-transparent via-purple-700/3 to-slate-50 transition-opacity duration-500"
+        style={{ opacity: 1 - scrollProgress * 0.3 }}
+      ></div>
+      
+      {/* Animated overlay that grows as you scroll */}
+      <div 
+        className="absolute inset-0 bg-gradient-to-b from-transparent to-slate-50 pointer-events-none transition-opacity duration-300"
+        style={{ 
+          opacity: scrollProgress * 0.8,
+          transform: `translateY(${scrollProgress * 100}px)`
+        }}
+      ></div>
     </section>
   );
 }
