@@ -9,7 +9,6 @@ import NotFound from './pages/NotFound';
 import Onboarding from './pages/Onboarding';
 import OptimizationEngine from './pages/OptimizationEngine';
 import Panel from './pages/Panel';
-import PrivacyPolicy from './pages/PrivacyPolicy';
 import Rooms from './pages/Rooms';
 import Schedule from './pages/Schedule';
 import Settings from './pages/Settings';
@@ -21,9 +20,10 @@ import Support from './pages/Support';
 import SupportTickets from './pages/SupportTickets';
 import Teachers from './pages/Teachers';
 import TeachingGroups from './pages/TeachingGroups';
-import TermsOfUse from './pages/TermsOfUse';
 import TestData from './pages/TestData';
 import UserManagement from './pages/UserManagement';
+import PrivacyPolicy from './pages/PrivacyPolicy';
+import TermsOfUse from './pages/TermsOfUse';
 import __Layout from './Layout.jsx';
 
 
@@ -39,7 +39,6 @@ export const PAGES = {
     "Onboarding": Onboarding,
     "OptimizationEngine": OptimizationEngine,
     "Panel": Panel,
-    "PrivacyPolicy": PrivacyPolicy,
     "Rooms": Rooms,
     "Schedule": Schedule,
     "Settings": Settings,
@@ -51,9 +50,10 @@ export const PAGES = {
     "SupportTickets": SupportTickets,
     "Teachers": Teachers,
     "TeachingGroups": TeachingGroups,
-    "TermsOfUse": TermsOfUse,
     "TestData": TestData,
     "UserManagement": UserManagement,
+    "PrivacyPolicy": PrivacyPolicy,
+    "TermsOfUse": TermsOfUse,
 }
 
 export const pagesConfig = {

@@ -9,20 +9,14 @@ import LandingFooter from '../components/landing/LandingFooter';
 
 export default function Landing() {
   return (
-    <div className="min-h-screen relative">
-      {/* Fixed background gradient */}
-      <div className="fixed inset-0 bg-gradient-to-b from-purple-950 via-purple-950/95 to-black -z-10" />
-      
-      {/* Content */}
-      <div className="relative z-0">
-        <LandingHeader />
-        <HeroSection />
-        <InfoSection />
-        <MissionSection />
-        <HowItWorksSection />
-        <PricingSection />
-        <LandingFooter />
-      </div>
+    <div className="min-h-screen bg-white">
+      <LandingHeader />
+      <HeroSection />
+      <InfoSection />
+      <MissionSection />
+      <HowItWorksSection />
+      <PricingSection />
+      <LandingFooter />
     </div>
   );
 }
