@@ -59,84 +59,126 @@ export default function PricingSection() {
   };
 
   return (
-    <section id="pricing" className="py-20 px-4 sm:px-6 lg:px-8 bg-white">
-      <div className="max-w-7xl mx-auto">
+    <section id="pricing" className="relative py-24 px-4 sm:px-6 lg:px-8 bg-gradient-to-br from-slate-50 via-indigo-50/30 to-violet-50/30 overflow-hidden">
+      {/* Background decorations */}
+      <div className="absolute inset-0 overflow-hidden pointer-events-none">
+        <div className="absolute -top-40 -right-40 w-96 h-96 bg-indigo-200/20 rounded-full blur-3xl"></div>
+        <div className="absolute -bottom-40 -left-40 w-96 h-96 bg-violet-200/20 rounded-full blur-3xl"></div>
+      </div>
+
+      <div className="max-w-7xl mx-auto relative">
         {/* Section Header */}
         <div className="text-center mb-16">
-          <h2 className="text-4xl font-bold text-slate-900 mb-4">
-            Simple, Transparent Pricing
+          <div className="inline-block mb-4">
+            <span className="bg-gradient-to-r from-indigo-600 to-violet-600 text-transparent bg-clip-text text-sm font-semibold tracking-wide uppercase">
+              Pricing
+            </span>
+          </div>
+          <h2 className="text-5xl md:text-6xl font-bold text-slate-900 mb-6">
+            Invest in Smarter Scheduling
           </h2>
-          <p className="text-xl text-slate-600 max-w-3xl mx-auto">
-            Choose the plan that works best for your school. Cancel anytime.
+          <p className="text-xl text-slate-600 max-w-3xl mx-auto leading-relaxed">
+            One comprehensive plan. Everything you need to automate your IB timetabling.
           </p>
         </div>
 
-        {/* Pricing Cards */}
-        <div className="flex justify-center max-w-2xl mx-auto">
-          {plans.map((plan, index) => (
-            <div 
-              key={index} 
-              className={`relative p-8 rounded-2xl border-2 ${
-                plan.popular 
-                  ? 'border-indigo-600 shadow-2xl' 
-                  : 'border-slate-200 shadow-lg'
-              }`}
-            >
-              {plan.popular && (
-                <div className="absolute -top-4 left-1/2 -translate-x-1/2">
-                  <span className="bg-gradient-to-r from-indigo-600 to-violet-600 text-white px-4 py-1 rounded-full text-sm font-semibold">
-                    Most Popular
-                  </span>
-                </div>
-              )}
-
-              <div className="text-center mb-8">
-                <h3 className="text-2xl font-bold text-slate-900 mb-2">{plan.name}</h3>
-                <div className="flex items-baseline justify-center gap-2 mb-2">
-                  <span className="text-5xl font-bold text-slate-900">{plan.price}</span>
-                  <span className="text-slate-600">{plan.period}</span>
-                </div>
-                <p className="text-slate-600">{plan.description}</p>
-              </div>
-
-              <ul className="space-y-4 mb-8">
-                {plan.features.map((feature, i) => (
-                  <li key={i} className="flex items-start gap-3">
-                    <CheckCircle className="w-5 h-5 text-emerald-600 flex-shrink-0 mt-0.5" />
-                    <span className="text-slate-700">{feature}</span>
-                  </li>
-                ))}
-              </ul>
-
-              <Button 
-                className={`w-full py-6 text-lg ${
-                  plan.popular 
-                    ? 'bg-gradient-to-r from-indigo-600 to-violet-600 hover:from-indigo-700 hover:to-violet-700' 
-                    : 'bg-slate-900 hover:bg-slate-800'
-                }`}
-                onClick={() => handleSubscribe(plan.priceId)}
-                disabled={loading !== null}
-              >
-                {loading === plan.priceId ? (
-                  <>
-                    <Loader2 className="w-5 h-5 mr-2 animate-spin" />
-                    Processing...
-                  </>
-                ) : (
-                  'Subscribe Now'
-                )}
-              </Button>
+        {/* Main Pricing Card with Side Stats */}
+        <div className="grid lg:grid-cols-12 gap-8 items-center max-w-6xl mx-auto">
+          {/* Left Stats */}
+          <div className="lg:col-span-3 space-y-6">
+            <div className="bg-white/80 backdrop-blur-sm p-6 rounded-2xl border border-indigo-100 shadow-sm hover:shadow-md transition-shadow">
+              <div className="text-4xl font-bold text-indigo-600 mb-2">500+</div>
+              <p className="text-slate-600">Hours Saved Annually</p>
             </div>
-          ))}
+            <div className="bg-white/80 backdrop-blur-sm p-6 rounded-2xl border border-violet-100 shadow-sm hover:shadow-md transition-shadow">
+              <div className="text-4xl font-bold text-violet-600 mb-2">100%</div>
+              <p className="text-slate-600">IB Compliant</p>
+            </div>
+          </div>
+
+          {/* Center Pricing Card */}
+          <div className="lg:col-span-6">
+            {plans.map((plan, index) => (
+              <div 
+                key={index} 
+                className="relative p-10 rounded-3xl bg-white border-2 border-indigo-600 shadow-2xl hover:shadow-3xl transition-all duration-300 transform hover:-translate-y-1"
+              >
+                {plan.popular && (
+                  <div className="absolute -top-5 left-1/2 -translate-x-1/2">
+                    <span className="bg-gradient-to-r from-indigo-600 to-violet-600 text-white px-6 py-2 rounded-full text-sm font-semibold shadow-lg">
+                      ⭐ Most Popular
+                    </span>
+                  </div>
+                )}
+
+                <div className="text-center mb-10">
+                  <h3 className="text-3xl font-bold text-slate-900 mb-4">{plan.name}</h3>
+                  <div className="mb-4">
+                    <div className="flex items-baseline justify-center gap-2">
+                      <span className="text-6xl font-bold bg-gradient-to-r from-indigo-600 to-violet-600 text-transparent bg-clip-text">{plan.price}</span>
+                      <span className="text-slate-600 text-lg">{plan.period}</span>
+                    </div>
+                    <p className="text-slate-500 mt-2">≈ €186/month</p>
+                  </div>
+                  <p className="text-slate-600 text-lg">{plan.description}</p>
+                </div>
+
+                <ul className="space-y-4 mb-10">
+                  {plan.features.map((feature, i) => (
+                    <li key={i} className="flex items-start gap-3">
+                      <CheckCircle className="w-6 h-6 text-emerald-500 flex-shrink-0 mt-0.5" />
+                      <span className="text-slate-700 text-base">{feature}</span>
+                    </li>
+                  ))}
+                </ul>
+
+                <Button 
+                  className="w-full py-7 text-lg font-semibold bg-gradient-to-r from-indigo-600 to-violet-600 hover:from-indigo-700 hover:to-violet-700 shadow-lg hover:shadow-xl transition-all"
+                  onClick={() => handleSubscribe(plan.priceId)}
+                  disabled={loading !== null}
+                >
+                  {loading === plan.priceId ? (
+                    <>
+                      <Loader2 className="w-5 h-5 mr-2 animate-spin" />
+                      Processing...
+                    </>
+                  ) : (
+                    '🚀 Get Started Now'
+                  )}
+                </Button>
+              </div>
+            ))}
+          </div>
+
+          {/* Right Stats */}
+          <div className="lg:col-span-3 space-y-6">
+            <div className="bg-white/80 backdrop-blur-sm p-6 rounded-2xl border border-emerald-100 shadow-sm hover:shadow-md transition-shadow">
+              <div className="text-4xl font-bold text-emerald-600 mb-2">24/7</div>
+              <p className="text-slate-600">Priority Support</p>
+            </div>
+            <div className="bg-white/80 backdrop-blur-sm p-6 rounded-2xl border border-amber-100 shadow-sm hover:shadow-md transition-shadow">
+              <div className="text-4xl font-bold text-amber-600 mb-2">0</div>
+              <p className="text-slate-600">Conflicts Guaranteed</p>
+            </div>
+          </div>
         </div>
 
         {/* Trust Badges */}
-        <div className="mt-16 text-center">
-          <p className="text-slate-600 mb-4">Trusted by IB schools worldwide</p>
-          <div className="flex justify-center items-center gap-8 text-sm text-slate-500">
-            <span>✓ Secure payment via Stripe</span>
-            <span>✓ Cancel anytime</span>
-            <span>✓ 30-day money back</span>
+        <div className="mt-20 text-center">
+          <p className="text-slate-600 text-lg mb-6 font-medium">Trusted by IB schools worldwide 🌍</p>
+          <div className="flex flex-wrap justify-center items-center gap-6 md:gap-12">
+            <div className="flex items-center gap-2 text-slate-600 bg-white/60 backdrop-blur-sm px-6 py-3 rounded-full border border-slate-200">
+              <CheckCircle className="w-5 h-5 text-emerald-600" />
+              <span className="font-medium">Secure Stripe Payments</span>
+            </div>
+            <div className="flex items-center gap-2 text-slate-600 bg-white/60 backdrop-blur-sm px-6 py-3 rounded-full border border-slate-200">
+              <CheckCircle className="w-5 h-5 text-emerald-600" />
+              <span className="font-medium">Cancel Anytime</span>
+            </div>
+            <div className="flex items-center gap-2 text-slate-600 bg-white/60 backdrop-blur-sm px-6 py-3 rounded-full border border-slate-200">
+              <CheckCircle className="w-5 h-5 text-emerald-600" />
+              <span className="font-medium">30-Day Money Back</span>
+            </div>
           </div>
         </div>
       </div>
