@@ -25,7 +25,7 @@ export default function HeroSection() {
   };
 
   return (
-    <section className="relative pt-32 pb-40 px-4 sm:px-6 lg:px-8 bg-gradient-to-br from-indigo-500 via-violet-600 to-purple-700 overflow-hidden">
+    <section className="relative min-h-screen pt-32 pb-60 px-4 sm:px-6 lg:px-8 bg-gradient-to-br from-indigo-500 via-violet-600 to-purple-700 overflow-hidden">
       {/* Animated background elements */}
       <div className="absolute inset-0 opacity-20">
         <div className="absolute top-20 left-10 w-72 h-72 bg-white rounded-full blur-3xl animate-pulse"></div>
