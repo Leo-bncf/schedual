@@ -131,7 +131,7 @@ export default function Layout({ children, currentPageName }) {
     return (
       <div className="min-h-screen flex items-center justify-center bg-slate-50">
         <div className="text-center">
-          <div className="w-16 h-16 border-4 border-indigo-600 border-t-transparent rounded-full animate-spin mx-auto mb-4"></div>
+          <div className="w-16 h-16 border-4 border-blue-900 border-t-transparent rounded-full animate-spin mx-auto mb-4"></div>
           <p className="text-slate-600">Loading...</p>
         </div>
       </div>
@@ -194,7 +194,7 @@ export default function Layout({ children, currentPageName }) {
           {/* Logo */}
           <div className="flex items-center justify-between h-16 px-6 border-b border-slate-100">
             <Link to={createPageUrl('Landing')} className="flex items-center gap-3">
-              <div className="w-9 h-9 rounded-xl bg-gradient-to-br from-indigo-500 to-violet-600 flex items-center justify-center">
+              <div className="w-9 h-9 rounded-xl bg-gradient-to-br from-blue-900 to-blue-800 flex items-center justify-center">
                 <Calendar className="w-5 h-5 text-white" />
               </div>
               <span className="text-lg font-semibold text-slate-900">Schedual</span>
@@ -237,13 +237,13 @@ export default function Layout({ children, currentPageName }) {
                       flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-medium
                       transition-all duration-200
                       ${isActive 
-                        ? 'bg-indigo-50 text-indigo-700' 
+                        ? 'bg-blue-50 text-blue-900' 
                         : 'text-slate-600 hover:bg-slate-100 hover:text-slate-900'
                       }
                     `}
                     onClick={() => setSidebarOpen(false)}
                   >
-                    <item.icon className={`w-5 h-5 ${isActive ? 'text-indigo-600' : 'text-slate-400'}`} />
+                    <item.icon className={`w-5 h-5 ${isActive ? 'text-blue-900' : 'text-slate-400'}`} />
                     {item.name}
                   </Link>
                 );
@@ -257,7 +257,7 @@ export default function Layout({ children, currentPageName }) {
               <DropdownMenuTrigger asChild>
                 <button className="flex items-center gap-3 w-full p-2 rounded-lg hover:bg-slate-100 transition-colors">
                   <Avatar className="h-9 w-9">
-                    <AvatarFallback className="bg-gradient-to-br from-indigo-500 to-violet-600 text-white text-sm">
+                    <AvatarFallback className="bg-gradient-to-br from-blue-900 to-blue-800 text-white text-sm">
                       {getInitials(user?.full_name)}
                     </AvatarFallback>
                   </Avatar>
@@ -301,12 +301,12 @@ export default function Layout({ children, currentPageName }) {
           </Button>
 
           <div className="flex items-center gap-3 ml-auto">
-            <Link 
-              to={createPageUrl(isSuperAdmin ? 'SupportTickets' : 'Support')}
-              className="px-4 py-2 text-sm font-medium text-slate-700 hover:text-slate-900 hover:bg-slate-100 rounded-lg border-2 border-blue-900 transition-colors"
-            >
-              Contact Us
-            </Link>
+          <Link 
+            to={createPageUrl(isSuperAdmin ? 'SupportTickets' : 'Support')}
+            className="px-4 py-2 text-sm font-medium text-white bg-blue-900 hover:bg-blue-800 rounded-lg transition-colors"
+          >
+            Contact Us
+          </Link>
           </div>
         </header>
 
