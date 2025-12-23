@@ -13,7 +13,6 @@ import Schedule from './pages/Schedule';
 import Settings from './pages/Settings';
 import Students from './pages/Students';
 import Subjects from './pages/Subjects';
-import Subscription from './pages/Subscription';
 import SubscriptionsOverview from './pages/SubscriptionsOverview';
 import Support from './pages/Support';
 import SupportTickets from './pages/SupportTickets';
@@ -22,6 +21,7 @@ import TeachingGroups from './pages/TeachingGroups';
 import TestData from './pages/TestData';
 import UserManagement from './pages/UserManagement';
 import AccountManager from './pages/AccountManager';
+import Subscription from './pages/Subscription';
 import __Layout from './Layout.jsx';
 
 
@@ -41,7 +41,6 @@ export const PAGES = {
     "Settings": Settings,
     "Students": Students,
     "Subjects": Subjects,
-    "Subscription": Subscription,
     "SubscriptionsOverview": SubscriptionsOverview,
     "Support": Support,
     "SupportTickets": SupportTickets,
@@ -50,6 +49,7 @@ export const PAGES = {
     "TestData": TestData,
     "UserManagement": UserManagement,
     "AccountManager": AccountManager,
+    "Subscription": Subscription,
 }
 
 export const pagesConfig = {
