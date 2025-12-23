@@ -30,6 +30,7 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
+import LoginVerification from './components/auth/LoginVerification';
 
 const navigation = [
   // School Admin Pages
@@ -63,6 +64,8 @@ export default function Layout({ children, currentPageName }) {
   const [user, setUser] = useState(null);
   const [isSuperAdmin, setIsSuperAdmin] = useState(false);
   const [isLoading, setIsLoading] = useState(true);
+  const [needsVerification, setNeedsVerification] = useState(false);
+  const [sessionToken, setSessionToken] = useState(null);
 
   // Role definitions - school_id alone determines school admin access
   const isSchoolAdmin = (userData) => !!userData?.school_id && !isSuperAdmin;
@@ -86,7 +89,7 @@ export default function Layout({ children, currentPageName }) {
                 setUser(userData);
                 const { data } = await base44.functions.invoke('getSuperAdminEmails');
                 setIsSuperAdmin(data?.isSuperAdmin || false);
-                setIsLoading(false);
+                await checkLoginVerification(userData);
                 window.history.replaceState({}, '', window.location.pathname);
               } else if (attempts < maxAttempts) {
                 setTimeout(checkUserUpdate, 2000);
@@ -94,7 +97,7 @@ export default function Layout({ children, currentPageName }) {
                 setUser(userData);
                 const { data } = await base44.functions.invoke('getSuperAdminEmails');
                 setIsSuperAdmin(data?.isSuperAdmin || false);
-                setIsLoading(false);
+                await checkLoginVerification(userData);
                 window.history.replaceState({}, '', window.location.pathname);
               }
             } catch (error) {
@@ -116,7 +119,7 @@ export default function Layout({ children, currentPageName }) {
           const { data } = await base44.functions.invoke('getSuperAdminEmails');
           setIsSuperAdmin(data?.isSuperAdmin || false);
           
-          setIsLoading(false);
+          await checkLoginVerification(userData);
         }
       } catch (error) {
         console.error('Auth error:', error);
@@ -125,8 +128,42 @@ export default function Layout({ children, currentPageName }) {
       }
     };
 
+    const checkLoginVerification = async (userData) => {
+      try {
+        // Check for verified session in last 24 hours
+        const sessions = await base44.entities.LoginSession.filter({
+          user_email: userData.email,
+          verified: true
+        }, '-created_date', 1);
+
+        if (sessions.length > 0) {
+          const session = sessions[0];
+          if (new Date(session.expires_at) > new Date()) {
+            // Valid session exists
+            setIsLoading(false);
+            return;
+          }
+        }
+
+        // No valid session - need verification
+        const response = await base44.functions.invoke('sendLoginVerification');
+        if (response.data.success) {
+          setSessionToken(response.data.sessionToken);
+          setNeedsVerification(true);
+          setIsLoading(false);
+        }
+      } catch (error) {
+        console.error('Login verification check error:', error);
+        setIsLoading(false);
+      }
+    };
+
     loadAuth();
   }, []);
+
+  const handleVerified = async () => {
+    setNeedsVerification(false);
+  };
 
   if (isLoading) {
     return (
@@ -136,6 +173,24 @@ export default function Layout({ children, currentPageName }) {
           <p className="text-slate-600">Loading...</p>
         </div>
       </div>
+    );
+  }
+
+  if (needsVerification) {
+    return (
+      <>
+        <LoginVerification 
+          open={needsVerification}
+          onVerified={handleVerified}
+          sessionToken={sessionToken}
+        />
+        <div className="min-h-screen flex items-center justify-center bg-slate-50">
+          <div className="text-center">
+            <div className="w-16 h-16 border-4 border-blue-900 border-t-transparent rounded-full animate-spin mx-auto mb-4"></div>
+            <p className="text-slate-600">Verifying your login...</p>
+          </div>
+        </div>
+      </>
     );
   }
 
