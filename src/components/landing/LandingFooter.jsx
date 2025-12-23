@@ -5,13 +5,13 @@ import { createPageUrl } from '../../utils';
 
 export default function LandingFooter() {
   return (
-    <footer className="bg-gradient-to-br from-indigo-500 via-violet-600 to-purple-700 text-white py-12 px-4 sm:px-6 lg:px-8">
+    <footer className="bg-gradient-to-br from-blue-900 via-blue-800 to-blue-900 text-white py-12 px-4 sm:px-6 lg:px-8">
       <div className="max-w-7xl mx-auto">
         <div className="grid md:grid-cols-4 gap-8 mb-8">
           {/* Brand */}
           <div>
             <div className="flex items-center gap-3 mb-4">
-              <div className="w-9 h-9 rounded-xl bg-gradient-to-br from-indigo-500 to-violet-600 flex items-center justify-center">
+              <div className="w-9 h-9 rounded-xl bg-gradient-to-br from-blue-700 to-blue-600 flex items-center justify-center">
                 <Calendar className="w-5 h-5 text-white" />
               </div>
               <span className="text-lg font-semibold text-white">IB Schedule</span>

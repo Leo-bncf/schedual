@@ -36,7 +36,7 @@ const steps = [
 
 export default function HowItWorksSection() {
   return (
-    <section id="how-it-works" className="py-20 px-4 sm:px-6 lg:px-8 bg-gradient-to-br from-violet-50 via-purple-50 to-pink-50">
+    <section id="how-it-works" className="py-20 px-4 sm:px-6 lg:px-8 bg-gradient-to-br from-blue-50 via-slate-50 to-blue-50">
       <div className="max-w-7xl mx-auto">
         {/* Section Header */}
         <div className="text-center mb-16">
@@ -54,15 +54,15 @@ export default function HowItWorksSection() {
             <div key={index} className="flex flex-col md:flex-row gap-6 items-start">
               {/* Step Number & Icon */}
               <div className="flex-shrink-0">
-                <div className="w-16 h-16 rounded-2xl bg-gradient-to-br from-indigo-500 to-violet-600 flex items-center justify-center text-2xl font-bold text-white shadow-lg">
+                <div className="w-16 h-16 rounded-2xl bg-gradient-to-br from-blue-900 to-blue-800 flex items-center justify-center text-2xl font-bold text-white shadow-lg">
                   {step.number}
                 </div>
               </div>
 
               {/* Step Content */}
-              <div className="flex-1 bg-white p-6 rounded-xl border-2 border-purple-100 shadow-lg hover:shadow-xl transition-all">
+              <div className="flex-1 bg-white p-6 rounded-xl border-2 border-blue-100 shadow-lg hover:shadow-xl transition-all">
                 <div className="flex items-center gap-3 mb-3">
-                  <step.icon className="w-6 h-6 text-indigo-600" />
+                  <step.icon className="w-6 h-6 text-blue-900" />
                   <h3 className="text-xl font-semibold text-slate-900">{step.title}</h3>
                 </div>
                 <p className="text-slate-600 leading-relaxed">{step.description}</p>
