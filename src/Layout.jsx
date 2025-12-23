@@ -119,10 +119,8 @@ export default function Layout({ children, currentPageName }) {
         .catch(() => {
           base44.auth.redirectToLogin(window.location.pathname);
         });
-    } else {
-      setIsLoading(false);
     }
-  }, [currentPageName, user]);
+  }, []);
 
   if (isLoading) {
     return (
