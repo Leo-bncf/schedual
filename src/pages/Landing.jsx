@@ -6,10 +6,12 @@ import MissionSection from '../components/landing/MissionSection';
 import HowItWorksSection from '../components/landing/HowItWorksSection';
 import PricingSection from '../components/landing/PricingSection';
 import LandingFooter from '../components/landing/LandingFooter';
+import TermsAcceptanceDialog from '../components/landing/TermsAcceptanceDialog';
 
 export default function Landing() {
   return (
     <div className="min-h-screen bg-white">
+      <TermsAcceptanceDialog />
       <LandingHeader />
       <HeroSection />
       <InfoSection />
