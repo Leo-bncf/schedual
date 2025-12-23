@@ -146,7 +146,7 @@ export default function Layout({ children, currentPageName }) {
     return <Navigate to={createPageUrl('Panel')} replace />;
   } else if (isSchoolAdmin(user) && superAdminPages.includes(currentPageName)) {
     return <Navigate to={createPageUrl('Dashboard')} replace />;
-  } else if (isNewClient(user) && currentPageName !== 'Subscription') {
+  } else if (isNewClient(user) && currentPageName !== 'Subscription' && currentPageName !== 'AccountManager') {
     return <Navigate to={createPageUrl('Subscription')} replace />;
   }
 
