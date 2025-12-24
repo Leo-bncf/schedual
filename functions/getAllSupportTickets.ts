@@ -10,8 +10,13 @@ Deno.serve(async (req) => {
     }
 
     // Check if user is super admin
-    const { data: adminData } = await base44.functions.invoke('getSuperAdminEmails');
-    const isSuperAdmin = adminData?.isSuperAdmin || false;
+    const superAdminEmailsStr = Deno.env.get("SUPER_ADMIN_EMAILS") || '';
+    const superAdminEmails = superAdminEmailsStr
+      .split(',')
+      .map(email => email.trim().toLowerCase())
+      .filter(email => email.length > 0);
+    
+    const isSuperAdmin = superAdminEmails.includes(user.email.toLowerCase());
 
     if (!isSuperAdmin) {
       return Response.json({ error: 'Forbidden - Admin access required' }, { status: 403 });
