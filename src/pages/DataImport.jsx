@@ -108,8 +108,15 @@ export default function DataImport() {
       console.log('Import response:', importResponse.data);
       
       setProcessing(false);
-      
+
       if (importResponse.data.success) {
+        // Invalidate all entity queries to refresh the data
+        queryClient.invalidateQueries({ queryKey: ['teachers'] });
+        queryClient.invalidateQueries({ queryKey: ['students'] });
+        queryClient.invalidateQueries({ queryKey: ['subjects'] });
+        queryClient.invalidateQueries({ queryKey: ['rooms'] });
+        queryClient.invalidateQueries({ queryKey: ['teachingGroups'] });
+
         const totalCreated = 
           importResponse.data.results.subjects_created +
           importResponse.data.results.rooms_created +
