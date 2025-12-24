@@ -42,8 +42,11 @@ export default function SupportTickets() {
   const queryClient = useQueryClient();
 
   const { data: tickets = [], isLoading } = useQuery({
-    queryKey: ['allTickets'],
-    queryFn: () => base44.entities.SupportTicket.list('-created_date'),
+    queryKey: ['allSupportTickets'],
+    queryFn: async () => {
+      const response = await base44.functions.invoke('getAllSupportTickets');
+      return response.data.tickets || [];
+    },
   });
 
   const { data: user } = useQuery({
@@ -54,7 +57,7 @@ export default function SupportTickets() {
   const updateTicketMutation = useMutation({
     mutationFn: ({ id, data }) => base44.entities.SupportTicket.update(id, data),
     onSuccess: () => {
-      queryClient.invalidateQueries(['allTickets']);
+      queryClient.invalidateQueries(['allSupportTickets']);
     },
   });
 
