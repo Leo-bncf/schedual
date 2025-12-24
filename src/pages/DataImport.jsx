@@ -3,8 +3,9 @@ import { base44 } from '@/api/base44Client';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Alert, AlertDescription } from "@/components/ui/alert";
-import { Upload, FileText, CheckCircle, AlertCircle, Loader2, Trophy } from 'lucide-react';
+import { Upload, FileText, CheckCircle, AlertCircle, Loader2, Trophy, Send } from 'lucide-react';
 import { Progress } from "@/components/ui/progress";
+import { Input } from "@/components/ui/input";
 import PageHeader from '../components/ui-custom/PageHeader';
 
 export default function DataImport() {
@@ -15,6 +16,7 @@ export default function DataImport() {
   const [conversation, setConversation] = useState(null);
   const [messages, setMessages] = useState([]);
   const [error, setError] = useState(null);
+  const [userResponse, setUserResponse] = useState('');
 
   useEffect(() => {
     let unsubscribe;
@@ -107,6 +109,22 @@ export default function DataImport() {
     setError(null);
     setProcessing(false);
     setUploadProgress(0);
+    setUserResponse('');
+  };
+
+  const handleSendResponse = async () => {
+    if (!userResponse.trim() || !conversation) return;
+
+    try {
+      await base44.agents.addMessage(conversation, {
+        role: "user",
+        content: userResponse
+      });
+      setUserResponse('');
+    } catch (err) {
+      console.error('Send response error:', err);
+      setError(err.message || 'Failed to send response');
+    }
   };
 
   const assistantMessages = messages.filter(m => m.role === 'assistant');
@@ -231,9 +249,15 @@ export default function DataImport() {
                   </Card>
                 )}
                 
-                {assistantMessages.map((msg, idx) => (
-                  <Card key={idx} className="bg-slate-50">
+                {/* Show all messages (user and assistant) */}
+                {messages.map((msg, idx) => (
+                  <Card key={idx} className={msg.role === 'user' ? 'bg-white border-slate-200 ml-12' : 'bg-slate-50 mr-12'}>
                     <CardContent className="p-4">
+                      <div className="flex items-start gap-2 mb-2">
+                        <span className="text-xs font-semibold text-slate-500 uppercase">
+                          {msg.role === 'user' ? 'You' : 'AI Assistant'}
+                        </span>
+                      </div>
                       <div className="prose prose-sm max-w-none">
                         <p className="text-slate-700 whitespace-pre-wrap">{msg.content}</p>
                       </div>
@@ -244,8 +268,10 @@ export default function DataImport() {
                             <div key={tcIdx} className="flex items-center gap-2 text-sm">
                               {tc.status === 'completed' ? (
                                 <CheckCircle className="w-4 h-4 text-green-600" />
-                              ) : (
+                              ) : tc.status === 'running' || tc.status === 'pending' ? (
                                 <Loader2 className="w-4 h-4 text-blue-600 animate-spin" />
+                              ) : (
+                                <AlertCircle className="w-4 h-4 text-red-600" />
                               )}
                               <span className="text-slate-600">
                                 {tc.name.split('.').pop().replace(/_/g, ' ')}
@@ -272,6 +298,25 @@ export default function DataImport() {
                   </Card>
                 )}
               </div>
+
+              {/* Response Input */}
+              {!isComplete && conversation && (
+                <div className="flex gap-2">
+                  <Input
+                    value={userResponse}
+                    onChange={(e) => setUserResponse(e.target.value)}
+                    placeholder="Respond to the AI assistant..."
+                    onKeyPress={(e) => e.key === 'Enter' && handleSendResponse()}
+                  />
+                  <Button
+                    onClick={handleSendResponse}
+                    disabled={!userResponse.trim()}
+                    className="bg-blue-900 hover:bg-blue-800"
+                  >
+                    <Send className="w-4 h-4" />
+                  </Button>
+                </div>
+              )}
 
               {isComplete && (
                 <Button
