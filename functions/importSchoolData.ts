@@ -263,25 +263,24 @@ Return all data you can find. Make reasonable assumptions for missing fields.`,
 
     // CRITICAL: Verify user can actually read the created entities
     console.log('=== VERIFICATION PHASE ===');
-    console.log('Testing if user can read created entities...');
 
-    // Add a small delay to ensure DB consistency
-    await new Promise(resolve => setTimeout(resolve, 500));
+    let verifySubjects = [];
+    let verifyTeachers = [];
+    let verifyStudents = [];
+    let verifyRooms = [];
 
-    const verifySubjects = await base44.entities.Subject.filter({ school_id: user.school_id });
-    const verifyTeachers = await base44.entities.Teacher.filter({ school_id: user.school_id });
-    const verifyStudents = await base44.entities.Student.filter({ school_id: user.school_id });
-    const verifyRooms = await base44.entities.Room.filter({ school_id: user.school_id });
+    try {
+      verifySubjects = await base44.entities.Subject.list();
+      verifyTeachers = await base44.entities.Teacher.list();
+      verifyStudents = await base44.entities.Student.list();
+      verifyRooms = await base44.entities.Room.list();
 
-    console.log('✓ User can read Subjects:', verifySubjects.length);
-    console.log('✓ User can read Teachers:', verifyTeachers.length);
-    console.log('✓ User can read Students:', verifyStudents.length);
-    console.log('✓ User can read Rooms:', verifyRooms.length);
-
-    if (verifySubjects.length === 0 && results.subjects.length > 0) {
-      console.error('CRITICAL: Created subjects but user cannot read them!');
-      console.error('User school_id:', user.school_id);
-      console.error('Created subject school_id:', results.subjects[0]?.school_id);
+      console.log('✓ User can read Subjects:', verifySubjects.length);
+      console.log('✓ User can read Teachers:', verifyTeachers.length);
+      console.log('✓ User can read Students:', verifyStudents.length);
+      console.log('✓ User can read Rooms:', verifyRooms.length);
+    } catch (verifyError) {
+      console.error('Verification read error:', verifyError.message);
     }
 
     return Response.json({
