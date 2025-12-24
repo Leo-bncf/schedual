@@ -16,10 +16,15 @@ Deno.serve(async (req) => {
       return Response.json({ error: 'Missing fileUrl' }, { status: 400 });
     }
 
-    console.log('=== IMPORT DEBUG ===');
-    console.log('User:', user);
-    console.log('School ID:', user.school_id);
+    console.log('=== IMPORT DEBUG START ===');
+    console.log('Authenticated User:', JSON.stringify(user, null, 2));
+    console.log('School ID from user:', user.school_id);
     console.log('File URL:', fileUrl);
+
+    // Verify school exists
+    const schools = await base44.asServiceRole.entities.School.filter({ id: user.school_id });
+    console.log('School exists?', schools.length > 0);
+    console.log('School data:', schools[0]);
 
     // Use LLM to extract structured data from the file
     console.log('Calling InvokeLLM...');
@@ -126,10 +131,22 @@ Return all data you can find. Make reasonable assumptions for missing fields.`,
           ib_group_name: subject.ib_group_name || 'Language & Literature',
           is_active: true
         }));
-        
+
+        console.log('Subjects to create:', JSON.stringify(subjectsToCreate, null, 2));
+
         const created = await base44.asServiceRole.entities.Subject.bulkCreate(subjectsToCreate);
         results.subjects = created;
-        console.log('Created subjects:', created.length);
+        console.log('Created subjects count:', created.length);
+        console.log('Sample created subject:', JSON.stringify(created[0], null, 2));
+
+        // Verify we can read them back
+        const verifyRead = await base44.asServiceRole.entities.Subject.filter({ school_id: user.school_id });
+        console.log('Can read back subjects as service role:', verifyRead.length);
+
+        // Try reading with user credentials
+        const userRead = await base44.entities.Subject.filter({ school_id: user.school_id });
+        console.log('Can read subjects as user:', userRead.length);
+
       } catch (err) {
         console.error('Error bulk creating subjects:', err);
         results.errors.push(`Subjects bulk create: ${err.message}`);

@@ -30,7 +30,14 @@ export default function Dashboard() {
 
   const { data: teachers = [], isLoading: loadingTeachers } = useQuery({
     queryKey: ['teachers', user?.school_id],
-    queryFn: () => base44.entities.Teacher.filter({ school_id: user?.school_id }),
+    queryFn: async () => {
+      console.log('=== DASHBOARD FETCHING TEACHERS ===');
+      console.log('User school_id:', user?.school_id);
+      const result = await base44.entities.Teacher.filter({ school_id: user?.school_id });
+      console.log('Teachers fetched:', result.length);
+      console.log('Sample teacher:', result[0]);
+      return result;
+    },
     enabled: !!user?.school_id,
   });
 
@@ -42,7 +49,14 @@ export default function Dashboard() {
 
   const { data: subjects = [], isLoading: loadingSubjects } = useQuery({
     queryKey: ['subjects', user?.school_id],
-    queryFn: () => base44.entities.Subject.filter({ school_id: user?.school_id }),
+    queryFn: async () => {
+      console.log('=== DASHBOARD FETCHING SUBJECTS ===');
+      console.log('User school_id:', user?.school_id);
+      const result = await base44.entities.Subject.filter({ school_id: user?.school_id });
+      console.log('Subjects fetched:', result.length);
+      console.log('Sample subject:', result[0]);
+      return result;
+    },
     enabled: !!user?.school_id,
   });
 
