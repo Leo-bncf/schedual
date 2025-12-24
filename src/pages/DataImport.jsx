@@ -94,39 +94,39 @@ export default function DataImport() {
       setUploading(false);
       setProcessing(true);
 
-      // Step 2: Create conversation with agent
-      const conv = await base44.agents.createConversation({
-        agent_name: "data_importer",
-        metadata: {
-          name: `Import from ${file.name}`,
-          description: "Automated data import"
-        }
-      });
-
-      console.log('Conversation created:', conv);
-      setConversation(conv);
-
-      // Wait a bit for subscription to be ready
-      await new Promise(resolve => setTimeout(resolve, 500));
-
-      // Step 3: Send message to agent with file and school_id
-      console.log('Sending message to agent...');
-      console.log('Conversation:', conv);
+      // Step 2: Process file and create entities using backend function
+      console.log('Processing file with backend function...');
       console.log('File URL:', fileUrl);
       console.log('School ID:', user?.school_id);
       
-      const messageResult = await base44.agents.addMessage(conv, {
-        role: "user",
-        content: `Please process this uploaded school data file and create all necessary entities (subjects, rooms, teachers, students, and teaching groups).
-
-IMPORTANT: Use this school_id for ALL entities you create: ${user?.school_id}
-
-The file contains information about courses, classrooms, and their assignments. Extract all data and create the appropriate records in the system. Make sure to include the school_id property for every entity you create.`,
-        file_urls: [fileUrl]
+      const importResponse = await base44.functions.invoke('importSchoolData', {
+        fileUrl: fileUrl
       });
 
-      console.log('Message sent successfully:', messageResult);
-      console.log('Waiting for agent response...');
+      console.log('Import response:', importResponse.data);
+      
+      setProcessing(false);
+      
+      if (importResponse.data.success) {
+        setMessages([
+          {
+            role: 'assistant',
+            content: `Successfully imported school data!\n\n` +
+              `✓ Created ${importResponse.data.results.subjects_created} subjects\n` +
+              `✓ Created ${importResponse.data.results.rooms_created} rooms\n` +
+              `✓ Created ${importResponse.data.results.teachers_created} teachers\n` +
+              `✓ Created ${importResponse.data.results.students_created} students\n` +
+              `✓ Created ${importResponse.data.results.teaching_groups_created} teaching groups` +
+              (importResponse.data.results.errors.length > 0 
+                ? `\n\n⚠️ ${importResponse.data.results.errors.length} errors occurred:\n${importResponse.data.results.errors.join('\n')}` 
+                : ''),
+            tool_calls: []
+          }
+        ]);
+        setConversation({ id: 'import-complete' }); // Trigger UI state
+      } else {
+        throw new Error(importResponse.data.error || 'Import failed');
+      }
 
     } catch (err) {
       console.error('Upload/process error:', err);

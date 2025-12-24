@@ -3,6 +3,7 @@ import AccountManager from './pages/AccountManager';
 import Constraints from './pages/Constraints';
 import ContactUs from './pages/ContactUs';
 import Dashboard from './pages/Dashboard';
+import DataImport from './pages/DataImport';
 import DatabaseSchema from './pages/DatabaseSchema';
 import Documentation from './pages/Documentation';
 import Landing from './pages/Landing';
@@ -25,7 +26,6 @@ import TeachingGroups from './pages/TeachingGroups';
 import TermsOfUse from './pages/TermsOfUse';
 import TestData from './pages/TestData';
 import UserManagement from './pages/UserManagement';
-import DataImport from './pages/DataImport';
 import __Layout from './Layout.jsx';
 
 
@@ -35,6 +35,7 @@ export const PAGES = {
     "Constraints": Constraints,
     "ContactUs": ContactUs,
     "Dashboard": Dashboard,
+    "DataImport": DataImport,
     "DatabaseSchema": DatabaseSchema,
     "Documentation": Documentation,
     "Landing": Landing,
@@ -57,7 +58,6 @@ export const PAGES = {
     "TermsOfUse": TermsOfUse,
     "TestData": TestData,
     "UserManagement": UserManagement,
-    "DataImport": DataImport,
 }
 
 export const pagesConfig = {
