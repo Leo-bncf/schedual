@@ -125,7 +125,7 @@ export default function DataImport() {
               (importResponse.data.results.errors.length > 0 
                 ? `\n\n⚠️ ${importResponse.data.results.errors.length} errors occurred:\n${importResponse.data.results.errors.join('\n')}` 
                 : ''),
-            tool_calls: []
+            tool_calls: [{ status: 'completed', name: 'import_complete' }]
           }
         ]);
         setConversation({ id: 'import-complete' }); // Trigger UI state
