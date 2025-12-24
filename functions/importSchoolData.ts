@@ -252,6 +252,16 @@ Return all data you can find. Make reasonable assumptions for missing fields.`,
       }
     }
 
+    // CRITICAL: Verify user can actually read the created entities
+    console.log('=== VERIFICATION PHASE ===');
+    const verifySubjects = await base44.entities.Subject.filter({ school_id: user.school_id });
+    const verifyTeachers = await base44.entities.Teacher.filter({ school_id: user.school_id });
+    const verifyStudents = await base44.entities.Student.filter({ school_id: user.school_id });
+
+    console.log('User can read Subjects:', verifySubjects.length);
+    console.log('User can read Teachers:', verifyTeachers.length);
+    console.log('User can read Students:', verifyStudents.length);
+
     return Response.json({
       success: true,
       results: {
@@ -260,7 +270,12 @@ Return all data you can find. Make reasonable assumptions for missing fields.`,
         teachers_created: results.teachers.length,
         students_created: results.students.length,
         teaching_groups_created: results.teaching_groups.length,
-        errors: results.errors
+        errors: results.errors,
+        verified_readable: {
+          subjects: verifySubjects.length,
+          teachers: verifyTeachers.length,
+          students: verifyStudents.length
+        }
       },
       data: results
     });

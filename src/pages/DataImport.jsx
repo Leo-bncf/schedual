@@ -110,6 +110,11 @@ export default function DataImport() {
       setProcessing(false);
       
       if (importResponse.data.success) {
+        const verified = importResponse.data.results.verified_readable || {};
+        const verificationStatus = verified.subjects > 0 || verified.teachers > 0 || verified.students > 0
+          ? `\n\n✅ Verification: You can read ${verified.subjects} subjects, ${verified.teachers} teachers, ${verified.students} students`
+          : `\n\n⚠️ Warning: Entities created but may not be immediately visible. Refreshing...`;
+
         setMessages([
           {
             role: 'assistant',
@@ -118,8 +123,8 @@ export default function DataImport() {
               `✓ Created ${importResponse.data.results.rooms_created} rooms\n` +
               `✓ Created ${importResponse.data.results.teachers_created} teachers\n` +
               `✓ Created ${importResponse.data.results.students_created} students\n` +
-              `✓ Created ${importResponse.data.results.teaching_groups_created} teaching groups\n\n` +
-              `✨ Refreshing application to load new data...` +
+              `✓ Created ${importResponse.data.results.teaching_groups_created} teaching groups` +
+              verificationStatus +
               (importResponse.data.results.errors.length > 0 
                 ? `\n\n⚠️ ${importResponse.data.results.errors.length} errors occurred:\n${importResponse.data.results.errors.join('\n')}` 
                 : ''),
@@ -128,9 +133,11 @@ export default function DataImport() {
         ]);
         setConversation({ id: 'import-complete' });
 
-        // Reload page after 2 seconds to refresh all data
+        // Invalidate all queries and reload
+        queryClient.clear();
+
         setTimeout(() => {
-          window.location.reload();
+          window.location.href = window.location.origin + '/Dashboard';
         }, 2000);
       } else {
         throw new Error(importResponse.data.error || 'Import failed');
