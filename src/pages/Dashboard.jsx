@@ -30,51 +30,40 @@ export default function Dashboard() {
 
   const { data: teachers = [], isLoading: loadingTeachers } = useQuery({
     queryKey: ['teachers', user?.school_id],
-    queryFn: async () => {
-      console.log('=== DASHBOARD FETCHING TEACHERS ===');
-      console.log('User school_id:', user?.school_id);
-      const result = await base44.entities.Teacher.filter({ school_id: user?.school_id });
-      console.log('Teachers fetched:', result.length);
-      console.log('Sample teacher:', result[0]);
-      return result;
-    },
+    queryFn: () => base44.entities.Teacher.list(),
     enabled: !!user?.school_id,
   });
 
   const { data: students = [], isLoading: loadingStudents } = useQuery({
     queryKey: ['students', user?.school_id],
-    queryFn: () => base44.entities.Student.filter({ school_id: user?.school_id }),
+    queryFn: () => base44.entities.Student.list(),
     enabled: !!user?.school_id,
   });
 
   const { data: subjects = [], isLoading: loadingSubjects } = useQuery({
     queryKey: ['subjects', user?.school_id],
-    queryFn: async () => {
-      console.log('=== DASHBOARD FETCHING SUBJECTS ===');
-      console.log('User school_id:', user?.school_id);
-      const result = await base44.entities.Subject.filter({ school_id: user?.school_id });
-      console.log('Subjects fetched:', result.length);
-      console.log('Sample subject:', result[0]);
-      return result;
-    },
+    queryFn: () => base44.entities.Subject.list(),
     enabled: !!user?.school_id,
   });
 
   const { data: rooms = [], isLoading: loadingRooms } = useQuery({
     queryKey: ['rooms', user?.school_id],
-    queryFn: () => base44.entities.Room.filter({ school_id: user?.school_id }),
+    queryFn: () => base44.entities.Room.list(),
     enabled: !!user?.school_id,
   });
 
   const { data: scheduleVersions = [], isLoading: loadingSchedules } = useQuery({
     queryKey: ['scheduleVersions', user?.school_id],
-    queryFn: () => base44.entities.ScheduleVersion.filter({ school_id: user?.school_id }, '-created_date', 5),
+    queryFn: () => base44.entities.ScheduleVersion.list('-created_date', 5),
     enabled: !!user?.school_id,
   });
 
   const { data: aiLogs = [], isLoading: loadingLogs } = useQuery({
     queryKey: ['aiLogs', user?.school_id],
-    queryFn: () => base44.entities.AIAdvisorLog.filter({ school_id: user?.school_id, status: 'pending' }, '-created_date', 5),
+    queryFn: async () => {
+      const logs = await base44.entities.AIAdvisorLog.list('-created_date', 50);
+      return logs.filter(log => log.status === 'pending').slice(0, 5);
+    },
     enabled: !!user?.school_id,
   });
 

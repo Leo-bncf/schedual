@@ -71,7 +71,7 @@ export default function Subjects() {
 
   const { data: subjects = [], isLoading } = useQuery({
     queryKey: ['subjects', schoolId],
-    queryFn: () => schoolId ? base44.entities.Subject.filter({ school_id: schoolId }) : [],
+    queryFn: () => base44.entities.Subject.list(),
     enabled: !!schoolId,
   });
 
