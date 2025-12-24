@@ -27,13 +27,28 @@ export default function DataImport() {
   useEffect(() => {
     let unsubscribe;
     if (conversation?.id) {
+      console.log('Setting up subscription for conversation:', conversation.id);
       unsubscribe = base44.agents.subscribeToConversation(conversation.id, (data) => {
-        console.log('Messages updated:', data.messages);
+        console.log('==== SUBSCRIPTION UPDATE ====');
+        console.log('Full data:', data);
+        console.log('Messages:', data.messages);
+        console.log('Messages count:', data.messages?.length);
         setMessages(data.messages || []);
+        
+        // Check if agent is done processing
+        const lastMsg = data.messages?.[data.messages.length - 1];
+        if (lastMsg) {
+          console.log('Last message:', lastMsg);
+          console.log('Last message role:', lastMsg.role);
+          console.log('Tool calls:', lastMsg.tool_calls);
+        }
       });
     }
     return () => {
-      if (unsubscribe) unsubscribe();
+      if (unsubscribe) {
+        console.log('Unsubscribing from conversation');
+        unsubscribe();
+      }
     };
   }, [conversation?.id]);
 
@@ -95,7 +110,12 @@ export default function DataImport() {
       await new Promise(resolve => setTimeout(resolve, 500));
 
       // Step 3: Send message to agent with file and school_id
-      await base44.agents.addMessage(conv, {
+      console.log('Sending message to agent...');
+      console.log('Conversation:', conv);
+      console.log('File URL:', fileUrl);
+      console.log('School ID:', user?.school_id);
+      
+      const messageResult = await base44.agents.addMessage(conv, {
         role: "user",
         content: `Please process this uploaded school data file and create all necessary entities (subjects, rooms, teachers, students, and teaching groups).
 
@@ -105,7 +125,8 @@ The file contains information about courses, classrooms, and their assignments. 
         file_urls: [fileUrl]
       });
 
-      console.log('Message sent to agent with school_id:', user?.school_id);
+      console.log('Message sent successfully:', messageResult);
+      console.log('Waiting for agent response...');
 
     } catch (err) {
       console.error('Upload/process error:', err);
@@ -246,16 +267,43 @@ The file contains information about courses, classrooms, and their assignments. 
             </>
           ) : (
             <>
+              {/* Debug Info */}
+              {conversation && (
+                <Alert className="bg-slate-100 border-slate-300">
+                  <AlertDescription className="text-xs space-y-1">
+                    <div><strong>Debug Info:</strong></div>
+                    <div>Conversation ID: {conversation.id}</div>
+                    <div>Messages Count: {messages.length}</div>
+                    <div>Agent: data_importer</div>
+                    <div>School ID: {user?.school_id}</div>
+                  </AlertDescription>
+                </Alert>
+              )}
+
               {/* Processing Status */}
               <div className="space-y-4">
-                {processing && assistantMessages.length === 0 && (
+                {processing && messages.length === 0 && (
                   <Card className="bg-blue-50 border-blue-200">
                     <CardContent className="p-4">
                       <div className="flex items-center gap-3">
                         <Loader2 className="w-5 h-5 text-blue-600 animate-spin" />
                         <div>
-                          <p className="text-sm font-medium text-blue-900">Processing your file...</p>
-                          <p className="text-xs text-blue-700">The AI is analyzing the data and creating entities</p>
+                          <p className="text-sm font-medium text-blue-900">Waiting for AI response...</p>
+                          <p className="text-xs text-blue-700">Check browser console for debug logs</p>
+                        </div>
+                      </div>
+                    </CardContent>
+                  </Card>
+                )}
+                
+                {processing && messages.length === 1 && (
+                  <Card className="bg-blue-50 border-blue-200">
+                    <CardContent className="p-4">
+                      <div className="flex items-center gap-3">
+                        <Loader2 className="w-5 h-5 text-blue-600 animate-spin" />
+                        <div>
+                          <p className="text-sm font-medium text-blue-900">AI is processing...</p>
+                          <p className="text-xs text-blue-700">The agent is analyzing your file</p>
                         </div>
                       </div>
                     </CardContent>
