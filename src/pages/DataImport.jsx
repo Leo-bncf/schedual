@@ -111,9 +111,22 @@ export default function DataImport() {
       
       if (importResponse.data.success) {
         const verified = importResponse.data.results.verified_readable || {};
-        const verificationStatus = verified.subjects > 0 || verified.teachers > 0 || verified.students > 0
-          ? `\n\n✅ Verification: You can read ${verified.subjects} subjects, ${verified.teachers} teachers, ${verified.students} students`
-          : `\n\n⚠️ Warning: Entities created but may not be immediately visible. Refreshing...`;
+        const totalVerified = (verified.subjects || 0) + (verified.teachers || 0) + (verified.students || 0) + (verified.rooms || 0);
+
+        console.log('=== IMPORT COMPLETE ===');
+        console.log('School ID:', importResponse.data.school_id);
+        console.log('Created:', importResponse.data.results);
+        console.log('Verified readable:', verified);
+
+        if (totalVerified === 0 && (importResponse.data.results.subjects_created > 0 || importResponse.data.results.teachers_created > 0)) {
+          setError('⚠️ Entities were created but cannot be read. This may be a permissions issue. Contact support.');
+          setProcessing(false);
+          return;
+        }
+
+        const verificationStatus = totalVerified > 0
+          ? `\n\n✅ Verified: ${verified.subjects || 0} subjects, ${verified.teachers || 0} teachers, ${verified.students || 0} students, ${verified.rooms || 0} rooms are readable`
+          : '';
 
         setMessages([
           {
@@ -125,6 +138,7 @@ export default function DataImport() {
               `✓ Created ${importResponse.data.results.students_created} students\n` +
               `✓ Created ${importResponse.data.results.teaching_groups_created} teaching groups` +
               verificationStatus +
+              `\n\n🔄 Redirecting to dashboard...` +
               (importResponse.data.results.errors.length > 0 
                 ? `\n\n⚠️ ${importResponse.data.results.errors.length} errors occurred:\n${importResponse.data.results.errors.join('\n')}` 
                 : ''),
@@ -133,12 +147,10 @@ export default function DataImport() {
         ]);
         setConversation({ id: 'import-complete' });
 
-        // Invalidate all queries and reload
-        queryClient.clear();
-
+        // Force complete refresh
         setTimeout(() => {
-          window.location.href = window.location.origin + '/Dashboard';
-        }, 2000);
+          window.location.href = '/Dashboard';
+        }, 1500);
       } else {
         throw new Error(importResponse.data.error || 'Import failed');
       }

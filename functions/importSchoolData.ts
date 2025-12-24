@@ -26,6 +26,15 @@ Deno.serve(async (req) => {
     console.log('School exists?', schools.length > 0);
     console.log('School data:', schools[0]);
 
+    // Verify user's school_id one more time
+    if (!user.school_id) {
+      console.error('CRITICAL: User has no school_id!');
+      return Response.json({ 
+        success: false,
+        error: 'User account does not have a school_id. Please contact support.' 
+      }, { status: 400 });
+    }
+
     // Use LLM to extract structured data from the file
     console.log('Calling InvokeLLM...');
     const extractionResponse = await base44.asServiceRole.integrations.Core.InvokeLLM({
@@ -254,16 +263,30 @@ Return all data you can find. Make reasonable assumptions for missing fields.`,
 
     // CRITICAL: Verify user can actually read the created entities
     console.log('=== VERIFICATION PHASE ===');
+    console.log('Testing if user can read created entities...');
+
+    // Add a small delay to ensure DB consistency
+    await new Promise(resolve => setTimeout(resolve, 500));
+
     const verifySubjects = await base44.entities.Subject.filter({ school_id: user.school_id });
     const verifyTeachers = await base44.entities.Teacher.filter({ school_id: user.school_id });
     const verifyStudents = await base44.entities.Student.filter({ school_id: user.school_id });
+    const verifyRooms = await base44.entities.Room.filter({ school_id: user.school_id });
 
-    console.log('User can read Subjects:', verifySubjects.length);
-    console.log('User can read Teachers:', verifyTeachers.length);
-    console.log('User can read Students:', verifyStudents.length);
+    console.log('✓ User can read Subjects:', verifySubjects.length);
+    console.log('✓ User can read Teachers:', verifyTeachers.length);
+    console.log('✓ User can read Students:', verifyStudents.length);
+    console.log('✓ User can read Rooms:', verifyRooms.length);
+
+    if (verifySubjects.length === 0 && results.subjects.length > 0) {
+      console.error('CRITICAL: Created subjects but user cannot read them!');
+      console.error('User school_id:', user.school_id);
+      console.error('Created subject school_id:', results.subjects[0]?.school_id);
+    }
 
     return Response.json({
       success: true,
+      school_id: user.school_id,
       results: {
         subjects_created: results.subjects.length,
         rooms_created: results.rooms.length,
@@ -274,7 +297,8 @@ Return all data you can find. Make reasonable assumptions for missing fields.`,
         verified_readable: {
           subjects: verifySubjects.length,
           teachers: verifyTeachers.length,
-          students: verifyStudents.length
+          students: verifyStudents.length,
+          rooms: verifyRooms.length
         }
       },
       data: results
