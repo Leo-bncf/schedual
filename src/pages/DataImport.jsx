@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from 'react';
+import { useQuery } from '@tanstack/react-query';
 import { base44 } from '@/api/base44Client';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -17,6 +18,11 @@ export default function DataImport() {
   const [messages, setMessages] = useState([]);
   const [error, setError] = useState(null);
   const [userResponse, setUserResponse] = useState('');
+
+  const { data: user } = useQuery({
+    queryKey: ['currentUser'],
+    queryFn: () => base44.auth.me(),
+  });
 
   useEffect(() => {
     let unsubscribe;
@@ -40,7 +46,10 @@ export default function DataImport() {
   };
 
   const handleUploadAndProcess = async () => {
-    if (!file) return;
+    if (!file || !user?.school_id) {
+      setError('Missing school information. Please try refreshing the page.');
+      return;
+    }
 
     setUploading(true);
     setUploadProgress(0);
@@ -85,14 +94,18 @@ export default function DataImport() {
       // Wait a bit for subscription to be ready
       await new Promise(resolve => setTimeout(resolve, 500));
 
-      // Step 3: Send message to agent with file
+      // Step 3: Send message to agent with file and school_id
       await base44.agents.addMessage(conv, {
         role: "user",
-        content: `Please process this uploaded school data file and create all necessary entities (subjects, rooms, teachers, students, and teaching groups). The file contains information about courses, classrooms, and their assignments. Extract all data and create the appropriate records in the system.`,
+        content: `Please process this uploaded school data file and create all necessary entities (subjects, rooms, teachers, students, and teaching groups).
+
+IMPORTANT: Use this school_id for ALL entities you create: ${user?.school_id}
+
+The file contains information about courses, classrooms, and their assignments. Extract all data and create the appropriate records in the system. Make sure to include the school_id property for every entity you create.`,
         file_urls: [fileUrl]
       });
 
-      console.log('Message sent to agent');
+      console.log('Message sent to agent with school_id:', user?.school_id);
 
     } catch (err) {
       console.error('Upload/process error:', err);
