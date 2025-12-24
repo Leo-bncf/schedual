@@ -36,7 +36,7 @@ import { format } from 'date-fns';
 
 export default function SupportTickets() {
   const [selectedTicket, setSelectedTicket] = useState(null);
-  const [newMessage, setNewMessage] = useState('');
+  const [adminNotes, setAdminNotes] = useState('');
   const [filterStatus, setFilterStatus] = useState('all');
 
   const queryClient = useQueryClient();
@@ -66,41 +66,21 @@ export default function SupportTickets() {
     },
   });
 
-  const handleSendMessage = () => {
-    if (!newMessage.trim() || !selectedTicket) return;
-
-    const updatedMessages = [
-      ...(selectedTicket.messages || []),
-      {
-        sender: user.full_name,
-        message: newMessage,
-        timestamp: new Date().toISOString(),
-        is_admin: true
-      }
-    ];
-
-    updateTicketMutation.mutate({
-      id: selectedTicket.id,
-      data: { 
-        messages: updatedMessages,
-        status: 'waiting_for_customer'
-      }
-    });
-
-    setNewMessage('');
-  };
-
   const handleStatusChange = (status) => {
     if (!selectedTicket) return;
-    
-    const updateData = { status };
-    if (status === 'resolved' || status === 'closed') {
-      updateData.resolved_at = new Date().toISOString();
-    }
 
     updateTicketMutation.mutate({
       id: selectedTicket.id,
-      data: updateData
+      data: { status }
+    });
+  };
+
+  const handleSaveNotes = () => {
+    if (!selectedTicket) return;
+
+    updateTicketMutation.mutate({
+      id: selectedTicket.id,
+      data: { admin_notes: adminNotes }
     });
   };
 
@@ -168,22 +148,7 @@ export default function SupportTickets() {
         </span>
       )
     },
-    {
-      header: 'Category',
-      accessor: 'category',
-      cell: (row) => (
-        <Badge variant="outline" className="capitalize text-slate-600">
-          {row.category.replace('_', ' ')}
-        </Badge>
-      )
-    },
-    {
-      header: 'Messages',
-      accessor: 'messages',
-      cell: (row) => (
-        <span className="text-sm text-slate-600">{row.messages?.length || 1}</span>
-      )
-    },
+
     {
       header: 'Created',
       accessor: 'created_date',
@@ -296,26 +261,18 @@ export default function SupportTickets() {
 
       {/* Ticket Detail Dialog */}
       <Dialog open={!!selectedTicket} onOpenChange={() => setSelectedTicket(null)}>
-        <DialogContent className="max-w-4xl max-h-[85vh]">
+        <DialogContent className="max-w-2xl max-h-[85vh] overflow-y-auto">
           {selectedTicket && (
             <>
               <DialogHeader>
                 <div className="flex items-start justify-between">
                   <div className="flex-1">
                     <DialogTitle className="text-xl mb-3">{selectedTicket.subject}</DialogTitle>
-                    <div className="flex items-center gap-4 text-sm text-slate-600">
-                      <div className="flex items-center gap-1">
-                        <User className="w-4 h-4" />
-                        {selectedTicket.user_name}
-                      </div>
-                      <div className="flex items-center gap-1">
-                        <Mail className="w-4 h-4" />
-                        {selectedTicket.user_email}
-                      </div>
-                      <div className="flex items-center gap-2">
-                        {getStatusBadge(selectedTicket.status)}
-                        <Badge className="capitalize">{selectedTicket.priority}</Badge>
-                      </div>
+                    <div className="flex items-center gap-2 flex-wrap">
+                      {getStatusBadge(selectedTicket.status)}
+                      <Badge className={`capitalize ${getPriorityColor(selectedTicket.priority)}`}>
+                        {selectedTicket.priority}
+                      </Badge>
                     </div>
                   </div>
                   <Button variant="ghost" size="icon" onClick={() => setSelectedTicket(null)}>
@@ -324,62 +281,80 @@ export default function SupportTickets() {
                 </div>
               </DialogHeader>
 
-              <div className="space-y-4">
-                {/* Status Update */}
-                <div className="flex items-center gap-2">
-                  <Label>Change Status:</Label>
+              <div className="space-y-4 mt-4">
+                {/* Customer Info */}
+                <Card className="bg-slate-50">
+                  <CardContent className="p-4 space-y-2">
+                    <div className="flex items-center gap-2 text-sm">
+                      <User className="w-4 h-4 text-slate-500" />
+                      <span className="font-medium text-slate-900">{selectedTicket.user_name}</span>
+                    </div>
+                    <div className="flex items-center gap-2 text-sm">
+                      <Mail className="w-4 h-4 text-slate-500" />
+                      <a href={`mailto:${selectedTicket.user_email}`} className="text-blue-900 hover:underline">
+                        {selectedTicket.user_email}
+                      </a>
+                    </div>
+                    {selectedTicket.school_id && (
+                      <div className="flex items-center gap-2 text-sm">
+                        <Building2 className="w-4 h-4 text-slate-500" />
+                        <span className="text-slate-600">School: {selectedTicket.school_id}</span>
+                      </div>
+                    )}
+                    <div className="flex items-center gap-2 text-sm">
+                      <Clock className="w-4 h-4 text-slate-500" />
+                      <span className="text-slate-600">
+                        {format(new Date(selectedTicket.created_date), 'MMM d, yyyy HH:mm')}
+                      </span>
+                    </div>
+                  </CardContent>
+                </Card>
+
+                {/* Description */}
+                <div>
+                  <Label className="mb-2 block text-base">Description</Label>
+                  <Card>
+                    <CardContent className="p-4">
+                      <p className="text-sm text-slate-700 whitespace-pre-wrap">{selectedTicket.description}</p>
+                    </CardContent>
+                  </Card>
+                </div>
+
+                {/* Status Management */}
+                <div>
+                  <Label className="mb-2 block">Update Status</Label>
                   <Select value={selectedTicket.status} onValueChange={handleStatusChange}>
-                    <SelectTrigger className="w-48">
+                    <SelectTrigger>
                       <SelectValue />
                     </SelectTrigger>
                     <SelectContent>
                       <SelectItem value="open">Open</SelectItem>
                       <SelectItem value="in_progress">In Progress</SelectItem>
-                      <SelectItem value="waiting_for_customer">Waiting for Customer</SelectItem>
                       <SelectItem value="resolved">Resolved</SelectItem>
                       <SelectItem value="closed">Closed</SelectItem>
                     </SelectContent>
                   </Select>
                 </div>
 
-                {/* Messages */}
-                <div className="space-y-3 max-h-96 overflow-y-auto border rounded-lg p-4 bg-slate-50">
-                  {selectedTicket.messages?.map((msg, idx) => (
-                    <div key={idx} className={`p-4 rounded-lg ${msg.is_admin ? 'bg-indigo-100 border border-indigo-200' : 'bg-white border border-slate-200'}`}>
-                      <div className="flex items-center justify-between mb-2">
-                        <div className="flex items-center gap-2">
-                          <p className="font-semibold text-sm text-slate-900">{msg.sender}</p>
-                          {msg.is_admin && <Badge className="bg-indigo-600 text-white text-xs">Admin</Badge>}
-                        </div>
-                        <p className="text-xs text-slate-500">{format(new Date(msg.timestamp), 'MMM d, HH:mm')}</p>
-                      </div>
-                      <p className="text-sm text-slate-700 whitespace-pre-wrap">{msg.message}</p>
-                    </div>
-                  ))}
+                {/* Admin Notes */}
+                <div>
+                  <Label htmlFor="admin-notes" className="mb-2 block">Admin Notes (Internal)</Label>
+                  <Textarea
+                    id="admin-notes"
+                    value={adminNotes || selectedTicket.admin_notes || ''}
+                    onChange={(e) => setAdminNotes(e.target.value)}
+                    placeholder="Add internal notes about this ticket..."
+                    rows={4}
+                  />
+                  <Button 
+                    onClick={handleSaveNotes}
+                    disabled={updateTicketMutation.isPending}
+                    className="mt-2"
+                    size="sm"
+                  >
+                    Save Notes
+                  </Button>
                 </div>
-
-                {/* Reply */}
-                {selectedTicket.status !== 'closed' && (
-                  <div className="space-y-2 border-t pt-4">
-                    <Label>Reply to Customer</Label>
-                    <Textarea
-                      value={newMessage}
-                      onChange={(e) => setNewMessage(e.target.value)}
-                      placeholder="Type your response..."
-                      className="min-h-32"
-                    />
-                    <div className="flex justify-end">
-                      <Button 
-                        onClick={handleSendMessage} 
-                        disabled={!newMessage.trim() || updateTicketMutation.isPending}
-                        className="bg-indigo-600 hover:bg-indigo-700"
-                      >
-                        <Send className="w-4 h-4 mr-2" />
-                        Send Reply
-                      </Button>
-                    </div>
-                  </div>
-                )}
               </div>
             </>
           )}

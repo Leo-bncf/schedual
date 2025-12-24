@@ -20,6 +20,7 @@ import { Link } from 'react-router-dom';
 import { createPageUrl } from '../utils';
 import StatCard from '../components/ui-custom/StatCard';
 import PageHeader from '../components/ui-custom/PageHeader';
+import SupportTicketForm from '../components/support/SupportTicketForm';
 
 export default function Dashboard() {
   const { data: user } = useQuery({
@@ -272,6 +273,9 @@ export default function Dashboard() {
           </div>
         </CardContent>
       </Card>
+
+      {/* Support Ticket Form */}
+      <SupportTicketForm />
     </div>
   );
 }
