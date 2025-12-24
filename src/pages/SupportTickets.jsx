@@ -15,7 +15,8 @@ import {
   User,
   Mail,
   Building2,
-  X
+  X,
+  Trash2
 } from 'lucide-react';
 import PageHeader from '../components/ui-custom/PageHeader';
 import DataTable from '../components/ui-custom/DataTable';
@@ -66,6 +67,17 @@ export default function SupportTickets() {
     },
   });
 
+  const deleteTicketMutation = useMutation({
+    mutationFn: async (id) => {
+      const response = await base44.functions.invoke('deleteSupportTicket', { id });
+      return response.data;
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries(['allSupportTickets']);
+      setSelectedTicket(null);
+    },
+  });
+
   const handleStatusChange = (status) => {
     if (!selectedTicket) return;
 
@@ -82,6 +94,13 @@ export default function SupportTickets() {
       id: selectedTicket.id,
       data: { admin_notes: adminNotes }
     });
+  };
+
+  const handleDeleteTicket = () => {
+    if (!selectedTicket) return;
+    if (!confirm('Are you sure you want to delete this ticket? This action cannot be undone.')) return;
+
+    deleteTicketMutation.mutate(selectedTicket.id);
   };
 
   const getStatusBadge = (status) => {
@@ -346,16 +365,27 @@ export default function SupportTickets() {
                     placeholder="Add internal notes about this ticket..."
                     rows={4}
                   />
-                  <Button 
-                    onClick={handleSaveNotes}
-                    disabled={updateTicketMutation.isPending}
-                    className="mt-2"
-                    size="sm"
-                  >
-                    Save Notes
-                  </Button>
+                  <div className="flex gap-2 mt-2">
+                    <Button 
+                      onClick={handleSaveNotes}
+                      disabled={updateTicketMutation.isPending}
+                      size="sm"
+                    >
+                      Save Notes
+                    </Button>
+                    <Button 
+                      onClick={handleDeleteTicket}
+                      disabled={deleteTicketMutation.isPending}
+                      variant="destructive"
+                      size="sm"
+                      className="ml-auto"
+                    >
+                      <Trash2 className="w-4 h-4 mr-2" />
+                      Delete Ticket
+                    </Button>
+                  </div>
                 </div>
-              </div>
+                </div>
             </>
           )}
         </DialogContent>
