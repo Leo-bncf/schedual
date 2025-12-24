@@ -1,6 +1,7 @@
 import AIAdvisor from './pages/AIAdvisor';
 import AccountManager from './pages/AccountManager';
 import Constraints from './pages/Constraints';
+import ContactUs from './pages/ContactUs';
 import Dashboard from './pages/Dashboard';
 import DatabaseSchema from './pages/DatabaseSchema';
 import Documentation from './pages/Documentation';
@@ -17,14 +18,12 @@ import Students from './pages/Students';
 import Subjects from './pages/Subjects';
 import Subscription from './pages/Subscription';
 import SubscriptionsOverview from './pages/SubscriptionsOverview';
-import Support from './pages/Support';
 import SupportTickets from './pages/SupportTickets';
 import Teachers from './pages/Teachers';
 import TeachingGroups from './pages/TeachingGroups';
 import TermsOfUse from './pages/TermsOfUse';
 import TestData from './pages/TestData';
 import UserManagement from './pages/UserManagement';
-import ContactUs from './pages/ContactUs';
 import __Layout from './Layout.jsx';
 
 
@@ -32,6 +31,7 @@ export const PAGES = {
     "AIAdvisor": AIAdvisor,
     "AccountManager": AccountManager,
     "Constraints": Constraints,
+    "ContactUs": ContactUs,
     "Dashboard": Dashboard,
     "DatabaseSchema": DatabaseSchema,
     "Documentation": Documentation,
@@ -48,14 +48,12 @@ export const PAGES = {
     "Subjects": Subjects,
     "Subscription": Subscription,
     "SubscriptionsOverview": SubscriptionsOverview,
-    "Support": Support,
     "SupportTickets": SupportTickets,
     "Teachers": Teachers,
     "TeachingGroups": TeachingGroups,
     "TermsOfUse": TermsOfUse,
     "TestData": TestData,
     "UserManagement": UserManagement,
-    "ContactUs": ContactUs,
 }
 
 export const pagesConfig = {

@@ -61,6 +61,8 @@ export default function SupportTickets() {
     },
     onSuccess: () => {
       queryClient.invalidateQueries(['allSupportTickets']);
+      setSelectedTicket(null);
+      setAdminNotes('');
     },
   });
 
