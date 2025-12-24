@@ -16,8 +16,12 @@ Deno.serve(async (req) => {
       return Response.json({ error: 'Missing fileUrl' }, { status: 400 });
     }
 
+    console.log('Starting import for school:', user.school_id);
+    console.log('File URL:', fileUrl);
+
     // Use LLM to extract structured data from the file
-    const extractionResponse = await base44.integrations.Core.InvokeLLM({
+    console.log('Calling InvokeLLM...');
+    const extractionResponse = await base44.asServiceRole.integrations.Core.InvokeLLM({
       prompt: `Extract school data from this file and structure it as JSON.
       
 Extract:
@@ -94,6 +98,9 @@ Return all data you can find. Make reasonable assumptions for missing fields.`,
       }
     });
 
+    console.log('LLM extraction complete');
+    console.log('Extracted data:', JSON.stringify(extractionResponse, null, 2));
+
     const data = extractionResponse;
     const results = {
       subjects: [],
@@ -105,9 +112,11 @@ Return all data you can find. Make reasonable assumptions for missing fields.`,
     };
 
     // Create subjects
+    console.log('Creating subjects...');
     if (data.subjects && data.subjects.length > 0) {
       for (const subject of data.subjects) {
         try {
+          console.log('Creating subject:', subject.name);
           const created = await base44.asServiceRole.entities.Subject.create({
             school_id: user.school_id,
             name: subject.name,
@@ -117,14 +126,17 @@ Return all data you can find. Make reasonable assumptions for missing fields.`,
             ib_group_name: subject.ib_group_name || 'Language & Literature',
             is_active: true
           });
+          console.log('Created subject:', created.id);
           results.subjects.push(created);
         } catch (err) {
+          console.error('Error creating subject:', err);
           results.errors.push(`Subject ${subject.name}: ${err.message}`);
         }
       }
     }
 
     // Create rooms
+    console.log('Creating rooms...');
     if (data.rooms && data.rooms.length > 0) {
       for (const room of data.rooms) {
         try {
