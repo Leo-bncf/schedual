@@ -61,7 +61,13 @@ export default function Teachers() {
 
   const { data: teachers = [], isLoading } = useQuery({
     queryKey: ['teachers', schoolId],
-    queryFn: () => base44.entities.Teacher.filter({ school_id: schoolId }),
+    queryFn: async () => {
+      console.log('Fetching teachers for school_id:', schoolId);
+      const result = await base44.entities.Teacher.filter({ school_id: schoolId });
+      console.log('Teachers found:', result.length);
+      console.log('Teachers data:', result);
+      return result;
+    },
     enabled: !!schoolId,
   });
 
@@ -240,10 +246,23 @@ export default function Teachers() {
         title="Teachers"
         description="Manage teaching staff and their scheduling preferences"
         actions={
-          <Button onClick={() => setIsDialogOpen(true)} className="bg-indigo-600 hover:bg-indigo-700">
-            <Plus className="w-4 h-4 mr-2" />
-            Add Teacher
-          </Button>
+          <div className="flex gap-2">
+            <Button 
+              variant="outline" 
+              onClick={() => {
+                console.log('Current school_id:', schoolId);
+                console.log('Current user:', user);
+                console.log('Teachers count:', teachers.length);
+                queryClient.invalidateQueries({ queryKey: ['teachers'] });
+              }}
+            >
+              Debug & Refresh
+            </Button>
+            <Button onClick={() => setIsDialogOpen(true)} className="bg-indigo-600 hover:bg-indigo-700">
+              <Plus className="w-4 h-4 mr-2" />
+              Add Teacher
+            </Button>
+          </div>
         }
       />
 

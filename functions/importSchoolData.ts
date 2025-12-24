@@ -16,7 +16,9 @@ Deno.serve(async (req) => {
       return Response.json({ error: 'Missing fileUrl' }, { status: 400 });
     }
 
-    console.log('Starting import for school:', user.school_id);
+    console.log('=== IMPORT DEBUG ===');
+    console.log('User:', user);
+    console.log('School ID:', user.school_id);
     console.log('File URL:', fileUrl);
 
     // Use LLM to extract structured data from the file
@@ -169,6 +171,7 @@ Return all data you can find. Make reasonable assumptions for missing fields.`,
         const created = await base44.asServiceRole.entities.Teacher.bulkCreate(teachersToCreate);
         results.teachers = created;
         console.log('Created teachers:', created.length);
+        console.log('Sample teacher:', created[0]);
       } catch (err) {
         console.error('Error bulk creating teachers:', err);
         results.errors.push(`Teachers bulk create: ${err.message}`);
