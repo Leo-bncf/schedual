@@ -111,108 +111,124 @@ Return all data you can find. Make reasonable assumptions for missing fields.`,
       errors: []
     };
 
-    // Create subjects
+    // Create subjects using bulk create
     console.log('Creating subjects...');
     if (data.subjects && data.subjects.length > 0) {
-      for (const subject of data.subjects) {
-        try {
-          console.log('Creating subject:', subject.name);
-          const created = await base44.asServiceRole.entities.Subject.create({
-            school_id: user.school_id,
-            name: subject.name,
-            code: subject.code || subject.name.substring(0, 3).toUpperCase(),
-            ib_level: subject.ib_level || 'DP',
-            ib_group: subject.ib_group || '1',
-            ib_group_name: subject.ib_group_name || 'Language & Literature',
-            is_active: true
-          });
-          console.log('Created subject:', created.id);
-          results.subjects.push(created);
-        } catch (err) {
-          console.error('Error creating subject:', err);
-          results.errors.push(`Subject ${subject.name}: ${err.message}`);
-        }
+      try {
+        const subjectsToCreate = data.subjects.map(subject => ({
+          school_id: user.school_id,
+          name: subject.name,
+          code: subject.code || subject.name.substring(0, 3).toUpperCase(),
+          ib_level: subject.ib_level || 'DP',
+          ib_group: subject.ib_group || '1',
+          ib_group_name: subject.ib_group_name || 'Language & Literature',
+          is_active: true
+        }));
+        
+        const created = await base44.asServiceRole.entities.Subject.bulkCreate(subjectsToCreate);
+        results.subjects = created;
+        console.log('Created subjects:', created.length);
+      } catch (err) {
+        console.error('Error bulk creating subjects:', err);
+        results.errors.push(`Subjects bulk create: ${err.message}`);
       }
     }
 
-    // Create rooms
+    // Create rooms using bulk create
     console.log('Creating rooms...');
     if (data.rooms && data.rooms.length > 0) {
-      for (const room of data.rooms) {
-        try {
-          const created = await base44.asServiceRole.entities.Room.create({
-            school_id: user.school_id,
-            name: room.name,
-            capacity: room.capacity || 20,
-            room_type: room.room_type || 'classroom',
-            is_active: true
-          });
-          results.rooms.push(created);
-        } catch (err) {
-          results.errors.push(`Room ${room.name}: ${err.message}`);
-        }
+      try {
+        const roomsToCreate = data.rooms.map(room => ({
+          school_id: user.school_id,
+          name: room.name,
+          capacity: room.capacity || 20,
+          room_type: room.room_type || 'classroom',
+          is_active: true
+        }));
+        
+        const created = await base44.asServiceRole.entities.Room.bulkCreate(roomsToCreate);
+        results.rooms = created;
+        console.log('Created rooms:', created.length);
+      } catch (err) {
+        console.error('Error bulk creating rooms:', err);
+        results.errors.push(`Rooms bulk create: ${err.message}`);
       }
     }
 
-    // Create teachers
+    // Create teachers using bulk create
+    console.log('Creating teachers...');
     if (data.teachers && data.teachers.length > 0) {
-      for (const teacher of data.teachers) {
-        try {
-          const created = await base44.asServiceRole.entities.Teacher.create({
-            school_id: user.school_id,
-            full_name: teacher.full_name,
-            email: teacher.email || `${teacher.full_name.toLowerCase().replace(/\s/g, '.')}@school.edu`,
-            is_active: true
-          });
-          results.teachers.push(created);
-        } catch (err) {
-          results.errors.push(`Teacher ${teacher.full_name}: ${err.message}`);
-        }
+      try {
+        const teachersToCreate = data.teachers.map(teacher => ({
+          school_id: user.school_id,
+          full_name: teacher.full_name,
+          email: teacher.email || `${teacher.full_name.toLowerCase().replace(/\s/g, '.')}@school.edu`,
+          is_active: true
+        }));
+        
+        const created = await base44.asServiceRole.entities.Teacher.bulkCreate(teachersToCreate);
+        results.teachers = created;
+        console.log('Created teachers:', created.length);
+      } catch (err) {
+        console.error('Error bulk creating teachers:', err);
+        results.errors.push(`Teachers bulk create: ${err.message}`);
       }
     }
 
-    // Create students
+    // Create students using bulk create
+    console.log('Creating students...');
     if (data.students && data.students.length > 0) {
-      for (const student of data.students) {
-        try {
-          const created = await base44.asServiceRole.entities.Student.create({
-            school_id: user.school_id,
-            full_name: student.full_name,
-            email: student.email || `${student.full_name.toLowerCase().replace(/\s/g, '.')}@student.edu`,
-            ib_programme: student.ib_programme || 'DP',
-            year_group: student.year_group || 'DP1',
-            is_active: true
-          });
-          results.students.push(created);
-        } catch (err) {
-          results.errors.push(`Student ${student.full_name}: ${err.message}`);
-        }
+      try {
+        const studentsToCreate = data.students.map(student => ({
+          school_id: user.school_id,
+          full_name: student.full_name,
+          email: student.email || `${student.full_name.toLowerCase().replace(/\s/g, '.')}@student.edu`,
+          ib_programme: student.ib_programme || 'DP',
+          year_group: student.year_group || 'DP1',
+          is_active: true
+        }));
+        
+        const created = await base44.asServiceRole.entities.Student.bulkCreate(studentsToCreate);
+        results.students = created;
+        console.log('Created students:', created.length);
+      } catch (err) {
+        console.error('Error bulk creating students:', err);
+        results.errors.push(`Students bulk create: ${err.message}`);
       }
     }
 
-    // Create teaching groups
+    // Create teaching groups using bulk create
+    console.log('Creating teaching groups...');
     if (data.teaching_groups && data.teaching_groups.length > 0) {
-      for (const group of data.teaching_groups) {
-        try {
-          // Find matching subject
-          const subject = results.subjects.find(s => 
-            s.name.toLowerCase().includes(group.subject_name?.toLowerCase())
-          );
-          
-          if (subject) {
-            const created = await base44.asServiceRole.entities.TeachingGroup.create({
-              school_id: user.school_id,
-              name: group.name,
-              subject_id: subject.id,
-              level: group.level || 'SL',
-              year_group: group.year_group || 'DP1',
-              is_active: true
-            });
-            results.teaching_groups.push(created);
-          }
-        } catch (err) {
-          results.errors.push(`Teaching Group ${group.name}: ${err.message}`);
+      try {
+        const groupsToCreate = data.teaching_groups
+          .map(group => {
+            const subject = results.subjects.find(s => 
+              s.name.toLowerCase().includes(group.subject_name?.toLowerCase())
+            );
+            
+            if (subject) {
+              return {
+                school_id: user.school_id,
+                name: group.name,
+                subject_id: subject.id,
+                level: group.level || 'SL',
+                year_group: group.year_group || 'DP1',
+                is_active: true
+              };
+            }
+            return null;
+          })
+          .filter(g => g !== null);
+        
+        if (groupsToCreate.length > 0) {
+          const created = await base44.asServiceRole.entities.TeachingGroup.bulkCreate(groupsToCreate);
+          results.teaching_groups = created;
+          console.log('Created teaching groups:', created.length);
         }
+      } catch (err) {
+        console.error('Error bulk creating teaching groups:', err);
+        results.errors.push(`Teaching Groups bulk create: ${err.message}`);
       }
     }
 
