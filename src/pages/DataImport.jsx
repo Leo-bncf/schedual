@@ -3,12 +3,14 @@ import { base44 } from '@/api/base44Client';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Alert, AlertDescription } from "@/components/ui/alert";
-import { Upload, FileText, CheckCircle, AlertCircle, Loader2 } from 'lucide-react';
+import { Upload, FileText, CheckCircle, AlertCircle, Loader2, Trophy } from 'lucide-react';
+import { Progress } from "@/components/ui/progress";
 import PageHeader from '../components/ui-custom/PageHeader';
 
 export default function DataImport() {
   const [file, setFile] = useState(null);
   const [uploading, setUploading] = useState(false);
+  const [uploadProgress, setUploadProgress] = useState(0);
   const [processing, setProcessing] = useState(false);
   const [conversation, setConversation] = useState(null);
   const [messages, setMessages] = useState([]);
@@ -26,15 +28,32 @@ export default function DataImport() {
     if (!file) return;
 
     setUploading(true);
+    setUploadProgress(0);
     setError(null);
 
     try {
+      // Simulate upload progress
+      const progressInterval = setInterval(() => {
+        setUploadProgress(prev => {
+          if (prev >= 90) {
+            clearInterval(progressInterval);
+            return 90;
+          }
+          return prev + 10;
+        });
+      }, 200);
+
       // Step 1: Upload file
       const uploadResponse = await base44.integrations.Core.UploadFile({ file });
       const fileUrl = uploadResponse.file_url;
 
-      setUploading(false);
-      setProcessing(true);
+      clearInterval(progressInterval);
+      setUploadProgress(100);
+      
+      setTimeout(() => {
+        setUploading(false);
+        setProcessing(true);
+      }, 500);
 
       // Step 2: Create conversation with agent
       const conv = await base44.agents.createConversation({
@@ -73,6 +92,7 @@ export default function DataImport() {
     setMessages([]);
     setError(null);
     setProcessing(false);
+    setUploadProgress(0);
   };
 
   const assistantMessages = messages.filter(m => m.role === 'assistant');
@@ -138,6 +158,16 @@ export default function DataImport() {
                 </label>
               </div>
 
+              {uploading && (
+                <div className="space-y-2">
+                  <div className="flex items-center justify-between text-sm">
+                    <span className="text-slate-600">Uploading file...</span>
+                    <span className="font-medium text-blue-900">{uploadProgress}%</span>
+                  </div>
+                  <Progress value={uploadProgress} className="h-2" />
+                </div>
+              )}
+
               {error && (
                 <Alert variant="destructive">
                   <AlertCircle className="h-4 w-4" />
@@ -201,12 +231,17 @@ export default function DataImport() {
                 ))}
 
                 {isComplete && (
-                  <Alert className="bg-green-50 border-green-200">
-                    <CheckCircle className="h-4 w-4 text-green-600" />
-                    <AlertDescription className="text-green-800">
-                      Import completed successfully! All entities have been created.
-                    </AlertDescription>
-                  </Alert>
+                  <Card className="bg-gradient-to-br from-green-50 to-emerald-50 border-green-200">
+                    <CardContent className="p-6 text-center">
+                      <div className="w-16 h-16 rounded-full bg-green-100 flex items-center justify-center mx-auto mb-4">
+                        <Trophy className="w-8 h-8 text-green-600" />
+                      </div>
+                      <h3 className="text-xl font-semibold text-green-900 mb-2">Import Complete!</h3>
+                      <p className="text-green-700">
+                        All entities have been successfully created from your file.
+                      </p>
+                    </CardContent>
+                  </Card>
                 )}
               </div>
 
