@@ -55,7 +55,7 @@ export default function SupportTickets() {
   });
 
   const updateTicketMutation = useMutation({
-    mutationFn: ({ id, data }) => base44.entities.SupportTicket.update(id, data),
+    mutationFn: ({ id, data }) => base44.asServiceRole.entities.SupportTicket.update(id, data),
     onSuccess: () => {
       queryClient.invalidateQueries(['allSupportTickets']);
     },
