@@ -357,14 +357,12 @@ export default function Layout({ children, currentPageName }) {
           </Button>
 
           <div className="flex items-center gap-3 ml-auto">
-          {isSuperAdmin && (
-            <Link 
-              to={createPageUrl('SupportTickets')}
-              className="px-4 py-2 text-sm font-medium text-white bg-blue-900 hover:bg-blue-800 rounded-lg transition-colors"
-            >
-              Support Tickets
-            </Link>
-          )}
+          <Link 
+            to={createPageUrl(isSuperAdmin ? 'SupportTickets' : 'Support')}
+            className="px-4 py-2 text-sm font-medium text-white bg-blue-900 hover:bg-blue-800 rounded-lg transition-colors"
+          >
+            Contact Us
+          </Link>
           </div>
         </header>
 
