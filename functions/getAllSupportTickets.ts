@@ -22,20 +22,8 @@ Deno.serve(async (req) => {
       return Response.json({ error: 'Forbidden - Admin access required' }, { status: 403 });
     }
 
-    // Fetch all support tickets - use direct read_entities
-    const response = await fetch(`${Deno.env.get('BASE44_API_URL') || 'https://api.base44.com'}/v1/apps/${Deno.env.get('BASE44_APP_ID')}/entities/SupportTicket/records`, {
-      method: 'GET',
-      headers: {
-        'Authorization': `Bearer ${Deno.env.get('BASE44_SERVICE_ROLE_KEY')}`,
-        'Content-Type': 'application/json'
-      }
-    });
-
-    if (!response.ok) {
-      throw new Error(`Failed to fetch tickets: ${response.statusText}`);
-    }
-
-    const tickets = await response.json();
+    // Fetch all support tickets using service role
+    const tickets = await base44.asServiceRole.entities.SupportTicket.list();
 
     return Response.json({ 
       success: true,
