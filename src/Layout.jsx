@@ -366,7 +366,7 @@ export default function Layout({ children, currentPageName }) {
             </Link>
           ) : isSchoolAdmin(user) && (
             <Link 
-              to={createPageUrl('Dashboard')}
+              to={createPageUrl('Support')}
               className="px-4 py-2 text-sm font-medium text-white bg-blue-900 hover:bg-blue-800 rounded-lg transition-colors"
             >
               Support Ticket
