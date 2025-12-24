@@ -148,14 +148,6 @@ Return all data you can find. Make reasonable assumptions for missing fields.`,
         console.log('Created subjects count:', created.length);
         console.log('Sample created subject:', JSON.stringify(created[0], null, 2));
 
-        // Verify we can read them back
-        const verifyRead = await base44.asServiceRole.entities.Subject.filter({ school_id: user.school_id });
-        console.log('Can read back subjects as service role:', verifyRead.length);
-
-        // Try reading with user credentials
-        const userRead = await base44.entities.Subject.filter({ school_id: user.school_id });
-        console.log('Can read subjects as user:', userRead.length);
-
       } catch (err) {
         console.error('Error bulk creating subjects:', err);
         results.errors.push(`Subjects bulk create: ${err.message}`);
