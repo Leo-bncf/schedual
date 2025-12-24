@@ -110,9 +110,6 @@ export default function DataImport() {
       setProcessing(false);
       
       if (importResponse.data.success) {
-        // Clear all caches
-        queryClient.clear();
-
         setMessages([
           {
             role: 'assistant',
@@ -121,14 +118,20 @@ export default function DataImport() {
               `✓ Created ${importResponse.data.results.rooms_created} rooms\n` +
               `✓ Created ${importResponse.data.results.teachers_created} teachers\n` +
               `✓ Created ${importResponse.data.results.students_created} students\n` +
-              `✓ Created ${importResponse.data.results.teaching_groups_created} teaching groups` +
+              `✓ Created ${importResponse.data.results.teaching_groups_created} teaching groups\n\n` +
+              `✨ Refreshing application to load new data...` +
               (importResponse.data.results.errors.length > 0 
                 ? `\n\n⚠️ ${importResponse.data.results.errors.length} errors occurred:\n${importResponse.data.results.errors.join('\n')}` 
                 : ''),
             tool_calls: [{ status: 'completed', name: 'import_complete' }]
           }
         ]);
-        setConversation({ id: 'import-complete' }); // Trigger UI state
+        setConversation({ id: 'import-complete' });
+
+        // Reload page after 2 seconds to refresh all data
+        setTimeout(() => {
+          window.location.reload();
+        }, 2000);
       } else {
         throw new Error(importResponse.data.error || 'Import failed');
       }
