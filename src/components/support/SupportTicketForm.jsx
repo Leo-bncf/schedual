@@ -27,6 +27,7 @@ export default function SupportTicketForm() {
       setFormData({ subject: '', description: '', priority: 'medium' });
       setTimeout(() => setSuccess(false), 5000);
       queryClient.invalidateQueries(['supportTickets']);
+      queryClient.invalidateQueries(['allSupportTickets']);
     },
   });
 
