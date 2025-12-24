@@ -79,12 +79,27 @@ export default function Dashboard() {
         title="Dashboard"
         description="Overview of your scheduling system"
         actions={
-          <Link to={createPageUrl('Schedule')}>
-            <Button className="bg-blue-900 hover:bg-blue-800">
-              <Calendar className="w-4 h-4 mr-2" />
-              View Schedule
+          <div className="flex gap-2">
+            <Button 
+              onClick={() => {
+                console.log('=== DASHBOARD DEBUG ===');
+                console.log('User school_id:', user?.school_id);
+                console.log('Teachers count:', teachers.length);
+                console.log('Students count:', students.length);
+                console.log('Subjects count:', subjects.length);
+                console.log('Sample teacher:', teachers[0]);
+              }}
+              variant="outline"
+            >
+              Debug Data
             </Button>
-          </Link>
+            <Link to={createPageUrl('Schedule')}>
+              <Button className="bg-blue-900 hover:bg-blue-800">
+                <Calendar className="w-4 h-4 mr-2" />
+                View Schedule
+              </Button>
+            </Link>
+          </div>
         }
       />
 
