@@ -369,7 +369,7 @@ export default function Layout({ children, currentPageName }) {
               to={createPageUrl('Dashboard')}
               className="px-4 py-2 text-sm font-medium text-white bg-blue-900 hover:bg-blue-800 rounded-lg transition-colors"
             >
-              Need Help?
+              Support Ticket
             </Link>
           )}
           </div>
