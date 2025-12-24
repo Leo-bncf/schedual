@@ -111,11 +111,11 @@ export default function DataImport() {
       
       if (importResponse.data.success) {
         // Invalidate all entity queries to refresh dashboard
-        queryClient.invalidateQueries({ queryKey: ['teachers'] });
-        queryClient.invalidateQueries({ queryKey: ['students'] });
-        queryClient.invalidateQueries({ queryKey: ['subjects'] });
-        queryClient.invalidateQueries({ queryKey: ['rooms'] });
-        queryClient.invalidateQueries({ queryKey: ['teaching_groups'] });
+        queryClient.invalidateQueries({ queryKey: ['teachers', user.school_id] });
+        queryClient.invalidateQueries({ queryKey: ['students', user.school_id] });
+        queryClient.invalidateQueries({ queryKey: ['subjects', user.school_id] });
+        queryClient.invalidateQueries({ queryKey: ['rooms', user.school_id] });
+        queryClient.invalidateQueries({ queryKey: ['teaching_groups', user.school_id] });
         
         setMessages([
           {
