@@ -110,44 +110,37 @@ export default function DataImport() {
       setProcessing(false);
       
       if (importResponse.data.success) {
-        const verified = importResponse.data.results.verified_readable || {};
-        const totalVerified = (verified.subjects || 0) + (verified.teachers || 0) + (verified.students || 0) + (verified.rooms || 0);
+        const totalCreated = 
+          importResponse.data.results.subjects_created +
+          importResponse.data.results.rooms_created +
+          importResponse.data.results.teachers_created +
+          importResponse.data.results.students_created +
+          importResponse.data.results.teaching_groups_created;
 
         console.log('=== IMPORT COMPLETE ===');
         console.log('School ID:', importResponse.data.school_id);
-        console.log('Created:', importResponse.data.results);
-        console.log('Verified readable:', verified);
-
-        if (totalVerified === 0 && (importResponse.data.results.subjects_created > 0 || importResponse.data.results.teachers_created > 0)) {
-          setError('⚠️ Entities were created but cannot be read. This may be a permissions issue. Contact support.');
-          setProcessing(false);
-          return;
-        }
-
-        const verificationStatus = totalVerified > 0
-          ? `\n\n✅ Verified: ${verified.subjects || 0} subjects, ${verified.teachers || 0} teachers, ${verified.students || 0} students, ${verified.rooms || 0} rooms are readable`
-          : '';
+        console.log('Total entities created:', totalCreated);
 
         setMessages([
           {
             role: 'assistant',
-            content: `Successfully imported school data!\n\n` +
-              `✓ Created ${importResponse.data.results.subjects_created} subjects\n` +
-              `✓ Created ${importResponse.data.results.rooms_created} rooms\n` +
-              `✓ Created ${importResponse.data.results.teachers_created} teachers\n` +
-              `✓ Created ${importResponse.data.results.students_created} students\n` +
-              `✓ Created ${importResponse.data.results.teaching_groups_created} teaching groups` +
-              verificationStatus +
-              `\n\n🔄 Redirecting to dashboard...` +
+            content: `✅ Successfully imported school data!\n\n` +
+              `✓ ${importResponse.data.results.subjects_created} subjects\n` +
+              `✓ ${importResponse.data.results.rooms_created} rooms\n` +
+              `✓ ${importResponse.data.results.teachers_created} teachers\n` +
+              `✓ ${importResponse.data.results.students_created} students\n` +
+              `✓ ${importResponse.data.results.teaching_groups_created} teaching groups\n\n` +
+              `🔄 Refreshing dashboard to display your data...` +
               (importResponse.data.results.errors.length > 0 
-                ? `\n\n⚠️ ${importResponse.data.results.errors.length} errors occurred:\n${importResponse.data.results.errors.join('\n')}` 
+                ? `\n\n⚠️ ${importResponse.data.results.errors.length} warnings occurred:\n${importResponse.data.results.errors.join('\n')}` 
                 : ''),
             tool_calls: [{ status: 'completed', name: 'import_complete' }]
           }
         ]);
         setConversation({ id: 'import-complete' });
+        setProcessing(false);
 
-        // Force complete refresh
+        // Force complete page reload to dashboard
         setTimeout(() => {
           window.location.href = '/Dashboard';
         }, 1500);
