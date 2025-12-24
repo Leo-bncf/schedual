@@ -52,15 +52,18 @@ export default function Support() {
   });
 
   const { data: tickets = [], isLoading } = useQuery({
-    queryKey: ['tickets', user?.email],
-    queryFn: () => base44.entities.SupportTicket.filter({ user_email: user?.email }, '-created_date'),
+    queryKey: ['supportTickets', user?.email],
+    queryFn: async () => {
+      const allTickets = await base44.entities.SupportTicket.list('-created_date');
+      return allTickets.filter(ticket => ticket.user_email === user?.email);
+    },
     enabled: !!user?.email,
   });
 
   const createTicketMutation = useMutation({
     mutationFn: (data) => base44.functions.invoke('createSupportTicket', data),
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['tickets'] });
+      queryClient.invalidateQueries({ queryKey: ['supportTickets'] });
       setShowNewTicket(false);
       setFormData({ subject: '', description: '', category: 'general', priority: 'medium' });
     },
@@ -69,7 +72,7 @@ export default function Support() {
   const updateTicketMutation = useMutation({
     mutationFn: ({ id, data }) => base44.entities.SupportTicket.update(id, data),
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['tickets'] });
+      queryClient.invalidateQueries({ queryKey: ['supportTickets'] });
       setSelectedTicket(null);
     },
   });
