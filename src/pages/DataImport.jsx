@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { base44 } from '@/api/base44Client';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -15,6 +15,19 @@ export default function DataImport() {
   const [conversation, setConversation] = useState(null);
   const [messages, setMessages] = useState([]);
   const [error, setError] = useState(null);
+
+  useEffect(() => {
+    let unsubscribe;
+    if (conversation?.id) {
+      unsubscribe = base44.agents.subscribeToConversation(conversation.id, (data) => {
+        console.log('Messages updated:', data.messages);
+        setMessages(data.messages || []);
+      });
+    }
+    return () => {
+      if (unsubscribe) unsubscribe();
+    };
+  }, [conversation?.id]);
 
   const handleFileSelect = (e) => {
     const selectedFile = e.target.files[0];
@@ -50,10 +63,10 @@ export default function DataImport() {
       clearInterval(progressInterval);
       setUploadProgress(100);
       
-      setTimeout(() => {
-        setUploading(false);
-        setProcessing(true);
-      }, 500);
+      await new Promise(resolve => setTimeout(resolve, 500));
+      
+      setUploading(false);
+      setProcessing(true);
 
       // Step 2: Create conversation with agent
       const conv = await base44.agents.createConversation({
@@ -64,12 +77,11 @@ export default function DataImport() {
         }
       });
 
+      console.log('Conversation created:', conv);
       setConversation(conv);
 
-      // Subscribe to updates
-      base44.agents.subscribeToConversation(conv.id, (data) => {
-        setMessages(data.messages);
-      });
+      // Wait a bit for subscription to be ready
+      await new Promise(resolve => setTimeout(resolve, 500));
 
       // Step 3: Send message to agent with file
       await base44.agents.addMessage(conv, {
@@ -77,6 +89,8 @@ export default function DataImport() {
         content: `Please process this uploaded school data file and create all necessary entities (subjects, rooms, teachers, students, and teaching groups). The file contains information about courses, classrooms, and their assignments. Extract all data and create the appropriate records in the system.`,
         file_urls: [fileUrl]
       });
+
+      console.log('Message sent to agent');
 
     } catch (err) {
       console.error('Upload/process error:', err);
@@ -203,6 +217,20 @@ export default function DataImport() {
             <>
               {/* Processing Status */}
               <div className="space-y-4">
+                {processing && assistantMessages.length === 0 && (
+                  <Card className="bg-blue-50 border-blue-200">
+                    <CardContent className="p-4">
+                      <div className="flex items-center gap-3">
+                        <Loader2 className="w-5 h-5 text-blue-600 animate-spin" />
+                        <div>
+                          <p className="text-sm font-medium text-blue-900">Processing your file...</p>
+                          <p className="text-xs text-blue-700">The AI is analyzing the data and creating entities</p>
+                        </div>
+                      </div>
+                    </CardContent>
+                  </Card>
+                )}
+                
                 {assistantMessages.map((msg, idx) => (
                   <Card key={idx} className="bg-slate-50">
                     <CardContent className="p-4">
