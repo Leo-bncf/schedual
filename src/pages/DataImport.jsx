@@ -130,7 +130,7 @@ export default function DataImport() {
               `✓ ${importResponse.data.results.teachers_created} teachers\n` +
               `✓ ${importResponse.data.results.students_created} students\n` +
               `✓ ${importResponse.data.results.teaching_groups_created} teaching groups\n\n` +
-              `✅ Data is now available in Teachers, Students, Subjects, and Rooms pages!` +
+              `View your data in Teachers, Students, Subjects, and Rooms pages!` +
               (importResponse.data.results.errors.length > 0 
                 ? `\n\n⚠️ ${importResponse.data.results.errors.length} warnings occurred:\n${importResponse.data.results.errors.join('\n')}` 
                 : ''),
@@ -139,18 +139,6 @@ export default function DataImport() {
         ]);
         setConversation({ id: 'import-complete' });
         setProcessing(false);
-
-        // Invalidate all queries to force refresh
-        queryClient.invalidateQueries({ queryKey: ['teachers'] });
-        queryClient.invalidateQueries({ queryKey: ['students'] });
-        queryClient.invalidateQueries({ queryKey: ['subjects'] });
-        queryClient.invalidateQueries({ queryKey: ['rooms'] });
-        queryClient.invalidateQueries({ queryKey: ['teachingGroups'] });
-
-        // Navigate to Teachers page to see imported data
-        setTimeout(() => {
-          window.location.href = '/Teachers';
-        }, 2000);
       } else {
         throw new Error(importResponse.data.error || 'Import failed');
       }
