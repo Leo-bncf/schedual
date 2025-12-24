@@ -110,12 +110,17 @@ export default function DataImport() {
       setProcessing(false);
       
       if (importResponse.data.success) {
-        // Invalidate all entity queries to refresh dashboard
-        queryClient.invalidateQueries({ queryKey: ['teachers', user.school_id] });
-        queryClient.invalidateQueries({ queryKey: ['students', user.school_id] });
-        queryClient.invalidateQueries({ queryKey: ['subjects', user.school_id] });
-        queryClient.invalidateQueries({ queryKey: ['rooms', user.school_id] });
-        queryClient.invalidateQueries({ queryKey: ['teaching_groups', user.school_id] });
+        // Force refresh all entity queries
+        await queryClient.invalidateQueries({ queryKey: ['teachers'] });
+        await queryClient.invalidateQueries({ queryKey: ['students'] });
+        await queryClient.invalidateQueries({ queryKey: ['subjects'] });
+        await queryClient.invalidateQueries({ queryKey: ['rooms'] });
+        await queryClient.invalidateQueries({ queryKey: ['teaching_groups'] });
+        await queryClient.refetchQueries({ queryKey: ['teachers', user.school_id] });
+        await queryClient.refetchQueries({ queryKey: ['students', user.school_id] });
+        await queryClient.refetchQueries({ queryKey: ['subjects', user.school_id] });
+        await queryClient.refetchQueries({ queryKey: ['rooms', user.school_id] });
+        await queryClient.refetchQueries({ queryKey: ['teaching_groups', user.school_id] });
         
         setMessages([
           {
