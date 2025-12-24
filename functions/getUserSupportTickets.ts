@@ -11,7 +11,7 @@ Deno.serve(async (req) => {
     }
 
     // Fetch user's support tickets using service role to bypass RLS
-    const allTickets = await base44.asServiceRole.entities.SupportTicket.list('-created_date');
+    const allTickets = await base44.asServiceRole.entities.SupportTicket.filter({}, '-created_date');
     const userTickets = allTickets.filter(ticket => ticket.user_email === user.email);
 
     return Response.json({ 
