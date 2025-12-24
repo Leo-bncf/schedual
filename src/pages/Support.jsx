@@ -54,8 +54,8 @@ export default function Support() {
   const { data: tickets = [], isLoading } = useQuery({
     queryKey: ['supportTickets', user?.email],
     queryFn: async () => {
-      const allTickets = await base44.entities.SupportTicket.list('-created_date');
-      return allTickets.filter(ticket => ticket.user_email === user?.email);
+      const response = await base44.functions.invoke('getUserSupportTickets');
+      return response.data.tickets || [];
     },
     enabled: !!user?.email,
   });
