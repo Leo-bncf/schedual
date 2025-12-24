@@ -319,27 +319,51 @@ The file contains information about courses, classrooms, and their assignments. 
                           {msg.role === 'user' ? 'You' : 'AI Assistant'}
                         </span>
                       </div>
-                      <div className="prose prose-sm max-w-none">
-                        <p className="text-slate-700 whitespace-pre-wrap">{msg.content}</p>
-                      </div>
+                      {msg.content && (
+                        <div className="prose prose-sm max-w-none">
+                          <p className="text-slate-700 whitespace-pre-wrap">{msg.content}</p>
+                        </div>
+                      )}
                       
                       {msg.tool_calls && msg.tool_calls.length > 0 && (
                         <div className="mt-3 space-y-2">
+                          <div className="text-xs font-semibold text-slate-600 mb-2">
+                            Creating entities: {msg.tool_calls.length} operations
+                          </div>
                           {msg.tool_calls.map((tc, tcIdx) => (
-                            <div key={tcIdx} className="flex items-center gap-2 text-sm">
-                              {tc.status === 'completed' ? (
-                                <CheckCircle className="w-4 h-4 text-green-600" />
-                              ) : tc.status === 'running' || tc.status === 'pending' ? (
-                                <Loader2 className="w-4 h-4 text-blue-600 animate-spin" />
-                              ) : (
-                                <AlertCircle className="w-4 h-4 text-red-600" />
-                              )}
-                              <span className="text-slate-600">
-                                {tc.name.split('.').pop().replace(/_/g, ' ')}
-                              </span>
+                            <div key={tcIdx} className="flex items-start gap-2 text-sm p-2 rounded bg-white border border-slate-200">
+                              <div className="flex-shrink-0 mt-0.5">
+                                {tc.status === 'completed' ? (
+                                  <CheckCircle className="w-4 h-4 text-green-600" />
+                                ) : tc.status === 'running' || tc.status === 'pending' ? (
+                                  <Loader2 className="w-4 h-4 text-blue-600 animate-spin" />
+                                ) : (
+                                  <AlertCircle className="w-4 h-4 text-red-600" />
+                                )}
+                              </div>
+                              <div className="flex-1 min-w-0">
+                                <div className="font-medium text-slate-900">
+                                  {tc.name.split('.').pop().replace(/_/g, ' ')}
+                                </div>
+                                {tc.status === 'completed' && tc.results && (
+                                  <div className="text-xs text-green-600 mt-1">✓ Created successfully</div>
+                                )}
+                                {tc.status === 'failed' && (
+                                  <div className="text-xs text-red-600 mt-1">✗ Failed</div>
+                                )}
+                              </div>
                             </div>
                           ))}
                         </div>
+                      )}
+                      
+                      {msg.role === 'assistant' && (!msg.tool_calls || msg.tool_calls.length === 0) && msg.content && (
+                        <Alert className="mt-3 border-amber-200 bg-amber-50">
+                          <AlertCircle className="h-4 w-4 text-amber-600" />
+                          <AlertDescription className="text-amber-800">
+                            Agent responded but didn't create any entities. It may need more information.
+                          </AlertDescription>
+                        </Alert>
                       )}
                     </CardContent>
                   </Card>
