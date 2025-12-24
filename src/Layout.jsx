@@ -55,7 +55,7 @@ const navigation = [
 
 export default function Layout({ children, currentPageName }) {
   // Public pages render immediately without authentication
-  const publicPages = ['Landing', 'PrivacyPolicy', 'TermsOfUse'];
+  const publicPages = ['Landing', 'PrivacyPolicy', 'TermsOfUse', 'ContactUs'];
   if (publicPages.includes(currentPageName)) {
     return <>{children}</>;
   }
