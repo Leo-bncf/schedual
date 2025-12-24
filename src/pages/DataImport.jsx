@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { useQuery } from '@tanstack/react-query';
+import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { base44 } from '@/api/base44Client';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -18,6 +18,8 @@ export default function DataImport() {
   const [messages, setMessages] = useState([]);
   const [error, setError] = useState(null);
   const [userResponse, setUserResponse] = useState('');
+
+  const queryClient = useQueryClient();
 
   const { data: user } = useQuery({
     queryKey: ['currentUser'],
@@ -108,6 +110,13 @@ export default function DataImport() {
       setProcessing(false);
       
       if (importResponse.data.success) {
+        // Invalidate all entity queries to refresh dashboard
+        queryClient.invalidateQueries({ queryKey: ['teachers'] });
+        queryClient.invalidateQueries({ queryKey: ['students'] });
+        queryClient.invalidateQueries({ queryKey: ['subjects'] });
+        queryClient.invalidateQueries({ queryKey: ['rooms'] });
+        queryClient.invalidateQueries({ queryKey: ['teaching_groups'] });
+        
         setMessages([
           {
             role: 'assistant',
