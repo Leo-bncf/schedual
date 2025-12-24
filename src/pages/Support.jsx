@@ -70,7 +70,10 @@ export default function Support() {
   });
 
   const updateTicketMutation = useMutation({
-    mutationFn: ({ id, data }) => base44.entities.SupportTicket.update(id, data),
+    mutationFn: async ({ id, data }) => {
+      const response = await base44.functions.invoke('updateSupportTicket', { id, data });
+      return response.data;
+    },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['supportTickets'] });
       setSelectedTicket(null);
