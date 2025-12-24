@@ -23,7 +23,11 @@ Deno.serve(async (req) => {
     }
 
     // Fetch all support tickets using service role
-    const tickets = await base44.asServiceRole.entities.SupportTicket.list('-created_date');
+    const tickets = await base44.asServiceRole.entities.SupportTicket.filter({
+      $or: [
+        { id: { $exists: true } }
+      ]
+    }, '-created_date');
 
     return Response.json({ 
       success: true,
