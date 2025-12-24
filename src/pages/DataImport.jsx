@@ -121,15 +121,25 @@ export default function DataImport() {
         console.log('School ID:', importResponse.data.school_id);
         console.log('Total entities created:', totalCreated);
 
+        const verified = importResponse.data.results.verified_readable || {};
         setMessages([
           {
             role: 'assistant',
             content: `✅ Successfully imported school data!\n\n` +
+              `Created:\n` +
               `✓ ${importResponse.data.results.subjects_created} subjects\n` +
               `✓ ${importResponse.data.results.rooms_created} rooms\n` +
               `✓ ${importResponse.data.results.teachers_created} teachers\n` +
               `✓ ${importResponse.data.results.students_created} students\n` +
               `✓ ${importResponse.data.results.teaching_groups_created} teaching groups\n\n` +
+              `Readable (verification):\n` +
+              `✓ ${verified.subjects || 0} subjects readable\n` +
+              `✓ ${verified.rooms || 0} rooms readable\n` +
+              `✓ ${verified.teachers || 0} teachers readable\n` +
+              `✓ ${verified.students || 0} students readable\n\n` +
+              (verified.subjects === 0 && importResponse.data.results.subjects_created > 0 
+                ? `❌ CRITICAL: Data was created but cannot be read back. This indicates an RLS permission issue.\n\n` 
+                : ``) +
               `View your data in Teachers, Students, Subjects, and Rooms pages!` +
               (importResponse.data.results.errors.length > 0 
                 ? `\n\n⚠️ ${importResponse.data.results.errors.length} warnings occurred:\n${importResponse.data.results.errors.join('\n')}` 
