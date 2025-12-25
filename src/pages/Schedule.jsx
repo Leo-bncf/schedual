@@ -168,15 +168,22 @@ export default function Schedule() {
       console.log('Students:', students.length);
       console.log('Rooms:', rooms.length);
       
-      // Delete existing slots for this version
+      // Delete existing slots for this version (batch to avoid rate limits)
       const existingSlots = await base44.entities.ScheduleSlot.list();
       const slotsToDelete = existingSlots.filter(s => s.schedule_version === selectedVersion.id);
       
       console.log('Existing slots to delete:', slotsToDelete.length);
       
       if (slotsToDelete.length > 0) {
-        for (const slot of slotsToDelete) {
-          await base44.entities.ScheduleSlot.delete(slot.id);
+        // Delete in batches of 10 with delays to avoid rate limits
+        const batchSize = 10;
+        for (let i = 0; i < slotsToDelete.length; i += batchSize) {
+          const batch = slotsToDelete.slice(i, i + batchSize);
+          await Promise.all(batch.map(slot => base44.entities.ScheduleSlot.delete(slot.id)));
+          // Small delay between batches
+          if (i + batchSize < slotsToDelete.length) {
+            await new Promise(resolve => setTimeout(resolve, 500));
+          }
         }
       }
 
