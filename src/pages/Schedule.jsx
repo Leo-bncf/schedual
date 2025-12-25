@@ -197,9 +197,13 @@ export default function Schedule() {
       const studentSchedules = {};
       const teacherSchedules = {};
       const roomSchedules = {};
+      const studentConsecutiveSubjects = {}; // Track consecutive subject periods
 
       // Initialize availability tracking
-      students.forEach(s => { studentSchedules[s.id] = []; });
+      students.forEach(s => { 
+        studentSchedules[s.id] = []; 
+        studentConsecutiveSubjects[s.id] = {}; // { day: [{ period, subjectId, count }] }
+      });
       teachers.forEach(t => { teacherSchedules[t.id] = []; });
       rooms.forEach(r => { roomSchedules[r.id] = []; });
 
@@ -318,7 +322,29 @@ export default function Schedule() {
             // Check if all students are available (or no students assigned yet)
             const studentsFree = studentIds.length === 0 || studentIds.every(studentId => {
               const schedule = studentSchedules[studentId] || [];
-              return !schedule.some(s => s.day === day && s.period === period);
+              const isSlotFree = !schedule.some(s => s.day === day && s.period === period);
+
+              if (!isSlotFree) return false;
+
+              // Check consecutive subject limit (max 2 consecutive hours of same subject)
+              if (period > 1) {
+                const daySchedule = schedule.filter(s => s.day === day && s.period < period);
+                const sortedSchedule = daySchedule.sort((a, b) => b.period - a.period);
+
+                // Check if previous 2 periods were the same subject
+                if (sortedSchedule.length >= 2) {
+                  const prev1 = sortedSchedule.find(s => s.period === period - 1);
+                  const prev2 = sortedSchedule.find(s => s.period === period - 2);
+
+                  if (prev1 && prev2 && 
+                      prev1.subjectId === group.subject_id && 
+                      prev2.subjectId === group.subject_id) {
+                    return false; // Already 2 consecutive hours of this subject
+                  }
+                }
+              }
+
+              return true;
             });
 
             // Check if teacher is available (if assigned)
@@ -360,7 +386,11 @@ export default function Schedule() {
                 // Mark as busy
                 if (studentIds.length > 0) {
                   studentIds.forEach(studentId => {
-                    studentSchedules[studentId].push({ day, period });
+                    studentSchedules[studentId].push({ 
+                      day, 
+                      period, 
+                      subjectId: group.subject_id 
+                    });
                   });
                 }
                 if (teacherId && teacherSchedules[teacherId]) {
