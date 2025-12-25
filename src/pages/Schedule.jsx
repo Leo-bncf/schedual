@@ -259,10 +259,24 @@ export default function Schedule() {
         console.log(`\n=== Scheduling ${level} (${levelGroups.length} groups) ===`);
 
         for (const group of levelGroups) {
-        const periodsNeeded = Math.ceil(group.hours_per_week);
-        let periodsScheduled = 0;
-        let studentIds = group.student_ids || [];
-        const teacherId = group.teacher_id;
+          // Determine hours based on subject's HL/SL hours and group's level
+          const subject = subjects.find(s => s.id === group.subject_id);
+          let hoursPerWeek = group.hours_per_week;
+
+          if (subject && group.level) {
+            if (group.level === 'HL' && subject.hl_hours_per_week) {
+              hoursPerWeek = subject.hl_hours_per_week;
+            } else if (group.level === 'SL' && subject.sl_hours_per_week) {
+              hoursPerWeek = subject.sl_hours_per_week;
+            }
+          }
+
+          const periodsNeeded = Math.ceil(hoursPerWeek || group.hours_per_week || 4);
+          console.log(`Scheduling "${group.name}" (${group.level}): ${periodsNeeded} periods needed`);
+
+          let periodsScheduled = 0;
+          let studentIds = group.student_ids || [];
+          const teacherId = group.teacher_id;
 
         // If no students assigned, try to find matching students
         if (studentIds.length === 0 && group.subject_id && group.year_group) {
@@ -284,7 +298,6 @@ export default function Schedule() {
         }
 
         // Find suitable room
-        const subject = subjects.find(s => s.id === group.subject_id);
         let preferredRooms = rooms.filter(r => r.is_active);
         
         if (subject?.requires_special_room) {
