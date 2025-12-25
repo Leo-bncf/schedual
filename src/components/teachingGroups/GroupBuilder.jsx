@@ -23,6 +23,15 @@ export default function GroupBuilder({
   initialData,
   onSubmit 
 }) {
+  // Detect IB level from year_group
+  const getIBLevel = (yearGroup) => {
+    if (!yearGroup) return 'DP';
+    if (yearGroup.startsWith('DP')) return 'DP';
+    if (yearGroup.startsWith('MYP')) return 'MYP';
+    if (yearGroup.startsWith('PYP')) return 'PYP';
+    return 'DP';
+  };
+
   const [formData, setFormData] = useState(initialData || {
     name: '',
     subject_id: '',
@@ -40,6 +49,7 @@ export default function GroupBuilder({
 
   const [selectedStudents, setSelectedStudents] = useState(initialData?.student_ids || []);
   const selectedSubject = subjects.find(s => s.id === formData.subject_id);
+  const currentIBLevel = getIBLevel(formData.year_group);
 
   const handleSubjectChange = (subjectId) => {
     const subject = subjects.find(s => s.id === subjectId);
@@ -74,7 +84,11 @@ export default function GroupBuilder({
     onSubmit(formData);
   };
 
-  const filteredStudents = students.filter(s => s.year_group === formData.year_group);
+  // For MYP and PYP, show all students from that level
+  const filteredStudents = (currentIBLevel === 'MYP' || currentIBLevel === 'PYP')
+    ? students.filter(s => s.ib_programme === currentIBLevel)
+    : students.filter(s => s.year_group === formData.year_group);
+  
   const selectedTeacher = teachers.find(t => t.id === formData.teacher_id);
   
   // Filter teachers by qualification for selected subject
@@ -110,22 +124,42 @@ export default function GroupBuilder({
           </Select>
         </div>
 
-        <div className="space-y-2">
-          <Label htmlFor="level">Level *</Label>
-          <Select 
-            value={formData.level} 
-            onValueChange={handleLevelChange}
-            required
-          >
-            <SelectTrigger>
-              <SelectValue />
-            </SelectTrigger>
-            <SelectContent>
-              <SelectItem value="HL">Higher Level (HL)</SelectItem>
-              <SelectItem value="SL">Standard Level (SL)</SelectItem>
-            </SelectContent>
-          </Select>
-        </div>
+        {currentIBLevel === 'DP' && (
+          <div className="space-y-2">
+            <Label htmlFor="level">Level *</Label>
+            <Select 
+              value={formData.level} 
+              onValueChange={handleLevelChange}
+              required
+            >
+              <SelectTrigger>
+                <SelectValue />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="HL">Higher Level (HL)</SelectItem>
+                <SelectItem value="SL">Standard Level (SL)</SelectItem>
+              </SelectContent>
+            </Select>
+          </div>
+        )}
+        {(currentIBLevel === 'MYP' || currentIBLevel === 'PYP') && (
+          <div className="space-y-2">
+            <Label htmlFor="level">Level *</Label>
+            <Select 
+              value={formData.level} 
+              onValueChange={(value) => setFormData({ ...formData, level: value })}
+              required
+            >
+              <SelectTrigger>
+                <SelectValue />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="Standard">Standard</SelectItem>
+                <SelectItem value="Extended">Extended</SelectItem>
+              </SelectContent>
+            </Select>
+          </div>
+        )}
 
         <div className="space-y-2">
           <Label htmlFor="year_group">Year Group *</Label>
@@ -140,6 +174,17 @@ export default function GroupBuilder({
             <SelectContent>
               <SelectItem value="DP1">DP1 (First Year)</SelectItem>
               <SelectItem value="DP2">DP2 (Second Year)</SelectItem>
+              <SelectItem value="MYP1">MYP1</SelectItem>
+              <SelectItem value="MYP2">MYP2</SelectItem>
+              <SelectItem value="MYP3">MYP3</SelectItem>
+              <SelectItem value="MYP4">MYP4</SelectItem>
+              <SelectItem value="MYP5">MYP5</SelectItem>
+              <SelectItem value="PYP1">PYP1</SelectItem>
+              <SelectItem value="PYP2">PYP2</SelectItem>
+              <SelectItem value="PYP3">PYP3</SelectItem>
+              <SelectItem value="PYP4">PYP4</SelectItem>
+              <SelectItem value="PYP5">PYP5</SelectItem>
+              <SelectItem value="PYP6">PYP6</SelectItem>
             </SelectContent>
           </Select>
         </div>
@@ -265,12 +310,19 @@ export default function GroupBuilder({
           )}
         </div>
 
+        {(currentIBLevel === 'MYP' || currentIBLevel === 'PYP') && (
+          <div className="mb-2 p-2 rounded-lg bg-blue-50 border border-blue-200">
+            <p className="text-xs text-blue-700">
+              ℹ️ All {currentIBLevel} students are shown. They will be grouped together for this subject.
+            </p>
+          </div>
+        )}
         {filteredStudents.length === 0 ? (
           <Card className="border-dashed">
             <CardContent className="p-6 text-center">
               <Users className="w-10 h-10 text-slate-300 mx-auto mb-2" />
               <p className="text-sm text-slate-500">
-                No {formData.year_group} students available
+                No {currentIBLevel === 'DP' ? formData.year_group : currentIBLevel} students available
               </p>
             </CardContent>
           </Card>
