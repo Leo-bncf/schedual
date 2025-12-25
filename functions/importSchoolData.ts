@@ -38,16 +38,27 @@ Deno.serve(async (req) => {
     // Use LLM to extract structured data from the file
     console.log('Calling InvokeLLM...');
     const extractionResponse = await base44.asServiceRole.integrations.Core.InvokeLLM({
-      prompt: `Extract school data from this file and structure it as JSON.
-      
-Extract:
-- Subjects: name, code, ib_level (PYP/MYP/DP), ib_group (1-6 as string), ib_group_name
-- Rooms: name, capacity, room_type
-- Teachers: full_name, email
-- Students: full_name, email, ib_programme (PYP/MYP/DP), year_group
-- Teaching Groups: name, subject reference, level (HL/SL), year_group (DP1/DP2)
+      prompt: `Extract school data from this file and structure it as JSON. Be thorough and extract ALL relationships.
 
-Return all data you can find. Make reasonable assumptions for missing fields.`,
+    CRITICAL REQUIREMENTS:
+
+    1. SUBJECTS: Extract name, code, ib_level (PYP/MYP/DP), ib_group (1-6 as string), ib_group_name
+
+    2. TEACHERS: Extract full_name, email, AND which subjects they teach
+    - Look for subject assignments, teaching schedules, or course lists
+    - Add subject_names array with the names of subjects this teacher teaches
+    - Example: {"full_name": "John Doe", "email": "john@edu", "subject_names": ["Physics HL", "Physics SL"]}
+
+    3. STUDENTS: Extract full_name, email, ib_programme (PYP/MYP/DP), year_group (DP1/DP2/MYP3/PYP5)
+    - FOR DP STUDENTS: Extract their 6 subject choices with levels (HL or SL)
+    - Add subject_selections array with subject names and levels
+    - Example: {"full_name": "Jane Smith", "ib_programme": "DP", "year_group": "DP1", "subject_selections": [{"subject_name": "Physics", "level": "HL"}, {"subject_name": "Math", "level": "HL"}]}
+
+    4. ROOMS: name, capacity, room_type
+
+    5. TEACHING GROUPS: name, subject reference, level (HL/SL), year_group
+
+    Extract EVERYTHING you can find including all relationships between teachers-subjects and students-subjects.`,
       file_urls: [fileUrl],
       response_json_schema: {
         type: "object",
@@ -82,7 +93,12 @@ Return all data you can find. Make reasonable assumptions for missing fields.`,
               type: "object",
               properties: {
                 full_name: { type: "string" },
-                email: { type: "string" }
+                email: { type: "string" },
+                subject_names: { 
+                  type: "array",
+                  items: { type: "string" },
+                  description: "Names of subjects this teacher teaches"
+                }
               }
             }
           },
@@ -94,7 +110,18 @@ Return all data you can find. Make reasonable assumptions for missing fields.`,
                 full_name: { type: "string" },
                 email: { type: "string" },
                 ib_programme: { type: "string" },
-                year_group: { type: "string" }
+                year_group: { type: "string" },
+                subject_selections: {
+                  type: "array",
+                  items: {
+                    type: "object",
+                    properties: {
+                      subject_name: { type: "string" },
+                      level: { type: "string", enum: ["HL", "SL"] }
+                    }
+                  },
+                  description: "Student's subject choices with HL/SL levels"
+                }
               }
             }
           },
@@ -175,43 +202,82 @@ Return all data you can find. Make reasonable assumptions for missing fields.`,
       }
     }
 
-    // Create teachers using bulk create
+    // Create teachers using bulk create with subject assignments
     console.log('Creating teachers...');
     if (data.teachers && data.teachers.length > 0) {
       try {
-        const teachersToCreate = data.teachers.map(teacher => ({
-          school_id: user.school_id,
-          full_name: teacher.full_name,
-          email: teacher.email || `${teacher.full_name.toLowerCase().replace(/\s/g, '.')}@school.edu`,
-          is_active: true
-        }));
-        
+        const teachersToCreate = data.teachers.map(teacher => {
+          // Map subject names to subject IDs
+          const teacherSubjectIds = [];
+          if (teacher.subject_names && teacher.subject_names.length > 0) {
+            teacher.subject_names.forEach(subjectName => {
+              const matchedSubject = results.subjects.find(s => 
+                s.name.toLowerCase().includes(subjectName.toLowerCase()) ||
+                subjectName.toLowerCase().includes(s.name.toLowerCase())
+              );
+              if (matchedSubject) {
+                teacherSubjectIds.push(matchedSubject.id);
+              }
+            });
+          }
+
+          return {
+            school_id: user.school_id,
+            full_name: teacher.full_name,
+            email: teacher.email || `${teacher.full_name.toLowerCase().replace(/\s/g, '.')}@school.edu`,
+            subjects: teacherSubjectIds,
+            is_active: true
+          };
+        });
+
         const created = await base44.asServiceRole.entities.Teacher.bulkCreate(teachersToCreate);
         results.teachers = created;
         console.log('Created teachers:', created.length);
-        console.log('Sample teacher:', created[0]);
+        console.log('Sample teacher with subjects:', created[0]);
       } catch (err) {
         console.error('Error bulk creating teachers:', err);
         results.errors.push(`Teachers bulk create: ${err.message}`);
       }
     }
 
-    // Create students using bulk create
+    // Create students using bulk create with subject choices
     console.log('Creating students...');
     if (data.students && data.students.length > 0) {
       try {
-        const studentsToCreate = data.students.map(student => ({
-          school_id: user.school_id,
-          full_name: student.full_name,
-          email: student.email || `${student.full_name.toLowerCase().replace(/\s/g, '.')}@student.edu`,
-          ib_programme: student.ib_programme || 'DP',
-          year_group: student.year_group || 'DP1',
-          is_active: true
-        }));
-        
+        const studentsToCreate = data.students.map(student => {
+          // Map subject selections to subject_choices format
+          const subjectChoices = [];
+          if (student.subject_selections && student.subject_selections.length > 0) {
+            student.subject_selections.forEach(selection => {
+              const matchedSubject = results.subjects.find(s => 
+                s.name.toLowerCase().includes(selection.subject_name.toLowerCase()) ||
+                selection.subject_name.toLowerCase().includes(s.name.toLowerCase())
+              );
+              if (matchedSubject) {
+                subjectChoices.push({
+                  subject_id: matchedSubject.id,
+                  level: selection.level || 'SL',
+                  ib_group: matchedSubject.ib_group
+                });
+              }
+            });
+          }
+
+          return {
+            school_id: user.school_id,
+            full_name: student.full_name,
+            email: student.email || `${student.full_name.toLowerCase().replace(/\s/g, '.')}@student.edu`,
+            ib_programme: student.ib_programme || 'DP',
+            year_group: student.year_group || 'DP1',
+            subject_choices: subjectChoices,
+            is_active: true
+          };
+        });
+
         const created = await base44.asServiceRole.entities.Student.bulkCreate(studentsToCreate);
         results.students = created;
         console.log('Created students:', created.length);
+        console.log('Sample student with subjects:', created[0]);
       } catch (err) {
         console.error('Error bulk creating students:', err);
         results.errors.push(`Students bulk create: ${err.message}`);
