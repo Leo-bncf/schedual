@@ -66,14 +66,38 @@ export default function AIGroupGenerator({ onComplete }) {
                 year_group: 'PYP1', // Base year group
                 student_ids: [],
                 ib_group: subject.ib_group,
-                is_pyp_combined: true,
+                is_combined: true,
+                programme: 'PYP',
               };
             }
             
             groupMap[key].student_ids.push(student.id);
           });
-        } 
-        // For MYP/DP students - use subject choices
+        }
+        // For MYP students - group by IB level and subject (all MYP students of same subject together)
+        else if (student.ib_programme === 'MYP') {
+          subjects.forEach(subject => {
+            if (subject.ib_level !== 'MYP') return;
+            
+            const key = `${subject.id}_Standard_MYP_ALL`;
+            
+            if (!groupMap[key]) {
+              groupMap[key] = {
+                subject_id: subject.id,
+                subject_name: subject.name,
+                level: 'Standard',
+                year_group: 'MYP1', // Base year group
+                student_ids: [],
+                ib_group: subject.ib_group,
+                is_combined: true,
+                programme: 'MYP',
+              };
+            }
+            
+            groupMap[key].student_ids.push(student.id);
+          });
+        }
+        // For DP students - use subject choices
         else if (student.subject_choices) {
           student.subject_choices.forEach(choice => {
             const subject = subjects.find(s => s.id === choice.subject_id);
@@ -105,8 +129,8 @@ export default function AIGroupGenerator({ onComplete }) {
       Object.values(groupMap).forEach(group => {
         const studentCount = group.student_ids.length;
 
-        // For PYP combined groups - keep all students together in one large group
-        if (group.is_pyp_combined) {
+        // For PYP/MYP combined groups - keep all students together in one large group
+        if (group.is_combined) {
           proposedGroups.push({
             ...group,
             status: 'ready',
@@ -195,8 +219,8 @@ export default function AIGroupGenerator({ onComplete }) {
 
       return {
         school_id: schoolId,
-        name: group.is_pyp_combined 
-          ? `${group.subject_name} - All PYP`
+        name: group.is_combined
+          ? `${group.subject_name} - All ${group.programme}`
           : `${group.subject_name} ${group.level} - ${group.year_group}${group.group_suffix ? ` Group ${group.group_suffix}` : ''}`,
         subject_id: group.subject_id,
         level: group.level,
