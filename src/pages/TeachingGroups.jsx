@@ -29,6 +29,7 @@ export default function TeachingGroups() {
   const [isDialogOpen, setIsDialogOpen] = useState(false);
   const [editingGroup, setEditingGroup] = useState(null);
   const [searchQuery, setSearchQuery] = useState('');
+  const [ibLevelFilter, setIbLevelFilter] = useState('DP'); // DP, MYP, or PYP
   const [levelFilter, setLevelFilter] = useState('all');
   const [yearFilter, setYearFilter] = useState('all');
   const [showAIGenerator, setShowAIGenerator] = useState(false);
@@ -118,16 +119,20 @@ export default function TeachingGroups() {
 
   const filteredGroups = groups.filter(g => {
     const matchesSearch = g.name?.toLowerCase().includes(searchQuery.toLowerCase());
+    const matchesIbLevel = g.year_group?.startsWith(ibLevelFilter);
     const matchesLevel = levelFilter === 'all' || g.level === levelFilter;
     const matchesYear = yearFilter === 'all' || g.year_group === yearFilter;
-    return matchesSearch && matchesLevel && matchesYear;
+    return matchesSearch && matchesIbLevel && matchesLevel && matchesYear;
   });
 
   const getSubjectInfo = (subjectId) => subjects.find(s => s.id === subjectId);
   const getTeacherInfo = (teacherId) => teachers.find(t => t.id === teacherId);
 
+  // DP uses HL/SL, MYP/PYP use Standard/Extended or no level
   const hlGroups = filteredGroups.filter(g => g.level === 'HL');
   const slGroups = filteredGroups.filter(g => g.level === 'SL');
+  const standardGroups = filteredGroups.filter(g => g.level === 'Standard');
+  const extendedGroups = filteredGroups.filter(g => g.level === 'Extended');
 
   return (
     <div className="space-y-6">
@@ -166,20 +171,29 @@ export default function TeachingGroups() {
             onChange={(e) => setSearchQuery(e.target.value)}
           />
         </div>
-        <Tabs value={levelFilter} onValueChange={setLevelFilter}>
+        <Tabs value={ibLevelFilter} onValueChange={setIbLevelFilter}>
           <TabsList className="bg-slate-100">
-            <TabsTrigger value="all">All ({groups.length})</TabsTrigger>
-            <TabsTrigger value="HL">HL ({hlGroups.length})</TabsTrigger>
-            <TabsTrigger value="SL">SL ({slGroups.length})</TabsTrigger>
+            <TabsTrigger value="DP">DP</TabsTrigger>
+            <TabsTrigger value="MYP">MYP</TabsTrigger>
+            <TabsTrigger value="PYP">PYP</TabsTrigger>
           </TabsList>
         </Tabs>
-        <Tabs value={yearFilter} onValueChange={setYearFilter}>
-          <TabsList className="bg-slate-100">
-            <TabsTrigger value="all">All Years</TabsTrigger>
-            <TabsTrigger value="DP1">DP1</TabsTrigger>
-            <TabsTrigger value="DP2">DP2</TabsTrigger>
-          </TabsList>
-        </Tabs>
+        {ibLevelFilter === 'DP' && (
+          <Tabs value={levelFilter} onValueChange={setLevelFilter}>
+            <TabsList className="bg-slate-100">
+              <TabsTrigger value="all">All ({filteredGroups.length})</TabsTrigger>
+              <TabsTrigger value="HL">HL ({hlGroups.length})</TabsTrigger>
+              <TabsTrigger value="SL">SL ({slGroups.length})</TabsTrigger>
+            </TabsList>
+          </Tabs>
+        )}
+        {(ibLevelFilter === 'MYP' || ibLevelFilter === 'PYP') && (
+          <Tabs value={levelFilter} onValueChange={setLevelFilter}>
+            <TabsList className="bg-slate-100">
+              <TabsTrigger value="all">All ({filteredGroups.length})</TabsTrigger>
+            </TabsList>
+          </Tabs>
+        )}
       </div>
 
       {filteredGroups.length === 0 && !isLoading ? (
