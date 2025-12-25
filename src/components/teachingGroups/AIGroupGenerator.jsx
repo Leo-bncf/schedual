@@ -49,27 +49,52 @@ export default function AIGroupGenerator({ onComplete }) {
       const groupMap = {};
 
       students.forEach(student => {
-        if (!student.subject_choices || !student.is_active) return;
+        if (!student.is_active) return;
 
-        student.subject_choices.forEach(choice => {
-          const subject = subjects.find(s => s.id === choice.subject_id);
-          if (!subject) return;
+        // For PYP students - group by IB level and subject (all PYP students of same subject together)
+        if (student.ib_programme === 'PYP') {
+          subjects.forEach(subject => {
+            if (subject.ib_level !== 'PYP') return;
+            
+            const key = `${subject.id}_Standard_PYP_ALL`;
+            
+            if (!groupMap[key]) {
+              groupMap[key] = {
+                subject_id: subject.id,
+                subject_name: subject.name,
+                level: 'Standard',
+                year_group: 'PYP1', // Base year group
+                student_ids: [],
+                ib_group: subject.ib_group,
+                is_pyp_combined: true,
+              };
+            }
+            
+            groupMap[key].student_ids.push(student.id);
+          });
+        } 
+        // For MYP/DP students - use subject choices
+        else if (student.subject_choices) {
+          student.subject_choices.forEach(choice => {
+            const subject = subjects.find(s => s.id === choice.subject_id);
+            if (!subject) return;
 
-          const key = `${choice.subject_id}_${choice.level}_${student.year_group}`;
-          
-          if (!groupMap[key]) {
-            groupMap[key] = {
-              subject_id: choice.subject_id,
-              subject_name: subject.name,
-              level: choice.level,
-              year_group: student.year_group,
-              student_ids: [],
-              ib_group: choice.ib_group,
-            };
-          }
+            const key = `${choice.subject_id}_${choice.level}_${student.year_group}`;
+            
+            if (!groupMap[key]) {
+              groupMap[key] = {
+                subject_id: choice.subject_id,
+                subject_name: subject.name,
+                level: choice.level,
+                year_group: student.year_group,
+                student_ids: [],
+                ib_group: choice.ib_group,
+              };
+            }
 
-          groupMap[key].student_ids.push(student.id);
-        });
+            groupMap[key].student_ids.push(student.id);
+          });
+        }
       });
 
       // Convert to array and split large groups
@@ -80,7 +105,13 @@ export default function AIGroupGenerator({ onComplete }) {
       Object.values(groupMap).forEach(group => {
         const studentCount = group.student_ids.length;
 
-        if (studentCount < minGroupSize) {
+        // For PYP combined groups - keep all students together in one large group
+        if (group.is_pyp_combined) {
+          proposedGroups.push({
+            ...group,
+            status: 'ready',
+          });
+        } else if (studentCount < minGroupSize) {
           // Too small - flag for review
           proposedGroups.push({
             ...group,
@@ -94,7 +125,7 @@ export default function AIGroupGenerator({ onComplete }) {
             status: 'ready',
           });
         } else {
-          // Split into multiple groups
+          // Split into multiple groups (for DP/MYP only)
           const numGroups = Math.ceil(studentCount / maxGroupSize);
           const studentsPerGroup = Math.ceil(studentCount / numGroups);
 
@@ -164,7 +195,9 @@ export default function AIGroupGenerator({ onComplete }) {
 
       return {
         school_id: schoolId,
-        name: `${group.subject_name} ${group.level} - ${group.year_group}${group.group_suffix ? ` Group ${group.group_suffix}` : ''}`,
+        name: group.is_pyp_combined 
+          ? `${group.subject_name} - All PYP`
+          : `${group.subject_name} ${group.level} - ${group.year_group}${group.group_suffix ? ` Group ${group.group_suffix}` : ''}`,
         subject_id: group.subject_id,
         level: group.level,
         year_group: group.year_group,
