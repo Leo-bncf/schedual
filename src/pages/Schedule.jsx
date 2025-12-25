@@ -312,12 +312,23 @@ export default function Schedule() {
           if (preferred) preferredRooms = [preferred, ...preferredRooms.filter(r => r.id !== preferred.id)];
         }
 
-        // Try to schedule periods for this group
+        // Calculate ideal distribution across the week
+        const daysToUse = Math.min(periodsNeeded, 5); // Spread across max 5 days
+        const periodsPerDay = Math.ceil(periodsNeeded / daysToUse);
+
+        // Track periods scheduled per day for this group
+        const dayPeriodCount = {};
+        days.forEach(d => { dayPeriodCount[d] = 0; });
+
+        // Try to schedule periods for this group - distribute across week
         for (const day of days) {
           if (periodsScheduled >= periodsNeeded) break;
 
           for (const period of periods) {
             if (periodsScheduled >= periodsNeeded) break;
+
+            // Skip if this day already has enough periods for this subject
+            if (dayPeriodCount[day] >= periodsPerDay) continue;
 
             // Check if all students are available (or no students assigned yet)
             const studentsFree = studentIds.length === 0 || studentIds.every(studentId => {
@@ -399,10 +410,99 @@ export default function Schedule() {
                 roomSchedules[assignedRoom.id].push({ day, period });
 
                 periodsScheduled++;
-              }
-            }
-          }
-        }
+                dayPeriodCount[day]++;
+                }
+                }
+                }
+                }
+
+                // Second pass: fill remaining periods if needed (more flexible)
+                if (periodsScheduled < periodsNeeded) {
+                for (const day of days) {
+                if (periodsScheduled >= periodsNeeded) break;
+
+                for (const period of periods) {
+                if (periodsScheduled >= periodsNeeded) break;
+
+                const studentsFree = studentIds.length === 0 || studentIds.every(studentId => {
+                const schedule = studentSchedules[studentId] || [];
+                const isSlotFree = !schedule.some(s => s.day === day && s.period === period);
+
+                if (!isSlotFree) return false;
+
+                if (period > 1) {
+                  const daySchedule = schedule.filter(s => s.day === day && s.period < period);
+                  const sortedSchedule = daySchedule.sort((a, b) => b.period - a.period);
+
+                  if (sortedSchedule.length >= 2) {
+                    const prev1 = sortedSchedule.find(s => s.period === period - 1);
+                    const prev2 = sortedSchedule.find(s => s.period === period - 2);
+
+                    if (prev1 && prev2 && 
+                        prev1.subjectId === group.subject_id && 
+                        prev2.subjectId === group.subject_id) {
+                      return false;
+                    }
+                  }
+                }
+
+                return true;
+                });
+
+                let teacherFree = true;
+                let teacherAvailable = true;
+
+                if (teacherId) {
+                teacherFree = !teacherSchedules[teacherId]?.some(s => s.day === day && s.period === period);
+                const teacher = teachers.find(t => t.id === teacherId);
+                teacherAvailable = !teacher?.unavailable_slots?.some(u => u.day === day && u.period === period);
+                }
+
+                if (studentsFree && teacherFree && teacherAvailable) {
+                let assignedRoom = null;
+                for (const room of preferredRooms) {
+                  const roomFree = !roomSchedules[room.id]?.some(s => s.day === day && s.period === period);
+                  const hasCapacity = !room.capacity || (studentIds.length <= room.capacity);
+
+                  if (roomFree && hasCapacity) {
+                    assignedRoom = room;
+                    break;
+                  }
+                }
+
+                if (assignedRoom) {
+                  const slot = {
+                    school_id: schoolId,
+                    schedule_version: selectedVersion.id,
+                    teaching_group_id: group.id,
+                    room_id: assignedRoom.id,
+                    day,
+                    period,
+                    status: 'scheduled'
+                  };
+
+                  newSlots.push(slot);
+
+                  if (studentIds.length > 0) {
+                    studentIds.forEach(studentId => {
+                      studentSchedules[studentId].push({ 
+                        day, 
+                        period, 
+                        subjectId: group.subject_id 
+                      });
+                    });
+                  }
+                  if (teacherId && teacherSchedules[teacherId]) {
+                    teacherSchedules[teacherId].push({ day, period });
+                  }
+                  roomSchedules[assignedRoom.id].push({ day, period });
+
+                  periodsScheduled++;
+                }
+                }
+                }
+                }
+                }
 
           // Debug: Log if group wasn't fully scheduled
           if (periodsScheduled < periodsNeeded) {
