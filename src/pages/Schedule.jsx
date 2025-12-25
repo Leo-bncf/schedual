@@ -232,11 +232,46 @@ export default function Schedule() {
         console.log('Sample group:', sortedGroups[0]);
       }
 
+      // Log groups by year to see distribution
+      const groupsByYear = {};
+      sortedGroups.forEach(g => {
+        if (!groupsByYear[g.year_group]) groupsByYear[g.year_group] = 0;
+        groupsByYear[g.year_group]++;
+      });
+      console.log('Groups by year:', groupsByYear);
+
+      // Log students by programme
+      const studentsByProgramme = {};
+      students.forEach(s => {
+        if (!studentsByProgramme[s.ib_programme]) studentsByProgramme[s.ib_programme] = 0;
+        studentsByProgramme[s.ib_programme]++;
+      });
+      console.log('Students by programme:', studentsByProgramme);
+
       for (const group of sortedGroups) {
         const periodsNeeded = Math.ceil(group.hours_per_week);
         let periodsScheduled = 0;
-        const studentIds = group.student_ids || [];
+        let studentIds = group.student_ids || [];
         const teacherId = group.teacher_id;
+
+        // If no students assigned, try to find matching students
+        if (studentIds.length === 0 && group.subject_id && group.year_group) {
+          const matchingStudents = students.filter(s => {
+            // Match by year_group
+            if (s.year_group !== group.year_group) return false;
+
+            // For DP students, check subject choices
+            if (s.ib_programme === 'DP' && s.subject_choices) {
+              return s.subject_choices.some(choice => choice.subject_id === group.subject_id);
+            }
+
+            // For MYP/PYP, just match by year group
+            return true;
+          });
+
+          studentIds = matchingStudents.map(s => s.id);
+          console.log(`Auto-assigned ${studentIds.length} students to "${group.name}"`);
+        }
 
         // Find suitable room
         const subject = subjects.find(s => s.id === group.subject_id);
@@ -322,13 +357,27 @@ export default function Schedule() {
               console.log(`⚠️ Group "${group.name}" only scheduled ${periodsScheduled}/${periodsNeeded} periods`);
               }
 
-      // Create all slots
+      // Create all slots in batches to avoid rate limits
       console.log('Total slots to create:', newSlots.length);
       console.log('Sample slot:', newSlots[0]);
-      
+
       if (newSlots.length > 0) {
-        const created = await base44.entities.ScheduleSlot.bulkCreate(newSlots);
-        console.log('Created slots:', created.length);
+        const batchSize = 20;
+        let totalCreated = 0;
+
+        for (let i = 0; i < newSlots.length; i += batchSize) {
+          const batch = newSlots.slice(i, i + batchSize);
+          console.log(`Creating batch ${Math.floor(i/batchSize) + 1}/${Math.ceil(newSlots.length/batchSize)}...`);
+          const created = await base44.entities.ScheduleSlot.bulkCreate(batch);
+          totalCreated += created.length;
+
+          // Delay between batches
+          if (i + batchSize < newSlots.length) {
+            await new Promise(resolve => setTimeout(resolve, 1000));
+          }
+        }
+
+        console.log('Created slots:', totalCreated);
       } else {
         console.warn('No slots were generated!');
       }
