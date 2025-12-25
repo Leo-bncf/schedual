@@ -156,7 +156,7 @@ export default function Subjects() {
 
   const groupedSubjects = IB_GROUPS.map(group => ({
     ...group,
-    subjects: filteredSubjects.filter(s => s.ib_group === group.id)
+    subjects: filteredSubjects.filter(s => String(s.ib_group) === String(group.id))
   }));
 
   const coreSubjects = filteredSubjects.filter(s => s.is_core);
