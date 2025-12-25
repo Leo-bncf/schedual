@@ -214,8 +214,8 @@ export default function Schedule() {
         .filter(g => {
           // Only filter out explicitly inactive groups
           if (g.is_active === false) return false;
-          // Must have a teacher
-          if (!g.teacher_id) return false;
+          // Must have hours per week to schedule
+          if (!g.hours_per_week || g.hours_per_week <= 0) return false;
           return true;
         })
         .sort((a, b) => (a.student_ids?.length || 0) - (b.student_ids?.length || 0));
