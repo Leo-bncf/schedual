@@ -175,16 +175,16 @@ export default function Schedule() {
       console.log('Existing slots to delete:', slotsToDelete.length);
       
       if (slotsToDelete.length > 0) {
-        // Delete in batches of 10 with delays to avoid rate limits
-        const batchSize = 10;
+        // Delete in small batches with delays to avoid rate limits
+        const batchSize = 5;
         for (let i = 0; i < slotsToDelete.length; i += batchSize) {
           const batch = slotsToDelete.slice(i, i + batchSize);
           await Promise.all(batch.map(slot => base44.entities.ScheduleSlot.delete(slot.id)));
-          // Small delay between batches
-          if (i + batchSize < slotsToDelete.length) {
-            await new Promise(resolve => setTimeout(resolve, 500));
-          }
+          // Delay between batches to avoid rate limit
+          await new Promise(resolve => setTimeout(resolve, 1000));
         }
+        console.log('All slots deleted, waiting before creating new ones...');
+        await new Promise(resolve => setTimeout(resolve, 2000));
       }
 
       // Comprehensive scheduling algorithm for all students, teachers, and rooms
@@ -257,8 +257,8 @@ export default function Schedule() {
           for (const period of periods) {
             if (periodsScheduled >= periodsNeeded) break;
 
-            // Check if all students are available
-            const studentsFree = studentIds.every(studentId => {
+            // Check if all students are available (or no students assigned yet)
+            const studentsFree = studentIds.length === 0 || studentIds.every(studentId => {
               const schedule = studentSchedules[studentId] || [];
               return !schedule.some(s => s.day === day && s.period === period);
             });
@@ -266,7 +266,7 @@ export default function Schedule() {
             // Check if teacher is available (if assigned)
             let teacherFree = true;
             let teacherAvailable = true;
-            
+
             if (teacherId) {
               teacherFree = !teacherSchedules[teacherId]?.some(s => s.day === day && s.period === period);
               const teacher = teachers.find(t => t.id === teacherId);
@@ -300,9 +300,11 @@ export default function Schedule() {
                 newSlots.push(slot);
 
                 // Mark as busy
-                studentIds.forEach(studentId => {
-                  studentSchedules[studentId].push({ day, period });
-                });
+                if (studentIds.length > 0) {
+                  studentIds.forEach(studentId => {
+                    studentSchedules[studentId].push({ day, period });
+                  });
+                }
                 if (teacherId && teacherSchedules[teacherId]) {
                   teacherSchedules[teacherId].push({ day, period });
                 }
@@ -310,10 +312,15 @@ export default function Schedule() {
 
                 periodsScheduled++;
               }
-            }
-          }
-        }
-      }
+              }
+              }
+              }
+              }
+
+              // Debug: Log if group wasn't fully scheduled
+              if (periodsScheduled < periodsNeeded) {
+              console.log(`⚠️ Group "${group.name}" only scheduled ${periodsScheduled}/${periodsNeeded} periods`);
+              }
 
       // Create all slots
       console.log('Total slots to create:', newSlots.length);
