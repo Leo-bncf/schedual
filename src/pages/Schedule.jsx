@@ -162,6 +162,7 @@ export default function Schedule() {
     try {
       // Delete existing slots for this version using bulk delete
       const existingSlots = await base44.entities.ScheduleSlot.filter({ 
+        school_id: schoolId,
         schedule_version: selectedVersion.id 
       });
       
