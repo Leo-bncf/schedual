@@ -160,18 +160,23 @@ export default function Schedule() {
     setIsGenerating(true);
     
     try {
-      // Delete existing slots for this version using bulk delete
-      const existingSlots = await base44.entities.ScheduleSlot.filter({ 
-        school_id: schoolId,
-        schedule_version: selectedVersion.id 
-      });
+      console.log('=== SCHEDULE GENERATION START ===');
+      console.log('School ID:', schoolId);
+      console.log('Selected Version:', selectedVersion);
+      console.log('Teaching Groups:', teachingGroups.length);
+      console.log('Teachers:', teachers.length);
+      console.log('Students:', students.length);
+      console.log('Rooms:', rooms.length);
       
-      if (existingSlots.length > 0) {
-        // Delete in batches to avoid too many concurrent requests
-        const batchSize = 50;
-        for (let i = 0; i < existingSlots.length; i += batchSize) {
-          const batch = existingSlots.slice(i, i + batchSize);
-          await Promise.all(batch.map(slot => base44.entities.ScheduleSlot.delete(slot.id)));
+      // Delete existing slots for this version
+      const existingSlots = await base44.entities.ScheduleSlot.list();
+      const slotsToDelete = existingSlots.filter(s => s.schedule_version === selectedVersion.id);
+      
+      console.log('Existing slots to delete:', slotsToDelete.length);
+      
+      if (slotsToDelete.length > 0) {
+        for (const slot of slotsToDelete) {
+          await base44.entities.ScheduleSlot.delete(slot.id);
         }
       }
 
@@ -191,12 +196,12 @@ export default function Schedule() {
       rooms.forEach(r => { roomSchedules[r.id] = []; });
 
       // Sort groups by priority (fewer students = harder to schedule = higher priority)
-      // Include ALL teaching groups across ALL IB levels (PYP, MYP, DP)
       const sortedGroups = [...teachingGroups]
-        .filter(g => g.is_active && g.hours_per_week && g.teacher_id && g.student_ids?.length > 0)
+        .filter(g => g.is_active !== false && g.hours_per_week && g.teacher_id && g.student_ids?.length > 0)
         .sort((a, b) => (a.student_ids?.length || 0) - (b.student_ids?.length || 0));
 
-      console.log(`Scheduling ${sortedGroups.length} teaching groups across all IB levels...`);
+      console.log(`Filtered teaching groups: ${sortedGroups.length}`);
+      console.log('Sample group:', sortedGroups[0]);
 
       for (const group of sortedGroups) {
         const periodsNeeded = Math.ceil(group.hours_per_week);
@@ -277,8 +282,14 @@ export default function Schedule() {
       }
 
       // Create all slots
+      console.log('Total slots to create:', newSlots.length);
+      console.log('Sample slot:', newSlots[0]);
+      
       if (newSlots.length > 0) {
-        await base44.entities.ScheduleSlot.bulkCreate(newSlots);
+        const created = await base44.entities.ScheduleSlot.bulkCreate(newSlots);
+        console.log('Created slots:', created.length);
+      } else {
+        console.warn('No slots were generated!');
       }
 
       // Calculate actual stats
@@ -306,8 +317,13 @@ export default function Schedule() {
 
       // Refresh slots
       queryClient.invalidateQueries({ queryKey: ['scheduleSlots'] });
+      console.log('=== SCHEDULE GENERATION COMPLETE ===');
     } catch (error) {
-      console.error('Generation error:', error);
+      console.error('=== GENERATION ERROR ===');
+      console.error('Error:', error);
+      console.error('Error message:', error.message);
+      console.error('Error stack:', error.stack);
+      alert('Schedule generation failed. Check browser console for details.');
     }
     
     setIsGenerating(false);
