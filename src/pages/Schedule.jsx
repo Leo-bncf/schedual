@@ -195,13 +195,35 @@ export default function Schedule() {
       teachers.forEach(t => { teacherSchedules[t.id] = []; });
       rooms.forEach(r => { roomSchedules[r.id] = []; });
 
-      // Sort groups by priority (fewer students = harder to schedule = higher priority)
+      // Debug: Check why groups are being filtered out
+      console.log('All teaching groups:', teachingGroups.length);
+      teachingGroups.forEach((g, i) => {
+        if (i < 3) { // Log first 3 groups
+          console.log(`Group ${i}:`, {
+            name: g.name,
+            is_active: g.is_active,
+            hours_per_week: g.hours_per_week,
+            teacher_id: g.teacher_id,
+            student_ids_count: g.student_ids?.length || 0
+          });
+        }
+      });
+
+      // Sort groups by priority - RELAXED FILTERS
       const sortedGroups = [...teachingGroups]
-        .filter(g => g.is_active !== false && g.hours_per_week && g.teacher_id && g.student_ids?.length > 0)
+        .filter(g => {
+          // Only filter out explicitly inactive groups
+          if (g.is_active === false) return false;
+          // Must have a teacher
+          if (!g.teacher_id) return false;
+          return true;
+        })
         .sort((a, b) => (a.student_ids?.length || 0) - (b.student_ids?.length || 0));
 
       console.log(`Filtered teaching groups: ${sortedGroups.length}`);
-      console.log('Sample group:', sortedGroups[0]);
+      if (sortedGroups.length > 0) {
+        console.log('Sample group:', sortedGroups[0]);
+      }
 
       for (const group of sortedGroups) {
         const periodsNeeded = Math.ceil(group.hours_per_week);
