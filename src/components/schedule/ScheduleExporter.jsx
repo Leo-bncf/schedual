@@ -17,22 +17,38 @@ export default function ScheduleExporter({ elementId, filename, label = "Export 
       }
 
       const canvas = await html2canvas(element, {
-        scale: 2,
+        scale: 3,
         logging: false,
         useCORS: true,
-        backgroundColor: '#ffffff'
+        backgroundColor: '#ffffff',
+        removeContainer: true,
+        imageTimeout: 0,
       });
 
-      const imgData = canvas.toDataURL('image/png');
+      const imgData = canvas.toDataURL('image/png', 1.0);
       const pdf = new jsPDF({
         orientation: canvas.width > canvas.height ? 'landscape' : 'portrait',
         unit: 'mm',
       });
 
-      const imgWidth = pdf.internal.pageSize.getWidth();
-      const imgHeight = (canvas.height * imgWidth) / canvas.width;
+      const pdfWidth = pdf.internal.pageSize.getWidth();
+      const pdfHeight = pdf.internal.pageSize.getHeight();
+      const imgWidth = canvas.width;
+      const imgHeight = canvas.height;
+      
+      // Calculate scaling with margins
+      const margin = 10;
+      const maxWidth = pdfWidth - (margin * 2);
+      const maxHeight = pdfHeight - (margin * 2);
+      
+      const scale = Math.min(maxWidth / (imgWidth * 0.264583), maxHeight / (imgHeight * 0.264583));
+      const scaledWidth = (imgWidth * 0.264583) * scale;
+      const scaledHeight = (imgHeight * 0.264583) * scale;
+      
+      const x = (pdfWidth - scaledWidth) / 2;
+      const y = (pdfHeight - scaledHeight) / 2;
 
-      pdf.addImage(imgData, 'PNG', 0, 0, imgWidth, imgHeight);
+      pdf.addImage(imgData, 'PNG', x, y, scaledWidth, scaledHeight, undefined, 'FAST');
       pdf.save(`${filename}.pdf`);
     } catch (error) {
       console.error('Export failed:', error);
