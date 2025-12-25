@@ -318,17 +318,27 @@ export default function Schedule() {
 
         // Track periods scheduled per day for this group
         const dayPeriodCount = {};
+        const usedDayPeriods = new Set(); // Track day-period combos to avoid repetition
         days.forEach(d => { dayPeriodCount[d] = 0; });
 
-        // Try to schedule periods for this group - distribute across week
+        // Randomize period order to create variety across days
+        const shuffledPeriods = [...periods].sort(() => Math.random() - 0.5);
+
+        // Try to schedule periods for this group - distribute across week with variation
         for (const day of days) {
           if (periodsScheduled >= periodsNeeded) break;
 
-          for (const period of periods) {
+          for (const period of shuffledPeriods) {
             if (periodsScheduled >= periodsNeeded) break;
 
             // Skip if this day already has enough periods for this subject
             if (dayPeriodCount[day] >= periodsPerDay) continue;
+
+            // Try to avoid same period across consecutive days for variety
+            const prevDay = days[days.indexOf(day) - 1];
+            if (prevDay && usedDayPeriods.has(`${prevDay}-${period}`)) {
+              continue; // Skip this period to create variation
+            }
 
             // Check if all students are available (or no students assigned yet)
             const studentsFree = studentIds.length === 0 || studentIds.every(studentId => {
@@ -411,6 +421,7 @@ export default function Schedule() {
 
                 periodsScheduled++;
                 dayPeriodCount[day]++;
+                usedDayPeriods.add(`${day}-${period}`);
                 }
                 }
                 }
