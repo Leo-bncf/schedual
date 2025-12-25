@@ -52,6 +52,7 @@ export default function Schedule() {
   const [isGenerating, setIsGenerating] = useState(false);
   const [selectedStudentId, setSelectedStudentId] = useState(null);
   const [selectedTeacherId, setSelectedTeacherId] = useState(null);
+  const [selectedLevel, setSelectedLevel] = useState('DP'); // DP, MYP, or PYP
   const [formData, setFormData] = useState({
     name: '',
     academic_year: '2024-2025',
@@ -216,39 +217,48 @@ export default function Schedule() {
         }
       });
 
-      // Sort groups by priority - RELAXED FILTERS
-      const sortedGroups = [...teachingGroups]
-        .filter(g => {
-          // Only filter out explicitly inactive groups
-          if (g.is_active === false) return false;
-          // Must have hours per week to schedule
-          if (!g.hours_per_week || g.hours_per_week <= 0) return false;
-          return true;
-        })
-        .sort((a, b) => (a.student_ids?.length || 0) - (b.student_ids?.length || 0));
+      // Helper to determine IB level from year_group
+      const getIBLevel = (year_group) => {
+        if (!year_group) return null;
+        if (year_group.startsWith('DP')) return 'DP';
+        if (year_group.startsWith('MYP')) return 'MYP';
+        if (year_group.startsWith('PYP')) return 'PYP';
+        return null;
+      };
 
-      console.log(`Filtered teaching groups: ${sortedGroups.length}`);
-      if (sortedGroups.length > 0) {
-        console.log('Sample group:', sortedGroups[0]);
-      }
+      // Separate groups by IB level
+      const groupsByLevel = {
+        DP: [],
+        MYP: [],
+        PYP: []
+      };
 
-      // Log groups by year to see distribution
-      const groupsByYear = {};
-      sortedGroups.forEach(g => {
-        if (!groupsByYear[g.year_group]) groupsByYear[g.year_group] = 0;
-        groupsByYear[g.year_group]++;
+      teachingGroups.forEach(g => {
+        if (g.is_active === false) return;
+        if (!g.hours_per_week || g.hours_per_week <= 0) return;
+        
+        const level = getIBLevel(g.year_group);
+        if (level) {
+          groupsByLevel[level].push(g);
+        }
       });
-      console.log('Groups by year:', groupsByYear);
 
-      // Log students by programme
-      const studentsByProgramme = {};
-      students.forEach(s => {
-        if (!studentsByProgramme[s.ib_programme]) studentsByProgramme[s.ib_programme] = 0;
-        studentsByProgramme[s.ib_programme]++;
+      console.log('Groups by IB Level:', {
+        DP: groupsByLevel.DP.length,
+        MYP: groupsByLevel.MYP.length,
+        PYP: groupsByLevel.PYP.length
       });
-      console.log('Students by programme:', studentsByProgramme);
 
-      for (const group of sortedGroups) {
+      // Schedule each IB level separately but track teachers globally
+      const scheduleLevels = ['DP', 'MYP', 'PYP'];
+      
+      for (const level of scheduleLevels) {
+        const levelGroups = groupsByLevel[level]
+          .sort((a, b) => (a.student_ids?.length || 0) - (b.student_ids?.length || 0));
+        
+        console.log(`\n=== Scheduling ${level} (${levelGroups.length} groups) ===`);
+
+        for (const group of levelGroups) {
         const periodsNeeded = Math.ceil(group.hours_per_week);
         let periodsScheduled = 0;
         let studentIds = group.student_ids || [];
@@ -351,9 +361,10 @@ export default function Schedule() {
           }
         }
 
-        // Debug: Log if group wasn't fully scheduled
-        if (periodsScheduled < periodsNeeded) {
-          console.log(`⚠️ Group "${group.name}" only scheduled ${periodsScheduled}/${periodsNeeded} periods`);
+          // Debug: Log if group wasn't fully scheduled
+          if (periodsScheduled < periodsNeeded) {
+            console.log(`⚠️ Group "${group.name}" only scheduled ${periodsScheduled}/${periodsNeeded} periods`);
+          }
         }
       }
 
@@ -396,21 +407,23 @@ export default function Schedule() {
         }
       });
 
-      // Count all unique teachers from all groups (whether scheduled or not)
+      // Count all unique teachers from all groups
       const allTeachersInGroups = new Set();
-      sortedGroups.forEach(g => {
+      Object.values(groupsByLevel).flat().forEach(g => {
         if (g.teacher_id) allTeachersInGroups.add(g.teacher_id);
       });
+
+      const totalGroups = Object.values(groupsByLevel).flat().length;
 
       // Update version with stats
       await updateVersionMutation.mutateAsync({
         id: selectedVersion.id,
         data: { 
           generated_at: new Date().toISOString(),
-          score: Math.floor((newSlots.length / (sortedGroups.length * 6)) * 100),
+          score: Math.floor((newSlots.length / (totalGroups * 6)) * 100),
           conflicts_count: 0,
-          warnings_count: sortedGroups.length - scheduledGroups.size,
-          notes: `Scheduled ${scheduledStudents.size}/${students.length} students, ${scheduledGroups.size}/${sortedGroups.length} groups (${allTeachersInGroups.size} teachers assigned) across ${newSlots.length} periods. ${sortedGroups.length - scheduledGroups.size} groups could not be scheduled.`
+          warnings_count: totalGroups - scheduledGroups.size,
+          notes: `DP: ${groupsByLevel.DP.length} groups, MYP: ${groupsByLevel.MYP.length} groups, PYP: ${groupsByLevel.PYP.length} groups | Scheduled ${scheduledStudents.size}/${students.length} students, ${scheduledGroups.size}/${totalGroups} groups (${allTeachersInGroups.size} teachers) across ${newSlots.length} periods.`
         }
       });
 
@@ -602,6 +615,32 @@ export default function Schedule() {
                     <TabsTrigger value="teacher">Teacher View</TabsTrigger>
                     <TabsTrigger value="list">List View</TabsTrigger>
                   </TabsList>
+                  <div className="flex items-center gap-2">
+                    <span className="text-sm text-slate-600">IB Level:</span>
+                    <TabsList className="bg-slate-100">
+                      <TabsTrigger 
+                        value={selectedLevel} 
+                        onClick={() => setSelectedLevel('DP')}
+                        className={selectedLevel === 'DP' ? 'bg-white' : ''}
+                      >
+                        DP
+                      </TabsTrigger>
+                      <TabsTrigger 
+                        value={selectedLevel}
+                        onClick={() => setSelectedLevel('MYP')}
+                        className={selectedLevel === 'MYP' ? 'bg-white' : ''}
+                      >
+                        MYP
+                      </TabsTrigger>
+                      <TabsTrigger 
+                        value={selectedLevel}
+                        onClick={() => setSelectedLevel('PYP')}
+                        className={selectedLevel === 'PYP' ? 'bg-white' : ''}
+                      >
+                        PYP
+                      </TabsTrigger>
+                    </TabsList>
+                  </div>
                 </div>
                 
                 <TabsContent value="grid">
@@ -615,8 +654,12 @@ export default function Schedule() {
                     </div>
                     <div className="grid lg:grid-cols-[1fr_320px] gap-4" id="master-schedule-grid">
                       <TimetableGrid 
-                        slots={scheduleSlots}
-                        groups={teachingGroups}
+                        slots={scheduleSlots.filter(slot => {
+                          const group = teachingGroups.find(g => g.id === slot.teaching_group_id);
+                          if (!group?.year_group) return false;
+                          return group.year_group.startsWith(selectedLevel);
+                        })}
+                        groups={teachingGroups.filter(g => g.year_group?.startsWith(selectedLevel))}
                         rooms={rooms}
                         subjects={subjects}
                         teachers={teachers}
@@ -626,8 +669,11 @@ export default function Schedule() {
                         exportId="master-timetable"
                       />
                       <HoursSummary 
-                        slots={scheduleSlots}
-                        groups={teachingGroups}
+                        slots={scheduleSlots.filter(slot => {
+                          const group = teachingGroups.find(g => g.id === slot.teaching_group_id);
+                          return group?.year_group?.startsWith(selectedLevel);
+                        })}
+                        groups={teachingGroups.filter(g => g.year_group?.startsWith(selectedLevel))}
                         subjects={subjects}
                       />
                     </div>
