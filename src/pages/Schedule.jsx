@@ -329,12 +329,21 @@ export default function Schedule() {
       // Calculate actual stats
       const scheduledStudents = new Set();
       const scheduledTeachers = new Set();
+      const scheduledGroups = new Set();
+
       newSlots.forEach(slot => {
         const group = teachingGroups.find(g => g.id === slot.teaching_group_id);
         if (group) {
+          scheduledGroups.add(group.id);
           group.student_ids?.forEach(sid => scheduledStudents.add(sid));
           if (group.teacher_id) scheduledTeachers.add(group.teacher_id);
         }
+      });
+
+      // Count all unique teachers from all groups (whether scheduled or not)
+      const allTeachersInGroups = new Set();
+      sortedGroups.forEach(g => {
+        if (g.teacher_id) allTeachersInGroups.add(g.teacher_id);
       });
 
       // Update version with stats
@@ -344,8 +353,8 @@ export default function Schedule() {
           generated_at: new Date().toISOString(),
           score: Math.floor((newSlots.length / (sortedGroups.length * 6)) * 100),
           conflicts_count: 0,
-          warnings_count: sortedGroups.length - new Set(newSlots.map(s => s.teaching_group_id)).size,
-          notes: `Scheduled ${scheduledStudents.size} students and ${scheduledTeachers.size} teachers across ${newSlots.length} periods`
+          warnings_count: sortedGroups.length - scheduledGroups.size,
+          notes: `Scheduled ${scheduledStudents.size}/${students.length} students, ${scheduledGroups.size}/${sortedGroups.length} groups (${allTeachersInGroups.size} teachers assigned) across ${newSlots.length} periods. ${sortedGroups.length - scheduledGroups.size} groups could not be scheduled.`
         }
       });
 
