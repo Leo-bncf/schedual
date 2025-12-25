@@ -160,12 +160,18 @@ export default function Schedule() {
     setIsGenerating(true);
     
     try {
-      // Delete existing slots for this version
+      // Delete existing slots for this version using bulk delete
       const existingSlots = await base44.entities.ScheduleSlot.filter({ 
         schedule_version: selectedVersion.id 
       });
-      for (const slot of existingSlots) {
-        await base44.entities.ScheduleSlot.delete(slot.id);
+      
+      if (existingSlots.length > 0) {
+        // Delete in batches to avoid too many concurrent requests
+        const batchSize = 50;
+        for (let i = 0; i < existingSlots.length; i += batchSize) {
+          const batch = existingSlots.slice(i, i + batchSize);
+          await Promise.all(batch.map(slot => base44.entities.ScheduleSlot.delete(slot.id)));
+        }
       }
 
       // Comprehensive scheduling algorithm for all students, teachers, and rooms
