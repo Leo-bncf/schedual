@@ -373,18 +373,37 @@ export default function Schedule() {
       console.log('Sample slot:', newSlots[0]);
 
       if (newSlots.length > 0) {
-        const batchSize = 20;
+        const batchSize = 10; // Reduced batch size
         let totalCreated = 0;
 
         for (let i = 0; i < newSlots.length; i += batchSize) {
           const batch = newSlots.slice(i, i + batchSize);
-          console.log(`Creating batch ${Math.floor(i/batchSize) + 1}/${Math.ceil(newSlots.length/batchSize)}...`);
-          const created = await base44.entities.ScheduleSlot.bulkCreate(batch);
-          totalCreated += created.length;
+          console.log(`Creating batch ${Math.floor(i/batchSize) + 1}/${Math.ceil(newSlots.length/batchSize)} (${batch.length} slots)...`);
+          
+          try {
+            const created = await base44.entities.ScheduleSlot.bulkCreate(batch);
+            totalCreated += created.length;
+            console.log(`✓ Batch created: ${created.length} slots`);
+          } catch (batchError) {
+            console.error(`✗ Batch failed:`, batchError.message);
+            // Wait longer before retry
+            await new Promise(resolve => setTimeout(resolve, 3000));
+            
+            // Retry with smaller sub-batches
+            for (const slot of batch) {
+              try {
+                await base44.entities.ScheduleSlot.create(slot);
+                totalCreated++;
+                await new Promise(resolve => setTimeout(resolve, 500));
+              } catch (slotError) {
+                console.error(`Failed to create slot:`, slotError.message);
+              }
+            }
+          }
 
-          // Delay between batches
+          // Longer delay between batches
           if (i + batchSize < newSlots.length) {
-            await new Promise(resolve => setTimeout(resolve, 1000));
+            await new Promise(resolve => setTimeout(resolve, 2000));
           }
         }
 
