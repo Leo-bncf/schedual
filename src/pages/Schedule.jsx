@@ -347,15 +347,15 @@ export default function Schedule() {
 
                 periodsScheduled++;
               }
-              }
-              }
-              }
-              }
+            }
+          }
+        }
 
-              // Debug: Log if group wasn't fully scheduled
-              if (periodsScheduled < periodsNeeded) {
-              console.log(`⚠️ Group "${group.name}" only scheduled ${periodsScheduled}/${periodsNeeded} periods`);
-              }
+        // Debug: Log if group wasn't fully scheduled
+        if (periodsScheduled < periodsNeeded) {
+          console.log(`⚠️ Group "${group.name}" only scheduled ${periodsScheduled}/${periodsNeeded} periods`);
+        }
+      }
 
       // Create all slots in batches to avoid rate limits
       console.log('Total slots to create:', newSlots.length);
