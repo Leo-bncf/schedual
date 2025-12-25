@@ -4,6 +4,7 @@ import { Badge } from "@/components/ui/badge";
 
 const DAYS = ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday'];
 const PERIODS = [1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12];
+const LUNCH_PERIOD = 6; // After period 6 (11:45), before period 7 (13:00)
 
 const periodTimes = {
   1: '08:00',
@@ -114,11 +115,12 @@ export default function TimetableGrid({ slots = [], groups = [], rooms = [], sub
 
             {/* Period Rows */}
             {activePeriods.map(period => (
-              <div key={period} className="grid grid-cols-[100px_repeat(5,1fr)] border-b border-slate-200 last:border-0" style={{ minHeight: '100px' }}>
-                <div className="p-4 bg-slate-50 border-r border-slate-300 flex flex-col justify-center">
-                  <div className="text-sm font-semibold text-slate-700">Period {period}</div>
-                  <div className="text-sm text-slate-500 mt-1">{periodTimes[period]}</div>
-                </div>
+              <React.Fragment key={period}>
+                <div className="grid grid-cols-[100px_repeat(5,1fr)] border-b border-slate-200 last:border-0" style={{ minHeight: '100px' }}>
+                  <div className="p-4 bg-slate-50 border-r border-slate-300 flex flex-col justify-center">
+                    <div className="text-sm font-semibold text-slate-700">Period {period}</div>
+                    <div className="text-sm text-slate-500 mt-1">{periodTimes[period]}</div>
+                  </div>
                 {DAYS.map(day => {
                   if (shouldSkipCell(day, period)) {
                     return null;
@@ -160,7 +162,23 @@ export default function TimetableGrid({ slots = [], groups = [], rooms = [], sub
                     </div>
                   );
                 })}
-              </div>
+                </div>
+                
+                {/* Lunch Break Row */}
+                {period === LUNCH_PERIOD && (
+                  <div className="grid grid-cols-[100px_repeat(5,1fr)] border-b-2 border-amber-300 bg-gradient-to-r from-amber-50 to-orange-50">
+                    <div className="p-4 bg-amber-100 border-r border-amber-300 flex flex-col justify-center">
+                      <div className="text-sm font-bold text-amber-900">🍽️ Lunch</div>
+                      <div className="text-sm text-amber-700 mt-1">12:30 - 13:00</div>
+                    </div>
+                    {DAYS.map(day => (
+                      <div key={`${day}-lunch`} className="p-4 border-r border-amber-200 last:border-r-0 flex items-center justify-center">
+                        <span className="text-amber-700 font-medium text-sm">Lunch Break</span>
+                      </div>
+                    ))}
+                  </div>
+                )}
+              </React.Fragment>
             ))}
           </div>
         </div>

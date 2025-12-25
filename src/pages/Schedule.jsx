@@ -619,79 +619,52 @@ export default function Schedule() {
 
   return (
     <div className="space-y-6">
-      <PageHeader 
-        title="Schedule"
-        description="Create and manage IB Diploma Programme timetables"
-        actions={
+      <div className="flex items-start justify-between gap-4">
+        <PageHeader 
+          title="Schedule"
+          description="Create and manage IB Diploma Programme timetables"
+        />
+
+        {/* Version Selector - Moved to top */}
+        <div className="flex items-center gap-3">
+          <Select value={selectedVersion?.id} onValueChange={(id) => setSelectedVersion(scheduleVersions.find(v => v.id === id))}>
+            <SelectTrigger className="w-[280px]">
+              <SelectValue placeholder="Select a version" />
+            </SelectTrigger>
+            <SelectContent>
+              {publishedVersion && (
+                <>
+                  <SelectItem value={publishedVersion.id}>
+                    <div className="flex items-center gap-2">
+                      <CheckCircle className="w-4 h-4 text-emerald-600" />
+                      <span className="font-medium">{publishedVersion.name}</span>
+                      <Badge className="ml-2 bg-emerald-100 text-emerald-700 border-0 text-xs">Published</Badge>
+                    </div>
+                  </SelectItem>
+                </>
+              )}
+              {draftVersions.map(version => (
+                <SelectItem key={version.id} value={version.id}>
+                  <div className="flex items-center gap-2">
+                    <Clock className="w-4 h-4 text-slate-400" />
+                    <span>{version.name}</span>
+                    <Badge variant="outline" className="ml-2 text-xs">Draft</Badge>
+                  </div>
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
           <Button onClick={() => setIsDialogOpen(true)} className="bg-indigo-600 hover:bg-indigo-700">
             <Plus className="w-4 h-4 mr-2" />
             New Version
           </Button>
-        }
-      />
-
-      <div className="grid lg:grid-cols-4 gap-6">
-        {/* Version Sidebar */}
-        <div className="lg:col-span-1 space-y-4">
-          <Card className="border-0 shadow-sm">
-            <CardHeader className="pb-3">
-              <CardTitle className="text-base">Schedule Versions</CardTitle>
-            </CardHeader>
-            <CardContent className="space-y-2">
-              {publishedVersion && (
-                <div 
-                  className={`p-3 rounded-lg cursor-pointer transition-all ${
-                    selectedVersion?.id === publishedVersion.id 
-                      ? 'bg-emerald-50 border-2 border-emerald-200' 
-                      : 'bg-emerald-50/50 border border-emerald-100 hover:border-emerald-200'
-                  }`}
-                  onClick={() => setSelectedVersion(publishedVersion)}
-                >
-                  <div className="flex items-center gap-2 mb-1">
-                    <CheckCircle className="w-4 h-4 text-emerald-600" />
-                    <span className="font-medium text-emerald-900">{publishedVersion.name}</span>
-                  </div>
-                  <Badge className="bg-emerald-100 text-emerald-700 border-0 text-xs">Published</Badge>
-                </div>
-              )}
-
-              {draftVersions.map(version => (
-                <div 
-                  key={version.id}
-                  className={`p-3 rounded-lg cursor-pointer transition-all ${
-                    selectedVersion?.id === version.id 
-                      ? 'bg-slate-100 border-2 border-slate-300' 
-                      : 'bg-slate-50 border border-slate-100 hover:border-slate-200'
-                  }`}
-                  onClick={() => setSelectedVersion(version)}
-                >
-                  <div className="flex items-center gap-2 mb-1">
-                    <Clock className="w-4 h-4 text-slate-400" />
-                    <span className="font-medium text-slate-700">{version.name}</span>
-                  </div>
-                  <div className="flex items-center gap-2">
-                    <Badge variant="outline" className="text-xs">Draft</Badge>
-                    {version.conflicts_count > 0 && (
-                      <Badge className="bg-rose-100 text-rose-700 border-0 text-xs">
-                        {version.conflicts_count} conflicts
-                      </Badge>
-                    )}
-                  </div>
-                </div>
-              ))}
-
-              {scheduleVersions.length === 0 && !loadingVersions && (
-                <div className="text-center py-6">
-                  <Calendar className="w-10 h-10 text-slate-300 mx-auto mb-2" />
-                  <p className="text-sm text-slate-500">No versions yet</p>
-                </div>
-              )}
-            </CardContent>
-          </Card>
         </div>
+      </div>
 
-        {/* Main Content */}
-        <div className="lg:col-span-3 space-y-4">
+      <div className="space-y-4">
+        {/* Main Content - Now full width */}
+        <div className="space-y-4">
+
           {selectedVersion ? (
             <>
               {/* Version Header */}
@@ -825,7 +798,7 @@ export default function Schedule() {
                         label="Export Master Schedule"
                       />
                     </div>
-                    <div className="grid lg:grid-cols-[1fr_320px] gap-4" id="master-schedule-grid">
+                    <div id="master-schedule-grid">
                       <TimetableGrid 
                         slots={scheduleSlots.filter(slot => {
                           const group = teachingGroups.find(g => g.id === slot.teaching_group_id);
@@ -840,14 +813,6 @@ export default function Schedule() {
                           console.log('Clicked:', day, period, slot);
                         }}
                         exportId="master-timetable"
-                      />
-                      <HoursSummary 
-                        slots={scheduleSlots.filter(slot => {
-                          const group = teachingGroups.find(g => g.id === slot.teaching_group_id);
-                          return group?.year_group?.startsWith(selectedLevel);
-                        })}
-                        groups={teachingGroups.filter(g => g.year_group?.startsWith(selectedLevel))}
-                        subjects={subjects}
                       />
                     </div>
                   </div>
