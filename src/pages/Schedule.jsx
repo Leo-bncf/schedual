@@ -256,12 +256,15 @@ export default function Schedule() {
               return !schedule.some(s => s.day === day && s.period === period);
             });
 
-            // Check if teacher is available
-            const teacherFree = !teacherSchedules[teacherId]?.some(s => s.day === day && s.period === period);
-
-            // Check teacher unavailability
-            const teacher = teachers.find(t => t.id === teacherId);
-            const teacherAvailable = !teacher?.unavailable_slots?.some(u => u.day === day && u.period === period);
+            // Check if teacher is available (if assigned)
+            let teacherFree = true;
+            let teacherAvailable = true;
+            
+            if (teacherId) {
+              teacherFree = !teacherSchedules[teacherId]?.some(s => s.day === day && s.period === period);
+              const teacher = teachers.find(t => t.id === teacherId);
+              teacherAvailable = !teacher?.unavailable_slots?.some(u => u.day === day && u.period === period);
+            }
 
             if (studentsFree && teacherFree && teacherAvailable) {
               // Find available room
@@ -293,7 +296,9 @@ export default function Schedule() {
                 studentIds.forEach(studentId => {
                   studentSchedules[studentId].push({ day, period });
                 });
-                teacherSchedules[teacherId].push({ day, period });
+                if (teacherId && teacherSchedules[teacherId]) {
+                  teacherSchedules[teacherId].push({ day, period });
+                }
                 roomSchedules[assignedRoom.id].push({ day, period });
 
                 periodsScheduled++;
