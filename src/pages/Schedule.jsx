@@ -52,7 +52,7 @@ export default function Schedule() {
   const [isGenerating, setIsGenerating] = useState(false);
   const [selectedStudentId, setSelectedStudentId] = useState(null);
   const [selectedTeacherId, setSelectedTeacherId] = useState(null);
-  const [selectedLevel, setSelectedLevel] = useState('DP'); // DP, MYP, or PYP
+  const [selectedClassGroupId, setSelectedClassGroupId] = useState(null);
   const [formData, setFormData] = useState({
     name: '',
     academic_year: '2024-2025',
@@ -108,6 +108,12 @@ export default function Schedule() {
   const { data: students = [] } = useQuery({
     queryKey: ['students', schoolId],
     queryFn: () => base44.entities.Student.filter({ school_id: schoolId }),
+    enabled: !!schoolId,
+  });
+
+  const { data: classGroups = [] } = useQuery({
+    queryKey: ['classGroups', schoolId],
+    queryFn: () => base44.entities.ClassGroup.filter({ school_id: schoolId }, '-year_group'),
     enabled: !!schoolId,
   });
 
@@ -761,60 +767,68 @@ export default function Schedule() {
                     <TabsTrigger value="teacher">Teacher View</TabsTrigger>
                     <TabsTrigger value="list">List View</TabsTrigger>
                   </TabsList>
-                  <div className="flex items-center gap-2">
-                    <span className="text-sm text-slate-600">IB Level:</span>
-                    <TabsList className="bg-slate-100">
-                      <TabsTrigger 
-                        value={selectedLevel} 
-                        onClick={() => setSelectedLevel('DP')}
-                        className={selectedLevel === 'DP' ? 'bg-white' : ''}
-                      >
-                        DP
-                      </TabsTrigger>
-                      <TabsTrigger 
-                        value={selectedLevel}
-                        onClick={() => setSelectedLevel('MYP')}
-                        className={selectedLevel === 'MYP' ? 'bg-white' : ''}
-                      >
-                        MYP
-                      </TabsTrigger>
-                      <TabsTrigger 
-                        value={selectedLevel}
-                        onClick={() => setSelectedLevel('PYP')}
-                        className={selectedLevel === 'PYP' ? 'bg-white' : ''}
-                      >
-                        PYP
-                      </TabsTrigger>
-                    </TabsList>
-                  </div>
                 </div>
                 
                 <TabsContent value="grid">
                   <div className="space-y-4">
-                    <div className="flex justify-end">
+                    <div className="flex items-center justify-between">
+                      <div className="flex items-center gap-3">
+                        <Label className="text-sm text-slate-600">ClassGroup:</Label>
+                        <Select 
+                          value={selectedClassGroupId || ''} 
+                          onValueChange={setSelectedClassGroupId}
+                        >
+                          <SelectTrigger className="w-[280px]">
+                            <SelectValue placeholder="Select a ClassGroup" />
+                          </SelectTrigger>
+                          <SelectContent>
+                            {classGroups.map(cg => (
+                              <SelectItem key={cg.id} value={cg.id}>
+                                {cg.name} ({cg.ib_programme})
+                              </SelectItem>
+                            ))}
+                          </SelectContent>
+                        </Select>
+                      </div>
                       <ScheduleExporter 
                         elementId="master-schedule-grid"
-                        filename={`master-schedule-${selectedVersion?.name || 'schedule'}`}
+                        filename={`master-schedule-${classGroups.find(cg => cg.id === selectedClassGroupId)?.name || 'schedule'}`}
                         label="Export Master Schedule"
                       />
                     </div>
-                    <div id="master-schedule-grid">
-                      <TimetableGrid 
-                        slots={scheduleSlots.filter(slot => {
-                          const group = teachingGroups.find(g => g.id === slot.teaching_group_id);
-                          if (!group?.year_group) return false;
-                          return group.year_group.startsWith(selectedLevel);
-                        })}
-                        groups={teachingGroups.filter(g => g.year_group?.startsWith(selectedLevel))}
-                        rooms={rooms}
-                        subjects={subjects}
-                        teachers={teachers}
-                        onSlotClick={(day, period, slot) => {
-                          console.log('Clicked:', day, period, slot);
-                        }}
-                        exportId="master-timetable"
-                      />
-                    </div>
+                    {selectedClassGroupId ? (
+                      <div id="master-schedule-grid">
+                        <TimetableGrid 
+                          slots={scheduleSlots.filter(slot => {
+                            const group = teachingGroups.find(g => g.id === slot.teaching_group_id);
+                            if (!group) return false;
+                            // Get students in this teaching group
+                            const groupStudents = group.student_ids || [];
+                            // Get students in selected ClassGroup
+                            const classGroupStudents = students
+                              .filter(s => s.classgroup_id === selectedClassGroupId)
+                              .map(s => s.id);
+                            // Show slot if any student from the ClassGroup is in this teaching group
+                            return groupStudents.some(sid => classGroupStudents.includes(sid));
+                          })}
+                          groups={teachingGroups}
+                          rooms={rooms}
+                          subjects={subjects}
+                          teachers={teachers}
+                          onSlotClick={(day, period, slot) => {
+                            console.log('Clicked:', day, period, slot);
+                          }}
+                          exportId="master-timetable"
+                        />
+                      </div>
+                    ) : (
+                      <Card className="border-0 shadow-sm">
+                        <CardContent className="py-16 text-center">
+                          <Calendar className="w-12 h-12 text-slate-300 mx-auto mb-3" />
+                          <p className="text-slate-500">Select a ClassGroup to view their master schedule</p>
+                        </CardContent>
+                      </Card>
+                    )}
                   </div>
                 </TabsContent>
 
