@@ -175,6 +175,17 @@ export default function Schedule() {
       console.log('Students:', students.length);
       console.log('Rooms:', rooms.length);
       
+      // Step 1: Assign teachers to teaching groups
+      console.log('Assigning teachers to teaching groups...');
+      const { data: assignmentResult } = await base44.functions.invoke('assignTeachers');
+      console.log('Teacher assignments:', assignmentResult);
+      
+      // Refresh teaching groups to get updated teacher assignments
+      await queryClient.invalidateQueries({ queryKey: ['teachingGroups'] });
+      await new Promise(resolve => setTimeout(resolve, 1000));
+      const updatedGroups = await base44.entities.TeachingGroup.filter({ school_id: schoolId });
+      console.log('Updated groups with teachers:', updatedGroups.filter(g => g.teacher_id).length);
+      
       // Delete existing slots for this version (batch to avoid rate limits)
       const existingSlots = await base44.entities.ScheduleSlot.list();
       const slotsToDelete = existingSlots.filter(s => s.schedule_version === selectedVersion.id);
@@ -263,12 +274,17 @@ export default function Schedule() {
       const scheduleLevels = ['DP', 'MYP', 'PYP'];
       
       for (const level of scheduleLevels) {
-        const levelGroups = groupsByLevel[level]
-          .sort((a, b) => (a.student_ids?.length || 0) - (b.student_ids?.length || 0));
+        // Use updated groups with teacher assignments
+        const levelGroupsFromUpdated = updatedGroups.filter(g => {
+          if (g.is_active === false) return false;
+          if (!g.hours_per_week || g.hours_per_week <= 0) return false;
+          const ibLevel = getIBLevel(g.year_group);
+          return ibLevel === level;
+        }).sort((a, b) => (a.student_ids?.length || 0) - (b.student_ids?.length || 0));
 
-        console.log(`\n=== Scheduling ${level} (${levelGroups.length} groups) ===`);
+        console.log(`\n=== Scheduling ${level} (${levelGroupsFromUpdated.length} groups) ===`);
 
-        for (const group of levelGroups) {
+        for (const group of levelGroupsFromUpdated) {
           // Determine hours based on subject's HL/SL hours and group's level
           const subject = subjects.find(s => s.id === group.subject_id);
           let hoursPerWeek = group.hours_per_week;
@@ -286,41 +302,10 @@ export default function Schedule() {
 
           let periodsScheduled = 0;
           let studentIds = group.student_ids || [];
+          const teacherId = group.teacher_id;
 
-          // Auto-assign teacher if not assigned
-          let teacherId = group.teacher_id;
           if (!teacherId) {
-            // Find qualified teacher with capacity
-            const qualifiedTeachers = teachers.filter(t => {
-              if (!t.is_active || !t.subjects?.includes(group.subject_id)) return false;
-
-              // Check IB level qualification
-              const ibLevel = getIBLevel(group.year_group);
-              const qualification = t.qualifications?.find(q => q.subject_id === group.subject_id);
-              if (qualification && !qualification.ib_levels?.includes(ibLevel)) return false;
-
-              // Check teaching hours capacity
-              const currentHours = (teacherSchedules[t.id] || []).length;
-              const maxHours = t.max_hours_per_week || 25;
-              return (currentHours + periodsNeeded) <= maxHours;
-            });
-
-            // Pick teacher with lowest current load
-            qualifiedTeachers.sort((a, b) => {
-              const loadA = (teacherSchedules[a.id] || []).length;
-              const loadB = (teacherSchedules[b.id] || []).length;
-              return loadA - loadB;
-            });
-
-            if (qualifiedTeachers.length > 0) {
-              teacherId = qualifiedTeachers[0].id;
-              console.log(`Auto-assigned teacher ${qualifiedTeachers[0].full_name} to "${group.name}"`);
-
-              // Update the group with teacher assignment
-              await base44.entities.TeachingGroup.update(group.id, { teacher_id: teacherId });
-            } else {
-              console.warn(`No qualified teacher found for "${group.name}"`);
-            }
+            console.warn(`No teacher assigned to "${group.name}"`);
           }
 
           // Initialize teacher schedule if needed
