@@ -323,9 +323,57 @@ Deno.serve(async (req) => {
     console.log('=== AUTO-GENERATING CLASSGROUPS ===');
     let classGroupsCreated = 0;
     try {
-      const classGroupResponse = await base44.asServiceRole.functions.invoke('autoGenerateClassGroups');
-      if (classGroupResponse.data?.success) {
-        classGroupsCreated = classGroupResponse.data.classGroupsCreated || 0;
+      // Group students by year_group
+      const studentsByYear = {};
+      results.students.forEach(student => {
+        const key = student.year_group;
+        if (!studentsByYear[key]) {
+          studentsByYear[key] = [];
+        }
+        studentsByYear[key].push(student);
+      });
+
+      const classGroupsToCreate = [];
+
+      // Create ClassGroups for each year_group
+      for (const [yearGroup, students] of Object.entries(studentsByYear)) {
+        const ibProgramme = students[0].ib_programme;
+        const batchSize = 20;
+        const numBatches = Math.ceil(students.length / batchSize);
+
+        for (let i = 0; i < numBatches; i++) {
+          const batchLetter = String.fromCharCode(65 + i); // A, B, C, etc.
+          const batchStudents = students.slice(i * batchSize, (i + 1) * batchSize);
+          
+          const classGroup = {
+            school_id: user.school_id,
+            name: `${yearGroup}-Batch-${batchLetter}`,
+            year_group: yearGroup,
+            ib_programme: ibProgramme,
+            batch_letter: batchLetter,
+            student_ids: batchStudents.map(s => s.id),
+            max_students: batchSize,
+            is_active: true
+          };
+
+          classGroupsToCreate.push(classGroup);
+        }
+      }
+
+      // Create all ClassGroups
+      if (classGroupsToCreate.length > 0) {
+        const createdClassGroups = await base44.asServiceRole.entities.ClassGroup.bulkCreate(classGroupsToCreate);
+        classGroupsCreated = createdClassGroups.length;
+
+        // Update students with their ClassGroup IDs
+        for (const classGroup of createdClassGroups) {
+          for (const studentId of classGroup.student_ids) {
+            await base44.asServiceRole.entities.Student.update(studentId, {
+              classgroup_id: classGroup.id
+            });
+          }
+        }
+
         console.log('✓ ClassGroups created:', classGroupsCreated);
       }
     } catch (cgError) {
