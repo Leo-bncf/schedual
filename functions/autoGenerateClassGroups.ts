@@ -36,11 +36,11 @@ Deno.serve(async (req) => {
     const classGroupsToCreate = [];
     const studentUpdates = [];
 
-    // Create ClassGroups for each year_group
+    // Create ClassGroups for each year_group (exactly 20 students per group)
     for (const [yearGroup, students] of Object.entries(studentsByYear)) {
       const ibProgramme = students[0].ib_programme;
       const batchSize = 20;
-      const numBatches = Math.ceil(students.length / batchSize);
+      const numBatches = Math.floor(students.length / batchSize); // Only create full batches
 
       for (let i = 0; i < numBatches; i++) {
         const batchLetter = String.fromCharCode(65 + i); // A, B, C, etc.
