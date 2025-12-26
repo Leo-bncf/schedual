@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React from 'react';
 import { Card } from "@/components/ui/card";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Badge } from "@/components/ui/badge";
@@ -13,13 +13,7 @@ const periodTimes = {
 };
 
 export default function StudentScheduleView({ students, slots, groups, subjects, teachers, rooms, selectedStudentId, onStudentChange, exportId = "student-schedule" }) {
-  const [yearFilter, setYearFilter] = useState('all');
-  
-  const filteredStudents = yearFilter === 'all' 
-    ? students 
-    : students.filter(s => s.year_group === yearFilter);
-  
-  const selectedStudent = filteredStudents.find(s => s.id === selectedStudentId);
+  const selectedStudent = students.find(s => s.id === selectedStudentId);
 
   const getStudentSlots = (studentId) => {
     return slots.filter(slot => {
@@ -45,38 +39,14 @@ export default function StudentScheduleView({ students, slots, groups, subjects,
 
   return (
     <div className="space-y-4">
-      <div className="flex items-center gap-4 flex-wrap">
+      <div className="flex items-center gap-4">
         <GraduationCap className="w-5 h-5 text-indigo-600" />
-        <Select value={yearFilter} onValueChange={(value) => {
-          setYearFilter(value);
-          onStudentChange(null);
-        }}>
-          <SelectTrigger className="w-40">
-            <SelectValue />
-          </SelectTrigger>
-          <SelectContent>
-            <SelectItem value="all">All Years</SelectItem>
-            <SelectItem value="DP1">DP1</SelectItem>
-            <SelectItem value="DP2">DP2</SelectItem>
-            <SelectItem value="MYP1">MYP1</SelectItem>
-            <SelectItem value="MYP2">MYP2</SelectItem>
-            <SelectItem value="MYP3">MYP3</SelectItem>
-            <SelectItem value="MYP4">MYP4</SelectItem>
-            <SelectItem value="MYP5">MYP5</SelectItem>
-            <SelectItem value="PYP1">PYP1</SelectItem>
-            <SelectItem value="PYP2">PYP2</SelectItem>
-            <SelectItem value="PYP3">PYP3</SelectItem>
-            <SelectItem value="PYP4">PYP4</SelectItem>
-            <SelectItem value="PYP5">PYP5</SelectItem>
-            <SelectItem value="PYP6">PYP6</SelectItem>
-          </SelectContent>
-        </Select>
         <Select value={selectedStudentId || ''} onValueChange={onStudentChange}>
           <SelectTrigger className="w-72">
             <SelectValue placeholder="Select a student..." />
           </SelectTrigger>
           <SelectContent>
-            {filteredStudents.map(student => (
+            {students.map(student => (
               <SelectItem key={student.id} value={student.id}>
                 {student.full_name} ({student.year_group})
               </SelectItem>
