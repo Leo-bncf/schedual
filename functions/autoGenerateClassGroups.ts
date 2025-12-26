@@ -13,7 +13,7 @@ Deno.serve(async (req) => {
 
     // Get all students without ClassGroups
     const allStudents = await base44.entities.Student.filter({ school_id: schoolId });
-    const studentsWithoutClassGroup = allStudents.filter(s => !s.classgroup_id && s.is_active);
+    const studentsWithoutClassGroup = allStudents.filter(s => !s.classgroup_id && s.is_active !== false);
 
     if (studentsWithoutClassGroup.length === 0) {
       return Response.json({ 
