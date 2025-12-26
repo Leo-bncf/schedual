@@ -330,6 +330,11 @@ export default function Schedule() {
 
           studentIds = matchingStudents.map(s => s.id);
           console.log(`Auto-assigned ${studentIds.length} students to "${group.name}"`);
+          
+          // Update the teaching group with student assignments
+          if (studentIds.length > 0) {
+            await base44.entities.TeachingGroup.update(group.id, { student_ids: studentIds });
+          }
         }
 
         // Find suitable room
