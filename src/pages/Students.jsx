@@ -278,11 +278,12 @@ export default function Students() {
     MYP5: students.filter(s => s.year_group === 'MYP5').length,
   };
   const pypCounts = {
-    PYP1: students.filter(s => s.year_group === 'PYP1').length,
-    PYP2: students.filter(s => s.year_group === 'PYP2').length,
-    PYP3: students.filter(s => s.year_group === 'PYP3').length,
-    PYP4: students.filter(s => s.year_group === 'PYP4').length,
-    PYP5: students.filter(s => s.year_group === 'PYP5').length,
+    'PYP-A': students.filter(s => s.year_group === 'PYP-A').length,
+    'PYP-B': students.filter(s => s.year_group === 'PYP-B').length,
+    'PYP-C': students.filter(s => s.year_group === 'PYP-C').length,
+    'PYP-D': students.filter(s => s.year_group === 'PYP-D').length,
+    'PYP-E': students.filter(s => s.year_group === 'PYP-E').length,
+    'PYP-F': students.filter(s => s.year_group === 'PYP-F').length,
   };
   const totalMYP = Object.values(mypCounts).reduce((a, b) => a + b, 0);
   const totalPYP = Object.values(pypCounts).reduce((a, b) => a + b, 0);
@@ -320,11 +321,12 @@ export default function Students() {
             <TabsTrigger value="MYP3">MYP3 ({mypCounts.MYP3})</TabsTrigger>
             <TabsTrigger value="MYP4">MYP4 ({mypCounts.MYP4})</TabsTrigger>
             <TabsTrigger value="MYP5">MYP5 ({mypCounts.MYP5})</TabsTrigger>
-            <TabsTrigger value="PYP1">PYP1 ({pypCounts.PYP1})</TabsTrigger>
-            <TabsTrigger value="PYP2">PYP2 ({pypCounts.PYP2})</TabsTrigger>
-            <TabsTrigger value="PYP3">PYP3 ({pypCounts.PYP3})</TabsTrigger>
-            <TabsTrigger value="PYP4">PYP4 ({pypCounts.PYP4})</TabsTrigger>
-            <TabsTrigger value="PYP5">PYP5 ({pypCounts.PYP5})</TabsTrigger>
+            <TabsTrigger value="PYP-A">PYP A ({pypCounts['PYP-A']})</TabsTrigger>
+            <TabsTrigger value="PYP-B">PYP B ({pypCounts['PYP-B']})</TabsTrigger>
+            <TabsTrigger value="PYP-C">PYP C ({pypCounts['PYP-C']})</TabsTrigger>
+            <TabsTrigger value="PYP-D">PYP D ({pypCounts['PYP-D']})</TabsTrigger>
+            <TabsTrigger value="PYP-E">PYP E ({pypCounts['PYP-E']})</TabsTrigger>
+            <TabsTrigger value="PYP-F">PYP F ({pypCounts['PYP-F']})</TabsTrigger>
           </TabsList>
         </Tabs>
       </div>
@@ -428,11 +430,12 @@ export default function Students() {
                     )}
                     {formData.ib_programme === 'PYP' && (
                       <>
-                        <SelectItem value="PYP1">PYP1</SelectItem>
-                        <SelectItem value="PYP2">PYP2</SelectItem>
-                        <SelectItem value="PYP3">PYP3</SelectItem>
-                        <SelectItem value="PYP4">PYP4</SelectItem>
-                        <SelectItem value="PYP5">PYP5</SelectItem>
+                        <SelectItem value="PYP-A">PYP A</SelectItem>
+                        <SelectItem value="PYP-B">PYP B</SelectItem>
+                        <SelectItem value="PYP-C">PYP C</SelectItem>
+                        <SelectItem value="PYP-D">PYP D</SelectItem>
+                        <SelectItem value="PYP-E">PYP E</SelectItem>
+                        <SelectItem value="PYP-F">PYP F</SelectItem>
                       </>
                     )}
                   </SelectContent>
