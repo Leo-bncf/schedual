@@ -118,8 +118,8 @@ export default function TimetableGrid({ slots = [], groups = [], rooms = [], sub
             {/* Period Rows */}
             {activePeriods.map(period => (
               <React.Fragment key={period}>
-                <div className="grid grid-cols-[100px_repeat(5,1fr)] border-b border-slate-200 last:border-0" style={{ minHeight: '100px' }}>
-                  <div className="p-4 bg-slate-50 border-r border-slate-300 flex flex-col justify-center">
+                <div className="grid grid-cols-[100px_repeat(5,1fr)] border-b border-slate-300">
+                  <div className="p-4 bg-slate-50 border-r border-slate-300 flex flex-col justify-center min-h-[120px]">
                     <div className="text-sm font-semibold text-slate-700">Period {period}</div>
                     <div className="text-sm text-slate-500 mt-1">{periodTimes[period]}</div>
                   </div>
@@ -130,7 +130,7 @@ export default function TimetableGrid({ slots = [], groups = [], rooms = [], sub
                     return (
                       <div 
                         key={`${day}-${period}`} 
-                        className="border-r border-slate-200 last:border-r-0"
+                        className="border-r border-slate-300 last:border-r-0 min-h-[120px]"
                       />
                     );
                   }
@@ -142,11 +142,11 @@ export default function TimetableGrid({ slots = [], groups = [], rooms = [], sub
                     return null;
                   }
 
-                  // If multiple slots, show them side by side
+                  // Stack multiple slots vertically within the same cell
                   return (
                     <div 
                       key={`${day}-${period}`} 
-                      className="border-r border-slate-200 last:border-r-0 flex gap-1 p-1"
+                      className="border-r border-slate-300 last:border-r-0 p-2 space-y-2"
                     >
                       {visibleSlots.map(slot => {
                         const span = getSlotSpan(day, period, slot.id);
@@ -159,26 +159,28 @@ export default function TimetableGrid({ slots = [], groups = [], rooms = [], sub
                         return (
                           <div 
                             key={slot.id}
-                            className={`flex-1 cursor-pointer hover:brightness-95 transition-all rounded-lg overflow-hidden`}
-                            style={{ 
-                              minHeight: span > 1 ? `${span * 100}px` : '98px',
-                            }}
+                            className="cursor-pointer hover:shadow-md transition-all rounded-lg overflow-hidden"
                             onClick={() => handleSlotClick(slot)}
                           >
                             {group && (
-                              <div className={`h-full p-3 border-l-4 ${colorClass} flex flex-col justify-center`}>
-                                <div className={`font-bold ${visibleSlots.length > 1 ? 'text-sm' : 'text-base'} text-slate-900 leading-tight mb-1`}>
+                              <div className={`p-3 border-l-4 ${colorClass} border border-slate-200`}>
+                                <div className="font-bold text-sm text-slate-900 leading-tight mb-1.5">
                                   {subject?.name || group.name}
                                 </div>
-                                <Badge variant="outline" className="w-fit mb-1 bg-white/60 font-semibold text-xs">
+                                <Badge variant="outline" className="w-fit mb-2 bg-white/70 font-semibold text-xs">
                                   {group.level}
                                 </Badge>
-                                <div className={`${visibleSlots.length > 1 ? 'text-xs' : 'text-sm'} text-slate-700 space-y-0.5`}>
+                                <div className="text-xs text-slate-700 space-y-1">
                                   <div className="font-medium">📍 {room?.name || 'TBD'}</div>
                                   {teacher && (
-                                    <div className="font-medium truncate">👤 {teacher.full_name}</div>
+                                    <div className="font-medium">👤 {teacher.full_name}</div>
                                   )}
                                 </div>
+                                {span > 1 && (
+                                  <div className="mt-2 text-xs text-slate-500 font-medium">
+                                    {span} periods
+                                  </div>
+                                )}
                               </div>
                             )}
                           </div>
