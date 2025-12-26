@@ -125,12 +125,43 @@ export default function Students() {
     setIsDialogOpen(true);
   };
 
-  const handleSubmit = (e) => {
+  const handleSubmit = async (e) => {
     e.preventDefault();
-    if (editingStudent) {
-      updateMutation.mutate({ id: editingStudent.id, data: formData });
+    
+    // For PYP/MYP students, also update all other students in the same program
+    if ((formData.ib_programme === 'PYP' || formData.ib_programme === 'MYP') && formData.subject_choices.length > 0) {
+      try {
+        // First, save the current student
+        if (editingStudent) {
+          await updateMutation.mutateAsync({ id: editingStudent.id, data: formData });
+        } else {
+          await createMutation.mutateAsync(formData);
+        }
+
+        // Then update all other students in the same program with the same subjects
+        const studentsToUpdate = students.filter(s => 
+          s.ib_programme === formData.ib_programme && 
+          s.id !== editingStudent?.id &&
+          s.is_active !== false
+        );
+
+        for (const student of studentsToUpdate) {
+          await base44.entities.Student.update(student.id, {
+            subject_choices: formData.subject_choices
+          });
+        }
+
+        queryClient.invalidateQueries({ queryKey: ['students'] });
+      } catch (error) {
+        console.error('Error updating students:', error);
+      }
     } else {
-      createMutation.mutate(formData);
+      // For DP students, just save normally
+      if (editingStudent) {
+        updateMutation.mutate({ id: editingStudent.id, data: formData });
+      } else {
+        createMutation.mutate(formData);
+      }
     }
   };
 
@@ -385,6 +416,11 @@ export default function Students() {
 
             <div className="space-y-2">
               <Label>Subject Choices</Label>
+              {(formData.ib_programme === 'PYP' || formData.ib_programme === 'MYP') && (
+                <p className="text-xs text-amber-600 bg-amber-50 p-2 rounded border border-amber-200">
+                  Note: Selecting subjects for {formData.ib_programme} students will apply to all {formData.ib_programme} students.
+                </p>
+              )}
               <SubjectSelector 
                 subjects={subjects}
                 selectedSubjects={formData.subject_choices}
