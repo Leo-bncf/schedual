@@ -5,13 +5,21 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Input } from "@/components/ui/input";
-import { Users, Sparkles, Search, RefreshCw } from 'lucide-react';
+import { Users, Sparkles, Search, RefreshCw, X, BookOpen } from 'lucide-react';
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
 import PageHeader from '../components/ui-custom/PageHeader';
 import EmptyState from '../components/ui-custom/EmptyState';
 
 export default function ClassGroups() {
   const [searchQuery, setSearchQuery] = useState('');
   const [isGenerating, setIsGenerating] = useState(false);
+  const [selectedGroup, setSelectedGroup] = useState(null);
   const queryClient = useQueryClient();
 
   const { data: user } = useQuery({
@@ -36,6 +44,18 @@ export default function ClassGroups() {
   const { data: teachers = [] } = useQuery({
     queryKey: ['teachers', schoolId],
     queryFn: () => base44.entities.Teacher.filter({ school_id: schoolId }),
+    enabled: !!schoolId,
+  });
+
+  const { data: subjects = [] } = useQuery({
+    queryKey: ['subjects', schoolId],
+    queryFn: () => base44.entities.Subject.filter({ school_id: schoolId }),
+    enabled: !!schoolId,
+  });
+
+  const { data: teachingGroups = [] } = useQuery({
+    queryKey: ['teachingGroups', schoolId],
+    queryFn: () => base44.entities.TeachingGroup.filter({ school_id: schoolId }),
     enabled: !!schoolId,
   });
 
@@ -147,7 +167,11 @@ export default function ClassGroups() {
             const homeroomTeacher = teachers.find(t => t.id === group.homeroom_teacher_id);
 
             return (
-              <Card key={group.id} className="border-0 shadow-sm hover:shadow-md transition-shadow">
+              <Card 
+                key={group.id} 
+                className="border-0 shadow-sm hover:shadow-md transition-shadow cursor-pointer"
+                onClick={() => setSelectedGroup(group)}
+              >
                 <CardHeader className="pb-3">
                   <div className="flex items-start justify-between">
                     <div className="flex-1">
@@ -196,6 +220,103 @@ export default function ClassGroups() {
           })}
         </div>
       )}
+
+      {/* ClassGroup Detail Dialog */}
+      <Dialog open={!!selectedGroup} onOpenChange={() => setSelectedGroup(null)}>
+        <DialogContent className="max-w-4xl max-h-[90vh] overflow-y-auto">
+          <DialogHeader>
+            <DialogTitle className="text-2xl">{selectedGroup?.name}</DialogTitle>
+            <DialogDescription>
+              {selectedGroup?.ib_programme} • {selectedGroup?.year_group} • {students.filter(s => s.classgroup_id === selectedGroup?.id).length} students
+            </DialogDescription>
+          </DialogHeader>
+
+          <div className="space-y-6 mt-4">
+            {students
+              .filter(s => s.classgroup_id === selectedGroup?.id)
+              .map(student => {
+                // Get student's classes (for DP students)
+                const studentClasses = student.ib_programme === 'DP' 
+                  ? teachingGroups.filter(tg => tg.student_ids?.includes(student.id))
+                  : [];
+
+                return (
+                  <Card key={student.id} className="border-slate-200">
+                    <CardHeader className="pb-3">
+                      <div className="flex items-start justify-between">
+                        <div>
+                          <CardTitle className="text-lg">{student.full_name}</CardTitle>
+                          <div className="flex items-center gap-2 mt-1">
+                            <Badge variant="outline" className="text-xs">
+                              {student.student_id}
+                            </Badge>
+                            <Badge className={programmeColors[student.ib_programme]}>
+                              {student.ib_programme}
+                            </Badge>
+                          </div>
+                        </div>
+                      </div>
+                    </CardHeader>
+                    <CardContent>
+                      {student.ib_programme === 'DP' && studentClasses.length > 0 ? (
+                        <div className="space-y-2">
+                          <div className="flex items-center gap-2 text-sm font-medium text-slate-700">
+                            <BookOpen className="w-4 h-4" />
+                            <span>Classes ({studentClasses.length})</span>
+                          </div>
+                          <div className="grid grid-cols-1 md:grid-cols-2 gap-2">
+                            {studentClasses.map(tg => {
+                              const subject = subjects.find(s => s.id === tg.subject_id);
+                              const teacher = teachers.find(t => t.id === tg.teacher_id);
+                              return (
+                                <div 
+                                  key={tg.id}
+                                  className="p-3 rounded-lg bg-slate-50 border border-slate-200"
+                                >
+                                  <div className="flex items-center justify-between">
+                                    <div className="flex-1">
+                                      <p className="font-medium text-sm text-slate-900">
+                                        {subject?.name || 'Unknown Subject'}
+                                      </p>
+                                      <p className="text-xs text-slate-500 mt-1">
+                                        {teacher?.full_name || 'No teacher'}
+                                      </p>
+                                    </div>
+                                    <Badge className={
+                                      tg.level === 'HL' 
+                                        ? 'bg-rose-100 text-rose-700 border-0' 
+                                        : 'bg-amber-100 text-amber-700 border-0'
+                                    }>
+                                      {tg.level}
+                                    </Badge>
+                                  </div>
+                                </div>
+                              );
+                            })}
+                          </div>
+                        </div>
+                      ) : (
+                        <p className="text-sm text-slate-500">
+                          {student.ib_programme === 'DP' 
+                            ? 'No teaching groups assigned yet' 
+                            : `All ${student.ib_programme} students attend the same classes as their ClassGroup`
+                          }
+                        </p>
+                      )}
+                    </CardContent>
+                  </Card>
+                );
+              })}
+
+            {students.filter(s => s.classgroup_id === selectedGroup?.id).length === 0 && (
+              <div className="text-center py-12">
+                <Users className="w-12 h-12 text-slate-300 mx-auto mb-3" />
+                <p className="text-slate-500">No students in this ClassGroup yet</p>
+              </div>
+            )}
+          </div>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }
