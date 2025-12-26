@@ -179,17 +179,27 @@ export default function Students() {
     {
       header: 'Subjects',
       cell: (row) => {
-        const { hl, sl } = getSubjectInfo(row.subject_choices);
-        return (
-          <div className="flex gap-2">
-            <Badge variant="secondary" className="bg-rose-50 text-rose-700 border-0">
-              {hl} HL
+        if (row.ib_programme === 'DP') {
+          const { hl, sl } = getSubjectInfo(row.subject_choices);
+          return (
+            <div className="flex gap-2">
+              <Badge variant="secondary" className="bg-rose-50 text-rose-700 border-0">
+                {hl} HL
+              </Badge>
+              <Badge variant="secondary" className="bg-amber-50 text-amber-700 border-0">
+                {sl} SL
+              </Badge>
+            </div>
+          );
+        } else {
+          // PYP/MYP students don't have HL/SL
+          const subjectCount = row.subject_choices?.length || 0;
+          return (
+            <Badge variant="secondary" className="bg-blue-50 text-blue-700 border-0">
+              {subjectCount} subjects
             </Badge>
-            <Badge variant="secondary" className="bg-amber-50 text-amber-700 border-0">
-              {sl} SL
-            </Badge>
-          </div>
-        );
+          );
+        }
       }
     },
     {
