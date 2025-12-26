@@ -37,7 +37,7 @@ Deno.serve(async (req) => {
 
     // Use LLM to extract structured data from the file
     console.log('Calling InvokeLLM...');
-    const extractionResponse = await base44.asServiceRole.integrations.Core.InvokeLLM({
+    const extractionResponse = await base44.integrations.Core.InvokeLLM({
       prompt: `Extract school data from this file and structure it as JSON. Be thorough and extract ALL relationships.
 
     CRITICAL REQUIREMENTS:
