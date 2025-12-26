@@ -72,32 +72,34 @@ Deno.serve(async (req) => {
 
     const createdClassGroups = await base44.asServiceRole.entities.ClassGroup.bulkCreate(classGroupsToCreate);
 
-    // Update students with their ClassGroup IDs in smaller batches with longer delays
-    const updateBatchSize = 3;
+    // Update students with their ClassGroup IDs - one at a time to avoid rate limits
+    let successfulUpdates = 0;
+    let failedUpdates = 0;
+    
     for (const classGroup of createdClassGroups) {
-      for (let i = 0; i < classGroup.student_ids.length; i += updateBatchSize) {
-        const batch = classGroup.student_ids.slice(i, i + updateBatchSize);
-        await Promise.all(
-          batch.map(studentId => 
-            base44.asServiceRole.entities.Student.update(studentId, {
-              classgroup_id: classGroup.id
-            })
-          )
-        );
-        // Longer delay between batches to avoid rate limit
-        if (i + updateBatchSize < classGroup.student_ids.length) {
+      for (const studentId of classGroup.student_ids) {
+        try {
+          await base44.asServiceRole.entities.Student.update(studentId, {
+            classgroup_id: classGroup.id
+          });
+          successfulUpdates++;
+          // Small delay between each update
+          await new Promise(resolve => setTimeout(resolve, 500));
+        } catch (updateError) {
+          console.error(`Failed to update student ${studentId}:`, updateError.message);
+          failedUpdates++;
+          // Wait longer on error before retrying next student
           await new Promise(resolve => setTimeout(resolve, 2000));
         }
       }
-      // Delay between class groups
-      await new Promise(resolve => setTimeout(resolve, 1000));
     }
 
     return Response.json({
       success: true,
       message: `Created ${createdClassGroups.length} ClassGroups`,
       classGroupsCreated: createdClassGroups.length,
-      studentsAssigned: studentsWithoutClassGroup.length,
+      studentsAssigned: successfulUpdates,
+      studentUpdatesFailed: failedUpdates,
       classGroups: createdClassGroups
     });
 
