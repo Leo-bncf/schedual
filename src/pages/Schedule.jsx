@@ -318,14 +318,28 @@ export default function Schedule() {
           const matchingStudents = students.filter(s => {
             // Match by year_group
             if (s.year_group !== group.year_group) return false;
+            
+            // Skip inactive students
+            if (s.is_active === false) return false;
 
             // For DP students, check subject choices
             if (s.ib_programme === 'DP' && s.subject_choices) {
               return s.subject_choices.some(choice => choice.subject_id === group.subject_id);
             }
 
-            // For MYP/PYP, just match by year group
-            return true;
+            // For MYP/PYP, check if student has this subject in their assigned_groups or subject_choices
+            if (s.ib_programme === 'MYP' || s.ib_programme === 'PYP') {
+              // Check assigned_groups first
+              if (s.assigned_groups?.includes(group.id)) {
+                return true;
+              }
+              // Or check subject_choices
+              if (s.subject_choices?.some(choice => choice.subject_id === group.subject_id)) {
+                return true;
+              }
+            }
+
+            return false;
           });
 
           studentIds = matchingStudents.map(s => s.id);
