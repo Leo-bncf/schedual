@@ -163,7 +163,11 @@ export default function Students() {
           });
         }
 
+        // Auto-create and assign teaching groups for PYP/MYP
+        await base44.functions.invoke('autoAssignPYPMYPGroups');
+
         queryClient.invalidateQueries({ queryKey: ['students'] });
+        queryClient.invalidateQueries({ queryKey: ['teachingGroups'] });
       } catch (error) {
         console.error('Error updating students:', error);
       }
