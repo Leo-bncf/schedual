@@ -365,12 +365,22 @@ Deno.serve(async (req) => {
         const createdClassGroups = await base44.asServiceRole.entities.ClassGroup.bulkCreate(classGroupsToCreate);
         classGroupsCreated = createdClassGroups.length;
 
-        // Update students with their ClassGroup IDs
+        // Update students with their ClassGroup IDs in batches to avoid rate limits
+        const updateBatchSize = 5;
         for (const classGroup of createdClassGroups) {
-          for (const studentId of classGroup.student_ids) {
-            await base44.asServiceRole.entities.Student.update(studentId, {
-              classgroup_id: classGroup.id
-            });
+          for (let i = 0; i < classGroup.student_ids.length; i += updateBatchSize) {
+            const batch = classGroup.student_ids.slice(i, i + updateBatchSize);
+            await Promise.all(
+              batch.map(studentId => 
+                base44.asServiceRole.entities.Student.update(studentId, {
+                  classgroup_id: classGroup.id
+                })
+              )
+            );
+            // Delay between batches to avoid rate limit
+            if (i + updateBatchSize < classGroup.student_ids.length) {
+              await new Promise(resolve => setTimeout(resolve, 1000));
+            }
           }
         }
 
