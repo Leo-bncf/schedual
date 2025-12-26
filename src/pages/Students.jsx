@@ -118,6 +118,7 @@ export default function Students() {
       student_id: student.student_id || '',
       ib_programme: student.ib_programme || 'DP',
       year_group: student.year_group || 'DP1',
+      classgroup_id: student.classgroup_id || '',
       subject_choices: student.subject_choices || [],
       core_components: student.core_components || { tok_assigned: false, cas_assigned: false, ee_assigned: false },
       is_active: student.is_active !== false
@@ -129,33 +130,42 @@ export default function Students() {
     e.preventDefault();
     
     // For PYP/MYP students, sync subjects across entire ClassGroup
-    if ((formData.ib_programme === 'PYP' || formData.ib_programme === 'MYP') && formData.classgroup_id) {
+    if (formData.ib_programme === 'PYP' || formData.ib_programme === 'MYP') {
       try {
-        // Save the current student
+        // Save the current student first
+        let savedStudent;
         if (editingStudent) {
           await updateMutation.mutateAsync({ id: editingStudent.id, data: formData });
+          savedStudent = { ...editingStudent, ...formData };
         } else {
-          const newStudent = await createMutation.mutateAsync(formData);
-          // If new student without classgroup, create it first
-          if (!formData.classgroup_id) {
-            await base44.functions.invoke('debugAndFixClassGroups');
-            queryClient.invalidateQueries({ queryKey: ['students'] });
-            queryClient.invalidateQueries({ queryKey: ['classGroups'] });
-            return;
-          }
+          savedStudent = await createMutation.mutateAsync(formData);
         }
 
-        // Update all students in the SAME ClassGroup with the same subjects
-        const studentsToUpdate = students.filter(s => 
-          s.classgroup_id === formData.classgroup_id && 
-          s.id !== editingStudent?.id &&
-          s.is_active !== false
-        );
+        // If no classgroup, create one first
+        if (!savedStudent.classgroup_id) {
+          await base44.functions.invoke('debugAndFixClassGroups');
+          await queryClient.invalidateQueries({ queryKey: ['students'] });
+          await queryClient.invalidateQueries({ queryKey: ['classGroups'] });
+          // Refetch to get updated student with classgroup_id
+          const updatedStudents = await base44.entities.Student.filter({ school_id: user.school_id });
+          savedStudent = updatedStudents.find(s => s.id === savedStudent.id) || savedStudent;
+        }
 
-        for (const student of studentsToUpdate) {
-          await base44.entities.Student.update(student.id, {
-            subject_choices: formData.subject_choices
-          });
+        // Update all OTHER students in the SAME ClassGroup with the same subjects
+        if (savedStudent.classgroup_id) {
+          const studentsToUpdate = students.filter(s => 
+            s.classgroup_id === savedStudent.classgroup_id && 
+            s.id !== savedStudent.id &&
+            s.is_active !== false
+          );
+
+          console.log(`Syncing subjects to ${studentsToUpdate.length} students in ClassGroup ${savedStudent.classgroup_id}`);
+
+          for (const student of studentsToUpdate) {
+            await base44.entities.Student.update(student.id, {
+              subject_choices: formData.subject_choices
+            });
+          }
         }
 
         // Auto-create and assign teaching groups for PYP/MYP
