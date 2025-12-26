@@ -319,6 +319,20 @@ Deno.serve(async (req) => {
       }
     }
 
+    // Auto-generate ClassGroups for imported students
+    console.log('=== AUTO-GENERATING CLASSGROUPS ===');
+    let classGroupsCreated = 0;
+    try {
+      const classGroupResponse = await base44.asServiceRole.functions.invoke('autoGenerateClassGroups');
+      if (classGroupResponse.data?.success) {
+        classGroupsCreated = classGroupResponse.data.classGroupsCreated || 0;
+        console.log('✓ ClassGroups created:', classGroupsCreated);
+      }
+    } catch (cgError) {
+      console.error('ClassGroup generation error:', cgError);
+      results.errors.push(`ClassGroup generation: ${cgError.message}`);
+    }
+
     // CRITICAL: Verify user can actually read the created entities
     console.log('=== VERIFICATION PHASE ===');
 
@@ -326,17 +340,20 @@ Deno.serve(async (req) => {
     let verifyTeachers = [];
     let verifyStudents = [];
     let verifyRooms = [];
+    let verifyClassGroups = [];
 
     try {
       verifySubjects = await base44.entities.Subject.list();
       verifyTeachers = await base44.entities.Teacher.list();
       verifyStudents = await base44.entities.Student.list();
       verifyRooms = await base44.entities.Room.list();
+      verifyClassGroups = await base44.entities.ClassGroup.list();
 
       console.log('✓ User can read Subjects:', verifySubjects.length);
       console.log('✓ User can read Teachers:', verifyTeachers.length);
       console.log('✓ User can read Students:', verifyStudents.length);
       console.log('✓ User can read Rooms:', verifyRooms.length);
+      console.log('✓ User can read ClassGroups:', verifyClassGroups.length);
     } catch (verifyError) {
       console.error('Verification read error:', verifyError.message);
     }
@@ -350,12 +367,14 @@ Deno.serve(async (req) => {
         teachers_created: results.teachers.length,
         students_created: results.students.length,
         teaching_groups_created: results.teaching_groups.length,
+        classgroups_created: classGroupsCreated,
         errors: results.errors,
         verified_readable: {
           subjects: verifySubjects.length,
           teachers: verifyTeachers.length,
           students: verifyStudents.length,
-          rooms: verifyRooms.length
+          rooms: verifyRooms.length,
+          classGroups: verifyClassGroups.length
         }
       },
       data: results
