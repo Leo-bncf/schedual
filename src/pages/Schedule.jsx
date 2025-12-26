@@ -265,7 +265,7 @@ export default function Schedule() {
       for (const level of scheduleLevels) {
         const levelGroups = groupsByLevel[level]
           .sort((a, b) => (a.student_ids?.length || 0) - (b.student_ids?.length || 0));
-        
+
         console.log(`\n=== Scheduling ${level} (${levelGroups.length} groups) ===`);
 
         for (const group of levelGroups) {
@@ -286,7 +286,47 @@ export default function Schedule() {
 
           let periodsScheduled = 0;
           let studentIds = group.student_ids || [];
-          const teacherId = group.teacher_id;
+
+          // Auto-assign teacher if not assigned
+          let teacherId = group.teacher_id;
+          if (!teacherId) {
+            // Find qualified teacher with capacity
+            const qualifiedTeachers = teachers.filter(t => {
+              if (!t.is_active || !t.subjects?.includes(group.subject_id)) return false;
+
+              // Check IB level qualification
+              const ibLevel = getIBLevel(group.year_group);
+              const qualification = t.qualifications?.find(q => q.subject_id === group.subject_id);
+              if (qualification && !qualification.ib_levels?.includes(ibLevel)) return false;
+
+              // Check teaching hours capacity
+              const currentHours = (teacherSchedules[t.id] || []).length;
+              const maxHours = t.max_hours_per_week || 25;
+              return (currentHours + periodsNeeded) <= maxHours;
+            });
+
+            // Pick teacher with lowest current load
+            qualifiedTeachers.sort((a, b) => {
+              const loadA = (teacherSchedules[a.id] || []).length;
+              const loadB = (teacherSchedules[b.id] || []).length;
+              return loadA - loadB;
+            });
+
+            if (qualifiedTeachers.length > 0) {
+              teacherId = qualifiedTeachers[0].id;
+              console.log(`Auto-assigned teacher ${qualifiedTeachers[0].full_name} to "${group.name}"`);
+
+              // Update the group with teacher assignment
+              await base44.entities.TeachingGroup.update(group.id, { teacher_id: teacherId });
+            } else {
+              console.warn(`No qualified teacher found for "${group.name}"`);
+            }
+          }
+
+          // Initialize teacher schedule if needed
+          if (teacherId && !teacherSchedules[teacherId]) {
+            teacherSchedules[teacherId] = [];
+          }
 
         // If no students assigned, try to find matching students
         if (studentIds.length === 0 && group.subject_id && group.year_group) {
