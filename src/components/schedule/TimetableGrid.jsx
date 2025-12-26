@@ -34,7 +34,7 @@ export default function TimetableGrid({ slots = [], groups = [], rooms = [], sub
   const [selectedSlot, setSelectedSlot] = React.useState(null);
 
   const getSlotData = (day, period) => {
-    return slots.find(s => s.day === day && s.period === period);
+    return slots.filter(s => s.day === day && s.period === period);
   };
 
   const getGroupInfo = (groupId) => {
@@ -55,16 +55,17 @@ export default function TimetableGrid({ slots = [], groups = [], rooms = [], sub
 
   const activePeriods = PERIODS.slice(0, periodsPerDay);
 
-  const getSlotSpan = (day, period) => {
-    const currentSlot = getSlotData(day, period);
+  const getSlotSpan = (day, period, slotId) => {
+    const currentSlots = getSlotData(day, period);
+    const currentSlot = currentSlots.find(s => s.id === slotId);
     if (!currentSlot) return 1;
 
     let span = 1;
     let checkPeriod = period + 1;
     
     while (checkPeriod <= periodsPerDay) {
-      const nextSlot = getSlotData(day, checkPeriod);
-      if (nextSlot && nextSlot.teaching_group_id === currentSlot.teaching_group_id) {
+      const nextSlots = getSlotData(day, checkPeriod);
+      if (nextSlots.some(s => s.teaching_group_id === currentSlot.teaching_group_id)) {
         span++;
         checkPeriod++;
       } else {
@@ -75,11 +76,12 @@ export default function TimetableGrid({ slots = [], groups = [], rooms = [], sub
     return span;
   };
 
-  const shouldSkipCell = (day, period) => {
+  const shouldSkipCell = (day, period, slotId) => {
     for (let p = period - 1; p >= 1; p--) {
-      const slot = getSlotData(day, p);
-      if (slot) {
-        const span = getSlotSpan(day, p);
+      const prevSlots = getSlotData(day, p);
+      const prevSlot = prevSlots.find(s => s.id === slotId);
+      if (prevSlot) {
+        const span = getSlotSpan(day, p, slotId);
         if (p + span > period) {
           return true;
         }
@@ -122,43 +124,66 @@ export default function TimetableGrid({ slots = [], groups = [], rooms = [], sub
                     <div className="text-sm text-slate-500 mt-1">{periodTimes[period]}</div>
                   </div>
                 {DAYS.map(day => {
-                  if (shouldSkipCell(day, period)) {
+                  const slotsInCell = getSlotData(day, period);
+                  
+                  if (slotsInCell.length === 0) {
+                    return (
+                      <div 
+                        key={`${day}-${period}`} 
+                        className="border-r border-slate-200 last:border-r-0"
+                      />
+                    );
+                  }
+
+                  // Filter out slots that should be skipped due to spanning
+                  const visibleSlots = slotsInCell.filter(slot => !shouldSkipCell(day, period, slot.id));
+
+                  if (visibleSlots.length === 0) {
                     return null;
                   }
 
-                  const slot = getSlotData(day, period);
-                  const span = slot ? getSlotSpan(day, period) : 1;
-                  const group = slot ? getGroupInfo(slot.teaching_group_id) : null;
-                  const room = slot ? getRoomInfo(slot.room_id) : null;
-                  const subject = group ? getSubjectInfo(group.subject_id) : null;
-                  const teacher = group ? getTeacherInfo(group.teacher_id) : null;
-                  const colorClass = subject ? subjectColors[subject.ib_group || 1] : '';
-
+                  // If multiple slots, show them side by side
                   return (
                     <div 
                       key={`${day}-${period}`} 
-                      className={`border-r border-slate-200 last:border-r-0 transition-all relative ${slot ? 'cursor-pointer hover:brightness-95' : ''}`}
-                      style={{ 
-                        gridRow: span > 1 ? `span ${span}` : undefined,
-                      }}
-                      onClick={() => slot && handleSlotClick(slot)}
+                      className="border-r border-slate-200 last:border-r-0 flex gap-1 p-1"
                     >
-                      {slot && group && (
-                        <div className={`h-full p-4 border-l-4 ${colorClass} flex flex-col justify-center`}>
-                          <div className="font-bold text-base text-slate-900 leading-tight mb-2">
-                            {subject?.name || group.name}
-                          </div>
-                          <Badge variant="outline" className="w-fit mb-2 bg-white/60 font-semibold">
-                            {group.level}
-                          </Badge>
-                          <div className="text-sm text-slate-700 space-y-1">
-                            <div className="font-medium">📍 {room?.name || 'TBD'}</div>
-                            {teacher && (
-                              <div className="font-medium">👤 {teacher.full_name}</div>
+                      {visibleSlots.map(slot => {
+                        const span = getSlotSpan(day, period, slot.id);
+                        const group = getGroupInfo(slot.teaching_group_id);
+                        const room = getRoomInfo(slot.room_id);
+                        const subject = group ? getSubjectInfo(group.subject_id) : null;
+                        const teacher = group ? getTeacherInfo(group.teacher_id) : null;
+                        const colorClass = subject ? subjectColors[subject.ib_group || 1] : '';
+
+                        return (
+                          <div 
+                            key={slot.id}
+                            className={`flex-1 cursor-pointer hover:brightness-95 transition-all rounded-lg overflow-hidden`}
+                            style={{ 
+                              minHeight: span > 1 ? `${span * 100}px` : '98px',
+                            }}
+                            onClick={() => handleSlotClick(slot)}
+                          >
+                            {group && (
+                              <div className={`h-full p-3 border-l-4 ${colorClass} flex flex-col justify-center`}>
+                                <div className={`font-bold ${visibleSlots.length > 1 ? 'text-sm' : 'text-base'} text-slate-900 leading-tight mb-1`}>
+                                  {subject?.name || group.name}
+                                </div>
+                                <Badge variant="outline" className="w-fit mb-1 bg-white/60 font-semibold text-xs">
+                                  {group.level}
+                                </Badge>
+                                <div className={`${visibleSlots.length > 1 ? 'text-xs' : 'text-sm'} text-slate-700 space-y-0.5`}>
+                                  <div className="font-medium">📍 {room?.name || 'TBD'}</div>
+                                  {teacher && (
+                                    <div className="font-medium truncate">👤 {teacher.full_name}</div>
+                                  )}
+                                </div>
+                              </div>
                             )}
                           </div>
-                        </div>
-                      )}
+                        );
+                      })}
                     </div>
                   );
                 })}
