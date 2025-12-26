@@ -403,7 +403,18 @@ export default function Students() {
                 <Label htmlFor="ib_programme">IB Programme *</Label>
                 <Select 
                   value={formData.ib_programme} 
-                  onValueChange={(value) => setFormData({ ...formData, ib_programme: value })}
+                  onValueChange={(value) => {
+                    const defaultYearGroups = {
+                      'DP': 'DP1',
+                      'MYP': 'MYP1',
+                      'PYP': 'PYP-A'
+                    };
+                    setFormData({ 
+                      ...formData, 
+                      ib_programme: value,
+                      year_group: defaultYearGroups[value]
+                    });
+                  }}
                 >
                   <SelectTrigger>
                     <SelectValue />
