@@ -61,11 +61,19 @@ Deno.serve(async (req) => {
       }
     }
 
-    // Create all ClassGroups
+    // Create all ClassGroups (if any to create)
+    if (classGroupsToCreate.length === 0) {
+      return Response.json({ 
+        success: true, 
+        message: 'Not enough students to form complete ClassGroups (need groups of 20)',
+        classGroupsCreated: 0
+      });
+    }
+
     const createdClassGroups = await base44.asServiceRole.entities.ClassGroup.bulkCreate(classGroupsToCreate);
 
-    // Update students with their ClassGroup IDs in batches to avoid rate limits
-    const updateBatchSize = 5;
+    // Update students with their ClassGroup IDs in smaller batches with longer delays
+    const updateBatchSize = 3;
     for (const classGroup of createdClassGroups) {
       for (let i = 0; i < classGroup.student_ids.length; i += updateBatchSize) {
         const batch = classGroup.student_ids.slice(i, i + updateBatchSize);
@@ -76,11 +84,13 @@ Deno.serve(async (req) => {
             })
           )
         );
-        // Delay between batches to avoid rate limit
+        // Longer delay between batches to avoid rate limit
         if (i + updateBatchSize < classGroup.student_ids.length) {
-          await new Promise(resolve => setTimeout(resolve, 1000));
+          await new Promise(resolve => setTimeout(resolve, 2000));
         }
       }
+      // Delay between class groups
+      await new Promise(resolve => setTimeout(resolve, 1000));
     }
 
     return Response.json({
