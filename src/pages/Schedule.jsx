@@ -327,14 +327,11 @@ export default function Schedule() {
               return s.subject_choices.some(choice => choice.subject_id === group.subject_id);
             }
 
-            // For MYP/PYP, check if student has this subject in their assigned_groups or subject_choices
+            // For MYP/PYP, ALL students in the same year group take ALL subjects together
             if (s.ib_programme === 'MYP' || s.ib_programme === 'PYP') {
-              // Check assigned_groups first
-              if (s.assigned_groups?.includes(group.id)) {
-                return true;
-              }
-              // Or check subject_choices
-              if (s.subject_choices?.some(choice => choice.subject_id === group.subject_id)) {
+              // Check if subject is for the correct programme
+              const subject = subjects.find(subj => subj.id === group.subject_id);
+              if (subject && subject.ib_level === s.ib_programme) {
                 return true;
               }
             }
@@ -343,12 +340,17 @@ export default function Schedule() {
           });
 
           studentIds = matchingStudents.map(s => s.id);
-          console.log(`Auto-assigned ${studentIds.length} students to "${group.name}"`);
+          console.log(`Auto-assigned ${studentIds.length} ${level} students to "${group.name}"`);
           
           // Update the teaching group with student assignments
           if (studentIds.length > 0) {
             await base44.entities.TeachingGroup.update(group.id, { student_ids: studentIds });
           }
+        }
+        
+        // Log assignment status for debugging
+        if (level === 'MYP' || level === 'PYP') {
+          console.log(`${level} Group "${group.name}": ${studentIds.length} students, Teacher: ${teacherId ? 'Yes' : 'No'}`);
         }
 
         // Find suitable room
