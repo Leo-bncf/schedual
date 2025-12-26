@@ -1,0 +1,201 @@
+import React, { useState } from 'react';
+import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
+import { base44 } from '@/api/base44Client';
+import { Button } from "@/components/ui/button";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Badge } from "@/components/ui/badge";
+import { Input } from "@/components/ui/input";
+import { Users, Sparkles, Search, RefreshCw } from 'lucide-react';
+import PageHeader from '../components/ui-custom/PageHeader';
+import EmptyState from '../components/ui-custom/EmptyState';
+
+export default function ClassGroups() {
+  const [searchQuery, setSearchQuery] = useState('');
+  const [isGenerating, setIsGenerating] = useState(false);
+  const queryClient = useQueryClient();
+
+  const { data: user } = useQuery({
+    queryKey: ['currentUser'],
+    queryFn: () => base44.auth.me(),
+  });
+
+  const schoolId = user?.school_id;
+
+  const { data: classGroups = [], isLoading } = useQuery({
+    queryKey: ['classGroups', schoolId],
+    queryFn: () => base44.entities.ClassGroup.filter({ school_id: schoolId }, '-year_group'),
+    enabled: !!schoolId,
+  });
+
+  const { data: students = [] } = useQuery({
+    queryKey: ['students', schoolId],
+    queryFn: () => base44.entities.Student.filter({ school_id: schoolId }),
+    enabled: !!schoolId,
+  });
+
+  const { data: teachers = [] } = useQuery({
+    queryKey: ['teachers', schoolId],
+    queryFn: () => base44.entities.Teacher.filter({ school_id: schoolId }),
+    enabled: !!schoolId,
+  });
+
+  const handleAutoGenerate = async () => {
+    setIsGenerating(true);
+    try {
+      const response = await base44.functions.invoke('autoGenerateClassGroups');
+      if (response.data.success) {
+        queryClient.invalidateQueries({ queryKey: ['classGroups'] });
+        queryClient.invalidateQueries({ queryKey: ['students'] });
+        alert(`Success! Created ${response.data.classGroupsCreated} ClassGroups for ${response.data.studentsAssigned} students.`);
+      }
+    } catch (error) {
+      console.error('Error generating ClassGroups:', error);
+      alert('Failed to generate ClassGroups. Check console for details.');
+    }
+    setIsGenerating(false);
+  };
+
+  const filteredGroups = classGroups.filter(group =>
+    group.name.toLowerCase().includes(searchQuery.toLowerCase())
+  );
+
+  const studentsWithoutClassGroup = students.filter(s => !s.classgroup_id && s.is_active);
+
+  const programmeColors = {
+    DP: 'bg-blue-100 text-blue-800 border-blue-300',
+    MYP: 'bg-emerald-100 text-emerald-800 border-emerald-300',
+    PYP: 'bg-amber-100 text-amber-800 border-amber-300'
+  };
+
+  return (
+    <div className="space-y-6">
+      <PageHeader
+        title="Class Groups"
+        description="Batches of students organized by year level (max 20 students per batch)"
+        actions={
+          <Button
+            onClick={handleAutoGenerate}
+            disabled={isGenerating || studentsWithoutClassGroup.length === 0}
+            className="bg-indigo-600 hover:bg-indigo-700"
+          >
+            {isGenerating ? (
+              <>
+                <RefreshCw className="w-4 h-4 mr-2 animate-spin" />
+                Generating...
+              </>
+            ) : (
+              <>
+                <Sparkles className="w-4 h-4 mr-2" />
+                Auto-Generate ClassGroups
+              </>
+            )}
+          </Button>
+        }
+      />
+
+      {studentsWithoutClassGroup.length > 0 && (
+        <Card className="border-amber-200 bg-amber-50">
+          <CardContent className="p-4">
+            <div className="flex items-center gap-3">
+              <Users className="w-5 h-5 text-amber-600" />
+              <div className="flex-1">
+                <p className="font-medium text-amber-900">
+                  {studentsWithoutClassGroup.length} students not assigned to ClassGroups
+                </p>
+                <p className="text-sm text-amber-700">
+                  Click "Auto-Generate ClassGroups" to automatically create batches
+                </p>
+              </div>
+            </div>
+          </CardContent>
+        </Card>
+      )}
+
+      <div className="flex items-center gap-3">
+        <div className="relative flex-1">
+          <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-slate-400 w-4 h-4" />
+          <Input
+            placeholder="Search ClassGroups..."
+            value={searchQuery}
+            onChange={(e) => setSearchQuery(e.target.value)}
+            className="pl-10"
+          />
+        </div>
+      </div>
+
+      {isLoading ? (
+        <div className="text-center py-12">
+          <div className="w-16 h-16 border-4 border-indigo-600 border-t-transparent rounded-full animate-spin mx-auto mb-4"></div>
+          <p className="text-slate-600">Loading ClassGroups...</p>
+        </div>
+      ) : filteredGroups.length === 0 ? (
+        <Card className="border-0 shadow-sm">
+          <CardContent className="py-16">
+            <EmptyState
+              icon={Users}
+              title="No ClassGroups Yet"
+              description="ClassGroups will be auto-generated when you import or add students"
+              action={studentsWithoutClassGroup.length > 0 ? handleAutoGenerate : null}
+              actionLabel={studentsWithoutClassGroup.length > 0 ? "Generate Now" : null}
+            />
+          </CardContent>
+        </Card>
+      ) : (
+        <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
+          {filteredGroups.map(group => {
+            const groupStudents = students.filter(s => s.classgroup_id === group.id);
+            const homeroomTeacher = teachers.find(t => t.id === group.homeroom_teacher_id);
+
+            return (
+              <Card key={group.id} className="border-0 shadow-sm hover:shadow-md transition-shadow">
+                <CardHeader className="pb-3">
+                  <div className="flex items-start justify-between">
+                    <div className="flex-1">
+                      <CardTitle className="text-lg font-bold text-slate-900 mb-2">
+                        {group.name}
+                      </CardTitle>
+                      <div className="flex items-center gap-2 flex-wrap">
+                        <Badge className={programmeColors[group.ib_programme]}>
+                          {group.ib_programme}
+                        </Badge>
+                        <Badge variant="outline">
+                          {group.year_group}
+                        </Badge>
+                      </div>
+                    </div>
+                    <div className="text-right">
+                      <div className="text-2xl font-bold text-indigo-600">
+                        {groupStudents.length}
+                      </div>
+                      <div className="text-xs text-slate-500">
+                        / {group.max_students}
+                      </div>
+                    </div>
+                  </div>
+                </CardHeader>
+                <CardContent>
+                  <div className="space-y-2">
+                    {homeroomTeacher && (
+                      <div className="text-sm">
+                        <span className="text-slate-500">Homeroom: </span>
+                        <span className="font-medium text-slate-700">
+                          {homeroomTeacher.full_name}
+                        </span>
+                      </div>
+                    )}
+                    <div className="flex items-center gap-2 text-sm">
+                      <Users className="w-4 h-4 text-slate-400" />
+                      <span className="text-slate-600">
+                        {groupStudents.length} students
+                      </span>
+                    </div>
+                  </div>
+                </CardContent>
+              </Card>
+            );
+          })}
+        </div>
+      )}
+    </div>
+  );
+}
