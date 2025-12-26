@@ -270,6 +270,22 @@ export default function Students() {
 
   const dp1Count = students.filter(s => s.year_group === 'DP1').length;
   const dp2Count = students.filter(s => s.year_group === 'DP2').length;
+  const mypCounts = {
+    MYP1: students.filter(s => s.year_group === 'MYP1').length,
+    MYP2: students.filter(s => s.year_group === 'MYP2').length,
+    MYP3: students.filter(s => s.year_group === 'MYP3').length,
+    MYP4: students.filter(s => s.year_group === 'MYP4').length,
+    MYP5: students.filter(s => s.year_group === 'MYP5').length,
+  };
+  const pypCounts = {
+    PYP1: students.filter(s => s.year_group === 'PYP1').length,
+    PYP2: students.filter(s => s.year_group === 'PYP2').length,
+    PYP3: students.filter(s => s.year_group === 'PYP3').length,
+    PYP4: students.filter(s => s.year_group === 'PYP4').length,
+    PYP5: students.filter(s => s.year_group === 'PYP5').length,
+  };
+  const totalMYP = Object.values(mypCounts).reduce((a, b) => a + b, 0);
+  const totalPYP = Object.values(pypCounts).reduce((a, b) => a + b, 0);
 
   return (
     <div className="space-y-6">
@@ -299,6 +315,16 @@ export default function Students() {
             <TabsTrigger value="all">All ({students.length})</TabsTrigger>
             <TabsTrigger value="DP1">DP1 ({dp1Count})</TabsTrigger>
             <TabsTrigger value="DP2">DP2 ({dp2Count})</TabsTrigger>
+            <TabsTrigger value="MYP1">MYP1 ({mypCounts.MYP1})</TabsTrigger>
+            <TabsTrigger value="MYP2">MYP2 ({mypCounts.MYP2})</TabsTrigger>
+            <TabsTrigger value="MYP3">MYP3 ({mypCounts.MYP3})</TabsTrigger>
+            <TabsTrigger value="MYP4">MYP4 ({mypCounts.MYP4})</TabsTrigger>
+            <TabsTrigger value="MYP5">MYP5 ({mypCounts.MYP5})</TabsTrigger>
+            <TabsTrigger value="PYP1">PYP1 ({pypCounts.PYP1})</TabsTrigger>
+            <TabsTrigger value="PYP2">PYP2 ({pypCounts.PYP2})</TabsTrigger>
+            <TabsTrigger value="PYP3">PYP3 ({pypCounts.PYP3})</TabsTrigger>
+            <TabsTrigger value="PYP4">PYP4 ({pypCounts.PYP4})</TabsTrigger>
+            <TabsTrigger value="PYP5">PYP5 ({pypCounts.PYP5})</TabsTrigger>
           </TabsList>
         </Tabs>
       </div>
