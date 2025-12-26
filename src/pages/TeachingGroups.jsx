@@ -29,7 +29,7 @@ export default function TeachingGroups() {
   const [isDialogOpen, setIsDialogOpen] = useState(false);
   const [editingGroup, setEditingGroup] = useState(null);
   const [searchQuery, setSearchQuery] = useState('');
-  const [ibLevelFilter, setIbLevelFilter] = useState('DP'); // DP, MYP, or PYP
+
   const [levelFilter, setLevelFilter] = useState('all');
   const [yearFilter, setYearFilter] = useState('all');
   const [showAIGenerator, setShowAIGenerator] = useState(false);
@@ -119,7 +119,7 @@ export default function TeachingGroups() {
 
   const filteredGroups = groups.filter(g => {
     const matchesSearch = g.name?.toLowerCase().includes(searchQuery.toLowerCase());
-    const matchesIbLevel = g.year_group?.startsWith(ibLevelFilter);
+    const matchesIbLevel = g.year_group?.startsWith('DP'); // Only show DP groups
     const matchesLevel = levelFilter === 'all' || g.level === levelFilter;
     const matchesYear = yearFilter === 'all' || g.year_group === yearFilter;
     return matchesSearch && matchesIbLevel && matchesLevel && matchesYear;
@@ -137,8 +137,8 @@ export default function TeachingGroups() {
   return (
     <div className="space-y-6">
       <PageHeader 
-        title="Teaching Groups"
-        description="Organize students into class sections by subject and level"
+        title="Teaching Groups (DP Only)"
+        description="Organize DP students into class sections by subject and level. PYP/MYP students attend all classes together as ClassGroups."
         actions={
           <div className="flex gap-2">
             <Button 
@@ -171,29 +171,13 @@ export default function TeachingGroups() {
             onChange={(e) => setSearchQuery(e.target.value)}
           />
         </div>
-        <Tabs value={ibLevelFilter} onValueChange={setIbLevelFilter}>
+        <Tabs value={levelFilter} onValueChange={setLevelFilter}>
           <TabsList className="bg-slate-100">
-            <TabsTrigger value="DP">DP</TabsTrigger>
-            <TabsTrigger value="MYP">MYP</TabsTrigger>
-            <TabsTrigger value="PYP">PYP</TabsTrigger>
+            <TabsTrigger value="all">All ({filteredGroups.length})</TabsTrigger>
+            <TabsTrigger value="HL">HL ({hlGroups.length})</TabsTrigger>
+            <TabsTrigger value="SL">SL ({slGroups.length})</TabsTrigger>
           </TabsList>
         </Tabs>
-        {ibLevelFilter === 'DP' && (
-          <Tabs value={levelFilter} onValueChange={setLevelFilter}>
-            <TabsList className="bg-slate-100">
-              <TabsTrigger value="all">All ({filteredGroups.length})</TabsTrigger>
-              <TabsTrigger value="HL">HL ({hlGroups.length})</TabsTrigger>
-              <TabsTrigger value="SL">SL ({slGroups.length})</TabsTrigger>
-            </TabsList>
-          </Tabs>
-        )}
-        {(ibLevelFilter === 'MYP' || ibLevelFilter === 'PYP') && (
-          <Tabs value={levelFilter} onValueChange={setLevelFilter}>
-            <TabsList className="bg-slate-100">
-              <TabsTrigger value="all">All ({filteredGroups.length})</TabsTrigger>
-            </TabsList>
-          </Tabs>
-        )}
       </div>
 
       {filteredGroups.length === 0 && !isLoading ? (

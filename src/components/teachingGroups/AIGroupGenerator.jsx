@@ -51,54 +51,8 @@ export default function AIGroupGenerator({ onComplete }) {
       students.forEach(student => {
         if (!student.is_active) return;
 
-        // For PYP students - group by IB level and subject (all PYP students of same subject together)
-        if (student.ib_programme === 'PYP') {
-          subjects.forEach(subject => {
-            if (subject.ib_level !== 'PYP') return;
-            
-            const key = `${subject.id}_Standard_PYP_ALL`;
-            
-            if (!groupMap[key]) {
-              groupMap[key] = {
-                subject_id: subject.id,
-                subject_name: subject.name,
-                level: 'Standard',
-                year_group: 'PYP1', // Base year group
-                student_ids: [],
-                ib_group: subject.ib_group,
-                is_combined: true,
-                programme: 'PYP',
-              };
-            }
-            
-            groupMap[key].student_ids.push(student.id);
-          });
-        }
-        // For MYP students - group by IB level and subject (all MYP students of same subject together)
-        else if (student.ib_programme === 'MYP') {
-          subjects.forEach(subject => {
-            if (subject.ib_level !== 'MYP') return;
-            
-            const key = `${subject.id}_Standard_MYP_ALL`;
-            
-            if (!groupMap[key]) {
-              groupMap[key] = {
-                subject_id: subject.id,
-                subject_name: subject.name,
-                level: 'Standard',
-                year_group: 'MYP1', // Base year group
-                student_ids: [],
-                ib_group: subject.ib_group,
-                is_combined: true,
-                programme: 'MYP',
-              };
-            }
-            
-            groupMap[key].student_ids.push(student.id);
-          });
-        }
-        // For DP students - use subject choices
-        else if (student.subject_choices) {
+        // Only process DP students - PYP/MYP use ClassGroups instead
+        if (student.ib_programme === 'DP' && student.subject_choices) {
           student.subject_choices.forEach(choice => {
             const subject = subjects.find(s => s.id === choice.subject_id);
             if (!subject) return;
@@ -129,13 +83,7 @@ export default function AIGroupGenerator({ onComplete }) {
       Object.values(groupMap).forEach(group => {
         const studentCount = group.student_ids.length;
 
-        // For PYP/MYP combined groups - keep all students together in one large group
-        if (group.is_combined) {
-          proposedGroups.push({
-            ...group,
-            status: 'ready',
-          });
-        } else if (studentCount < minGroupSize) {
+        if (studentCount < minGroupSize) {
           // Too small - flag for review
           proposedGroups.push({
             ...group,
@@ -149,7 +97,7 @@ export default function AIGroupGenerator({ onComplete }) {
             status: 'ready',
           });
         } else {
-          // Split into multiple groups (for DP/MYP only)
+          // Split into multiple groups
           const numGroups = Math.ceil(studentCount / maxGroupSize);
           const studentsPerGroup = Math.ceil(studentCount / numGroups);
 
@@ -219,9 +167,7 @@ export default function AIGroupGenerator({ onComplete }) {
 
       return {
         school_id: schoolId,
-        name: group.is_combined
-          ? `${group.subject_name} - All ${group.programme}`
-          : `${group.subject_name} ${group.level} - ${group.year_group}${group.group_suffix ? ` Group ${group.group_suffix}` : ''}`,
+        name: `${group.subject_name} ${group.level} - ${group.year_group}${group.group_suffix ? ` Group ${group.group_suffix}` : ''}`,
         subject_id: group.subject_id,
         level: group.level,
         year_group: group.year_group,
@@ -244,7 +190,7 @@ export default function AIGroupGenerator({ onComplete }) {
           AI Teaching Group Generator
         </CardTitle>
         <CardDescription>
-          Automatically create teaching groups based on student subject choices
+          Automatically create teaching groups for DP students based on their subject choices. PYP/MYP students use ClassGroups instead.
         </CardDescription>
       </CardHeader>
       <CardContent className="space-y-4">
