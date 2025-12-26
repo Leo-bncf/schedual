@@ -128,17 +128,29 @@ export default function Students() {
   const handleSubmit = async (e) => {
     e.preventDefault();
     
-    // For PYP/MYP students, also update all other students in the same program
-    if ((formData.ib_programme === 'PYP' || formData.ib_programme === 'MYP') && formData.subject_choices.length > 0) {
+    // Auto-assign all subjects for PYP/MYP students
+    if (formData.ib_programme === 'PYP' || formData.ib_programme === 'MYP') {
+      const programmeSubjects = subjects
+        .filter(s => s.ib_level === formData.ib_programme && s.is_active)
+        .map(s => ({
+          subject_id: s.id,
+          ib_group: s.ib_group
+        }));
+      
+      const dataToSave = {
+        ...formData,
+        subject_choices: programmeSubjects
+      };
+
       try {
-        // First, save the current student
+        // Save the current student
         if (editingStudent) {
-          await updateMutation.mutateAsync({ id: editingStudent.id, data: formData });
+          await updateMutation.mutateAsync({ id: editingStudent.id, data: dataToSave });
         } else {
-          await createMutation.mutateAsync(formData);
+          await createMutation.mutateAsync(dataToSave);
         }
 
-        // Then update all other students in the same program with the same subjects
+        // Update all other students in the same program with the same subjects
         const studentsToUpdate = students.filter(s => 
           s.ib_programme === formData.ib_programme && 
           s.id !== editingStudent?.id &&
@@ -147,7 +159,7 @@ export default function Students() {
 
         for (const student of studentsToUpdate) {
           await base44.entities.Student.update(student.id, {
-            subject_choices: formData.subject_choices
+            subject_choices: programmeSubjects
           });
         }
 
@@ -156,7 +168,7 @@ export default function Students() {
         console.error('Error updating students:', error);
       }
     } else {
-      // For DP students, just save normally
+      // For DP students, just save normally with manual subject selection
       if (editingStudent) {
         updateMutation.mutate({ id: editingStudent.id, data: formData });
       } else {
@@ -443,20 +455,26 @@ export default function Students() {
               </div>
             </div>
 
-            <div className="space-y-2">
-              <Label>Subject Choices</Label>
-              {(formData.ib_programme === 'PYP' || formData.ib_programme === 'MYP') && (
-                <p className="text-xs text-amber-600 bg-amber-50 p-2 rounded border border-amber-200">
-                  Note: Selecting subjects for {formData.ib_programme} students will apply to all {formData.ib_programme} students.
+            {formData.ib_programme === 'DP' && (
+              <div className="space-y-2">
+                <Label>Subject Choices</Label>
+                <SubjectSelector 
+                  subjects={subjects}
+                  selectedSubjects={formData.subject_choices}
+                  onChange={(choices) => setFormData({ ...formData, subject_choices: choices })}
+                  programme={formData.ib_programme}
+                />
+              </div>
+            )}
+
+            {(formData.ib_programme === 'PYP' || formData.ib_programme === 'MYP') && (
+              <div className="space-y-2">
+                <Label>Subject Choices</Label>
+                <p className="text-xs text-blue-600 bg-blue-50 p-3 rounded border border-blue-200">
+                  ✓ All {formData.ib_programme} subjects will be automatically assigned to this student and all other {formData.ib_programme} students.
                 </p>
-              )}
-              <SubjectSelector 
-                subjects={subjects}
-                selectedSubjects={formData.subject_choices}
-                onChange={(choices) => setFormData({ ...formData, subject_choices: choices })}
-                programme={formData.ib_programme}
-              />
-            </div>
+              </div>
+            )}
 
             {formData.ib_programme === 'DP' && (
               <DPValidator 
