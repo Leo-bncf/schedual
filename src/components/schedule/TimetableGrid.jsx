@@ -171,10 +171,10 @@ export default function TimetableGrid({ slots = [], groups = [], rooms = [], sub
                                   {group.level}
                                 </Badge>
                                 <div className="text-xs text-slate-700 space-y-1">
-                                  <div className="font-medium">📍 {room?.name || 'TBD'}</div>
                                   {teacher && (
                                     <div className="font-medium">👤 {teacher.full_name}</div>
                                   )}
+                                  <div className="font-medium">📍 {room?.name || 'TBD'}</div>
                                 </div>
                                 {span > 1 && (
                                   <div className="mt-2 text-xs text-slate-500 font-medium">
