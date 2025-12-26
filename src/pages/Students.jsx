@@ -128,38 +128,33 @@ export default function Students() {
   const handleSubmit = async (e) => {
     e.preventDefault();
     
-    // Auto-assign all subjects for PYP/MYP students
-    if (formData.ib_programme === 'PYP' || formData.ib_programme === 'MYP') {
-      const programmeSubjects = subjects
-        .filter(s => s.ib_level === formData.ib_programme && s.is_active)
-        .map(s => ({
-          subject_id: s.id,
-          ib_group: s.ib_group
-        }));
-      
-      const dataToSave = {
-        ...formData,
-        subject_choices: programmeSubjects
-      };
-
+    // For PYP/MYP students, sync subjects across entire ClassGroup
+    if ((formData.ib_programme === 'PYP' || formData.ib_programme === 'MYP') && formData.classgroup_id) {
       try {
         // Save the current student
         if (editingStudent) {
-          await updateMutation.mutateAsync({ id: editingStudent.id, data: dataToSave });
+          await updateMutation.mutateAsync({ id: editingStudent.id, data: formData });
         } else {
-          await createMutation.mutateAsync(dataToSave);
+          const newStudent = await createMutation.mutateAsync(formData);
+          // If new student without classgroup, create it first
+          if (!formData.classgroup_id) {
+            await base44.functions.invoke('debugAndFixClassGroups');
+            queryClient.invalidateQueries({ queryKey: ['students'] });
+            queryClient.invalidateQueries({ queryKey: ['classGroups'] });
+            return;
+          }
         }
 
-        // Update all other students in the same program with the same subjects
+        // Update all students in the SAME ClassGroup with the same subjects
         const studentsToUpdate = students.filter(s => 
-          s.ib_programme === formData.ib_programme && 
+          s.classgroup_id === formData.classgroup_id && 
           s.id !== editingStudent?.id &&
           s.is_active !== false
         );
 
         for (const student of studentsToUpdate) {
           await base44.entities.Student.update(student.id, {
-            subject_choices: programmeSubjects
+            subject_choices: formData.subject_choices
           });
         }
 
@@ -470,26 +465,20 @@ export default function Students() {
               </div>
             </div>
 
-            {formData.ib_programme === 'DP' && (
-              <div className="space-y-2">
-                <Label>Subject Choices</Label>
-                <SubjectSelector 
-                  subjects={subjects}
-                  selectedSubjects={formData.subject_choices}
-                  onChange={(choices) => setFormData({ ...formData, subject_choices: choices })}
-                  programme={formData.ib_programme}
-                />
-              </div>
-            )}
-
-            {(formData.ib_programme === 'PYP' || formData.ib_programme === 'MYP') && (
-              <div className="space-y-2">
-                <Label>Subject Choices</Label>
-                <p className="text-xs text-blue-600 bg-blue-50 p-3 rounded border border-blue-200">
-                  ✓ All {formData.ib_programme} subjects will be automatically assigned to this student and all other {formData.ib_programme} students.
+            <div className="space-y-2">
+              <Label>Subject Choices</Label>
+              {(formData.ib_programme === 'PYP' || formData.ib_programme === 'MYP') && (
+                <p className="text-xs text-blue-600 bg-blue-50 p-3 rounded border border-blue-200 mb-2">
+                  ℹ️ Changes will sync to all students in the same ClassGroup
                 </p>
-              </div>
-            )}
+              )}
+              <SubjectSelector 
+                subjects={subjects}
+                selectedSubjects={formData.subject_choices}
+                onChange={(choices) => setFormData({ ...formData, subject_choices: choices })}
+                programme={formData.ib_programme}
+              />
+            </div>
 
             {formData.ib_programme === 'DP' && (
               <DPValidator 
