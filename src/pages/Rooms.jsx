@@ -186,7 +186,7 @@ export default function Rooms() {
       // Send message with file to agent
       await base44.agents.addMessage(conv, {
         role: "user",
-        content: `Please extract all room information from this document and create Room entities. IMPORTANT: Every room must have school_id set to "${schoolId}". Extract room name, capacity (as a number), and map the room type to one of: classroom, lab, art_studio, music_room, computer_lab, gymnasium, library, auditorium, or other.`,
+        content: `Extract all rooms from this document and create Room entities. CRITICAL REQUIREMENT: Set school_id="${schoolId}" for EVERY room you create. Required fields: school_id, name, capacity (number), room_type (choose from: classroom, lab, art_studio, music_room, computer_lab, gymnasium, library, auditorium, other). Create all rooms found in the document.`,
         file_urls: [file_url]
       });
 
