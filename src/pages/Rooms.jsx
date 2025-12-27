@@ -138,7 +138,7 @@ export default function Rooms() {
     }
   };
 
-  const filteredRooms = (rooms || []).filter(r => {
+  const filteredRooms = rooms.filter(r => {
     const matchesSearch = r.name?.toLowerCase().includes(searchQuery.toLowerCase()) ||
       r.building?.toLowerCase().includes(searchQuery.toLowerCase());
     const matchesType = typeFilter === 'all' || r.room_type === typeFilter;
@@ -149,8 +149,8 @@ export default function Rooms() {
     return ROOM_TYPES.find(t => t.value === type) || ROOM_TYPES[ROOM_TYPES.length - 1];
   };
 
-  const totalCapacity = (rooms || []).reduce((sum, r) => sum + (r.capacity || 0), 0);
-  const labCount = (rooms || []).filter(r => r.room_type === 'lab').length;
+  const totalCapacity = rooms.reduce((sum, r) => sum + (r.capacity || 0), 0);
+  const labCount = rooms.filter(r => r.room_type === 'lab').length;
 
   React.useEffect(() => {
     let unsubscribe;
