@@ -40,9 +40,12 @@ export default function Students() {
   const [editingStudent, setEditingStudent] = useState(null);
   const [searchQuery, setSearchQuery] = useState('');
   const [yearFilter, setYearFilter] = useState('all');
-  const [uploading, setUploading] = useState(false);
-  const [conversation, setConversation] = useState(null);
-  const [messages, setMessages] = useState([]);
+  const [uploadState, setUploadState] = useState({
+    isUploading: false,
+    progress: '',
+    studentsCreated: 0,
+    error: null
+  });
   const [formData, setFormData] = useState({
     full_name: '',
     email: '',
@@ -346,74 +349,110 @@ export default function Students() {
   const totalMYP = Object.values(mypCounts).reduce((a, b) => a + b, 0);
   const totalPYP = Object.values(pypCounts).reduce((a, b) => a + b, 0);
 
-  React.useEffect(() => {
-    let unsubscribe;
-    if (conversation?.id) {
-      console.log('Subscribing to conversation:', conversation.id);
-      unsubscribe = base44.agents.subscribeToConversation(conversation.id, (data) => {
-        console.log('Conversation update:', data);
-        setMessages(data.messages || []);
-      });
-    }
-    return () => {
-      if (unsubscribe) {
-        console.log('Unsubscribing from conversation');
-        unsubscribe();
-      }
-    };
-  }, [conversation?.id]);
-
   const handleFileUpload = async (e) => {
     const file = e.target.files?.[0];
     if (!file) return;
 
-    setUploading(true);
-    setMessages([]);
-    try {
-      console.log('Uploading file:', file.name);
-      const { file_url } = await base44.integrations.Core.UploadFile({ file });
-      console.log('File uploaded:', file_url);
+    e.target.value = '';
 
-      console.log('Creating conversation...');
-      const conv = await base44.agents.createConversation({
-        agent_name: "student_importer",
-        metadata: { 
-          file_name: file.name,
-          school_id: schoolId
+    if (!schoolId) {
+      alert('No school assigned. Please set up your school in Settings first.');
+      return;
+    }
+
+    setUploadState({
+      isUploading: true,
+      progress: 'Uploading file...',
+      studentsCreated: 0,
+      error: null
+    });
+
+    try {
+      const { file_url } = await base44.integrations.Core.UploadFile({ file });
+
+      setUploadState(prev => ({ ...prev, progress: 'Extracting student data...' }));
+
+      const extractionResult = await base44.integrations.Core.InvokeLLM({
+        prompt: `Extract all students from this document. For each student, provide: full_name, email (if available), student_id (if available), ib_programme (one of: DP, MYP, PYP), year_group (e.g., DP1, DP2, MYP1-5, PYP-A through PYP-F).`,
+        file_urls: [file_url],
+        response_json_schema: {
+          type: "object",
+          properties: {
+            students: {
+              type: "array",
+              items: {
+                type: "object",
+                properties: {
+                  full_name: { type: "string" },
+                  email: { type: "string" },
+                  student_id: { type: "string" },
+                  ib_programme: { type: "string" },
+                  year_group: { type: "string" }
+                },
+                required: ["full_name", "ib_programme", "year_group"]
+              }
+            }
+          }
         }
       });
-      console.log('Conversation created:', conv);
-      setConversation(conv);
 
-      console.log('Sending message to agent...');
-      await base44.agents.addMessage(conv, {
-        role: "user",
-        content: `Extract all students from this document and create Student entities. Use school_id: ${schoolId}`,
-        file_urls: [file_url]
-      });
-      console.log('Message sent');
+      const studentsData = extractionResult?.students || [];
+
+      if (studentsData.length === 0) {
+        throw new Error('No students found in the document');
+      }
+
+      setUploadState(prev => ({ ...prev, progress: `Creating ${studentsData.length} students...` }));
+
+      let created = 0;
+      for (const student of studentsData) {
+        await base44.entities.Student.create({
+          school_id: schoolId,
+          full_name: student.full_name,
+          email: student.email || '',
+          student_id: student.student_id || '',
+          ib_programme: student.ib_programme,
+          year_group: student.year_group,
+          subject_choices: [],
+          core_components: { tok_assigned: false, cas_assigned: false, ee_assigned: false },
+          is_active: true
+        });
+
+        created++;
+        setUploadState(prev => ({ 
+          ...prev, 
+          studentsCreated: created,
+          progress: `Created ${created} of ${studentsData.length} students...`
+        }));
+      }
+
+      setUploadState(prev => ({ 
+        ...prev, 
+        isUploading: false,
+        progress: `Successfully created ${created} students!`
+      }));
+
+      setTimeout(() => {
+        setUploadState({
+          isUploading: false,
+          progress: '',
+          studentsCreated: 0,
+          error: null
+        });
+        queryClient.invalidateQueries({ queryKey: ['students'] });
+      }, 2000);
 
     } catch (error) {
       console.error('Upload error:', error);
-      alert('Failed to upload file: ' + (error?.message || 'Unknown error'));
-      setConversation(null);
-      setMessages([]);
-    } finally {
-      setUploading(false);
+      setUploadState({
+        isUploading: false,
+        progress: '',
+        studentsCreated: 0,
+        error: error?.message || 'An unknown error occurred'
+      });
+      alert('Failed to process file: ' + (error?.message || 'Unknown error'));
     }
   };
-
-  const closeImportDialog = () => {
-    setConversation(null);
-    setMessages([]);
-    queryClient.invalidateQueries({ queryKey: ['students'] });
-  };
-
-  const isImportComplete = messages.length > 0 && 
-    messages[messages.length - 1]?.role === 'assistant' &&
-    (!messages[messages.length - 1]?.tool_calls || 
-     !Array.isArray(messages[messages.length - 1]?.tool_calls) ||
-     !messages[messages.length - 1]?.tool_calls?.some(tc => tc?.status === 'running' || tc?.status === 'pending'));
 
   return (
     <div className="space-y-6">
@@ -434,12 +473,12 @@ export default function Students() {
                 type="button"
                 variant="outline"
                 onClick={() => document.getElementById('student-upload').click()}
-                disabled={uploading}
+                disabled={uploadState.isUploading}
               >
-                {uploading ? (
+                {uploadState.isUploading ? (
                   <>
                     <Loader2 className="w-4 h-4 mr-2 animate-spin" />
-                    Uploading...
+                    {uploadState.progress || 'Processing...'}
                   </>
                 ) : (
                   <>
@@ -654,91 +693,7 @@ export default function Students() {
         </DialogContent>
       </Dialog>
 
-      {/* Import Progress Dialog */}
-      <Dialog open={!!conversation} onOpenChange={(open) => { if (!open && isImportComplete) closeImportDialog(); }}>
-        <DialogContent className="sm:max-w-lg">
-          <DialogHeader>
-            <DialogTitle>Importing Students</DialogTitle>
-            <DialogDescription>
-              AI is reading the document and creating student entities
-            </DialogDescription>
-          </DialogHeader>
-          
-          <div className="space-y-4 max-h-96 overflow-y-auto">
-            <AnimatePresence mode="popLayout">
-              {messages.map((msg, idx) => (
-                <motion.div
-                  key={idx}
-                  initial={{ opacity: 0, y: 10 }}
-                  animate={{ opacity: 1, y: 0 }}
-                  transition={{ duration: 0.3 }}
-                  className={`p-3 rounded-lg ${msg.role === 'user' ? 'bg-slate-50' : 'bg-blue-50'}`}
-                >
-                  {msg.content && (
-                    <p className="text-sm text-slate-700 whitespace-pre-wrap">{msg.content}</p>
-                  )}
-                  
-                  {msg.tool_calls && Array.isArray(msg.tool_calls) && msg.tool_calls.length > 0 && (
-                    <div className="mt-2 space-y-1">
-                      {msg.tool_calls.filter(tc => tc && typeof tc === 'object').map((tc, tcIdx) => (
-                        <motion.div
-                          key={tcIdx}
-                          initial={{ opacity: 0, x: -10 }}
-                          animate={{ opacity: 1, x: 0 }}
-                          transition={{ delay: tcIdx * 0.1 }}
-                          className="flex items-center gap-2 text-sm"
-                        >
-                          {tc?.status === 'completed' ? (
-                            <motion.div
-                              initial={{ scale: 0 }}
-                              animate={{ scale: 1 }}
-                              transition={{ type: "spring", stiffness: 200, damping: 15 }}
-                            >
-                              <CheckCircle className="w-4 h-4 text-green-600" />
-                            </motion.div>
-                          ) : (
-                            <Loader2 className="w-4 h-4 text-blue-600 animate-spin" />
-                          )}
-                          <span className="text-slate-600">
-                            {tc?.status === 'completed' ? 'Created student' : 'Creating student...'}
-                          </span>
-                        </motion.div>
-                      ))}
-                    </div>
-                  )}
-                </motion.div>
-              ))}
-            </AnimatePresence>
-          </div>
 
-          <AnimatePresence>
-            {isImportComplete && (
-              <motion.div
-                initial={{ opacity: 0, scale: 0.9 }}
-                animate={{ opacity: 1, scale: 1 }}
-                exit={{ opacity: 0, scale: 0.9 }}
-              >
-                <div className="flex items-center justify-center py-6">
-                  <motion.div
-                    initial={{ scale: 0 }}
-                    animate={{ scale: 1 }}
-                    transition={{ type: "spring", stiffness: 200, damping: 15, delay: 0.2 }}
-                    className="w-16 h-16 rounded-full bg-green-100 flex items-center justify-center"
-                  >
-                    <CheckCircle className="w-8 h-8 text-green-600" />
-                  </motion.div>
-                </div>
-                <DialogFooter>
-                  <Button onClick={closeImportDialog} className="bg-green-600 hover:bg-green-700 w-full">
-                    <CheckCircle className="w-4 h-4 mr-2" />
-                    Done - View Students
-                  </Button>
-                </DialogFooter>
-              </motion.div>
-            )}
-          </AnimatePresence>
-        </DialogContent>
-      </Dialog>
     </div>
   );
 }
