@@ -168,6 +168,11 @@ export default function Rooms() {
     const file = e.target.files?.[0];
     if (!file) return;
 
+    if (!schoolId) {
+      alert('No school assigned. Please contact support.');
+      return;
+    }
+
     setUploading(true);
     try {
       // Upload file
@@ -188,15 +193,25 @@ export default function Rooms() {
         role: "user",
         content: `Extract all rooms from this document and create Room entities. 
 
-Use school_id: ${schoolId}
+  My school_id is: ${schoolId}
 
-Required fields for each room: school_id (use ${schoolId}), name, capacity (number), room_type (choose from: classroom, lab, art_studio, music_room, computer_lab, gymnasium, library, auditorium, other).`,
+  For each room you find, create a Room entity with these fields:
+  - school_id: ${schoolId}
+  - name: room name/number
+  - capacity: number only (e.g., 30)
+  - room_type: choose from classroom, lab, art_studio, music_room, computer_lab, gymnasium, library, auditorium, other
+  - building: if available
+  - floor: if available
+  - equipment: []
+  - is_active: true`,
         file_urls: [file_url]
       });
 
     } catch (error) {
       console.error('Upload error:', error);
-      alert('Failed to upload file: ' + error.message);
+      alert('Failed to upload file: ' + (error?.message || 'Unknown error'));
+      setUploading(false);
+      setConversation(null);
     } finally {
       setUploading(false);
     }
