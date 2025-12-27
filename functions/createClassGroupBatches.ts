@@ -174,6 +174,7 @@ Deno.serve(async (req) => {
       ineligibleStudents: ineligibleStudents.length,
       assignedStudents: assignedCount,
       failedStudents: failedCount,
+      failedDetails: failedDetails,
       missingYearGroupStudents: ineligibleStudents.map(s => ({
         id: s.id,
         name: s.full_name,
