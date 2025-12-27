@@ -151,28 +151,17 @@ export default function Students() {
           savedStudent = updatedStudents.find(s => s.id === savedStudent.id) || savedStudent;
         }
 
-        // Update all OTHER students in the SAME ClassGroup with the same subjects
+        // Sync subjects to all students in the ClassGroup
         if (savedStudent.classgroup_id) {
-          const studentsToUpdate = students.filter(s => 
-            s.classgroup_id === savedStudent.classgroup_id && 
-            s.id !== savedStudent.id &&
-            s.is_active !== false
-          );
-
-          console.log(`Syncing subjects to ${studentsToUpdate.length} students in ClassGroup ${savedStudent.classgroup_id}`);
-
-          for (const student of studentsToUpdate) {
-            await base44.entities.Student.update(student.id, {
-              subject_choices: formData.subject_choices
-            });
-          }
+          await base44.functions.invoke('syncClassGroupSubjects', {
+            student_id: savedStudent.id,
+            subject_choices: formData.subject_choices
+          });
         }
-
-        // Auto-create and assign teaching groups for PYP/MYP
-        await base44.functions.invoke('autoAssignPYPMYPGroups');
 
         queryClient.invalidateQueries({ queryKey: ['students'] });
         queryClient.invalidateQueries({ queryKey: ['teachingGroups'] });
+        resetForm();
       } catch (error) {
         console.error('Error updating students:', error);
       }
