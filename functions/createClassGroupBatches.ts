@@ -124,7 +124,7 @@ Deno.serve(async (req) => {
 
     return Response.json({
       success: true,
-      message: `Created ${createdGroups.length} class groups with ${updatePromises.length} students assigned`,
+      message: `Created ${createdGroups.length} class groups with ${studentsToAssign.length} students assigned`,
       groups: createdGroups.map(g => ({
         name: g.name,
         year_group: g.year_group,
