@@ -137,7 +137,7 @@ export default function Layout({ children, currentPageName }) {
         const sessions = await base44.entities.LoginSession.filter({
           user_email: userData.email,
           verified: true
-        }, '-created_date', 1);
+        }).catch(() => []);
 
         if (sessions.length > 0) {
           const session = sessions[0];
