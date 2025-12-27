@@ -11,14 +11,14 @@ Deno.serve(async (req) => {
 
     const schoolId = user.school_id;
 
-    // Step 1: Fetch ALL students (no limit)
+    // Step 1: Fetch ALL students (no is_active filter)
     let allStudents = [];
     let skip = 0;
     const batchSize = 100;
     
     while (true) {
       const batch = await base44.asServiceRole.entities.Student.filter(
-        { school_id: schoolId, is_active: true },
+        { school_id: schoolId },
         '-created_date',
         batchSize,
         skip
@@ -34,23 +34,37 @@ Deno.serve(async (req) => {
     console.log(`Total students fetched: ${allStudents.length}`);
 
     // Step 2: Delete ALL existing ClassGroups
-    const existingGroups = await base44.asServiceRole.entities.ClassGroup.filter({
-      school_id: schoolId
-    }, '-created_date', 1000);
+    let existingGroups = [];
+    skip = 0;
+    
+    while (true) {
+      const batch = await base44.asServiceRole.entities.ClassGroup.filter(
+        { school_id: schoolId },
+        '-created_date',
+        100,
+        skip
+      );
+      
+      if (batch.length === 0) break;
+      existingGroups = existingGroups.concat(batch);
+      
+      if (batch.length < 100) break;
+      skip += 100;
+    }
+    
+    console.log(`Deleting ${existingGroups.length} existing class groups`);
     
     for (const group of existingGroups) {
       await base44.asServiceRole.entities.ClassGroup.delete(group.id);
-      await new Promise(resolve => setTimeout(resolve, 100));
     }
 
     // Step 3: Clear ALL student classgroup_ids
+    console.log(`Clearing classgroup_ids for ${allStudents.length} students`);
+    
     for (const student of allStudents) {
-      if (student.classgroup_id) {
-        await base44.asServiceRole.entities.Student.update(student.id, {
-          classgroup_id: null
-        });
-        await new Promise(resolve => setTimeout(resolve, 50));
-      }
+      await base44.asServiceRole.entities.Student.update(student.id, {
+        classgroup_id: null
+      });
     }
 
     // Step 4: Group students by programme + year_group
