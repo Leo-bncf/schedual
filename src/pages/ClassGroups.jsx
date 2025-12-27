@@ -116,9 +116,8 @@ export default function ClassGroups() {
   );
 
   const studentsWithoutClassGroup = students.filter(s => {
-    if (!s.classgroup_id) return true;
-    // Check if classgroup_id points to a deleted/non-existent group
-    return !classGroups.find(cg => cg.id === s.classgroup_id);
+    // Check if student is in any ClassGroup's student_ids array
+    return !classGroups.some(cg => cg.student_ids?.includes(s.id));
   });
 
   const programmeColors = {
@@ -227,7 +226,7 @@ export default function ClassGroups() {
       ) : (
         <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
           {filteredGroups.map(group => {
-            const groupStudents = students.filter(s => s.classgroup_id === group.id);
+            const groupStudents = students.filter(s => group.student_ids?.includes(s.id));
             const homeroomTeacher = teachers.find(t => t.id === group.homeroom_teacher_id);
 
             return (
@@ -308,13 +307,13 @@ export default function ClassGroups() {
           <DialogHeader>
             <DialogTitle className="text-2xl">{selectedGroup?.name}</DialogTitle>
             <DialogDescription>
-              {selectedGroup?.ib_programme} • {selectedGroup?.year_group} • {students.filter(s => s.classgroup_id === selectedGroup?.id).length} students
+              {selectedGroup?.ib_programme} • {selectedGroup?.year_group} • {students.filter(s => selectedGroup?.student_ids?.includes(s.id)).length} students
             </DialogDescription>
           </DialogHeader>
 
           <div className="space-y-6 mt-4">
             {students
-              .filter(s => s.classgroup_id === selectedGroup?.id)
+              .filter(s => selectedGroup?.student_ids?.includes(s.id))
               .map(student => {
                 // Get student's classes (for DP students)
                 const studentClasses = student.ib_programme === 'DP' 
@@ -389,7 +388,7 @@ export default function ClassGroups() {
                 );
               })}
 
-            {students.filter(s => s.classgroup_id === selectedGroup?.id).length === 0 && (
+            {students.filter(s => selectedGroup?.student_ids?.includes(s.id)).length === 0 && (
               <div className="text-center py-12">
                 <Users className="w-12 h-12 text-slate-300 mx-auto mb-3" />
                 <p className="text-slate-500">No students in this ClassGroup yet</p>
