@@ -3,7 +3,6 @@ import AccountManager from './pages/AccountManager';
 import Constraints from './pages/Constraints';
 import ContactUs from './pages/ContactUs';
 import Dashboard from './pages/Dashboard';
-import DataImport from './pages/DataImport';
 import DatabaseSchema from './pages/DatabaseSchema';
 import Documentation from './pages/Documentation';
 import Landing from './pages/Landing';
@@ -36,7 +35,6 @@ export const PAGES = {
     "Constraints": Constraints,
     "ContactUs": ContactUs,
     "Dashboard": Dashboard,
-    "DataImport": DataImport,
     "DatabaseSchema": DatabaseSchema,
     "Documentation": Documentation,
     "Landing": Landing,

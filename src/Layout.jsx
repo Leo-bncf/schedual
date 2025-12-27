@@ -37,7 +37,6 @@ const navigation = [
   // School Admin Pages
   { name: 'Dashboard', page: 'Dashboard', icon: LayoutDashboard, schoolOnly: true },
   { name: 'Setup Guide', page: 'Onboarding', icon: Sparkles, schoolOnly: true },
-  { name: 'Import Data', page: 'DataImport', icon: Upload, schoolOnly: true },
   { name: 'Schedule', page: 'Schedule', icon: Calendar, schoolOnly: true },
   { name: 'Class Groups', page: 'ClassGroups', icon: Users, schoolOnly: true },
   { name: 'Teaching Groups', page: 'TeachingGroups', icon: Users, schoolOnly: true },
@@ -198,7 +197,7 @@ export default function Layout({ children, currentPageName }) {
   }
 
   // Role-based access control with React Router navigation
-  const schoolOnlyPages = ['Dashboard', 'Onboarding', 'DataImport', 'Schedule', 'TeachingGroups', 'Teachers', 'Students', 'Subjects', 'Rooms', 'Constraints', 'AIAdvisor', 'Settings', 'Support', 'Subscription'];
+  const schoolOnlyPages = ['Dashboard', 'Onboarding', 'Schedule', 'TeachingGroups', 'Teachers', 'Students', 'Subjects', 'Rooms', 'Constraints', 'AIAdvisor', 'Settings', 'Support', 'Subscription'];
   const superAdminPages = ['Panel', 'UserManagement', 'SubscriptionsOverview', 'SupportTickets'];
 
   if (isSuperAdmin && schoolOnlyPages.includes(currentPageName)) {
