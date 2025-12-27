@@ -60,7 +60,7 @@ Deno.serve(async (req) => {
     const allStudents = await base44.asServiceRole.entities.Student.filter({
       school_id: schoolId,
       is_active: true
-    });
+    }, '-created_date', 1000); // Explicitly fetch up to 1000 students
 
     const studentsToUpdate = allStudents.filter(s => s.classgroup_id);
     if (studentsToUpdate.length > 0) {
