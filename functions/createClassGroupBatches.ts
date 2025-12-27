@@ -98,11 +98,9 @@ Deno.serve(async (req) => {
       groups[key].students.push(student);
     });
 
-    // Step 5: Create ClassGroups AND assign students immediately
+    // Step 5: Create ClassGroups and collect student assignments
     const createdGroups = [];
-    let assignedCount = 0;
-    let failedCount = 0;
-    const failedDetails = [];
+    const studentAssignments = []; // Collect all assignments for bulk update
     
     for (const [key, data] of Object.entries(groups)) {
       const { ib_programme, year_group, students } = data;
@@ -132,38 +130,42 @@ Deno.serve(async (req) => {
         createdGroups.push(group);
         console.log(`✓ Created group ${group.id}: ${group.name}`);
         
-        // Immediately assign all students in this batch
-        console.log(`Assigning ${batchStudents.length} students to ${group.name}...`);
-        
+        // Collect student assignments
         for (const student of batchStudents) {
-          try {
-            await base44.asServiceRole.entities.Student.update(student.id, {
-              classgroup_id: group.id
-            });
-            console.log(`  ✓ Assigned ${student.full_name} (${student.id})`);
-            assignedCount++;
-          } catch (err) {
-            console.error(`  ✗ Failed to assign ${student.full_name} (${student.id}):`, err.message);
-            failedDetails.push({ 
-              studentId: student.id, 
-              studentName: student.full_name,
-              groupId: group.id, 
-              error: err.message 
-            });
-            failedCount++;
-          }
-          await new Promise(resolve => setTimeout(resolve, 50));
+          studentAssignments.push({
+            id: student.id,
+            classgroup_id: group.id
+          });
         }
         
-        await new Promise(resolve => setTimeout(resolve, 200));
+        await new Promise(resolve => setTimeout(resolve, 100));
       }
     }
 
     console.log(`✓ Created ${createdGroups.length} class groups`);
-    console.log(`✓ Assigned ${assignedCount} students successfully`);
+    console.log(`Assigning ${studentAssignments.length} students using bulk update...`);
+    
+    // Step 6: Bulk assign students to their groups
+    let assignedCount = 0;
+    let failedCount = 0;
+    
+    for (const assignment of studentAssignments) {
+      try {
+        await base44.asServiceRole.entities.Student.update(assignment.id, {
+          classgroup_id: assignment.classgroup_id
+        });
+        assignedCount++;
+      } catch (err) {
+        console.error(`Failed to assign student ${assignment.id}:`, err.message);
+        failedCount++;
+      }
+      // Small delay to avoid rate limits
+      await new Promise(resolve => setTimeout(resolve, 100));
+    }
+
+    console.log(`✓ Successfully assigned ${assignedCount} students`);
     if (failedCount > 0) {
       console.log(`✗ Failed to assign ${failedCount} students`);
-      console.log('Failed assignments:', failedDetails);
     }
 
     return Response.json({
