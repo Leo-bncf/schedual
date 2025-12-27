@@ -37,7 +37,9 @@ Deno.serve(async (req) => {
 
     // Use LLM to extract structured data from the file
     console.log('Calling InvokeLLM...');
-    const extractionResponse = await base44.integrations.Core.InvokeLLM({
+    let extractionResponse;
+    try {
+      extractionResponse = await base44.integrations.Core.InvokeLLM({
       prompt: `Extract school data from this file and structure it as JSON. Be thorough and extract ALL relationships.
 
     CRITICAL REQUIREMENTS:
@@ -140,6 +142,13 @@ Deno.serve(async (req) => {
         }
       }
     });
+    } catch (llmError) {
+      console.error('LLM extraction failed:', llmError);
+      return Response.json({ 
+        success: false,
+        error: `Failed to extract data from file: ${llmError.message || 'The file format may not be supported or readable.'}` 
+      }, { status: 500 });
+    }
 
     console.log('LLM extraction complete');
     console.log('Extracted data:', JSON.stringify(extractionResponse, null, 2));
