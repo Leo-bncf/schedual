@@ -44,7 +44,7 @@ Deno.serve(async (req) => {
 
     // Step 2: Delete ALL existing ClassGroups
     let existingGroups = [];
-    skip = 0;
+    let skip = 0;
     
     while (true) {
       const batch = await base44.asServiceRole.entities.ClassGroup.filter(
