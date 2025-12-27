@@ -176,7 +176,13 @@ export default function Teachers() {
       setUploadState(prev => ({ ...prev, progress: 'Extracting teacher data...' }));
 
       const extractionResult = await base44.integrations.Core.InvokeLLM({
-        prompt: `Extract all teachers from this document. For each teacher, provide: full_name, email, employee_id (if available), max_hours_per_week (as number, default 25 if not specified).`,
+        prompt: `Extract all teachers from this document. For each teacher, provide:
+- full_name, email, employee_id (if available)
+- max_hours_per_week (as number, default 25 if not specified)
+- subjects: array of subject names they teach (e.g., ["Physics", "Chemistry"])
+- ib_levels: array of IB programme levels they can teach (PYP, MYP, and/or DP)
+
+Example: {"full_name": "John Smith", "email": "john@school.com", "subjects": ["Physics", "Chemistry"], "ib_levels": ["DP"]}`,
         file_urls: [file_url],
         response_json_schema: {
           type: "object",
@@ -189,7 +195,15 @@ export default function Teachers() {
                   full_name: { type: "string" },
                   email: { type: "string" },
                   employee_id: { type: "string" },
-                  max_hours_per_week: { type: "number" }
+                  max_hours_per_week: { type: "number" },
+                  subjects: {
+                    type: "array",
+                    items: { type: "string" }
+                  },
+                  ib_levels: {
+                    type: "array",
+                    items: { type: "string" }
+                  }
                 },
                 required: ["full_name", "email"]
               }
@@ -206,15 +220,42 @@ export default function Teachers() {
 
       setUploadState(prev => ({ ...prev, progress: `Creating ${teachersData.length} teachers...` }));
 
+      // Fetch all subjects to match names to IDs
+      const allSubjects = await base44.entities.Subject.list();
+
       let created = 0;
       for (const teacher of teachersData) {
+        // Match subject names to IDs
+        const subjectIds = [];
+        const qualifications = [];
+        
+        if (teacher.subjects && Array.isArray(teacher.subjects)) {
+          teacher.subjects.forEach(subjectName => {
+            const matchedSubject = allSubjects.find(s => 
+              s.name?.toLowerCase().includes(subjectName?.toLowerCase()) ||
+              subjectName?.toLowerCase().includes(s.name?.toLowerCase())
+            );
+            
+            if (matchedSubject) {
+              subjectIds.push(matchedSubject.id);
+              
+              // Build qualifications based on extracted IB levels
+              const teacherLevels = teacher.ib_levels || ['DP'];
+              qualifications.push({
+                subject_id: matchedSubject.id,
+                ib_levels: teacherLevels
+              });
+            }
+          });
+        }
+
         await base44.entities.Teacher.create({
           school_id: schoolId,
           full_name: teacher.full_name,
           email: teacher.email,
           employee_id: teacher.employee_id || '',
-          subjects: [],
-          qualifications: [],
+          subjects: subjectIds,
+          qualifications: qualifications,
           max_hours_per_week: teacher.max_hours_per_week || 25,
           max_consecutive_periods: 4,
           unavailable_slots: [],
