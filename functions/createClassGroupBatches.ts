@@ -98,9 +98,11 @@ Deno.serve(async (req) => {
       groups[key].students.push(student);
     });
 
-    // Step 5: Create ClassGroups and collect student assignments
+    // Step 5: Create ClassGroups AND assign students immediately
     const createdGroups = [];
-    const studentAssignments = []; // Collect all assignments for bulk update
+    let assignedCount = 0;
+    let failedCount = 0;
+    const failedDetails = [];
     
     for (const [key, data] of Object.entries(groups)) {
       const { ib_programme, year_group, students } = data;
@@ -130,67 +132,38 @@ Deno.serve(async (req) => {
         createdGroups.push(group);
         console.log(`✓ Created group ${group.id}: ${group.name}`);
         
-        // Collect student assignments
+        // Immediately assign all students in this batch
+        console.log(`Assigning ${batchStudents.length} students to ${group.name}...`);
+        
         for (const student of batchStudents) {
-          studentAssignments.push({
-            id: student.id,
-            classgroup_id: group.id
-          });
+          try {
+            await base44.asServiceRole.entities.Student.update(student.id, {
+              classgroup_id: group.id
+            });
+            console.log(`  ✓ Assigned ${student.full_name} (${student.id})`);
+            assignedCount++;
+          } catch (err) {
+            console.error(`  ✗ Failed to assign ${student.full_name} (${student.id}):`, err.message);
+            failedDetails.push({ 
+              studentId: student.id, 
+              studentName: student.full_name,
+              groupId: group.id, 
+              error: err.message 
+            });
+            failedCount++;
+          }
+          await new Promise(resolve => setTimeout(resolve, 50));
         }
         
-        await new Promise(resolve => setTimeout(resolve, 100));
+        await new Promise(resolve => setTimeout(resolve, 200));
       }
     }
 
     console.log(`✓ Created ${createdGroups.length} class groups`);
-    console.log(`Assigning ${studentAssignments.length} students using bulk update...`);
-    
-    // Step 6: Bulk assign students to their groups using filter + update
-    let assignedCount = 0;
-    let failedCount = 0;
-    
-    // Group assignments by classgroup_id to do batch updates
-    const assignmentsByGroup = {};
-    for (const assignment of studentAssignments) {
-      if (!assignmentsByGroup[assignment.classgroup_id]) {
-        assignmentsByGroup[assignment.classgroup_id] = [];
-      }
-      assignmentsByGroup[assignment.classgroup_id].push(assignment.id);
-    }
-    
-    // Update students group by group using bulk operations
-    for (const [groupId, studentIds] of Object.entries(assignmentsByGroup)) {
-      try {
-        // Use filter to get students, then update them
-        const studentsToUpdate = await base44.asServiceRole.entities.Student.filter({
-          id: { $in: studentIds }
-        }, '-created_date', 500);
-        
-        // Update each student
-        for (const student of studentsToUpdate) {
-          try {
-            await base44.asServiceRole.entities.Student.update(student.id, {
-              classgroup_id: groupId
-            });
-            assignedCount++;
-            await new Promise(resolve => setTimeout(resolve, 150));
-          } catch (err) {
-            console.error(`Failed to assign student ${student.id}:`, err.message);
-            failedCount++;
-          }
-        }
-      } catch (err) {
-        console.error(`Failed to process group ${groupId}:`, err.message);
-        failedCount += studentIds.length;
-      }
-      
-      // Delay between groups
-      await new Promise(resolve => setTimeout(resolve, 300));
-    }
-
-    console.log(`✓ Successfully assigned ${assignedCount} students`);
+    console.log(`✓ Assigned ${assignedCount} students successfully`);
     if (failedCount > 0) {
       console.log(`✗ Failed to assign ${failedCount} students`);
+      console.log('Failed assignments:', failedDetails);
     }
 
     return Response.json({
@@ -201,6 +174,7 @@ Deno.serve(async (req) => {
       ineligibleStudents: ineligibleStudents.length,
       assignedStudents: assignedCount,
       failedStudents: failedCount,
+      failedDetails: failedDetails,
       missingYearGroupStudents: ineligibleStudents.map(s => ({
         id: s.id,
         name: s.full_name,
