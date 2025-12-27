@@ -121,15 +121,22 @@ Deno.serve(async (req) => {
 
     // Step 6: Assign EACH student to their ClassGroup (in smaller batches)
     console.log(`Assigning students to ${createdGroups.length} class groups`);
+    console.log('Group details:', createdGroups.map(g => ({ id: g.id, name: g.name, studentCount: g.student_ids?.length || 0 })));
     
     let assignedCount = 0;
     let failedCount = 0;
+    const failedDetails = [];
     
     // Process in smaller batches to avoid rate limiting
     const chunkSize = 10;
     
     for (const group of createdGroups) {
-      console.log(`Assigning ${group.student_ids.length} students to ${group.name}`);
+      if (!group.student_ids || group.student_ids.length === 0) {
+        console.log(`Group ${group.name} has no student_ids!`);
+        continue;
+      }
+      
+      console.log(`Assigning ${group.student_ids.length} students to ${group.name} (group id: ${group.id})`);
       
       for (let i = 0; i < group.student_ids.length; i += chunkSize) {
         const chunk = group.student_ids.slice(i, i + chunkSize);
@@ -138,20 +145,30 @@ Deno.serve(async (req) => {
           chunk.map(studentId => 
             base44.asServiceRole.entities.Student.update(studentId, {
               classgroup_id: group.id
-            }).then(() => ({ success: true, studentId }))
-              .catch(err => {
-                console.error(`Failed to assign student ${studentId}:`, err.message);
-                return { success: false, studentId, error: err.message };
-              })
+            }).then((updated) => {
+              console.log(`✓ Assigned student ${studentId} to group ${group.id}`);
+              return { success: true, studentId };
+            })
+            .catch(err => {
+              console.error(`✗ Failed to assign student ${studentId}:`, err.message, err);
+              failedDetails.push({ studentId, groupId: group.id, error: err.message });
+              return { success: false, studentId, error: err.message };
+            })
           )
         );
         
         assignedCount += results.filter(r => r.success).length;
         failedCount += results.filter(r => !r.success).length;
+        
+        // Small delay between chunks
+        await new Promise(resolve => setTimeout(resolve, 100));
       }
     }
 
     console.log(`Successfully assigned ${assignedCount} students, ${failedCount} failed`);
+    if (failedDetails.length > 0) {
+      console.log('Failed assignment details:', failedDetails);
+    }
 
     return Response.json({
       success: true,
@@ -160,6 +177,7 @@ Deno.serve(async (req) => {
       eligibleStudents: eligibleStudents.length,
       ineligibleStudents: ineligibleStudents.length,
       assignedStudents: assignedCount,
+      failedStudents: failedCount,
       missingYearGroupStudents: ineligibleStudents.map(s => ({
         id: s.id,
         name: s.full_name,
@@ -170,7 +188,7 @@ Deno.serve(async (req) => {
         name: g.name,
         year_group: g.year_group,
         programme: g.ib_programme,
-        students: g.student_ids.length
+        students: g.student_ids?.length || 0
       }))
     });
 
