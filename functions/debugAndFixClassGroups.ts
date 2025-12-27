@@ -78,10 +78,10 @@ Deno.serve(async (req) => {
     const classGroupsToCreate = [];
 
     // Create ClassGroups (up to 20 students per group)
-    for (const [yearGroup, students] of Object.entries(studentsByYear)) {
-      const ibProgramme = students[0].ib_programme;
+    for (const [key, groupData] of Object.entries(studentsByYear)) {
+      const { year_group, ib_programme, students } = groupData;
       const batchSize = 20;
-      const numBatches = Math.ceil(students.length / batchSize); // Create partial batches too
+      const numBatches = Math.ceil(students.length / batchSize);
 
       for (let i = 0; i < numBatches; i++) {
         const batchLetter = String.fromCharCode(65 + i); // A, B, C, etc.
@@ -91,9 +91,9 @@ Deno.serve(async (req) => {
         
         const classGroup = {
           school_id: schoolId,
-          name: `${yearGroup}-Batch-${batchLetter}`,
-          year_group: yearGroup,
-          ib_programme: ibProgramme,
+          name: `${year_group}-Batch-${batchLetter}`,
+          year_group: year_group,
+          ib_programme: ib_programme,
           batch_letter: batchLetter,
           student_ids: batchStudents.map(s => s.id),
           max_students: 20,
