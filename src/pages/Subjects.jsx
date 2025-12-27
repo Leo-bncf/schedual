@@ -22,7 +22,8 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import { Plus, Search, BookOpen, MoreHorizontal, Pencil, Trash2, FlaskConical, Palette, Calculator, Globe, Languages, FileText } from 'lucide-react';
+import { Plus, Search, BookOpen, MoreHorizontal, Pencil, Trash2, FlaskConical, Palette, Calculator, Globe, Languages, FileText, Upload, Loader2, CheckCircle } from 'lucide-react';
+import { motion, AnimatePresence } from 'framer-motion';
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -45,6 +46,9 @@ export default function Subjects() {
   const [isDialogOpen, setIsDialogOpen] = useState(false);
   const [editingSubject, setEditingSubject] = useState(null);
   const [searchQuery, setSearchQuery] = useState('');
+  const [uploading, setUploading] = useState(false);
+  const [conversation, setConversation] = useState(null);
+  const [messages, setMessages] = useState([]);
   const [formData, setFormData] = useState({
     name: '',
     code: '',
@@ -161,16 +165,98 @@ export default function Subjects() {
 
   const coreSubjects = filteredSubjects.filter(s => s.is_core);
 
+  React.useEffect(() => {
+    let unsubscribe;
+    if (conversation?.id) {
+      unsubscribe = base44.agents.subscribeToConversation(conversation.id, (data) => {
+        setMessages(data.messages || []);
+      });
+    }
+    return () => {
+      if (unsubscribe) unsubscribe();
+    };
+  }, [conversation?.id]);
+
+  const handleFileUpload = async (e) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+
+    setUploading(true);
+    try {
+      const { file_url } = await base44.integrations.Core.UploadFile({ file });
+
+      const conv = await base44.agents.createConversation({
+        agent_name: "subject_importer",
+        metadata: { 
+          file_name: file.name,
+          school_id: schoolId
+        }
+      });
+      setConversation(conv);
+
+      await base44.agents.addMessage(conv, {
+        role: "user",
+        content: `Extract all subjects/classes from this document and create Subject entities. CRITICAL: Set school_id="${schoolId}" for EVERY subject. Extract name, code, ib_level (DP/MYP/PYP), and for DP subjects include ib_group (1-6) and ib_group_name. Create all subjects found.`,
+        file_urls: [file_url]
+      });
+
+    } catch (error) {
+      console.error('Upload error:', error);
+      alert('Failed to upload file: ' + error.message);
+    } finally {
+      setUploading(false);
+    }
+  };
+
+  const closeImportDialog = () => {
+    setConversation(null);
+    setMessages([]);
+    queryClient.invalidateQueries({ queryKey: ['subjects'] });
+  };
+
+  const isImportComplete = messages.length > 0 && 
+    messages[messages.length - 1]?.role === 'assistant' &&
+    !messages[messages.length - 1]?.tool_calls?.some(tc => tc.status === 'running' || tc.status === 'pending');
+
   return (
     <div className="space-y-6">
       <PageHeader 
         title="Subjects"
         description="Manage IB Diploma Programme subjects across all groups"
         actions={
-          <Button onClick={() => setIsDialogOpen(true)} className="bg-indigo-600 hover:bg-indigo-700">
-            <Plus className="w-4 h-4 mr-2" />
-            Add Subject
-          </Button>
+          <div className="flex gap-2">
+            <label htmlFor="subject-upload">
+              <input
+                type="file"
+                id="subject-upload"
+                className="hidden"
+                onChange={handleFileUpload}
+                accept=".csv,.xlsx,.xls,.pdf,.txt,.doc,.docx"
+              />
+              <Button 
+                type="button"
+                variant="outline"
+                onClick={() => document.getElementById('subject-upload').click()}
+                disabled={uploading}
+              >
+                {uploading ? (
+                  <>
+                    <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+                    Uploading...
+                  </>
+                ) : (
+                  <>
+                    <Upload className="w-4 h-4 mr-2" />
+                    Import Document
+                  </>
+                )}
+              </Button>
+            </label>
+            <Button onClick={() => setIsDialogOpen(true)} className="bg-indigo-600 hover:bg-indigo-700">
+              <Plus className="w-4 h-4 mr-2" />
+              Add Subject
+            </Button>
+          </div>
         }
       />
 
@@ -428,6 +514,92 @@ export default function Subjects() {
               </Button>
             </DialogFooter>
           </form>
+        </DialogContent>
+      </Dialog>
+
+      {/* Import Progress Dialog */}
+      <Dialog open={!!conversation} onOpenChange={(open) => { if (!open && isImportComplete) closeImportDialog(); }}>
+        <DialogContent className="sm:max-w-lg">
+          <DialogHeader>
+            <DialogTitle>Importing Subjects</DialogTitle>
+            <DialogDescription>
+              AI is reading the document and creating subject entities
+            </DialogDescription>
+          </DialogHeader>
+          
+          <div className="space-y-4 max-h-96 overflow-y-auto">
+            <AnimatePresence mode="popLayout">
+              {messages.map((msg, idx) => (
+                <motion.div
+                  key={idx}
+                  initial={{ opacity: 0, y: 10 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  transition={{ duration: 0.3 }}
+                  className={`p-3 rounded-lg ${msg.role === 'user' ? 'bg-slate-50' : 'bg-blue-50'}`}
+                >
+                  {msg.content && (
+                    <p className="text-sm text-slate-700 whitespace-pre-wrap">{msg.content}</p>
+                  )}
+                  
+                  {msg.tool_calls && msg.tool_calls.length > 0 && (
+                    <div className="mt-2 space-y-1">
+                      {msg.tool_calls.map((tc, tcIdx) => (
+                        <motion.div
+                          key={tcIdx}
+                          initial={{ opacity: 0, x: -10 }}
+                          animate={{ opacity: 1, x: 0 }}
+                          transition={{ delay: tcIdx * 0.1 }}
+                          className="flex items-center gap-2 text-sm"
+                        >
+                          {tc.status === 'completed' ? (
+                            <motion.div
+                              initial={{ scale: 0 }}
+                              animate={{ scale: 1 }}
+                              transition={{ type: "spring", stiffness: 200, damping: 15 }}
+                            >
+                              <CheckCircle className="w-4 h-4 text-green-600" />
+                            </motion.div>
+                          ) : (
+                            <Loader2 className="w-4 h-4 text-blue-600 animate-spin" />
+                          )}
+                          <span className="text-slate-600">
+                            {tc.status === 'completed' ? 'Created subject' : 'Creating subject...'}
+                          </span>
+                        </motion.div>
+                      ))}
+                    </div>
+                  )}
+                </motion.div>
+              ))}
+            </AnimatePresence>
+          </div>
+
+          <AnimatePresence>
+            {isImportComplete && (
+              <motion.div
+                initial={{ opacity: 0, scale: 0.9 }}
+                animate={{ opacity: 1, scale: 1 }}
+                exit={{ opacity: 0, scale: 0.9 }}
+              >
+                <div className="flex items-center justify-center py-6">
+                  <motion.div
+                    initial={{ scale: 0 }}
+                    animate={{ scale: 1 }}
+                    transition={{ type: "spring", stiffness: 200, damping: 15, delay: 0.2 }}
+                    className="w-16 h-16 rounded-full bg-green-100 flex items-center justify-center"
+                  >
+                    <CheckCircle className="w-8 h-8 text-green-600" />
+                  </motion.div>
+                </div>
+                <DialogFooter>
+                  <Button onClick={closeImportDialog} className="bg-green-600 hover:bg-green-700 w-full">
+                    <CheckCircle className="w-4 h-4 mr-2" />
+                    Done - View Subjects
+                  </Button>
+                </DialogFooter>
+              </motion.div>
+            )}
+          </AnimatePresence>
         </DialogContent>
       </Dialog>
     </div>
