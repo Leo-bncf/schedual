@@ -119,7 +119,14 @@ Deno.serve(async (req) => {
       message: `Created ${createdGroups.length} class groups with ${assignedCount} students assigned`,
       totalStudents: allStudents.length,
       eligibleStudents: eligibleStudents.length,
+      ineligibleStudents: ineligibleStudents.length,
       assignedStudents: assignedCount,
+      missingYearGroupStudents: ineligibleStudents.map(s => ({
+        id: s.id,
+        name: s.full_name,
+        programme: s.ib_programme,
+        year_group: s.year_group
+      })),
       groups: createdGroups.map(g => ({
         name: g.name,
         year_group: g.year_group,
