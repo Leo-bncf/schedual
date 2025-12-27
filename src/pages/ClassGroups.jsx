@@ -66,7 +66,13 @@ export default function ClassGroups() {
       if (response.data.success) {
         queryClient.invalidateQueries({ queryKey: ['classGroups'] });
         queryClient.invalidateQueries({ queryKey: ['students'] });
-        alert(response.data.message);
+
+        let message = response.data.message;
+        if (response.data.ineligibleStudents > 0) {
+          message += `\n\nWarning: ${response.data.ineligibleStudents} students are missing year_group or programme data and were not assigned to class groups. Please update their profiles.`;
+          console.log('Students missing data:', response.data.missingYearGroupStudents);
+        }
+        alert(message);
       } else {
         alert('Failed to generate class groups');
       }
