@@ -132,35 +132,48 @@ Deno.serve(async (req) => {
         createdGroups.push(group);
         console.log(`✓ Created group ${group.id}: ${group.name}`);
         
-        // Batch assign students to this group
-        console.log(`Batch assigning ${batchStudents.length} students to ${group.name}...`);
+        // Assign students in smaller chunks to avoid rate limits
+        console.log(`Assigning ${batchStudents.length} students to ${group.name}...`);
         
-        const assignResults = await Promise.allSettled(
-          batchStudents.map(student => 
-            base44.asServiceRole.entities.Student.update(student.id, {
-              classgroup_id: group.id
-            }).then(() => ({ success: true, student }))
-              .catch(err => ({ success: false, student, error: err.message }))
-          )
-        );
-        
-        assignResults.forEach(result => {
-          if (result.status === 'fulfilled' && result.value.success) {
-            console.log(`  ✓ Assigned ${result.value.student.full_name}`);
-            assignedCount++;
-          } else {
-            const studentInfo = result.value?.student || { full_name: 'Unknown', id: 'Unknown' };
-            const errorMsg = result.value?.error || result.reason?.message || 'Unknown error';
-            console.error(`  ✗ Failed to assign ${studentInfo.full_name}: ${errorMsg}`);
-            failedDetails.push({ 
-              studentId: studentInfo.id, 
-              studentName: studentInfo.full_name,
-              groupId: group.id, 
-              error: errorMsg
-            });
-            failedCount++;
+        const chunkSize = 5;
+        for (let j = 0; j < batchStudents.length; j += chunkSize) {
+          const chunk = batchStudents.slice(j, j + chunkSize);
+          
+          const assignResults = await Promise.allSettled(
+            chunk.map(student => 
+              base44.asServiceRole.entities.Student.update(student.id, {
+                classgroup_id: group.id
+              }).then(() => ({ success: true, student }))
+                .catch(err => ({ success: false, student, error: err.message }))
+            )
+          );
+          
+          assignResults.forEach(result => {
+            if (result.status === 'fulfilled' && result.value.success) {
+              console.log(`  ✓ Assigned ${result.value.student.full_name}`);
+              assignedCount++;
+            } else {
+              const studentInfo = result.value?.student || { full_name: 'Unknown', id: 'Unknown' };
+              const errorMsg = result.value?.error || result.reason?.message || 'Unknown error';
+              console.error(`  ✗ Failed to assign ${studentInfo.full_name}: ${errorMsg}`);
+              failedDetails.push({ 
+                studentId: studentInfo.id, 
+                studentName: studentInfo.full_name,
+                groupId: group.id, 
+                error: errorMsg
+              });
+              failedCount++;
+            }
+          });
+          
+          // Small delay between chunks
+          if (j + chunkSize < batchStudents.length) {
+            await new Promise(resolve => setTimeout(resolve, 300));
           }
-        });
+        }
+        
+        // Delay between class groups
+        await new Promise(resolve => setTimeout(resolve, 500));
       }
     }
 
