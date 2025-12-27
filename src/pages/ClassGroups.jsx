@@ -82,15 +82,14 @@ export default function ClassGroups() {
     try {
       const response = await base44.functions.invoke('createClassGroupBatches');
       if (response.data.success) {
-        // Force refetch all data
-        await Promise.all([
-          queryClient.invalidateQueries({ queryKey: ['classGroups'] }),
-          queryClient.invalidateQueries({ queryKey: ['students'] })
-        ]);
+        // Wait for backend updates to complete
+        await new Promise(resolve => setTimeout(resolve, 2000));
         
-        // Wait a moment for data to propagate
-        await new Promise(resolve => setTimeout(resolve, 1000));
+        // Force hard refresh - clear cache completely
+        queryClient.removeQueries({ queryKey: ['classGroups'] });
+        queryClient.removeQueries({ queryKey: ['students'] });
         
+        // Refetch fresh data
         await Promise.all([
           queryClient.refetchQueries({ queryKey: ['classGroups'] }),
           queryClient.refetchQueries({ queryKey: ['students'] })
@@ -194,6 +193,18 @@ export default function ClassGroups() {
             className="pl-10"
           />
         </div>
+        <Button
+          variant="outline"
+          onClick={() => {
+            queryClient.removeQueries({ queryKey: ['classGroups'] });
+            queryClient.removeQueries({ queryKey: ['students'] });
+            queryClient.refetchQueries({ queryKey: ['classGroups'] });
+            queryClient.refetchQueries({ queryKey: ['students'] });
+          }}
+        >
+          <RefreshCw className="w-4 h-4 mr-2" />
+          Refresh
+        </Button>
       </div>
 
       {isLoading ? (
