@@ -10,8 +10,11 @@ Deno.serve(async (req) => {
     }
 
     const schoolId = user.school_id;
+    console.log('=== STARTING CLASS GROUP GENERATION ===');
+    console.log('User:', user.email, 'School ID:', schoolId);
 
     // Step 1: Fetch ALL students (no is_active filter)
+    console.log('Fetching students from database...');
     let allStudents = [];
     let skip = 0;
     const batchSize = 100;
@@ -24,6 +27,8 @@ Deno.serve(async (req) => {
         skip
       );
       
+      console.log(`Fetched batch: ${batch.length} students (skip: ${skip})`);
+      
       if (batch.length === 0) break;
       allStudents = allStudents.concat(batch);
       
@@ -31,7 +36,15 @@ Deno.serve(async (req) => {
       skip += batchSize;
     }
 
-    console.log(`Total students fetched: ${allStudents.length}`);
+    console.log(`✓ Total students fetched: ${allStudents.length}`);
+    
+    if (allStudents.length === 0) {
+      return Response.json({ 
+        error: 'No students found in database for this school',
+        schoolId: schoolId,
+        userEmail: user.email
+      }, { status: 400 });
+    }
 
     // Step 2: Delete ALL existing ClassGroups
     let existingGroups = [];
