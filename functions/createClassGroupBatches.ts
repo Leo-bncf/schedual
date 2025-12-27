@@ -132,11 +132,11 @@ Deno.serve(async (req) => {
 
     await batchProcess(
       studentsToAssign,
-      10,
+      5,
       (item) => base44.asServiceRole.entities.Student.update(item.studentId, {
         classgroup_id: item.groupId
       }),
-      150
+      400
     );
 
     return Response.json({
