@@ -132,30 +132,35 @@ Deno.serve(async (req) => {
         createdGroups.push(group);
         console.log(`✓ Created group ${group.id}: ${group.name}`);
         
-        // Immediately assign all students in this batch
-        console.log(`Assigning ${batchStudents.length} students to ${group.name}...`);
+        // Batch assign students to this group
+        console.log(`Batch assigning ${batchStudents.length} students to ${group.name}...`);
         
-        for (const student of batchStudents) {
-          try {
-            await base44.asServiceRole.entities.Student.update(student.id, {
+        const assignResults = await Promise.allSettled(
+          batchStudents.map(student => 
+            base44.asServiceRole.entities.Student.update(student.id, {
               classgroup_id: group.id
-            });
-            console.log(`  ✓ Assigned ${student.full_name} (${student.id})`);
+            }).then(() => ({ success: true, student }))
+              .catch(err => ({ success: false, student, error: err.message }))
+          )
+        );
+        
+        assignResults.forEach(result => {
+          if (result.status === 'fulfilled' && result.value.success) {
+            console.log(`  ✓ Assigned ${result.value.student.full_name}`);
             assignedCount++;
-          } catch (err) {
-            console.error(`  ✗ Failed to assign ${student.full_name} (${student.id}):`, err.message);
+          } else {
+            const studentInfo = result.value?.student || { full_name: 'Unknown', id: 'Unknown' };
+            const errorMsg = result.value?.error || result.reason?.message || 'Unknown error';
+            console.error(`  ✗ Failed to assign ${studentInfo.full_name}: ${errorMsg}`);
             failedDetails.push({ 
-              studentId: student.id, 
-              studentName: student.full_name,
+              studentId: studentInfo.id, 
+              studentName: studentInfo.full_name,
               groupId: group.id, 
-              error: err.message 
+              error: errorMsg
             });
             failedCount++;
           }
-          await new Promise(resolve => setTimeout(resolve, 50));
-        }
-        
-        await new Promise(resolve => setTimeout(resolve, 200));
+        });
       }
     }
 
