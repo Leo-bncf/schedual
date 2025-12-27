@@ -263,12 +263,28 @@ Deno.serve(async (req) => {
             });
           }
 
+          // Normalize year_group for PYP students (handle "class a", "Class B", "A", etc.)
+          let normalizedYearGroup = student.year_group || 'DP1';
+          const ibProgramme = student.ib_programme || 'DP';
+          
+          if (ibProgramme === 'PYP') {
+            // Extract class letter from various formats: "class a", "Class B", "PYP-A", "A", etc.
+            const classMatch = normalizedYearGroup.match(/[a-f]/i);
+            if (classMatch) {
+              // For PYP, we'll use "PYP-A" format where A-F represents the class
+              normalizedYearGroup = `PYP-${classMatch[0].toUpperCase()}`;
+            } else {
+              // Default to PYP-A if no class detected
+              normalizedYearGroup = 'PYP-A';
+            }
+          }
+
           return {
             school_id: user.school_id,
             full_name: student.full_name,
             email: student.email || `${student.full_name.toLowerCase().replace(/\s/g, '.')}@student.edu`,
-            ib_programme: student.ib_programme || 'DP',
-            year_group: student.year_group || 'DP1',
+            ib_programme: ibProgramme,
+            year_group: normalizedYearGroup,
             subject_choices: subjectChoices,
             is_active: true
           };
