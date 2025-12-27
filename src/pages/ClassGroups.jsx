@@ -121,6 +121,18 @@ export default function ClassGroups() {
         }
       />
 
+      <Card className="border-blue-200 bg-blue-50">
+        <CardContent className="p-6">
+          <div className="flex items-center justify-between">
+            <div>
+              <p className="text-sm text-blue-700 font-medium mb-1">Total Students in School</p>
+              <p className="text-4xl font-bold text-blue-900">{students.length}</p>
+            </div>
+            <Users className="w-12 h-12 text-blue-400" />
+          </div>
+        </CardContent>
+      </Card>
+
       {studentsWithoutClassGroup.length > 0 && (
         <Card className="border-amber-200 bg-amber-50">
           <CardContent className="p-4">
