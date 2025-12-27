@@ -12,12 +12,26 @@ Deno.serve(async (req) => {
     const schoolId = user.school_id;
     console.log('Starting class group generation for school:', schoolId);
 
-    // Fetch all students for this school
-    const students = await base44.asServiceRole.entities.Student.filter(
-      { school_id: schoolId },
-      '-created_date',
-      500
-    );
+    // Fetch ALL students for this school (no limit)
+    const allStudents = [];
+    let skip = 0;
+    const batchSize = 500;
+
+    while (true) {
+      const batch = await base44.asServiceRole.entities.Student.filter(
+        { school_id: schoolId },
+        '-created_date',
+        batchSize
+      );
+
+      if (batch.length === 0) break;
+      allStudents.push(...batch);
+
+      if (batch.length < batchSize) break;
+      skip += batchSize;
+    }
+
+    const students = allStudents;
     
     console.log(`Found ${students.length} students`);
 
