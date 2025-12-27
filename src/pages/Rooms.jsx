@@ -21,7 +21,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import { Plus, Search, Building2, Users, MoreHorizontal, Pencil, Trash2, FlaskConical, Palette, Monitor, Music, BookOpen, Dumbbell } from 'lucide-react';
+import { Plus, Search, Building2, Users, MoreHorizontal, Pencil, Trash2, FlaskConical, Palette, Monitor, Music, BookOpen, Dumbbell, Upload, Loader2, CheckCircle, X } from 'lucide-react';
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -48,6 +48,9 @@ export default function Rooms() {
   const [editingRoom, setEditingRoom] = useState(null);
   const [searchQuery, setSearchQuery] = useState('');
   const [typeFilter, setTypeFilter] = useState('all');
+  const [uploading, setUploading] = useState(false);
+  const [conversation, setConversation] = useState(null);
+  const [messages, setMessages] = useState([]);
   const [formData, setFormData] = useState({
     name: '',
     building: '',
@@ -148,16 +151,98 @@ export default function Rooms() {
   const totalCapacity = rooms.reduce((sum, r) => sum + (r.capacity || 0), 0);
   const labCount = rooms.filter(r => r.room_type === 'lab').length;
 
+  React.useEffect(() => {
+    let unsubscribe;
+    if (conversation?.id) {
+      unsubscribe = base44.agents.subscribeToConversation(conversation.id, (data) => {
+        setMessages(data.messages || []);
+      });
+    }
+    return () => {
+      if (unsubscribe) unsubscribe();
+    };
+  }, [conversation?.id]);
+
+  const handleFileUpload = async (e) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+
+    setUploading(true);
+    try {
+      // Upload file
+      const { file_url } = await base44.integrations.Core.UploadFile({ file });
+
+      // Create conversation with agent
+      const conv = await base44.agents.createConversation({
+        agent_name: "room_importer",
+        metadata: { file_name: file.name }
+      });
+      setConversation(conv);
+
+      // Send message with file to agent
+      await base44.agents.addMessage(conv, {
+        role: "user",
+        content: "Please extract all room information from this document and create Room entities for each one.",
+        file_urls: [file_url]
+      });
+
+    } catch (error) {
+      console.error('Upload error:', error);
+      alert('Failed to upload file: ' + error.message);
+    } finally {
+      setUploading(false);
+    }
+  };
+
+  const closeImportDialog = () => {
+    setConversation(null);
+    setMessages([]);
+    queryClient.invalidateQueries({ queryKey: ['rooms'] });
+  };
+
+  const isImportComplete = messages.length > 0 && 
+    messages[messages.length - 1]?.role === 'assistant' &&
+    !messages[messages.length - 1]?.tool_calls?.some(tc => tc.status === 'running' || tc.status === 'pending');
+
   return (
     <div className="space-y-6">
       <PageHeader 
         title="Rooms"
         description="Manage classrooms, labs, and other teaching spaces"
         actions={
-          <Button onClick={() => setIsDialogOpen(true)} className="bg-indigo-600 hover:bg-indigo-700">
-            <Plus className="w-4 h-4 mr-2" />
-            Add Room
-          </Button>
+          <div className="flex gap-2">
+            <label htmlFor="room-upload">
+              <input
+                type="file"
+                id="room-upload"
+                className="hidden"
+                onChange={handleFileUpload}
+                accept=".csv,.xlsx,.xls,.pdf,.txt,.doc,.docx"
+              />
+              <Button 
+                type="button"
+                variant="outline"
+                onClick={() => document.getElementById('room-upload').click()}
+                disabled={uploading}
+              >
+                {uploading ? (
+                  <>
+                    <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+                    Uploading...
+                  </>
+                ) : (
+                  <>
+                    <Upload className="w-4 h-4 mr-2" />
+                    Import Document
+                  </>
+                )}
+              </Button>
+            </label>
+            <Button onClick={() => setIsDialogOpen(true)} className="bg-indigo-600 hover:bg-indigo-700">
+              <Plus className="w-4 h-4 mr-2" />
+              Add Room
+            </Button>
+          </div>
         }
       />
 
@@ -360,6 +445,54 @@ export default function Rooms() {
               </Button>
             </DialogFooter>
           </form>
+        </DialogContent>
+      </Dialog>
+
+      {/* Import Progress Dialog */}
+      <Dialog open={!!conversation} onOpenChange={(open) => { if (!open && isImportComplete) closeImportDialog(); }}>
+        <DialogContent className="sm:max-w-lg">
+          <DialogHeader>
+            <DialogTitle>Importing Rooms</DialogTitle>
+            <DialogDescription>
+              AI is reading the document and creating room entities
+            </DialogDescription>
+          </DialogHeader>
+          
+          <div className="space-y-4 max-h-96 overflow-y-auto">
+            {messages.map((msg, idx) => (
+              <div key={idx} className={`p-3 rounded-lg ${msg.role === 'user' ? 'bg-slate-50' : 'bg-blue-50'}`}>
+                {msg.content && (
+                  <p className="text-sm text-slate-700 whitespace-pre-wrap">{msg.content}</p>
+                )}
+                
+                {msg.tool_calls && msg.tool_calls.length > 0 && (
+                  <div className="mt-2 space-y-1">
+                    {msg.tool_calls.map((tc, tcIdx) => (
+                      <div key={tcIdx} className="flex items-center gap-2 text-sm">
+                        {tc.status === 'completed' ? (
+                          <CheckCircle className="w-4 h-4 text-green-600" />
+                        ) : (
+                          <Loader2 className="w-4 h-4 text-blue-600 animate-spin" />
+                        )}
+                        <span className="text-slate-600">
+                          {tc.status === 'completed' ? 'Created room' : 'Creating room...'}
+                        </span>
+                      </div>
+                    ))}
+                  </div>
+                )}
+              </div>
+            ))}
+          </div>
+
+          {isImportComplete && (
+            <DialogFooter>
+              <Button onClick={closeImportDialog} className="bg-green-600 hover:bg-green-700">
+                <CheckCircle className="w-4 h-4 mr-2" />
+                Done
+              </Button>
+            </DialogFooter>
+          )}
         </DialogContent>
       </Dialog>
     </div>
