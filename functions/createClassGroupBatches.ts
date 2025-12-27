@@ -91,15 +91,20 @@ Deno.serve(async (req) => {
 
     // Step 5: Create ClassGroups (20 students per batch)
     const createdGroups = [];
+    const groupToStudentMap = new Map(); // Track which students belong to which group
     
     for (const [key, data] of Object.entries(groups)) {
       const { ib_programme, year_group, students } = data;
       const batchSize = 20;
       const numBatches = Math.ceil(students.length / batchSize);
 
+      console.log(`Creating ${numBatches} batches for ${year_group} ${ib_programme} (${students.length} students)`);
+
       for (let i = 0; i < numBatches; i++) {
         const batchLetter = String.fromCharCode(65 + i);
         const batchStudents = students.slice(i * batchSize, (i + 1) * batchSize);
+        
+        console.log(`Creating ${year_group}-Batch-${batchLetter} with ${batchStudents.length} students`);
         
         const group = await base44.asServiceRole.entities.ClassGroup.create({
           school_id: schoolId,
@@ -112,16 +117,20 @@ Deno.serve(async (req) => {
           is_active: true
         });
         
+        // Store the mapping
+        groupToStudentMap.set(group.id, batchStudents.map(s => s.id));
         createdGroups.push(group);
+        
+        console.log(`✓ Created group ${group.id}: ${group.name}`);
         await new Promise(resolve => setTimeout(resolve, 100));
       }
     }
 
     console.log(`Created ${createdGroups.length} class groups`);
+    console.log(`Total students to assign: ${Array.from(groupToStudentMap.values()).flat().length}`);
 
-    // Step 6: Assign EACH student to their ClassGroup (in smaller batches)
+    // Step 6: Assign EACH student to their ClassGroup using the map
     console.log(`Assigning students to ${createdGroups.length} class groups`);
-    console.log('Group details:', createdGroups.map(g => ({ id: g.id, name: g.name, studentCount: g.student_ids?.length || 0 })));
     
     let assignedCount = 0;
     let failedCount = 0;
@@ -131,26 +140,28 @@ Deno.serve(async (req) => {
     const chunkSize = 10;
     
     for (const group of createdGroups) {
-      if (!group.student_ids || group.student_ids.length === 0) {
-        console.log(`Group ${group.name} has no student_ids!`);
+      const studentIds = groupToStudentMap.get(group.id);
+      
+      if (!studentIds || studentIds.length === 0) {
+        console.log(`⚠ Group ${group.name} (${group.id}) has no students in map!`);
         continue;
       }
       
-      console.log(`Assigning ${group.student_ids.length} students to ${group.name} (group id: ${group.id})`);
+      console.log(`Assigning ${studentIds.length} students to ${group.name} (${group.id})`);
       
-      for (let i = 0; i < group.student_ids.length; i += chunkSize) {
-        const chunk = group.student_ids.slice(i, i + chunkSize);
+      for (let i = 0; i < studentIds.length; i += chunkSize) {
+        const chunk = studentIds.slice(i, i + chunkSize);
         
         const results = await Promise.all(
           chunk.map(studentId => 
             base44.asServiceRole.entities.Student.update(studentId, {
               classgroup_id: group.id
             }).then((updated) => {
-              console.log(`✓ Assigned student ${studentId} to group ${group.id}`);
+              console.log(`✓ Student ${studentId} → Group ${group.id}`);
               return { success: true, studentId };
             })
             .catch(err => {
-              console.error(`✗ Failed to assign student ${studentId}:`, err.message, err);
+              console.error(`✗ Failed student ${studentId}:`, err.message);
               failedDetails.push({ studentId, groupId: group.id, error: err.message });
               return { success: false, studentId, error: err.message };
             })
@@ -160,14 +171,14 @@ Deno.serve(async (req) => {
         assignedCount += results.filter(r => r.success).length;
         failedCount += results.filter(r => !r.success).length;
         
-        // Small delay between chunks
         await new Promise(resolve => setTimeout(resolve, 100));
       }
     }
 
-    console.log(`Successfully assigned ${assignedCount} students, ${failedCount} failed`);
-    if (failedDetails.length > 0) {
-      console.log('Failed assignment details:', failedDetails);
+    console.log(`✓ Assigned ${assignedCount} students successfully`);
+    if (failedCount > 0) {
+      console.log(`✗ Failed to assign ${failedCount} students`);
+      console.log('Details:', failedDetails);
     }
 
     return Response.json({
