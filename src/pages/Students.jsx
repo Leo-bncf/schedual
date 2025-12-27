@@ -404,26 +404,43 @@ export default function Students() {
 
       setUploadState(prev => ({ ...prev, progress: `Creating ${studentsData.length} students...` }));
 
-      let created = 0;
-      for (const student of studentsData) {
-        await base44.entities.Student.create({
-          school_id: schoolId,
-          full_name: student.full_name,
-          email: student.email || '',
-          student_id: student.student_id || '',
-          ib_programme: student.ib_programme,
-          year_group: student.year_group,
-          subject_choices: [],
-          core_components: { tok_assigned: false, cas_assigned: false, ee_assigned: false },
-          is_active: true
-        });
+      const studentsToCreate = studentsData.map(student => ({
+        school_id: schoolId,
+        full_name: student.full_name,
+        email: student.email || '',
+        student_id: student.student_id || '',
+        ib_programme: student.ib_programme,
+        year_group: student.year_group,
+        subject_choices: [],
+        core_components: { tok_assigned: false, cas_assigned: false, ee_assigned: false },
+        is_active: true
+      }));
 
-        created++;
-        setUploadState(prev => ({ 
-          ...prev, 
-          studentsCreated: created,
-          progress: `Created ${created} of ${studentsData.length} students...`
-        }));
+      // Batch create with rate limit handling
+      const batchSize = 10;
+      let created = 0;
+      
+      for (let i = 0; i < studentsToCreate.length; i += batchSize) {
+        const batch = studentsToCreate.slice(i, i + batchSize);
+        
+        try {
+          await base44.entities.Student.bulkCreate(batch);
+          created += batch.length;
+          
+          setUploadState(prev => ({ 
+            ...prev, 
+            studentsCreated: created,
+            progress: `Created ${created} of ${studentsData.length} students...`
+          }));
+          
+          // Small delay between batches to avoid rate limits
+          if (i + batchSize < studentsToCreate.length) {
+            await new Promise(resolve => setTimeout(resolve, 500));
+          }
+        } catch (error) {
+          console.error('Batch creation error:', error);
+          // Continue with next batch even if one fails
+        }
       }
 
       setUploadState(prev => ({ 
