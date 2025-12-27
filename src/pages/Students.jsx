@@ -21,7 +21,7 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { Plus, Search, GraduationCap, MoreHorizontal, Pencil, Trash2 } from 'lucide-react';
+import { Plus, Search, GraduationCap, MoreHorizontal, Pencil, Trash2, Upload, Loader2 } from 'lucide-react';
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -39,6 +39,12 @@ export default function Students() {
   const [editingStudent, setEditingStudent] = useState(null);
   const [searchQuery, setSearchQuery] = useState('');
   const [yearFilter, setYearFilter] = useState('all');
+  const [uploadState, setUploadState] = useState({
+    isUploading: false,
+    progress: '',
+    studentsCreated: 0,
+    error: null
+  });
   const [formData, setFormData] = useState({
     full_name: '',
     email: '',
@@ -342,16 +348,172 @@ export default function Students() {
   const totalMYP = Object.values(mypCounts).reduce((a, b) => a + b, 0);
   const totalPYP = Object.values(pypCounts).reduce((a, b) => a + b, 0);
 
+  const handleFileUpload = async (e) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+
+    e.target.value = '';
+
+    if (!schoolId) {
+      alert('No school assigned. Please set up your school in Settings first.');
+      return;
+    }
+
+    setUploadState({
+      isUploading: true,
+      progress: 'Uploading file...',
+      studentsCreated: 0,
+      error: null
+    });
+
+    try {
+      const { file_url } = await base44.integrations.Core.UploadFile({ file });
+
+      setUploadState(prev => ({ ...prev, progress: 'Extracting student data...' }));
+
+      const extractionResult = await base44.integrations.Core.InvokeLLM({
+        prompt: `Extract all students from this document. For each student, provide: full_name, email (if available), student_id (if available), ib_programme (one of: DP, MYP, PYP), year_group (e.g., DP1, DP2, MYP1-5, PYP-A through PYP-F), and subject_choices array with objects containing subject_id (match by subject name), and for DP students also include level (HL or SL).`,
+        file_urls: [file_url],
+        response_json_schema: {
+          type: "object",
+          properties: {
+            students: {
+              type: "array",
+              items: {
+                type: "object",
+                properties: {
+                  full_name: { type: "string" },
+                  email: { type: "string" },
+                  student_id: { type: "string" },
+                  ib_programme: { type: "string" },
+                  year_group: { type: "string" },
+                  subject_choices: {
+                    type: "array",
+                    items: {
+                      type: "object",
+                      properties: {
+                        subject_name: { type: "string" },
+                        level: { type: "string" }
+                      }
+                    }
+                  }
+                },
+                required: ["full_name", "ib_programme", "year_group"]
+              }
+            }
+          }
+        }
+      });
+
+      const studentsData = extractionResult?.students || [];
+
+      if (studentsData.length === 0) {
+        throw new Error('No students found in the document');
+      }
+
+      setUploadState(prev => ({ ...prev, progress: `Creating ${studentsData.length} students...` }));
+
+      let created = 0;
+      for (const student of studentsData) {
+        // Map subject names to IDs
+        const subjectChoices = (student.subject_choices || []).map(sc => {
+          const foundSubject = subjects.find(s => 
+            s.name.toLowerCase() === sc.subject_name.toLowerCase()
+          );
+          return {
+            subject_id: foundSubject?.id || '',
+            level: sc.level || 'SL',
+            ib_group: foundSubject?.ib_group || ''
+          };
+        }).filter(sc => sc.subject_id);
+
+        await base44.entities.Student.create({
+          school_id: schoolId,
+          full_name: student.full_name,
+          email: student.email || '',
+          student_id: student.student_id || '',
+          ib_programme: student.ib_programme,
+          year_group: student.year_group,
+          subject_choices: subjectChoices,
+          core_components: { tok_assigned: false, cas_assigned: false, ee_assigned: false },
+          is_active: true
+        });
+
+        created++;
+        setUploadState(prev => ({ 
+          ...prev, 
+          studentsCreated: created,
+          progress: `Created ${created} of ${studentsData.length} students...`
+        }));
+      }
+
+      setUploadState(prev => ({ 
+        ...prev, 
+        isUploading: false,
+        progress: `Successfully created ${created} students!`
+      }));
+
+      setTimeout(() => {
+        setUploadState({
+          isUploading: false,
+          progress: '',
+          studentsCreated: 0,
+          error: null
+        });
+        queryClient.invalidateQueries({ queryKey: ['students'] });
+      }, 2000);
+
+    } catch (error) {
+      console.error('Upload error:', error);
+      setUploadState({
+        isUploading: false,
+        progress: '',
+        studentsCreated: 0,
+        error: error?.message || 'An unknown error occurred'
+      });
+      alert('Failed to process file: ' + (error?.message || 'Unknown error'));
+    }
+  };
+
   return (
     <div className="space-y-6">
       <PageHeader 
         title="Students"
         description="Manage IB Diploma students and their subject choices"
         actions={
-          <Button onClick={() => setIsDialogOpen(true)} className="bg-indigo-600 hover:bg-indigo-700">
-            <Plus className="w-4 h-4 mr-2" />
-            Add Student
-          </Button>
+          <div className="flex gap-2">
+            <label htmlFor="student-upload">
+              <input
+                type="file"
+                id="student-upload"
+                className="hidden"
+                onChange={handleFileUpload}
+                accept=".csv,.xlsx,.xls,.pdf,.txt,.doc,.docx"
+              />
+              <Button 
+                type="button"
+                variant="outline"
+                onClick={() => document.getElementById('student-upload').click()}
+                disabled={uploadState.isUploading || !schoolId}
+              >
+                {uploadState.isUploading ? (
+                  <>
+                    <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+                    {uploadState.progress || 'Processing...'}
+                  </>
+                ) : (
+                  <>
+                    <Upload className="w-4 h-4 mr-2" />
+                    Import Document
+                  </>
+                )}
+              </Button>
+            </label>
+            <Button onClick={() => setIsDialogOpen(true)} className="bg-indigo-600 hover:bg-indigo-700">
+              <Plus className="w-4 h-4 mr-2" />
+              Add Student
+            </Button>
+          </div>
         }
       />
 
