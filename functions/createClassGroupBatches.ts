@@ -105,19 +105,22 @@ Deno.serve(async (req) => {
     // Step 6: Create all ClassGroups
     const createdGroups = await base44.asServiceRole.entities.ClassGroup.bulkCreate(classGroupsToCreate);
 
-    // Step 7: Update students with their new classgroup_id (parallel)
-    const updatePromises = [];
+    // Step 7: Update students with their new classgroup_id (batched)
+    const studentsToAssign = [];
     for (const group of createdGroups) {
       for (const studentId of group.student_ids) {
-        updatePromises.push(
-          base44.asServiceRole.entities.Student.update(studentId, {
-            classgroup_id: group.id
-          })
-        );
+        studentsToAssign.push({ studentId, groupId: group.id });
       }
     }
 
-    await Promise.all(updatePromises);
+    await batchProcess(
+      studentsToAssign,
+      10,
+      (item) => base44.asServiceRole.entities.Student.update(item.studentId, {
+        classgroup_id: item.groupId
+      }),
+      150
+    );
 
     return Response.json({
       success: true,
