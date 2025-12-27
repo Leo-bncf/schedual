@@ -50,9 +50,9 @@ Deno.serve(async (req) => {
     if (existingGroups.length > 0) {
       await batchProcess(
         existingGroups, 
-        10, 
+        5, 
         (group) => base44.asServiceRole.entities.ClassGroup.delete(group.id),
-        150
+        400
       );
     }
 
@@ -66,11 +66,11 @@ Deno.serve(async (req) => {
     if (studentsToUpdate.length > 0) {
       await batchProcess(
         studentsToUpdate,
-        10,
+        5,
         (student) => base44.asServiceRole.entities.Student.update(student.id, {
           classgroup_id: null
         }),
-        150
+        400
       );
     }
 
