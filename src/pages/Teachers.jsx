@@ -20,7 +20,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import { Plus, Search, Mail, Clock, BookOpen, MoreHorizontal, Pencil, Trash2 } from 'lucide-react';
+import { Plus, Search, Mail, Clock, BookOpen, MoreHorizontal, Pencil, Trash2, Upload, Loader2 } from 'lucide-react';
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -152,6 +152,111 @@ export default function Teachers() {
     return subjectIds.map(id => subjects.find(s => s.id === id)?.name).filter(Boolean);
   };
 
+  const handleFileUpload = async (e) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+
+    e.target.value = '';
+
+    if (!schoolId) {
+      alert('No school assigned. Please set up your school in Settings first.');
+      return;
+    }
+
+    setUploadState({
+      isUploading: true,
+      progress: 'Uploading file...',
+      teachersCreated: 0,
+      error: null
+    });
+
+    try {
+      const { file_url } = await base44.integrations.Core.UploadFile({ file });
+
+      setUploadState(prev => ({ ...prev, progress: 'Extracting teacher data...' }));
+
+      const extractionResult = await base44.integrations.Core.InvokeLLM({
+        prompt: `Extract all teachers from this document. For each teacher, provide: full_name, email, employee_id (if available), max_hours_per_week (as number, default 25 if not specified).`,
+        file_urls: [file_url],
+        response_json_schema: {
+          type: "object",
+          properties: {
+            teachers: {
+              type: "array",
+              items: {
+                type: "object",
+                properties: {
+                  full_name: { type: "string" },
+                  email: { type: "string" },
+                  employee_id: { type: "string" },
+                  max_hours_per_week: { type: "number" }
+                },
+                required: ["full_name", "email"]
+              }
+            }
+          }
+        }
+      });
+
+      const teachersData = extractionResult?.teachers || [];
+
+      if (teachersData.length === 0) {
+        throw new Error('No teachers found in the document');
+      }
+
+      setUploadState(prev => ({ ...prev, progress: `Creating ${teachersData.length} teachers...` }));
+
+      let created = 0;
+      for (const teacher of teachersData) {
+        await base44.entities.Teacher.create({
+          school_id: schoolId,
+          full_name: teacher.full_name,
+          email: teacher.email,
+          employee_id: teacher.employee_id || '',
+          subjects: [],
+          qualifications: [],
+          max_hours_per_week: teacher.max_hours_per_week || 25,
+          max_consecutive_periods: 4,
+          unavailable_slots: [],
+          is_active: true
+        });
+
+        created++;
+        setUploadState(prev => ({ 
+          ...prev, 
+          teachersCreated: created,
+          progress: `Created ${created} of ${teachersData.length} teachers...`
+        }));
+      }
+
+      setUploadState(prev => ({ 
+        ...prev, 
+        isUploading: false,
+        progress: `Successfully created ${created} teachers!`
+      }));
+
+      setTimeout(() => {
+        setUploadState({
+          isUploading: false,
+          progress: '',
+          teachersCreated: 0,
+          error: null
+        });
+        queryClient.invalidateQueries({ queryKey: ['teachers'] });
+      }, 2000);
+
+    } catch (error) {
+      console.error('Upload error:', error);
+      setUploadState({
+        isUploading: false,
+        progress: '',
+        teachersCreated: 0,
+        error: error?.message || 'An unknown error occurred'
+      });
+      alert('Failed to process file: ' + (error?.message || 'Unknown error'));
+    }
+  };
+
   const columns = [
     {
       header: 'Name',
@@ -246,10 +351,39 @@ export default function Teachers() {
         title="Teachers"
         description="Manage teaching staff and their scheduling preferences"
         actions={
-          <Button onClick={() => setIsDialogOpen(true)} className="bg-indigo-600 hover:bg-indigo-700">
-            <Plus className="w-4 h-4 mr-2" />
-            Add Teacher
-          </Button>
+          <div className="flex gap-2">
+            <label htmlFor="teacher-upload">
+              <input
+                type="file"
+                id="teacher-upload"
+                className="hidden"
+                onChange={handleFileUpload}
+                accept=".csv,.xlsx,.xls,.pdf,.txt,.doc,.docx"
+              />
+              <Button 
+                type="button"
+                variant="outline"
+                onClick={() => document.getElementById('teacher-upload').click()}
+                disabled={uploadState.isUploading}
+              >
+                {uploadState.isUploading ? (
+                  <>
+                    <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+                    {uploadState.progress || 'Processing...'}
+                  </>
+                ) : (
+                  <>
+                    <Upload className="w-4 h-4 mr-2" />
+                    Import Document
+                  </>
+                )}
+              </Button>
+            </label>
+            <Button onClick={() => setIsDialogOpen(true)} className="bg-indigo-600 hover:bg-indigo-700">
+              <Plus className="w-4 h-4 mr-2" />
+              Add Teacher
+            </Button>
+          </div>
         }
       />
 
