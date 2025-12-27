@@ -240,6 +240,16 @@ export default function Settings() {
                   </SelectContent>
                 </Select>
               </div>
+
+              <Separator />
+
+              <div className="space-y-2">
+                <Label>School ID</Label>
+                <div className="p-3 rounded-lg bg-slate-50 border border-slate-200">
+                  <p className="text-sm font-mono text-slate-700">{school?.id || 'Not available'}</p>
+                  <p className="text-xs text-slate-500 mt-1">Use this ID when uploading documents to import data</p>
+                </div>
+              </div>
             </CardContent>
           </Card>
         </TabsContent>
