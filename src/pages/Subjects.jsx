@@ -196,7 +196,14 @@ export default function Subjects() {
 
       await base44.agents.addMessage(conv, {
         role: "user",
-        content: `Extract all subjects/classes from this document and create Subject entities. CRITICAL: Set school_id="${schoolId}" for EVERY subject. Extract name, code, ib_level (DP/MYP/PYP), and for DP subjects include ib_group (1-6) and ib_group_name. Create all subjects found.`,
+        content: `Extract all subjects/classes from this document and create Subject entities.
+
+      IMPORTANT: To complete this import, you need your school_id. You can find it in Settings > School Info tab.
+
+      Once you have your school_id, provide it in this format:
+      school_id: [your-school-id-here]
+
+      Required fields for each subject: school_id, name, code, ib_level (DP/MYP/PYP), and for DP subjects include ib_group (1-6) and ib_group_name.`,
         file_urls: [file_url]
       });
 
