@@ -192,7 +192,7 @@ export default function Subjects() {
       setUploadState(prev => ({ ...prev, progress: 'Extracting subject data...' }));
 
       const extractionResult = await base44.integrations.Core.InvokeLLM({
-        prompt: `Extract all subjects/classes from this document. For each subject, provide: name, code, ib_level (one of: DP, MYP, PYP), and for DP subjects also include ib_group (number 1-6) and available_levels (array of HL and/or SL).`,
+        prompt: `Extract all subjects/classes from this document. For each subject, provide: name, code, ib_level (one of: DP, MYP, PYP), and for DP subjects also include ib_group (string: "1", "2", "3", "4", "5", or "6") and available_levels (array of HL and/or SL).`,
         file_urls: [file_url],
         response_json_schema: {
           type: "object",
@@ -205,7 +205,7 @@ export default function Subjects() {
                   name: { type: "string" },
                   code: { type: "string" },
                   ib_level: { type: "string" },
-                  ib_group: { type: "number" },
+                  ib_group: { type: "string" },
                   available_levels: { type: "array", items: { type: "string" } }
                 },
                 required: ["name", "code", "ib_level"]
@@ -225,14 +225,15 @@ export default function Subjects() {
 
       let created = 0;
       for (const subject of subjectsData) {
-        const group = IB_GROUPS.find(g => g.id === subject.ib_group);
+        const ibGroupStr = subject.ib_group || "1";
+        const group = IB_GROUPS.find(g => g.id === parseInt(ibGroupStr));
         
         await base44.entities.Subject.create({
           school_id: schoolId,
           name: subject.name,
           code: subject.code,
           ib_level: subject.ib_level,
-          ib_group: subject.ib_group || 1,
+          ib_group: ibGroupStr,
           ib_group_name: group?.name || 'Language & Literature',
           available_levels: subject.available_levels || ['HL', 'SL'],
           hl_hours_per_week: 6,
