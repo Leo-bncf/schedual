@@ -5,7 +5,7 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Input } from "@/components/ui/input";
-import { Users, Sparkles, Search, RefreshCw, X, BookOpen } from 'lucide-react';
+import { Users, Sparkles, Search, RefreshCw, X, BookOpen, Trash2 } from 'lucide-react';
 import {
   Dialog,
   DialogContent,
@@ -57,6 +57,24 @@ export default function ClassGroups() {
     queryKey: ['teachingGroups', schoolId],
     queryFn: () => base44.entities.TeachingGroup.filter({ school_id: schoolId }),
     enabled: !!schoolId,
+  });
+
+  const deleteClassGroupMutation = useMutation({
+    mutationFn: async (groupId) => {
+      // Clear classgroup_id from all students in this group
+      const studentsInGroup = students.filter(s => s.classgroup_id === groupId);
+      await Promise.all(
+        studentsInGroup.map(s => 
+          base44.entities.Student.update(s.id, { classgroup_id: null })
+        )
+      );
+      // Delete the class group
+      return base44.entities.ClassGroup.delete(groupId);
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['classGroups'] });
+      queryClient.invalidateQueries({ queryKey: ['students'] });
+    },
   });
 
   const handleAutoGenerate = async () => {
@@ -204,12 +222,14 @@ export default function ClassGroups() {
             return (
               <Card 
                 key={group.id} 
-                className="border-0 shadow-sm hover:shadow-md transition-shadow cursor-pointer"
-                onClick={() => setSelectedGroup(group)}
+                className="border-0 shadow-sm hover:shadow-md transition-shadow"
               >
                 <CardHeader className="pb-3">
                   <div className="flex items-start justify-between">
-                    <div className="flex-1">
+                    <div 
+                      className="flex-1 cursor-pointer"
+                      onClick={() => setSelectedGroup(group)}
+                    >
                       <CardTitle className="text-lg font-bold text-slate-900 mb-2">
                         {group.name}
                       </CardTitle>
@@ -222,13 +242,28 @@ export default function ClassGroups() {
                         </Badge>
                       </div>
                     </div>
-                    <div className="text-right">
-                      <div className="text-2xl font-bold text-indigo-600">
-                        {groupStudents.length}
+                    <div className="flex items-start gap-2">
+                      <div className="text-right">
+                        <div className="text-2xl font-bold text-indigo-600">
+                          {groupStudents.length}
+                        </div>
+                        <div className="text-xs text-slate-500">
+                          / {group.max_students}
+                        </div>
                       </div>
-                      <div className="text-xs text-slate-500">
-                        / {group.max_students}
-                      </div>
+                      <Button
+                        variant="ghost"
+                        size="icon"
+                        className="text-rose-600 hover:text-rose-700 hover:bg-rose-50 h-8 w-8"
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          if (confirm(`Delete ${group.name}? Students will be unassigned.`)) {
+                            deleteClassGroupMutation.mutate(group.id);
+                          }
+                        }}
+                      >
+                        <Trash2 className="w-4 h-4" />
+                      </Button>
                     </div>
                   </div>
                 </CardHeader>
