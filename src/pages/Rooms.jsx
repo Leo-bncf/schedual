@@ -49,9 +49,12 @@ export default function Rooms() {
   const [editingRoom, setEditingRoom] = useState(null);
   const [searchQuery, setSearchQuery] = useState('');
   const [typeFilter, setTypeFilter] = useState('all');
-  const [uploading, setUploading] = useState(false);
-  const [conversation, setConversation] = useState(null);
-  const [messages, setMessages] = useState([]);
+  const [uploadState, setUploadState] = useState({
+    isUploading: false,
+    conversationId: null,
+    messages: [],
+    error: null
+  });
   const [formData, setFormData] = useState({
     name: '',
     building: '',
@@ -154,78 +157,107 @@ export default function Rooms() {
 
   React.useEffect(() => {
     let unsubscribe;
-    if (conversation?.id) {
-      unsubscribe = base44.agents.subscribeToConversation(conversation.id, (data) => {
-        setMessages(data.messages || []);
+    if (uploadState.conversationId) {
+      unsubscribe = base44.agents.subscribeToConversation(uploadState.conversationId, (data) => {
+        setUploadState(prev => ({ ...prev, messages: data.messages || [] }));
       });
     }
     return () => {
       if (unsubscribe) unsubscribe();
     };
-  }, [conversation?.id]);
+  }, [uploadState.conversationId]);
 
   const handleFileUpload = async (e) => {
     const file = e.target.files?.[0];
     if (!file) return;
 
+    // Reset file input
+    e.target.value = '';
+
     if (!schoolId) {
-      alert('No school assigned. Please contact support.');
+      alert('No school assigned. Please set up your school in Settings first.');
       return;
     }
 
-    setUploading(true);
-    try {
-      // Upload file
-      const { file_url } = await base44.integrations.Core.UploadFile({ file });
+    setUploadState({
+      isUploading: true,
+      conversationId: null,
+      messages: [],
+      error: null
+    });
 
-      // Create conversation with agent
-      const conv = await base44.agents.createConversation({
+    try {
+      // Step 1: Upload file
+      const uploadResult = await base44.integrations.Core.UploadFile({ file });
+      if (!uploadResult?.file_url) {
+        throw new Error('File upload failed - no URL returned');
+      }
+
+      // Step 2: Create agent conversation
+      const conversation = await base44.agents.createConversation({
         agent_name: "room_importer",
         metadata: { 
           file_name: file.name,
           school_id: schoolId
         }
       });
-      setConversation(conv);
 
-      // Send message with file to agent
-      await base44.agents.addMessage(conv, {
+      if (!conversation?.id) {
+        throw new Error('Failed to create conversation');
+      }
+
+      setUploadState(prev => ({
+        ...prev,
+        conversationId: conversation.id,
+        isUploading: false
+      }));
+
+      // Step 3: Send message to agent
+      await base44.agents.addMessage(conversation, {
         role: "user",
-        content: `Extract all rooms from this document and create Room entities. 
+        content: `I need you to extract all rooms from the attached document and create Room entities in the database.
 
   My school_id is: ${schoolId}
 
-  For each room you find, create a Room entity with these fields:
-  - school_id: ${schoolId}
-  - name: room name/number
-  - capacity: number only (e.g., 30)
-  - room_type: choose from classroom, lab, art_studio, music_room, computer_lab, gymnasium, library, auditorium, other
-  - building: if available
-  - floor: if available
-  - equipment: []
-  - is_active: true`,
-        file_urls: [file_url]
+  For each room you find in the document, create a Room entity with:
+  - school_id: "${schoolId}"
+  - name: the room name or number
+  - capacity: the maximum number of students (must be a number)
+  - room_type: one of these values: "classroom", "lab", "art_studio", "music_room", "computer_lab", "gymnasium", "library", "auditorium", "other"
+  - building: building name if mentioned (optional)
+  - floor: floor number if mentioned (optional)
+  - equipment: [] (empty array)
+  - is_active: true
+
+  Please process all rooms one by one and confirm each creation.`,
+        file_urls: [uploadResult.file_url]
       });
 
     } catch (error) {
       console.error('Upload error:', error);
+      setUploadState({
+        isUploading: false,
+        conversationId: null,
+        messages: [],
+        error: error?.message || 'An unknown error occurred'
+      });
       alert('Failed to upload file: ' + (error?.message || 'Unknown error'));
-      setUploading(false);
-      setConversation(null);
-    } finally {
-      setUploading(false);
     }
   };
 
   const closeImportDialog = () => {
-    setConversation(null);
-    setMessages([]);
+    setUploadState({
+      isUploading: false,
+      conversationId: null,
+      messages: [],
+      error: null
+    });
     queryClient.invalidateQueries({ queryKey: ['rooms'] });
   };
 
-  const isImportComplete = messages.length > 0 && 
-    messages[messages.length - 1]?.role === 'assistant' &&
-    !messages[messages.length - 1]?.tool_calls?.some(tc => tc.status === 'running' || tc.status === 'pending');
+  const isImportComplete = uploadState.messages.length > 0 && 
+    uploadState.messages[uploadState.messages.length - 1]?.role === 'assistant' &&
+    !uploadState.messages[uploadState.messages.length - 1]?.tool_calls?.some(tc => tc.status === 'running' || tc.status === 'pending');
 
   return (
     <div className="space-y-6">
@@ -246,9 +278,9 @@ export default function Rooms() {
                 type="button"
                 variant="outline"
                 onClick={() => document.getElementById('room-upload').click()}
-                disabled={uploading}
+                disabled={uploadState.isUploading || uploadState.conversationId}
               >
-                {uploading ? (
+                {uploadState.isUploading ? (
                   <>
                     <Loader2 className="w-4 h-4 mr-2 animate-spin" />
                     Uploading...
@@ -472,7 +504,7 @@ export default function Rooms() {
       </Dialog>
 
       {/* Import Progress Dialog */}
-      <Dialog open={!!conversation} onOpenChange={(open) => { if (!open && isImportComplete) closeImportDialog(); }}>
+      <Dialog open={!!uploadState.conversationId} onOpenChange={(open) => { if (!open && isImportComplete) closeImportDialog(); }}>
         <DialogContent className="sm:max-w-lg">
           <DialogHeader>
             <DialogTitle>Importing Rooms</DialogTitle>
@@ -480,53 +512,65 @@ export default function Rooms() {
               AI is reading the document and creating room entities
             </DialogDescription>
           </DialogHeader>
-          
-          <div className="space-y-4 max-h-96 overflow-y-auto">
-            <AnimatePresence mode="popLayout">
-              {messages.map((msg, idx) => (
-                <motion.div
-                  key={idx}
-                  initial={{ opacity: 0, y: 10 }}
-                  animate={{ opacity: 1, y: 0 }}
-                  transition={{ duration: 0.3 }}
-                  className={`p-3 rounded-lg ${msg.role === 'user' ? 'bg-slate-50' : 'bg-blue-50'}`}
-                >
-                  {msg.content && (
-                    <p className="text-sm text-slate-700 whitespace-pre-wrap">{msg.content}</p>
-                  )}
-                  
-                  {msg.tool_calls && msg.tool_calls.length > 0 && (
-                    <div className="mt-2 space-y-1">
-                      {msg.tool_calls.map((tc, tcIdx) => (
-                        <motion.div
-                          key={tcIdx}
-                          initial={{ opacity: 0, x: -10 }}
-                          animate={{ opacity: 1, x: 0 }}
-                          transition={{ delay: tcIdx * 0.1 }}
-                          className="flex items-center gap-2 text-sm"
-                        >
-                          {tc.status === 'completed' ? (
+
+          {uploadState.error ? (
+            <div className="p-4 bg-red-50 rounded-lg">
+              <p className="text-sm text-red-700">{uploadState.error}</p>
+            </div>
+          ) : (
+            <div className="space-y-4 max-h-96 overflow-y-auto">
+              {uploadState.messages.length === 0 ? (
+                <div className="flex items-center justify-center py-8">
+                  <Loader2 className="w-8 h-8 animate-spin text-blue-600" />
+                </div>
+              ) : (
+                <AnimatePresence mode="popLayout">
+                  {uploadState.messages.map((msg, idx) => (
+                    <motion.div
+                      key={idx}
+                      initial={{ opacity: 0, y: 10 }}
+                      animate={{ opacity: 1, y: 0 }}
+                      transition={{ duration: 0.3 }}
+                      className={`p-3 rounded-lg ${msg.role === 'user' ? 'bg-slate-50' : 'bg-blue-50'}`}
+                    >
+                      {msg.content && (
+                        <p className="text-sm text-slate-700 whitespace-pre-wrap">{msg.content}</p>
+                      )}
+
+                      {msg.tool_calls && msg.tool_calls.length > 0 && (
+                        <div className="mt-2 space-y-1">
+                          {msg.tool_calls.map((tc, tcIdx) => (
                             <motion.div
-                              initial={{ scale: 0 }}
-                              animate={{ scale: 1 }}
-                              transition={{ type: "spring", stiffness: 200, damping: 15 }}
+                              key={tcIdx}
+                              initial={{ opacity: 0, x: -10 }}
+                              animate={{ opacity: 1, x: 0 }}
+                              transition={{ delay: tcIdx * 0.1 }}
+                              className="flex items-center gap-2 text-sm"
                             >
-                              <CheckCircle className="w-4 h-4 text-green-600" />
+                              {tc.status === 'completed' ? (
+                                <motion.div
+                                  initial={{ scale: 0 }}
+                                  animate={{ scale: 1 }}
+                                  transition={{ type: "spring", stiffness: 200, damping: 15 }}
+                                >
+                                  <CheckCircle className="w-4 h-4 text-green-600" />
+                                </motion.div>
+                              ) : (
+                                <Loader2 className="w-4 h-4 text-blue-600 animate-spin" />
+                              )}
+                              <span className="text-slate-600">
+                                {tc.status === 'completed' ? 'Created room' : 'Creating room...'}
+                              </span>
                             </motion.div>
-                          ) : (
-                            <Loader2 className="w-4 h-4 text-blue-600 animate-spin" />
-                          )}
-                          <span className="text-slate-600">
-                            {tc.status === 'completed' ? 'Created room' : 'Creating room...'}
-                          </span>
-                        </motion.div>
-                      ))}
-                    </div>
-                  )}
-                </motion.div>
-              ))}
-            </AnimatePresence>
-          </div>
+                          ))}
+                        </div>
+                      )}
+                    </motion.div>
+                  ))}
+                </AnimatePresence>
+              )}
+            </div>
+          )}
 
           <AnimatePresence>
             {isImportComplete && (
