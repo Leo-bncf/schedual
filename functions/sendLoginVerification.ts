@@ -25,7 +25,7 @@ Deno.serve(async (req) => {
     const recentCodes = await base44.asServiceRole.entities.EmailVerificationCode.filter({
       user_email: email,
       verified: false
-    }).catch(() => []);
+    }, '-created_date', 1);
 
     if (recentCodes.length > 0) {
       const lastCode = recentCodes[0];
@@ -47,7 +47,7 @@ Deno.serve(async (req) => {
     // Delete old codes
     const oldCodes = await base44.asServiceRole.entities.EmailVerificationCode.filter({
       user_email: email
-    }).catch(() => []);
+    });
     
     for (const oldCode of oldCodes) {
       await base44.asServiceRole.entities.EmailVerificationCode.delete(oldCode.id);
