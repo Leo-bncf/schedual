@@ -54,7 +54,8 @@ Deno.serve(async (req) => {
     }
 
     // Step 4: Group students by programme + year_group
-    const eligibleStudents = allStudents.filter(s => s.year_group);
+    const eligibleStudents = allStudents.filter(s => s.year_group && s.ib_programme);
+    const ineligibleStudents = allStudents.filter(s => !s.year_group || !s.ib_programme);
     
     const groups = {};
     eligibleStudents.forEach(student => {
