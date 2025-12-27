@@ -59,10 +59,33 @@ export default function Students() {
 
   const schoolId = user?.school_id;
 
-  const { data: students = [], isLoading } = useQuery({
+  const { data: rawStudents = [], isLoading } = useQuery({
     queryKey: ['students', schoolId],
     queryFn: () => base44.entities.Student.filter({ school_id: schoolId }, '-created_date', 500),
     enabled: !!schoolId,
+  });
+
+  // Auto-normalize PYP year groups on display
+  const students = rawStudents.map(student => {
+    if (student.ib_programme === 'PYP' && student.year_group) {
+      const lowerYearGroup = student.year_group.toLowerCase();
+      const patterns = [
+        /class[_\s-]*([a-f])/i,
+        /pyp[_\s-]+class[_\s-]*([a-f])/i,
+        /pyp[_\s-]+([a-f])/i,
+        /[_-]([a-f])$/i,
+        /\b([a-f])\b/i
+      ];
+      
+      for (const pattern of patterns) {
+        const match = lowerYearGroup.match(pattern);
+        if (match) {
+          const classLetter = match[match.length - 1];
+          return { ...student, year_group: `PYP-${classLetter.toUpperCase()}` };
+        }
+      }
+    }
+    return student;
   });
 
   const { data: subjects = [] } = useQuery({
@@ -325,36 +348,10 @@ export default function Students() {
         title="Students"
         description="Manage IB Diploma students and their subject choices"
         actions={
-          <div className="flex gap-2">
-            <Button 
-              variant="outline"
-              onClick={async () => {
-                try {
-                  const confirmed = confirm('This will normalize all PYP student year groups from formats like "PYP_Class_A" to "PYP-A". Continue?');
-                  if (!confirmed) return;
-                  
-                  const res = await base44.functions.invoke('normalizePYPYearGroups');
-                  console.log('Normalization result:', res.data);
-                  
-                  if (res.data.success) {
-                    alert(`✅ Successfully updated ${res.data.updated} out of ${res.data.total} PYP students.\n\nCheck the console for details.`);
-                    queryClient.invalidateQueries({ queryKey: ['students'] });
-                  } else {
-                    alert('❌ Normalization failed. Check console for details.');
-                  }
-                } catch (error) {
-                  console.error('Error normalizing:', error);
-                  alert('❌ Error: ' + error.message);
-                }
-              }}
-            >
-              Fix PYP Classes
-            </Button>
-            <Button onClick={() => setIsDialogOpen(true)} className="bg-indigo-600 hover:bg-indigo-700">
-              <Plus className="w-4 h-4 mr-2" />
-              Add Student
-            </Button>
-          </div>
+          <Button onClick={() => setIsDialogOpen(true)} className="bg-indigo-600 hover:bg-indigo-700">
+            <Plus className="w-4 h-4 mr-2" />
+            Add Student
+          </Button>
         }
       />
 
