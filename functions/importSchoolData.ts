@@ -322,7 +322,7 @@ Deno.serve(async (req) => {
         const created = await base44.asServiceRole.entities.Student.bulkCreate(studentsToCreate);
         results.students = created;
         console.log('Created students:', created.length);
-        console.log('Sample student with subjects:', created[0]);
+        console.log('Sample student with normalized year_group:', created[0]?.full_name, created[0]?.year_group);
       } catch (err) {
         console.error('Error bulk creating students:', err);
         results.errors.push(`Students bulk create: ${err.message}`);
