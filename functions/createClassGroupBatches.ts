@@ -13,36 +13,32 @@ Deno.serve(async (req) => {
     console.log('=== STARTING CLASS GROUP GENERATION ===');
     console.log('User:', user.email, 'School ID:', schoolId);
 
-    // Step 1: Fetch ALL students (no is_active filter)
-    console.log('Fetching students from database...');
-    let allStudents = [];
-    let skip = 0;
-    const batchSize = 100;
+    // Step 1: Fetch ALL students - try without filter first to debug
+    console.log('Fetching ALL students from database (no filter)...');
+    const allStudentsNoFilter = await base44.asServiceRole.entities.Student.list('-created_date', 500);
+    console.log(`Found ${allStudentsNoFilter.length} total students in database`);
+    console.log('Sample student school_ids:', allStudentsNoFilter.slice(0, 5).map(s => ({ 
+      name: s.full_name, 
+      school_id: s.school_id,
+      matches: s.school_id === schoolId
+    })));
     
-    while (true) {
-      const batch = await base44.asServiceRole.entities.Student.filter(
-        { school_id: schoolId },
-        '-created_date',
-        batchSize,
-        skip
-      );
-      
-      console.log(`Fetched batch: ${batch.length} students (skip: ${skip})`);
-      
-      if (batch.length === 0) break;
-      allStudents = allStudents.concat(batch);
-      
-      if (batch.length < batchSize) break;
-      skip += batchSize;
-    }
-
-    console.log(`✓ Total students fetched: ${allStudents.length}`);
+    // Now filter for this school
+    console.log(`Filtering for school_id: ${schoolId}`);
+    const allStudents = allStudentsNoFilter.filter(s => s.school_id === schoolId);
+    
+    console.log(`✓ Total students for this school: ${allStudents.length}`);
     
     if (allStudents.length === 0) {
       return Response.json({ 
-        error: 'No students found in database for this school',
+        error: 'No students found for this school',
         schoolId: schoolId,
-        userEmail: user.email
+        userEmail: user.email,
+        totalStudentsInDB: allStudentsNoFilter.length,
+        debug: {
+          userSchoolId: schoolId,
+          sampleSchoolIds: allStudentsNoFilter.slice(0, 10).map(s => s.school_id)
+        }
       }, { status: 400 });
     }
 
