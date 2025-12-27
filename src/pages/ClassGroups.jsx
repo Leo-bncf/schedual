@@ -87,7 +87,11 @@ export default function ClassGroups() {
     group.name.toLowerCase().includes(searchQuery.toLowerCase())
   );
 
-  const studentsWithoutClassGroup = students.filter(s => !s.classgroup_id);
+  const studentsWithoutClassGroup = students.filter(s => {
+    if (!s.classgroup_id) return true;
+    // Check if classgroup_id points to a deleted/non-existent group
+    return !classGroups.find(cg => cg.id === s.classgroup_id);
+  });
 
   const programmeColors = {
     DP: 'bg-blue-100 text-blue-800 border-blue-300',

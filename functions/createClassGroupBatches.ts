@@ -58,14 +58,19 @@ Deno.serve(async (req) => {
       await base44.asServiceRole.entities.ClassGroup.delete(group.id);
     }
 
-    // Step 3: Clear ALL student classgroup_ids
+    // Step 3: Clear ALL student classgroup_ids (batch updates)
     console.log(`Clearing classgroup_ids for ${allStudents.length} students`);
     
-    for (const student of allStudents) {
-      await base44.asServiceRole.entities.Student.update(student.id, {
+    const updatePromises = allStudents.map(student => 
+      base44.asServiceRole.entities.Student.update(student.id, {
         classgroup_id: null
-      });
-    }
+      }).catch(err => {
+        console.error(`Failed to clear classgroup_id for student ${student.id}:`, err);
+        return null;
+      })
+    );
+    
+    await Promise.all(updatePromises);
 
     // Step 4: Group students by programme + year_group
     const eligibleStudents = allStudents.filter(s => s.year_group && s.ib_programme);
@@ -114,20 +119,27 @@ Deno.serve(async (req) => {
 
     console.log(`Created ${createdGroups.length} class groups`);
 
-    // Step 6: Assign EACH student to their ClassGroup
+    // Step 6: Assign EACH student to their ClassGroup (batch updates)
     console.log(`Assigning students to ${createdGroups.length} class groups`);
     
-    let assignedCount = 0;
+    const assignmentPromises = [];
     for (const group of createdGroups) {
       console.log(`Assigning ${group.student_ids.length} students to ${group.name}`);
       
       for (const studentId of group.student_ids) {
-        await base44.asServiceRole.entities.Student.update(studentId, {
-          classgroup_id: group.id
-        });
-        assignedCount++;
+        assignmentPromises.push(
+          base44.asServiceRole.entities.Student.update(studentId, {
+            classgroup_id: group.id
+          }).catch(err => {
+            console.error(`Failed to assign student ${studentId} to group ${group.id}:`, err);
+            return null;
+          })
+        );
       }
     }
+    
+    const results = await Promise.all(assignmentPromises);
+    const assignedCount = results.filter(r => r !== null).length;
 
     console.log(`Successfully assigned ${assignedCount} students to class groups`);
 
