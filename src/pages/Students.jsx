@@ -174,7 +174,33 @@ export default function Students() {
     const matchesSearch = s.full_name?.toLowerCase().includes(searchQuery.toLowerCase()) ||
       s.email?.toLowerCase().includes(searchQuery.toLowerCase()) ||
       s.student_id?.toLowerCase().includes(searchQuery.toLowerCase());
-    const matchesYear = yearFilter === 'all' || s.year_group === yearFilter;
+    
+    // Normalize year group for comparison (ignore batch, case-insensitive)
+    const normalizeYearGroup = (yg) => {
+      if (!yg) return '';
+      // Extract core year group: DP1, DP2, MYP1-5, PYP-A through PYP-F
+      const lower = yg.toLowerCase().trim();
+      
+      // Match DP1 or DP2
+      if (lower.includes('dp1')) return 'dp1';
+      if (lower.includes('dp2')) return 'dp2';
+      
+      // Match MYP1-5
+      for (let i = 1; i <= 5; i++) {
+        if (lower.includes(`myp${i}`)) return `myp${i}`;
+      }
+      
+      // Match PYP-A through PYP-F
+      for (const letter of ['a', 'b', 'c', 'd', 'e', 'f']) {
+        if (lower.includes(letter)) return `pyp-${letter}`;
+      }
+      
+      return lower;
+    };
+    
+    const matchesYear = yearFilter === 'all' || 
+      normalizeYearGroup(s.year_group) === normalizeYearGroup(yearFilter);
+    
     return matchesSearch && matchesYear;
   });
 
