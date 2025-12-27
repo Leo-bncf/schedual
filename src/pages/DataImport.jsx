@@ -110,22 +110,12 @@ export default function DataImport() {
       setProcessing(false);
 
       if (importResponse.data.success) {
-        // Auto-generate ClassGroups after successful import
-        try {
-          console.log('Auto-generating ClassGroups...');
-          await base44.functions.invoke('createClassGroupBatches');
-          console.log('ClassGroups generated successfully');
-        } catch (cgError) {
-          console.warn('ClassGroup generation failed:', cgError);
-        }
-
         // Invalidate all entity queries to refresh the data
         queryClient.invalidateQueries({ queryKey: ['teachers'] });
         queryClient.invalidateQueries({ queryKey: ['students'] });
         queryClient.invalidateQueries({ queryKey: ['subjects'] });
         queryClient.invalidateQueries({ queryKey: ['rooms'] });
         queryClient.invalidateQueries({ queryKey: ['teachingGroups'] });
-        queryClient.invalidateQueries({ queryKey: ['classGroups'] });
 
         const totalCreated = 
           importResponse.data.results.subjects_created +
