@@ -62,14 +62,13 @@ export default function ClassGroups() {
   const handleAutoGenerate = async () => {
     setIsGenerating(true);
     try {
-      const response = await base44.functions.invoke('debugAndFixClassGroups');
+      const response = await base44.functions.invoke('createClassGroupBatches');
       if (response.data.success) {
         queryClient.invalidateQueries({ queryKey: ['classGroups'] });
         queryClient.invalidateQueries({ queryKey: ['students'] });
-        alert(`Success! Created ${response.data.classGroupsCreated} ClassGroups for ${response.data.studentsAssigned} students.`);
+        alert(response.data.message);
       } else {
-        alert(response.data.message || 'Failed to generate class groups');
-        console.log('Debug info:', response.data.debug);
+        alert('Failed to generate class groups');
       }
     } catch (error) {
       console.error('Error generating ClassGroups:', error);
