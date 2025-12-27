@@ -62,13 +62,17 @@ Deno.serve(async (req) => {
 
     // Update all students (including the original one for consistency)
     let updatedCount = 0;
-    for (const studentInGroup of studentsInGroup) {
-      await base44.asServiceRole.entities.Student.update(studentInGroup.id, {
+    const updatePromises = studentsInGroup.map(studentInGroup => 
+      base44.asServiceRole.entities.Student.update(studentInGroup.id, {
         subject_choices: subjectsToSync
-      });
-      updatedCount++;
-      console.log(`[SYNC] Updated student ${studentInGroup.full_name} (${studentInGroup.id})`);
-    }
+      }).then(() => {
+        console.log(`[SYNC] Updated student ${studentInGroup.full_name} (${studentInGroup.id})`);
+        return studentInGroup;
+      })
+    );
+    
+    await Promise.all(updatePromises);
+    updatedCount = studentsInGroup.length;
 
     console.log(`[SYNC] Updated ${updatedCount} students with ${subjectsToSync.length} subjects`);
 
