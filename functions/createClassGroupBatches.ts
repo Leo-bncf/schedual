@@ -1,12 +1,29 @@
 import { createClientFromRequest } from 'npm:@base44/sdk@0.8.6';
 
-// Helper to batch operations with delays
-async function batchProcess(items, batchSize, processor, delayMs = 100) {
+// Helper to batch operations with delays and retry logic
+async function batchProcess(items, batchSize, processor, delayMs = 300) {
   const results = [];
   for (let i = 0; i < items.length; i += batchSize) {
     const batch = items.slice(i, i + batchSize);
-    const batchResults = await Promise.all(batch.map(processor));
-    results.push(...batchResults);
+    
+    // Process each item in batch sequentially to avoid rate limits
+    for (const item of batch) {
+      let retries = 3;
+      while (retries > 0) {
+        try {
+          const result = await processor(item);
+          results.push(result);
+          await new Promise(resolve => setTimeout(resolve, 50)); // Small delay between each item
+          break;
+        } catch (error) {
+          retries--;
+          if (retries === 0) throw error;
+          await new Promise(resolve => setTimeout(resolve, 500)); // Wait longer on error
+        }
+      }
+    }
+    
+    // Delay between batches
     if (i + batchSize < items.length) {
       await new Promise(resolve => setTimeout(resolve, delayMs));
     }
