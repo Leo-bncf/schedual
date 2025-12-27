@@ -115,18 +115,21 @@ Deno.serve(async (req) => {
     console.log(`Created ${createdGroups.length} class groups`);
 
     // Step 6: Assign EACH student to their ClassGroup
+    console.log(`Assigning students to ${createdGroups.length} class groups`);
+    
     let assignedCount = 0;
     for (const group of createdGroups) {
+      console.log(`Assigning ${group.student_ids.length} students to ${group.name}`);
+      
       for (const studentId of group.student_ids) {
         await base44.asServiceRole.entities.Student.update(studentId, {
           classgroup_id: group.id
         });
         assignedCount++;
-        await new Promise(resolve => setTimeout(resolve, 50));
       }
     }
 
-    console.log(`Assigned ${assignedCount} students`);
+    console.log(`Successfully assigned ${assignedCount} students to class groups`);
 
     return Response.json({
       success: true,
