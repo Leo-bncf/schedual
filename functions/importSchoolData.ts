@@ -263,18 +263,47 @@ Deno.serve(async (req) => {
             });
           }
 
-          // Normalize year_group for PYP students (handle "class a", "Class B", "A", etc.)
+          // Normalize year_group for PYP students (handle "class a", "Class B", "PYP_Class_D", "A", etc.)
           let normalizedYearGroup = student.year_group || 'DP1';
           const ibProgramme = student.ib_programme || 'DP';
           
           if (ibProgramme === 'PYP') {
-            // Extract class letter from various formats: "class a", "Class B", "PYP-A", "A", etc.
-            const classMatch = normalizedYearGroup.match(/[a-f]/i);
-            if (classMatch) {
-              // For PYP, we'll use "PYP-A" format where A-F represents the class
-              normalizedYearGroup = `PYP-${classMatch[0].toUpperCase()}`;
+            // Try multiple patterns to extract class letter (A-F)
+            let classLetter = null;
+            
+            // Pattern 1: "class [a-f]" or "Class [a-f]"
+            const pattern1 = normalizedYearGroup.match(/class\s*([a-f])/i);
+            if (pattern1) {
+              classLetter = pattern1[1];
+            }
+            
+            // Pattern 2: ends with "_[a-f]" or "-[a-f]"
+            if (!classLetter) {
+              const pattern2 = normalizedYearGroup.match(/[_-]([a-f])$/i);
+              if (pattern2) {
+                classLetter = pattern2[1];
+              }
+            }
+            
+            // Pattern 3: just the letter [a-f] at the end
+            if (!classLetter) {
+              const pattern3 = normalizedYearGroup.match(/([a-f])$/i);
+              if (pattern3) {
+                classLetter = pattern3[1];
+              }
+            }
+            
+            // Pattern 4: any [a-f] in the string (last resort)
+            if (!classLetter) {
+              const pattern4 = normalizedYearGroup.match(/([a-f])/i);
+              if (pattern4) {
+                classLetter = pattern4[1];
+              }
+            }
+            
+            if (classLetter) {
+              normalizedYearGroup = `PYP-${classLetter.toUpperCase()}`;
             } else {
-              // Default to PYP-A if no class detected
               normalizedYearGroup = 'PYP-A';
             }
           }
