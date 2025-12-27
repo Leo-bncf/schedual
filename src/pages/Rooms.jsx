@@ -51,8 +51,8 @@ export default function Rooms() {
   const [typeFilter, setTypeFilter] = useState('all');
   const [uploadState, setUploadState] = useState({
     isUploading: false,
-    conversationId: null,
-    messages: [],
+    progress: '',
+    roomsCreated: 0,
     error: null
   });
   const [formData, setFormData] = useState({
@@ -155,23 +155,12 @@ export default function Rooms() {
   const totalCapacity = rooms.reduce((sum, r) => sum + (r.capacity || 0), 0);
   const labCount = rooms.filter(r => r.room_type === 'lab').length;
 
-  React.useEffect(() => {
-    let unsubscribe;
-    if (uploadState.conversationId) {
-      unsubscribe = base44.agents.subscribeToConversation(uploadState.conversationId, (data) => {
-        setUploadState(prev => ({ ...prev, messages: data.messages || [] }));
-      });
-    }
-    return () => {
-      if (unsubscribe) unsubscribe();
-    };
-  }, [uploadState.conversationId]);
+
 
   const handleFileUpload = async (e) => {
     const file = e.target.files?.[0];
     if (!file) return;
 
-    // Reset file input
     e.target.value = '';
 
     if (!schoolId) {
@@ -181,83 +170,100 @@ export default function Rooms() {
 
     setUploadState({
       isUploading: true,
-      conversationId: null,
-      messages: [],
+      progress: 'Uploading file...',
+      roomsCreated: 0,
       error: null
     });
 
     try {
-      // Step 1: Upload file
-      const uploadResult = await base44.integrations.Core.UploadFile({ file });
-      if (!uploadResult?.file_url) {
-        throw new Error('File upload failed - no URL returned');
-      }
+      // Upload file
+      const { file_url } = await base44.integrations.Core.UploadFile({ file });
 
-      // Step 2: Create agent conversation
-      const conversation = await base44.agents.createConversation({
-        agent_name: "room_importer",
-        metadata: { 
-          file_name: file.name,
-          school_id: schoolId
+      setUploadState(prev => ({ ...prev, progress: 'Extracting room data...' }));
+
+      // Extract room data using LLM
+      const extractionResult = await base44.integrations.Core.InvokeLLM({
+        prompt: `Extract all rooms from this document. For each room, provide: name, capacity (as number), room_type (one of: classroom, lab, art_studio, music_room, computer_lab, gymnasium, library, auditorium, other), building (if available), floor (if available).`,
+        file_urls: [file_url],
+        response_json_schema: {
+          type: "object",
+          properties: {
+            rooms: {
+              type: "array",
+              items: {
+                type: "object",
+                properties: {
+                  name: { type: "string" },
+                  capacity: { type: "number" },
+                  room_type: { type: "string" },
+                  building: { type: "string" },
+                  floor: { type: "string" }
+                },
+                required: ["name", "capacity", "room_type"]
+              }
+            }
+          }
         }
       });
 
-      if (!conversation?.id) {
-        throw new Error('Failed to create conversation');
+      const rooms = extractionResult?.rooms || [];
+
+      if (rooms.length === 0) {
+        throw new Error('No rooms found in the document');
       }
 
-      setUploadState(prev => ({
-        ...prev,
-        conversationId: conversation.id,
-        isUploading: false
+      setUploadState(prev => ({ ...prev, progress: `Creating ${rooms.length} rooms...` }));
+
+      // Create rooms one by one
+      let created = 0;
+      for (const room of rooms) {
+        await base44.entities.Room.create({
+          school_id: schoolId,
+          name: room.name,
+          capacity: room.capacity,
+          room_type: room.room_type,
+          building: room.building || '',
+          floor: room.floor || '',
+          equipment: [],
+          is_active: true
+        });
+        created++;
+        setUploadState(prev => ({ 
+          ...prev, 
+          roomsCreated: created,
+          progress: `Created ${created} of ${rooms.length} rooms...`
+        }));
+      }
+
+      setUploadState(prev => ({ 
+        ...prev, 
+        isUploading: false,
+        progress: `Successfully created ${created} rooms!`
       }));
 
-      // Step 3: Send message to agent
-      await base44.agents.addMessage(conversation, {
-        role: "user",
-        content: `I need you to extract all rooms from the attached document and create Room entities in the database.
-
-  My school_id is: ${schoolId}
-
-  For each room you find in the document, create a Room entity with:
-  - school_id: "${schoolId}"
-  - name: the room name or number
-  - capacity: the maximum number of students (must be a number)
-  - room_type: one of these values: "classroom", "lab", "art_studio", "music_room", "computer_lab", "gymnasium", "library", "auditorium", "other"
-  - building: building name if mentioned (optional)
-  - floor: floor number if mentioned (optional)
-  - equipment: [] (empty array)
-  - is_active: true
-
-  Please process all rooms one by one and confirm each creation.`,
-        file_urls: [uploadResult.file_url]
-      });
+      setTimeout(() => {
+        setUploadState({
+          isUploading: false,
+          progress: '',
+          roomsCreated: 0,
+          error: null
+        });
+        queryClient.invalidateQueries({ queryKey: ['rooms'] });
+      }, 2000);
 
     } catch (error) {
       console.error('Upload error:', error);
       setUploadState({
         isUploading: false,
-        conversationId: null,
-        messages: [],
+        progress: '',
+        roomsCreated: 0,
         error: error?.message || 'An unknown error occurred'
       });
-      alert('Failed to upload file: ' + (error?.message || 'Unknown error'));
+      alert('Failed to process file: ' + (error?.message || 'Unknown error'));
     }
   };
 
-  const closeImportDialog = () => {
-    setUploadState({
-      isUploading: false,
-      conversationId: null,
-      messages: [],
-      error: null
-    });
-    queryClient.invalidateQueries({ queryKey: ['rooms'] });
-  };
 
-  const isImportComplete = uploadState.messages.length > 0 && 
-    uploadState.messages[uploadState.messages.length - 1]?.role === 'assistant' &&
-    !uploadState.messages[uploadState.messages.length - 1]?.tool_calls?.some(tc => tc.status === 'running' || tc.status === 'pending');
 
   return (
     <div className="space-y-6">
@@ -278,12 +284,12 @@ export default function Rooms() {
                 type="button"
                 variant="outline"
                 onClick={() => document.getElementById('room-upload').click()}
-                disabled={uploadState.isUploading || uploadState.conversationId}
+                disabled={uploadState.isUploading}
               >
                 {uploadState.isUploading ? (
                   <>
                     <Loader2 className="w-4 h-4 mr-2 animate-spin" />
-                    Uploading...
+                    {uploadState.progress || 'Processing...'}
                   </>
                 ) : (
                   <>
@@ -503,103 +509,7 @@ export default function Rooms() {
         </DialogContent>
       </Dialog>
 
-      {/* Import Progress Dialog */}
-      <Dialog open={!!uploadState.conversationId} onOpenChange={(open) => { if (!open && isImportComplete) closeImportDialog(); }}>
-        <DialogContent className="sm:max-w-lg">
-          <DialogHeader>
-            <DialogTitle>Importing Rooms</DialogTitle>
-            <DialogDescription>
-              AI is reading the document and creating room entities
-            </DialogDescription>
-          </DialogHeader>
 
-          {uploadState.error ? (
-            <div className="p-4 bg-red-50 rounded-lg">
-              <p className="text-sm text-red-700">{uploadState.error}</p>
-            </div>
-          ) : (
-            <div className="space-y-4 max-h-96 overflow-y-auto">
-              {uploadState.messages.length === 0 ? (
-                <div className="flex items-center justify-center py-8">
-                  <Loader2 className="w-8 h-8 animate-spin text-blue-600" />
-                </div>
-              ) : (
-                <AnimatePresence mode="popLayout">
-                  {uploadState.messages.map((msg, idx) => (
-                    <motion.div
-                      key={idx}
-                      initial={{ opacity: 0, y: 10 }}
-                      animate={{ opacity: 1, y: 0 }}
-                      transition={{ duration: 0.3 }}
-                      className={`p-3 rounded-lg ${msg.role === 'user' ? 'bg-slate-50' : 'bg-blue-50'}`}
-                    >
-                      {msg.content && (
-                        <p className="text-sm text-slate-700 whitespace-pre-wrap">{msg.content}</p>
-                      )}
-
-                      {msg.tool_calls && msg.tool_calls.length > 0 && (
-                        <div className="mt-2 space-y-1">
-                          {msg.tool_calls.map((tc, tcIdx) => (
-                            <motion.div
-                              key={tcIdx}
-                              initial={{ opacity: 0, x: -10 }}
-                              animate={{ opacity: 1, x: 0 }}
-                              transition={{ delay: tcIdx * 0.1 }}
-                              className="flex items-center gap-2 text-sm"
-                            >
-                              {tc.status === 'completed' ? (
-                                <motion.div
-                                  initial={{ scale: 0 }}
-                                  animate={{ scale: 1 }}
-                                  transition={{ type: "spring", stiffness: 200, damping: 15 }}
-                                >
-                                  <CheckCircle className="w-4 h-4 text-green-600" />
-                                </motion.div>
-                              ) : (
-                                <Loader2 className="w-4 h-4 text-blue-600 animate-spin" />
-                              )}
-                              <span className="text-slate-600">
-                                {tc.status === 'completed' ? 'Created room' : 'Creating room...'}
-                              </span>
-                            </motion.div>
-                          ))}
-                        </div>
-                      )}
-                    </motion.div>
-                  ))}
-                </AnimatePresence>
-              )}
-            </div>
-          )}
-
-          <AnimatePresence>
-            {isImportComplete && (
-              <motion.div
-                initial={{ opacity: 0, scale: 0.9 }}
-                animate={{ opacity: 1, scale: 1 }}
-                exit={{ opacity: 0, scale: 0.9 }}
-              >
-                <div className="flex items-center justify-center py-6">
-                  <motion.div
-                    initial={{ scale: 0 }}
-                    animate={{ scale: 1 }}
-                    transition={{ type: "spring", stiffness: 200, damping: 15, delay: 0.2 }}
-                    className="w-16 h-16 rounded-full bg-green-100 flex items-center justify-center"
-                  >
-                    <CheckCircle className="w-8 h-8 text-green-600" />
-                  </motion.div>
-                </div>
-                <DialogFooter>
-                  <Button onClick={closeImportDialog} className="bg-green-600 hover:bg-green-700 w-full">
-                    <CheckCircle className="w-4 h-4 mr-2" />
-                    Done - View Rooms
-                  </Button>
-                </DialogFooter>
-              </motion.div>
-            )}
-          </AnimatePresence>
-        </DialogContent>
-      </Dialog>
     </div>
   );
 }
