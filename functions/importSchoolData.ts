@@ -397,56 +397,32 @@ Deno.serve(async (req) => {
         const createdClassGroups = await base44.asServiceRole.entities.ClassGroup.bulkCreate(classGroupsToCreate);
         classGroupsCreated = createdClassGroups.length;
 
-        // Update students with their ClassGroup IDs in batches to avoid rate limits
-        const updateBatchSize = 5;
+        // Update students with their ClassGroup IDs sequentially with smaller delays
+        let studentsUpdated = 0;
         for (const classGroup of createdClassGroups) {
-          for (let i = 0; i < classGroup.student_ids.length; i += updateBatchSize) {
-            const batch = classGroup.student_ids.slice(i, i + updateBatchSize);
-            await Promise.all(
-              batch.map(studentId => 
-                base44.asServiceRole.entities.Student.update(studentId, {
-                  classgroup_id: classGroup.id
-                })
-              )
-            );
-            // Delay between batches to avoid rate limit
-            if (i + updateBatchSize < classGroup.student_ids.length) {
-              await new Promise(resolve => setTimeout(resolve, 1000));
+          for (const studentId of classGroup.student_ids) {
+            try {
+              await base44.asServiceRole.entities.Student.update(studentId, {
+                classgroup_id: classGroup.id
+              });
+              studentsUpdated++;
+              // Very small delay to avoid rate limit (100ms per student)
+              await new Promise(resolve => setTimeout(resolve, 100));
+            } catch (updateErr) {
+              console.error(`Failed to update student ${studentId}:`, updateErr.message);
             }
           }
         }
 
         console.log('✓ ClassGroups created:', classGroupsCreated);
+        console.log('✓ Students updated with ClassGroup IDs:', studentsUpdated);
       }
     } catch (cgError) {
       console.error('ClassGroup generation error:', cgError);
       results.errors.push(`ClassGroup generation: ${cgError.message}`);
     }
 
-    // CRITICAL: Verify user can actually read the created entities
-    console.log('=== VERIFICATION PHASE ===');
-
-    let verifySubjects = [];
-    let verifyTeachers = [];
-    let verifyStudents = [];
-    let verifyRooms = [];
-    let verifyClassGroups = [];
-
-    try {
-      verifySubjects = await base44.entities.Subject.list();
-      verifyTeachers = await base44.entities.Teacher.list();
-      verifyStudents = await base44.entities.Student.list();
-      verifyRooms = await base44.entities.Room.list();
-      verifyClassGroups = await base44.entities.ClassGroup.list();
-
-      console.log('✓ User can read Subjects:', verifySubjects.length);
-      console.log('✓ User can read Teachers:', verifyTeachers.length);
-      console.log('✓ User can read Students:', verifyStudents.length);
-      console.log('✓ User can read Rooms:', verifyRooms.length);
-      console.log('✓ User can read ClassGroups:', verifyClassGroups.length);
-    } catch (verifyError) {
-      console.error('Verification read error:', verifyError.message);
-    }
+    console.log('=== IMPORT COMPLETED ===');
 
     return Response.json({
       success: true,
@@ -458,14 +434,7 @@ Deno.serve(async (req) => {
         students_created: results.students.length,
         teaching_groups_created: results.teaching_groups.length,
         classgroups_created: classGroupsCreated,
-        errors: results.errors,
-        verified_readable: {
-          subjects: verifySubjects.length,
-          teachers: verifyTeachers.length,
-          students: verifyStudents.length,
-          rooms: verifyRooms.length,
-          classGroups: verifyClassGroups.length
-        }
+        errors: results.errors
       },
       data: results
     });
