@@ -40,27 +40,47 @@ Deno.serve(async (req) => {
     let extractionResponse;
     try {
       extractionResponse = await base44.integrations.Core.InvokeLLM({
-      prompt: `Extract school data from this file and structure it as JSON. Be thorough and extract ALL relationships.
+      prompt: `You are extracting school data from an IB school document. Extract ALL available information comprehensively.
 
-    CRITICAL REQUIREMENTS:
+MANDATORY: Scan the ENTIRE document and extract ALL of the following that exist:
 
-    1. SUBJECTS: Extract name, code, ib_level (PYP/MYP/DP), ib_group (1-6 as string), ib_group_name
+1. **SUBJECTS** - Look for subject/course names throughout the document:
+   - Subject names (Math, Physics, English, etc.)
+   - IB level: PYP, MYP, or DP
+   - IB group number (1-6): 1=Language & Literature, 2=Language Acquisition, 3=Individuals & Societies, 4=Sciences, 5=Mathematics, 6=The Arts
+   - For PYP/MYP: common subjects are Language, Math, Science, Social Studies, Arts, PE, etc.
+   - Extract EVERY subject mentioned even if only listed once
 
-    2. TEACHERS: Extract full_name, email, AND which subjects they teach
-    - Look for subject assignments, teaching schedules, or course lists
-    - Add subject_names array with the names of subjects this teacher teaches
-    - Example: {"full_name": "John Doe", "email": "john@edu", "subject_names": ["Physics HL", "Physics SL"]}
+2. **TEACHERS** - Look for teacher/staff names:
+   - Full names of any teachers/educators/staff mentioned
+   - Email addresses if provided
+   - Which subjects they teach (subject_names array)
+   - Extract ALL teachers even if only teaching one subject
 
-    3. STUDENTS: Extract full_name, email, ib_programme (PYP/MYP/DP), year_group (DP1/DP2/MYP3/PYP5)
-    - FOR DP STUDENTS: Extract their 6 subject choices with levels (HL or SL)
-    - Add subject_selections array with subject names and levels
-    - Example: {"full_name": "Jane Smith", "ib_programme": "DP", "year_group": "DP1", "subject_selections": [{"subject_name": "Physics", "level": "HL"}, {"subject_name": "Math", "level": "HL"}]}
+3. **STUDENTS** - Look for student names and details:
+   - Full name of EVERY student
+   - Email if provided
+   - IB Programme: PYP, MYP, or DP
+   - Year/grade level: PYP-A through PYP-F, MYP1-5, DP1-2
+   - For DP students: their 6 subject choices with HL/SL levels
+   - Extract EVERY student listed
 
-    4. ROOMS: name, capacity, room_type
+4. **ROOMS** - Look for classroom/room references:
+   - Room names/numbers
+   - Capacity if mentioned
+   - Room type (classroom, lab, etc.)
 
-    5. TEACHING GROUPS: name, subject reference, level (HL/SL), year_group
+5. **TEACHING GROUPS** - Look for class groupings:
+   - Group names
+   - Associated subject
+   - Level (HL/SL for DP)
+   - Year group
 
-    Extract EVERYTHING you can find including all relationships between teachers-subjects and students-subjects.`,
+IMPORTANT: 
+- DO NOT skip any entity type - extract subjects, teachers, students, rooms, and teaching groups from the document
+- If a file contains 200 students, extract ALL 200
+- If subjects are mentioned in student schedules or class lists, add them to the subjects array
+- Be comprehensive - extract EVERYTHING, don't summarize or limit results`,
       file_urls: [fileUrl],
       response_json_schema: {
         type: "object",
