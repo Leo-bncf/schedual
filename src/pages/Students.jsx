@@ -680,7 +680,7 @@ export default function Students() {
                   
                   {msg.tool_calls && Array.isArray(msg.tool_calls) && msg.tool_calls.length > 0 && (
                     <div className="mt-2 space-y-1">
-                      {msg.tool_calls.map((tc, tcIdx) => (
+                      {msg.tool_calls.filter(tc => tc && typeof tc === 'object').map((tc, tcIdx) => (
                         <motion.div
                           key={tcIdx}
                           initial={{ opacity: 0, x: -10 }}
