@@ -10,16 +10,14 @@ import { Input } from "@/components/ui/input";
 import PageHeader from '../components/ui-custom/PageHeader';
 
 export default function DataImport() {
-  const [files, setFiles] = useState([]);
+  const [file, setFile] = useState(null);
   const [uploading, setUploading] = useState(false);
   const [uploadProgress, setUploadProgress] = useState(0);
   const [processing, setProcessing] = useState(false);
-  const [currentFileIndex, setCurrentFileIndex] = useState(0);
   const [conversation, setConversation] = useState(null);
   const [messages, setMessages] = useState([]);
   const [error, setError] = useState(null);
   const [userResponse, setUserResponse] = useState('');
-  const [allResults, setAllResults] = useState([]);
 
   const queryClient = useQueryClient();
 
@@ -57,148 +55,127 @@ export default function DataImport() {
   }, [conversation?.id]);
 
   const handleFileSelect = (e) => {
-    const selectedFiles = Array.from(e.target.files);
-    if (selectedFiles.length > 0) {
-      setFiles(selectedFiles);
+    const selectedFile = e.target.files[0];
+    if (selectedFile) {
+      setFile(selectedFile);
       setError(null);
     }
   };
 
   const handleUploadAndProcess = async () => {
-    if (!files.length || !user?.school_id) {
-      setError('Missing files or school information. Please try refreshing the page.');
+    if (!file || !user?.school_id) {
+      setError('Missing school information. Please try refreshing the page.');
       return;
     }
 
     setUploading(true);
     setUploadProgress(0);
     setError(null);
-    setAllResults([]);
 
     try {
-      const results = [];
-
-      // Process each file sequentially
-      for (let i = 0; i < files.length; i++) {
-        const file = files[i];
-        setCurrentFileIndex(i);
-        setMessages([{
-          role: 'assistant',
-          content: `Processing file ${i + 1} of ${files.length}: ${file.name}...`,
-          tool_calls: [{ status: 'running', name: 'processing_file' }]
-        }]);
-
-        // Simulate upload progress
-        const progressInterval = setInterval(() => {
-          setUploadProgress(prev => {
-            if (prev >= 90) {
-              clearInterval(progressInterval);
-              return 90;
-            }
-            return prev + 10;
-          });
-        }, 200);
-
-        // Step 1: Upload file
-        const uploadResponse = await base44.integrations.Core.UploadFile({ file });
-        const fileUrl = uploadResponse.file_url;
-
-        clearInterval(progressInterval);
-        setUploadProgress(100);
-        
-        await new Promise(resolve => setTimeout(resolve, 300));
-        
-        setUploading(false);
-        setProcessing(true);
-
-        // Step 2: Process file and create entities
-        console.log(`Processing file ${i + 1}/${files.length}: ${file.name}`);
-        
-        const importResponse = await base44.functions.invoke('importSchoolData', {
-          fileUrl: fileUrl
+      // Simulate upload progress
+      const progressInterval = setInterval(() => {
+        setUploadProgress(prev => {
+          if (prev >= 90) {
+            clearInterval(progressInterval);
+            return 90;
+          }
+          return prev + 10;
         });
+      }, 200);
 
-        console.log(`File ${i + 1} import response:`, importResponse.data);
-        
-        if (importResponse.data.success) {
-          results.push({
-            fileName: file.name,
-            ...importResponse.data.results
-          });
-        } else {
-          results.push({
-            fileName: file.name,
-            error: importResponse.data.error || 'Import failed'
-          });
-        }
+      // Step 1: Upload file
+      const uploadResponse = await base44.integrations.Core.UploadFile({ file });
+      const fileUrl = uploadResponse.file_url;
 
-        // Small delay between files
-        await new Promise(resolve => setTimeout(resolve, 1000));
-        setUploadProgress(0);
-        setUploading(true);
-      }
-
-      setProcessing(false);
+      clearInterval(progressInterval);
+      setUploadProgress(100);
+      
+      await new Promise(resolve => setTimeout(resolve, 500));
+      
       setUploading(false);
+      setProcessing(true);
 
-      // Invalidate all entity queries to refresh the data
-      queryClient.invalidateQueries({ queryKey: ['teachers'] });
-      queryClient.invalidateQueries({ queryKey: ['students'] });
-      queryClient.invalidateQueries({ queryKey: ['subjects'] });
-      queryClient.invalidateQueries({ queryKey: ['rooms'] });
-      queryClient.invalidateQueries({ queryKey: ['teachingGroups'] });
+      // Step 2: Process file and create entities using backend function
+      console.log('Processing file with backend function...');
+      console.log('File URL:', fileUrl);
+      console.log('School ID:', user?.school_id);
+      
+      const importResponse = await base44.functions.invoke('importSchoolData', {
+        fileUrl: fileUrl
+      });
 
-      // Calculate totals
-      const totals = results.reduce((acc, r) => ({
-        subjects: acc.subjects + (r.subjects_created || 0),
-        rooms: acc.rooms + (r.rooms_created || 0),
-        teachers: acc.teachers + (r.teachers_created || 0),
-        students: acc.students + (r.students_created || 0),
-        teaching_groups: acc.teaching_groups + (r.teaching_groups_created || 0),
-        errors: acc.errors + (r.errors?.length || 0)
-      }), { subjects: 0, rooms: 0, teachers: 0, students: 0, teaching_groups: 0, errors: 0 });
+      console.log('Import response:', importResponse.data);
+      
+      setProcessing(false);
 
-      setAllResults(results);
-      setMessages([
-        {
-          role: 'assistant',
-          content: `✅ Successfully processed ${files.length} file${files.length > 1 ? 's' : ''}!\n\n` +
-            `Total Created:\n` +
-            `✓ ${totals.subjects} subjects\n` +
-            `✓ ${totals.rooms} rooms\n` +
-            `✓ ${totals.teachers} teachers\n` +
-            `✓ ${totals.students} students\n` +
-            `✓ ${totals.teaching_groups} teaching groups\n\n` +
-            `View your data in Teachers, Students, Subjects, and Rooms pages!\n\n` +
-            `Per-file breakdown:\n` +
-            results.map((r, i) => 
-              `\n${i + 1}. ${r.fileName}\n` +
-              (r.error ? `   ❌ Error: ${r.error}` : 
-              `   ✓ ${r.students_created || 0} students, ${r.teachers_created || 0} teachers`)
-            ).join(''),
-          tool_calls: [{ status: 'completed', name: 'import_complete' }]
-        }
-      ]);
-      setConversation({ id: 'import-complete' });
+      if (importResponse.data.success) {
+        // Invalidate all entity queries to refresh the data
+        queryClient.invalidateQueries({ queryKey: ['teachers'] });
+        queryClient.invalidateQueries({ queryKey: ['students'] });
+        queryClient.invalidateQueries({ queryKey: ['subjects'] });
+        queryClient.invalidateQueries({ queryKey: ['rooms'] });
+        queryClient.invalidateQueries({ queryKey: ['teachingGroups'] });
+
+        const totalCreated = 
+          importResponse.data.results.subjects_created +
+          importResponse.data.results.rooms_created +
+          importResponse.data.results.teachers_created +
+          importResponse.data.results.students_created +
+          importResponse.data.results.teaching_groups_created;
+
+        console.log('=== IMPORT COMPLETE ===');
+        console.log('School ID:', importResponse.data.school_id);
+        console.log('Total entities created:', totalCreated);
+
+        const verified = importResponse.data.results.verified_readable || {};
+        setMessages([
+          {
+            role: 'assistant',
+            content: `✅ Successfully imported school data!\n\n` +
+              `Created:\n` +
+              `✓ ${importResponse.data.results.subjects_created} subjects\n` +
+              `✓ ${importResponse.data.results.rooms_created} rooms\n` +
+              `✓ ${importResponse.data.results.teachers_created} teachers\n` +
+              `✓ ${importResponse.data.results.students_created} students\n` +
+              `✓ ${importResponse.data.results.teaching_groups_created} teaching groups\n\n` +
+              `Readable (verification):\n` +
+              `✓ ${verified.subjects || 0} subjects readable\n` +
+              `✓ ${verified.rooms || 0} rooms readable\n` +
+              `✓ ${verified.teachers || 0} teachers readable\n` +
+              `✓ ${verified.students || 0} students readable\n\n` +
+              (verified.subjects === 0 && importResponse.data.results.subjects_created > 0 
+                ? `❌ CRITICAL: Data was created but cannot be read back. This indicates an RLS permission issue.\n\n` 
+                : ``) +
+              `View your data in Teachers, Students, Subjects, and Rooms pages!` +
+              (importResponse.data.results.errors.length > 0 
+                ? `\n\n⚠️ ${importResponse.data.results.errors.length} warnings occurred:\n${importResponse.data.results.errors.join('\n')}` 
+                : ''),
+            tool_calls: [{ status: 'completed', name: 'import_complete' }]
+          }
+        ]);
+        setConversation({ id: 'import-complete' });
+        setProcessing(false);
+      } else {
+        throw new Error(importResponse.data.error || 'Import failed');
+      }
 
     } catch (err) {
       console.error('Upload/process error:', err);
-      setError(err.message || 'Failed to process files');
+      setError(err.message || 'Failed to process file');
       setUploading(false);
       setProcessing(false);
     }
   };
 
   const handleReset = () => {
-    setFiles([]);
+    setFile(null);
     setConversation(null);
     setMessages([]);
     setError(null);
     setProcessing(false);
     setUploadProgress(0);
     setUserResponse('');
-    setAllResults([]);
-    setCurrentFileIndex(0);
   };
 
   const handleSendResponse = async () => {
@@ -285,25 +262,18 @@ export default function DataImport() {
                   className="hidden"
                   onChange={handleFileSelect}
                   accept=".csv,.xlsx,.xls,.pdf"
-                  multiple
                 />
                 <label htmlFor="file-upload" className="cursor-pointer">
                   <Upload className="w-12 h-12 text-slate-400 mx-auto mb-3" />
-                  {files.length > 0 ? (
+                  {file ? (
                     <div>
-                      <p className="text-sm font-medium text-slate-900 mb-2">
-                        {files.length} file{files.length > 1 ? 's' : ''} selected
-                      </p>
-                      <div className="space-y-1 text-xs text-slate-600">
-                        {files.map((f, i) => (
-                          <div key={i}>{f.name} ({(f.size / 1024).toFixed(0)} KB)</div>
-                        ))}
-                      </div>
+                      <p className="text-sm font-medium text-slate-900 mb-1">{file.name}</p>
+                      <p className="text-xs text-slate-500">{(file.size / 1024).toFixed(2)} KB</p>
                     </div>
                   ) : (
                     <div>
-                      <p className="text-sm font-medium text-slate-900 mb-1">Click to upload files</p>
-                      <p className="text-xs text-slate-500">CSV, Excel, or PDF (multiple files supported)</p>
+                      <p className="text-sm font-medium text-slate-900 mb-1">Click to upload file</p>
+                      <p className="text-xs text-slate-500">CSV, Excel, or PDF</p>
                     </div>
                   )}
                 </label>
@@ -328,24 +298,24 @@ export default function DataImport() {
 
               <Button
                 onClick={handleUploadAndProcess}
-                disabled={!files.length || uploading || processing}
+                disabled={!file || uploading || processing}
                 className="w-full bg-blue-900 hover:bg-blue-800"
                 size="lg"
               >
                 {uploading ? (
                   <>
                     <Loader2 className="w-4 h-4 mr-2 animate-spin" />
-                    Uploading {currentFileIndex + 1}/{files.length}...
+                    Uploading...
                   </>
                 ) : processing ? (
                   <>
                     <Loader2 className="w-4 h-4 mr-2 animate-spin" />
-                    Processing {currentFileIndex + 1}/{files.length}...
+                    Processing...
                   </>
                 ) : (
                   <>
                     <Upload className="w-4 h-4 mr-2" />
-                    Upload & Process {files.length} File{files.length > 1 ? 's' : ''}
+                    Upload & Process File
                   </>
                 )}
               </Button>
