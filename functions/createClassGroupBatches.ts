@@ -18,7 +18,7 @@ Deno.serve(async (req) => {
     
     while (true) {
       const batch = await base44.asServiceRole.entities.Student.filter(
-        { school_id: schoolId, is_active: true },
+        { school_id: schoolId },
         '-created_date',
         batchSize,
         skip
@@ -34,13 +34,24 @@ Deno.serve(async (req) => {
     console.log(`Total students fetched: ${allStudents.length}`);
 
     // Step 2: Delete ALL existing ClassGroups
-    const existingGroups = await base44.asServiceRole.entities.ClassGroup.filter({
-      school_id: schoolId
-    }, '-created_date', 1000);
+    let allGroups = [];
+    let groupSkip = 0;
     
-    for (const group of existingGroups) {
+    while (true) {
+      const groupBatch = await base44.asServiceRole.entities.ClassGroup.filter({
+        school_id: schoolId
+      }, '-created_date', 100, groupSkip);
+      
+      if (groupBatch.length === 0) break;
+      allGroups = allGroups.concat(groupBatch);
+      
+      if (groupBatch.length < 100) break;
+      groupSkip += 100;
+    }
+    
+    for (const group of allGroups) {
       await base44.asServiceRole.entities.ClassGroup.delete(group.id);
-      await new Promise(resolve => setTimeout(resolve, 100));
+      await new Promise(resolve => setTimeout(resolve, 50));
     }
 
     // Step 3: Clear ALL student classgroup_ids
