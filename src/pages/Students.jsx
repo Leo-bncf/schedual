@@ -349,12 +349,17 @@ export default function Students() {
   React.useEffect(() => {
     let unsubscribe;
     if (conversation?.id) {
+      console.log('Subscribing to conversation:', conversation.id);
       unsubscribe = base44.agents.subscribeToConversation(conversation.id, (data) => {
+        console.log('Conversation update:', data);
         setMessages(data.messages || []);
       });
     }
     return () => {
-      if (unsubscribe) unsubscribe();
+      if (unsubscribe) {
+        console.log('Unsubscribing from conversation');
+        unsubscribe();
+      }
     };
   }, [conversation?.id]);
 
@@ -363,9 +368,13 @@ export default function Students() {
     if (!file) return;
 
     setUploading(true);
+    setMessages([]);
     try {
+      console.log('Uploading file:', file.name);
       const { file_url } = await base44.integrations.Core.UploadFile({ file });
+      console.log('File uploaded:', file_url);
 
+      console.log('Creating conversation...');
       const conv = await base44.agents.createConversation({
         agent_name: "student_importer",
         metadata: { 
@@ -373,21 +382,22 @@ export default function Students() {
           school_id: schoolId
         }
       });
+      console.log('Conversation created:', conv);
       setConversation(conv);
 
+      console.log('Sending message to agent...');
       await base44.agents.addMessage(conv, {
         role: "user",
-        content: `Extract all students from this document and create Student entities.
-
-Use school_id: ${schoolId}
-
-For each student, extract: full_name, email, student_id, ib_programme (DP/MYP/PYP), year_group, and subject_choices with levels (HL/SL for DP).`,
+        content: `Extract all students from this document and create Student entities. Use school_id: ${schoolId}`,
         file_urls: [file_url]
       });
+      console.log('Message sent');
 
     } catch (error) {
       console.error('Upload error:', error);
-      alert('Failed to upload file: ' + error.message);
+      alert('Failed to upload file: ' + (error?.message || 'Unknown error'));
+      setConversation(null);
+      setMessages([]);
     } finally {
       setUploading(false);
     }
