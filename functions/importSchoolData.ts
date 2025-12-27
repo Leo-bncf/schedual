@@ -351,89 +351,19 @@ Deno.serve(async (req) => {
       }
     }
 
-    // Auto-generate ClassGroups for imported students
-    console.log('=== AUTO-GENERATING CLASSGROUPS ===');
-    let classGroupsCreated = 0;
-    try {
-      // Group students by year_group
-      const studentsByYear = {};
-      results.students.forEach(student => {
-        const key = student.year_group;
-        if (!studentsByYear[key]) {
-          studentsByYear[key] = [];
-        }
-        studentsByYear[key].push(student);
-      });
-
-      const classGroupsToCreate = [];
-
-      // Create ClassGroups for each year_group (exactly 20 students per group)
-      for (const [yearGroup, students] of Object.entries(studentsByYear)) {
-        const ibProgramme = students[0].ib_programme;
-        const batchSize = 20;
-        const numBatches = Math.floor(students.length / batchSize); // Only create full batches
-
-        for (let i = 0; i < numBatches; i++) {
-          const batchLetter = String.fromCharCode(65 + i); // A, B, C, etc.
-          const batchStudents = students.slice(i * batchSize, (i + 1) * batchSize);
-          
-          const classGroup = {
-            school_id: user.school_id,
-            name: `${yearGroup}-Batch-${batchLetter}`,
-            year_group: yearGroup,
-            ib_programme: ibProgramme,
-            batch_letter: batchLetter,
-            student_ids: batchStudents.map(s => s.id),
-            max_students: batchSize,
-            is_active: true
-          };
-
-          classGroupsToCreate.push(classGroup);
-        }
-      }
-
-      // Create all ClassGroups
-      if (classGroupsToCreate.length > 0) {
-        const createdClassGroups = await base44.asServiceRole.entities.ClassGroup.bulkCreate(classGroupsToCreate);
-        classGroupsCreated = createdClassGroups.length;
-
-        // Update students with their ClassGroup IDs sequentially with smaller delays
-        let studentsUpdated = 0;
-        for (const classGroup of createdClassGroups) {
-          for (const studentId of classGroup.student_ids) {
-            try {
-              await base44.asServiceRole.entities.Student.update(studentId, {
-                classgroup_id: classGroup.id
-              });
-              studentsUpdated++;
-              // Very small delay to avoid rate limit (100ms per student)
-              await new Promise(resolve => setTimeout(resolve, 100));
-            } catch (updateErr) {
-              console.error(`Failed to update student ${studentId}:`, updateErr.message);
-            }
-          }
-        }
-
-        console.log('✓ ClassGroups created:', classGroupsCreated);
-        console.log('✓ Students updated with ClassGroup IDs:', studentsUpdated);
-      }
-    } catch (cgError) {
-      console.error('ClassGroup generation error:', cgError);
-      results.errors.push(`ClassGroup generation: ${cgError.message}`);
-    }
-
     console.log('=== IMPORT COMPLETED ===');
+    console.log('Note: ClassGroups will be created when you click "Create Batches" on the ClassGroups page');
 
     return Response.json({
       success: true,
       school_id: user.school_id,
+      message: `Successfully imported ${results.students.length} students, ${results.teachers.length} teachers, ${results.subjects.length} subjects. Go to ClassGroups page and click "Create Batches" to organize students.`,
       results: {
         subjects_created: results.subjects.length,
         rooms_created: results.rooms.length,
         teachers_created: results.teachers.length,
         students_created: results.students.length,
         teaching_groups_created: results.teaching_groups.length,
-        classgroups_created: classGroupsCreated,
         errors: results.errors
       },
       data: results
