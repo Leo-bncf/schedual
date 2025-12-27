@@ -174,17 +174,7 @@ export default function Students() {
     const matchesSearch = s.full_name?.toLowerCase().includes(searchQuery.toLowerCase()) ||
       s.email?.toLowerCase().includes(searchQuery.toLowerCase()) ||
       s.student_id?.toLowerCase().includes(searchQuery.toLowerCase());
-    
-    // Flexible year matching - ignore batch letters and case
-    let matchesYear = yearFilter === 'all';
-    if (!matchesYear && s.year_group) {
-      const studentYear = s.year_group.toLowerCase().replace(/[^a-z0-9]/g, ''); // Remove all non-alphanumeric
-      const filterYear = yearFilter.toLowerCase().replace(/[^a-z0-9]/g, '');
-      
-      // Check if the core year group matches (e.g., "dp1" matches "dp1batcha", "pypa" matches "pypclassa")
-      matchesYear = studentYear.startsWith(filterYear) || studentYear.includes(filterYear);
-    }
-    
+    const matchesYear = yearFilter === 'all' || s.year_group === yearFilter;
     return matchesSearch && matchesYear;
   });
 
@@ -283,29 +273,22 @@ export default function Students() {
     }
   ];
 
-  const flexibleMatch = (yearGroup, filter) => {
-    if (!yearGroup) return false;
-    const normalized = yearGroup.toLowerCase().replace(/[^a-z0-9]/g, '');
-    const filterNorm = filter.toLowerCase().replace(/[^a-z0-9]/g, '');
-    return normalized.startsWith(filterNorm) || normalized.includes(filterNorm);
-  };
-
-  const dp1Count = students.filter(s => flexibleMatch(s.year_group, 'DP1')).length;
-  const dp2Count = students.filter(s => flexibleMatch(s.year_group, 'DP2')).length;
+  const dp1Count = students.filter(s => s.year_group === 'DP1').length;
+  const dp2Count = students.filter(s => s.year_group === 'DP2').length;
   const mypCounts = {
-    MYP1: students.filter(s => flexibleMatch(s.year_group, 'MYP1')).length,
-    MYP2: students.filter(s => flexibleMatch(s.year_group, 'MYP2')).length,
-    MYP3: students.filter(s => flexibleMatch(s.year_group, 'MYP3')).length,
-    MYP4: students.filter(s => flexibleMatch(s.year_group, 'MYP4')).length,
-    MYP5: students.filter(s => flexibleMatch(s.year_group, 'MYP5')).length,
+    MYP1: students.filter(s => s.year_group === 'MYP1').length,
+    MYP2: students.filter(s => s.year_group === 'MYP2').length,
+    MYP3: students.filter(s => s.year_group === 'MYP3').length,
+    MYP4: students.filter(s => s.year_group === 'MYP4').length,
+    MYP5: students.filter(s => s.year_group === 'MYP5').length,
   };
   const pypCounts = {
-    'PYP-A': students.filter(s => flexibleMatch(s.year_group, 'PYPA')).length,
-    'PYP-B': students.filter(s => flexibleMatch(s.year_group, 'PYPB')).length,
-    'PYP-C': students.filter(s => flexibleMatch(s.year_group, 'PYPC')).length,
-    'PYP-D': students.filter(s => flexibleMatch(s.year_group, 'PYPD')).length,
-    'PYP-E': students.filter(s => flexibleMatch(s.year_group, 'PYPE')).length,
-    'PYP-F': students.filter(s => flexibleMatch(s.year_group, 'PYPF')).length,
+    'PYP-A': students.filter(s => s.year_group === 'PYP-A').length,
+    'PYP-B': students.filter(s => s.year_group === 'PYP-B').length,
+    'PYP-C': students.filter(s => s.year_group === 'PYP-C').length,
+    'PYP-D': students.filter(s => s.year_group === 'PYP-D').length,
+    'PYP-E': students.filter(s => s.year_group === 'PYP-E').length,
+    'PYP-F': students.filter(s => s.year_group === 'PYP-F').length,
   };
   const totalMYP = Object.values(mypCounts).reduce((a, b) => a + b, 0);
   const totalPYP = Object.values(pypCounts).reduce((a, b) => a + b, 0);
