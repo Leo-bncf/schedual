@@ -98,7 +98,7 @@ export default function ClassGroups() {
         actions={
           <Button
             onClick={handleAutoGenerate}
-            disabled={isGenerating || studentsWithoutClassGroup.length === 0}
+            disabled={isGenerating}
             className="bg-indigo-600 hover:bg-indigo-700"
           >
             {isGenerating ? (
@@ -109,7 +109,7 @@ export default function ClassGroups() {
             ) : (
               <>
                 <Sparkles className="w-4 h-4 mr-2" />
-                Auto-Generate ClassGroups
+                Create Batches
               </>
             )}
           </Button>
