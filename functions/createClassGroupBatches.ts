@@ -119,29 +119,39 @@ Deno.serve(async (req) => {
 
     console.log(`Created ${createdGroups.length} class groups`);
 
-    // Step 6: Assign EACH student to their ClassGroup (batch updates)
+    // Step 6: Assign EACH student to their ClassGroup (in smaller batches)
     console.log(`Assigning students to ${createdGroups.length} class groups`);
     
-    const assignmentPromises = [];
+    let assignedCount = 0;
+    let failedCount = 0;
+    
+    // Process in smaller batches to avoid rate limiting
+    const chunkSize = 10;
+    
     for (const group of createdGroups) {
       console.log(`Assigning ${group.student_ids.length} students to ${group.name}`);
       
-      for (const studentId of group.student_ids) {
-        assignmentPromises.push(
-          base44.asServiceRole.entities.Student.update(studentId, {
-            classgroup_id: group.id
-          }).catch(err => {
-            console.error(`Failed to assign student ${studentId} to group ${group.id}:`, err);
-            return null;
-          })
+      for (let i = 0; i < group.student_ids.length; i += chunkSize) {
+        const chunk = group.student_ids.slice(i, i + chunkSize);
+        
+        const results = await Promise.all(
+          chunk.map(studentId => 
+            base44.asServiceRole.entities.Student.update(studentId, {
+              classgroup_id: group.id
+            }).then(() => ({ success: true, studentId }))
+              .catch(err => {
+                console.error(`Failed to assign student ${studentId}:`, err.message);
+                return { success: false, studentId, error: err.message };
+              })
+          )
         );
+        
+        assignedCount += results.filter(r => r.success).length;
+        failedCount += results.filter(r => !r.success).length;
       }
     }
-    
-    const results = await Promise.all(assignmentPromises);
-    const assignedCount = results.filter(r => r !== null).length;
 
-    console.log(`Successfully assigned ${assignedCount} students to class groups`);
+    console.log(`Successfully assigned ${assignedCount} students, ${failedCount} failed`);
 
     return Response.json({
       success: true,
