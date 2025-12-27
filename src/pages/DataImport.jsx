@@ -223,6 +223,14 @@ export default function DataImport() {
         </CardContent>
       </Card>
 
+      {/* Large School Warning */}
+      <Alert className="border-amber-200 bg-amber-50">
+        <AlertCircle className="h-4 w-4 text-amber-600" />
+        <AlertDescription className="text-amber-800">
+          <strong>Large Schools (250+ people):</strong> To avoid system overload and timeouts, split your data into separate files by year group or programme (e.g., DP students, MYP students, PYP students) and upload them one at a time.
+        </AlertDescription>
+      </Alert>
+
       {/* Upload Area */}
       <Card className="border-0 shadow-sm">
         <CardHeader>
