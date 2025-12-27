@@ -373,7 +373,14 @@ export default function Students() {
       setUploadState(prev => ({ ...prev, progress: 'Extracting student data...' }));
 
       const extractionResult = await base44.integrations.Core.InvokeLLM({
-        prompt: `Extract all students from this document. For each student, provide: full_name, email (if available), student_id (if available), ib_programme (one of: DP, MYP, PYP), year_group (e.g., DP1, DP2, MYP1-5, PYP-A through PYP-F).`,
+        prompt: `Extract all students from this document. For each student, provide:
+- full_name, email (if available), student_id (if available)
+- ib_programme (one of: DP, MYP, PYP)
+- year_group (e.g., DP1, DP2, MYP1-5, PYP-A through PYP-F)
+- subjects: array of subject choices. For DP students, each subject should include the subject name and level (HL or SL). For MYP/PYP, just the subject name is needed.
+
+Example for DP: subjects: [{"name": "Physics", "level": "HL"}, {"name": "English A", "level": "SL"}]
+Example for MYP/PYP: subjects: [{"name": "Mathematics"}, {"name": "Science"}]`,
         file_urls: [file_url],
         response_json_schema: {
           type: "object",
@@ -387,7 +394,18 @@ export default function Students() {
                   email: { type: "string" },
                   student_id: { type: "string" },
                   ib_programme: { type: "string" },
-                  year_group: { type: "string" }
+                  year_group: { type: "string" },
+                  subjects: {
+                    type: "array",
+                    items: {
+                      type: "object",
+                      properties: {
+                        name: { type: "string" },
+                        level: { type: "string" }
+                      },
+                      required: ["name"]
+                    }
+                  }
                 },
                 required: ["full_name", "ib_programme", "year_group"]
               }
@@ -404,17 +422,44 @@ export default function Students() {
 
       setUploadState(prev => ({ ...prev, progress: `Creating ${studentsData.length} students...` }));
 
-      const studentsToCreate = studentsData.map(student => ({
-        school_id: schoolId,
-        full_name: student.full_name,
-        email: student.email || '',
-        student_id: student.student_id || '',
-        ib_programme: student.ib_programme,
-        year_group: student.year_group,
-        subject_choices: [],
-        core_components: { tok_assigned: false, cas_assigned: false, ee_assigned: false },
-        is_active: true
-      }));
+      // Fetch subjects to match names to IDs
+      const allSubjects = await base44.entities.Subject.list();
+      
+      const studentsToCreate = studentsData.map(student => {
+        let subjectChoices = [];
+        
+        // Process extracted subjects
+        if (student.subjects && Array.isArray(student.subjects)) {
+          subjectChoices = student.subjects.map(subj => {
+            // Find matching subject by name (case-insensitive)
+            const matchedSubject = allSubjects.find(s => 
+              s.name?.toLowerCase().includes(subj.name?.toLowerCase()) ||
+              subj.name?.toLowerCase().includes(s.name?.toLowerCase())
+            );
+            
+            if (matchedSubject) {
+              return {
+                subject_id: matchedSubject.id,
+                level: subj.level || 'SL', // Default to SL if not specified
+                ib_group: matchedSubject.ib_group
+              };
+            }
+            return null;
+          }).filter(Boolean);
+        }
+        
+        return {
+          school_id: schoolId,
+          full_name: student.full_name,
+          email: student.email || '',
+          student_id: student.student_id || '',
+          ib_programme: student.ib_programme,
+          year_group: student.year_group,
+          subject_choices: subjectChoices,
+          core_components: { tok_assigned: false, cas_assigned: false, ee_assigned: false },
+          is_active: true
+        };
+      });
 
       // Batch create with rate limit handling
       const batchSize = 10;
