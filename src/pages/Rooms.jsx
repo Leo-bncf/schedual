@@ -21,7 +21,8 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import { Plus, Search, Building2, Users, MoreHorizontal, Pencil, Trash2, FlaskConical, Palette, Monitor, Music, BookOpen, Dumbbell, Upload, Loader2, CheckCircle, X } from 'lucide-react';
+import { Plus, Search, Building2, Users, MoreHorizontal, Pencil, Trash2, FlaskConical, Palette, Monitor, Music, BookOpen, Dumbbell, Upload, Loader2, CheckCircle, X, FileText } from 'lucide-react';
+import { motion, AnimatePresence } from 'framer-motion';
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -459,40 +460,78 @@ export default function Rooms() {
           </DialogHeader>
           
           <div className="space-y-4 max-h-96 overflow-y-auto">
-            {messages.map((msg, idx) => (
-              <div key={idx} className={`p-3 rounded-lg ${msg.role === 'user' ? 'bg-slate-50' : 'bg-blue-50'}`}>
-                {msg.content && (
-                  <p className="text-sm text-slate-700 whitespace-pre-wrap">{msg.content}</p>
-                )}
-                
-                {msg.tool_calls && msg.tool_calls.length > 0 && (
-                  <div className="mt-2 space-y-1">
-                    {msg.tool_calls.map((tc, tcIdx) => (
-                      <div key={tcIdx} className="flex items-center gap-2 text-sm">
-                        {tc.status === 'completed' ? (
-                          <CheckCircle className="w-4 h-4 text-green-600" />
-                        ) : (
-                          <Loader2 className="w-4 h-4 text-blue-600 animate-spin" />
-                        )}
-                        <span className="text-slate-600">
-                          {tc.status === 'completed' ? 'Created room' : 'Creating room...'}
-                        </span>
-                      </div>
-                    ))}
-                  </div>
-                )}
-              </div>
-            ))}
+            <AnimatePresence mode="popLayout">
+              {messages.map((msg, idx) => (
+                <motion.div
+                  key={idx}
+                  initial={{ opacity: 0, y: 10 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  transition={{ duration: 0.3 }}
+                  className={`p-3 rounded-lg ${msg.role === 'user' ? 'bg-slate-50' : 'bg-blue-50'}`}
+                >
+                  {msg.content && (
+                    <p className="text-sm text-slate-700 whitespace-pre-wrap">{msg.content}</p>
+                  )}
+                  
+                  {msg.tool_calls && msg.tool_calls.length > 0 && (
+                    <div className="mt-2 space-y-1">
+                      {msg.tool_calls.map((tc, tcIdx) => (
+                        <motion.div
+                          key={tcIdx}
+                          initial={{ opacity: 0, x: -10 }}
+                          animate={{ opacity: 1, x: 0 }}
+                          transition={{ delay: tcIdx * 0.1 }}
+                          className="flex items-center gap-2 text-sm"
+                        >
+                          {tc.status === 'completed' ? (
+                            <motion.div
+                              initial={{ scale: 0 }}
+                              animate={{ scale: 1 }}
+                              transition={{ type: "spring", stiffness: 200, damping: 15 }}
+                            >
+                              <CheckCircle className="w-4 h-4 text-green-600" />
+                            </motion.div>
+                          ) : (
+                            <Loader2 className="w-4 h-4 text-blue-600 animate-spin" />
+                          )}
+                          <span className="text-slate-600">
+                            {tc.status === 'completed' ? 'Created room' : 'Creating room...'}
+                          </span>
+                        </motion.div>
+                      ))}
+                    </div>
+                  )}
+                </motion.div>
+              ))}
+            </AnimatePresence>
           </div>
 
-          {isImportComplete && (
-            <DialogFooter>
-              <Button onClick={closeImportDialog} className="bg-green-600 hover:bg-green-700">
-                <CheckCircle className="w-4 h-4 mr-2" />
-                Done
-              </Button>
-            </DialogFooter>
-          )}
+          <AnimatePresence>
+            {isImportComplete && (
+              <motion.div
+                initial={{ opacity: 0, scale: 0.9 }}
+                animate={{ opacity: 1, scale: 1 }}
+                exit={{ opacity: 0, scale: 0.9 }}
+              >
+                <div className="flex items-center justify-center py-6">
+                  <motion.div
+                    initial={{ scale: 0 }}
+                    animate={{ scale: 1 }}
+                    transition={{ type: "spring", stiffness: 200, damping: 15, delay: 0.2 }}
+                    className="w-16 h-16 rounded-full bg-green-100 flex items-center justify-center"
+                  >
+                    <CheckCircle className="w-8 h-8 text-green-600" />
+                  </motion.div>
+                </div>
+                <DialogFooter>
+                  <Button onClick={closeImportDialog} className="bg-green-600 hover:bg-green-700 w-full">
+                    <CheckCircle className="w-4 h-4 mr-2" />
+                    Done - View Rooms
+                  </Button>
+                </DialogFooter>
+              </motion.div>
+            )}
+          </AnimatePresence>
         </DialogContent>
       </Dialog>
     </div>
