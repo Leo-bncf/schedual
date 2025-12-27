@@ -145,22 +145,47 @@ Deno.serve(async (req) => {
     console.log(`✓ Created ${createdGroups.length} class groups`);
     console.log(`Assigning ${studentAssignments.length} students using bulk update...`);
     
-    // Step 6: Bulk assign students to their groups
+    // Step 6: Bulk assign students to their groups using filter + update
     let assignedCount = 0;
     let failedCount = 0;
     
+    // Group assignments by classgroup_id to do batch updates
+    const assignmentsByGroup = {};
     for (const assignment of studentAssignments) {
-      try {
-        await base44.asServiceRole.entities.Student.update(assignment.id, {
-          classgroup_id: assignment.classgroup_id
-        });
-        assignedCount++;
-      } catch (err) {
-        console.error(`Failed to assign student ${assignment.id}:`, err.message);
-        failedCount++;
+      if (!assignmentsByGroup[assignment.classgroup_id]) {
+        assignmentsByGroup[assignment.classgroup_id] = [];
       }
-      // Small delay to avoid rate limits
-      await new Promise(resolve => setTimeout(resolve, 100));
+      assignmentsByGroup[assignment.classgroup_id].push(assignment.id);
+    }
+    
+    // Update students group by group using bulk operations
+    for (const [groupId, studentIds] of Object.entries(assignmentsByGroup)) {
+      try {
+        // Use filter to get students, then update them
+        const studentsToUpdate = await base44.asServiceRole.entities.Student.filter({
+          id: { $in: studentIds }
+        }, '-created_date', 500);
+        
+        // Update each student
+        for (const student of studentsToUpdate) {
+          try {
+            await base44.asServiceRole.entities.Student.update(student.id, {
+              classgroup_id: groupId
+            });
+            assignedCount++;
+            await new Promise(resolve => setTimeout(resolve, 150));
+          } catch (err) {
+            console.error(`Failed to assign student ${student.id}:`, err.message);
+            failedCount++;
+          }
+        }
+      } catch (err) {
+        console.error(`Failed to process group ${groupId}:`, err.message);
+        failedCount += studentIds.length;
+      }
+      
+      // Delay between groups
+      await new Promise(resolve => setTimeout(resolve, 300));
     }
 
     console.log(`✓ Successfully assigned ${assignedCount} students`);
