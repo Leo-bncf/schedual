@@ -163,10 +163,12 @@ export default function Subjects() {
 
   const groupedSubjects = IB_GROUPS.map(group => ({
     ...group,
-    subjects: filteredSubjects.filter(s => String(s.ib_group) === String(group.id))
+    subjects: filteredSubjects.filter(s => String(s.ib_group) === String(group.id) && s.ib_level === 'DP')
   }));
 
   const coreSubjects = filteredSubjects.filter(s => s.is_core);
+  const pypSubjects = filteredSubjects.filter(s => s.ib_level === 'PYP' && !s.is_core);
+  const mypSubjects = filteredSubjects.filter(s => s.ib_level === 'MYP' && !s.is_core);
 
   const handleFileUpload = async (e) => {
     const file = e.target.files?.[0];
@@ -343,6 +345,88 @@ export default function Subjects() {
         />
       ) : (
         <div className="space-y-8">
+          {/* PYP Subjects */}
+          {pypSubjects.length > 0 && (
+            <div>
+              <h3 className="text-sm font-semibold text-slate-500 uppercase tracking-wide mb-4">PYP Programme</h3>
+              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
+                {pypSubjects.map(subject => (
+                  <Card key={subject.id} className="border-0 shadow-sm hover:shadow-md transition-shadow">
+                    <CardContent className="p-4">
+                      <div className="flex items-start justify-between">
+                        <div className="flex items-center gap-3">
+                          <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-green-500 to-emerald-600 flex items-center justify-center">
+                            <BookOpen className="w-5 h-5 text-white" />
+                          </div>
+                          <div>
+                            <p className="font-semibold text-slate-900">{subject.name}</p>
+                            <p className="text-sm text-slate-500">{subject.code}</p>
+                          </div>
+                        </div>
+                        <DropdownMenu>
+                          <DropdownMenuTrigger asChild>
+                            <Button variant="ghost" size="icon" className="h-8 w-8">
+                              <MoreHorizontal className="w-4 h-4" />
+                            </Button>
+                          </DropdownMenuTrigger>
+                          <DropdownMenuContent align="end">
+                            <DropdownMenuItem onClick={() => handleEdit(subject)}>
+                              <Pencil className="w-4 h-4 mr-2" /> Edit
+                            </DropdownMenuItem>
+                            <DropdownMenuItem className="text-rose-600" onClick={() => deleteMutation.mutate(subject.id)}>
+                              <Trash2 className="w-4 h-4 mr-2" /> Delete
+                            </DropdownMenuItem>
+                          </DropdownMenuContent>
+                        </DropdownMenu>
+                      </div>
+                    </CardContent>
+                  </Card>
+                ))}
+              </div>
+            </div>
+          )}
+
+          {/* MYP Subjects */}
+          {mypSubjects.length > 0 && (
+            <div>
+              <h3 className="text-sm font-semibold text-slate-500 uppercase tracking-wide mb-4">MYP Programme</h3>
+              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
+                {mypSubjects.map(subject => (
+                  <Card key={subject.id} className="border-0 shadow-sm hover:shadow-md transition-shadow">
+                    <CardContent className="p-4">
+                      <div className="flex items-start justify-between">
+                        <div className="flex items-center gap-3">
+                          <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-orange-500 to-amber-600 flex items-center justify-center">
+                            <BookOpen className="w-5 h-5 text-white" />
+                          </div>
+                          <div>
+                            <p className="font-semibold text-slate-900">{subject.name}</p>
+                            <p className="text-sm text-slate-500">{subject.code}</p>
+                          </div>
+                        </div>
+                        <DropdownMenu>
+                          <DropdownMenuTrigger asChild>
+                            <Button variant="ghost" size="icon" className="h-8 w-8">
+                              <MoreHorizontal className="w-4 h-4" />
+                            </Button>
+                          </DropdownMenuTrigger>
+                          <DropdownMenuContent align="end">
+                            <DropdownMenuItem onClick={() => handleEdit(subject)}>
+                              <Pencil className="w-4 h-4 mr-2" /> Edit
+                            </DropdownMenuItem>
+                            <DropdownMenuItem className="text-rose-600" onClick={() => deleteMutation.mutate(subject.id)}>
+                              <Trash2 className="w-4 h-4 mr-2" /> Delete
+                            </DropdownMenuItem>
+                          </DropdownMenuContent>
+                        </DropdownMenu>
+                      </div>
+                    </CardContent>
+                  </Card>
+                ))}
+              </div>
+            </div>
+          )}
+
           {/* Core Components */}
           {coreSubjects.length > 0 && (
             <div>
@@ -384,7 +468,7 @@ export default function Subjects() {
             </div>
           )}
 
-          {/* Subject Groups */}
+          {/* DP Subject Groups */}
           {groupedSubjects.map(group => {
             if (group.subjects.length === 0) return null;
             const Icon = group.icon;
