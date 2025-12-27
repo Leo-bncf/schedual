@@ -176,14 +176,17 @@ export default function Rooms() {
       // Create conversation with agent
       const conv = await base44.agents.createConversation({
         agent_name: "room_importer",
-        metadata: { file_name: file.name }
+        metadata: { 
+          file_name: file.name,
+          school_id: schoolId
+        }
       });
       setConversation(conv);
 
       // Send message with file to agent
       await base44.agents.addMessage(conv, {
         role: "user",
-        content: "Please extract all room information from this document and create Room entities for each one.",
+        content: `Please extract all room information from this document and create Room entities. IMPORTANT: Every room must have school_id set to "${schoolId}". Extract room name, capacity (as a number), and map the room type to one of: classroom, lab, art_studio, music_room, computer_lab, gymnasium, library, auditorium, or other.`,
         file_urls: [file_url]
       });
 
