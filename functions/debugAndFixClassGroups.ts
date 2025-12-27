@@ -29,9 +29,8 @@ Deno.serve(async (req) => {
       debugInfo.studentsByYearGroup[year] = (debugInfo.studentsByYearGroup[year] || 0) + 1;
     });
 
-    // Filter students eligible for class groups
+    // Filter students eligible for class groups (active students with year_group)
     const eligibleStudents = allStudents.filter(s => 
-      !s.classgroup_id && 
       s.is_active !== false && 
       s.year_group
     );
@@ -42,6 +41,15 @@ Deno.serve(async (req) => {
         message: 'No eligible students found for class group generation',
         debug: debugInfo
       });
+    }
+    
+    // Clear existing classgroup_ids to regenerate fresh batches
+    for (const student of eligibleStudents) {
+      if (student.classgroup_id) {
+        await base44.asServiceRole.entities.Student.update(student.id, {
+          classgroup_id: null
+        });
+      }
     }
 
     // Group by year_group
