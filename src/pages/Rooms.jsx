@@ -163,10 +163,15 @@ export default function Rooms() {
 
     e.target.value = '';
 
-    if (!schoolId) {
+    // Get fresh schoolId at the moment of upload
+    const currentSchoolId = user?.school_id;
+    
+    if (!currentSchoolId) {
       alert('No school assigned. Please set up your school in Settings first.');
       return;
     }
+
+    console.log('Starting upload with school_id:', currentSchoolId);
 
     setUploadState({
       isUploading: true,
@@ -177,14 +182,19 @@ export default function Rooms() {
 
     try {
       // Upload file
-      const { file_url } = await base44.integrations.Core.UploadFile({ file });
+      const uploadResult = await base44.integrations.Core.UploadFile({ file });
+      console.log('File uploaded:', uploadResult);
+      
+      if (!uploadResult?.file_url) {
+        throw new Error('File upload failed - no URL returned');
+      }
 
       setUploadState(prev => ({ ...prev, progress: 'Extracting room data...' }));
 
       // Extract room data using LLM
       const extractionResult = await base44.integrations.Core.InvokeLLM({
         prompt: `Extract all rooms from this document. For each room, provide: name, capacity (as number), room_type (one of: classroom, lab, art_studio, music_room, computer_lab, gymnasium, library, auditorium, other), building (if available), floor (if available).`,
-        file_urls: [file_url],
+        file_urls: [uploadResult.file_url],
         response_json_schema: {
           type: "object",
           properties: {
@@ -206,19 +216,23 @@ export default function Rooms() {
         }
       });
 
-      const rooms = extractionResult?.rooms || [];
+      console.log('Extraction result:', extractionResult);
 
-      if (rooms.length === 0) {
+      const roomsData = extractionResult?.rooms || [];
+
+      if (roomsData.length === 0) {
         throw new Error('No rooms found in the document');
       }
 
-      setUploadState(prev => ({ ...prev, progress: `Creating ${rooms.length} rooms...` }));
+      setUploadState(prev => ({ ...prev, progress: `Creating ${roomsData.length} rooms...` }));
 
       // Create rooms one by one
       let created = 0;
-      for (const room of rooms) {
+      for (const room of roomsData) {
+        console.log('Creating room:', { ...room, school_id: currentSchoolId });
+        
         await base44.entities.Room.create({
-          school_id: schoolId,
+          school_id: currentSchoolId,
           name: room.name,
           capacity: room.capacity,
           room_type: room.room_type,
@@ -227,13 +241,16 @@ export default function Rooms() {
           equipment: [],
           is_active: true
         });
+        
         created++;
         setUploadState(prev => ({ 
           ...prev, 
           roomsCreated: created,
-          progress: `Created ${created} of ${rooms.length} rooms...`
+          progress: `Created ${created} of ${roomsData.length} rooms...`
         }));
       }
+
+      console.log(`Successfully created ${created} rooms`);
 
       setUploadState(prev => ({ 
         ...prev, 
@@ -284,7 +301,7 @@ export default function Rooms() {
                 type="button"
                 variant="outline"
                 onClick={() => document.getElementById('room-upload').click()}
-                disabled={uploadState.isUploading}
+                disabled={uploadState.isUploading || !schoolId}
               >
                 {uploadState.isUploading ? (
                   <>
