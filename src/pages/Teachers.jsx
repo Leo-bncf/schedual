@@ -223,8 +223,7 @@ Example: {"full_name": "John Smith", "email": "john@school.com", "subjects": ["P
       // Fetch all subjects to match names to IDs
       const allSubjects = await base44.entities.Subject.list();
 
-      let created = 0;
-      for (const teacher of teachersData) {
+      const teachersToCreate = teachersData.map(teacher => {
         // Match subject names to IDs
         const subjectIds = [];
         const qualifications = [];
@@ -249,7 +248,7 @@ Example: {"full_name": "John Smith", "email": "john@school.com", "subjects": ["P
           });
         }
 
-        await base44.entities.Teacher.create({
+        return {
           school_id: schoolId,
           full_name: teacher.full_name,
           email: teacher.email,
@@ -260,14 +259,34 @@ Example: {"full_name": "John Smith", "email": "john@school.com", "subjects": ["P
           max_consecutive_periods: 4,
           unavailable_slots: [],
           is_active: true
-        });
+        };
+      });
 
-        created++;
-        setUploadState(prev => ({ 
-          ...prev, 
-          teachersCreated: created,
-          progress: `Created ${created} of ${teachersData.length} teachers...`
-        }));
+      // Batch create with error handling
+      const batchSize = 10;
+      let created = 0;
+      
+      for (let i = 0; i < teachersToCreate.length; i += batchSize) {
+        const batch = teachersToCreate.slice(i, i + batchSize);
+        
+        try {
+          await base44.entities.Teacher.bulkCreate(batch);
+          created += batch.length;
+          
+          setUploadState(prev => ({ 
+            ...prev, 
+            teachersCreated: created,
+            progress: `Created ${created} of ${teachersData.length} teachers...`
+          }));
+          
+          // Small delay between batches to avoid rate limits
+          if (i + batchSize < teachersToCreate.length) {
+            await new Promise(resolve => setTimeout(resolve, 500));
+          }
+        } catch (error) {
+          console.error('Batch creation error:', error);
+          // Continue with next batch even if one fails
+        }
       }
 
       setUploadState(prev => ({ 
