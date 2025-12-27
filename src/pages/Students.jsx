@@ -401,7 +401,9 @@ For each student, extract: full_name, email, student_id, ib_programme (DP/MYP/PY
 
   const isImportComplete = messages.length > 0 && 
     messages[messages.length - 1]?.role === 'assistant' &&
-    !messages[messages.length - 1]?.tool_calls?.some(tc => tc.status === 'running' || tc.status === 'pending');
+    (!messages[messages.length - 1]?.tool_calls || 
+     !Array.isArray(messages[messages.length - 1]?.tool_calls) ||
+     !messages[messages.length - 1]?.tool_calls?.some(tc => tc?.status === 'running' || tc?.status === 'pending'));
 
   return (
     <div className="space-y-6">
@@ -666,7 +668,7 @@ For each student, extract: full_name, email, student_id, ib_programme (DP/MYP/PY
                     <p className="text-sm text-slate-700 whitespace-pre-wrap">{msg.content}</p>
                   )}
                   
-                  {msg.tool_calls && msg.tool_calls.length > 0 && (
+                  {msg.tool_calls && Array.isArray(msg.tool_calls) && msg.tool_calls.length > 0 && (
                     <div className="mt-2 space-y-1">
                       {msg.tool_calls.map((tc, tcIdx) => (
                         <motion.div
@@ -676,7 +678,7 @@ For each student, extract: full_name, email, student_id, ib_programme (DP/MYP/PY
                           transition={{ delay: tcIdx * 0.1 }}
                           className="flex items-center gap-2 text-sm"
                         >
-                          {tc.status === 'completed' ? (
+                          {tc?.status === 'completed' ? (
                             <motion.div
                               initial={{ scale: 0 }}
                               animate={{ scale: 1 }}
@@ -688,7 +690,7 @@ For each student, extract: full_name, email, student_id, ib_programme (DP/MYP/PY
                             <Loader2 className="w-4 h-4 text-blue-600 animate-spin" />
                           )}
                           <span className="text-slate-600">
-                            {tc.status === 'completed' ? 'Created student' : 'Creating student...'}
+                            {tc?.status === 'completed' ? 'Created student' : 'Creating student...'}
                           </span>
                         </motion.div>
                       ))}
