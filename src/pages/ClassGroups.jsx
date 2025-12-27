@@ -37,7 +37,7 @@ export default function ClassGroups() {
 
   const { data: students = [] } = useQuery({
     queryKey: ['students', schoolId],
-    queryFn: () => base44.entities.Student.filter({ school_id: schoolId }),
+    queryFn: () => base44.entities.Student.filter({ school_id: schoolId }, '-created_date', 500),
     enabled: !!schoolId,
   });
 
