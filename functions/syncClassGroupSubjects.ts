@@ -9,56 +9,68 @@ Deno.serve(async (req) => {
       return Response.json({ error: 'Unauthorized' }, { status: 401 });
     }
 
-    const { student_id, classgroup_id, subject_choices } = await req.json();
+    const { student_id, subject_choices } = await req.json();
 
-    if (!student_id && !classgroup_id) {
-      return Response.json({ error: 'student_id or classgroup_id required' }, { status: 400 });
+    if (!student_id) {
+      return Response.json({ error: 'student_id required' }, { status: 400 });
     }
 
-    let targetClassGroupId = classgroup_id;
-    let subjectsToSync = subject_choices;
+    // Get the student to find their classgroup
+    const students = await base44.asServiceRole.entities.Student.filter({ 
+      id: student_id,
+      school_id: user.school_id 
+    });
+    
+    if (!students || students.length === 0) {
+      return Response.json({ error: 'Student not found' }, { status: 404 });
+    }
 
-    // If student_id provided, get their classgroup and subjects
-    if (student_id) {
-      const student = await base44.asServiceRole.entities.Student.filter({ 
-        id: student_id,
-        school_id: user.school_id 
+    const student = students[0];
+    
+    // Check if student is PYP or MYP
+    if (student.ib_programme !== 'PYP' && student.ib_programme !== 'MYP') {
+      return Response.json({ 
+        success: true, 
+        message: 'Student is not PYP/MYP, no sync needed' 
       });
-      
-      if (!student || student.length === 0) {
-        return Response.json({ error: 'Student not found' }, { status: 404 });
-      }
-
-      targetClassGroupId = student[0].classgroup_id;
-      subjectsToSync = subject_choices || student[0].subject_choices || [];
     }
 
-    if (!targetClassGroupId) {
-      return Response.json({ error: 'No ClassGroup found' }, { status: 400 });
+    // If no classgroup, we can't sync
+    if (!student.classgroup_id) {
+      return Response.json({ 
+        success: true,
+        message: 'Student has no ClassGroup, no sync needed'
+      });
     }
+
+    const targetClassGroupId = student.classgroup_id;
+    const subjectsToSync = subject_choices || [];
+
+    console.log(`[SYNC] Syncing ${subjectsToSync.length} subjects to ClassGroup ${targetClassGroupId}`);
 
     // Get all students in this ClassGroup
-    const studentsInGroup = await base44.asServiceRole.entities.Student.filter({
-      school_id: user.school_id,
-      classgroup_id: targetClassGroupId,
-      is_active: true
+    const allStudents = await base44.asServiceRole.entities.Student.filter({
+      school_id: user.school_id
     });
 
-    console.log(`Syncing ${subjectsToSync.length} subjects to ${studentsInGroup.length} students in ClassGroup ${targetClassGroupId}`);
+    const studentsInGroup = allStudents.filter(s => 
+      s.classgroup_id === targetClassGroupId && 
+      s.is_active !== false
+    );
 
-    // Update all students with the same subject choices
+    console.log(`[SYNC] Found ${studentsInGroup.length} students in ClassGroup`);
+
+    // Update all students (including the original one for consistency)
     let updatedCount = 0;
-    for (const student of studentsInGroup) {
-      // Skip if student_id was provided and this is the same student
-      if (student_id && student.id === student_id) {
-        continue;
-      }
-
-      await base44.asServiceRole.entities.Student.update(student.id, {
+    for (const studentInGroup of studentsInGroup) {
+      await base44.asServiceRole.entities.Student.update(studentInGroup.id, {
         subject_choices: subjectsToSync
       });
       updatedCount++;
+      console.log(`[SYNC] Updated student ${studentInGroup.full_name} (${studentInGroup.id})`);
     }
+
+    console.log(`[SYNC] Updated ${updatedCount} students with ${subjectsToSync.length} subjects`);
 
     // Auto-assign teaching groups
     await base44.asServiceRole.functions.invoke('autoAssignPYPMYPGroups');

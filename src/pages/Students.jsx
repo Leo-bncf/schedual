@@ -133,34 +133,29 @@ export default function Students() {
     if (formData.ib_programme === 'PYP' || formData.ib_programme === 'MYP') {
       try {
         // Save the current student first
-        let savedStudent;
+        let savedStudentId;
         if (editingStudent) {
           await updateMutation.mutateAsync({ id: editingStudent.id, data: formData });
-          savedStudent = { ...editingStudent, ...formData };
+          savedStudentId = editingStudent.id;
         } else {
-          savedStudent = await createMutation.mutateAsync(formData);
+          const newStudent = await createMutation.mutateAsync(formData);
+          savedStudentId = newStudent.id;
         }
 
-        // If no classgroup, create one first
-        if (!savedStudent.classgroup_id) {
-          await base44.functions.invoke('debugAndFixClassGroups');
-          await queryClient.invalidateQueries({ queryKey: ['students'] });
-          await queryClient.invalidateQueries({ queryKey: ['classGroups'] });
-          // Refetch to get updated student with classgroup_id
-          const updatedStudents = await base44.entities.Student.filter({ school_id: user.school_id });
-          savedStudent = updatedStudents.find(s => s.id === savedStudent.id) || savedStudent;
-        }
-
+        // Ensure classgroups exist
+        await base44.functions.invoke('debugAndFixClassGroups');
+        
         // Sync subjects to all students in the ClassGroup
-        if (savedStudent.classgroup_id) {
-          await base44.functions.invoke('syncClassGroupSubjects', {
-            student_id: savedStudent.id,
-            subject_choices: formData.subject_choices
-          });
-        }
+        const syncResult = await base44.functions.invoke('syncClassGroupSubjects', {
+          student_id: savedStudentId,
+          subject_choices: formData.subject_choices
+        });
+
+        console.log('Sync result:', syncResult.data);
 
         queryClient.invalidateQueries({ queryKey: ['students'] });
         queryClient.invalidateQueries({ queryKey: ['teachingGroups'] });
+        queryClient.invalidateQueries({ queryKey: ['classGroups'] });
         resetForm();
       } catch (error) {
         console.error('Error updating students:', error);
