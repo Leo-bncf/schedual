@@ -28,23 +28,13 @@ Deno.serve(async (req) => {
       }, { status: 400 });
     }
 
-    // Clear classgroup_id from ALL students first
-    console.log(`Clearing classgroup_id from ${students.length} students`);
-    await Promise.all(
-      students.map(student => 
-        base44.asServiceRole.entities.Student.update(student.id, {
-          classgroup_id: null
-        }).catch(err => console.error(`Failed to clear student ${student.id}:`, err.message))
-      )
-    );
-
     // Delete existing class groups
     const existingGroups = await base44.asServiceRole.entities.ClassGroup.filter(
       { school_id: schoolId },
       '-created_date',
       500
     );
-
+    
     console.log(`Deleting ${existingGroups.length} existing class groups`);
     for (const group of existingGroups) {
       await base44.asServiceRole.entities.ClassGroup.delete(group.id);
