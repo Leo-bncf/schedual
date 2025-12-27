@@ -93,7 +93,7 @@ Deno.serve(async (req) => {
       }
     }
 
-    // Update all students with their classgroup_id sequentially to avoid rate limits
+    // Update all students with their classgroup_id sequentially with retry logic
     console.log(`Updating ${Object.keys(studentAssignments).length} students...`);
     
     const entries = Object.entries(studentAssignments);
@@ -101,21 +101,32 @@ Deno.serve(async (req) => {
     let failed = 0;
     
     for (const [studentId, groupId] of entries) {
-      try {
-        await base44.asServiceRole.entities.Student.update(studentId, {
-          classgroup_id: groupId
-        });
-        updated++;
-        if (updated % 10 === 0) {
-          console.log(`Updated ${updated}/${entries.length} students...`);
+      let attempts = 0;
+      let success = false;
+      
+      while (attempts < 3 && !success) {
+        try {
+          await base44.asServiceRole.entities.Student.update(studentId, {
+            classgroup_id: groupId
+          });
+          updated++;
+          success = true;
+          if (updated % 10 === 0) {
+            console.log(`Updated ${updated}/${entries.length} students...`);
+          }
+        } catch (err) {
+          attempts++;
+          console.error(`Attempt ${attempts} failed for student ${studentId}:`, err.message);
+          if (attempts < 3) {
+            await new Promise(resolve => setTimeout(resolve, 200));
+          } else {
+            failed++;
+          }
         }
-      } catch (err) {
-        console.error(`Failed to update student ${studentId}:`, err.message);
-        failed++;
       }
       
-      // Small delay to avoid rate limits
-      await new Promise(resolve => setTimeout(resolve, 50));
+      // Delay between each student to avoid rate limits
+      await new Promise(resolve => setTimeout(resolve, 100));
     }
     
     console.log(`Finished: ${updated} updated, ${failed} failed`);
