@@ -93,37 +93,32 @@ Deno.serve(async (req) => {
       }
     }
 
-    // Bulk update all students with their classgroup_id in smaller batches
+    // Update all students with their classgroup_id sequentially to avoid rate limits
     console.log(`Updating ${Object.keys(studentAssignments).length} students...`);
     
     const entries = Object.entries(studentAssignments);
-    const batchSize = 10;
     let updated = 0;
+    let failed = 0;
     
-    for (let i = 0; i < entries.length; i += batchSize) {
-      const batch = entries.slice(i, i + batchSize);
-      const batchPromises = batch.map(([studentId, groupId]) =>
-        base44.asServiceRole.entities.Student.update(studentId, {
+    for (const [studentId, groupId] of entries) {
+      try {
+        await base44.asServiceRole.entities.Student.update(studentId, {
           classgroup_id: groupId
-        }).then(() => {
-          updated++;
-          return true;
-        }).catch(err => {
-          console.error(`Failed to update student ${studentId}:`, err.message);
-          return false;
-        })
-      );
-      
-      await Promise.all(batchPromises);
-      console.log(`Updated ${updated}/${entries.length} students...`);
-      
-      // Small delay between batches to avoid rate limits
-      if (i + batchSize < entries.length) {
-        await new Promise(resolve => setTimeout(resolve, 100));
+        });
+        updated++;
+        if (updated % 10 === 0) {
+          console.log(`Updated ${updated}/${entries.length} students...`);
+        }
+      } catch (err) {
+        console.error(`Failed to update student ${studentId}:`, err.message);
+        failed++;
       }
+      
+      // Small delay to avoid rate limits
+      await new Promise(resolve => setTimeout(resolve, 50));
     }
     
-    console.log(`Finished updating ${updated} students`);
+    console.log(`Finished: ${updated} updated, ${failed} failed`);
 
     return Response.json({
       success: true,
