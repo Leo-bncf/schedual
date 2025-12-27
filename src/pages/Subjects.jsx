@@ -46,9 +46,12 @@ export default function Subjects() {
   const [isDialogOpen, setIsDialogOpen] = useState(false);
   const [editingSubject, setEditingSubject] = useState(null);
   const [searchQuery, setSearchQuery] = useState('');
-  const [uploading, setUploading] = useState(false);
-  const [conversation, setConversation] = useState(null);
-  const [messages, setMessages] = useState([]);
+  const [uploadState, setUploadState] = useState({
+    isUploading: false,
+    progress: '',
+    subjectsCreated: 0,
+    error: null
+  });
   const [formData, setFormData] = useState({
     name: '',
     code: '',
@@ -165,62 +168,115 @@ export default function Subjects() {
 
   const coreSubjects = filteredSubjects.filter(s => s.is_core);
 
-  React.useEffect(() => {
-    let unsubscribe;
-    if (conversation?.id) {
-      unsubscribe = base44.agents.subscribeToConversation(conversation.id, (data) => {
-        setMessages(data.messages || []);
-      });
-    }
-    return () => {
-      if (unsubscribe) unsubscribe();
-    };
-  }, [conversation?.id]);
-
   const handleFileUpload = async (e) => {
     const file = e.target.files?.[0];
     if (!file) return;
 
-    setUploading(true);
+    e.target.value = '';
+
+    if (!schoolId) {
+      alert('No school assigned. Please set up your school in Settings first.');
+      return;
+    }
+
+    setUploadState({
+      isUploading: true,
+      progress: 'Uploading file...',
+      subjectsCreated: 0,
+      error: null
+    });
+
     try {
       const { file_url } = await base44.integrations.Core.UploadFile({ file });
 
-      const conv = await base44.agents.createConversation({
-        agent_name: "subject_importer",
-        metadata: { 
-          file_name: file.name,
-          school_id: schoolId
+      setUploadState(prev => ({ ...prev, progress: 'Extracting subject data...' }));
+
+      const extractionResult = await base44.integrations.Core.InvokeLLM({
+        prompt: `Extract all subjects/classes from this document. For each subject, provide: name, code, ib_level (one of: DP, MYP, PYP), and for DP subjects also include ib_group (number 1-6) and available_levels (array of HL and/or SL).`,
+        file_urls: [file_url],
+        response_json_schema: {
+          type: "object",
+          properties: {
+            subjects: {
+              type: "array",
+              items: {
+                type: "object",
+                properties: {
+                  name: { type: "string" },
+                  code: { type: "string" },
+                  ib_level: { type: "string" },
+                  ib_group: { type: "number" },
+                  available_levels: { type: "array", items: { type: "string" } }
+                },
+                required: ["name", "code", "ib_level"]
+              }
+            }
+          }
         }
       });
-      setConversation(conv);
 
-      await base44.agents.addMessage(conv, {
-        role: "user",
-        content: `Extract all subjects/classes from this document and create Subject entities.
+      const subjectsData = extractionResult?.subjects || [];
 
-      Use school_id: ${schoolId}
+      if (subjectsData.length === 0) {
+        throw new Error('No subjects found in the document');
+      }
 
-      Required fields for each subject: school_id (use ${schoolId}), name, code, ib_level (DP/MYP/PYP), and for DP subjects include ib_group (1-6) and ib_group_name.`,
-        file_urls: [file_url]
-      });
+      setUploadState(prev => ({ ...prev, progress: `Creating ${subjectsData.length} subjects...` }));
+
+      let created = 0;
+      for (const subject of subjectsData) {
+        const group = IB_GROUPS.find(g => g.id === subject.ib_group);
+        
+        await base44.entities.Subject.create({
+          school_id: schoolId,
+          name: subject.name,
+          code: subject.code,
+          ib_level: subject.ib_level,
+          ib_group: subject.ib_group || 1,
+          ib_group_name: group?.name || 'Language & Literature',
+          available_levels: subject.available_levels || ['HL', 'SL'],
+          hl_hours_per_week: 6,
+          sl_hours_per_week: 4,
+          requires_lab: false,
+          is_core: false,
+          is_active: true
+        });
+
+        created++;
+        setUploadState(prev => ({ 
+          ...prev, 
+          subjectsCreated: created,
+          progress: `Created ${created} of ${subjectsData.length} subjects...`
+        }));
+      }
+
+      setUploadState(prev => ({ 
+        ...prev, 
+        isUploading: false,
+        progress: `Successfully created ${created} subjects!`
+      }));
+
+      setTimeout(() => {
+        setUploadState({
+          isUploading: false,
+          progress: '',
+          subjectsCreated: 0,
+          error: null
+        });
+        queryClient.invalidateQueries({ queryKey: ['subjects'] });
+      }, 2000);
 
     } catch (error) {
       console.error('Upload error:', error);
-      alert('Failed to upload file: ' + error.message);
-    } finally {
-      setUploading(false);
+      setUploadState({
+        isUploading: false,
+        progress: '',
+        subjectsCreated: 0,
+        error: error?.message || 'An unknown error occurred'
+      });
+      alert('Failed to process file: ' + (error?.message || 'Unknown error'));
     }
   };
-
-  const closeImportDialog = () => {
-    setConversation(null);
-    setMessages([]);
-    queryClient.invalidateQueries({ queryKey: ['subjects'] });
-  };
-
-  const isImportComplete = messages.length > 0 && 
-    messages[messages.length - 1]?.role === 'assistant' &&
-    !messages[messages.length - 1]?.tool_calls?.some(tc => tc.status === 'running' || tc.status === 'pending');
 
   return (
     <div className="space-y-6">
@@ -241,12 +297,12 @@ export default function Subjects() {
                 type="button"
                 variant="outline"
                 onClick={() => document.getElementById('subject-upload').click()}
-                disabled={uploading}
+                disabled={uploadState.isUploading}
               >
-                {uploading ? (
+                {uploadState.isUploading ? (
                   <>
                     <Loader2 className="w-4 h-4 mr-2 animate-spin" />
-                    Uploading...
+                    {uploadState.progress || 'Processing...'}
                   </>
                 ) : (
                   <>
@@ -521,91 +577,7 @@ export default function Subjects() {
         </DialogContent>
       </Dialog>
 
-      {/* Import Progress Dialog */}
-      <Dialog open={!!conversation} onOpenChange={(open) => { if (!open && isImportComplete) closeImportDialog(); }}>
-        <DialogContent className="sm:max-w-lg">
-          <DialogHeader>
-            <DialogTitle>Importing Subjects</DialogTitle>
-            <DialogDescription>
-              AI is reading the document and creating subject entities
-            </DialogDescription>
-          </DialogHeader>
-          
-          <div className="space-y-4 max-h-96 overflow-y-auto">
-            <AnimatePresence mode="popLayout">
-              {messages.map((msg, idx) => (
-                <motion.div
-                  key={idx}
-                  initial={{ opacity: 0, y: 10 }}
-                  animate={{ opacity: 1, y: 0 }}
-                  transition={{ duration: 0.3 }}
-                  className={`p-3 rounded-lg ${msg.role === 'user' ? 'bg-slate-50' : 'bg-blue-50'}`}
-                >
-                  {msg.content && (
-                    <p className="text-sm text-slate-700 whitespace-pre-wrap">{msg.content}</p>
-                  )}
-                  
-                  {msg.tool_calls && msg.tool_calls.length > 0 && (
-                    <div className="mt-2 space-y-1">
-                      {msg.tool_calls.map((tc, tcIdx) => (
-                        <motion.div
-                          key={tcIdx}
-                          initial={{ opacity: 0, x: -10 }}
-                          animate={{ opacity: 1, x: 0 }}
-                          transition={{ delay: tcIdx * 0.1 }}
-                          className="flex items-center gap-2 text-sm"
-                        >
-                          {tc.status === 'completed' ? (
-                            <motion.div
-                              initial={{ scale: 0 }}
-                              animate={{ scale: 1 }}
-                              transition={{ type: "spring", stiffness: 200, damping: 15 }}
-                            >
-                              <CheckCircle className="w-4 h-4 text-green-600" />
-                            </motion.div>
-                          ) : (
-                            <Loader2 className="w-4 h-4 text-blue-600 animate-spin" />
-                          )}
-                          <span className="text-slate-600">
-                            {tc.status === 'completed' ? 'Created subject' : 'Creating subject...'}
-                          </span>
-                        </motion.div>
-                      ))}
-                    </div>
-                  )}
-                </motion.div>
-              ))}
-            </AnimatePresence>
-          </div>
 
-          <AnimatePresence>
-            {isImportComplete && (
-              <motion.div
-                initial={{ opacity: 0, scale: 0.9 }}
-                animate={{ opacity: 1, scale: 1 }}
-                exit={{ opacity: 0, scale: 0.9 }}
-              >
-                <div className="flex items-center justify-center py-6">
-                  <motion.div
-                    initial={{ scale: 0 }}
-                    animate={{ scale: 1 }}
-                    transition={{ type: "spring", stiffness: 200, damping: 15, delay: 0.2 }}
-                    className="w-16 h-16 rounded-full bg-green-100 flex items-center justify-center"
-                  >
-                    <CheckCircle className="w-8 h-8 text-green-600" />
-                  </motion.div>
-                </div>
-                <DialogFooter>
-                  <Button onClick={closeImportDialog} className="bg-green-600 hover:bg-green-700 w-full">
-                    <CheckCircle className="w-4 h-4 mr-2" />
-                    Done - View Subjects
-                  </Button>
-                </DialogFooter>
-              </motion.div>
-            )}
-          </AnimatePresence>
-        </DialogContent>
-      </Dialog>
     </div>
   );
 }
