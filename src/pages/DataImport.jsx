@@ -210,14 +210,29 @@ export default function DataImport() {
         <CardContent className="p-6">
           <div className="flex gap-3">
             <FileText className="w-5 h-5 text-blue-900 flex-shrink-0 mt-0.5" />
-            <div>
-              <h3 className="font-semibold text-blue-900 mb-2">File Format Guidelines</h3>
-              <ul className="text-sm text-blue-800 space-y-1">
-                <li>• Supported formats: CSV, Excel, PDF</li>
-                <li>• Include: Subject names, teacher names, student names, room numbers</li>
-                <li>• Optional: IB levels (HL/SL), subject groups, student IDs</li>
-                <li>• The AI will automatically structure and create all entities</li>
-              </ul>
+            <div className="space-y-4">
+              <div>
+                <h3 className="font-semibold text-blue-900 mb-2">File Format Guidelines</h3>
+                <ul className="text-sm text-blue-800 space-y-1">
+                  <li>• <strong>Formats:</strong> CSV, Excel (.xlsx, .xls), or PDF</li>
+                  <li>• <strong>Structure:</strong> Use clear column headers or section labels</li>
+                  <li>• <strong>Required:</strong> Student full names, IB programme (PYP/MYP/DP), year/grade level</li>
+                  <li>• <strong>Recommended:</strong> Teacher names, subject names, room numbers, student IDs</li>
+                  <li>• <strong>Optional:</strong> HL/SL levels, subject groups (1-6), email addresses</li>
+                </ul>
+              </div>
+              
+              <div>
+                <h4 className="font-semibold text-blue-900 mb-1 text-sm">Best Practices:</h4>
+                <ul className="text-xs text-blue-700 space-y-0.5">
+                  <li>✓ Use consistent naming (e.g., "Physics HL" not "HL Physics" and "Physics higher")</li>
+                  <li>✓ Include year groups clearly (DP1, DP2, MYP1-5, PYP-A through PYP-F)</li>
+                  <li>✓ List one student per row for CSV/Excel, or clear sections for PDF</li>
+                  <li>✓ Spell out full names consistently (avoid mixing "Mr. Smith" and "Smith")</li>
+                  <li>✓ Keep data clean - remove empty rows and irrelevant notes</li>
+                  <li>✗ Avoid merged cells in Excel - use plain tables</li>
+                </ul>
+              </div>
             </div>
           </div>
         </CardContent>
