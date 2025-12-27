@@ -43,24 +43,37 @@ Deno.serve(async (req) => {
       });
     }
     
-    // Clear existing classgroup_ids to regenerate fresh batches
+    // Delete all existing ClassGroups for this school to start fresh
+    const existingClassGroups = await base44.asServiceRole.entities.ClassGroup.filter({
+      school_id: schoolId
+    });
+    
+    for (const cg of existingClassGroups) {
+      await base44.asServiceRole.entities.ClassGroup.delete(cg.id);
+    }
+    
+    // Clear all students' classgroup_ids
     for (const student of eligibleStudents) {
-      if (student.classgroup_id) {
-        await base44.asServiceRole.entities.Student.update(student.id, {
-          classgroup_id: null
-        });
-      }
+      await base44.asServiceRole.entities.Student.update(student.id, {
+        classgroup_id: null
+      });
     }
 
-    // Group by year_group
+    // Group by year_group and ib_programme, then sort by student name
     const studentsByYear = {};
-    eligibleStudents.forEach(student => {
-      const key = student.year_group;
-      if (!studentsByYear[key]) {
-        studentsByYear[key] = [];
-      }
-      studentsByYear[key].push(student);
-    });
+    eligibleStudents
+      .sort((a, b) => (a.full_name || '').localeCompare(b.full_name || ''))
+      .forEach(student => {
+        const key = `${student.ib_programme}_${student.year_group}`;
+        if (!studentsByYear[key]) {
+          studentsByYear[key] = {
+            year_group: student.year_group,
+            ib_programme: student.ib_programme,
+            students: []
+          };
+        }
+        studentsByYear[key].students.push(student);
+      });
 
     const classGroupsToCreate = [];
 
