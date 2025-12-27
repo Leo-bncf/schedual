@@ -38,6 +38,12 @@ export default function Teachers() {
   const [isDialogOpen, setIsDialogOpen] = useState(false);
   const [editingTeacher, setEditingTeacher] = useState(null);
   const [searchQuery, setSearchQuery] = useState('');
+  const [uploadState, setUploadState] = useState({
+    isUploading: false,
+    progress: '',
+    teachersCreated: 0,
+    error: null
+  });
   const [formData, setFormData] = useState({
     full_name: '',
     email: '',
