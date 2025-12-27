@@ -198,12 +198,9 @@ export default function Subjects() {
         role: "user",
         content: `Extract all subjects/classes from this document and create Subject entities.
 
-      IMPORTANT: To complete this import, you need your school_id. You can find it in Settings > School Info tab.
+      Use school_id: ${schoolId}
 
-      Once you have your school_id, provide it in this format:
-      school_id: [your-school-id-here]
-
-      Required fields for each subject: school_id, name, code, ib_level (DP/MYP/PYP), and for DP subjects include ib_group (1-6) and ib_group_name.`,
+      Required fields for each subject: school_id (use ${schoolId}), name, code, ib_level (DP/MYP/PYP), and for DP subjects include ib_group (1-6) and ib_group_name.`,
         file_urls: [file_url]
       });
 

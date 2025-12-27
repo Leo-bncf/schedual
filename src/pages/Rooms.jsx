@@ -188,12 +188,9 @@ export default function Rooms() {
         role: "user",
         content: `Extract all rooms from this document and create Room entities. 
 
-IMPORTANT: To complete this import, you need your school_id. You can find it in Settings > School Info tab.
+Use school_id: ${schoolId}
 
-Once you have your school_id, provide it in this format:
-school_id: [your-school-id-here]
-
-Required fields for each room: school_id, name, capacity (number), room_type (choose from: classroom, lab, art_studio, music_room, computer_lab, gymnasium, library, auditorium, other).`,
+Required fields for each room: school_id (use ${schoolId}), name, capacity (number), room_type (choose from: classroom, lab, art_studio, music_room, computer_lab, gymnasium, library, auditorium, other).`,
         file_urls: [file_url]
       });
 
