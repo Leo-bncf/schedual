@@ -270,18 +270,20 @@ Deno.serve(async (req) => {
           if (ibProgramme === 'PYP') {
             // Extract class letter from various formats: "PYP_Class_A", "class a", "Class B", etc.
             let classLetter = null;
+            const lowerYearGroup = normalizedYearGroup.toLowerCase();
             
             const patterns = [
-              /class[_\s]+([a-f])/i,  // "Class_A" or "class A"
-              /pyp[_\s]+([a-f])/i,    // "PYP_A" or "PYP A"
-              /[_-]([a-f])$/i,        // ends with "_A" or "-A"
-              /([a-f])$/i             // ends with just "A"
+              /class[_\s-]*([a-f])/i,     // "Class_A", "class A", "Class-A"
+              /pyp[_\s-]+class[_\s-]*([a-f])/i,  // "PYP_Class_A"
+              /pyp[_\s-]+([a-f])/i,       // "PYP_A" or "PYP A"
+              /[_-]([a-f])$/i,            // ends with "_A" or "-A"
+              /\b([a-f])\b/i              // standalone letter
             ];
 
             for (const pattern of patterns) {
-              const match = normalizedYearGroup.match(pattern);
+              const match = lowerYearGroup.match(pattern);
               if (match) {
-                classLetter = match[1];
+                classLetter = match[match.length - 1]; // Get last capture group
                 break;
               }
             }

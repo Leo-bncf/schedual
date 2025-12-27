@@ -303,10 +303,22 @@ export default function Students() {
             <Button 
               variant="outline"
               onClick={async () => {
-                if (confirm('Normalize all PYP student year groups to PYP-A, PYP-B, etc. format?')) {
+                try {
+                  const confirmed = confirm('This will normalize all PYP student year groups from formats like "PYP_Class_A" to "PYP-A". Continue?');
+                  if (!confirmed) return;
+                  
                   const res = await base44.functions.invoke('normalizePYPYearGroups');
-                  alert(`Updated ${res.data.updated} students`);
-                  queryClient.invalidateQueries({ queryKey: ['students'] });
+                  console.log('Normalization result:', res.data);
+                  
+                  if (res.data.success) {
+                    alert(`✅ Successfully updated ${res.data.updated} out of ${res.data.total} PYP students.\n\nCheck the console for details.`);
+                    queryClient.invalidateQueries({ queryKey: ['students'] });
+                  } else {
+                    alert('❌ Normalization failed. Check console for details.');
+                  }
+                } catch (error) {
+                  console.error('Error normalizing:', error);
+                  alert('❌ Error: ' + error.message);
                 }
               }}
             >
