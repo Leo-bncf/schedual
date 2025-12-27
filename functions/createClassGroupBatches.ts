@@ -82,20 +82,23 @@ Deno.serve(async (req) => {
     // Step 6: Create all ClassGroups
     const createdGroups = await base44.asServiceRole.entities.ClassGroup.bulkCreate(classGroupsToCreate);
 
-    // Step 7: Update students with their new classgroup_id
-    let updated = 0;
+    // Step 7: Update students with their new classgroup_id (parallel)
+    const updatePromises = [];
     for (const group of createdGroups) {
       for (const studentId of group.student_ids) {
-        await base44.asServiceRole.entities.Student.update(studentId, {
-          classgroup_id: group.id
-        });
-        updated++;
+        updatePromises.push(
+          base44.asServiceRole.entities.Student.update(studentId, {
+            classgroup_id: group.id
+          })
+        );
       }
     }
 
+    await Promise.all(updatePromises);
+
     return Response.json({
       success: true,
-      message: `Created ${createdGroups.length} class groups with ${updated} students`,
+      message: `Created ${createdGroups.length} class groups with ${updatePromises.length} students assigned`,
       groups: createdGroups.map(g => ({
         name: g.name,
         year_group: g.year_group,
