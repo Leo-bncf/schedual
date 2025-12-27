@@ -1,5 +1,19 @@
 import { createClientFromRequest } from 'npm:@base44/sdk@0.8.6';
 
+// Helper to batch operations with delays
+async function batchProcess(items, batchSize, processor, delayMs = 100) {
+  const results = [];
+  for (let i = 0; i < items.length; i += batchSize) {
+    const batch = items.slice(i, i + batchSize);
+    const batchResults = await Promise.all(batch.map(processor));
+    results.push(...batchResults);
+    if (i + batchSize < items.length) {
+      await new Promise(resolve => setTimeout(resolve, delayMs));
+    }
+  }
+  return results;
+}
+
 Deno.serve(async (req) => {
   try {
     const base44 = createClientFromRequest(req);
@@ -11,27 +25,36 @@ Deno.serve(async (req) => {
 
     const schoolId = user.school_id;
 
-    // Step 1: Delete ALL existing ClassGroups
+    // Step 1: Delete ALL existing ClassGroups (batched)
     const existingGroups = await base44.asServiceRole.entities.ClassGroup.filter({
       school_id: schoolId
     });
     
-    for (const group of existingGroups) {
-      await base44.asServiceRole.entities.ClassGroup.delete(group.id);
+    if (existingGroups.length > 0) {
+      await batchProcess(
+        existingGroups, 
+        10, 
+        (group) => base44.asServiceRole.entities.ClassGroup.delete(group.id),
+        150
+      );
     }
 
-    // Step 2: Get all active students and clear their classgroup_ids
+    // Step 2: Get all active students and clear their classgroup_ids (batched)
     const allStudents = await base44.asServiceRole.entities.Student.filter({
       school_id: schoolId,
       is_active: true
     });
 
-    for (const student of allStudents) {
-      if (student.classgroup_id) {
-        await base44.asServiceRole.entities.Student.update(student.id, {
+    const studentsToUpdate = allStudents.filter(s => s.classgroup_id);
+    if (studentsToUpdate.length > 0) {
+      await batchProcess(
+        studentsToUpdate,
+        10,
+        (student) => base44.asServiceRole.entities.Student.update(student.id, {
           classgroup_id: null
-        });
-      }
+        }),
+        150
+      );
     }
 
     // Step 3: Filter students with year_group and sort by name
