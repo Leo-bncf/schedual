@@ -64,8 +64,19 @@ export default function ClassGroups() {
     try {
       const response = await base44.functions.invoke('createClassGroupBatches');
       if (response.data.success) {
-        queryClient.invalidateQueries({ queryKey: ['classGroups'] });
-        queryClient.invalidateQueries({ queryKey: ['students'] });
+        // Force refetch all data
+        await Promise.all([
+          queryClient.invalidateQueries({ queryKey: ['classGroups'] }),
+          queryClient.invalidateQueries({ queryKey: ['students'] })
+        ]);
+        
+        // Wait a moment for data to propagate
+        await new Promise(resolve => setTimeout(resolve, 1000));
+        
+        await Promise.all([
+          queryClient.refetchQueries({ queryKey: ['classGroups'] }),
+          queryClient.refetchQueries({ queryKey: ['students'] })
+        ]);
 
         let message = response.data.message;
         if (response.data.ineligibleStudents > 0) {
