@@ -299,10 +299,24 @@ export default function Students() {
         title="Students"
         description="Manage IB Diploma students and their subject choices"
         actions={
-          <Button onClick={() => setIsDialogOpen(true)} className="bg-indigo-600 hover:bg-indigo-700">
-            <Plus className="w-4 h-4 mr-2" />
-            Add Student
-          </Button>
+          <div className="flex gap-2">
+            <Button 
+              variant="outline"
+              onClick={async () => {
+                if (confirm('Normalize all PYP student year groups to PYP-A, PYP-B, etc. format?')) {
+                  const res = await base44.functions.invoke('normalizePYPYearGroups');
+                  alert(`Updated ${res.data.updated} students`);
+                  queryClient.invalidateQueries({ queryKey: ['students'] });
+                }
+              }}
+            >
+              Fix PYP Classes
+            </Button>
+            <Button onClick={() => setIsDialogOpen(true)} className="bg-indigo-600 hover:bg-indigo-700">
+              <Plus className="w-4 h-4 mr-2" />
+              Add Student
+            </Button>
+          </div>
         }
       />
 

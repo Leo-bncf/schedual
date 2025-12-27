@@ -268,36 +268,21 @@ Deno.serve(async (req) => {
           const ibProgramme = student.ib_programme || 'DP';
           
           if (ibProgramme === 'PYP') {
-            // Try multiple patterns to extract class letter (A-F)
+            // Extract class letter from various formats: "PYP_Class_A", "class a", "Class B", etc.
             let classLetter = null;
             
-            // Pattern 1: "class [a-f]" or "Class [a-f]"
-            const pattern1 = normalizedYearGroup.match(/class\s*([a-f])/i);
-            if (pattern1) {
-              classLetter = pattern1[1];
-            }
-            
-            // Pattern 2: ends with "_[a-f]" or "-[a-f]"
-            if (!classLetter) {
-              const pattern2 = normalizedYearGroup.match(/[_-]([a-f])$/i);
-              if (pattern2) {
-                classLetter = pattern2[1];
-              }
-            }
-            
-            // Pattern 3: just the letter [a-f] at the end
-            if (!classLetter) {
-              const pattern3 = normalizedYearGroup.match(/([a-f])$/i);
-              if (pattern3) {
-                classLetter = pattern3[1];
-              }
-            }
-            
-            // Pattern 4: any [a-f] in the string (last resort)
-            if (!classLetter) {
-              const pattern4 = normalizedYearGroup.match(/([a-f])/i);
-              if (pattern4) {
-                classLetter = pattern4[1];
+            const patterns = [
+              /class[_\s]+([a-f])/i,  // "Class_A" or "class A"
+              /pyp[_\s]+([a-f])/i,    // "PYP_A" or "PYP A"
+              /[_-]([a-f])$/i,        // ends with "_A" or "-A"
+              /([a-f])$/i             // ends with just "A"
+            ];
+
+            for (const pattern of patterns) {
+              const match = normalizedYearGroup.match(pattern);
+              if (match) {
+                classLetter = match[1];
+                break;
               }
             }
             
