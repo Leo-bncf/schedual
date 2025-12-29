@@ -397,6 +397,7 @@ export default function Subjects() {
                       </div>
                     </CardContent>
                   </Card>
+                </motion.div>
                 ))}
               </div>
             </div>
@@ -446,6 +447,7 @@ export default function Subjects() {
                       </div>
                     </CardContent>
                   </Card>
+                </motion.div>
                 ))}
               </div>
             </div>
