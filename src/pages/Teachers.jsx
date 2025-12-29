@@ -225,20 +225,46 @@ Example: {"full_name": "John Smith", "email": "john@school.com", "subjects": ["P
       const allSubjects = await base44.entities.Subject.list();
 
       const teachersToCreate = teachersData.map(teacher => {
-        // Match subject names to IDs
+        // Match subject names to IDs with improved fuzzy matching
         const subjectIds = [];
         const qualifications = [];
-        
+
         if (teacher.subjects && Array.isArray(teacher.subjects)) {
           teacher.subjects.forEach(subjectName => {
-            const matchedSubject = allSubjects.find(s => 
-              s.name?.toLowerCase().includes(subjectName?.toLowerCase()) ||
-              subjectName?.toLowerCase().includes(s.name?.toLowerCase())
-            );
-            
+            const normalizedSubject = subjectName?.toLowerCase().trim();
+
+            // Improved matching logic with specific acronym handling
+            const matchedSubject = allSubjects.find(s => {
+              const normalizedName = s.name?.toLowerCase().trim();
+              const normalizedCode = s.code?.toLowerCase().trim();
+
+              // Exact match
+              if (normalizedName === normalizedSubject || normalizedCode === normalizedSubject) {
+                return true;
+              }
+
+              // Handle common acronyms and variations
+              if ((normalizedSubject === 'tok' || normalizedSubject === 'theory of knowledge') && 
+                  (normalizedName.includes('tok') || normalizedName.includes('theory of knowledge'))) {
+                return true;
+              }
+              if ((normalizedSubject === 'ee' || normalizedSubject === 'extended essay') && 
+                  (normalizedName.includes('extended essay') || normalizedCode === 'ee')) {
+                return true;
+              }
+              if (normalizedSubject === 'cas' && (normalizedName.includes('cas') || normalizedCode === 'cas')) {
+                return true;
+              }
+
+              // Partial match (contains)
+              return normalizedName.includes(normalizedSubject) || 
+                     normalizedSubject.includes(normalizedName) ||
+                     (normalizedCode && normalizedCode.includes(normalizedSubject));
+            });
+
             if (matchedSubject) {
               subjectIds.push(matchedSubject.id);
-              
+
               // Build qualifications based on extracted IB levels
               const teacherLevels = teacher.ib_levels || ['DP'];
               qualifications.push({
