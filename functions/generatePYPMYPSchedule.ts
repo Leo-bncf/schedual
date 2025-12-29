@@ -74,7 +74,7 @@ Deno.serve(async (req) => {
       // For each subject, schedule periods
       for (const subject of levelSubjects) {
 
-        // Find a qualified teacher
+        // Find a qualified teacher (but continue even if none found)
         let assignedTeacher = null;
         for (const teacher of teachers) {
           const isQualified = teacher.qualifications?.some(q => 
@@ -88,8 +88,7 @@ Deno.serve(async (req) => {
         }
 
         if (!assignedTeacher) {
-          console.warn(`No qualified teacher found for ${subject.name} (${level})`);
-          continue;
+          console.warn(`No qualified teacher found for ${subject.name} (${level}) - scheduling anyway`);
         }
 
         // Track this ClassGroup's schedule to avoid conflicts
@@ -106,9 +105,11 @@ Deno.serve(async (req) => {
             const classGroupBusy = classGroupSchedule.some(s => s.day === day && s.period === period);
             if (classGroupBusy) continue;
 
-            // Check teacher availability
-            const teacherBusy = teacherSchedules[assignedTeacher.id]?.some(s => s.day === day && s.period === period);
-            if (teacherBusy) continue;
+            // Check teacher availability (only if teacher assigned)
+            if (assignedTeacher) {
+              const teacherBusy = teacherSchedules[assignedTeacher.id]?.some(s => s.day === day && s.period === period);
+              if (teacherBusy) continue;
+            }
 
             // Find available room
             let assignedRoom = null;
@@ -128,16 +129,18 @@ Deno.serve(async (req) => {
               schedule_version: schedule_version_id,
               classgroup_id: classGroup.id,
               subject_id: subject.id,
-              teacher_id: assignedTeacher.id,
+              teacher_id: assignedTeacher ? assignedTeacher.id : null,
               room_id: assignedRoom.id,
               day,
               period,
-              status: 'scheduled'
+              status: assignedTeacher ? 'scheduled' : 'tentative'
             };
 
             slots.push(slot);
             classGroupSchedule.push({ day, period });
-            teacherSchedules[assignedTeacher.id].push({ day, period });
+            if (assignedTeacher) {
+              teacherSchedules[assignedTeacher.id].push({ day, period });
+            }
             roomSchedules[assignedRoom.id].push({ day, period });
             scheduled = true;
             break; // Move to next day
