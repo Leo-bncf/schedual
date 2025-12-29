@@ -236,15 +236,15 @@ export default function Schedule() {
       
       if (slotsToDelete.length > 0) {
         // Delete in small batches with delays to avoid rate limits
-        const batchSize = 5;
+        const batchSize = 3; // Reduced from 5
         for (let i = 0; i < slotsToDelete.length; i += batchSize) {
           const batch = slotsToDelete.slice(i, i + batchSize);
           await Promise.all(batch.map(slot => base44.entities.ScheduleSlot.delete(slot.id)));
-          // Delay between batches to avoid rate limit
-          await new Promise(resolve => setTimeout(resolve, 1000));
+          // Longer delay between batches to avoid rate limit
+          await new Promise(resolve => setTimeout(resolve, 2000)); // Increased from 1000ms
         }
         console.log('All slots deleted, waiting before creating new ones...');
-        await new Promise(resolve => setTimeout(resolve, 2000));
+        await new Promise(resolve => setTimeout(resolve, 3000)); // Increased from 2000ms
       }
 
       // Comprehensive scheduling algorithm for all students, teachers, and rooms
@@ -704,7 +704,7 @@ export default function Schedule() {
       console.log('Sample slot:', newSlots[0]);
 
       if (newSlots.length > 0) {
-        const batchSize = 10;
+        const batchSize = 5; // Reduced from 10 to avoid rate limits
         let totalCreated = 0;
 
         for (let i = 0; i < newSlots.length; i += batchSize) {
@@ -727,23 +727,23 @@ export default function Schedule() {
           } catch (batchError) {
             console.error(`✗ Batch failed:`, batchError.message);
             // Wait longer before retry
-            await new Promise(resolve => setTimeout(resolve, 3000));
+            await new Promise(resolve => setTimeout(resolve, 5000));
             
-            // Retry with smaller sub-batches
+            // Retry individually with longer delays
             for (const slot of batch) {
               try {
                 await base44.entities.ScheduleSlot.create(slot);
                 totalCreated++;
-                await new Promise(resolve => setTimeout(resolve, 500));
+                await new Promise(resolve => setTimeout(resolve, 1000)); // Increased from 500ms
               } catch (slotError) {
                 console.error(`Failed to create slot:`, slotError.message);
               }
             }
           }
 
-          // Longer delay between batches
+          // Much longer delay between batches to avoid rate limits
           if (i + batchSize < newSlots.length) {
-            await new Promise(resolve => setTimeout(resolve, 2000));
+            await new Promise(resolve => setTimeout(resolve, 3000)); // Increased from 2000ms
           }
         }
 
