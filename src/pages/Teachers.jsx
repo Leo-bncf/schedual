@@ -32,6 +32,7 @@ import PageHeader from '../components/ui-custom/PageHeader';
 import DataTable from '../components/ui-custom/DataTable';
 import EmptyState from '../components/ui-custom/EmptyState';
 import QualificationManager from '../components/teachers/QualificationManager';
+import UploadProgressDialog from '../components/upload/UploadProgressDialog';
 
 const DAYS = ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday'];
 
@@ -41,8 +42,10 @@ export default function Teachers() {
   const [searchQuery, setSearchQuery] = useState('');
   const [uploadState, setUploadState] = useState({
     isUploading: false,
+    stage: 'uploading',
     progress: '',
     teachersCreated: 0,
+    totalTeachers: 0,
     error: null
   });
   const [formData, setFormData] = useState({
@@ -166,15 +169,17 @@ export default function Teachers() {
 
     setUploadState({
       isUploading: true,
+      stage: 'uploading',
       progress: 'Uploading file...',
       teachersCreated: 0,
+      totalTeachers: 0,
       error: null
     });
 
     try {
       const { file_url } = await base44.integrations.Core.UploadFile({ file });
 
-      setUploadState(prev => ({ ...prev, progress: 'Extracting teacher data...' }));
+      setUploadState(prev => ({ ...prev, stage: 'extracting', progress: 'Extracting teacher data...' }));
 
       const extractionResult = await base44.integrations.Core.InvokeLLM({
         prompt: `Extract all teachers from this document. For each teacher, provide:
@@ -219,7 +224,7 @@ Example: {"full_name": "John Smith", "email": "john@school.com", "subjects": ["P
         throw new Error('No teachers found in the document');
       }
 
-      setUploadState(prev => ({ ...prev, progress: `Creating ${teachersData.length} teachers...` }));
+      setUploadState(prev => ({ ...prev, stage: 'creating', totalTeachers: teachersData.length, progress: `Creating ${teachersData.length} teachers...` }));
 
       // Fetch all subjects to match names to IDs
       const allSubjects = await base44.entities.Subject.list();
@@ -318,15 +323,17 @@ Example: {"full_name": "John Smith", "email": "john@school.com", "subjects": ["P
 
       setUploadState(prev => ({ 
         ...prev, 
-        isUploading: false,
+        stage: 'complete',
         progress: `Successfully created ${created} teachers!`
       }));
 
       setTimeout(() => {
         setUploadState({
           isUploading: false,
+          stage: 'uploading',
           progress: '',
           teachersCreated: 0,
+          totalTeachers: 0,
           error: null
         });
         queryClient.invalidateQueries({ queryKey: ['teachers'] });
@@ -336,8 +343,10 @@ Example: {"full_name": "John Smith", "email": "john@school.com", "subjects": ["P
       console.error('Upload error:', error);
       setUploadState({
         isUploading: false,
+        stage: 'uploading',
         progress: '',
         teachersCreated: 0,
+        totalTeachers: 0,
         error: error?.message || 'An unknown error occurred'
       });
       alert('Failed to process file: ' + (error?.message || 'Unknown error'));
@@ -600,6 +609,15 @@ Example: {"full_name": "John Smith", "email": "john@school.com", "subjects": ["P
           </form>
         </DialogContent>
       </Dialog>
+
+      <UploadProgressDialog 
+        open={uploadState.isUploading}
+        stage={uploadState.stage}
+        progress={uploadState.progress}
+        current={uploadState.teachersCreated}
+        total={uploadState.totalTeachers}
+        entityType="Teachers"
+      />
     </div>
   );
 }

@@ -32,6 +32,7 @@ import {
 } from "@/components/ui/dropdown-menu";
 import PageHeader from '../components/ui-custom/PageHeader';
 import EmptyState from '../components/ui-custom/EmptyState';
+import UploadProgressDialog from '../components/upload/UploadProgressDialog';
 
 const IB_GROUPS = [
   { id: 1, name: 'Language & Literature', icon: FileText, color: 'bg-blue-500' },
@@ -48,8 +49,10 @@ export default function Subjects() {
   const [searchQuery, setSearchQuery] = useState('');
   const [uploadState, setUploadState] = useState({
     isUploading: false,
+    stage: 'uploading',
     progress: '',
     subjectsCreated: 0,
+    totalSubjects: 0,
     error: null
   });
   const [formData, setFormData] = useState({
@@ -183,15 +186,17 @@ export default function Subjects() {
 
     setUploadState({
       isUploading: true,
+      stage: 'uploading',
       progress: 'Uploading file...',
       subjectsCreated: 0,
+      totalSubjects: 0,
       error: null
     });
 
     try {
       const { file_url } = await base44.integrations.Core.UploadFile({ file });
 
-      setUploadState(prev => ({ ...prev, progress: 'Extracting subject data...' }));
+      setUploadState(prev => ({ ...prev, stage: 'extracting', progress: 'Extracting subject data...' }));
 
       const extractionResult = await base44.integrations.Core.InvokeLLM({
         prompt: `Extract all subjects/classes from this document. For each subject, provide: name, code, ib_level (one of: DP, MYP, PYP), and for DP subjects also include ib_group (string: "1", "2", "3", "4", "5", or "6") and available_levels (array of HL and/or SL).`,
@@ -223,7 +228,7 @@ export default function Subjects() {
         throw new Error('No subjects found in the document');
       }
 
-      setUploadState(prev => ({ ...prev, progress: `Creating ${subjectsData.length} subjects...` }));
+      setUploadState(prev => ({ ...prev, stage: 'creating', totalSubjects: subjectsData.length, progress: `Creating ${subjectsData.length} subjects...` }));
 
       let created = 0;
       for (const subject of subjectsData) {
@@ -255,15 +260,17 @@ export default function Subjects() {
 
       setUploadState(prev => ({ 
         ...prev, 
-        isUploading: false,
+        stage: 'complete',
         progress: `Successfully created ${created} subjects!`
       }));
 
       setTimeout(() => {
         setUploadState({
           isUploading: false,
+          stage: 'uploading',
           progress: '',
           subjectsCreated: 0,
+          totalSubjects: 0,
           error: null
         });
         queryClient.invalidateQueries({ queryKey: ['subjects'] });
@@ -273,8 +280,10 @@ export default function Subjects() {
       console.error('Upload error:', error);
       setUploadState({
         isUploading: false,
+        stage: 'uploading',
         progress: '',
         subjectsCreated: 0,
+        totalSubjects: 0,
         error: error?.message || 'An unknown error occurred'
       });
       alert('Failed to process file: ' + (error?.message || 'Unknown error'));
@@ -719,7 +728,14 @@ export default function Subjects() {
         </DialogContent>
       </Dialog>
 
-
+      <UploadProgressDialog 
+        open={uploadState.isUploading}
+        stage={uploadState.stage}
+        progress={uploadState.progress}
+        current={uploadState.subjectsCreated}
+        total={uploadState.totalSubjects}
+        entityType="Subjects"
+      />
     </div>
   );
 }

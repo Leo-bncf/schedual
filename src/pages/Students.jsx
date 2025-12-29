@@ -34,6 +34,7 @@ import DataTable from '../components/ui-custom/DataTable';
 import EmptyState from '../components/ui-custom/EmptyState';
 import SubjectSelector from '../components/students/SubjectSelector';
 import DPValidator from '../components/students/DPValidator';
+import UploadProgressDialog from '../components/upload/UploadProgressDialog';
 
 export default function Students() {
   const [isDialogOpen, setIsDialogOpen] = useState(false);
@@ -42,8 +43,10 @@ export default function Students() {
   const [yearFilter, setYearFilter] = useState('all');
   const [uploadState, setUploadState] = useState({
     isUploading: false,
+    stage: 'uploading',
     progress: '',
     studentsCreated: 0,
+    totalStudents: 0,
     error: null
   });
   const [formData, setFormData] = useState({
@@ -362,15 +365,17 @@ export default function Students() {
 
     setUploadState({
       isUploading: true,
+      stage: 'uploading',
       progress: 'Uploading file...',
       studentsCreated: 0,
+      totalStudents: 0,
       error: null
     });
 
     try {
       const { file_url } = await base44.integrations.Core.UploadFile({ file });
 
-      setUploadState(prev => ({ ...prev, progress: 'Extracting student data...' }));
+      setUploadState(prev => ({ ...prev, stage: 'extracting', progress: 'Extracting student data...' }));
 
       const extractionResult = await base44.integrations.Core.InvokeLLM({
         prompt: `Extract all students from this document. For each student, provide:
@@ -420,7 +425,7 @@ Example for MYP/PYP: subjects: [{"name": "Mathematics"}, {"name": "Science"}]`,
         throw new Error('No students found in the document');
       }
 
-      setUploadState(prev => ({ ...prev, progress: `Creating ${studentsData.length} students...` }));
+      setUploadState(prev => ({ ...prev, stage: 'creating', totalStudents: studentsData.length, progress: `Creating ${studentsData.length} students...` }));
 
       // Fetch subjects to match names to IDs
       const allSubjects = await base44.entities.Subject.list();
@@ -490,15 +495,17 @@ Example for MYP/PYP: subjects: [{"name": "Mathematics"}, {"name": "Science"}]`,
 
       setUploadState(prev => ({ 
         ...prev, 
-        isUploading: false,
+        stage: 'complete',
         progress: `Successfully created ${created} students!`
       }));
 
       setTimeout(() => {
         setUploadState({
           isUploading: false,
+          stage: 'uploading',
           progress: '',
           studentsCreated: 0,
+          totalStudents: 0,
           error: null
         });
         queryClient.invalidateQueries({ queryKey: ['students'] });
@@ -508,13 +515,15 @@ Example for MYP/PYP: subjects: [{"name": "Mathematics"}, {"name": "Science"}]`,
       console.error('Upload error:', error);
       setUploadState({
         isUploading: false,
+        stage: 'uploading',
         progress: '',
         studentsCreated: 0,
+        totalStudents: 0,
         error: error?.message || 'An unknown error occurred'
       });
       alert('Failed to process file: ' + (error?.message || 'Unknown error'));
-    }
-  };
+      }
+      };
 
   return (
     <div className="space-y-6">
@@ -757,7 +766,14 @@ Example for MYP/PYP: subjects: [{"name": "Mathematics"}, {"name": "Science"}]`,
         </DialogContent>
       </Dialog>
 
-
+      <UploadProgressDialog 
+        open={uploadState.isUploading}
+        stage={uploadState.stage}
+        progress={uploadState.progress}
+        current={uploadState.studentsCreated}
+        total={uploadState.totalStudents}
+        entityType="Students"
+      />
     </div>
   );
 }
