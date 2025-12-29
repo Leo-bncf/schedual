@@ -382,10 +382,17 @@ export default function Students() {
 - full_name, email (if available), student_id (if available)
 - ib_programme (one of: DP, MYP, PYP)
 - year_group (e.g., DP1, DP2, MYP1-5, PYP-A through PYP-F)
-- subjects: array of subject choices. For DP students, each subject should include the subject name and level (HL or SL). For MYP/PYP, just the subject name is needed.
+- subjects: array of ALL subject choices found for the student. 
 
-Example for DP: subjects: [{"name": "Physics", "level": "HL"}, {"name": "English A", "level": "SL"}]
-Example for MYP/PYP: subjects: [{"name": "Mathematics"}, {"name": "Science"}]`,
+CRITICAL: For DP students, they must take exactly 6 subjects (one from each of the 6 IB groups). Extract ALL 6 subjects with their levels (HL or SL).
+- Each DP student MUST have exactly 6 subjects in their subjects array
+- Each subject must include the subject name and level (HL or SL)
+- Typically 3-4 subjects at HL and the rest at SL
+
+For MYP/PYP students, extract all subjects listed (no level needed).
+
+Example for DP (MUST HAVE 6): subjects: [{"name": "English A", "level": "HL"}, {"name": "Spanish B", "level": "SL"}, {"name": "History", "level": "HL"}, {"name": "Physics", "level": "HL"}, {"name": "Mathematics AA", "level": "HL"}, {"name": "Visual Arts", "level": "SL"}]
+Example for MYP/PYP: subjects: [{"name": "Mathematics"}, {"name": "Science"}, {"name": "English"}, {"name": "History"}]`,
         file_urls: [file_url],
         response_json_schema: {
           type: "object",
@@ -402,6 +409,7 @@ Example for MYP/PYP: subjects: [{"name": "Mathematics"}, {"name": "Science"}]`,
                   year_group: { type: "string" },
                   subjects: {
                     type: "array",
+                    minItems: 1,
                     items: {
                       type: "object",
                       properties: {
