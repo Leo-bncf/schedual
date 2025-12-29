@@ -16,7 +16,13 @@ export default function StudentScheduleView({ students, slots, groups, subjects,
   const selectedStudent = students.find(s => s.id === selectedStudentId);
 
   const getStudentSlots = (studentId) => {
+    const student = students.find(s => s.id === studentId);
     return slots.filter(slot => {
+      // PYP/MYP: match by classgroup_id
+      if (slot.classgroup_id && student?.classgroup_id) {
+        return slot.classgroup_id === student.classgroup_id;
+      }
+      // DP: match by teaching_group_id
       const group = groups.find(g => g.id === slot.teaching_group_id);
       return group?.student_ids?.includes(studentId);
     });
@@ -78,18 +84,36 @@ export default function StudentScheduleView({ students, slots, groups, subjects,
                   </div>
                   {DAYS.map(day => {
                     const slot = getSlotForPeriod(day, period);
-                    const group = slot ? groups.find(g => g.id === slot.teaching_group_id) : null;
-                    const subject = group ? subjects.find(s => s.id === group.subject_id) : null;
-                    const teacher = group ? teachers.find(t => t.id === group.teacher_id) : null;
+                    let subject = null;
+                    let teacher = null;
+                    let level = null;
+                    
+                    if (slot) {
+                      // PYP/MYP: subject_id and teacher_id are directly on the slot
+                      if (slot.subject_id) {
+                        subject = subjects.find(s => s.id === slot.subject_id);
+                        teacher = teachers.find(t => t.id === slot.teacher_id);
+                        level = selectedStudent?.ib_programme || '';
+                      } else {
+                        // DP: get from teaching group
+                        const group = groups.find(g => g.id === slot.teaching_group_id);
+                        if (group) {
+                          subject = subjects.find(s => s.id === group.subject_id);
+                          teacher = teachers.find(t => t.id === group.teacher_id);
+                          level = group.level;
+                        }
+                      }
+                    }
+                    
                     const room = slot ? rooms.find(r => r.id === slot.room_id) : null;
                     const colorClass = subject ? subjectColors[subject.ib_group || 1] : '';
 
                     return (
                       <div key={`${day}-${period}`} className="border-r border-slate-200 last:border-r-0 hover:bg-slate-50/50">
-                        {slot && group && (
+                        {slot && subject && (
                           <div className={`h-full p-2 border-l-4 ${colorClass}`}>
-                            <div className="font-semibold text-xs text-slate-900 leading-tight">{subject?.name}</div>
-                            <div className="text-[10px] text-slate-700 leading-tight">{group.level}</div>
+                            <div className="font-semibold text-xs text-slate-900 leading-tight">{subject.name}</div>
+                            {level && <div className="text-[10px] text-slate-700 leading-tight">{level}</div>}
                             {teacher && <div className="text-[10px] text-slate-600 mt-0.5">{teacher.full_name}</div>}
                             {room && <div className="text-[10px] text-slate-500">{room.name}</div>}
                           </div>

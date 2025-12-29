@@ -30,7 +30,7 @@ const subjectColors = {
   6: 'bg-cyan-100 border-cyan-300',
 };
 
-export default function TimetableGrid({ slots = [], groups = [], rooms = [], subjects = [], teachers = [], onSlotClick, periodsPerDay = 12, exportId = "timetable-grid" }) {
+export default function TimetableGrid({ slots = [], groups = [], rooms = [], subjects = [], teachers = [], classGroups = [], onSlotClick, periodsPerDay = 12, exportId = "timetable-grid" }) {
   const [selectedSlot, setSelectedSlot] = React.useState(null);
 
   const getSlotData = (day, period) => {
@@ -150,10 +150,31 @@ export default function TimetableGrid({ slots = [], groups = [], rooms = [], sub
                     >
                       {visibleSlots.map(slot => {
                         const span = getSlotSpan(day, period, slot.id);
-                        const group = getGroupInfo(slot.teaching_group_id);
                         const room = getRoomInfo(slot.room_id);
-                        const subject = group ? getSubjectInfo(group.subject_id) : null;
-                        const teacher = group ? getTeacherInfo(group.teacher_id) : null;
+                        
+                        let subject = null;
+                        let teacher = null;
+                        let level = '';
+                        let displayName = '';
+                        
+                        // PYP/MYP: subject_id and teacher_id are directly on the slot
+                        if (slot.subject_id) {
+                          subject = getSubjectInfo(slot.subject_id);
+                          teacher = getTeacherInfo(slot.teacher_id);
+                          const classGroup = classGroups.find(cg => cg.id === slot.classgroup_id);
+                          level = classGroup?.ib_programme || '';
+                          displayName = classGroup?.name || '';
+                        } else {
+                          // DP: get from teaching group
+                          const group = getGroupInfo(slot.teaching_group_id);
+                          if (group) {
+                            subject = getSubjectInfo(group.subject_id);
+                            teacher = getTeacherInfo(group.teacher_id);
+                            level = group.level;
+                            displayName = group.name;
+                          }
+                        }
+                        
                         const colorClass = subject ? subjectColors[subject.ib_group || 1] : '';
 
                         return (
@@ -162,13 +183,13 @@ export default function TimetableGrid({ slots = [], groups = [], rooms = [], sub
                             className="cursor-pointer hover:shadow-md transition-all rounded-lg overflow-hidden"
                             onClick={() => handleSlotClick(slot)}
                           >
-                            {group && (
+                            {subject && (
                               <div className={`p-3 border-l-4 ${colorClass} border border-slate-200`}>
                                 <div className="font-bold text-sm text-slate-900 leading-tight mb-1.5">
-                                  {subject?.name || group.name}
+                                  {subject.name}
                                 </div>
                                 <Badge variant="outline" className="w-fit mb-2 bg-white/70 font-semibold text-xs">
-                                  {group.level}
+                                  {level}
                                 </Badge>
                                 <div className="text-xs text-slate-700 space-y-1">
                                   {teacher && (

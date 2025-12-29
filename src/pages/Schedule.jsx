@@ -444,7 +444,20 @@ export default function Schedule() {
               }
 
               if (assignedRoom) {
-                const slot = {
+                // For PYP/MYP: use classgroup_id and populate teacher/subject directly
+                // For DP: use teaching_group_id (traditional approach)
+                const isPYPorMYP = level === 'PYP' || level === 'MYP';
+                const slot = isPYPorMYP ? {
+                  school_id: schoolId,
+                  schedule_version: selectedVersion.id,
+                  classgroup_id: group.classgroup_id || null,
+                  teacher_id: teacherId,
+                  subject_id: group.subject_id,
+                  room_id: assignedRoom.id,
+                  day,
+                  period,
+                  status: 'scheduled'
+                } : {
                   school_id: schoolId,
                   schedule_version: selectedVersion.id,
                   teaching_group_id: group.id,
@@ -534,7 +547,18 @@ export default function Schedule() {
                 }
 
                 if (assignedRoom) {
-                  const slot = {
+                  const isPYPorMYP = level === 'PYP' || level === 'MYP';
+                  const slot = isPYPorMYP ? {
+                    school_id: schoolId,
+                    schedule_version: selectedVersion.id,
+                    classgroup_id: group.classgroup_id || null,
+                    teacher_id: teacherId,
+                    subject_id: group.subject_id,
+                    room_id: assignedRoom.id,
+                    day,
+                    period,
+                    status: 'scheduled'
+                  } : {
                     school_id: schoolId,
                     schedule_version: selectedVersion.id,
                     teaching_group_id: group.id,
@@ -843,30 +867,33 @@ export default function Schedule() {
                       />
                     </div>
                     {selectedClassGroupId ? (
-                      <div id="master-schedule-grid">
-                        <TimetableGrid 
-                          slots={scheduleSlots.filter(slot => {
-                            const group = teachingGroups.find(g => g.id === slot.teaching_group_id);
-                            if (!group) return false;
-                            // Get students in this teaching group
-                            const groupStudents = group.student_ids || [];
-                            // Get students in selected ClassGroup
-                            const classGroupStudents = students
-                              .filter(s => s.classgroup_id === selectedClassGroupId)
-                              .map(s => s.id);
-                            // Show slot if any student from the ClassGroup is in this teaching group
-                            return groupStudents.some(sid => classGroupStudents.includes(sid));
-                          })}
-                          groups={teachingGroups}
-                          rooms={rooms}
-                          subjects={subjects}
-                          teachers={teachers}
-                          onSlotClick={(day, period, slot) => {
-                            console.log('Clicked:', day, period, slot);
-                          }}
-                          exportId="master-timetable"
-                        />
-                      </div>
+                     <div id="master-schedule-grid">
+                       <TimetableGrid 
+                         slots={scheduleSlots.filter(slot => {
+                           // PYP/MYP slots use classgroup_id directly
+                           if (slot.classgroup_id) {
+                             return slot.classgroup_id === selectedClassGroupId;
+                           }
+                           // DP slots use teaching_group_id
+                           const group = teachingGroups.find(g => g.id === slot.teaching_group_id);
+                           if (!group) return false;
+                           const groupStudents = group.student_ids || [];
+                           const classGroupStudents = students
+                             .filter(s => s.classgroup_id === selectedClassGroupId)
+                             .map(s => s.id);
+                           return groupStudents.some(sid => classGroupStudents.includes(sid));
+                         })}
+                         groups={teachingGroups}
+                         rooms={rooms}
+                         subjects={subjects}
+                         teachers={teachers}
+                         classGroups={classGroups}
+                         onSlotClick={(day, period, slot) => {
+                           console.log('Clicked:', day, period, slot);
+                         }}
+                         exportId="master-timetable"
+                       />
+                     </div>
                     ) : (
                       <Card className="border-0 shadow-sm">
                         <CardContent className="py-16 text-center">

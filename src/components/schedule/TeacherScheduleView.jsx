@@ -17,6 +17,11 @@ export default function TeacherScheduleView({ teachers, slots, groups, subjects,
 
   const getTeacherSlots = (teacherId) => {
     return slots.filter(slot => {
+      // PYP/MYP: teacher_id is directly on the slot
+      if (slot.teacher_id) {
+        return slot.teacher_id === teacherId;
+      }
+      // DP: get from teaching group
       const group = groups.find(g => g.id === slot.teaching_group_id);
       return group?.teacher_id === teacherId;
     });
@@ -78,20 +83,40 @@ export default function TeacherScheduleView({ teachers, slots, groups, subjects,
                   </div>
                   {DAYS.map(day => {
                     const slot = getSlotForPeriod(day, period);
-                    const group = slot ? groups.find(g => g.id === slot.teaching_group_id) : null;
-                    const subject = group ? subjects.find(s => s.id === group.subject_id) : null;
+                    let subject = null;
+                    let displayText = '';
+                    let studentCount = 0;
+                    
+                    if (slot) {
+                      // PYP/MYP: subject_id is directly on the slot
+                      if (slot.subject_id) {
+                        subject = subjects.find(s => s.id === slot.subject_id);
+                        displayText = subject?.ib_level || '';
+                      } else {
+                        // DP: get from teaching group
+                        const group = groups.find(g => g.id === slot.teaching_group_id);
+                        if (group) {
+                          subject = subjects.find(s => s.id === group.subject_id);
+                          displayText = `${group.level} - ${group.name}`;
+                          studentCount = group.student_ids?.length || 0;
+                        }
+                      }
+                    }
+                    
                     const room = slot ? rooms.find(r => r.id === slot.room_id) : null;
                     const colorClass = subject ? subjectColors[subject.ib_group || 1] : '';
 
                     return (
                       <div key={`${day}-${period}`} className="border-r border-slate-200 last:border-r-0 hover:bg-slate-50/50">
-                        {slot && group && (
+                        {slot && subject && (
                           <div className={`h-full p-2 border-l-4 ${colorClass}`}>
-                            <div className="font-semibold text-xs text-slate-900 leading-tight">{subject?.name}</div>
-                            <div className="text-[10px] text-slate-700 leading-tight">{group.level} - {group.name}</div>
-                            <div className="text-[10px] text-slate-600 mt-0.5">
-                              {group.student_ids?.length || 0} students
-                            </div>
+                            <div className="font-semibold text-xs text-slate-900 leading-tight">{subject.name}</div>
+                            <div className="text-[10px] text-slate-700 leading-tight">{displayText}</div>
+                            {studentCount > 0 && (
+                              <div className="text-[10px] text-slate-600 mt-0.5">
+                                {studentCount} students
+                              </div>
+                            )}
                             {room && <div className="text-[10px] text-slate-500">{room.name}</div>}
                           </div>
                         )}

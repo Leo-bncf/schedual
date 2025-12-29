@@ -1,5 +1,6 @@
 import AIAdvisor from './pages/AIAdvisor';
 import AccountManager from './pages/AccountManager';
+import ClassGroups from './pages/ClassGroups';
 import Constraints from './pages/Constraints';
 import ContactUs from './pages/ContactUs';
 import Dashboard from './pages/Dashboard';
@@ -25,13 +26,13 @@ import TeachingGroups from './pages/TeachingGroups';
 import TermsOfUse from './pages/TermsOfUse';
 import TestData from './pages/TestData';
 import UserManagement from './pages/UserManagement';
-import ClassGroups from './pages/ClassGroups';
 import __Layout from './Layout.jsx';
 
 
 export const PAGES = {
     "AIAdvisor": AIAdvisor,
     "AccountManager": AccountManager,
+    "ClassGroups": ClassGroups,
     "Constraints": Constraints,
     "ContactUs": ContactUs,
     "Dashboard": Dashboard,
@@ -57,7 +58,6 @@ export const PAGES = {
     "TermsOfUse": TermsOfUse,
     "TestData": TestData,
     "UserManagement": UserManagement,
-    "ClassGroups": ClassGroups,
 }
 
 export const pagesConfig = {
