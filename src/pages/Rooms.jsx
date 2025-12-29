@@ -31,6 +31,7 @@ import {
 } from "@/components/ui/dropdown-menu";
 import PageHeader from '../components/ui-custom/PageHeader';
 import EmptyState from '../components/ui-custom/EmptyState';
+import UploadProgressDialog from '../components/upload/UploadProgressDialog';
 
 const ROOM_TYPES = [
   { value: 'classroom', label: 'Classroom', icon: BookOpen, color: 'bg-blue-500' },
@@ -51,8 +52,10 @@ export default function Rooms() {
   const [typeFilter, setTypeFilter] = useState('all');
   const [uploadState, setUploadState] = useState({
     isUploading: false,
+    stage: 'uploading',
     progress: '',
     roomsCreated: 0,
+    totalRooms: 0,
     error: null
   });
   const [formData, setFormData] = useState({
@@ -175,8 +178,10 @@ export default function Rooms() {
 
     setUploadState({
       isUploading: true,
+      stage: 'uploading',
       progress: 'Uploading file...',
       roomsCreated: 0,
+      totalRooms: 0,
       error: null
     });
 
@@ -189,7 +194,7 @@ export default function Rooms() {
         throw new Error('File upload failed - no URL returned');
       }
 
-      setUploadState(prev => ({ ...prev, progress: 'Extracting room data...' }));
+      setUploadState(prev => ({ ...prev, stage: 'extracting', progress: 'Extracting room data...' }));
 
       // Extract room data using LLM
       const extractionResult = await base44.integrations.Core.InvokeLLM({
@@ -224,7 +229,7 @@ export default function Rooms() {
         throw new Error('No rooms found in the document');
       }
 
-      setUploadState(prev => ({ ...prev, progress: `Creating ${roomsData.length} rooms...` }));
+      setUploadState(prev => ({ ...prev, stage: 'creating', totalRooms: roomsData.length, progress: `Creating ${roomsData.length} rooms...` }));
 
       // Create rooms one by one
       let created = 0;
@@ -254,15 +259,17 @@ export default function Rooms() {
 
       setUploadState(prev => ({ 
         ...prev, 
-        isUploading: false,
+        stage: 'complete',
         progress: `Successfully created ${created} rooms!`
       }));
 
       setTimeout(() => {
         setUploadState({
           isUploading: false,
+          stage: 'uploading',
           progress: '',
           roomsCreated: 0,
+          totalRooms: 0,
           error: null
         });
         queryClient.invalidateQueries({ queryKey: ['rooms'] });
@@ -272,8 +279,10 @@ export default function Rooms() {
       console.error('Upload error:', error);
       setUploadState({
         isUploading: false,
+        stage: 'uploading',
         progress: '',
         roomsCreated: 0,
+        totalRooms: 0,
         error: error?.message || 'An unknown error occurred'
       });
       alert('Failed to process file: ' + (error?.message || 'Unknown error'));
@@ -543,7 +552,14 @@ export default function Rooms() {
         </DialogContent>
       </Dialog>
 
-
+      <UploadProgressDialog 
+        open={uploadState.isUploading}
+        stage={uploadState.stage}
+        progress={uploadState.progress}
+        current={uploadState.roomsCreated}
+        total={uploadState.totalRooms}
+        entityType="Rooms"
+      />
     </div>
   );
 }
