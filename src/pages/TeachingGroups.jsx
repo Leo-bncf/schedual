@@ -14,6 +14,7 @@ import {
 } from "@/components/ui/dialog";
 import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Plus, Search, Users, MoreHorizontal, Pencil, Trash2, User, BookOpen, Sparkles } from 'lucide-react';
+import { motion } from 'framer-motion';
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -190,13 +191,21 @@ export default function TeachingGroups() {
         />
       ) : (
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-          {filteredGroups.map(group => {
+          {filteredGroups.map((group, index) => {
             const subject = getSubjectInfo(group.subject_id);
             const teacher = getTeacherInfo(group.teacher_id);
             const studentCount = group.student_ids?.length || 0;
 
             return (
-              <Card key={group.id} className="border-0 shadow-sm hover:shadow-md transition-shadow">
+              <motion.div
+                key={group.id}
+                initial={{ opacity: 0, y: 20 }}
+                animate={{ opacity: 1, y: 0 }}
+                transition={{ delay: index * 0.05 }}
+                whileHover={{ scale: 1.03, y: -5 }}
+              >
+                <Card className="border-0 shadow-lg hover:shadow-2xl transition-all duration-300 overflow-hidden">
+                  <div className={`h-1 ${group.level === 'HL' ? 'bg-gradient-to-r from-rose-500 to-pink-500' : 'bg-gradient-to-r from-amber-500 to-orange-500'}`} />
                 <CardContent className="p-5">
                   <div className="flex items-start justify-between mb-3">
                     <div className="flex-1">
@@ -275,6 +284,7 @@ export default function TeachingGroups() {
                   </div>
                 </CardContent>
               </Card>
+            </motion.div>
             );
           })}
         </div>

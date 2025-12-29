@@ -6,6 +6,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Input } from "@/components/ui/input";
 import { Users, Sparkles, Search, RefreshCw, X, BookOpen, Trash2 } from 'lucide-react';
+import { motion } from 'framer-motion';
 import {
   Dialog,
   DialogContent,
@@ -225,15 +226,24 @@ export default function ClassGroups() {
         </Card>
       ) : (
         <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
-          {filteredGroups.map(group => {
+          {filteredGroups.map((group, index) => {
             const groupStudents = students.filter(s => group.student_ids?.includes(s.id));
             const homeroomTeacher = teachers.find(t => t.id === group.homeroom_teacher_id);
 
             return (
-              <Card 
-                key={group.id} 
-                className="border-0 shadow-sm hover:shadow-md transition-shadow"
+              <motion.div
+                key={group.id}
+                initial={{ opacity: 0, scale: 0.9 }}
+                animate={{ opacity: 1, scale: 1 }}
+                transition={{ delay: index * 0.05 }}
+                whileHover={{ scale: 1.03, y: -5 }}
               >
+                <Card className="border-0 shadow-lg hover:shadow-2xl transition-all duration-300 overflow-hidden cursor-pointer">
+                  <div className={`h-1 bg-gradient-to-r ${
+                    group.ib_programme === 'DP' ? 'from-blue-500 to-cyan-500' :
+                    group.ib_programme === 'MYP' ? 'from-emerald-500 to-teal-500' :
+                    'from-amber-500 to-orange-500'
+                  }`} />
                 <CardHeader className="pb-3">
                   <div className="flex items-start justify-between">
                     <div 
@@ -296,6 +306,7 @@ export default function ClassGroups() {
                   </div>
                 </CardContent>
               </Card>
+            </motion.div>
             );
           })}
         </div>
