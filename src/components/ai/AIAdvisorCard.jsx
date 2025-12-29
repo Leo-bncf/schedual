@@ -30,26 +30,26 @@ export default function AIAdvisorCard({ log, onApply, onDismiss }) {
   const StatusIcon = statusIcons[log.status] || Clock;
 
   return (
-    <Card className="border-0 shadow-sm hover:shadow-md transition-all duration-300 overflow-hidden">
-      <div className="absolute top-0 left-0 w-1 h-full bg-gradient-to-b from-violet-500 to-indigo-500" />
+    <Card className="border-0 shadow-lg hover:shadow-xl transition-all duration-300 overflow-hidden bg-gradient-to-br from-white to-slate-50/50 relative">
+      <div className="absolute top-0 left-0 w-1 h-full bg-gradient-to-b from-violet-500 via-indigo-500 to-purple-500" />
       <CardHeader className="pb-3">
         <div className="flex items-start justify-between">
           <div className="flex items-center gap-3">
-            <div className="p-2 rounded-lg bg-gradient-to-br from-violet-100 to-indigo-100">
+            <div className="p-2.5 rounded-xl bg-gradient-to-br from-violet-100 via-indigo-100 to-purple-100 shadow-sm">
               <Sparkles className="w-5 h-5 text-violet-600" />
             </div>
             <div>
-              <CardTitle className="text-base font-semibold text-slate-900">
+              <CardTitle className="text-base font-bold text-slate-900">
                 {agentLabels[log.agent_type] || log.agent_type}
               </CardTitle>
               <p className="text-sm text-slate-500 capitalize">{log.action}</p>
             </div>
           </div>
           <div className="flex items-center gap-2">
-            <Badge className={`${severityColors[log.severity]} border-0 font-medium`}>
+            <Badge className={`${severityColors[log.severity]} border-0 font-medium shadow-sm`}>
               {log.severity}
             </Badge>
-            <Badge variant="outline" className="flex items-center gap-1">
+            <Badge variant="outline" className="flex items-center gap-1 border-slate-200">
               <StatusIcon className="w-3 h-3" />
               {log.status}
             </Badge>
@@ -58,24 +58,38 @@ export default function AIAdvisorCard({ log, onApply, onDismiss }) {
       </CardHeader>
       <CardContent className="pt-0">
         {log.output?.message && (
-          <p className="text-slate-600 mb-4">{log.output.message}</p>
+          <p className="text-slate-700 mb-4 leading-relaxed">{log.output.message}</p>
         )}
         {log.output?.recommendations && (
-          <div className="space-y-2 mb-4">
-            <p className="text-sm font-medium text-slate-700">Recommendations:</p>
-            <ul className="list-disc list-inside text-sm text-slate-600 space-y-1">
+          <div className="space-y-2 mb-4 p-3 rounded-lg bg-gradient-to-br from-violet-50/50 to-indigo-50/50 border border-violet-100">
+            <p className="text-sm font-bold text-slate-800 flex items-center gap-2">
+              <div className="w-1 h-4 bg-gradient-to-b from-violet-500 to-indigo-500 rounded-full" />
+              Recommendations:
+            </p>
+            <ul className="list-disc list-inside text-sm text-slate-700 space-y-1.5 ml-3">
               {log.output.recommendations.map((rec, i) => (
-                <li key={i}>{rec}</li>
+                <li key={i} className="leading-relaxed">{rec}</li>
               ))}
             </ul>
           </div>
         )}
         {log.status === 'pending' && (
           <div className="flex gap-2 mt-4">
-            <Button size="sm" onClick={() => onApply && onApply(log)} className="bg-indigo-600 hover:bg-indigo-700">
+            <Button 
+              size="sm" 
+              onClick={() => onApply && onApply(log)} 
+              className="bg-gradient-to-r from-violet-600 to-indigo-600 hover:from-violet-700 hover:to-indigo-700 shadow-md hover:shadow-lg transition-all"
+            >
+              <Check className="w-3 h-3 mr-1" />
               Apply Suggestion
             </Button>
-            <Button size="sm" variant="outline" onClick={() => onDismiss && onDismiss(log)}>
+            <Button 
+              size="sm" 
+              variant="outline" 
+              onClick={() => onDismiss && onDismiss(log)}
+              className="hover:bg-slate-100 border-slate-200"
+            >
+              <X className="w-3 h-3 mr-1" />
               Dismiss
             </Button>
           </div>

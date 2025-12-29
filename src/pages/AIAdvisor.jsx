@@ -198,23 +198,26 @@ export default function AIAdvisor() {
               initial={{ opacity: 0, y: 20 }}
               animate={{ opacity: 1, y: 0 }}
               transition={{ delay: index * 0.1 }}
-              whileHover={{ scale: 1.05, y: -5 }}
+              whileHover={{ scale: 1.05, y: -8 }}
               whileTap={{ scale: 0.98 }}
             >
               <Card 
-                className={`border-0 shadow-lg cursor-pointer transition-all overflow-hidden ${
-                  activeTab === agent.id ? 'ring-2 ring-indigo-500 bg-gradient-to-br from-indigo-50 to-violet-50' : 'hover:shadow-xl'
+                className={`border-0 shadow-lg cursor-pointer transition-all overflow-hidden h-full ${
+                  activeTab === agent.id ? 'ring-2 ring-violet-500 bg-gradient-to-br from-violet-50 via-indigo-50 to-purple-50' : 'hover:shadow-2xl bg-white'
                 }`}
                 onClick={() => setActiveTab(agent.id)}
               >
-                <CardContent className="p-4">
-                  <div className="flex items-center justify-between mb-2">
+                <div className={`h-1 bg-gradient-to-r from-violet-500 via-indigo-500 to-purple-500 ${
+                  activeTab === agent.id ? 'opacity-100' : 'opacity-0'
+                }`} />
+                <CardContent className="p-5">
+                  <div className="flex items-start justify-between mb-3">
                     <motion.div 
-                      className="p-2 rounded-lg bg-gradient-to-br from-violet-500 to-indigo-600"
-                      whileHover={{ rotate: 360 }}
+                      className="p-3 rounded-xl bg-gradient-to-br from-violet-500 via-indigo-500 to-purple-600 shadow-lg"
+                      whileHover={{ rotate: 360, scale: 1.1 }}
                       transition={{ duration: 0.6 }}
                     >
-                      <Icon className="w-5 h-5 text-white" />
+                      <Icon className="w-6 h-6 text-white" />
                     </motion.div>
                     {pendingAgentLogs > 0 && (
                       <motion.div
@@ -222,13 +225,14 @@ export default function AIAdvisor() {
                         animate={{ scale: 1 }}
                         transition={{ type: "spring", stiffness: 300 }}
                       >
-                        <Badge className="bg-amber-500 text-white border-0">
+                        <Badge className="bg-gradient-to-r from-amber-500 to-orange-500 text-white border-0 shadow-md">
                           {pendingAgentLogs}
                         </Badge>
                       </motion.div>
                     )}
                   </div>
-                  <h3 className="font-medium text-slate-900 text-sm">{agent.name}</h3>
+                  <h3 className="font-bold text-slate-900 text-sm mb-1">{agent.name}</h3>
+                  <p className="text-xs text-slate-500 leading-relaxed">{agent.description}</p>
                 </CardContent>
               </Card>
             </motion.div>
@@ -238,60 +242,86 @@ export default function AIAdvisor() {
 
       <div className="grid lg:grid-cols-3 gap-6">
         {/* Preference Input */}
-        <Card className="border-0 shadow-sm">
-          <CardHeader className="pb-3">
-            <CardTitle className="text-base flex items-center gap-2">
-              <MessageSquare className="w-5 h-5 text-violet-500" />
-              Add Preference
-            </CardTitle>
-          </CardHeader>
-          <CardContent>
-            <div className="space-y-4">
-              <Textarea 
-                placeholder="Describe a scheduling preference in natural language, e.g., 'Dr. Smith prefers not to teach on Wednesday afternoons' or 'Keep all DP2 Physics classes in the morning'"
-                value={userInput}
-                onChange={(e) => setUserInput(e.target.value)}
-                className="min-h-[120px] resize-none"
-              />
-              <motion.div
-                whileHover={{ scale: 1.02 }}
-                whileTap={{ scale: 0.98 }}
-              >
-                <Button 
-                  onClick={handleInterpretPreference}
-                  disabled={!userInput.trim() || isAnalyzing}
-                  className="w-full bg-gradient-to-r from-indigo-600 to-violet-600 hover:from-indigo-700 hover:to-violet-700 shadow-md hover:shadow-lg transition-shadow"
+        <motion.div
+          initial={{ opacity: 0, x: -20 }}
+          animate={{ opacity: 1, x: 0 }}
+          transition={{ delay: 0.2 }}
+        >
+          <Card className="border-0 shadow-lg hover:shadow-xl transition-shadow bg-gradient-to-br from-white to-violet-50/30 overflow-hidden h-full">
+            <div className="h-1 bg-gradient-to-r from-violet-500 via-indigo-500 to-purple-500" />
+            <CardHeader className="pb-3">
+              <CardTitle className="text-base flex items-center gap-2">
+                <div className="p-2 rounded-lg bg-gradient-to-br from-violet-500 to-indigo-600">
+                  <MessageSquare className="w-5 h-5 text-white" />
+                </div>
+                Add Preference
+              </CardTitle>
+            </CardHeader>
+            <CardContent>
+              <div className="space-y-4">
+                <Textarea 
+                  placeholder="Describe a scheduling preference in natural language, e.g., 'Dr. Smith prefers not to teach on Wednesday afternoons' or 'Keep all DP2 Physics classes in the morning'"
+                  value={userInput}
+                  onChange={(e) => setUserInput(e.target.value)}
+                  className="min-h-[120px] resize-none border-violet-200 focus:ring-violet-500"
+                />
+                <motion.div
+                  whileHover={{ scale: 1.02 }}
+                  whileTap={{ scale: 0.98 }}
                 >
-                  {isAnalyzing ? (
-                    <Loader2 className="w-4 h-4 mr-2 animate-spin" />
-                  ) : (
-                    <Send className="w-4 h-4 mr-2" />
-                  )}
-                  Interpret & Add Constraint
-                </Button>
-              </motion.div>
-            </div>
-          </CardContent>
-        </Card>
+                  <Button 
+                    onClick={handleInterpretPreference}
+                    disabled={!userInput.trim() || isAnalyzing}
+                    className="w-full bg-gradient-to-r from-violet-600 via-indigo-600 to-purple-600 hover:from-violet-700 hover:via-indigo-700 hover:to-purple-700 shadow-lg hover:shadow-xl transition-all"
+                  >
+                    {isAnalyzing ? (
+                      <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+                    ) : (
+                      <Send className="w-4 h-4 mr-2" />
+                    )}
+                    Interpret & Add Constraint
+                  </Button>
+                </motion.div>
+              </div>
+            </CardContent>
+          </Card>
+        </motion.div>
 
         {/* Insights Feed */}
-        <div className="lg:col-span-2">
-          <Card className="border-0 shadow-sm">
+        <motion.div 
+          className="lg:col-span-2"
+          initial={{ opacity: 0, x: 20 }}
+          animate={{ opacity: 1, x: 0 }}
+          transition={{ delay: 0.3 }}
+        >
+          <Card className="border-0 shadow-lg hover:shadow-xl transition-shadow bg-white overflow-hidden">
+            <div className="h-1 bg-gradient-to-r from-violet-500 via-indigo-500 to-purple-500" />
             <CardHeader className="pb-3">
               <div className="flex items-center justify-between">
-                <CardTitle className="text-base">
-                  Insights & Recommendations
+                <div className="flex items-center gap-2">
+                  <div className="p-2 rounded-lg bg-gradient-to-br from-violet-500 to-indigo-600">
+                    <Sparkles className="w-5 h-5 text-white" />
+                  </div>
+                  <CardTitle className="text-base">
+                    Insights & Recommendations
+                  </CardTitle>
                   {pendingCount > 0 && (
-                    <Badge className="ml-2 bg-amber-100 text-amber-700 border-0">
-                      {pendingCount} pending
-                    </Badge>
+                    <motion.div
+                      initial={{ scale: 0 }}
+                      animate={{ scale: 1 }}
+                      transition={{ type: "spring", stiffness: 300 }}
+                    >
+                      <Badge className="bg-gradient-to-r from-amber-500 to-orange-500 text-white border-0 shadow-md">
+                        {pendingCount} pending
+                      </Badge>
+                    </motion.div>
                   )}
-                </CardTitle>
+                </div>
                 <Tabs value={activeTab} onValueChange={setActiveTab}>
                   <TabsList className="bg-slate-100 h-8">
                     <TabsTrigger 
                       value="all" 
-                      className="text-xs px-3 h-6 data-[state=active]:bg-gradient-to-r data-[state=active]:from-indigo-500 data-[state=active]:to-violet-500 data-[state=active]:text-white transition-all"
+                      className="text-xs px-3 h-6 data-[state=active]:bg-gradient-to-r data-[state=active]:from-violet-500 data-[state=active]:to-indigo-500 data-[state=active]:text-white transition-all"
                     >
                       All
                     </TabsTrigger>
@@ -313,7 +343,7 @@ export default function AIAdvisor() {
                   description="Run an analysis or add preferences to get AI-powered recommendations."
                 />
               ) : (
-                <div className="space-y-4 max-h-[500px] overflow-y-auto pr-2">
+                <div className="space-y-4 max-h-[500px] overflow-y-auto pr-2 custom-scrollbar">
                   {filteredLogs
                     .filter(log => activeTab !== 'pending' || log.status === 'pending')
                     .map((log, index) => (
@@ -322,7 +352,7 @@ export default function AIAdvisor() {
                         initial={{ opacity: 0, x: -20 }}
                         animate={{ opacity: 1, x: 0 }}
                         transition={{ delay: index * 0.05 }}
-                        whileHover={{ scale: 1.02 }}
+                        whileHover={{ scale: 1.01, x: 4 }}
                       >
                         <AIAdvisorCard 
                           log={log}
@@ -335,7 +365,7 @@ export default function AIAdvisor() {
               )}
             </CardContent>
           </Card>
-        </div>
+        </motion.div>
       </div>
     </div>
   );
