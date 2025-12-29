@@ -315,10 +315,12 @@ export default function Subjects() {
                 )}
               </Button>
             </label>
-            <Button onClick={() => setIsDialogOpen(true)} className="bg-indigo-600 hover:bg-indigo-700">
-              <Plus className="w-4 h-4 mr-2" />
-              Add Subject
-            </Button>
+            <motion.div whileHover={{ scale: 1.05 }} whileTap={{ scale: 0.95 }}>
+              <Button onClick={() => setIsDialogOpen(true)} className="bg-gradient-to-r from-indigo-600 to-violet-600 hover:from-indigo-700 hover:to-violet-700 shadow-lg">
+                <Plus className="w-4 h-4 mr-2" />
+                Add Subject
+              </Button>
+            </motion.div>
           </div>
         }
       />
@@ -356,8 +358,16 @@ export default function Subjects() {
             <div>
               <h3 className="text-sm font-semibold text-slate-500 uppercase tracking-wide mb-4">PYP Programme</h3>
               <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
-                {pypSubjects.map(subject => (
-                  <Card key={subject.id} className="border-0 shadow-sm hover:shadow-md transition-shadow">
+                {pypSubjects.map((subject, index) => (
+                  <motion.div
+                    key={subject.id}
+                    initial={{ opacity: 0, scale: 0.9 }}
+                    animate={{ opacity: 1, scale: 1 }}
+                    transition={{ delay: index * 0.05 }}
+                    whileHover={{ scale: 1.03, y: -5 }}
+                  >
+                    <Card className="border-0 shadow-lg hover:shadow-2xl transition-all duration-300 overflow-hidden">
+                      <div className="h-1 bg-gradient-to-r from-green-500 to-emerald-600" />
                     <CardContent className="p-4">
                       <div className="flex items-start justify-between">
                         <div className="flex items-center gap-3">
@@ -397,8 +407,16 @@ export default function Subjects() {
             <div>
               <h3 className="text-sm font-semibold text-slate-500 uppercase tracking-wide mb-4">MYP Programme</h3>
               <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
-                {mypSubjects.map(subject => (
-                  <Card key={subject.id} className="border-0 shadow-sm hover:shadow-md transition-shadow">
+                {mypSubjects.map((subject, index) => (
+                  <motion.div
+                    key={subject.id}
+                    initial={{ opacity: 0, scale: 0.9 }}
+                    animate={{ opacity: 1, scale: 1 }}
+                    transition={{ delay: index * 0.05 }}
+                    whileHover={{ scale: 1.03, y: -5 }}
+                  >
+                    <Card className="border-0 shadow-lg hover:shadow-2xl transition-all duration-300 overflow-hidden">
+                      <div className="h-1 bg-gradient-to-r from-orange-500 to-amber-600" />
                     <CardContent className="p-4">
                       <div className="flex items-start justify-between">
                         <div className="flex items-center gap-3">
@@ -493,8 +511,16 @@ export default function Subjects() {
                   </Badge>
                 </div>
                 <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
-                  {group.subjects.filter(s => !s.is_core).map(subject => (
-                    <Card key={subject.id} className="border-0 shadow-sm hover:shadow-md transition-shadow">
+                  {group.subjects.filter(s => !s.is_core).map((subject, index) => (
+                    <motion.div
+                      key={subject.id}
+                      initial={{ opacity: 0, scale: 0.9 }}
+                      animate={{ opacity: 1, scale: 1 }}
+                      transition={{ delay: index * 0.05 }}
+                      whileHover={{ scale: 1.03, y: -5 }}
+                    >
+                      <Card className="border-0 shadow-lg hover:shadow-2xl transition-all duration-300 overflow-hidden">
+                        <div className={`h-1 bg-gradient-to-r ${group.color}`} />
                       <CardContent className="p-4">
                         <div className="flex items-start justify-between mb-3">
                           <div>
@@ -533,9 +559,10 @@ export default function Subjects() {
                               <FlaskConical className="w-3 h-3 mr-1" /> Lab
                             </Badge>
                           )}
-                        </div>
-                      </CardContent>
-                    </Card>
+                          </div>
+                        </CardContent>
+                      </Card>
+                    </motion.div>
                   ))}
                 </div>
               </div>

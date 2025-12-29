@@ -21,6 +21,7 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { Plus, Search, Mail, Clock, BookOpen, MoreHorizontal, Pencil, Trash2, Upload, Loader2 } from 'lucide-react';
+import { motion } from 'framer-motion';
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -439,10 +440,12 @@ Example: {"full_name": "John Smith", "email": "john@school.com", "subjects": ["P
                 )}
               </Button>
             </label>
-            <Button onClick={() => setIsDialogOpen(true)} className="bg-indigo-600 hover:bg-indigo-700">
-              <Plus className="w-4 h-4 mr-2" />
-              Add Teacher
-            </Button>
+            <motion.div whileHover={{ scale: 1.05 }} whileTap={{ scale: 0.95 }}>
+              <Button onClick={() => setIsDialogOpen(true)} className="bg-gradient-to-r from-indigo-600 to-violet-600 hover:from-indigo-700 hover:to-violet-700 shadow-lg">
+                <Plus className="w-4 h-4 mr-2" />
+                Add Teacher
+              </Button>
+            </motion.div>
           </div>
         }
       />

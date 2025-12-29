@@ -550,10 +550,12 @@ Example for MYP/PYP: subjects: [{"name": "Mathematics"}, {"name": "Science"}]`,
                 )}
               </Button>
             </label>
-            <Button onClick={() => setIsDialogOpen(true)} className="bg-indigo-600 hover:bg-indigo-700">
-              <Plus className="w-4 h-4 mr-2" />
-              Add Student
-            </Button>
+            <motion.div whileHover={{ scale: 1.05 }} whileTap={{ scale: 0.95 }}>
+              <Button onClick={() => setIsDialogOpen(true)} className="bg-gradient-to-r from-indigo-600 to-violet-600 hover:from-indigo-700 hover:to-violet-700 shadow-lg">
+                <Plus className="w-4 h-4 mr-2" />
+                Add Student
+              </Button>
+            </motion.div>
           </div>
         }
       />
