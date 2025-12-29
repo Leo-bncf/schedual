@@ -57,7 +57,7 @@ Deno.serve(async (req) => {
     for (const classGroup of classGroups) {
       console.log(`Scheduling ClassGroup: ${classGroup.name}`);
 
-      // Get a student from this ClassGroup to find subjects
+      // Get students in this ClassGroup
       const classGroupStudents = students.filter(s => s.classgroup_id === classGroup.id);
       
       if (classGroupStudents.length === 0) {
@@ -65,19 +65,14 @@ Deno.serve(async (req) => {
         continue;
       }
 
-      // Get subjects from first student (all students in ClassGroup have same subjects)
-      const sampleStudent = classGroupStudents[0];
-      const subjectChoices = sampleStudent.subject_choices || [];
+      // For PYP/MYP: All students take ALL subjects for their level
+      // Get all subjects for this IB level
+      const levelSubjects = subjects.filter(s => s.ib_level === level && s.is_active !== false);
 
-      console.log(`ClassGroup ${classGroup.name} has ${subjectChoices.length} subjects`);
+      console.log(`ClassGroup ${classGroup.name} will be scheduled for ${levelSubjects.length} subjects`);
 
       // For each subject, schedule periods
-      for (const choice of subjectChoices) {
-        const subject = subjects.find(s => s.id === choice.subject_id);
-        if (!subject) {
-          console.warn(`Subject ${choice.subject_id} not found`);
-          continue;
-        }
+      for (const subject of levelSubjects) {
 
         // Find a qualified teacher
         let assignedTeacher = null;
