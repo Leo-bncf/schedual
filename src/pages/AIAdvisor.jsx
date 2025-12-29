@@ -6,6 +6,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Textarea } from "@/components/ui/textarea";
+import { motion } from 'framer-motion';
 import { 
   Sparkles, 
   MessageSquare, 
@@ -159,55 +160,78 @@ export default function AIAdvisor() {
         title="AI Advisor"
         description="Intelligent scheduling assistance and recommendations"
         actions={
-          <Button 
-            onClick={handleAnalyzeSchedule} 
-            className="bg-gradient-to-r from-violet-600 to-indigo-600 hover:from-violet-700 hover:to-indigo-700"
-            disabled={isAnalyzing || !scheduleVersions[0]}
+          <motion.div
+            whileHover={{ scale: 1.05 }}
+            whileTap={{ scale: 0.95 }}
           >
-            {isAnalyzing ? (
-              <>
-                <Loader2 className="w-4 h-4 mr-2 animate-spin" />
-                Analyzing...
-              </>
-            ) : (
-              <>
-                <Sparkles className="w-4 h-4 mr-2" />
-                Analyze Schedule
-              </>
-            )}
-          </Button>
+            <Button 
+              onClick={handleAnalyzeSchedule} 
+              className="bg-gradient-to-r from-violet-600 to-indigo-600 hover:from-violet-700 hover:to-indigo-700 shadow-lg hover:shadow-xl transition-shadow"
+              disabled={isAnalyzing || !scheduleVersions[0]}
+            >
+              {isAnalyzing ? (
+                <>
+                  <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+                  Analyzing...
+                </>
+              ) : (
+                <>
+                  <Sparkles className="w-4 h-4 mr-2" />
+                  Analyze Schedule
+                </>
+              )}
+            </Button>
+          </motion.div>
         }
       />
 
       {/* Agent Cards */}
       <div className="grid sm:grid-cols-2 lg:grid-cols-5 gap-4">
-        {AGENT_TYPES.map(agent => {
+        {AGENT_TYPES.map((agent, index) => {
           const Icon = agent.icon;
           const agentLogs = aiLogs.filter(l => l.agent_type === agent.id);
           const pendingAgentLogs = agentLogs.filter(l => l.status === 'pending').length;
           
           return (
-            <Card 
-              key={agent.id} 
-              className={`border-0 shadow-sm cursor-pointer transition-all hover:shadow-md ${
-                activeTab === agent.id ? 'ring-2 ring-indigo-500' : ''
-              }`}
-              onClick={() => setActiveTab(agent.id)}
+            <motion.div
+              key={agent.id}
+              initial={{ opacity: 0, y: 20 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ delay: index * 0.1 }}
+              whileHover={{ scale: 1.05, y: -5 }}
+              whileTap={{ scale: 0.98 }}
             >
-              <CardContent className="p-4">
-                <div className="flex items-center justify-between mb-2">
-                  <div className="p-2 rounded-lg bg-gradient-to-br from-violet-100 to-indigo-100">
-                    <Icon className="w-5 h-5 text-violet-600" />
+              <Card 
+                className={`border-0 shadow-lg cursor-pointer transition-all overflow-hidden ${
+                  activeTab === agent.id ? 'ring-2 ring-indigo-500 bg-gradient-to-br from-indigo-50 to-violet-50' : 'hover:shadow-xl'
+                }`}
+                onClick={() => setActiveTab(agent.id)}
+              >
+                <CardContent className="p-4">
+                  <div className="flex items-center justify-between mb-2">
+                    <motion.div 
+                      className="p-2 rounded-lg bg-gradient-to-br from-violet-500 to-indigo-600"
+                      whileHover={{ rotate: 360 }}
+                      transition={{ duration: 0.6 }}
+                    >
+                      <Icon className="w-5 h-5 text-white" />
+                    </motion.div>
+                    {pendingAgentLogs > 0 && (
+                      <motion.div
+                        initial={{ scale: 0 }}
+                        animate={{ scale: 1 }}
+                        transition={{ type: "spring", stiffness: 300 }}
+                      >
+                        <Badge className="bg-amber-500 text-white border-0">
+                          {pendingAgentLogs}
+                        </Badge>
+                      </motion.div>
+                    )}
                   </div>
-                  {pendingAgentLogs > 0 && (
-                    <Badge className="bg-amber-100 text-amber-700 border-0">
-                      {pendingAgentLogs}
-                    </Badge>
-                  )}
-                </div>
-                <h3 className="font-medium text-slate-900 text-sm">{agent.name}</h3>
-              </CardContent>
-            </Card>
+                  <h3 className="font-medium text-slate-900 text-sm">{agent.name}</h3>
+                </CardContent>
+              </Card>
+            </motion.div>
           );
         })}
       </div>
@@ -229,18 +253,23 @@ export default function AIAdvisor() {
                 onChange={(e) => setUserInput(e.target.value)}
                 className="min-h-[120px] resize-none"
               />
-              <Button 
-                onClick={handleInterpretPreference}
-                disabled={!userInput.trim() || isAnalyzing}
-                className="w-full bg-indigo-600 hover:bg-indigo-700"
+              <motion.div
+                whileHover={{ scale: 1.02 }}
+                whileTap={{ scale: 0.98 }}
               >
-                {isAnalyzing ? (
-                  <Loader2 className="w-4 h-4 mr-2 animate-spin" />
-                ) : (
-                  <Send className="w-4 h-4 mr-2" />
-                )}
-                Interpret & Add Constraint
-              </Button>
+                <Button 
+                  onClick={handleInterpretPreference}
+                  disabled={!userInput.trim() || isAnalyzing}
+                  className="w-full bg-gradient-to-r from-indigo-600 to-violet-600 hover:from-indigo-700 hover:to-violet-700 shadow-md hover:shadow-lg transition-shadow"
+                >
+                  {isAnalyzing ? (
+                    <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+                  ) : (
+                    <Send className="w-4 h-4 mr-2" />
+                  )}
+                  Interpret & Add Constraint
+                </Button>
+              </motion.div>
             </div>
           </CardContent>
         </Card>
@@ -260,8 +289,18 @@ export default function AIAdvisor() {
                 </CardTitle>
                 <Tabs value={activeTab} onValueChange={setActiveTab}>
                   <TabsList className="bg-slate-100 h-8">
-                    <TabsTrigger value="all" className="text-xs px-3 h-6">All</TabsTrigger>
-                    <TabsTrigger value="pending" className="text-xs px-3 h-6">Pending</TabsTrigger>
+                    <TabsTrigger 
+                      value="all" 
+                      className="text-xs px-3 h-6 data-[state=active]:bg-gradient-to-r data-[state=active]:from-indigo-500 data-[state=active]:to-violet-500 data-[state=active]:text-white transition-all"
+                    >
+                      All
+                    </TabsTrigger>
+                    <TabsTrigger 
+                      value="pending" 
+                      className="text-xs px-3 h-6 data-[state=active]:bg-gradient-to-r data-[state=active]:from-amber-500 data-[state=active]:to-orange-500 data-[state=active]:text-white transition-all"
+                    >
+                      Pending
+                    </TabsTrigger>
                   </TabsList>
                 </Tabs>
               </div>
@@ -277,13 +316,20 @@ export default function AIAdvisor() {
                 <div className="space-y-4 max-h-[500px] overflow-y-auto pr-2">
                   {filteredLogs
                     .filter(log => activeTab !== 'pending' || log.status === 'pending')
-                    .map(log => (
-                      <AIAdvisorCard 
+                    .map((log, index) => (
+                      <motion.div
                         key={log.id}
-                        log={log}
-                        onApply={handleApplySuggestion}
-                        onDismiss={handleDismissSuggestion}
-                      />
+                        initial={{ opacity: 0, x: -20 }}
+                        animate={{ opacity: 1, x: 0 }}
+                        transition={{ delay: index * 0.05 }}
+                        whileHover={{ scale: 1.02 }}
+                      >
+                        <AIAdvisorCard 
+                          log={log}
+                          onApply={handleApplySuggestion}
+                          onDismiss={handleDismissSuggestion}
+                        />
+                      </motion.div>
                     ))}
                 </div>
               )}
