@@ -397,16 +397,16 @@ export default function Subjects() {
                             </DropdownMenuItem>
                           </DropdownMenuContent>
                         </DropdownMenu>
-                      </div>
-                    </CardContent>
-                  </Card>
-                </motion.div>
-                ))}
-              </div>
-            </div>
-          )}
+                        </div>
+                        </CardContent>
+                        </Card>
+                        </motion.div>
+                        ))}
+                        </div>
+                        </div>
+                        )}
 
-          {/* MYP Subjects */}
+                        {/* MYP Subjects */}
           {mypSubjects.length > 0 && (
             <div>
               <h3 className="text-lg font-bold text-slate-700 mb-4 flex items-center gap-2">
@@ -589,9 +589,9 @@ export default function Subjects() {
                             </motion.div>
                             ))}
                             </div>
-              </div>
-            );
-          })}
+                            </div>
+                            );
+                            })}
         </div>
       )}
 
