@@ -371,7 +371,7 @@ export default function Subjects() {
                   >
                     <Card className="border-0 shadow-lg hover:shadow-2xl transition-all duration-300 overflow-hidden">
                       <div className="h-1 bg-gradient-to-r from-green-500 to-emerald-600" />
-                    <CardContent className="p-4">
+                      <CardContent className="p-4">
                       <div className="flex items-start justify-between">
                         <div className="flex items-center gap-3">
                           <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-green-500 to-emerald-600 flex items-center justify-center">
@@ -424,7 +424,7 @@ export default function Subjects() {
                   >
                     <Card className="border-0 shadow-lg hover:shadow-2xl transition-all duration-300 overflow-hidden">
                       <div className="h-1 bg-gradient-to-r from-orange-500 to-amber-600" />
-                    <CardContent className="p-4">
+                      <CardContent className="p-4">
                       <div className="flex items-start justify-between">
                         <div className="flex items-center gap-3">
                           <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-orange-500 to-amber-600 flex items-center justify-center">
@@ -449,17 +449,17 @@ export default function Subjects() {
                               <Trash2 className="w-4 h-4 mr-2" /> Delete
                             </DropdownMenuItem>
                           </DropdownMenuContent>
-                        </DropdownMenu>
-                      </div>
-                    </CardContent>
-                  </Card>
-                </motion.div>
-                ))}
-              </div>
-            </div>
-          )}
+                          </DropdownMenu>
+                          </div>
+                          </CardContent>
+                          </Card>
+                          </motion.div>
+                          ))}
+                          </div>
+                          </div>
+                          )}
 
-          {/* Core Components */}
+                          {/* Core Components */}
           {coreSubjects.length > 0 && (
             <div>
               <h3 className="text-lg font-bold text-slate-700 mb-4 flex items-center gap-2">
@@ -477,7 +477,7 @@ export default function Subjects() {
                   >
                     <Card className="border-0 shadow-lg hover:shadow-2xl transition-all duration-300 overflow-hidden">
                       <div className="h-1 bg-gradient-to-r from-slate-700 to-slate-900" />
-                    <CardContent className="p-4">
+                      <CardContent className="p-4">
                       <div className="flex items-start justify-between">
                         <div className="flex items-center gap-3">
                           <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-slate-700 to-slate-800 flex items-center justify-center">
@@ -502,17 +502,17 @@ export default function Subjects() {
                               <Trash2 className="w-4 h-4 mr-2" /> Delete
                             </DropdownMenuItem>
                           </DropdownMenuContent>
-                        </DropdownMenu>
-                      </div>
-                    </CardContent>
-                  </Card>
-                </motion.div>
-                ))}
-              </div>
-            </div>
-          )}
+                          </DropdownMenu>
+                          </div>
+                          </CardContent>
+                          </Card>
+                          </motion.div>
+                          ))}
+                          </div>
+                          </div>
+                          )}
 
-          {/* DP Subject Groups */}
+                          {/* DP Subject Groups */}
           {groupedSubjects.map(group => {
             if (group.subjects.length === 0) return null;
             const Icon = group.icon;
@@ -545,7 +545,7 @@ export default function Subjects() {
                     >
                       <Card className="border-0 shadow-lg hover:shadow-2xl transition-all duration-300 overflow-hidden">
                         <div className={`h-1 bg-gradient-to-r ${group.color}`} />
-                      <CardContent className="p-4">
+                        <CardContent className="p-4">
                         <div className="flex items-start justify-between mb-3">
                           <div>
                             <p className="font-semibold text-slate-900">{subject.name}</p>
@@ -582,13 +582,13 @@ export default function Subjects() {
                             <Badge variant="outline" className="text-violet-600 border-violet-200">
                               <FlaskConical className="w-3 h-3 mr-1" /> Lab
                             </Badge>
-                          )}
-                          </div>
-                        </CardContent>
-                      </Card>
-                    </motion.div>
-                  ))}
-                </div>
+                            )}
+                            </div>
+                            </CardContent>
+                            </Card>
+                            </motion.div>
+                            ))}
+                            </div>
               </div>
             );
           })}
