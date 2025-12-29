@@ -187,25 +187,43 @@ export default function Onboarding() {
   const progress = (completedSteps / steps.length) * 100;
 
   return (
-    <div className="max-w-4xl mx-auto space-y-8 py-8">
-      <div className="text-center space-y-4">
-        <h1 className="text-3xl font-bold text-slate-900">Welcome to IB Schedule</h1>
-        <p className="text-lg text-slate-600">
-          Let's set up your school step by step
-        </p>
+    <div className="max-w-5xl mx-auto space-y-8 py-8 px-4">
+      <motion.div 
+        className="text-center space-y-6"
+        initial={{ opacity: 0, y: -20 }}
+        animate={{ opacity: 1, y: 0 }}
+        transition={{ duration: 0.6 }}
+      >
+        <div>
+          <motion.h1 
+            className="text-4xl font-bold bg-gradient-to-r from-indigo-600 via-violet-600 to-purple-600 bg-clip-text text-transparent mb-3"
+            animate={{ backgroundPosition: ['0%', '100%', '0%'] }}
+            transition={{ duration: 5, repeat: Infinity }}
+          >
+            Welcome to Schedual
+          </motion.h1>
+          <p className="text-lg text-slate-600 font-medium">
+            Let's set up your school step by step
+          </p>
+        </div>
         
-        <div className="flex items-center justify-center gap-3">
-          <div className="flex-1 max-w-md h-3 bg-slate-100 rounded-full overflow-hidden">
-            <div 
-              className="h-full bg-gradient-to-r from-indigo-500 to-violet-600 transition-all duration-500"
-              style={{ width: `${progress}%` }}
+        <div className="flex items-center justify-center gap-4 max-w-2xl mx-auto">
+          <div className="flex-1 h-4 bg-slate-200 rounded-full overflow-hidden shadow-inner">
+            <motion.div 
+              className="h-full bg-gradient-to-r from-indigo-500 via-violet-500 to-purple-600 rounded-full shadow-lg"
+              initial={{ width: 0 }}
+              animate={{ width: `${progress}%` }}
+              transition={{ duration: 0.8, ease: "easeOut" }}
             />
           </div>
-          <span className="text-sm font-medium text-slate-600">
+          <motion.div
+            className="px-4 py-2 bg-gradient-to-r from-indigo-500 to-violet-600 text-white rounded-full font-bold shadow-lg"
+            whileHover={{ scale: 1.1 }}
+          >
             {completedSteps} / {steps.length}
-          </span>
+          </motion.div>
         </div>
-      </div>
+      </motion.div>
 
       <div className="space-y-6">
         {steps.map((step, index) => {
@@ -215,17 +233,22 @@ export default function Onboarding() {
           return (
             <motion.div
               key={step.id}
-              initial={{ opacity: 0, y: 20 }}
-              animate={{ opacity: 1, y: 0 }}
-              transition={{ delay: index * 0.1 }}
+              initial={{ opacity: 0, x: -50 }}
+              animate={{ opacity: 1, x: 0 }}
+              transition={{ delay: index * 0.1, type: "spring", stiffness: 100 }}
+              whileHover={isEnabled ? { 
+                scale: 1.02,
+                boxShadow: "0 20px 40px rgba(0,0,0,0.1)",
+                transition: { duration: 0.2 }
+              } : {}}
             >
               <Card 
-                className={`border-2 transition-all ${
+                className={`border-2 transition-all duration-300 ${
                   step.completed 
-                    ? 'border-emerald-300 bg-gradient-to-br from-emerald-50 to-teal-50 shadow-lg' 
+                    ? 'border-emerald-400 bg-gradient-to-br from-emerald-50 via-teal-50 to-cyan-50 shadow-xl' 
                     : isEnabled 
-                      ? 'border-indigo-300 hover:border-indigo-400 hover:shadow-lg' 
-                      : 'border-slate-200 opacity-60'
+                      ? 'border-indigo-300 hover:border-indigo-500 shadow-lg hover:shadow-2xl bg-gradient-to-br from-white to-indigo-50/30' 
+                      : 'border-slate-200 opacity-60 grayscale'
                 }`}
               >
                 <CardContent className="p-6">
@@ -233,14 +256,22 @@ export default function Onboarding() {
                     <div className="flex items-start justify-between">
                       <div className="flex items-start gap-4 flex-1">
                         <motion.div 
-                          className={`w-14 h-14 rounded-xl flex items-center justify-center flex-shrink-0 ${
+                          className={`w-14 h-14 rounded-xl flex items-center justify-center flex-shrink-0 shadow-lg ${
                             step.completed 
                               ? 'bg-gradient-to-br from-emerald-500 to-teal-600' 
                               : isEnabled 
                                 ? 'bg-gradient-to-br from-indigo-500 to-violet-600' 
                                 : 'bg-slate-300'
                           }`}
-                          whileHover={isEnabled ? { scale: 1.1, rotate: 5 } : {}}
+                          whileHover={isEnabled ? { 
+                            scale: 1.2, 
+                            rotate: 360,
+                            transition: { duration: 0.6 }
+                          } : {}}
+                          animate={step.completed ? {
+                            scale: [1, 1.1, 1],
+                            transition: { duration: 2, repeat: Infinity }
+                          } : {}}
                         >
                           {step.completed ? (
                             <CheckCircle className="w-7 h-7 text-white" />
@@ -268,24 +299,48 @@ export default function Onboarding() {
                           <p className="text-slate-600 font-medium mb-3">{step.description}</p>
                           
                           {/* Instructions */}
-                          <div className="bg-white/60 rounded-lg p-3 mb-3 border border-slate-200">
-                            <p className="text-sm text-slate-700">{step.instructions}</p>
-                          </div>
+                          <motion.div 
+                            className="bg-white/80 rounded-lg p-4 mb-3 border-2 border-indigo-100 shadow-sm"
+                            whileHover={{ 
+                              scale: 1.02,
+                              borderColor: "rgb(165, 180, 252)",
+                              boxShadow: "0 4px 12px rgba(99, 102, 241, 0.1)"
+                            }}
+                          >
+                            <p className="text-sm text-slate-700 leading-relaxed">{step.instructions}</p>
+                          </motion.div>
 
                           {/* Quick Tips */}
                           {step.quickTips && (
-                            <div className="space-y-2">
+                            <motion.div 
+                              className="space-y-2 bg-amber-50/50 rounded-lg p-3 border border-amber-200"
+                              initial={{ opacity: 0, height: 0 }}
+                              animate={{ opacity: 1, height: "auto" }}
+                              transition={{ delay: 0.3 }}
+                            >
                               <div className="flex items-center gap-2 mb-2">
-                                <Zap className="w-4 h-4 text-amber-500" />
-                                <span className="text-xs font-semibold text-amber-700 uppercase">Quick Tips</span>
+                                <motion.div
+                                  animate={{ rotate: [0, 15, -15, 0] }}
+                                  transition={{ duration: 2, repeat: Infinity }}
+                                >
+                                  <Zap className="w-4 h-4 text-amber-600" />
+                                </motion.div>
+                                <span className="text-xs font-bold text-amber-700 uppercase tracking-wide">Quick Tips</span>
                               </div>
                               {step.quickTips.map((tip, tipIndex) => (
-                                <div key={tipIndex} className="flex items-start gap-2">
-                                  <div className="w-1.5 h-1.5 rounded-full bg-indigo-400 mt-1.5 flex-shrink-0" />
-                                  <p className="text-sm text-slate-600">{tip}</p>
-                                </div>
+                                <motion.div 
+                                  key={tipIndex} 
+                                  className="flex items-start gap-3 p-2 rounded hover:bg-amber-100/50 transition-colors"
+                                  initial={{ opacity: 0, x: -10 }}
+                                  animate={{ opacity: 1, x: 0 }}
+                                  transition={{ delay: 0.4 + tipIndex * 0.1 }}
+                                  whileHover={{ x: 5 }}
+                                >
+                                  <div className="w-2 h-2 rounded-full bg-gradient-to-r from-amber-400 to-orange-500 mt-1.5 flex-shrink-0" />
+                                  <p className="text-sm text-slate-700 font-medium">{tip}</p>
+                                </motion.div>
                               ))}
-                            </div>
+                            </motion.div>
                           )}
                         </div>
                       </div>
