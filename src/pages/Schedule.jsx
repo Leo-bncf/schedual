@@ -274,7 +274,34 @@ export default function Schedule() {
       const scheduleLevels = ['DP', 'MYP', 'PYP'];
       
       for (const level of scheduleLevels) {
-        // Use updated groups with teacher assignments
+        console.log(`\n=== Scheduling ${level} ===`);
+
+        // PYP/MYP: Use ClassGroups-based scheduling
+        if (level === 'PYP' || level === 'MYP') {
+          console.log(`Using ClassGroup-based scheduling for ${level}`);
+          const { data: result } = await base44.functions.invoke('generatePYPMYPSchedule', {
+            schedule_version_id: selectedVersion.id,
+            level
+          });
+          
+          if (result.slots) {
+            console.log(`Generated ${result.slots.length} slots for ${level}`);
+            newSlots.push(...result.slots);
+            
+            // Update availability tracking
+            result.slots.forEach(slot => {
+              if (slot.teacher_id && teacherSchedules[slot.teacher_id]) {
+                teacherSchedules[slot.teacher_id].push({ day: slot.day, period: slot.period });
+              }
+              if (slot.room_id && roomSchedules[slot.room_id]) {
+                roomSchedules[slot.room_id].push({ day: slot.day, period: slot.period });
+              }
+            });
+          }
+          continue;
+        }
+
+        // DP: Use TeachingGroups-based scheduling
         const levelGroupsFromUpdated = updatedGroups.filter(g => {
           if (g.is_active === false) return false;
           if (!g.hours_per_week || g.hours_per_week <= 0) return false;
@@ -282,7 +309,7 @@ export default function Schedule() {
           return ibLevel === level;
         }).sort((a, b) => (a.student_ids?.length || 0) - (b.student_ids?.length || 0));
 
-        console.log(`\n=== Scheduling ${level} (${levelGroupsFromUpdated.length} groups) ===`);
+        console.log(`Found ${levelGroupsFromUpdated.length} DP groups`);
 
         for (const group of levelGroupsFromUpdated) {
           // Determine hours based on subject's HL/SL hours and group's level
