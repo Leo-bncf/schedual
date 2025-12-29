@@ -45,11 +45,20 @@ import ScheduleExporter from '../components/schedule/ScheduleExporter';
 import ConflictAlert from '../components/schedule/ConflictAlert';
 import ConflictViewer from '../components/schedule/ConflictViewer';
 import EmptyState from '../components/ui-custom/EmptyState';
+import GenerationProgress from '../components/schedule/GenerationProgress';
 
 export default function Schedule() {
   const [isDialogOpen, setIsDialogOpen] = useState(false);
   const [selectedVersion, setSelectedVersion] = useState(null);
   const [isGenerating, setIsGenerating] = useState(false);
+  const [generationProgress, setGenerationProgress] = useState({
+    stage: '',
+    percent: 0,
+    message: '',
+    currentStep: '',
+    completedSteps: [],
+    completed: false
+  });
   const [selectedStudentId, setSelectedStudentId] = useState(null);
   const [selectedTeacherId, setSelectedTeacherId] = useState(null);
   const [selectedClassGroupId, setSelectedClassGroupId] = useState(null);
@@ -165,6 +174,14 @@ export default function Schedule() {
     if (!selectedVersion) return;
     
     setIsGenerating(true);
+    setGenerationProgress({
+      stage: 'Initializing',
+      percent: 0,
+      message: 'Starting schedule generation...',
+      currentStep: 'teachers',
+      completedSteps: [],
+      completed: false
+    });
     
     try {
       console.log('=== SCHEDULE GENERATION START ===');
@@ -176,17 +193,35 @@ export default function Schedule() {
       console.log('Rooms:', rooms.length);
       
       // Step 1: Assign teachers to teaching groups
+      setGenerationProgress(prev => ({
+        ...prev,
+        stage: 'Assigning Teachers',
+        percent: 10,
+        message: 'Matching teachers to teaching groups based on qualifications...'
+      }));
       console.log('Assigning teachers to teaching groups...');
       const { data: assignmentResult } = await base44.functions.invoke('assignTeachers');
       console.log('Teacher assignments:', assignmentResult);
       
       // Refresh teaching groups to get updated teacher assignments
+      setGenerationProgress(prev => ({
+        ...prev,
+        stage: 'Preparing Data',
+        percent: 15,
+        message: 'Refreshing teaching group assignments...',
+        completedSteps: ['teachers']
+      }));
       await queryClient.invalidateQueries({ queryKey: ['teachingGroups'] });
       await new Promise(resolve => setTimeout(resolve, 1000));
       const updatedGroups = await base44.entities.TeachingGroup.filter({ school_id: schoolId });
       console.log('Updated groups with teachers:', updatedGroups.filter(g => g.teacher_id).length);
       
       // Delete existing slots for this version (batch to avoid rate limits)
+      setGenerationProgress(prev => ({
+        ...prev,
+        percent: 20,
+        message: 'Clearing existing schedule slots...'
+      }));
       const existingSlots = await base44.entities.ScheduleSlot.list();
       const slotsToDelete = existingSlots.filter(s => s.schedule_version === selectedVersion.id);
       
@@ -278,6 +313,15 @@ export default function Schedule() {
 
         // PYP/MYP: Use ClassGroups-based scheduling
         if (level === 'PYP' || level === 'MYP') {
+          const levelPercent = level === 'DP' ? 30 : level === 'MYP' ? 50 : 70;
+          setGenerationProgress(prev => ({
+            ...prev,
+            stage: `Scheduling ${level}`,
+            percent: levelPercent,
+            message: `Creating ${level} class schedules across the week...`,
+            currentStep: level.toLowerCase()
+          }));
+          
           console.log(`Using ClassGroup-based scheduling for ${level}`);
           const { data: result } = await base44.functions.invoke('generatePYPMYPSchedule', {
             schedule_version_id: selectedVersion.id,
@@ -287,6 +331,12 @@ export default function Schedule() {
           if (result.slots) {
             console.log(`Generated ${result.slots.length} slots for ${level}`);
             newSlots.push(...result.slots);
+            
+            setGenerationProgress(prev => ({
+              ...prev,
+              message: `Created ${result.slots.length} ${level} schedule slots`,
+              completedSteps: [...prev.completedSteps, level.toLowerCase()]
+            }));
             
             // Update availability tracking
             result.slots.forEach(slot => {
@@ -302,6 +352,14 @@ export default function Schedule() {
         }
 
         // DP: Use TeachingGroups-based scheduling
+        setGenerationProgress(prev => ({
+          ...prev,
+          stage: 'Scheduling DP',
+          percent: 30,
+          message: 'Creating DP teaching group schedules...',
+          currentStep: 'dp'
+        }));
+        
         const levelGroupsFromUpdated = updatedGroups.filter(g => {
           if (g.is_active === false) return false;
           if (!g.hours_per_week || g.hours_per_week <= 0) return false;
@@ -626,16 +684,34 @@ export default function Schedule() {
       }
 
       // Create all slots in batches to avoid rate limits
+      setGenerationProgress(prev => ({
+        ...prev,
+        stage: 'Creating Schedule Slots',
+        percent: 75,
+        message: `Creating ${newSlots.length} schedule slots...`,
+        currentStep: 'slots',
+        completedSteps: [...prev.completedSteps, 'dp']
+      }));
+      
       console.log('Total slots to create:', newSlots.length);
       console.log('Sample slot:', newSlots[0]);
 
       if (newSlots.length > 0) {
-        const batchSize = 10; // Reduced batch size
+        const batchSize = 10;
         let totalCreated = 0;
 
         for (let i = 0; i < newSlots.length; i += batchSize) {
           const batch = newSlots.slice(i, i + batchSize);
-          console.log(`Creating batch ${Math.floor(i/batchSize) + 1}/${Math.ceil(newSlots.length/batchSize)} (${batch.length} slots)...`);
+          const batchNum = Math.floor(i/batchSize) + 1;
+          const totalBatches = Math.ceil(newSlots.length/batchSize);
+          
+          setGenerationProgress(prev => ({
+            ...prev,
+            percent: 75 + Math.floor((batchNum / totalBatches) * 15),
+            message: `Creating batch ${batchNum}/${totalBatches} (${totalCreated}/${newSlots.length} slots completed)`
+          }));
+          
+          console.log(`Creating batch ${batchNum}/${totalBatches} (${batch.length} slots)...`);
           
           try {
             const created = await base44.entities.ScheduleSlot.bulkCreate(batch);
@@ -692,6 +768,15 @@ export default function Schedule() {
       const totalGroups = Object.values(groupsByLevel).flat().length;
 
       // Update version with stats
+      setGenerationProgress(prev => ({
+        ...prev,
+        stage: 'Finalizing',
+        percent: 95,
+        message: 'Updating schedule version and calculating statistics...',
+        currentStep: 'finalize',
+        completedSteps: [...prev.completedSteps, 'slots']
+      }));
+      
       await updateVersionMutation.mutateAsync({
         id: selectedVersion.id,
         data: { 
@@ -705,16 +790,36 @@ export default function Schedule() {
 
       // Refresh slots
       queryClient.invalidateQueries({ queryKey: ['scheduleSlots'] });
+      
+      setGenerationProgress({
+        stage: 'Complete',
+        percent: 100,
+        message: `Successfully created ${newSlots.length} schedule slots!`,
+        currentStep: '',
+        completedSteps: ['teachers', 'dp', 'myp', 'pyp', 'slots', 'finalize'],
+        completed: true
+      });
+      
       console.log('=== SCHEDULE GENERATION COMPLETE ===');
     } catch (error) {
       console.error('=== GENERATION ERROR ===');
       console.error('Error:', error);
       console.error('Error message:', error.message);
       console.error('Error stack:', error.stack);
-      alert('Schedule generation failed. Check browser console for details.');
+      
+      setGenerationProgress({
+        stage: 'Error',
+        percent: 0,
+        message: `Generation failed: ${error.message}`,
+        currentStep: '',
+        completedSteps: [],
+        completed: true
+      });
     }
     
-    setIsGenerating(false);
+    setTimeout(() => {
+      setIsGenerating(false);
+    }, 2000);
   };
 
   const publishedVersion = scheduleVersions.find(v => v.status === 'published');
@@ -1095,6 +1200,23 @@ export default function Schedule() {
           </form>
         </DialogContent>
       </Dialog>
+
+      {/* Generation Progress Modal */}
+      <GenerationProgress 
+        open={isGenerating}
+        progress={generationProgress}
+        onClose={() => {
+          setIsGenerating(false);
+          setGenerationProgress({
+            stage: '',
+            percent: 0,
+            message: '',
+            currentStep: '',
+            completedSteps: [],
+            completed: false
+          });
+        }}
+      />
     </div>
   );
 }
