@@ -93,39 +93,83 @@ export default function Dashboard() {
 
       {/* Stats Grid */}
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
-        <StatCard
-          title="Teachers"
-          value={activeTeachers}
-          subtitle={`${teachers.length} total`}
-          icon={Users}
-        />
-        <StatCard
-          title="Students"
-          value={activeStudents}
-          subtitle={`${students.filter(s => s.year_group === 'DP2').length} DP2, ${students.filter(s => s.year_group === 'DP1').length} DP1`}
-          icon={GraduationCap}
-        />
-        <StatCard
-          title="Subjects"
-          value={activeSubjects}
-          subtitle={`${subjects.filter(s => s.is_core).length} core components`}
-          icon={BookOpen}
-        />
-        <StatCard
-          title="Rooms"
-          value={activeRooms}
-          subtitle={`${rooms.filter(r => r.room_type === 'lab').length} labs`}
-          icon={Building2}
-        />
+        <Card className="border-0 shadow-sm bg-gradient-to-br from-blue-500 to-blue-600 text-white overflow-hidden relative">
+          <CardContent className="p-6">
+            <div className="absolute top-0 right-0 -mt-4 -mr-4 w-24 h-24 bg-white/10 rounded-full blur-2xl"></div>
+            <div className="relative">
+              <div className="flex items-center justify-between mb-2">
+                <Users className="w-8 h-8 text-white/90" />
+                <div className="text-right">
+                  <div className="text-3xl font-bold">{activeTeachers}</div>
+                </div>
+              </div>
+              <div className="text-sm font-medium text-blue-100">Teachers</div>
+              <div className="text-xs text-blue-200 mt-1">{teachers.length} total</div>
+            </div>
+          </CardContent>
+        </Card>
+
+        <Card className="border-0 shadow-sm bg-gradient-to-br from-emerald-500 to-emerald-600 text-white overflow-hidden relative">
+          <CardContent className="p-6">
+            <div className="absolute top-0 right-0 -mt-4 -mr-4 w-24 h-24 bg-white/10 rounded-full blur-2xl"></div>
+            <div className="relative">
+              <div className="flex items-center justify-between mb-2">
+                <GraduationCap className="w-8 h-8 text-white/90" />
+                <div className="text-right">
+                  <div className="text-3xl font-bold">{activeStudents}</div>
+                </div>
+              </div>
+              <div className="text-sm font-medium text-emerald-100">Students</div>
+              <div className="text-xs text-emerald-200 mt-1">
+                {students.filter(s => s.year_group === 'DP2').length} DP2, {students.filter(s => s.year_group === 'DP1').length} DP1
+              </div>
+            </div>
+          </CardContent>
+        </Card>
+
+        <Card className="border-0 shadow-sm bg-gradient-to-br from-violet-500 to-violet-600 text-white overflow-hidden relative">
+          <CardContent className="p-6">
+            <div className="absolute top-0 right-0 -mt-4 -mr-4 w-24 h-24 bg-white/10 rounded-full blur-2xl"></div>
+            <div className="relative">
+              <div className="flex items-center justify-between mb-2">
+                <BookOpen className="w-8 h-8 text-white/90" />
+                <div className="text-right">
+                  <div className="text-3xl font-bold">{activeSubjects}</div>
+                </div>
+              </div>
+              <div className="text-sm font-medium text-violet-100">Subjects</div>
+              <div className="text-xs text-violet-200 mt-1">{subjects.filter(s => s.is_core).length} core components</div>
+            </div>
+          </CardContent>
+        </Card>
+
+        <Card className="border-0 shadow-sm bg-gradient-to-br from-amber-500 to-amber-600 text-white overflow-hidden relative">
+          <CardContent className="p-6">
+            <div className="absolute top-0 right-0 -mt-4 -mr-4 w-24 h-24 bg-white/10 rounded-full blur-2xl"></div>
+            <div className="relative">
+              <div className="flex items-center justify-between mb-2">
+                <Building2 className="w-8 h-8 text-white/90" />
+                <div className="text-right">
+                  <div className="text-3xl font-bold">{activeRooms}</div>
+                </div>
+              </div>
+              <div className="text-sm font-medium text-amber-100">Rooms</div>
+              <div className="text-xs text-amber-200 mt-1">{rooms.filter(r => r.room_type === 'lab').length} labs</div>
+            </div>
+          </CardContent>
+        </Card>
       </div>
 
       {/* Main Content Grid */}
       <div className="grid lg:grid-cols-3 gap-6">
         {/* Schedule Status */}
-        <Card className="lg:col-span-2 border-0 shadow-sm">
-          <CardHeader className="pb-4">
+        <Card className="lg:col-span-2 border-0 shadow-lg bg-white">
+          <CardHeader className="pb-4 bg-gradient-to-r from-blue-50 to-indigo-50 border-b border-blue-100">
             <div className="flex items-center justify-between">
-              <CardTitle className="text-lg font-semibold text-slate-900">Schedule Status</CardTitle>
+              <CardTitle className="text-lg font-semibold text-slate-900 flex items-center gap-2">
+                <Calendar className="w-5 h-5 text-blue-600" />
+                Schedule Status
+              </CardTitle>
               <Link to={createPageUrl('Schedule')}>
                 <Button variant="ghost" size="sm" className="text-blue-900 hover:text-blue-800">
                   View All <ArrowRight className="w-4 h-4 ml-1" />
@@ -197,15 +241,15 @@ export default function Dashboard() {
         </Card>
 
         {/* AI Advisor Suggestions */}
-        <Card className="border-0 shadow-sm">
+        <Card className="border-0 shadow-lg bg-gradient-to-br from-purple-50 to-pink-50">
           <CardHeader className="pb-4">
             <div className="flex items-center justify-between">
               <CardTitle className="text-lg font-semibold text-slate-900 flex items-center gap-2">
-                <Sparkles className="w-5 h-5 text-blue-900" />
+                <Sparkles className="w-5 h-5 text-purple-600" />
                 AI Insights
               </CardTitle>
               <Link to={createPageUrl('AIAdvisor')}>
-                <Button variant="ghost" size="sm" className="text-blue-900 hover:text-blue-800">
+                <Button variant="ghost" size="sm" className="text-purple-700 hover:text-purple-900">
                   View All
                 </Button>
               </Link>
@@ -215,12 +259,16 @@ export default function Dashboard() {
             {aiLogs.length > 0 ? (
               <div className="space-y-3">
                 {aiLogs.slice(0, 4).map(log => (
-                  <div key={log.id} className="p-3 rounded-lg bg-gradient-to-br from-blue-50 to-blue-100 border border-blue-200">
+                  <div key={log.id} className="p-3 rounded-lg bg-white border-l-4 shadow-sm hover:shadow-md transition-shadow ${
+                    log.severity === 'warning' ? 'border-amber-400 bg-gradient-to-r from-amber-50 to-white' :
+                    log.severity === 'error' ? 'border-rose-400 bg-gradient-to-r from-rose-50 to-white' :
+                    'border-purple-400 bg-gradient-to-r from-purple-50 to-white'
+                  }">
                     <div className="flex items-center gap-2 mb-1">
                       <Badge className={`text-xs border-0 ${
                         log.severity === 'warning' ? 'bg-amber-100 text-amber-700' :
                         log.severity === 'error' ? 'bg-rose-100 text-rose-700' :
-                        'bg-blue-100 text-blue-700'
+                        'bg-purple-100 text-purple-700'
                       }`}>
                         {log.severity}
                       </Badge>
@@ -234,7 +282,7 @@ export default function Dashboard() {
               </div>
             ) : (
               <div className="text-center py-8">
-                <Sparkles className="w-12 h-12 text-slate-300 mx-auto mb-3" />
+                <Sparkles className="w-12 h-12 text-purple-300 mx-auto mb-3" />
                 <p className="text-slate-500">No pending suggestions</p>
               </div>
             )}
@@ -243,34 +291,42 @@ export default function Dashboard() {
       </div>
 
       {/* Quick Actions */}
-      <Card className="border-0 shadow-sm">
+      <Card className="border-0 shadow-lg bg-gradient-to-br from-slate-50 to-blue-50">
         <CardHeader className="pb-4">
           <CardTitle className="text-lg font-semibold text-slate-900">Quick Actions</CardTitle>
         </CardHeader>
         <CardContent>
           <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">
-            <Link to={createPageUrl('Teachers')} className="block">
-              <div className="p-4 rounded-xl border border-slate-200 hover:border-blue-900 hover:bg-blue-50/50 transition-all text-center">
-                <Users className="w-8 h-8 text-blue-900 mx-auto mb-2" />
-                <span className="text-sm font-medium text-slate-700">Add Teacher</span>
+            <Link to={createPageUrl('Teachers')} className="block group">
+              <div className="p-5 rounded-xl bg-white border-2 border-blue-200 hover:border-blue-500 hover:shadow-lg hover:-translate-y-1 transition-all text-center">
+                <div className="w-12 h-12 mx-auto mb-3 rounded-full bg-gradient-to-br from-blue-500 to-blue-600 flex items-center justify-center group-hover:scale-110 transition-transform">
+                  <Users className="w-6 h-6 text-white" />
+                </div>
+                <span className="text-sm font-semibold text-slate-800">Add Teacher</span>
               </div>
             </Link>
-            <Link to={createPageUrl('Students')} className="block">
-              <div className="p-4 rounded-xl border border-slate-200 hover:border-blue-900 hover:bg-blue-50/50 transition-all text-center">
-                <GraduationCap className="w-8 h-8 text-blue-900 mx-auto mb-2" />
-                <span className="text-sm font-medium text-slate-700">Add Student</span>
+            <Link to={createPageUrl('Students')} className="block group">
+              <div className="p-5 rounded-xl bg-white border-2 border-emerald-200 hover:border-emerald-500 hover:shadow-lg hover:-translate-y-1 transition-all text-center">
+                <div className="w-12 h-12 mx-auto mb-3 rounded-full bg-gradient-to-br from-emerald-500 to-emerald-600 flex items-center justify-center group-hover:scale-110 transition-transform">
+                  <GraduationCap className="w-6 h-6 text-white" />
+                </div>
+                <span className="text-sm font-semibold text-slate-800">Add Student</span>
               </div>
             </Link>
-            <Link to={createPageUrl('Subjects')} className="block">
-              <div className="p-4 rounded-xl border border-slate-200 hover:border-blue-900 hover:bg-blue-50/50 transition-all text-center">
-                <BookOpen className="w-8 h-8 text-blue-900 mx-auto mb-2" />
-                <span className="text-sm font-medium text-slate-700">Add Subject</span>
+            <Link to={createPageUrl('Subjects')} className="block group">
+              <div className="p-5 rounded-xl bg-white border-2 border-violet-200 hover:border-violet-500 hover:shadow-lg hover:-translate-y-1 transition-all text-center">
+                <div className="w-12 h-12 mx-auto mb-3 rounded-full bg-gradient-to-br from-violet-500 to-violet-600 flex items-center justify-center group-hover:scale-110 transition-transform">
+                  <BookOpen className="w-6 h-6 text-white" />
+                </div>
+                <span className="text-sm font-semibold text-slate-800">Add Subject</span>
               </div>
             </Link>
-            <Link to={createPageUrl('Schedule')} className="block">
-              <div className="p-4 rounded-xl border border-slate-200 hover:border-blue-900 hover:bg-blue-50/50 transition-all text-center">
-                <Calendar className="w-8 h-8 text-blue-900 mx-auto mb-2" />
-                <span className="text-sm font-medium text-slate-700">Generate Schedule</span>
+            <Link to={createPageUrl('Schedule')} className="block group">
+              <div className="p-5 rounded-xl bg-white border-2 border-amber-200 hover:border-amber-500 hover:shadow-lg hover:-translate-y-1 transition-all text-center">
+                <div className="w-12 h-12 mx-auto mb-3 rounded-full bg-gradient-to-br from-amber-500 to-amber-600 flex items-center justify-center group-hover:scale-110 transition-transform">
+                  <Calendar className="w-6 h-6 text-white" />
+                </div>
+                <span className="text-sm font-semibold text-slate-800">Generate Schedule</span>
               </div>
             </Link>
           </div>
