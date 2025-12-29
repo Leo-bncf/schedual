@@ -92,22 +92,16 @@ Deno.serve(async (req) => {
           continue;
         }
 
-        // Determine hours per week (default to 4 for PYP/MYP)
-        const hoursPerWeek = 4;
-        let periodsScheduled = 0;
-
         // Track this ClassGroup's schedule to avoid conflicts
         const classGroupSchedule = slots
           .filter(s => s.classgroup_id === classGroup.id)
           .map(s => ({ day: s.day, period: s.period }));
 
-        // Schedule periods for this subject
+        // Schedule 1 period per day (5 days = full week coverage)
         for (const day of days) {
-          if (periodsScheduled >= hoursPerWeek) break;
+          let scheduled = false;
 
           for (const period of periods) {
-            if (periodsScheduled >= hoursPerWeek) break;
-
             // Check ClassGroup availability
             const classGroupBusy = classGroupSchedule.some(s => s.day === day && s.period === period);
             if (classGroupBusy) continue;
@@ -145,11 +139,14 @@ Deno.serve(async (req) => {
             classGroupSchedule.push({ day, period });
             teacherSchedules[assignedTeacher.id].push({ day, period });
             roomSchedules[assignedRoom.id].push({ day, period });
-            periodsScheduled++;
+            scheduled = true;
+            break; // Move to next day
+          }
+
+          if (!scheduled) {
+            console.warn(`Could not schedule ${subject.name} for ${classGroup.name} on ${day}`);
           }
         }
-
-        console.log(`Scheduled ${periodsScheduled}/${hoursPerWeek} periods for ${subject.name} in ${classGroup.name}`);
       }
     }
 
