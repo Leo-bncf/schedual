@@ -356,7 +356,10 @@ export default function Subjects() {
           {/* PYP Subjects */}
           {pypSubjects.length > 0 && (
             <div>
-              <h3 className="text-sm font-semibold text-slate-500 uppercase tracking-wide mb-4">PYP Programme</h3>
+              <h3 className="text-lg font-bold text-slate-700 mb-4 flex items-center gap-2">
+                <div className="h-1 w-12 bg-gradient-to-r from-green-500 to-emerald-600 rounded-full" />
+                PYP Programme
+              </h3>
               <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
                 {pypSubjects.map((subject, index) => (
                   <motion.div
@@ -406,7 +409,10 @@ export default function Subjects() {
           {/* MYP Subjects */}
           {mypSubjects.length > 0 && (
             <div>
-              <h3 className="text-sm font-semibold text-slate-500 uppercase tracking-wide mb-4">MYP Programme</h3>
+              <h3 className="text-lg font-bold text-slate-700 mb-4 flex items-center gap-2">
+                <div className="h-1 w-12 bg-gradient-to-r from-orange-500 to-amber-600 rounded-full" />
+                MYP Programme
+              </h3>
               <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
                 {mypSubjects.map((subject, index) => (
                   <motion.div
@@ -456,10 +462,21 @@ export default function Subjects() {
           {/* Core Components */}
           {coreSubjects.length > 0 && (
             <div>
-              <h3 className="text-sm font-semibold text-slate-500 uppercase tracking-wide mb-4">Core Components</h3>
+              <h3 className="text-lg font-bold text-slate-700 mb-4 flex items-center gap-2">
+                <div className="h-1 w-12 bg-gradient-to-r from-slate-700 to-slate-900 rounded-full" />
+                Core Components
+              </h3>
               <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
-                {coreSubjects.map(subject => (
-                  <Card key={subject.id} className="border-0 shadow-sm hover:shadow-md transition-shadow">
+                {coreSubjects.map((subject, index) => (
+                  <motion.div
+                    key={subject.id}
+                    initial={{ opacity: 0, scale: 0.9 }}
+                    animate={{ opacity: 1, scale: 1 }}
+                    transition={{ delay: index * 0.05 }}
+                    whileHover={{ scale: 1.03, y: -5 }}
+                  >
+                    <Card className="border-0 shadow-lg hover:shadow-2xl transition-all duration-300 overflow-hidden">
+                      <div className="h-1 bg-gradient-to-r from-slate-700 to-slate-900" />
                     <CardContent className="p-4">
                       <div className="flex items-start justify-between">
                         <div className="flex items-center gap-3">
@@ -489,6 +506,7 @@ export default function Subjects() {
                       </div>
                     </CardContent>
                   </Card>
+                </motion.div>
                 ))}
               </div>
             </div>
@@ -502,13 +520,17 @@ export default function Subjects() {
             return (
               <div key={group.id}>
                 <div className="flex items-center gap-3 mb-4">
-                  <div className={`w-8 h-8 rounded-lg ${group.color} flex items-center justify-center`}>
-                    <Icon className="w-4 h-4 text-white" />
-                  </div>
-                  <h3 className="text-sm font-semibold text-slate-700">
+                  <motion.div 
+                    className={`w-10 h-10 rounded-xl ${group.color} flex items-center justify-center shadow-lg`}
+                    whileHover={{ rotate: 360, scale: 1.1 }}
+                    transition={{ duration: 0.6 }}
+                  >
+                    <Icon className="w-5 h-5 text-white" />
+                  </motion.div>
+                  <h3 className="text-lg font-bold text-slate-800">
                     Group {group.id}: {group.name}
                   </h3>
-                  <Badge variant="secondary" className="bg-slate-100">
+                  <Badge className="bg-slate-800 text-white border-0 shadow-sm">
                     {group.subjects.length} subjects
                   </Badge>
                 </div>

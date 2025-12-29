@@ -577,21 +577,21 @@ Example for MYP/PYP: subjects: [{"name": "Mathematics"}, {"name": "Science"}]`,
           />
         </div>
         <Tabs value={yearFilter} onValueChange={setYearFilter}>
-          <TabsList className="bg-slate-100">
-            <TabsTrigger value="all">All ({students.length})</TabsTrigger>
-            <TabsTrigger value="DP1">DP1 ({dp1Count})</TabsTrigger>
-            <TabsTrigger value="DP2">DP2 ({dp2Count})</TabsTrigger>
-            <TabsTrigger value="MYP1">MYP1 ({mypCounts.MYP1})</TabsTrigger>
-            <TabsTrigger value="MYP2">MYP2 ({mypCounts.MYP2})</TabsTrigger>
-            <TabsTrigger value="MYP3">MYP3 ({mypCounts.MYP3})</TabsTrigger>
-            <TabsTrigger value="MYP4">MYP4 ({mypCounts.MYP4})</TabsTrigger>
-            <TabsTrigger value="MYP5">MYP5 ({mypCounts.MYP5})</TabsTrigger>
-            <TabsTrigger value="PYP-A">PYP A ({pypCounts['PYP-A']})</TabsTrigger>
-            <TabsTrigger value="PYP-B">PYP B ({pypCounts['PYP-B']})</TabsTrigger>
-            <TabsTrigger value="PYP-C">PYP C ({pypCounts['PYP-C']})</TabsTrigger>
-            <TabsTrigger value="PYP-D">PYP D ({pypCounts['PYP-D']})</TabsTrigger>
-            <TabsTrigger value="PYP-E">PYP E ({pypCounts['PYP-E']})</TabsTrigger>
-            <TabsTrigger value="PYP-F">PYP F ({pypCounts['PYP-F']})</TabsTrigger>
+          <TabsList className="bg-slate-100 overflow-x-auto">
+            <TabsTrigger value="all" className="data-[state=active]:bg-gradient-to-r data-[state=active]:from-indigo-500 data-[state=active]:to-violet-500 data-[state=active]:text-white transition-all">All ({students.length})</TabsTrigger>
+            <TabsTrigger value="DP1" className="data-[state=active]:bg-gradient-to-r data-[state=active]:from-blue-500 data-[state=active]:to-cyan-500 data-[state=active]:text-white transition-all">DP1 ({dp1Count})</TabsTrigger>
+            <TabsTrigger value="DP2" className="data-[state=active]:bg-gradient-to-r data-[state=active]:from-violet-500 data-[state=active]:to-purple-500 data-[state=active]:text-white transition-all">DP2 ({dp2Count})</TabsTrigger>
+            <TabsTrigger value="MYP1" className="data-[state=active]:bg-gradient-to-r data-[state=active]:from-emerald-500 data-[state=active]:to-teal-500 data-[state=active]:text-white transition-all">MYP1 ({mypCounts.MYP1})</TabsTrigger>
+            <TabsTrigger value="MYP2" className="data-[state=active]:bg-gradient-to-r data-[state=active]:from-emerald-500 data-[state=active]:to-teal-500 data-[state=active]:text-white transition-all">MYP2 ({mypCounts.MYP2})</TabsTrigger>
+            <TabsTrigger value="MYP3" className="data-[state=active]:bg-gradient-to-r data-[state=active]:from-emerald-500 data-[state=active]:to-teal-500 data-[state=active]:text-white transition-all">MYP3 ({mypCounts.MYP3})</TabsTrigger>
+            <TabsTrigger value="MYP4" className="data-[state=active]:bg-gradient-to-r data-[state=active]:from-emerald-500 data-[state=active]:to-teal-500 data-[state=active]:text-white transition-all">MYP4 ({mypCounts.MYP4})</TabsTrigger>
+            <TabsTrigger value="MYP5" className="data-[state=active]:bg-gradient-to-r data-[state=active]:from-emerald-500 data-[state=active]:to-teal-500 data-[state=active]:text-white transition-all">MYP5 ({mypCounts.MYP5})</TabsTrigger>
+            <TabsTrigger value="PYP-A" className="data-[state=active]:bg-gradient-to-r data-[state=active]:from-amber-500 data-[state=active]:to-orange-500 data-[state=active]:text-white transition-all">PYP A ({pypCounts['PYP-A']})</TabsTrigger>
+            <TabsTrigger value="PYP-B" className="data-[state=active]:bg-gradient-to-r data-[state=active]:from-amber-500 data-[state=active]:to-orange-500 data-[state=active]:text-white transition-all">PYP B ({pypCounts['PYP-B']})</TabsTrigger>
+            <TabsTrigger value="PYP-C" className="data-[state=active]:bg-gradient-to-r data-[state=active]:from-amber-500 data-[state=active]:to-orange-500 data-[state=active]:text-white transition-all">PYP C ({pypCounts['PYP-C']})</TabsTrigger>
+            <TabsTrigger value="PYP-D" className="data-[state=active]:bg-gradient-to-r data-[state=active]:from-amber-500 data-[state=active]:to-orange-500 data-[state=active]:text-white transition-all">PYP D ({pypCounts['PYP-D']})</TabsTrigger>
+            <TabsTrigger value="PYP-E" className="data-[state=active]:bg-gradient-to-r data-[state=active]:from-amber-500 data-[state=active]:to-orange-500 data-[state=active]:text-white transition-all">PYP E ({pypCounts['PYP-E']})</TabsTrigger>
+            <TabsTrigger value="PYP-F" className="data-[state=active]:bg-gradient-to-r data-[state=active]:from-amber-500 data-[state=active]:to-orange-500 data-[state=active]:text-white transition-all">PYP F ({pypCounts['PYP-F']})</TabsTrigger>
           </TabsList>
         </Tabs>
       </div>
