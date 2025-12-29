@@ -78,6 +78,13 @@ export default function Schedule() {
 
   const schoolId = user?.school_id;
 
+  const { data: school } = useQuery({
+    queryKey: ['school', schoolId],
+    queryFn: () => base44.entities.School.filter({ id: schoolId }),
+    enabled: !!schoolId,
+    select: (data) => data[0]
+  });
+
   const { data: scheduleVersions = [], isLoading: loadingVersions } = useQuery({
     queryKey: ['scheduleVersions', schoolId],
     queryFn: () => base44.entities.ScheduleVersion.filter({ school_id: schoolId }, '-created_date'),
@@ -997,10 +1004,7 @@ export default function Schedule() {
                         filename={`master-schedule-${classGroups.find(cg => cg.id === selectedClassGroupId)?.name || 'schedule'}`}
                         label="Export Master Schedule"
                         headerData={{
-                          schoolName: user?.school_id ? (async () => {
-                            const schools = await base44.entities.School.filter({ id: user.school_id });
-                            return schools[0]?.name || '';
-                          })() : '',
+                          schoolName: school?.name || '',
                           studentName: classGroups.find(cg => cg.id === selectedClassGroupId)?.name || '',
                           lastUpdated: selectedVersion?.generated_at ? new Date(selectedVersion.generated_at).toLocaleDateString() : ''
                         }}
@@ -1054,10 +1058,7 @@ export default function Schedule() {
                           filename={`student-schedule-${students.find(s => s.id === selectedStudentId)?.full_name || 'student'}`}
                           label="Export Student Schedule"
                           headerData={{
-                            schoolName: user?.school_id ? (async () => {
-                              const schools = await base44.entities.School.filter({ id: user.school_id });
-                              return schools[0]?.name || '';
-                            })() : '',
+                            schoolName: school?.name || '',
                             studentName: students.find(s => s.id === selectedStudentId)?.full_name || '',
                             lastUpdated: selectedVersion?.generated_at ? new Date(selectedVersion.generated_at).toLocaleDateString() : ''
                           }}
@@ -1087,10 +1088,7 @@ export default function Schedule() {
                           filename={`teacher-schedule-${teachers.find(t => t.id === selectedTeacherId)?.full_name || 'teacher'}`}
                           label="Export Teacher Schedule"
                           headerData={{
-                            schoolName: user?.school_id ? (async () => {
-                              const schools = await base44.entities.School.filter({ id: user.school_id });
-                              return schools[0]?.name || '';
-                            })() : '',
+                            schoolName: school?.name || '',
                             studentName: teachers.find(t => t.id === selectedTeacherId)?.full_name || '',
                             lastUpdated: selectedVersion?.generated_at ? new Date(selectedVersion.generated_at).toLocaleDateString() : ''
                           }}
