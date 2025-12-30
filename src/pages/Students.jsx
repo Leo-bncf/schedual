@@ -540,62 +540,92 @@ Return EXACTLY ${batchNames.length} students - one for each name in the list abo
       });
 
       if (missingFromExtraction.length > 0) {
-        console.warn(`⚠️ ${missingFromExtraction.length} students identified but not extracted:`, missingFromExtraction);
+        console.warn(`⚠️ MISSING: ${missingFromExtraction.length} students not extracted:`, missingFromExtraction);
+        alert(`⚠️ Warning: ${missingFromExtraction.length} students were identified but not extracted:\n\n${missingFromExtraction.join('\n')}\n\nAttempting to recover them now...`);
         
-        // Retry missing students
-        setUploadState(prev => ({ 
-          ...prev, 
-          progress: `Retrying ${missingFromExtraction.length} missing students...` 
-        }));
+        // Retry missing students ONE BY ONE for maximum reliability
+        for (const missingName of missingFromExtraction) {
+          setUploadState(prev => ({ 
+            ...prev, 
+            progress: `Recovering: ${missingName}...` 
+          }));
 
-        const retryResult = await base44.integrations.Core.InvokeLLM({
-          prompt: `We identified these students but failed to extract their details: ${missingFromExtraction.join(', ')}
+          try {
+            const retryResult = await base44.integrations.Core.InvokeLLM({
+              prompt: `CRITICAL TASK: Find the student named "${missingName}" in this document.
 
-CRITICAL: Find these EXACT students in the document and extract their information.
+This student EXISTS in the document - we already identified their name. Now extract ALL their information:
 
-For each student, provide:
-- full_name (must match exactly one of the names above)
-- email, student_id (if available)
-- ib_programme (DP, MYP, or PYP)
-- year_group (e.g., DP1, DP2, MYP1-5, PYP-A through PYP-F)
-- subjects: ALL their subject choices
+1. full_name: "${missingName}" (use this EXACT name with all accents)
+2. email (if available)
+3. student_id (if available)  
+4. ib_programme (DP, MYP, or PYP)
+5. year_group (DP1/DP2, MYP1-5, or PYP-A through PYP-F)
+6. subjects: ALL subjects for this student
 
-Return EXACTLY ${missingFromExtraction.length} students.`,
-          file_urls: [file_url],
-          response_json_schema: {
-            type: "object",
-            properties: {
-              students: {
-                type: "array",
-                items: {
-                  type: "object",
-                  properties: {
-                    full_name: { type: "string" },
-                    email: { type: "string" },
-                    student_id: { type: "string" },
-                    ib_programme: { type: "string" },
-                    year_group: { type: "string" },
-                    subjects: {
-                      type: "array",
-                      items: {
-                        type: "object",
-                        properties: {
-                          name: { type: "string" },
-                          level: { type: "string" }
+For DP students: Include level (HL/SL) for each subject.
+
+Return EXACTLY 1 student object. Do not skip this student.`,
+              file_urls: [file_url],
+              response_json_schema: {
+                type: "object",
+                properties: {
+                  students: {
+                    type: "array",
+                    items: {
+                      type: "object",
+                      properties: {
+                        full_name: { type: "string" },
+                        email: { type: "string" },
+                        student_id: { type: "string" },
+                        ib_programme: { type: "string" },
+                        year_group: { type: "string" },
+                        subjects: {
+                          type: "array",
+                          items: {
+                            type: "object",
+                            properties: {
+                              name: { type: "string" },
+                              level: { type: "string" }
+                            }
+                          }
                         }
                       }
                     }
                   }
                 }
               }
+            });
+
+            const recoveredStudent = retryResult?.students?.[0];
+            if (recoveredStudent && recoveredStudent.full_name) {
+              console.log(`✅ Recovered: ${recoveredStudent.full_name}`);
+              allStudents.push(recoveredStudent);
+            } else {
+              console.error(`❌ Failed to recover: ${missingName}`);
             }
+
+            // Small delay between retries
+            await new Promise(resolve => setTimeout(resolve, 500));
+          } catch (error) {
+            console.error(`❌ Error recovering ${missingName}:`, error);
           }
+        }
+
+        const finalExtractedNames = allStudents.map(s => s.full_name?.toLowerCase().trim()).filter(Boolean);
+        const stillMissing = allNames.filter(name => {
+          const nameLower = name.toLowerCase().trim();
+          return !finalExtractedNames.some(en => 
+            en === nameLower || 
+            en.includes(nameLower) || 
+            nameLower.includes(en)
+          );
         });
 
-        const recoveredStudents = retryResult?.students || [];
-        if (recoveredStudents.length > 0) {
-          console.log(`✅ Recovered ${recoveredStudents.length} students`);
-          allStudents.push(...recoveredStudents);
+        if (stillMissing.length > 0) {
+          alert(`❌ CRITICAL: Still missing ${stillMissing.length} students after retry:\n\n${stillMissing.join('\n')}\n\nThese students will need to be added manually.`);
+        } else {
+          alert(`✅ Successfully recovered all ${missingFromExtraction.length} missing students!`);
         }
       }
 
