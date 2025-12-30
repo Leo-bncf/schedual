@@ -439,14 +439,12 @@ export default function Students() {
         console.log(`Second pass found ${missingStudents.length} additional students:`, missingStudents);
         allNames = [...allNames, ...missingStudents];
       }
-
-      const allNames = namesResult?.student_names || [];
       
       if (allNames.length === 0) {
         throw new Error('No student names found in the document');
       }
 
-      console.log(`Found ${allNames.length} student names`);
+      console.log(`Total found: ${allNames.length} student names`);
       
       setUploadState(prev => ({ 
         ...prev, 
