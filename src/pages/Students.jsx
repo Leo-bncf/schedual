@@ -374,54 +374,18 @@ export default function Students() {
     try {
       const { file_url } = await base44.integrations.Core.UploadFile({ file });
 
-      setUploadState(prev => ({ ...prev, stage: 'extracting', progress: 'Analyzing document structure...' }));
+      setUploadState(prev => ({ ...prev, stage: 'extracting', progress: 'Extracting student data...' }));
 
-      // First pass: Count total students
-      const countResult = await base44.integrations.Core.InvokeLLM({
-        prompt: `Count the TOTAL NUMBER of students in this entire document. Scan from start to finish and provide the exact count.
-        
-Return format: {"total_students": <number>, "document_type": "spreadsheet/list/table/etc"}`,
-        file_urls: [file_url],
-        response_json_schema: {
-          type: "object",
-          properties: {
-            total_students: { type: "number" },
-            document_type: { type: "string" }
-          }
-        }
-      });
+      // Single-pass extraction with deduplication
+      const extractionResult = await base44.integrations.Core.InvokeLLM({
+        prompt: `Extract ALL students from this document. Read the ENTIRE document carefully and extract each unique student exactly once.
 
-      const expectedCount = countResult?.total_students || 0;
-      console.log(`Expected ${expectedCount} students in document`);
-
-      setUploadState(prev => ({ 
-        ...prev, 
-        progress: `Found ${expectedCount} students. Extracting in chunks...` 
-      }));
-
-      // Extract students in chunks to handle large documents
-      const chunkSize = 50;
-      const totalChunks = Math.ceil(expectedCount / chunkSize);
-      let allStudents = [];
-
-      for (let chunk = 0; chunk < totalChunks; chunk++) {
-        const startIndex = chunk * chunkSize + 1;
-        const endIndex = Math.min((chunk + 1) * chunkSize, expectedCount);
-        
-        setUploadState(prev => ({ 
-          ...prev, 
-          progress: `Extracting students ${startIndex}-${endIndex} of ${expectedCount}...` 
-        }));
-
-        const chunkResult = await base44.integrations.Core.InvokeLLM({
-          prompt: `EXTRACT STUDENTS ${startIndex} through ${endIndex} from this document.
-
-CRITICAL INSTRUCTIONS:
-- Total students in document: ${expectedCount}
-- Extract ONLY students numbered ${startIndex} to ${endIndex}
-- Skip students 1-${startIndex - 1} (already processed)
-- Stop after student ${endIndex}
-- Return exactly ${endIndex - startIndex + 1} students
+CRITICAL RULES:
+- Extract each student ONLY ONCE (no duplicates)
+- Process every row/entry in the document
+- If you see the same student name twice, only include them once
+- Do not skip any students
+- Do not add fake/placeholder students
 
 For each student you find, provide:
 - full_name, email (if available), student_id (if available)
@@ -456,52 +420,47 @@ subjects: [
 For MYP/PYP students, extract all subjects listed (no level needed).
 
 Example for MYP/PYP: subjects: [{"name": "Mathematics"}, {"name": "Science"}, {"name": "English"}, {"name": "History"}]`,
-          file_urls: [file_url],
-          response_json_schema: {
-            type: "object",
-            properties: {
-              students: {
-                type: "array",
-                items: {
-                  type: "object",
-                  properties: {
-                    full_name: { type: "string" },
-                    email: { type: "string" },
-                    student_id: { type: "string" },
-                    ib_programme: { type: "string" },
-                    year_group: { type: "string" },
-                    subjects: {
-                      type: "array",
-                      minItems: 1,
-                      items: {
-                        type: "object",
-                        properties: {
-                          name: { type: "string" },
-                          level: { type: "string" }
-                        },
-                        required: ["name"]
-                      }
+        file_urls: [file_url],
+        response_json_schema: {
+          type: "object",
+          properties: {
+            students: {
+              type: "array",
+              items: {
+                type: "object",
+                properties: {
+                  full_name: { type: "string" },
+                  email: { type: "string" },
+                  student_id: { type: "string" },
+                  ib_programme: { type: "string" },
+                  year_group: { type: "string" },
+                  subjects: {
+                    type: "array",
+                    minItems: 1,
+                    items: {
+                      type: "object",
+                      properties: {
+                        name: { type: "string" },
+                        level: { type: "string" }
+                      },
+                      required: ["name"]
                     }
-                  },
-                  required: ["full_name", "ib_programme", "year_group"]
-                }
+                  }
+                },
+                required: ["full_name", "ib_programme", "year_group"]
               }
             }
           }
-        });
+        }
+      });
 
-        const chunkStudents = chunkResult?.students || [];
-        allStudents = [...allStudents, ...chunkStudents];
-        
-        console.log(`Chunk ${chunk + 1}/${totalChunks}: Extracted ${chunkStudents.length} students (Total so far: ${allStudents.length})`);
-      }
-
-      // Deduplicate students by name, email, or student_id
-      const seen = new Set();
-      const deduplicatedStudents = [];
+      const rawStudents = extractionResult?.students || [];
       
-      for (const student of allStudents) {
-        // Create a unique key from available identifiers
+      // Deduplicate students
+      const seen = new Set();
+      const studentsData = [];
+      
+      for (const student of rawStudents) {
         const key = [
           student.full_name?.toLowerCase().trim(),
           student.email?.toLowerCase().trim(),
@@ -510,33 +469,22 @@ Example for MYP/PYP: subjects: [{"name": "Mathematics"}, {"name": "Science"}, {"
         
         if (!seen.has(key)) {
           seen.add(key);
-          deduplicatedStudents.push(student);
+          studentsData.push(student);
         } else {
-          console.log(`Skipping duplicate student: ${student.full_name}`);
+          console.log(`Removed duplicate: ${student.full_name}`);
         }
       }
-
-      const studentsData = deduplicatedStudents;
 
       if (studentsData.length === 0) {
         throw new Error('No students found in the document');
       }
 
-      // Check if extraction count matches
-      const extractedCount = studentsData.length;
-      const countDifference = extractedCount - expectedCount;
-      
-      if (countDifference !== 0) {
-        const msg = countDifference > 0 
-          ? `⚠️ EXTRACTION MISMATCH\n\nExpected: ${expectedCount} students\nExtracted: ${extractedCount} students\nExtra: ${countDifference} students (duplicates removed)\n\nThe AI may have extracted some students multiple times or hallucinated entries.\n\nRecommendation: Review the imported data carefully before using it.\n\nContinue with ${extractedCount} students?`
-          : `⚠️ INCOMPLETE EXTRACTION\n\nExpected: ${expectedCount} students\nExtracted: ${extractedCount} students\nMissing: ${-countDifference} students\n\nThis usually happens with large documents.\n\nOptions:\n1. Continue with ${extractedCount} students\n2. Cancel and split document into smaller files\n\nContinue anyway?`;
-        
-        if (!confirm(msg)) {
-          throw new Error('Upload cancelled - extraction count mismatch');
-        }
+      const duplicatesRemoved = rawStudents.length - studentsData.length;
+      if (duplicatesRemoved > 0) {
+        console.log(`Removed ${duplicatesRemoved} duplicate entries`);
       }
 
-      console.log(`Extracted ${extractedCount} of ${expectedCount} students (after deduplication)`);
+      console.log(`Extracted ${studentsData.length} unique students`);
 
       // Validate DP students have 6 subjects
       const dpValidationWarnings = [];
