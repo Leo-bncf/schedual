@@ -376,11 +376,28 @@ export default function Students() {
 
       setUploadState(prev => ({ ...prev, stage: 'extracting', progress: 'Finding all student names...' }));
 
+      // Helper function to call LLM with retry on 502 errors
+      const callLLMWithRetry = async (params, maxRetries = 3) => {
+        for (let attempt = 1; attempt <= maxRetries; attempt++) {
+          try {
+            return await base44.integrations.Core.InvokeLLM(params);
+          } catch (error) {
+            const is502 = error?.message?.includes('502') || error?.response?.status === 502;
+            if (is502 && attempt < maxRetries) {
+              console.log(`⚠️ Retry ${attempt}/${maxRetries} after 502 error...`);
+              await new Promise(resolve => setTimeout(resolve, 2000 * attempt)); // Exponential backoff
+              continue;
+            }
+            throw error;
+          }
+        }
+      };
+
       // Phase 1: Get list of all student names - multiple passes for reliability
       let allNames = [];
 
       // First pass: Get all names
-      const namesResult1 = await base44.integrations.Core.InvokeLLM({
+      const namesResult1 = await callLLMWithRetry({
         prompt: `You are extracting student names from a document. This is CRITICAL - you must find EVERY SINGLE student.
 
       TASK: List ALL student names in this document. Count them carefully and list every single one.
@@ -411,7 +428,7 @@ export default function Students() {
       console.log(`First pass found ${allNames.length} students`);
 
       // Second pass: Double-check we got everyone
-      const namesResult2 = await base44.integrations.Core.InvokeLLM({
+      const namesResult2 = await callLLMWithRetry({
         prompt: `We found these ${allNames.length} students: ${allNames.join(', ')}
 
       CRITICAL VERIFICATION: Look through the document again and find any students we might have MISSED.
@@ -452,7 +469,7 @@ export default function Students() {
       }));
 
       // Phase 2: Extract full details in manageable batches
-      const extractBatchSize = 30;
+      const extractBatchSize = 15; // Reduced to prevent timeouts
       const totalBatches = Math.ceil(allNames.length / extractBatchSize);
       const allStudents = [];
 
@@ -464,7 +481,7 @@ export default function Students() {
           progress: `Extracting batch ${batch + 1}/${totalBatches} (${batchNames.length} students)...` 
         }));
 
-        const batchResult = await base44.integrations.Core.InvokeLLM({
+        const batchResult = await callLLMWithRetry({
           prompt: `Extract ONLY these specific students from the document: ${batchNames.join(', ')}
 
 CRITICAL: Copy names EXACTLY as provided above with ALL accents and special characters preserved (é, ñ, ü, ö, ç, etc.).
@@ -522,9 +539,9 @@ Return EXACTLY ${batchNames.length} students - one for each name in the list abo
         
         console.log(`Batch ${batch + 1}/${totalBatches}: Extracted ${batchStudents.length}/${batchNames.length} students`);
         
-        // Small delay to avoid rate limits
+        // Delay to avoid rate limits and timeouts
         if (batch < totalBatches - 1) {
-          await new Promise(resolve => setTimeout(resolve, 500));
+          await new Promise(resolve => setTimeout(resolve, 1000));
         }
       }
 
@@ -551,7 +568,7 @@ Return EXACTLY ${batchNames.length} students - one for each name in the list abo
           }));
 
           try {
-            const retryResult = await base44.integrations.Core.InvokeLLM({
+            const retryResult = await callLLMWithRetry({
               prompt: `CRITICAL TASK: Find the student named "${missingName}" in this document.
 
 This student EXISTS in the document - we already identified their name. Now extract ALL their information:
