@@ -496,25 +496,47 @@ Example for MYP/PYP: subjects: [{"name": "Mathematics"}, {"name": "Science"}, {"
         console.log(`Chunk ${chunk + 1}/${totalChunks}: Extracted ${chunkStudents.length} students (Total so far: ${allStudents.length})`);
       }
 
-      const studentsData = allStudents;
+      // Deduplicate students by name, email, or student_id
+      const seen = new Set();
+      const deduplicatedStudents = [];
+      
+      for (const student of allStudents) {
+        // Create a unique key from available identifiers
+        const key = [
+          student.full_name?.toLowerCase().trim(),
+          student.email?.toLowerCase().trim(),
+          student.student_id?.toLowerCase().trim()
+        ].filter(Boolean).join('|');
+        
+        if (!seen.has(key)) {
+          seen.add(key);
+          deduplicatedStudents.push(student);
+        } else {
+          console.log(`Skipping duplicate student: ${student.full_name}`);
+        }
+      }
+
+      const studentsData = deduplicatedStudents;
 
       if (studentsData.length === 0) {
         throw new Error('No students found in the document');
       }
 
-      // Check if extraction is incomplete
+      // Check if extraction count matches
       const extractedCount = studentsData.length;
-      const missingCount = expectedCount - extractedCount;
+      const countDifference = extractedCount - expectedCount;
       
-      if (missingCount > 0) {
-        const msg = `⚠️ INCOMPLETE EXTRACTION\n\nExpected: ${expectedCount} students\nExtracted: ${extractedCount} students\nMissing: ${missingCount} students\n\nThis usually happens with large documents. The AI may have stopped early due to response limits.\n\nOptions:\n1. Split your document into smaller files (recommended)\n2. Continue with ${extractedCount} students and add the rest manually\n3. Cancel and try again`;
+      if (countDifference !== 0) {
+        const msg = countDifference > 0 
+          ? `⚠️ EXTRACTION MISMATCH\n\nExpected: ${expectedCount} students\nExtracted: ${extractedCount} students\nExtra: ${countDifference} students (duplicates removed)\n\nThe AI may have extracted some students multiple times or hallucinated entries.\n\nRecommendation: Review the imported data carefully before using it.\n\nContinue with ${extractedCount} students?`
+          : `⚠️ INCOMPLETE EXTRACTION\n\nExpected: ${expectedCount} students\nExtracted: ${extractedCount} students\nMissing: ${-countDifference} students\n\nThis usually happens with large documents.\n\nOptions:\n1. Continue with ${extractedCount} students\n2. Cancel and split document into smaller files\n\nContinue anyway?`;
         
-        if (!confirm(msg + '\n\nContinue with partial import?')) {
-          throw new Error('Upload cancelled - incomplete extraction');
+        if (!confirm(msg)) {
+          throw new Error('Upload cancelled - extraction count mismatch');
         }
       }
 
-      console.log(`Extracted ${extractedCount} of ${expectedCount} students`);
+      console.log(`Extracted ${extractedCount} of ${expectedCount} students (after deduplication)`);
 
       // Validate DP students have 6 subjects
       const dpValidationWarnings = [];
