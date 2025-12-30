@@ -436,13 +436,16 @@ export default function Students() {
       const namesResult2 = await callLLMWithRetry({
         prompt: `We found these ${allNames.length} students: ${allNames.join(', ')}
 
-      CRITICAL VERIFICATION: Look through the document again and find any students we might have MISSED.
+      CRITICAL VERIFICATION: Look through the ENTIRE document one more time and count ALL students.
+
+      IMPORTANT: If the same name appears multiple times in the document (e.g., two different students with the same name), include that name MULTIPLE TIMES in missing_students if we only found it once.
 
       Return:
-      1. missing_students: Any student names NOT in the list above (preserve accents exactly)
-      2. confirmed: true if the list above is complete and correct
+      1. missing_students: Any student names NOT in the list above OR duplicate names that appear multiple times (preserve accents exactly)
+      2. total_count_in_document: Total number of students you found in the document (including duplicates)
+      3. confirmed: true if our list matches the document exactly
 
-      Be extremely careful - if there are ANY students not in that list, add them to missing_students.`,
+      Count carefully and check every page/section.`,
         file_urls: [file_url],
         response_json_schema: {
           type: "object",
@@ -451,15 +454,22 @@ export default function Students() {
               type: "array",
               items: { type: "string" }
             },
+            total_count_in_document: { type: "number" },
             confirmed: { type: "boolean" }
           }
         }
       });
 
       const missingStudents = namesResult2?.missing_students || [];
+      const totalInDoc = namesResult2?.total_count_in_document;
+      
       if (missingStudents.length > 0) {
         console.log(`Second pass found ${missingStudents.length} additional students:`, missingStudents);
         allNames = [...allNames, ...missingStudents];
+      }
+      
+      if (totalInDoc && totalInDoc > allNames.length) {
+        console.warn(`⚠️ Document has ${totalInDoc} students but we only found ${allNames.length}. ${totalInDoc - allNames.length} still missing!`);
       }
       
       if (allNames.length === 0) {
@@ -723,23 +733,36 @@ Return EXACTLY 1 student object. Do not skip this student.`,
 
       const rawStudents = allStudents;
       
-      // Deduplicate students
-      const seen = new Set();
+      // Smart deduplication - only remove TRUE duplicates (exact same person extracted twice)
       const studentsData = [];
+      const duplicateLog = [];
       
-      for (const student of rawStudents) {
-        const key = [
-          student.full_name?.toLowerCase().trim(),
-          student.email?.toLowerCase().trim(),
-          student.student_id?.toLowerCase().trim()
-        ].filter(Boolean).join('|');
+      for (let i = 0; i < rawStudents.length; i++) {
+        const student = rawStudents[i];
         
-        if (!seen.has(key)) {
-          seen.add(key);
+        // Check if this exact student already exists
+        const isDuplicate = studentsData.some(existing => {
+          const sameName = existing.full_name?.toLowerCase().trim() === student.full_name?.toLowerCase().trim();
+          const sameEmail = existing.email && student.email && 
+            existing.email.toLowerCase().trim() === student.email.toLowerCase().trim();
+          const sameId = existing.student_id && student.student_id && 
+            existing.student_id.toLowerCase().trim() === student.student_id.toLowerCase().trim();
+          
+          // Only mark as duplicate if name matches AND (email OR student_id also match)
+          // This preserves students with same name but different email/id (legitimate duplicates in document)
+          return sameName && (sameEmail || sameId);
+        });
+        
+        if (!isDuplicate) {
           studentsData.push(student);
         } else {
-          console.log(`Removed duplicate: ${student.full_name}`);
+          duplicateLog.push(student.full_name);
+          console.log(`Removed duplicate: ${student.full_name} (matched email/ID)`);
         }
+      }
+      
+      if (duplicateLog.length > 0) {
+        console.log(`Removed ${duplicateLog.length} duplicate extractions (same name + email/ID)`);
       }
 
       if (studentsData.length === 0) {
