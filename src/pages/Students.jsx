@@ -382,16 +382,34 @@ export default function Students() {
 - full_name, email (if available), student_id (if available)
 - ib_programme (one of: DP, MYP, PYP)
 - year_group (e.g., DP1, DP2, MYP1-5, PYP-A through PYP-F)
-- subjects: array of ALL subject choices found for the student. 
+- subjects: array of ALL subject choices
 
-CRITICAL: For DP students, they must take exactly 6 subjects (one from each of the 6 IB groups). Extract ALL 6 subjects with their levels (HL or SL).
-- Each DP student MUST have exactly 6 subjects in their subjects array
-- Each subject must include the subject name and level (HL or SL)
-- Typically 3-4 subjects at HL and the rest at SL
+CRITICAL FOR DP STUDENTS - READ CAREFULLY:
+Every DP student MUST take EXACTLY 6 SUBJECTS - one from each of the 6 IB subject groups:
+1. Group 1: Language & Literature (e.g., English A, Spanish A)
+2. Group 2: Language Acquisition (e.g., Spanish B, French B, English B)
+3. Group 3: Individuals & Societies (e.g., History, Geography, Economics, Psychology)
+4. Group 4: Sciences (e.g., Physics, Chemistry, Biology, Environmental Systems)
+5. Group 5: Mathematics (e.g., Mathematics AA, Mathematics AI)
+6. Group 6: The Arts OR another subject from Groups 1-5 (e.g., Visual Arts, Music, Theatre, or additional Science/Humanities)
+
+Each subject must specify its level: HL (Higher Level) or SL (Standard Level).
+Typically students take 3-4 subjects at HL and the remaining at SL.
+
+DO NOT skip any subjects. If a student appears to have fewer than 6 subjects, look more carefully at the document for ALL their subject choices.
+
+Example DP student with ALL 6 subjects:
+subjects: [
+  {"name": "English A: Literature", "level": "HL"},
+  {"name": "Spanish B", "level": "SL"},
+  {"name": "History", "level": "HL"},
+  {"name": "Physics", "level": "HL"},
+  {"name": "Mathematics AA", "level": "HL"},
+  {"name": "Visual Arts", "level": "SL"}
+]
 
 For MYP/PYP students, extract all subjects listed (no level needed).
 
-Example for DP (MUST HAVE 6): subjects: [{"name": "English A", "level": "HL"}, {"name": "Spanish B", "level": "SL"}, {"name": "History", "level": "HL"}, {"name": "Physics", "level": "HL"}, {"name": "Mathematics AA", "level": "HL"}, {"name": "Visual Arts", "level": "SL"}]
 Example for MYP/PYP: subjects: [{"name": "Mathematics"}, {"name": "Science"}, {"name": "English"}, {"name": "History"}]`,
         file_urls: [file_url],
         response_json_schema: {
@@ -431,6 +449,25 @@ Example for MYP/PYP: subjects: [{"name": "Mathematics"}, {"name": "Science"}, {"
 
       if (studentsData.length === 0) {
         throw new Error('No students found in the document');
+      }
+
+      // Validate DP students have 6 subjects
+      const dpValidationWarnings = [];
+      studentsData.forEach((student, idx) => {
+        if (student.ib_programme === 'DP') {
+          const subjectCount = student.subjects?.length || 0;
+          if (subjectCount !== 6) {
+            dpValidationWarnings.push(`${student.full_name}: has ${subjectCount} subjects (expected 6)`);
+          }
+        }
+      });
+
+      if (dpValidationWarnings.length > 0) {
+        const warningMsg = `Warning: ${dpValidationWarnings.length} DP students don't have exactly 6 subjects:\n${dpValidationWarnings.slice(0, 5).join('\n')}${dpValidationWarnings.length > 5 ? `\n...and ${dpValidationWarnings.length - 5} more` : ''}`;
+        console.warn(warningMsg);
+        if (!confirm(`${warningMsg}\n\nDo you want to continue anyway? These students will need manual correction.`)) {
+          throw new Error('Upload cancelled due to validation warnings');
+        }
       }
 
       setUploadState(prev => ({ ...prev, stage: 'creating', totalStudents: studentsData.length, progress: `Creating ${studentsData.length} students...` }));
