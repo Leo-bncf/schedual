@@ -374,87 +374,114 @@ export default function Students() {
     try {
       const { file_url } = await base44.integrations.Core.UploadFile({ file });
 
-      setUploadState(prev => ({ ...prev, stage: 'extracting', progress: 'Extracting student data...' }));
+      setUploadState(prev => ({ ...prev, stage: 'extracting', progress: 'Finding all student names...' }));
 
-      // Single-pass extraction with deduplication
-      const extractionResult = await base44.integrations.Core.InvokeLLM({
-        prompt: `Extract ALL students from this document. Read the ENTIRE document carefully and extract each unique student exactly once.
+      // Phase 1: Get list of all student names (simple, reliable)
+      const namesResult = await base44.integrations.Core.InvokeLLM({
+        prompt: `Extract ONLY the full names of ALL students in this document. List every single student name you see - do not skip any.
 
-CRITICAL RULES:
-- Extract each student ONLY ONCE (no duplicates)
-- Process every row/entry in the document
-- If you see the same student name twice, only include them once
-- Do not skip any students
-- Do not add fake/placeholder students
-
-For each student you find, provide:
-- full_name, email (if available), student_id (if available)
-- ib_programme (one of: DP, MYP, PYP)
-- year_group (e.g., DP1, DP2, MYP1-5, PYP-A through PYP-F)
-- subjects: array of ALL subject choices
-
-CRITICAL FOR DP STUDENTS - READ CAREFULLY:
-Every DP student MUST take EXACTLY 6 SUBJECTS - one from each of the 6 IB subject groups:
-1. Group 1: Language & Literature (e.g., English A, Spanish A)
-2. Group 2: Language Acquisition (e.g., Spanish B, French B, English B)
-3. Group 3: Individuals & Societies (e.g., History, Geography, Economics, Psychology)
-4. Group 4: Sciences (e.g., Physics, Chemistry, Biology, Environmental Systems)
-5. Group 5: Mathematics (e.g., Mathematics AA, Mathematics AI)
-6. Group 6: The Arts OR another subject from Groups 1-5 (e.g., Visual Arts, Music, Theatre, or additional Science/Humanities)
-
-Each subject must specify its level: HL (Higher Level) or SL (Standard Level).
-Typically students take 3-4 subjects at HL and the remaining at SL.
-
-DO NOT skip any subjects. If a student appears to have fewer than 6 subjects, look more carefully at the document for ALL their subject choices.
-
-Example DP student with ALL 6 subjects:
-subjects: [
-  {"name": "English A: Literature", "level": "HL"},
-  {"name": "Spanish B", "level": "SL"},
-  {"name": "History", "level": "HL"},
-  {"name": "Physics", "level": "HL"},
-  {"name": "Mathematics AA", "level": "HL"},
-  {"name": "Visual Arts", "level": "SL"}
-]
-
-For MYP/PYP students, extract all subjects listed (no level needed).
-
-Example for MYP/PYP: subjects: [{"name": "Mathematics"}, {"name": "Science"}, {"name": "English"}, {"name": "History"}]`,
+Return a simple list of names in order. Do not include any other information, just names.`,
         file_urls: [file_url],
         response_json_schema: {
           type: "object",
           properties: {
-            students: {
+            student_names: {
               type: "array",
-              items: {
-                type: "object",
-                properties: {
-                  full_name: { type: "string" },
-                  email: { type: "string" },
-                  student_id: { type: "string" },
-                  ib_programme: { type: "string" },
-                  year_group: { type: "string" },
-                  subjects: {
-                    type: "array",
-                    minItems: 1,
-                    items: {
-                      type: "object",
-                      properties: {
-                        name: { type: "string" },
-                        level: { type: "string" }
-                      },
-                      required: ["name"]
-                    }
-                  }
-                },
-                required: ["full_name", "ib_programme", "year_group"]
-              }
+              items: { type: "string" }
             }
           }
         }
       });
 
-      const rawStudents = extractionResult?.students || [];
+      const allNames = namesResult?.student_names || [];
+      
+      if (allNames.length === 0) {
+        throw new Error('No student names found in the document');
+      }
+
+      console.log(`Found ${allNames.length} student names`);
+      
+      setUploadState(prev => ({ 
+        ...prev, 
+        progress: `Found ${allNames.length} students. Extracting details...` 
+      }));
+
+      // Phase 2: Extract full details in manageable batches
+      const batchSize = 30;
+      const totalBatches = Math.ceil(allNames.length / batchSize);
+      const allStudents = [];
+
+      for (let batch = 0; batch < totalBatches; batch++) {
+        const batchNames = allNames.slice(batch * batchSize, (batch + 1) * batchSize);
+        
+        setUploadState(prev => ({ 
+          ...prev, 
+          progress: `Extracting batch ${batch + 1}/${totalBatches} (${batchNames.length} students)...` 
+        }));
+
+        const batchResult = await base44.integrations.Core.InvokeLLM({
+          prompt: `Extract ONLY these specific students from the document: ${batchNames.join(', ')}
+
+For each of these ${batchNames.length} students, provide:
+- full_name (must match exactly one of the names above)
+- email, student_id (if available)
+- ib_programme (DP, MYP, or PYP)
+- year_group (e.g., DP1, DP2, MYP1-5, PYP-A through PYP-F)
+- subjects: ALL their subject choices
+
+CRITICAL FOR DP STUDENTS:
+- DP students take EXACTLY 6 subjects (one from each IB group 1-6)
+- Each subject needs a level: HL or SL
+- Example: [{"name": "English A", "level": "HL"}, {"name": "Spanish B", "level": "SL"}, ...]
+
+For MYP/PYP: extract all subjects (no level needed).
+
+Return EXACTLY ${batchNames.length} students - one for each name in the list above.`,
+          file_urls: [file_url],
+          response_json_schema: {
+            type: "object",
+            properties: {
+              students: {
+                type: "array",
+                items: {
+                  type: "object",
+                  properties: {
+                    full_name: { type: "string" },
+                    email: { type: "string" },
+                    student_id: { type: "string" },
+                    ib_programme: { type: "string" },
+                    year_group: { type: "string" },
+                    subjects: {
+                      type: "array",
+                      items: {
+                        type: "object",
+                        properties: {
+                          name: { type: "string" },
+                          level: { type: "string" }
+                        },
+                        required: ["name"]
+                      }
+                    }
+                  },
+                  required: ["full_name", "ib_programme", "year_group"]
+                }
+              }
+            }
+          }
+        });
+
+        const batchStudents = batchResult?.students || [];
+        allStudents.push(...batchStudents);
+        
+        console.log(`Batch ${batch + 1}/${totalBatches}: Extracted ${batchStudents.length}/${batchNames.length} students`);
+        
+        // Small delay to avoid rate limits
+        if (batch < totalBatches - 1) {
+          await new Promise(resolve => setTimeout(resolve, 500));
+        }
+      }
+
+      const rawStudents = allStudents;
       
       // Deduplicate students
       const seen = new Set();
