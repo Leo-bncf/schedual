@@ -380,6 +380,10 @@ export default function Students() {
       const namesResult = await base44.integrations.Core.InvokeLLM({
         prompt: `Extract ONLY the full names of ALL students in this document. List every single student name you see - do not skip any.
 
+CRITICAL: Preserve ALL special characters, accents, and diacritics EXACTLY as they appear (é, ñ, ü, ö, ç, etc.). Do not convert or simplify names.
+
+Examples: José García, François Müller, Søren Ødegård, María José López
+
 Return a simple list of names in order. Do not include any other information, just names.`,
         file_urls: [file_url],
         response_json_schema: {
@@ -421,6 +425,8 @@ Return a simple list of names in order. Do not include any other information, ju
 
         const batchResult = await base44.integrations.Core.InvokeLLM({
           prompt: `Extract ONLY these specific students from the document: ${batchNames.join(', ')}
+
+CRITICAL: Copy names EXACTLY as provided above with ALL accents and special characters preserved (é, ñ, ü, ö, ç, etc.).
 
 For each of these ${batchNames.length} students, provide:
 - full_name (must match exactly one of the names above)
