@@ -375,10 +375,35 @@ export default function Students() {
     try {
       const { file_url } = await base44.integrations.Core.UploadFile({ file });
 
-      setUploadState(prev => ({ ...prev, stage: 'extracting', progress: 'Extracting student data...' }));
+      setUploadState(prev => ({ ...prev, stage: 'extracting', progress: 'Analyzing document structure...' }));
+
+      // First pass: Count total students
+      const countResult = await base44.integrations.Core.InvokeLLM({
+        prompt: `Count the TOTAL NUMBER of students in this entire document. Scan from start to finish and provide the exact count.
+        
+Return format: {"total_students": <number>, "document_type": "spreadsheet/list/table/etc"}`,
+        file_urls: [file_url],
+        response_json_schema: {
+          type: "object",
+          properties: {
+            total_students: { type: "number" },
+            document_type: { type: "string" }
+          }
+        }
+      });
+
+      const expectedCount = countResult?.total_students || 0;
+      console.log(`Expected ${expectedCount} students in document`);
+
+      setUploadState(prev => ({ 
+        ...prev, 
+        progress: `Found ${expectedCount} students. Extracting data...` 
+      }));
 
       const extractionResult = await base44.integrations.Core.InvokeLLM({
-        prompt: `EXTRACT EVERY SINGLE STUDENT from this document - do not skip any. Scan the ENTIRE document thoroughly from beginning to end.
+        prompt: `EXTRACT EVERY SINGLE STUDENT from this document - all ${expectedCount} students. Do not stop early. Process the ENTIRE document from beginning to end.
+
+CRITICAL: The document contains ${expectedCount} students. Your output MUST contain exactly ${expectedCount} students in the array. If you extract fewer, you are missing data.
 
 For each student you find, provide:
 - full_name, email (if available), student_id (if available)
@@ -454,6 +479,20 @@ Example for MYP/PYP: subjects: [{"name": "Mathematics"}, {"name": "Science"}, {"
       if (studentsData.length === 0) {
         throw new Error('No students found in the document');
       }
+
+      // Check if extraction is incomplete
+      const extractedCount = studentsData.length;
+      const missingCount = expectedCount - extractedCount;
+      
+      if (missingCount > 0) {
+        const msg = `⚠️ INCOMPLETE EXTRACTION\n\nExpected: ${expectedCount} students\nExtracted: ${extractedCount} students\nMissing: ${missingCount} students\n\nThis usually happens with large documents. The AI may have stopped early due to response limits.\n\nOptions:\n1. Split your document into smaller files (recommended)\n2. Continue with ${extractedCount} students and add the rest manually\n3. Cancel and try again`;
+        
+        if (!confirm(msg + '\n\nContinue with partial import?')) {
+          throw new Error('Upload cancelled - incomplete extraction');
+        }
+      }
+
+      console.log(`Extracted ${extractedCount} of ${expectedCount} students`);
 
       // Validate DP students have 6 subjects
       const dpValidationWarnings = [];
