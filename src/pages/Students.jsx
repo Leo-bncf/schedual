@@ -376,16 +376,21 @@ export default function Students() {
 
       setUploadState(prev => ({ ...prev, stage: 'extracting', progress: 'Finding all student names...' }));
 
-      // Helper function to call LLM with retry on 502 errors
+      // Helper function to call LLM with retry on errors
       const callLLMWithRetry = async (params, maxRetries = 3) => {
         for (let attempt = 1; attempt <= maxRetries; attempt++) {
           try {
             return await base44.integrations.Core.InvokeLLM(params);
           } catch (error) {
-            const is502 = error?.message?.includes('502') || error?.response?.status === 502;
-            if (is502 && attempt < maxRetries) {
-              console.log(`⚠️ Retry ${attempt}/${maxRetries} after 502 error...`);
-              await new Promise(resolve => setTimeout(resolve, 2000 * attempt)); // Exponential backoff
+            const shouldRetry = 
+              error?.message?.includes('502') || 
+              error?.message?.includes('aborted') ||
+              error?.message?.includes('timeout') ||
+              error?.response?.status === 502;
+            
+            if (shouldRetry && attempt < maxRetries) {
+              console.log(`⚠️ Retry ${attempt}/${maxRetries} after error: ${error?.message}...`);
+              await new Promise(resolve => setTimeout(resolve, 3000 * attempt)); // Longer exponential backoff
               continue;
             }
             throw error;
@@ -469,7 +474,7 @@ export default function Students() {
       }));
 
       // Phase 2: Extract full details in manageable batches
-      const extractBatchSize = 15; // Reduced to prevent timeouts
+      const extractBatchSize = 10; // Further reduced to prevent timeouts
       const totalBatches = Math.ceil(allNames.length / extractBatchSize);
       const allStudents = [];
 
@@ -539,9 +544,9 @@ Return EXACTLY ${batchNames.length} students - one for each name in the list abo
         
         console.log(`Batch ${batch + 1}/${totalBatches}: Extracted ${batchStudents.length}/${batchNames.length} students`);
         
-        // Delay to avoid rate limits and timeouts
+        // Longer delay to avoid rate limits and timeouts
         if (batch < totalBatches - 1) {
-          await new Promise(resolve => setTimeout(resolve, 1000));
+          await new Promise(resolve => setTimeout(resolve, 2000));
         }
       }
 
