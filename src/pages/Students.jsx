@@ -407,12 +407,12 @@ Return a simple list of names in order. Do not include any other information, ju
       }));
 
       // Phase 2: Extract full details in manageable batches
-      const batchSize = 30;
-      const totalBatches = Math.ceil(allNames.length / batchSize);
+      const extractBatchSize = 30;
+      const totalBatches = Math.ceil(allNames.length / extractBatchSize);
       const allStudents = [];
 
       for (let batch = 0; batch < totalBatches; batch++) {
-        const batchNames = allNames.slice(batch * batchSize, (batch + 1) * batchSize);
+        const batchNames = allNames.slice(batch * extractBatchSize, (batch + 1) * extractBatchSize);
         
         setUploadState(prev => ({ 
           ...prev, 
