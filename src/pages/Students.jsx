@@ -376,19 +376,29 @@ export default function Students() {
 
       setUploadState(prev => ({ ...prev, stage: 'extracting', progress: 'Finding all student names...' }));
 
-      // Phase 1: Get list of all student names (simple, reliable)
-      const namesResult = await base44.integrations.Core.InvokeLLM({
-        prompt: `Extract ONLY the full names of ALL students in this document. List every single student name you see - do not skip any.
+      // Phase 1: Get list of all student names - multiple passes for reliability
+      let allNames = [];
 
-CRITICAL: Preserve ALL special characters, accents, and diacritics EXACTLY as they appear (é, ñ, ü, ö, ç, etc.). Do not convert or simplify names.
+      // First pass: Get all names
+      const namesResult1 = await base44.integrations.Core.InvokeLLM({
+        prompt: `You are extracting student names from a document. This is CRITICAL - you must find EVERY SINGLE student.
 
-Examples: José García, François Müller, Søren Ødegård, María José López
+      TASK: List ALL student names in this document. Count them carefully and list every single one.
 
-Return a simple list of names in order. Do not include any other information, just names.`,
+      RULES:
+      1. Preserve ALL special characters, accents, and diacritics EXACTLY (é, ñ, ü, ö, ç, ø, å, etc.)
+      2. Include middle names if present
+      3. Do NOT skip anyone - triple-check you got everyone
+      4. Return ONLY the names, nothing else
+
+      Examples: José María García, François Müller, Søren Ødegård
+
+      Return the complete list of ALL student names.`,
         file_urls: [file_url],
         response_json_schema: {
           type: "object",
           properties: {
+            total_count: { type: "number" },
             student_names: {
               type: "array",
               items: { type: "string" }
@@ -396,6 +406,39 @@ Return a simple list of names in order. Do not include any other information, ju
           }
         }
       });
+
+      allNames = namesResult1?.student_names || [];
+      console.log(`First pass found ${allNames.length} students`);
+
+      // Second pass: Double-check we got everyone
+      const namesResult2 = await base44.integrations.Core.InvokeLLM({
+        prompt: `We found these ${allNames.length} students: ${allNames.join(', ')}
+
+      CRITICAL VERIFICATION: Look through the document again and find any students we might have MISSED.
+
+      Return:
+      1. missing_students: Any student names NOT in the list above (preserve accents exactly)
+      2. confirmed: true if the list above is complete and correct
+
+      Be extremely careful - if there are ANY students not in that list, add them to missing_students.`,
+        file_urls: [file_url],
+        response_json_schema: {
+          type: "object",
+          properties: {
+            missing_students: {
+              type: "array",
+              items: { type: "string" }
+            },
+            confirmed: { type: "boolean" }
+          }
+        }
+      });
+
+      const missingStudents = namesResult2?.missing_students || [];
+      if (missingStudents.length > 0) {
+        console.log(`Second pass found ${missingStudents.length} additional students:`, missingStudents);
+        allNames = [...allNames, ...missingStudents];
+      }
 
       const allNames = namesResult?.student_names || [];
       
