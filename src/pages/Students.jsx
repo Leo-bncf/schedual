@@ -378,7 +378,9 @@ export default function Students() {
       setUploadState(prev => ({ ...prev, stage: 'extracting', progress: 'Extracting student data...' }));
 
       const extractionResult = await base44.integrations.Core.InvokeLLM({
-        prompt: `Extract all students from this document. For each student, provide:
+        prompt: `EXTRACT EVERY SINGLE STUDENT from this document - do not skip any. Scan the ENTIRE document thoroughly from beginning to end.
+
+For each student you find, provide:
 - full_name, email (if available), student_id (if available)
 - ib_programme (one of: DP, MYP, PYP)
 - year_group (e.g., DP1, DP2, MYP1-5, PYP-A through PYP-F)
@@ -397,6 +399,8 @@ Each subject must specify its level: HL (Higher Level) or SL (Standard Level).
 Typically students take 3-4 subjects at HL and the remaining at SL.
 
 DO NOT skip any subjects. If a student appears to have fewer than 6 subjects, look more carefully at the document for ALL their subject choices.
+
+IMPORTANT: If the document contains many students (like a class list or spreadsheet), extract ALL of them. Do not stop early - continue until you've processed every student in the document.
 
 Example DP student with ALL 6 subjects:
 subjects: [
