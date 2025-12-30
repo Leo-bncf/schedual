@@ -396,13 +396,32 @@ Return format: {"total_students": <number>, "document_type": "spreadsheet/list/t
 
       setUploadState(prev => ({ 
         ...prev, 
-        progress: `Found ${expectedCount} students. Extracting data...` 
+        progress: `Found ${expectedCount} students. Extracting in chunks...` 
       }));
 
-      const extractionResult = await base44.integrations.Core.InvokeLLM({
-        prompt: `EXTRACT EVERY SINGLE STUDENT from this document - all ${expectedCount} students. Do not stop early. Process the ENTIRE document from beginning to end.
+      // Extract students in chunks to handle large documents
+      const chunkSize = 50;
+      const totalChunks = Math.ceil(expectedCount / chunkSize);
+      let allStudents = [];
 
-CRITICAL: The document contains ${expectedCount} students. Your output MUST contain exactly ${expectedCount} students in the array. If you extract fewer, you are missing data.
+      for (let chunk = 0; chunk < totalChunks; chunk++) {
+        const startIndex = chunk * chunkSize + 1;
+        const endIndex = Math.min((chunk + 1) * chunkSize, expectedCount);
+        
+        setUploadState(prev => ({ 
+          ...prev, 
+          progress: `Extracting students ${startIndex}-${endIndex} of ${expectedCount}...` 
+        }));
+
+        const chunkResult = await base44.integrations.Core.InvokeLLM({
+          prompt: `EXTRACT STUDENTS ${startIndex} through ${endIndex} from this document.
+
+CRITICAL INSTRUCTIONS:
+- Total students in document: ${expectedCount}
+- Extract ONLY students numbered ${startIndex} to ${endIndex}
+- Skip students 1-${startIndex - 1} (already processed)
+- Stop after student ${endIndex}
+- Return exactly ${endIndex - startIndex + 1} students
 
 For each student you find, provide:
 - full_name, email (if available), student_id (if available)
@@ -424,8 +443,6 @@ Typically students take 3-4 subjects at HL and the remaining at SL.
 
 DO NOT skip any subjects. If a student appears to have fewer than 6 subjects, look more carefully at the document for ALL their subject choices.
 
-IMPORTANT: If the document contains many students (like a class list or spreadsheet), extract ALL of them. Do not stop early - continue until you've processed every student in the document.
-
 Example DP student with ALL 6 subjects:
 subjects: [
   {"name": "English A: Literature", "level": "HL"},
@@ -439,41 +456,47 @@ subjects: [
 For MYP/PYP students, extract all subjects listed (no level needed).
 
 Example for MYP/PYP: subjects: [{"name": "Mathematics"}, {"name": "Science"}, {"name": "English"}, {"name": "History"}]`,
-        file_urls: [file_url],
-        response_json_schema: {
-          type: "object",
-          properties: {
-            students: {
-              type: "array",
-              items: {
-                type: "object",
-                properties: {
-                  full_name: { type: "string" },
-                  email: { type: "string" },
-                  student_id: { type: "string" },
-                  ib_programme: { type: "string" },
-                  year_group: { type: "string" },
-                  subjects: {
-                    type: "array",
-                    minItems: 1,
-                    items: {
-                      type: "object",
-                      properties: {
-                        name: { type: "string" },
-                        level: { type: "string" }
-                      },
-                      required: ["name"]
+          file_urls: [file_url],
+          response_json_schema: {
+            type: "object",
+            properties: {
+              students: {
+                type: "array",
+                items: {
+                  type: "object",
+                  properties: {
+                    full_name: { type: "string" },
+                    email: { type: "string" },
+                    student_id: { type: "string" },
+                    ib_programme: { type: "string" },
+                    year_group: { type: "string" },
+                    subjects: {
+                      type: "array",
+                      minItems: 1,
+                      items: {
+                        type: "object",
+                        properties: {
+                          name: { type: "string" },
+                          level: { type: "string" }
+                        },
+                        required: ["name"]
+                      }
                     }
-                  }
-                },
-                required: ["full_name", "ib_programme", "year_group"]
+                  },
+                  required: ["full_name", "ib_programme", "year_group"]
+                }
               }
             }
           }
-        }
-      });
+        });
 
-      const studentsData = extractionResult?.students || [];
+        const chunkStudents = chunkResult?.students || [];
+        allStudents = [...allStudents, ...chunkStudents];
+        
+        console.log(`Chunk ${chunk + 1}/${totalChunks}: Extracted ${chunkStudents.length} students (Total so far: ${allStudents.length})`);
+      }
+
+      const studentsData = allStudents;
 
       if (studentsData.length === 0) {
         throw new Error('No students found in the document');
