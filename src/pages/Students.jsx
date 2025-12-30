@@ -401,26 +401,21 @@ export default function Students() {
       // Phase 1: Get list of all student names - multiple passes for reliability
       let allNames = [];
 
-      // First pass: Get all names with EXHAUSTIVE search
+      // First pass: Get all names
       const namesResult1 = await callLLMWithRetry({
-        prompt: `CRITICAL MISSION: Extract EVERY SINGLE student name from this document. Missing even ONE is unacceptable.
+        prompt: `You are extracting student names from a document. This is CRITICAL - you must find EVERY SINGLE student.
 
-SEARCH METHOD:
-1. Read EVERY PAGE from start to finish
-2. Check ALL formats: lists, tables, paragraphs, bullet points, sections, headers, footers, sidebars
-3. Look in ALL structures: numbered lists, bullet points, prose paragraphs, tables/grids, column layouts
-4. Don't assume structure - SCAN EVERYTHING LINE BY LINE
-5. If you see a name, include it - even if it appears similar to another
+      TASK: List ALL student names in this document. Count them carefully and list every single one.
 
-CRITICAL RULES:
-- Preserve names EXACTLY: ALL accents (é, í, ñ, ü, ö, ç, ø, å, etc.)
-- Include full names with middle names if present
-- If the same name appears multiple times, list it MULTIPLE times (could be different people)
-- Count as you go to ensure completeness
+      RULES:
+      1. Preserve ALL special characters, accents, and diacritics EXACTLY (é, ñ, ü, ö, ç, ø, å, etc.)
+      2. Include middle names if present
+      3. Do NOT skip anyone - triple-check you got everyone
+      4. Return ONLY the names, nothing else
 
-Examples: José María García, François Müller, Søren Ødegård, Victor Almeida
+      Examples: José María García, François Müller, Søren Ødegård
 
-Return the COMPLETE exhaustive list of ALL student names found.`,
+      Return the complete list of ALL student names.`,
         file_urls: [file_url],
         response_json_schema: {
           type: "object",
