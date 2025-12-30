@@ -18,7 +18,9 @@ import {
   Scale,
   Loader2,
   Send,
-  RefreshCw
+  RefreshCw,
+  Upload,
+  X
 } from 'lucide-react';
 import PageHeader from '../components/ui-custom/PageHeader';
 import AIAdvisorCard from '../components/ai/AIAdvisorCard';
@@ -41,6 +43,8 @@ export default function AIAdvisor() {
     details: '',
     progress: 0
   });
+  const [isDragging, setIsDragging] = useState(false);
+  const [uploadedFiles, setUploadedFiles] = useState([]);
 
   const queryClient = useQueryClient();
 
@@ -193,6 +197,42 @@ export default function AIAdvisor() {
 
   const pendingCount = aiLogs.filter(l => l.status === 'pending').length;
 
+  const handleDragOver = (e) => {
+    e.preventDefault();
+    setIsDragging(true);
+  };
+
+  const handleDragLeave = (e) => {
+    e.preventDefault();
+    setIsDragging(false);
+  };
+
+  const handleDrop = async (e) => {
+    e.preventDefault();
+    setIsDragging(false);
+    
+    const files = Array.from(e.dataTransfer.files);
+    if (files.length > 0) {
+      setUploadedFiles(prev => [...prev, ...files]);
+    }
+  };
+
+  const handlePaste = async (e) => {
+    const items = Array.from(e.clipboardData.items);
+    const files = items
+      .filter(item => item.kind === 'file')
+      .map(item => item.getAsFile())
+      .filter(Boolean);
+    
+    if (files.length > 0) {
+      setUploadedFiles(prev => [...prev, ...files]);
+    }
+  };
+
+  const removeFile = (index) => {
+    setUploadedFiles(prev => prev.filter((_, i) => i !== index));
+  };
+
   return (
     <div className="space-y-6">
       <PageHeader 
@@ -316,8 +356,66 @@ export default function AIAdvisor() {
                   placeholder="Describe a scheduling preference in natural language, e.g., 'Dr. Smith prefers not to teach on Wednesday afternoons' or 'Keep all DP2 Physics classes in the morning'"
                   value={userInput}
                   onChange={(e) => setUserInput(e.target.value)}
+                  onPaste={handlePaste}
                   className="min-h-[120px] resize-none border-violet-200 focus:ring-violet-500"
                 />
+                
+                {/* Drag and Drop Zone */}
+                <div
+                  onDragOver={handleDragOver}
+                  onDragLeave={handleDragLeave}
+                  onDrop={handleDrop}
+                  className={`
+                    border-2 border-dashed rounded-lg p-6 text-center transition-all
+                    ${isDragging 
+                      ? 'border-violet-500 bg-violet-50' 
+                      : 'border-slate-200 bg-slate-50/50 hover:border-violet-300 hover:bg-violet-50/30'
+                    }
+                  `}
+                >
+                  <div className="flex flex-col items-center gap-2">
+                    <div className={`p-3 rounded-full transition-all ${
+                      isDragging ? 'bg-violet-500 scale-110' : 'bg-violet-100'
+                    }`}>
+                      <Upload className={`w-5 h-5 ${isDragging ? 'text-white' : 'text-violet-600'}`} />
+                    </div>
+                    <p className="text-sm font-medium text-slate-700">
+                      {isDragging ? 'Drop files here' : 'Drag & drop files or paste'}
+                    </p>
+                    <p className="text-xs text-slate-500">
+                      PDF, Excel, Word, or images
+                    </p>
+                  </div>
+                </div>
+
+                {/* Uploaded Files */}
+                {uploadedFiles.length > 0 && (
+                  <div className="space-y-2">
+                    {uploadedFiles.map((file, index) => (
+                      <motion.div
+                        key={index}
+                        initial={{ opacity: 0, x: -20 }}
+                        animate={{ opacity: 1, x: 0 }}
+                        className="flex items-center justify-between p-2 bg-violet-50 border border-violet-200 rounded-lg"
+                      >
+                        <div className="flex items-center gap-2 flex-1 min-w-0">
+                          <div className="p-1.5 rounded bg-violet-500">
+                            <CheckCircle className="w-3 h-3 text-white" />
+                          </div>
+                          <span className="text-xs text-slate-700 truncate">{file.name}</span>
+                        </div>
+                        <Button
+                          variant="ghost"
+                          size="icon"
+                          className="h-6 w-6"
+                          onClick={() => removeFile(index)}
+                        >
+                          <X className="w-3 h-3" />
+                        </Button>
+                      </motion.div>
+                    ))}
+                  </div>
+                )}
                 <div className="space-y-2">
                   <motion.div
                     whileHover={{ scale: 1.02 }}
