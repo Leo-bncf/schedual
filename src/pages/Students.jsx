@@ -405,17 +405,20 @@ export default function Students() {
       const namesResult1 = await callLLMWithRetry({
         prompt: `You are extracting student names from a document. This is CRITICAL - you must find EVERY SINGLE student.
 
-      TASK: List ALL student names in this document. Count them carefully and list every single one.
+TASK: List ALL student names in this document. Count them carefully and list every single one.
 
-      RULES:
-      1. Preserve ALL special characters, accents, and diacritics EXACTLY (é, ñ, ü, ö, ç, ø, å, etc.)
-      2. Include middle names if present
-      3. Do NOT skip anyone - triple-check you got everyone
-      4. Return ONLY the names, nothing else
+⚠️ CRITICAL RULES:
+1. Preserve ALL special characters, accents, and diacritics EXACTLY (é, ñ, ü, ö, ç, ø, å, etc.)
+2. Include middle names if present
+3. ONLY extract names that are ACTUALLY VISIBLE in the document
+4. Do NOT invent, generate, or make up ANY names
+5. Do NOT add placeholder/example names like "John Doe" or "Student A"
+6. If you can't read a name clearly, skip it rather than guessing
+7. Return ONLY the names you can see written in the document
 
-      Examples: José María García, François Müller, Søren Ødegård
+Examples: José María García, François Müller, Søren Ødegård
 
-      Return the complete list of ALL student names.`,
+Return the complete list of ALL REAL student names from the document. NO inventions.`,
         file_urls: [file_url],
         response_json_schema: {
           type: "object",
