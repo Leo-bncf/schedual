@@ -528,6 +528,77 @@ Return EXACTLY ${batchNames.length} students - one for each name in the list abo
         }
       }
 
+      // Verify all names were extracted
+      const extractedNames = allStudents.map(s => s.full_name?.toLowerCase().trim()).filter(Boolean);
+      const missingFromExtraction = allNames.filter(name => {
+        const nameLower = name.toLowerCase().trim();
+        return !extractedNames.some(en => 
+          en === nameLower || 
+          en.includes(nameLower) || 
+          nameLower.includes(en)
+        );
+      });
+
+      if (missingFromExtraction.length > 0) {
+        console.warn(`⚠️ ${missingFromExtraction.length} students identified but not extracted:`, missingFromExtraction);
+        
+        // Retry missing students
+        setUploadState(prev => ({ 
+          ...prev, 
+          progress: `Retrying ${missingFromExtraction.length} missing students...` 
+        }));
+
+        const retryResult = await base44.integrations.Core.InvokeLLM({
+          prompt: `We identified these students but failed to extract their details: ${missingFromExtraction.join(', ')}
+
+CRITICAL: Find these EXACT students in the document and extract their information.
+
+For each student, provide:
+- full_name (must match exactly one of the names above)
+- email, student_id (if available)
+- ib_programme (DP, MYP, or PYP)
+- year_group (e.g., DP1, DP2, MYP1-5, PYP-A through PYP-F)
+- subjects: ALL their subject choices
+
+Return EXACTLY ${missingFromExtraction.length} students.`,
+          file_urls: [file_url],
+          response_json_schema: {
+            type: "object",
+            properties: {
+              students: {
+                type: "array",
+                items: {
+                  type: "object",
+                  properties: {
+                    full_name: { type: "string" },
+                    email: { type: "string" },
+                    student_id: { type: "string" },
+                    ib_programme: { type: "string" },
+                    year_group: { type: "string" },
+                    subjects: {
+                      type: "array",
+                      items: {
+                        type: "object",
+                        properties: {
+                          name: { type: "string" },
+                          level: { type: "string" }
+                        }
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          }
+        });
+
+        const recoveredStudents = retryResult?.students || [];
+        if (recoveredStudents.length > 0) {
+          console.log(`✅ Recovered ${recoveredStudents.length} students`);
+          allStudents.push(...recoveredStudents);
+        }
+      }
+
       const rawStudents = allStudents;
       
       // Deduplicate students
