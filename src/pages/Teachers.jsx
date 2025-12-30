@@ -33,6 +33,7 @@ import DataTable from '../components/ui-custom/DataTable';
 import EmptyState from '../components/ui-custom/EmptyState';
 import QualificationManager from '../components/teachers/QualificationManager';
 import UploadProgressDialog from '../components/upload/UploadProgressDialog';
+import DragDropUploadDialog from '../components/upload/DragDropUploadDialog';
 
 const DAYS = ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday'];
 
@@ -48,6 +49,7 @@ export default function Teachers() {
     totalTeachers: 0,
     error: null
   });
+  const [showUploadDialog, setShowUploadDialog] = useState(false);
   const [formData, setFormData] = useState({
     full_name: '',
     email: '',
@@ -156,11 +158,8 @@ export default function Teachers() {
     return subjectIds.map(id => subjects.find(s => s.id === id)?.name).filter(Boolean);
   };
 
-  const handleFileUpload = async (e) => {
-    const file = e.target.files?.[0];
+  const handleFileUpload = async (file) => {
     if (!file) return;
-
-    e.target.value = '';
 
     if (!schoolId) {
       alert('No school assigned. Please set up your school in Settings first.');
@@ -448,33 +447,24 @@ Example: {"full_name": "John Smith", "email": "john@school.com", "subjects": ["P
         description="Manage teaching staff and their scheduling preferences"
         actions={
           <div className="flex gap-2">
-            <label htmlFor="teacher-upload">
-              <input
-                type="file"
-                id="teacher-upload"
-                className="hidden"
-                onChange={handleFileUpload}
-                accept=".csv,.xlsx,.xls,.pdf,.txt,.doc,.docx"
-              />
-              <Button 
-                type="button"
-                variant="outline"
-                onClick={() => document.getElementById('teacher-upload').click()}
-                disabled={uploadState.isUploading}
-              >
-                {uploadState.isUploading ? (
-                  <>
-                    <Loader2 className="w-4 h-4 mr-2 animate-spin" />
-                    {uploadState.progress || 'Processing...'}
-                  </>
-                ) : (
-                  <>
-                    <Upload className="w-4 h-4 mr-2" />
-                    Import Document
-                  </>
-                )}
-              </Button>
-            </label>
+            <Button 
+              type="button"
+              variant="outline"
+              onClick={() => setShowUploadDialog(true)}
+              disabled={uploadState.isUploading}
+            >
+              {uploadState.isUploading ? (
+                <>
+                  <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+                  {uploadState.progress || 'Processing...'}
+                </>
+              ) : (
+                <>
+                  <Upload className="w-4 h-4 mr-2" />
+                  Import Document
+                </>
+              )}
+            </Button>
             <motion.div whileHover={{ scale: 1.05 }} whileTap={{ scale: 0.95 }}>
               <Button onClick={() => setIsDialogOpen(true)} className="bg-gradient-to-r from-indigo-600 to-violet-600 hover:from-indigo-700 hover:to-violet-700 shadow-lg">
                 <Plus className="w-4 h-4 mr-2" />
@@ -617,6 +607,17 @@ Example: {"full_name": "John Smith", "email": "john@school.com", "subjects": ["P
         current={uploadState.teachersCreated}
         total={uploadState.totalTeachers}
         entityType="Teachers"
+      />
+
+      <DragDropUploadDialog 
+        open={showUploadDialog}
+        onOpenChange={setShowUploadDialog}
+        onUpload={(file) => {
+          setShowUploadDialog(false);
+          handleFileUpload(file);
+        }}
+        title="Import Teachers"
+        description="Upload a document or paste to extract teacher data"
       />
     </div>
   );
