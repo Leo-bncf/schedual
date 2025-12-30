@@ -33,6 +33,7 @@ import {
 import PageHeader from '../components/ui-custom/PageHeader';
 import EmptyState from '../components/ui-custom/EmptyState';
 import UploadProgressDialog from '../components/upload/UploadProgressDialog';
+import DragDropUploadDialog from '../components/upload/DragDropUploadDialog';
 
 const IB_GROUPS = [
   { id: 1, name: 'Language & Literature', icon: FileText, color: 'bg-blue-500' },
@@ -55,6 +56,7 @@ export default function Subjects() {
     totalSubjects: 0,
     error: null
   });
+  const [showUploadDialog, setShowUploadDialog] = useState(false);
   const [formData, setFormData] = useState({
     name: '',
     code: '',
@@ -173,11 +175,8 @@ export default function Subjects() {
   const pypSubjects = filteredSubjects.filter(s => s.ib_level === 'PYP' && !s.is_core);
   const mypSubjects = filteredSubjects.filter(s => s.ib_level === 'MYP' && !s.is_core);
 
-  const handleFileUpload = async (e) => {
-    const file = e.target.files?.[0];
+  const handleFileUpload = async (file) => {
     if (!file) return;
-
-    e.target.value = '';
 
     if (!schoolId) {
       alert('No school assigned. Please set up your school in Settings first.');
@@ -297,33 +296,24 @@ export default function Subjects() {
         description="Manage IB Diploma Programme subjects across all groups"
         actions={
           <div className="flex gap-2">
-            <label htmlFor="subject-upload">
-              <input
-                type="file"
-                id="subject-upload"
-                className="hidden"
-                onChange={handleFileUpload}
-                accept=".csv,.xlsx,.xls,.pdf,.txt,.doc,.docx"
-              />
-              <Button 
-                type="button"
-                variant="outline"
-                onClick={() => document.getElementById('subject-upload').click()}
-                disabled={uploadState.isUploading}
-              >
-                {uploadState.isUploading ? (
-                  <>
-                    <Loader2 className="w-4 h-4 mr-2 animate-spin" />
-                    {uploadState.progress || 'Processing...'}
-                  </>
-                ) : (
-                  <>
-                    <Upload className="w-4 h-4 mr-2" />
-                    Import Document
-                  </>
-                )}
-              </Button>
-            </label>
+            <Button 
+              type="button"
+              variant="outline"
+              onClick={() => setShowUploadDialog(true)}
+              disabled={uploadState.isUploading}
+            >
+              {uploadState.isUploading ? (
+                <>
+                  <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+                  {uploadState.progress || 'Processing...'}
+                </>
+              ) : (
+                <>
+                  <Upload className="w-4 h-4 mr-2" />
+                  Import Document
+                </>
+              )}
+            </Button>
             <motion.div whileHover={{ scale: 1.05 }} whileTap={{ scale: 0.95 }}>
               <Button onClick={() => setIsDialogOpen(true)} className="bg-gradient-to-r from-indigo-600 to-violet-600 hover:from-indigo-700 hover:to-violet-700 shadow-lg">
                 <Plus className="w-4 h-4 mr-2" />
@@ -735,6 +725,17 @@ export default function Subjects() {
         current={uploadState.subjectsCreated}
         total={uploadState.totalSubjects}
         entityType="Subjects"
+      />
+
+      <DragDropUploadDialog 
+        open={showUploadDialog}
+        onOpenChange={setShowUploadDialog}
+        onUpload={(file) => {
+          setShowUploadDialog(false);
+          handleFileUpload(file);
+        }}
+        title="Import Subjects"
+        description="Upload a document or paste to extract subject data"
       />
     </div>
   );

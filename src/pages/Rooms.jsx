@@ -32,6 +32,7 @@ import {
 import PageHeader from '../components/ui-custom/PageHeader';
 import EmptyState from '../components/ui-custom/EmptyState';
 import UploadProgressDialog from '../components/upload/UploadProgressDialog';
+import DragDropUploadDialog from '../components/upload/DragDropUploadDialog';
 
 const ROOM_TYPES = [
   { value: 'classroom', label: 'Classroom', icon: BookOpen, color: 'bg-blue-500' },
@@ -58,6 +59,7 @@ export default function Rooms() {
     totalRooms: 0,
     error: null
   });
+  const [showUploadDialog, setShowUploadDialog] = useState(false);
   const [formData, setFormData] = useState({
     name: '',
     building: '',
@@ -160,11 +162,8 @@ export default function Rooms() {
 
 
 
-  const handleFileUpload = async (e) => {
-    const file = e.target.files?.[0];
+  const handleFileUpload = async (file) => {
     if (!file) return;
-
-    e.target.value = '';
 
     // Get fresh schoolId at the moment of upload
     const currentSchoolId = user?.school_id;
@@ -298,33 +297,24 @@ export default function Rooms() {
         description="Manage classrooms, labs, and other teaching spaces"
         actions={
           <div className="flex gap-2">
-            <label htmlFor="room-upload">
-              <input
-                type="file"
-                id="room-upload"
-                className="hidden"
-                onChange={handleFileUpload}
-                accept=".csv,.xlsx,.xls,.pdf,.txt,.doc,.docx"
-              />
-              <Button 
-                type="button"
-                variant="outline"
-                onClick={() => document.getElementById('room-upload').click()}
-                disabled={uploadState.isUploading || !schoolId}
-              >
-                {uploadState.isUploading ? (
-                  <>
-                    <Loader2 className="w-4 h-4 mr-2 animate-spin" />
-                    {uploadState.progress || 'Processing...'}
-                  </>
-                ) : (
-                  <>
-                    <Upload className="w-4 h-4 mr-2" />
-                    Import Document
-                  </>
-                )}
-              </Button>
-            </label>
+            <Button 
+              type="button"
+              variant="outline"
+              onClick={() => setShowUploadDialog(true)}
+              disabled={uploadState.isUploading || !schoolId}
+            >
+              {uploadState.isUploading ? (
+                <>
+                  <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+                  {uploadState.progress || 'Processing...'}
+                </>
+              ) : (
+                <>
+                  <Upload className="w-4 h-4 mr-2" />
+                  Import Document
+                </>
+              )}
+            </Button>
             <Button onClick={() => setIsDialogOpen(true)} className="bg-indigo-600 hover:bg-indigo-700">
               <Plus className="w-4 h-4 mr-2" />
               Add Room
@@ -559,6 +549,17 @@ export default function Rooms() {
         current={uploadState.roomsCreated}
         total={uploadState.totalRooms}
         entityType="Rooms"
+      />
+
+      <DragDropUploadDialog 
+        open={showUploadDialog}
+        onOpenChange={setShowUploadDialog}
+        onUpload={(file) => {
+          setShowUploadDialog(false);
+          handleFileUpload(file);
+        }}
+        title="Import Rooms"
+        description="Upload a document or paste to extract room data"
       />
     </div>
   );
