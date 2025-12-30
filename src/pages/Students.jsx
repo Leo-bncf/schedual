@@ -49,6 +49,9 @@ export default function Students() {
     totalStudents: 0,
     error: null
   });
+  const [showUploadDialog, setShowUploadDialog] = useState(false);
+  const [isDragging, setIsDragging] = useState(false);
+  const [selectedFile, setSelectedFile] = useState(null);
   const [formData, setFormData] = useState({
     full_name: '',
     email: '',
@@ -352,11 +355,8 @@ export default function Students() {
   const totalMYP = Object.values(mypCounts).reduce((a, b) => a + b, 0);
   const totalPYP = Object.values(pypCounts).reduce((a, b) => a + b, 0);
 
-  const handleFileUpload = async (e) => {
-    const file = e.target.files?.[0];
+  const handleFileUpload = async (file) => {
     if (!file) return;
-
-    e.target.value = '';
 
     if (!schoolId) {
       alert('No school assigned. Please set up your school in Settings first.');
@@ -613,6 +613,53 @@ Example for MYP/PYP: subjects: [{"name": "Mathematics"}, {"name": "Science"}, {"
       }
       };
 
+      const handleDragOver = (e) => {
+      e.preventDefault();
+      setIsDragging(true);
+      };
+
+      const handleDragLeave = (e) => {
+      e.preventDefault();
+      setIsDragging(false);
+      };
+
+      const handleDrop = (e) => {
+      e.preventDefault();
+      setIsDragging(false);
+
+      const file = e.dataTransfer.files[0];
+      if (file) {
+      setSelectedFile(file);
+      }
+      };
+
+      const handleFileSelect = (e) => {
+      const file = e.target.files?.[0];
+      if (file) {
+      setSelectedFile(file);
+      }
+      };
+
+      const handlePaste = (e) => {
+      const items = Array.from(e.clipboardData.items);
+      const file = items
+      .filter(item => item.kind === 'file')
+      .map(item => item.getAsFile())
+      .filter(Boolean)[0];
+
+      if (file) {
+      setSelectedFile(file);
+      }
+      };
+
+      const startUpload = () => {
+      if (selectedFile) {
+      setShowUploadDialog(false);
+      handleFileUpload(selectedFile);
+      setSelectedFile(null);
+      }
+      };
+
   return (
     <div className="space-y-6">
       <PageHeader 
@@ -620,33 +667,24 @@ Example for MYP/PYP: subjects: [{"name": "Mathematics"}, {"name": "Science"}, {"
         description="Manage IB Diploma students and their subject choices"
         actions={
           <div className="flex gap-2">
-            <label htmlFor="student-upload">
-              <input
-                type="file"
-                id="student-upload"
-                className="hidden"
-                onChange={handleFileUpload}
-                accept=".csv,.xlsx,.xls,.pdf,.txt,.doc,.docx"
-              />
-              <Button 
-                type="button"
-                variant="outline"
-                onClick={() => document.getElementById('student-upload').click()}
-                disabled={uploadState.isUploading}
-              >
-                {uploadState.isUploading ? (
-                  <>
-                    <Loader2 className="w-4 h-4 mr-2 animate-spin" />
-                    {uploadState.progress || 'Processing...'}
-                  </>
-                ) : (
-                  <>
-                    <Upload className="w-4 h-4 mr-2" />
-                    Import Document
-                  </>
-                )}
-              </Button>
-            </label>
+            <Button 
+              type="button"
+              variant="outline"
+              onClick={() => setShowUploadDialog(true)}
+              disabled={uploadState.isUploading}
+            >
+              {uploadState.isUploading ? (
+                <>
+                  <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+                  {uploadState.progress || 'Processing...'}
+                </>
+              ) : (
+                <>
+                  <Upload className="w-4 h-4 mr-2" />
+                  Import Document
+                </>
+              )}
+            </Button>
             <motion.div whileHover={{ scale: 1.05 }} whileTap={{ scale: 0.95 }}>
               <Button onClick={() => setIsDialogOpen(true)} className="bg-gradient-to-r from-indigo-600 to-violet-600 hover:from-indigo-700 hover:to-violet-700 shadow-lg">
                 <Plus className="w-4 h-4 mr-2" />
@@ -862,6 +900,92 @@ Example for MYP/PYP: subjects: [{"name": "Mathematics"}, {"name": "Science"}, {"
         total={uploadState.totalStudents}
         entityType="Students"
       />
-    </div>
-  );
-}
+
+      {/* Upload Dialog */}
+      <Dialog open={showUploadDialog} onOpenChange={setShowUploadDialog}>
+        <DialogContent className="sm:max-w-md">
+          <DialogHeader>
+            <DialogTitle>Import Students</DialogTitle>
+            <DialogDescription>
+              Upload a document or paste to extract student data
+            </DialogDescription>
+          </DialogHeader>
+          <div className="space-y-4">
+            <div
+              onDragOver={handleDragOver}
+              onDragLeave={handleDragLeave}
+              onDrop={handleDrop}
+              onPaste={handlePaste}
+              tabIndex={0}
+              className={`
+                border-2 border-dashed rounded-lg p-8 text-center transition-all cursor-pointer
+                ${isDragging 
+                  ? 'border-indigo-500 bg-indigo-50' 
+                  : selectedFile
+                  ? 'border-green-500 bg-green-50'
+                  : 'border-slate-300 bg-slate-50 hover:border-indigo-400 hover:bg-indigo-50/50'
+                }
+              `}
+            >
+              <input
+                type="file"
+                id="file-input"
+                className="hidden"
+                onChange={handleFileSelect}
+                accept=".csv,.xlsx,.xls,.pdf,.txt,.doc,.docx"
+              />
+              <label htmlFor="file-input" className="cursor-pointer">
+                <div className="flex flex-col items-center gap-3">
+                  <div className={`p-4 rounded-full transition-all ${
+                    isDragging ? 'bg-indigo-500 scale-110' : selectedFile ? 'bg-green-500' : 'bg-indigo-100'
+                  }`}>
+                    {selectedFile ? (
+                      <CheckCircle className="w-8 h-8 text-white" />
+                    ) : (
+                      <Upload className={`w-8 h-8 ${isDragging ? 'text-white' : 'text-indigo-600'}`} />
+                    )}
+                  </div>
+                  {selectedFile ? (
+                    <>
+                      <p className="text-sm font-medium text-green-700">
+                        {selectedFile.name}
+                      </p>
+                      <p className="text-xs text-slate-500">
+                        Click to change or drop a different file
+                      </p>
+                    </>
+                  ) : (
+                    <>
+                      <p className="text-sm font-medium text-slate-700">
+                        {isDragging ? 'Drop your file here' : 'Drag & drop, paste, or click to browse'}
+                      </p>
+                      <p className="text-xs text-slate-500">
+                        Supports: PDF, Excel, Word, CSV, Text
+                      </p>
+                    </>
+                  )}
+                </div>
+              </label>
+            </div>
+          </div>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => {
+              setShowUploadDialog(false);
+              setSelectedFile(null);
+            }}>
+              Cancel
+            </Button>
+            <Button 
+              onClick={startUpload}
+              disabled={!selectedFile}
+              className="bg-indigo-600 hover:bg-indigo-700"
+            >
+              <Upload className="w-4 h-4 mr-2" />
+              Upload & Extract
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+      </div>
+      );
+      }
