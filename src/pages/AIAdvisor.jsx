@@ -36,6 +36,11 @@ export default function AIAdvisor() {
   const [activeTab, setActiveTab] = useState('all');
   const [userInput, setUserInput] = useState('');
   const [isAnalyzing, setIsAnalyzing] = useState(false);
+  const [analysisStatus, setAnalysisStatus] = useState({
+    stage: '',
+    details: '',
+    progress: 0
+  });
 
   const queryClient = useQueryClient();
 
@@ -78,8 +83,25 @@ export default function AIAdvisor() {
     
     setIsAnalyzing(true);
     
-    // Simulate AI analysis
-    await new Promise(resolve => setTimeout(resolve, 2000));
+    // Stage 1: Loading schedule data
+    setAnalysisStatus({ stage: 'Loading', details: 'Fetching schedule data...', progress: 10 });
+    await new Promise(resolve => setTimeout(resolve, 400));
+    
+    // Stage 2: Analyzing workload
+    setAnalysisStatus({ stage: 'Analyzing', details: 'Checking teacher workload distribution...', progress: 30 });
+    await new Promise(resolve => setTimeout(resolve, 500));
+    
+    // Stage 3: Checking constraints
+    setAnalysisStatus({ stage: 'Validating', details: 'Validating schedule constraints...', progress: 50 });
+    await new Promise(resolve => setTimeout(resolve, 500));
+    
+    // Stage 4: IB compliance
+    setAnalysisStatus({ stage: 'Compliance', details: 'Verifying IB pedagogical requirements...', progress: 70 });
+    await new Promise(resolve => setTimeout(resolve, 400));
+    
+    // Stage 5: Generating insights
+    setAnalysisStatus({ stage: 'Generating', details: 'Creating recommendations...', progress: 90 });
+    await new Promise(resolve => setTimeout(resolve, 300));
     
     const analyses = [
       {
@@ -117,7 +139,11 @@ export default function AIAdvisor() {
       });
     }
     
+    setAnalysisStatus({ stage: 'Complete', details: 'Analysis complete!', progress: 100 });
+    await new Promise(resolve => setTimeout(resolve, 500));
+    
     setIsAnalyzing(false);
+    setAnalysisStatus({ stage: '', details: '', progress: 0 });
   };
 
   const handleInterpretPreference = async () => {
@@ -125,8 +151,17 @@ export default function AIAdvisor() {
     
     setIsAnalyzing(true);
     
-    // Simulate preference interpretation
-    await new Promise(resolve => setTimeout(resolve, 1500));
+    // Stage 1: Understanding input
+    setAnalysisStatus({ stage: 'Understanding', details: 'Parsing natural language input...', progress: 25 });
+    await new Promise(resolve => setTimeout(resolve, 500));
+    
+    // Stage 2: Identifying constraints
+    setAnalysisStatus({ stage: 'Identifying', details: 'Identifying scheduling constraints...', progress: 50 });
+    await new Promise(resolve => setTimeout(resolve, 500));
+    
+    // Stage 3: Creating rules
+    setAnalysisStatus({ stage: 'Creating', details: 'Creating constraint rules...', progress: 75 });
+    await new Promise(resolve => setTimeout(resolve, 500));
     
     await createLogMutation.mutateAsync({
       agent_type: 'preference_interpreter',
@@ -144,8 +179,12 @@ export default function AIAdvisor() {
       status: 'pending'
     });
     
+    setAnalysisStatus({ stage: 'Complete', details: 'Preference interpreted!', progress: 100 });
+    await new Promise(resolve => setTimeout(resolve, 400));
+    
     setUserInput('');
     setIsAnalyzing(false);
+    setAnalysisStatus({ stage: '', details: '', progress: 0 });
   };
 
   const filteredLogs = activeTab === 'all' 
@@ -164,23 +203,37 @@ export default function AIAdvisor() {
             whileHover={{ scale: 1.05 }}
             whileTap={{ scale: 0.95 }}
           >
-            <Button 
-              onClick={handleAnalyzeSchedule} 
-              className="bg-gradient-to-r from-violet-600 to-indigo-600 hover:from-violet-700 hover:to-indigo-700 shadow-lg hover:shadow-xl transition-shadow"
-              disabled={isAnalyzing || !scheduleVersions[0]}
-            >
-              {isAnalyzing ? (
-                <>
-                  <Loader2 className="w-4 h-4 mr-2 animate-spin" />
-                  Analyzing...
-                </>
-              ) : (
-                <>
-                  <Sparkles className="w-4 h-4 mr-2" />
-                  Analyze Schedule
-                </>
+            <div className="flex flex-col items-end gap-2">
+              <Button 
+                onClick={handleAnalyzeSchedule} 
+                className="bg-gradient-to-r from-violet-600 to-indigo-600 hover:from-violet-700 hover:to-indigo-700 shadow-lg hover:shadow-xl transition-shadow"
+                disabled={isAnalyzing || !scheduleVersions[0]}
+              >
+                {isAnalyzing ? (
+                  <>
+                    <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+                    {analysisStatus.stage}...
+                  </>
+                ) : (
+                  <>
+                    <Sparkles className="w-4 h-4 mr-2" />
+                    Analyze Schedule
+                  </>
+                )}
+              </Button>
+              {isAnalyzing && analysisStatus.details && (
+                <motion.div
+                  initial={{ opacity: 0, y: -10 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  className="text-xs text-slate-600 bg-white px-3 py-1 rounded-full shadow-md border border-violet-100"
+                >
+                  <span className="inline-flex items-center gap-2">
+                    <div className="w-2 h-2 rounded-full bg-violet-500 animate-pulse" />
+                    {analysisStatus.details}
+                  </span>
+                </motion.div>
               )}
-            </Button>
+            </div>
           </motion.div>
         }
       />
@@ -265,23 +318,42 @@ export default function AIAdvisor() {
                   onChange={(e) => setUserInput(e.target.value)}
                   className="min-h-[120px] resize-none border-violet-200 focus:ring-violet-500"
                 />
-                <motion.div
-                  whileHover={{ scale: 1.02 }}
-                  whileTap={{ scale: 0.98 }}
-                >
-                  <Button 
-                    onClick={handleInterpretPreference}
-                    disabled={!userInput.trim() || isAnalyzing}
-                    className="w-full bg-gradient-to-r from-violet-600 via-indigo-600 to-purple-600 hover:from-violet-700 hover:via-indigo-700 hover:to-purple-700 shadow-lg hover:shadow-xl transition-all"
+                <div className="space-y-2">
+                  <motion.div
+                    whileHover={{ scale: 1.02 }}
+                    whileTap={{ scale: 0.98 }}
                   >
-                    {isAnalyzing ? (
-                      <Loader2 className="w-4 h-4 mr-2 animate-spin" />
-                    ) : (
-                      <Send className="w-4 h-4 mr-2" />
-                    )}
-                    Interpret & Add Constraint
-                  </Button>
-                </motion.div>
+                    <Button 
+                      onClick={handleInterpretPreference}
+                      disabled={!userInput.trim() || isAnalyzing}
+                      className="w-full bg-gradient-to-r from-violet-600 via-indigo-600 to-purple-600 hover:from-violet-700 hover:via-indigo-700 hover:to-purple-700 shadow-lg hover:shadow-xl transition-all"
+                    >
+                      {isAnalyzing ? (
+                        <>
+                          <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+                          {analysisStatus.stage}...
+                        </>
+                      ) : (
+                        <>
+                          <Send className="w-4 h-4 mr-2" />
+                          Interpret & Add Constraint
+                        </>
+                      )}
+                    </Button>
+                  </motion.div>
+                  {isAnalyzing && analysisStatus.details && (
+                    <motion.div
+                      initial={{ opacity: 0, y: -5 }}
+                      animate={{ opacity: 1, y: 0 }}
+                      className="text-xs text-center text-slate-600 bg-violet-50 px-3 py-2 rounded-lg border border-violet-100"
+                    >
+                      <span className="inline-flex items-center gap-2">
+                        <div className="w-1.5 h-1.5 rounded-full bg-violet-500 animate-pulse" />
+                        {analysisStatus.details}
+                      </span>
+                    </motion.div>
+                  )}
+                </div>
               </div>
             </CardContent>
           </Card>
