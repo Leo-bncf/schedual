@@ -425,7 +425,7 @@ export default function Students() {
       });
 
       allNames = namesResult1?.student_names || [];
-      console.log(`First pass found ${allNames.length} students:`, allNames);
+      console.log(`First pass found ${allNames.length} students`);
 
       // Second pass: Double-check we got everyone
       const namesResult2 = await callLLMWithRetry({
@@ -456,10 +456,6 @@ export default function Students() {
         console.log(`Second pass found ${missingStudents.length} additional students:`, missingStudents);
         allNames = [...allNames, ...missingStudents];
       }
-      
-      console.log('===== COMPLETE LIST OF IDENTIFIED STUDENTS =====');
-      allNames.forEach((name, idx) => console.log(`${idx + 1}. ${name}`));
-      console.log(`===== TOTAL: ${allNames.length} students =====`);
       
       if (allNames.length === 0) {
         throw new Error('No student names found in the document');
