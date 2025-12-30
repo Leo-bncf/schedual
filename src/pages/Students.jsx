@@ -496,16 +496,25 @@ For each of these ${batchNames.length} students, provide:
 - email, student_id (if available)
 - ib_programme (DP, MYP, or PYP)
 - year_group (e.g., DP1, DP2, MYP1-5, PYP-A through PYP-F)
-- subjects: ALL their subject choices
+- subjects: ALL their subject choices - DO NOT skip any subjects
 
-CRITICAL FOR DP STUDENTS:
-- DP students take EXACTLY 6 subjects (one from each IB group 1-6)
-- Each subject needs a level: HL or SL
-- Example: [{"name": "English A", "level": "HL"}, {"name": "Spanish B", "level": "SL"}, ...]
+**ABSOLUTELY CRITICAL FOR DP STUDENTS:**
+- DP students MUST have EXACTLY 6 subjects (Groups 1, 2, 3, 4, 5, 6)
+- You MUST extract ALL 6 subjects for EACH DP student
+- Each subject MUST have a level: "HL" or "SL"
+- Group 1: Language & Literature (e.g., English A, Spanish A)
+- Group 2: Language Acquisition (e.g., Spanish B, French ab initio)
+- Group 3: Individuals & Societies (e.g., History, Economics)
+- Group 4: Sciences (e.g., Biology, Chemistry, Physics)
+- Group 5: Mathematics (e.g., Math AA, Math AI)
+- Group 6: The Arts (e.g., Visual Arts, Music) OR an extra subject from Groups 1-5
+- Example: [{"name": "English A", "level": "HL"}, {"name": "Spanish B", "level": "SL"}, {"name": "History", "level": "HL"}, {"name": "Biology", "level": "SL"}, {"name": "Math AA", "level": "HL"}, {"name": "Economics", "level": "SL"}]
+
+If you cannot find ALL 6 subjects for a DP student, KEEP LOOKING until you find them all. Do not return incomplete data.
 
 For MYP/PYP: extract all subjects (no level needed).
 
-Return EXACTLY ${batchNames.length} students - one for each name in the list above.`,
+Return EXACTLY ${batchNames.length} students with COMPLETE subject lists.`,
           file_urls: [file_url],
           response_json_schema: {
             type: "object",
@@ -547,6 +556,67 @@ Return EXACTLY ${batchNames.length} students - one for each name in the list abo
         // Longer delay to avoid rate limits and timeouts
         if (batch < totalBatches - 1) {
           await new Promise(resolve => setTimeout(resolve, 2000));
+        }
+      }
+
+      // Verify DP students have 6 subjects
+      const dpStudentsIncomplete = allStudents.filter(s => 
+        s.ib_programme === 'DP' && (!s.subjects || s.subjects.length < 6)
+      );
+
+      if (dpStudentsIncomplete.length > 0) {
+        console.warn(`⚠️ ${dpStudentsIncomplete.length} DP students missing subjects:`, dpStudentsIncomplete.map(s => `${s.full_name} (${s.subjects?.length || 0}/6)`));
+        
+        for (const student of dpStudentsIncomplete) {
+          setUploadState(prev => ({ 
+            ...prev, 
+            progress: `Completing subjects for ${student.full_name}...` 
+          }));
+
+          try {
+            const completeResult = await callLLMWithRetry({
+              prompt: `URGENT: Find ALL 6 subjects for DP student "${student.full_name}".
+
+Current subjects found: ${student.subjects?.map(s => s.name).join(', ') || 'none'}
+
+This DP student MUST have EXACTLY 6 subjects covering all IB groups:
+- Group 1: Language & Literature
+- Group 2: Language Acquisition  
+- Group 3: Individuals & Societies
+- Group 4: Sciences
+- Group 5: Mathematics
+- Group 6: The Arts OR extra from Groups 1-5
+
+Each subject needs level (HL or SL).
+
+Search the document thoroughly and return ALL 6 subjects for ${student.full_name}.`,
+              file_urls: [file_url],
+              response_json_schema: {
+                type: "object",
+                properties: {
+                  subjects: {
+                    type: "array",
+                    items: {
+                      type: "object",
+                      properties: {
+                        name: { type: "string" },
+                        level: { type: "string" }
+                      }
+                    }
+                  }
+                }
+              }
+            });
+
+            if (completeResult?.subjects && completeResult.subjects.length === 6) {
+              student.subjects = completeResult.subjects;
+              console.log(`✅ Completed subjects for ${student.full_name}`);
+            }
+
+            await new Promise(resolve => setTimeout(resolve, 1000));
+          } catch (error) {
+            console.error(`Failed to complete subjects for ${student.full_name}:`, error);
+          }
         }
       }
 
