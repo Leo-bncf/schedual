@@ -127,7 +127,10 @@ export default function Students() {
 
   const deleteMutation = useMutation({
     mutationFn: (id) => base44.entities.Student.delete(id),
-    onSuccess: () => queryClient.invalidateQueries({ queryKey: ['students'] }),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['students', schoolId] });
+      queryClient.invalidateQueries({ queryKey: ['students'] });
+    },
   });
 
   const resetForm = () => {
