@@ -471,6 +471,46 @@ export default function Students() {
       if (totalInDoc && totalInDoc > allNames.length) {
         console.warn(`⚠️ Document has ${totalInDoc} students but we only found ${allNames.length}. ${totalInDoc - allNames.length} still missing!`);
       }
+
+      // Verify no hallucinated names - check each name actually exists in document
+      setUploadState(prev => ({ 
+        ...prev, 
+        progress: 'Verifying extracted names...' 
+      }));
+
+      const verificationResult = await callLLMWithRetry({
+        prompt: `VERIFICATION TASK: Check if these names actually exist in the document.
+
+Names to verify: ${allNames.join(', ')}
+
+For EACH name above, search the document and confirm:
+- Does this EXACT name appear in the document? (yes/no)
+
+Return:
+- verified_names: Only names that actually exist in the document
+- hallucinated_names: Names that do NOT appear in the document (likely AI inventions)`,
+        file_urls: [file_url],
+        response_json_schema: {
+          type: "object",
+          properties: {
+            verified_names: {
+              type: "array",
+              items: { type: "string" }
+            },
+            hallucinated_names: {
+              type: "array",
+              items: { type: "string" }
+            }
+          }
+        }
+      });
+
+      if (verificationResult?.hallucinated_names?.length > 0) {
+        console.warn(`⚠️ Removed ${verificationResult.hallucinated_names.length} hallucinated names:`, verificationResult.hallucinated_names);
+        allNames = verificationResult.verified_names || allNames.filter(
+          name => !verificationResult.hallucinated_names.includes(name)
+        );
+      }
       
       if (allNames.length === 0) {
         throw new Error('No student names found in the document');
