@@ -9,9 +9,12 @@ import { Textarea } from "@/components/ui/textarea";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { Upload, Loader2, CheckCircle, XCircle, Edit, Save, Brain, TrendingUp } from 'lucide-react';
 import { toast } from 'sonner';
+import UploadProgressDialog from '../upload/UploadProgressDialog';
 
 export default function AgentTrainingSection({ agentName, agentTitle, agentDescription }) {
   const [uploadingFile, setUploadingFile] = useState(false);
+  const [uploadProgress, setUploadProgress] = useState('');
+  const [uploadStage, setUploadStage] = useState('uploading');
   const [selectedTraining, setSelectedTraining] = useState(null);
   const [editingField, setEditingField] = useState(null);
   const [fieldValue, setFieldValue] = useState('');
@@ -27,8 +30,14 @@ export default function AgentTrainingSection({ agentName, agentTitle, agentDescr
 
   const uploadMutation = useMutation({
     mutationFn: async (file) => {
+      setUploadStage('uploading');
+      setUploadProgress('Uploading document...');
+      
       // Upload file
       const { file_url } = await base44.integrations.Core.UploadFile({ file });
+      
+      setUploadStage('extracting');
+      setUploadProgress('Extracting data with AI...');
       
       // Extract data based on agent type
       let extractionPrompt = '';
@@ -123,8 +132,11 @@ export default function AgentTrainingSection({ agentName, agentTitle, agentDescr
         response_json_schema: schema
       });
 
+      setUploadStage('storing');
+      setUploadProgress('Saving training data...');
+
       // Store in training data
-      return base44.entities.AITrainingData.create({
+      const result = await base44.entities.AITrainingData.create({
         agent_name: agentName,
         file_url,
         file_name: file.name,
@@ -132,14 +144,27 @@ export default function AgentTrainingSection({ agentName, agentTitle, agentDescr
         field_feedback: {},
         overall_status: 'pending_review'
       });
+      
+      setUploadStage('complete');
+      setUploadProgress('Complete!');
+      
+      return result;
     },
-    onSuccess: () => {
+    onSuccess: (newTraining) => {
       queryClient.invalidateQueries({ queryKey: ['aiTraining', agentName] });
       toast.success('Document uploaded and processed');
-      setUploadingFile(false);
+      
+      // Auto-open the newly uploaded training for review
+      setTimeout(() => {
+        setUploadingFile(false);
+        setSelectedTraining(newTraining);
+      }, 1500);
     },
     onError: (error) => {
+      console.error('Upload error:', error);
       toast.error(error.message || 'Failed to process document');
+      setUploadStage('uploading');
+      setUploadProgress('');
       setUploadingFile(false);
     }
   });
