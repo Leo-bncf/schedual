@@ -74,7 +74,7 @@ Provide: full_name, email, student_id, ib_programme (PYP/MYP/DP), year_group, an
             student_id: { type: "object", properties: { value: { type: "string" }, confidence: { type: "number" }, context: { type: "string" } } },
             ib_programme: { type: "object", properties: { value: { type: "string" }, confidence: { type: "number" }, context: { type: "string" } } },
             year_group: { type: "object", properties: { value: { type: "string" }, confidence: { type: "number" }, context: { type: "string" } } },
-            subjects: { type: "object", properties: { value: { type: "array" }, confidence: { type: "number" }, context: { type: "string" } } }
+            subjects: { type: "object", properties: { value: { type: "array", items: { type: "string" } }, confidence: { type: "number" }, context: { type: "string" } } }
           }
         };
       } else if (agentName === 'teacher_importer') {
@@ -89,8 +89,8 @@ Provide: full_name, email, employee_id, subjects they teach, and ib_levels they'
             full_name: { type: "object", properties: { value: { type: "string" }, confidence: { type: "number" }, context: { type: "string" } } },
             email: { type: "object", properties: { value: { type: "string" }, confidence: { type: "number" }, context: { type: "string" } } },
             employee_id: { type: "object", properties: { value: { type: "string" }, confidence: { type: "number" }, context: { type: "string" } } },
-            subjects: { type: "object", properties: { value: { type: "array" }, confidence: { type: "number" }, context: { type: "string" } } },
-            ib_levels: { type: "object", properties: { value: { type: "array" }, confidence: { type: "number" }, context: { type: "string" } } }
+            subjects: { type: "object", properties: { value: { type: "array", items: { type: "string" } }, confidence: { type: "number" }, context: { type: "string" } } },
+            ib_levels: { type: "object", properties: { value: { type: "array", items: { type: "string" } }, confidence: { type: "number" }, context: { type: "string" } } }
           }
         };
       } else if (agentName === 'room_importer') {
@@ -106,7 +106,7 @@ Provide: name, building, capacity, room_type, and available equipment.`;
             building: { type: "object", properties: { value: { type: "string" }, confidence: { type: "number" }, context: { type: "string" } } },
             capacity: { type: "object", properties: { value: { type: "number" }, confidence: { type: "number" }, context: { type: "string" } } },
             room_type: { type: "object", properties: { value: { type: "string" }, confidence: { type: "number" }, context: { type: "string" } } },
-            equipment: { type: "object", properties: { value: { type: "array" }, confidence: { type: "number" }, context: { type: "string" } } }
+            equipment: { type: "object", properties: { value: { type: "array", items: { type: "string" } }, confidence: { type: "number" }, context: { type: "string" } } }
           }
         };
       } else if (agentName === 'subject_importer') {
@@ -122,7 +122,7 @@ Provide: name, code, ib_level, ib_group, and available_levels (HL/SL if DP).`;
             code: { type: "object", properties: { value: { type: "string" }, confidence: { type: "number" }, context: { type: "string" } } },
             ib_level: { type: "object", properties: { value: { type: "string" }, confidence: { type: "number" }, context: { type: "string" } } },
             ib_group: { type: "object", properties: { value: { type: "string" }, confidence: { type: "number" }, context: { type: "string" } } },
-            available_levels: { type: "object", properties: { value: { type: "array" }, confidence: { type: "number" }, context: { type: "string" } } }
+            available_levels: { type: "object", properties: { value: { type: "array", items: { type: "string" } }, confidence: { type: "number" }, context: { type: "string" } } }
           }
         };
       }
