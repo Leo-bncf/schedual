@@ -9,7 +9,8 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { Building2, Users, GraduationCap, Plus, Pencil, Trash2, Calendar, Crown, MoreHorizontal } from 'lucide-react';
+import { Building2, Users, GraduationCap, Plus, Pencil, Trash2, Calendar, Crown, MoreHorizontal, Brain } from 'lucide-react';
+import AgentTrainingSection from '../components/ai-training/AgentTrainingSection';
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
 import PageHeader from '../components/ui-custom/PageHeader';
 import StatCard from '../components/ui-custom/StatCard';
@@ -433,6 +434,10 @@ export default function Panel() {
           <TabsTrigger value="schools">Schools</TabsTrigger>
           <TabsTrigger value="users">Users</TabsTrigger>
           <TabsTrigger value="analytics">Analytics</TabsTrigger>
+          <TabsTrigger value="ai-training">
+            <Brain className="w-4 h-4 mr-2" />
+            AI Training
+          </TabsTrigger>
         </TabsList>
 
         <TabsContent value="schools">
@@ -502,6 +507,60 @@ export default function Panel() {
                 </Card>
               );
             })}
+          </div>
+        </TabsContent>
+
+        <TabsContent value="ai-training">
+          <div className="space-y-8">
+            <Card className="bg-gradient-to-r from-blue-50 to-violet-50 border-blue-200">
+              <CardContent className="p-6">
+                <div className="flex items-start gap-4">
+                  <div className="w-12 h-12 rounded-lg bg-gradient-to-br from-blue-500 to-violet-600 flex items-center justify-center">
+                    <Brain className="w-6 h-6 text-white" />
+                  </div>
+                  <div>
+                    <h3 className="font-semibold text-slate-900 mb-2">AI Agent Training System</h3>
+                    <p className="text-sm text-slate-600 mb-3">
+                      Upload documents to train AI agents. Review extractions field-by-field and mark them as correct/incorrect. 
+                      The AI learns from your feedback to improve future document processing accuracy.
+                    </p>
+                    <div className="text-sm text-slate-600">
+                      <p><strong>How it works:</strong></p>
+                      <ol className="list-decimal list-inside space-y-1 mt-2">
+                        <li>Upload a training document for any agent</li>
+                        <li>AI extracts data and shows it for review</li>
+                        <li>Mark each field as correct ✓ or incorrect ✗</li>
+                        <li>AI learns from corrections and uses them as reference for future imports</li>
+                      </ol>
+                    </div>
+                  </div>
+                </div>
+              </CardContent>
+            </Card>
+
+            <AgentTrainingSection
+              agentName="student_importer"
+              agentTitle="Student Import Agent"
+              agentDescription="Train the AI to extract student data from documents accurately"
+            />
+
+            <AgentTrainingSection
+              agentName="teacher_importer"
+              agentTitle="Teacher Import Agent"
+              agentDescription="Train the AI to extract teacher information and qualifications"
+            />
+
+            <AgentTrainingSection
+              agentName="room_importer"
+              agentTitle="Room Import Agent"
+              agentDescription="Train the AI to extract classroom and facility information"
+            />
+
+            <AgentTrainingSection
+              agentName="subject_importer"
+              agentTitle="Subject Import Agent"
+              agentDescription="Train the AI to extract subject details and IB requirements"
+            />
           </div>
         </TabsContent>
       </Tabs>
