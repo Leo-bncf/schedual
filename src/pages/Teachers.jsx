@@ -21,7 +21,7 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { Plus, Search, Mail, Clock, BookOpen, MoreHorizontal, Pencil, Trash2, Upload, Loader2 } from 'lucide-react';
-import { motion } from 'framer-motion';
+import { AnimatePresence, motion } from 'framer-motion';
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -509,8 +509,16 @@ Example: {"full_name": "John Smith", "email": "john@school.com", "subjects": ["P
         />
       )}
 
-      <Dialog open={isDialogOpen} onOpenChange={(open) => { if (!open) resetForm(); }}>
-        <DialogContent className="sm:max-w-2xl max-h-[90vh] overflow-y-auto">
+      <AnimatePresence>
+        {isDialogOpen && (
+          <Dialog open={isDialogOpen} onOpenChange={(open) => { if (!open) resetForm(); }}>
+            <DialogContent className="sm:max-w-2xl max-h-[90vh] overflow-y-auto" asChild>
+              <motion.div
+                initial={{ opacity: 0, scale: 0.95, y: 10 }}
+                animate={{ opacity: 1, scale: 1, y: 0 }}
+                exit={{ opacity: 0, scale: 0.95, y: 10 }}
+                transition={{ duration: 0.2, ease: "easeOut" }}
+              >
           <DialogHeader>
             <DialogTitle className="text-2xl">{editingTeacher ? 'Edit Teacher' : 'Add New Teacher'}</DialogTitle>
             <DialogDescription>
@@ -617,8 +625,11 @@ Example: {"full_name": "John Smith", "email": "john@school.com", "subjects": ["P
               </Button>
             </DialogFooter>
           </form>
-        </DialogContent>
-      </Dialog>
+              </motion.div>
+            </DialogContent>
+          </Dialog>
+        )}
+      </AnimatePresence>
 
       <UploadProgressDialog 
         open={uploadState.isUploading}
