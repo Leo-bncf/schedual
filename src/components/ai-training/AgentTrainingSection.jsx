@@ -10,6 +10,7 @@ import { Alert, AlertDescription } from "@/components/ui/alert";
 import { Upload, Loader2, CheckCircle, XCircle, Edit, Save, Brain, TrendingUp } from 'lucide-react';
 import { toast } from 'sonner';
 import UploadProgressDialog from '../upload/UploadProgressDialog';
+import TrainingChat from './TrainingChat';
 
 export default function AgentTrainingSection({ agentName, agentTitle, agentDescription }) {
   const [uploadingFile, setUploadingFile] = useState(false);
@@ -464,6 +465,8 @@ export default function AgentTrainingSection({ agentName, agentTitle, agentDescr
           })}
         </div>
       )}
+
+      <TrainingChat agentName={agentName} agentTitle={agentTitle} />
 
       <UploadProgressDialog 
         open={uploadingFile}
