@@ -23,9 +23,11 @@ import {
   Shield,
   Save,
   Loader2,
-  CheckCircle
+  CheckCircle,
+  Brain
 } from 'lucide-react';
 import PageHeader from '../components/ui-custom/PageHeader';
+import AgentTrainingSection from '../components/ai-training/AgentTrainingSection';
 
 const TIMEZONES = [
   'UTC', 'America/New_York', 'America/Chicago', 'America/Denver', 'America/Los_Angeles',
@@ -158,6 +160,10 @@ export default function Settings() {
           <TabsTrigger value="notifications" className="flex items-center gap-2">
             <Bell className="w-4 h-4" />
             Notifications
+          </TabsTrigger>
+          <TabsTrigger value="ai-training" className="flex items-center gap-2">
+            <Brain className="w-4 h-4" />
+            AI Training
           </TabsTrigger>
         </TabsList>
 
@@ -390,6 +396,31 @@ export default function Settings() {
               </div>
             </CardContent>
           </Card>
+        </TabsContent>
+
+        <TabsContent value="ai-training">
+          <div className="space-y-6">
+            <AgentTrainingSection 
+              agentName="student_importer"
+              agentTitle="Student Importer"
+              agentDescription="Train AI to extract student data from documents"
+            />
+            <AgentTrainingSection 
+              agentName="teacher_importer"
+              agentTitle="Teacher Importer"
+              agentDescription="Train AI to extract teacher data from documents"
+            />
+            <AgentTrainingSection 
+              agentName="room_importer"
+              agentTitle="Room Importer"
+              agentDescription="Train AI to extract room data from documents"
+            />
+            <AgentTrainingSection 
+              agentName="subject_importer"
+              agentTitle="Subject Importer"
+              agentDescription="Train AI to extract subject data from documents"
+            />
+          </div>
         </TabsContent>
       </Tabs>
     </div>
