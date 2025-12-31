@@ -13,6 +13,13 @@ import { Upload, Loader2, CheckCircle, XCircle, Edit, Save, Brain, TrendingUp, P
 import UploadProgressDialog from '../upload/UploadProgressDialog';
 import TrainingChat from './TrainingChat';
 
+const AGENT_COLORS = {
+  student_importer: { gradient: 'from-blue-500 to-cyan-500', bg: 'bg-blue-50', border: 'border-blue-200', text: 'text-blue-700' },
+  teacher_importer: { gradient: 'from-violet-500 to-purple-500', bg: 'bg-violet-50', border: 'border-violet-200', text: 'text-violet-700' },
+  room_importer: { gradient: 'from-emerald-500 to-teal-500', bg: 'bg-emerald-50', border: 'border-emerald-200', text: 'text-emerald-700' },
+  subject_importer: { gradient: 'from-rose-500 to-pink-500', bg: 'bg-rose-50', border: 'border-rose-200', text: 'text-rose-700' },
+};
+
 export default function AgentTrainingSection({ agentName, agentTitle, agentDescription }) {
   const [uploadingFile, setUploadingFile] = useState(false);
   const [uploadProgress, setUploadProgress] = useState('');
@@ -150,7 +157,6 @@ Provide: name, code, ib_level, ib_group, and available_levels (HL/SL if DP).`;
     Object.entries(currentEntry).forEach(([field, data]) => {
       const feedback = fieldFeedback[field];
       if (feedback === 'correct' || feedback === undefined) {
-        // Use original value
         correctedData[field] = data.value;
         trainingFeedback[field] = {
           original: data.value,
@@ -160,7 +166,6 @@ Provide: name, code, ib_level, ib_group, and available_levels (HL/SL if DP).`;
           context: data.context
         };
       } else if (feedback === 'incorrect') {
-        // Use corrected value
         correctedData[field] = fieldValue;
         trainingFeedback[field] = {
           original: data.value,
@@ -173,9 +178,9 @@ Provide: name, code, ib_level, ib_group, and available_levels (HL/SL if DP).`;
       }
     });
     
-    // Save to training data
+    // Save and auto-approve training data
     try {
-      await base44.functions.invoke('aiTrainingUpload', {
+      const { data: result } = await base44.functions.invoke('aiTrainingUpload', {
         action: 'upload',
         agent_name: agentName,
         file_url: currentFileUrl,
@@ -184,9 +189,18 @@ Provide: name, code, ib_level, ib_group, and available_levels (HL/SL if DP).`;
         training_feedback: trainingFeedback
       });
 
-      toast.success('Training data saved');
+      // Auto-approve with reviewed status
+      if (result?.training?.id) {
+        await base44.functions.invoke('aiTrainingUpload', {
+          action: 'approve',
+          training_id: result.training.id,
+          status: 'approved',
+          notes: 'Auto-approved with corrections'
+        });
+      }
+
+      toast.success('Training data saved & approved');
       
-      // Reset and move to next
       setFieldFeedback({});
       setFieldNotes({});
       
@@ -194,7 +208,6 @@ Provide: name, code, ib_level, ib_group, and available_levels (HL/SL if DP).`;
         setCurrentIndex(currentIndex + 1);
         setCurrentEntry(null);
       } else {
-        // Done
         toast.success('All entries processed!');
         setInteractiveMode(false);
         setCurrentFileUrl(null);
@@ -387,7 +400,7 @@ Provide: name, code, ib_level, ib_group, and available_levels (HL/SL if DP).`;
 
   const updateFieldMutation = useMutation({
     mutationFn: async ({ trainingId, fieldPath, isCorrect, correctedValue, notes }) => {
-      return base44.functions.invoke('aiTrainingUpload', {
+      await base44.functions.invoke('aiTrainingUpload', {
         action: 'updateField',
         training_id: trainingId,
         field_path: fieldPath,
@@ -395,10 +408,18 @@ Provide: name, code, ib_level, ib_group, and available_levels (HL/SL if DP).`;
         corrected_value: correctedValue,
         notes: notes || ''
       });
+      
+      // Auto-approve after any field update
+      return base44.functions.invoke('aiTrainingUpload', {
+        action: 'approve',
+        training_id: trainingId,
+        status: 'approved',
+        notes: 'Auto-approved with field corrections'
+      });
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['aiTraining', agentName] });
-      toast.success('Feedback saved');
+      toast.success('Correction saved & approved');
       setEditingField(null);
     }
   });
@@ -474,13 +495,15 @@ Provide: name, code, ib_level, ib_group, and available_levels (HL/SL if DP).`;
     pending: trainingData.filter(t => t.overall_status === 'pending_review').length
   };
 
+  const colors = AGENT_COLORS[agentName] || AGENT_COLORS.student_importer;
+
   return (
     <div className="space-y-6">
-      <Card>
+      <Card className={`border-2 ${colors.border}`}>
         <CardHeader>
           <div className="flex items-start justify-between">
             <div className="flex items-center gap-3">
-              <div className="w-12 h-12 rounded-lg bg-gradient-to-br from-blue-500 to-violet-600 flex items-center justify-center">
+              <div className={`w-12 h-12 rounded-lg bg-gradient-to-br ${colors.gradient} flex items-center justify-center shadow-lg`}>
                 <Brain className="w-6 h-6 text-white" />
               </div>
               <div>
@@ -505,7 +528,7 @@ Provide: name, code, ib_level, ib_group, and available_levels (HL/SL if DP).`;
                     disabled={uploadingFile}
                     accept=".pdf,.png,.jpg,.jpeg,.txt,.csv"
                   />
-                  <Button disabled={uploadingFile} className="bg-blue-900 hover:bg-blue-800" asChild>
+                  <Button disabled={uploadingFile} className={`bg-gradient-to-r ${colors.gradient} hover:opacity-90`} asChild>
                     <span>
                       {uploadingFile ? (
                         <>
@@ -542,7 +565,7 @@ Provide: name, code, ib_level, ib_group, and available_levels (HL/SL if DP).`;
               <Button 
                 onClick={handleTextUpload}
                 disabled={uploadingFile || !textInput.trim()}
-                className="w-full bg-blue-900 hover:bg-blue-800"
+                className={`w-full bg-gradient-to-r ${colors.gradient} hover:opacity-90`}
               >
                 {uploadingFile ? (
                   <>
@@ -705,20 +728,7 @@ Provide: name, code, ib_level, ib_group, and available_levels (HL/SL if DP).`;
                         </Card>
                       ))}
                       
-                      <div className="flex gap-2 pt-4 border-t">
-                        <Button
-                          onClick={() => approveMutation.mutate({ trainingId: training.id, status: 'approved', notes: 'All fields verified' })}
-                          className="bg-green-600 hover:bg-green-700"
-                        >
-                          <CheckCircle className="w-4 h-4 mr-2" />
-                          Approve All
-                        </Button>
-                        <Button
-                          variant="outline"
-                          onClick={() => approveMutation.mutate({ trainingId: training.id, status: 'partially_approved', notes: 'Some corrections made' })}
-                        >
-                          Save as Partially Approved
-                        </Button>
+                      <div className="flex justify-end pt-4 border-t">
                         <Button
                           variant="outline"
                           onClick={() => setSelectedTraining(null)}
@@ -744,8 +754,8 @@ Provide: name, code, ib_level, ib_group, and available_levels (HL/SL if DP).`;
       )}
 
       {interactiveMode && (
-        <Card className="border-2 border-blue-500">
-          <CardHeader className="bg-blue-50">
+        <Card className={`border-2 ${colors.border}`}>
+          <CardHeader className={colors.bg}>
             <div className="flex items-center justify-between">
               <div>
                 <CardTitle>Interactive Training Mode</CardTitle>
@@ -753,7 +763,7 @@ Provide: name, code, ib_level, ib_group, and available_levels (HL/SL if DP).`;
                   Review and approve each entry - Entry {currentIndex + 1} of {totalEntries}
                 </CardDescription>
               </div>
-              <Badge className="bg-blue-600 text-white">
+              <Badge className={`bg-gradient-to-r ${colors.gradient} text-white border-0`}>
                 {Math.round((currentIndex / totalEntries) * 100)}% Complete
               </Badge>
             </div>
@@ -873,11 +883,11 @@ Provide: name, code, ib_level, ib_group, and available_levels (HL/SL if DP).`;
                 <div className="flex gap-3 pt-4 border-t">
                   <Button
                     onClick={handleApproveEntry}
-                    className="flex-1 bg-blue-600 hover:bg-blue-700"
+                    className={`flex-1 bg-gradient-to-r ${colors.gradient} hover:opacity-90`}
                     disabled={Object.keys(fieldFeedback).length === 0}
                   >
                     <CheckCircle className="w-4 h-4 mr-2" />
-                    Save & Next Entry
+                    Save & Approve
                   </Button>
                   <Button
                     onClick={() => {
