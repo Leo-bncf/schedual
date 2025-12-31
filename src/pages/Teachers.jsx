@@ -520,8 +520,9 @@ Example: {"full_name": "John Smith", "email": "john@school.com", "subjects": ["P
               initial={{ opacity: 0, y: 20 }}
               animate={{ opacity: 1, y: 0 }}
               transition={{ delay: index * 0.05 }}
+              whileHover={{ scale: 1.05, y: -8, transition: { duration: 0.2 } }}
             >
-              <Card className="group hover:shadow-xl transition-all duration-300 border-slate-200 overflow-hidden">
+              <Card className="group hover:shadow-2xl transition-all duration-300 border-slate-200 overflow-hidden">
                 <CardHeader className="pb-3 bg-gradient-to-br from-indigo-50 to-white">
                   <div className="flex items-start justify-between">
                     <div className="flex items-center gap-3">
