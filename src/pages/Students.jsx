@@ -804,6 +804,61 @@ Return EXACTLY 1 student object. Do not skip this student.`,
 
       console.log(`Extracted ${studentsData.length} unique students`);
 
+      // CRITICAL: Final verification - remove any hallucinated students
+      setUploadState(prev => ({ 
+        ...prev, 
+        progress: 'Final verification of all students...' 
+      }));
+
+      const finalVerification = await callLLMWithRetry({
+        prompt: `CRITICAL VERIFICATION: I have extracted ${studentsData.length} students. 
+        
+List of extracted names: ${studentsData.map(s => s.full_name).join(', ')}
+
+TASK: Look through the ENTIRE original document and verify EACH of these names.
+
+For EACH name in the list above:
+1. Search the document carefully
+2. If the name EXISTS in the document → include it in "real_students"
+3. If the name does NOT exist in the document → include it in "fake_students"
+
+IMPORTANT: Be extremely strict. Only mark a name as "real" if you can actually SEE it written in the document.
+
+Return:
+- real_students: Names that ACTUALLY appear in the document
+- fake_students: Names that do NOT appear (AI inventions/hallucinations)
+- total_in_document: How many students are ACTUALLY in the document`,
+        file_urls: [file_url],
+        response_json_schema: {
+          type: "object",
+          properties: {
+            real_students: {
+              type: "array",
+              items: { type: "string" }
+            },
+            fake_students: {
+              type: "array",
+              items: { type: "string" }
+            },
+            total_in_document: { type: "number" }
+          }
+        }
+      });
+
+      if (finalVerification?.fake_students?.length > 0) {
+        console.warn(`⚠️ REMOVING ${finalVerification.fake_students.length} HALLUCINATED STUDENTS:`, finalVerification.fake_students);
+        alert(`⚠️ Removed ${finalVerification.fake_students.length} hallucinated students that don't exist in the document:\n\n${finalVerification.fake_students.join('\n')}`);
+        
+        // Remove hallucinated students
+        const realStudentNames = finalVerification.real_students.map(n => n.toLowerCase().trim());
+        studentsData.length = 0;
+        studentsData.push(...rawStudents.filter(s => 
+          realStudentNames.includes(s.full_name?.toLowerCase().trim())
+        ));
+        
+        console.log(`After removing hallucinations: ${studentsData.length} students`);
+      }
+
       // Validate DP students have 6 subjects
       const dpValidationWarnings = [];
       studentsData.forEach((student, idx) => {
