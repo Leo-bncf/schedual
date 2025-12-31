@@ -4,6 +4,7 @@ import { base44 } from '@/api/base44Client';
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
+import { motion } from 'framer-motion';
 import { 
   Users, 
   GraduationCap, 
@@ -93,6 +94,12 @@ export default function Dashboard() {
 
       {/* Stats Grid */}
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+        <motion.div
+          initial={{ opacity: 0, y: 20 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ duration: 0.3, delay: 0 }}
+          whileHover={{ scale: 1.05, y: -8 }}
+        >
         <Card className="border-0 shadow-sm bg-gradient-to-br from-blue-500 to-blue-600 text-white overflow-hidden relative">
           <CardContent className="p-6">
             <div className="absolute top-0 right-0 -mt-4 -mr-4 w-24 h-24 bg-white/10 rounded-full blur-2xl"></div>
@@ -108,7 +115,14 @@ export default function Dashboard() {
             </div>
           </CardContent>
         </Card>
+        </motion.div>
 
+        <motion.div
+          initial={{ opacity: 0, y: 20 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ duration: 0.3, delay: 0.1 }}
+          whileHover={{ scale: 1.05, y: -8 }}
+        >
         <Card className="border-0 shadow-sm bg-gradient-to-br from-emerald-500 to-emerald-600 text-white overflow-hidden relative">
           <CardContent className="p-6">
             <div className="absolute top-0 right-0 -mt-4 -mr-4 w-24 h-24 bg-white/10 rounded-full blur-2xl"></div>
@@ -126,7 +140,14 @@ export default function Dashboard() {
             </div>
           </CardContent>
         </Card>
+        </motion.div>
 
+        <motion.div
+          initial={{ opacity: 0, y: 20 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ duration: 0.3, delay: 0.2 }}
+          whileHover={{ scale: 1.05, y: -8 }}
+        >
         <Card className="border-0 shadow-sm bg-gradient-to-br from-violet-500 to-violet-600 text-white overflow-hidden relative">
           <CardContent className="p-6">
             <div className="absolute top-0 right-0 -mt-4 -mr-4 w-24 h-24 bg-white/10 rounded-full blur-2xl"></div>
@@ -142,7 +163,14 @@ export default function Dashboard() {
             </div>
           </CardContent>
         </Card>
+        </motion.div>
 
+        <motion.div
+          initial={{ opacity: 0, y: 20 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ duration: 0.3, delay: 0.3 }}
+          whileHover={{ scale: 1.05, y: -8 }}
+        >
         <Card className="border-0 shadow-sm bg-gradient-to-br from-amber-500 to-amber-600 text-white overflow-hidden relative">
           <CardContent className="p-6">
             <div className="absolute top-0 right-0 -mt-4 -mr-4 w-24 h-24 bg-white/10 rounded-full blur-2xl"></div>
@@ -158,12 +186,19 @@ export default function Dashboard() {
             </div>
           </CardContent>
         </Card>
+        </motion.div>
       </div>
 
       {/* Main Content Grid */}
       <div className="grid lg:grid-cols-3 gap-6">
         {/* Schedule Status */}
-        <Card className="lg:col-span-2 border-0 shadow-lg bg-white">
+        <motion.div
+          initial={{ opacity: 0, y: 30 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ duration: 0.4, delay: 0.4 }}
+          className="lg:col-span-2"
+        >
+        <Card className="border-0 shadow-lg bg-white">
           <CardHeader className="pb-4 bg-gradient-to-r from-blue-50 to-indigo-50 border-b border-blue-100">
             <div className="flex items-center justify-between">
               <CardTitle className="text-lg font-semibold text-slate-900 flex items-center gap-2">
@@ -205,8 +240,15 @@ export default function Dashboard() {
             {draftSchedules.length > 0 && (
               <div className="space-y-3">
                 <h4 className="text-sm font-medium text-slate-600">Draft Schedules</h4>
-                {draftSchedules.slice(0, 3).map(schedule => (
-                  <div key={schedule.id} className="flex items-center justify-between p-3 rounded-lg bg-slate-50 hover:bg-slate-100 transition-colors">
+                {draftSchedules.slice(0, 3).map((schedule, index) => (
+                  <motion.div 
+                    key={schedule.id} 
+                    className="flex items-center justify-between p-3 rounded-lg bg-slate-50 hover:bg-slate-100 transition-colors cursor-pointer"
+                    initial={{ opacity: 0, x: -20 }}
+                    animate={{ opacity: 1, x: 0 }}
+                    transition={{ duration: 0.3, delay: 0.5 + index * 0.1 }}
+                    whileHover={{ scale: 1.02, x: 5 }}
+                  >
                     <div className="flex items-center gap-3">
                       <Clock className="w-4 h-4 text-slate-400" />
                       <span className="font-medium text-slate-700">{schedule.name}</span>
@@ -221,7 +263,7 @@ export default function Dashboard() {
                         Draft
                       </Badge>
                     </div>
-                  </div>
+                  </motion.div>
                 ))}
               </div>
             )}
@@ -239,8 +281,14 @@ export default function Dashboard() {
             )}
           </CardContent>
         </Card>
+        </motion.div>
 
         {/* AI Advisor Suggestions */}
+        <motion.div
+          initial={{ opacity: 0, y: 30 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ duration: 0.4, delay: 0.5 }}
+        >
         <Card className="border-0 shadow-lg bg-gradient-to-br from-purple-50 to-pink-50">
           <CardHeader className="pb-4">
             <div className="flex items-center justify-between">
@@ -258,8 +306,25 @@ export default function Dashboard() {
           <CardContent>
             {aiLogs.length > 0 ? (
               <div className="space-y-3">
-                {aiLogs.slice(0, 4).map(log => (
-                  <div key={log.id} className="p-3 rounded-lg bg-white border-l-4 shadow-sm hover:shadow-md transition-shadow ${
+                {aiLogs.slice(0, 4).map((log, index) => (
+                  <motion.div 
+                    key={log.id} 
+                    className="p-3 rounded-lg bg-white border-l-4 shadow-sm hover:shadow-md transition-shadow cursor-pointer"
+                    initial={{ opacity: 0, x: -20 }}
+                    animate={{ opacity: 1, x: 0 }}
+                    transition={{ duration: 0.3, delay: 0.6 + index * 0.1 }}
+                    whileHover={{ scale: 1.02, x: 5 }}
+                    style={{
+                      borderLeftColor: log.severity === 'warning' ? '#f59e0b' :
+                                      log.severity === 'error' ? '#ef4444' :
+                                      '#a855f7',
+                      backgroundImage: log.severity === 'warning' ? 'linear-gradient(to right, #fffbeb, white)' :
+                                      log.severity === 'error' ? 'linear-gradient(to right, #fef2f2, white)' :
+                                      'linear-gradient(to right, #faf5ff, white)'
+                    }}
+                  >
+                    <div className="flex items-center gap-2 mb-1">
+                      <Badge className={`text-xs border-0 ${
                     log.severity === 'warning' ? 'border-amber-400 bg-gradient-to-r from-amber-50 to-white' :
                     log.severity === 'error' ? 'border-rose-400 bg-gradient-to-r from-rose-50 to-white' :
                     'border-purple-400 bg-gradient-to-r from-purple-50 to-white'
@@ -277,7 +342,7 @@ export default function Dashboard() {
                     <p className="text-sm text-slate-700 line-clamp-2">
                       {log.output?.message || 'New insight available'}
                     </p>
-                  </div>
+                  </motion.div>
                 ))}
               </div>
             ) : (
@@ -288,9 +353,15 @@ export default function Dashboard() {
             )}
           </CardContent>
         </Card>
+        </motion.div>
       </div>
 
       {/* Quick Actions */}
+      <motion.div
+        initial={{ opacity: 0, y: 30 }}
+        animate={{ opacity: 1, y: 0 }}
+        transition={{ duration: 0.4, delay: 0.6 }}
+      >
       <Card className="border-0 shadow-lg bg-gradient-to-br from-slate-50 to-blue-50">
         <CardHeader className="pb-4">
           <CardTitle className="text-lg font-semibold text-slate-900">Quick Actions</CardTitle>
@@ -298,43 +369,62 @@ export default function Dashboard() {
         <CardContent>
           <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">
             <Link to={createPageUrl('Teachers')} className="block group">
-              <div className="p-5 rounded-xl bg-white border-2 border-blue-200 hover:border-blue-500 hover:shadow-lg hover:-translate-y-1 transition-all text-center">
+              <motion.div 
+                className="p-5 rounded-xl bg-white border-2 border-blue-200 hover:border-blue-500 transition-all text-center"
+                whileHover={{ scale: 1.05, y: -8, boxShadow: "0 10px 15px -3px rgba(0, 0, 0, 0.1)" }}
+              >
                 <div className="w-12 h-12 mx-auto mb-3 rounded-full bg-gradient-to-br from-blue-500 to-blue-600 flex items-center justify-center group-hover:scale-110 transition-transform">
                   <Users className="w-6 h-6 text-white" />
                 </div>
                 <span className="text-sm font-semibold text-slate-800">Add Teacher</span>
-              </div>
+              </motion.div>
             </Link>
             <Link to={createPageUrl('Students')} className="block group">
-              <div className="p-5 rounded-xl bg-white border-2 border-emerald-200 hover:border-emerald-500 hover:shadow-lg hover:-translate-y-1 transition-all text-center">
+              <motion.div 
+                className="p-5 rounded-xl bg-white border-2 border-emerald-200 hover:border-emerald-500 transition-all text-center"
+                whileHover={{ scale: 1.05, y: -8, boxShadow: "0 10px 15px -3px rgba(0, 0, 0, 0.1)" }}
+              >
                 <div className="w-12 h-12 mx-auto mb-3 rounded-full bg-gradient-to-br from-emerald-500 to-emerald-600 flex items-center justify-center group-hover:scale-110 transition-transform">
                   <GraduationCap className="w-6 h-6 text-white" />
                 </div>
                 <span className="text-sm font-semibold text-slate-800">Add Student</span>
-              </div>
+              </motion.div>
             </Link>
             <Link to={createPageUrl('Subjects')} className="block group">
-              <div className="p-5 rounded-xl bg-white border-2 border-violet-200 hover:border-violet-500 hover:shadow-lg hover:-translate-y-1 transition-all text-center">
+              <motion.div 
+                className="p-5 rounded-xl bg-white border-2 border-violet-200 hover:border-violet-500 transition-all text-center"
+                whileHover={{ scale: 1.05, y: -8, boxShadow: "0 10px 15px -3px rgba(0, 0, 0, 0.1)" }}
+              >
                 <div className="w-12 h-12 mx-auto mb-3 rounded-full bg-gradient-to-br from-violet-500 to-violet-600 flex items-center justify-center group-hover:scale-110 transition-transform">
                   <BookOpen className="w-6 h-6 text-white" />
                 </div>
                 <span className="text-sm font-semibold text-slate-800">Add Subject</span>
-              </div>
+              </motion.div>
             </Link>
             <Link to={createPageUrl('Schedule')} className="block group">
-              <div className="p-5 rounded-xl bg-white border-2 border-amber-200 hover:border-amber-500 hover:shadow-lg hover:-translate-y-1 transition-all text-center">
+              <motion.div 
+                className="p-5 rounded-xl bg-white border-2 border-amber-200 hover:border-amber-500 transition-all text-center"
+                whileHover={{ scale: 1.05, y: -8, boxShadow: "0 10px 15px -3px rgba(0, 0, 0, 0.1)" }}
+              >
                 <div className="w-12 h-12 mx-auto mb-3 rounded-full bg-gradient-to-br from-amber-500 to-amber-600 flex items-center justify-center group-hover:scale-110 transition-transform">
                   <Calendar className="w-6 h-6 text-white" />
                 </div>
                 <span className="text-sm font-semibold text-slate-800">Generate Schedule</span>
-              </div>
+              </motion.div>
             </Link>
           </div>
         </CardContent>
       </Card>
+      </motion.div>
 
       {/* Support Ticket Form */}
+      <motion.div
+        initial={{ opacity: 0, y: 30 }}
+        animate={{ opacity: 1, y: 0 }}
+        transition={{ duration: 0.4, delay: 0.7 }}
+      >
       <SupportTicketForm />
+      </motion.div>
     </div>
   );
 }
