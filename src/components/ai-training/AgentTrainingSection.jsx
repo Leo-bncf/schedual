@@ -600,6 +600,24 @@ Provide: name, code, ib_level, ib_group, and available_levels (HL/SL if DP).`;
         </CardContent>
       </Card>
 
+      <div className="space-y-2">
+        <Button
+          variant="outline"
+          onClick={() => setShowChat(!showChat)}
+          className="w-full justify-between"
+        >
+          <span className="flex items-center gap-2">
+            <MessageSquare className="w-4 h-4" />
+            Chat with {agentTitle} AI
+          </span>
+          {showChat ? <ChevronDown className="w-4 h-4" /> : <ChevronRight className="w-4 h-4" />}
+        </Button>
+        
+        {showChat && (
+          <TrainingChat agentName={agentName} agentTitle={agentTitle} colors={colors} />
+        )}
+      </div>
+
       {interactiveMode && (
         <Card className={`border-2 ${colors.border}`}>
           <CardHeader className={colors.bg}>
