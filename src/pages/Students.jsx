@@ -476,84 +476,78 @@ export default function Students() {
       }));
 
       // Phase 2: Extract full details in optimized batches
-      const extractBatchSize = 15;
+      const extractBatchSize = 10;
       const totalBatches = Math.ceil(allNames.length / extractBatchSize);
       const allStudents = [];
 
-      // Training context (simplified)
-      const approvedTraining = trainingData.filter(t => t.overall_status === 'approved');
-      const hasTraining = approvedTraining.length > 0;
-      const trainingHints = hasTraining ? approvedTraining.slice(0, 2)
-        .map(t => t.field_feedback ? Object.entries(t.field_feedback)
-          .filter(([_, f]) => !f.was_correct && f.notes)
-          .map(([field, f]) => `${field}: ${f.notes}`)
-          .join('; ') : '')
-        .filter(Boolean)
-        .join(' | ') : '';
+      console.log(`Starting extraction: ${totalBatches} batches of ~${extractBatchSize} students each`);
 
       for (let batch = 0; batch < totalBatches; batch++) {
         const batchNames = allNames.slice(batch * extractBatchSize, (batch + 1) * extractBatchSize);
         
+        console.log(`⏳ Batch ${batch + 1}/${totalBatches} starting...`);
         setUploadState(prev => ({ 
           ...prev, 
           progress: `Extracting batch ${batch + 1}/${totalBatches} (${batchNames.length} students)...` 
         }));
 
-        const batchResult = await callLLMWithRetry({
-          prompt: `Extract: ${batchNames.join(', ')}
+        try {
+          const batchResult = await callLLMWithRetry({
+            prompt: `Extract these ${batchNames.length} students: ${batchNames.join(', ')}
 
-Programme: ${detectedProgramme}
-${trainingHints ? `Tips: ${trainingHints}\n` : ''}
-Rules:
-- Preserve accents (é, ñ, ü)
-- Programme: "${detectedProgramme}" for ALL
-- Year: ${detectedProgramme === 'DP' ? 'DP1 or DP2 based on document section' : detectedProgramme === 'MYP' ? 'MYP1-5' : 'PYP-A to PYP-F'}
-${detectedProgramme === 'DP' ? '- Subjects: EXACTLY 6 with HL/SL levels\n- Count subjects before returning' : '- Extract all subjects'}
-
-Return ${batchNames.length} students with full data.`,
-          file_urls: [file_url],
-          response_json_schema: {
-            type: "object",
-            properties: {
-              students: {
-                type: "array",
-                items: {
-                  type: "object",
-                  properties: {
-                    full_name: { type: "string" },
-                    email: { type: "string" },
-                    student_id: { type: "string" },
-                    ib_programme: { type: "string" },
-                    year_group: { type: "string" },
-                    subjects: {
-                      type: "array",
-                      items: {
-                        type: "object",
-                        properties: {
-                          name: { type: "string" },
-                          level: { type: "string" }
-                        },
-                        required: ["name"]
+PROGRAMME: ${detectedProgramme}
+For each student provide: full_name, email, student_id, ib_programme ("${detectedProgramme}"), year_group (${detectedProgramme === 'DP' ? 'DP1 or DP2' : detectedProgramme === 'MYP' ? 'MYP1-5' : 'PYP-A to F'}), subjects array.
+${detectedProgramme === 'DP' ? 'DP: EXACTLY 6 subjects with "HL" or "SL" level each.' : ''}
+Preserve all accents exactly.`,
+            file_urls: [file_url],
+            response_json_schema: {
+              type: "object",
+              properties: {
+                students: {
+                  type: "array",
+                  items: {
+                    type: "object",
+                    properties: {
+                      full_name: { type: "string" },
+                      email: { type: "string" },
+                      student_id: { type: "string" },
+                      ib_programme: { type: "string" },
+                      year_group: { type: "string" },
+                      subjects: {
+                        type: "array",
+                        items: {
+                          type: "object",
+                          properties: {
+                            name: { type: "string" },
+                            level: { type: "string" }
+                          },
+                          required: ["name"]
+                        }
                       }
-                    }
-                  },
-                  required: ["full_name", "ib_programme", "year_group"]
+                    },
+                    required: ["full_name", "ib_programme", "year_group"]
+                  }
                 }
               }
             }
-          }
-        });
+          });
 
-        const batchStudents = batchResult?.students || [];
-        allStudents.push(...batchStudents);
-        
-        console.log(`Batch ${batch + 1}/${totalBatches}: Extracted ${batchStudents.length}/${batchNames.length} students`);
-        
-        // Minimal delay to prevent rate limits
-        if (batch < totalBatches - 1) {
-          await new Promise(resolve => setTimeout(resolve, 500));
+          const batchStudents = batchResult?.students || [];
+          allStudents.push(...batchStudents);
+          
+          console.log(`✅ Batch ${batch + 1}/${totalBatches}: Extracted ${batchStudents.length}/${batchNames.length} students`);
+          
+          // Delay between batches
+          if (batch < totalBatches - 1) {
+            await new Promise(resolve => setTimeout(resolve, 300));
+          }
+        } catch (error) {
+          console.error(`❌ Batch ${batch + 1} failed:`, error);
+          // Continue with next batch even if this one fails
         }
       }
+      
+      console.log(`Total extracted: ${allStudents.length} students across all batches`);
 
       // STRICT VALIDATION for DP students
       if (detectedProgramme === 'DP') {
