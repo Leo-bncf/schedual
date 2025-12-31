@@ -1001,144 +1001,164 @@ Return EXACTLY ${batchNames.length} students with COMPLETE data.`,
       )}
 
       <Dialog open={isDialogOpen} onOpenChange={(open) => { if (!open) resetForm(); }}>
-        <DialogContent className="sm:max-w-lg">
-          <DialogHeader>
-            <DialogTitle>{editingStudent ? 'Edit Student' : 'Add New Student'}</DialogTitle>
+        <DialogContent className="sm:max-w-3xl max-h-[85vh] flex flex-col p-0">
+          <DialogHeader className="px-6 pt-6 pb-4 border-b border-slate-200">
+            <DialogTitle className="text-2xl">{editingStudent ? 'Edit Student' : 'Add New Student'}</DialogTitle>
             <DialogDescription>
               {editingStudent ? 'Update student information.' : 'Enter the details for the new student.'}
             </DialogDescription>
           </DialogHeader>
-          <form onSubmit={handleSubmit} className="space-y-4">
-            <div className="grid grid-cols-2 gap-4">
-              <div className="space-y-2">
-                <Label htmlFor="full_name">Full Name *</Label>
-                <Input 
-                  id="full_name"
-                  value={formData.full_name}
-                  onChange={(e) => setFormData({ ...formData, full_name: e.target.value })}
-                  required
+          
+          <form onSubmit={handleSubmit} className="flex flex-col flex-1 min-h-0">
+            <div className="flex-1 overflow-y-auto px-6 py-4 space-y-6">
+              <div className="space-y-4">
+                <div className="grid grid-cols-2 gap-4">
+                  <div className="space-y-2">
+                    <Label htmlFor="full_name" className="text-sm font-semibold text-slate-700">Full Name *</Label>
+                    <Input 
+                      id="full_name"
+                      value={formData.full_name}
+                      onChange={(e) => setFormData({ ...formData, full_name: e.target.value })}
+                      placeholder="John Smith"
+                      className="h-11"
+                      required
+                    />
+                  </div>
+                  <div className="space-y-2">
+                    <Label htmlFor="student_id" className="text-sm font-semibold text-slate-700">Student ID</Label>
+                    <Input 
+                      id="student_id"
+                      value={formData.student_id}
+                      onChange={(e) => setFormData({ ...formData, student_id: e.target.value })}
+                      placeholder="STU-001"
+                      className="h-11"
+                    />
+                  </div>
+                </div>
+
+                <div className="space-y-2">
+                  <Label htmlFor="email" className="text-sm font-semibold text-slate-700">Email</Label>
+                  <Input 
+                    id="email"
+                    type="email"
+                    value={formData.email}
+                    onChange={(e) => setFormData({ ...formData, email: e.target.value })}
+                    placeholder="student@school.com"
+                    className="h-11"
+                  />
+                </div>
+
+                <div className="grid grid-cols-2 gap-4">
+                  <div className="space-y-2">
+                    <Label htmlFor="ib_programme" className="text-sm font-semibold text-slate-700">IB Programme *</Label>
+                    <Select 
+                      value={formData.ib_programme} 
+                      onValueChange={(value) => {
+                        const defaultYearGroups = {
+                          'DP': 'DP1',
+                          'MYP': 'MYP1',
+                          'PYP': 'PYP-A'
+                        };
+                        setFormData({ 
+                          ...formData, 
+                          ib_programme: value,
+                          year_group: defaultYearGroups[value]
+                        });
+                      }}
+                    >
+                      <SelectTrigger className="h-11">
+                        <SelectValue />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="PYP">PYP (Primary Years)</SelectItem>
+                        <SelectItem value="MYP">MYP (Middle Years)</SelectItem>
+                        <SelectItem value="DP">DP (Diploma Programme)</SelectItem>
+                      </SelectContent>
+                    </Select>
+                  </div>
+                  <div className="space-y-2">
+                    <Label htmlFor="year_group" className="text-sm font-semibold text-slate-700">Year Group *</Label>
+                    <Select 
+                      value={formData.year_group} 
+                      onValueChange={(value) => setFormData({ ...formData, year_group: value })}
+                    >
+                      <SelectTrigger className="h-11">
+                        <SelectValue />
+                      </SelectTrigger>
+                      <SelectContent>
+                        {formData.ib_programme === 'DP' && (
+                          <>
+                            <SelectItem value="DP1">DP1 (Year 1)</SelectItem>
+                            <SelectItem value="DP2">DP2 (Year 2)</SelectItem>
+                          </>
+                        )}
+                        {formData.ib_programme === 'MYP' && (
+                          <>
+                            <SelectItem value="MYP1">MYP1</SelectItem>
+                            <SelectItem value="MYP2">MYP2</SelectItem>
+                            <SelectItem value="MYP3">MYP3</SelectItem>
+                            <SelectItem value="MYP4">MYP4</SelectItem>
+                            <SelectItem value="MYP5">MYP5</SelectItem>
+                          </>
+                        )}
+                        {formData.ib_programme === 'PYP' && (
+                          <>
+                            <SelectItem value="PYP-A">PYP A</SelectItem>
+                            <SelectItem value="PYP-B">PYP B</SelectItem>
+                            <SelectItem value="PYP-C">PYP C</SelectItem>
+                            <SelectItem value="PYP-D">PYP D</SelectItem>
+                            <SelectItem value="PYP-E">PYP E</SelectItem>
+                            <SelectItem value="PYP-F">PYP F</SelectItem>
+                          </>
+                        )}
+                      </SelectContent>
+                    </Select>
+                  </div>
+                </div>
+              </div>
+
+              <div className="border-t border-slate-200 pt-6 space-y-2">
+                <Label className="text-sm font-semibold text-slate-700">Subject Choices</Label>
+                {(formData.ib_programme === 'PYP' || formData.ib_programme === 'MYP') && (
+                  <p className="text-xs text-blue-600 bg-blue-50 p-3 rounded border border-blue-200">
+                    ℹ️ Changes will sync to all students in the same ClassGroup
+                  </p>
+                )}
+                <SubjectSelector 
+                  subjects={subjects}
+                  selectedSubjects={formData.subject_choices}
+                  onChange={(choices) => setFormData({ ...formData, subject_choices: choices })}
+                  programme={formData.ib_programme}
                 />
               </div>
-              <div className="space-y-2">
-                <Label htmlFor="student_id">Student ID</Label>
-                <Input 
-                  id="student_id"
-                  value={formData.student_id}
-                  onChange={(e) => setFormData({ ...formData, student_id: e.target.value })}
-                />
-              </div>
-            </div>
 
-            <div className="space-y-2">
-              <Label htmlFor="email">Email</Label>
-              <Input 
-                id="email"
-                type="email"
-                value={formData.email}
-                onChange={(e) => setFormData({ ...formData, email: e.target.value })}
-              />
-            </div>
-
-            <div className="grid grid-cols-2 gap-4">
-              <div className="space-y-2">
-                <Label htmlFor="ib_programme">IB Programme *</Label>
-                <Select 
-                  value={formData.ib_programme} 
-                  onValueChange={(value) => {
-                    const defaultYearGroups = {
-                      'DP': 'DP1',
-                      'MYP': 'MYP1',
-                      'PYP': 'PYP-A'
-                    };
-                    setFormData({ 
-                      ...formData, 
-                      ib_programme: value,
-                      year_group: defaultYearGroups[value]
-                    });
-                  }}
-                >
-                  <SelectTrigger>
-                    <SelectValue />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="PYP">PYP (Primary Years)</SelectItem>
-                    <SelectItem value="MYP">MYP (Middle Years)</SelectItem>
-                    <SelectItem value="DP">DP (Diploma Programme)</SelectItem>
-                  </SelectContent>
-                </Select>
-              </div>
-              <div className="space-y-2">
-                <Label htmlFor="year_group">Year Group *</Label>
-                <Select 
-                  value={formData.year_group} 
-                  onValueChange={(value) => setFormData({ ...formData, year_group: value })}
-                >
-                  <SelectTrigger>
-                    <SelectValue />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {formData.ib_programme === 'DP' && (
-                      <>
-                        <SelectItem value="DP1">DP1 (Year 1)</SelectItem>
-                        <SelectItem value="DP2">DP2 (Year 2)</SelectItem>
-                      </>
-                    )}
-                    {formData.ib_programme === 'MYP' && (
-                      <>
-                        <SelectItem value="MYP1">MYP1</SelectItem>
-                        <SelectItem value="MYP2">MYP2</SelectItem>
-                        <SelectItem value="MYP3">MYP3</SelectItem>
-                        <SelectItem value="MYP4">MYP4</SelectItem>
-                        <SelectItem value="MYP5">MYP5</SelectItem>
-                      </>
-                    )}
-                    {formData.ib_programme === 'PYP' && (
-                      <>
-                        <SelectItem value="PYP-A">PYP A</SelectItem>
-                        <SelectItem value="PYP-B">PYP B</SelectItem>
-                        <SelectItem value="PYP-C">PYP C</SelectItem>
-                        <SelectItem value="PYP-D">PYP D</SelectItem>
-                        <SelectItem value="PYP-E">PYP E</SelectItem>
-                        <SelectItem value="PYP-F">PYP F</SelectItem>
-                      </>
-                    )}
-                  </SelectContent>
-                </Select>
-              </div>
-            </div>
-
-            <div className="space-y-2">
-              <Label>Subject Choices</Label>
-              {(formData.ib_programme === 'PYP' || formData.ib_programme === 'MYP') && (
-                <p className="text-xs text-blue-600 bg-blue-50 p-3 rounded border border-blue-200 mb-2">
-                  ℹ️ Changes will sync to all students in the same ClassGroup
-                </p>
+              {formData.ib_programme === 'DP' && (
+                <div className="border-t border-slate-200 pt-6">
+                  <DPValidator 
+                    subjectChoices={formData.subject_choices}
+                    subjects={subjects}
+                  />
+                </div>
               )}
-              <SubjectSelector 
-                subjects={subjects}
-                selectedSubjects={formData.subject_choices}
-                onChange={(choices) => setFormData({ ...formData, subject_choices: choices })}
-                programme={formData.ib_programme}
-              />
             </div>
 
-            {formData.ib_programme === 'DP' && (
-              <DPValidator 
-                subjectChoices={formData.subject_choices}
-                subjects={subjects}
-              />
-            )}
-
-            <DialogFooter>
-              <Button type="button" variant="outline" onClick={resetForm}>
+            <DialogFooter className="px-6 py-4 border-t border-slate-200 bg-slate-50 gap-2">
+              <Button type="button" variant="outline" onClick={resetForm} className="h-11">
                 Cancel
               </Button>
               <Button 
                 type="submit" 
-                className="bg-indigo-600 hover:bg-indigo-700"
+                className="bg-gradient-to-r from-indigo-600 to-violet-600 hover:from-indigo-700 hover:to-violet-700 h-11 shadow-lg"
                 disabled={createMutation.isPending || updateMutation.isPending}
               >
-                {editingStudent ? 'Save Changes' : 'Add Student'}
+                {createMutation.isPending || updateMutation.isPending ? (
+                  <>
+                    <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+                    Saving...
+                  </>
+                ) : (
+                  editingStudent ? 'Save Changes' : 'Add Student'
+                )}
               </Button>
             </DialogFooter>
           </form>
