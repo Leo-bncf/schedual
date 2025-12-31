@@ -475,8 +475,8 @@ export default function Students() {
         progress: `Found ${allNames.length} students. Extracting details...` 
       }));
 
-      // Phase 2: Extract full details in optimized batches
-      const extractBatchSize = 10;
+      // Phase 2: Extract full details in larger batches (speed over caution)
+      const extractBatchSize = 30;
       const totalBatches = Math.ceil(allNames.length / extractBatchSize);
       const allStudents = [];
 
@@ -537,9 +537,9 @@ Preserve all accents exactly.`,
           
           console.log(`✅ Batch ${batch + 1}/${totalBatches}: Extracted ${batchStudents.length}/${batchNames.length} students`);
           
-          // Delay between batches
+          // Minimal delay between batches
           if (batch < totalBatches - 1) {
-            await new Promise(resolve => setTimeout(resolve, 300));
+            await new Promise(resolve => setTimeout(resolve, 200));
           }
         } catch (error) {
           console.error(`❌ Batch ${batch + 1} failed:`, error);
