@@ -908,23 +908,6 @@ Return EXACTLY 1 student object. Do not skip this student.`,
         }
       }
 
-      // For PYP/MYP: Get ALL subjects and assign to every student
-      const programmeSubjects = await base44.entities.Subject.filter({ school_id: schoolId });
-      
-      studentsToCreate.forEach(student => {
-        if (student.ib_programme === 'PYP' || student.ib_programme === 'MYP') {
-          const studentSubjects = programmeSubjects
-            .filter(subj => subj.ib_level === student.ib_programme && subj.is_active !== false)
-            .map(subj => ({
-              subject_id: subj.id,
-              ib_group: subj.ib_group
-            }));
-          
-          student.subject_choices = studentSubjects;
-          console.log(`Assigned ${studentSubjects.length} ${student.ib_programme} subjects to ${student.full_name}`);
-        }
-      });
-
       setUploadState(prev => ({ 
         ...prev, 
         stage: 'complete',
