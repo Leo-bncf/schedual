@@ -181,12 +181,28 @@ export default function Teachers() {
 
       setUploadState(prev => ({ ...prev, stage: 'extracting', progress: 'Extracting teacher data...' }));
 
+      // Fetch training data to improve extraction
+      const trainingData = await base44.entities.AITrainingData.filter({
+        agent_name: 'teacher_importer',
+        overall_status: 'approved'
+      }).catch(() => []);
+
+      const trainingFeedback = trainingData.slice(0, 3).map(t => {
+        const corrections = Object.entries(t.field_feedback || {})
+          .filter(([_, f]) => !f.correct && f.notes)
+          .map(([field, f]) => `- ${field}: ${f.notes}`)
+          .join('\n');
+        return corrections;
+      }).filter(Boolean).join('\n\n');
+
       const extractionResult = await base44.integrations.Core.InvokeLLM({
         prompt: `Extract all teachers from this document. For each teacher, provide:
 - full_name, email, employee_id (if available)
 - max_hours_per_week (as number, default 25 if not specified)
 - subjects: array of subject names they teach (e.g., ["Physics", "Chemistry"])
 - ib_levels: array of IB programme levels they can teach (PYP, MYP, and/or DP)
+
+${trainingFeedback ? `LESSONS FROM ADMIN FEEDBACK:\n${trainingFeedback}\n\n` : ''}
 
 Example: {"full_name": "John Smith", "email": "john@school.com", "subjects": ["Physics", "Chemistry"], "ib_levels": ["DP"]}`,
         file_urls: [file_url],
