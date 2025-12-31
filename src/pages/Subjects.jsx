@@ -197,8 +197,24 @@ export default function Subjects() {
 
       setUploadState(prev => ({ ...prev, stage: 'extracting', progress: 'Extracting subject data...' }));
 
+      // Fetch training data to improve extraction
+      const trainingData = await base44.entities.AITrainingData.filter({
+        agent_name: 'subject_importer',
+        overall_status: 'approved'
+      }).catch(() => []);
+
+      const trainingFeedback = trainingData.slice(0, 3).map(t => {
+        const corrections = Object.entries(t.field_feedback || {})
+          .filter(([_, f]) => !f.correct && f.notes)
+          .map(([field, f]) => `- ${field}: ${f.notes}`)
+          .join('\n');
+        return corrections;
+      }).filter(Boolean).join('\n\n');
+
       const extractionResult = await base44.integrations.Core.InvokeLLM({
-        prompt: `Extract all subjects/classes from this document. For each subject, provide: name, code, ib_level (one of: DP, MYP, PYP), and for DP subjects also include ib_group (string: "1", "2", "3", "4", "5", or "6") and available_levels (array of HL and/or SL).`,
+        prompt: `Extract all subjects/classes from this document. For each subject, provide: name, code, ib_level (one of: DP, MYP, PYP), and for DP subjects also include ib_group (string: "1", "2", "3", "4", "5", or "6") and available_levels (array of HL and/or SL).
+
+${trainingFeedback ? `LESSONS FROM ADMIN FEEDBACK:\n${trainingFeedback}\n\n` : ''}`,
         file_urls: [file_url],
         response_json_schema: {
           type: "object",

@@ -195,9 +195,25 @@ export default function Rooms() {
 
       setUploadState(prev => ({ ...prev, stage: 'extracting', progress: 'Extracting room data...' }));
 
+      // Fetch training data to improve extraction
+      const trainingData = await base44.entities.AITrainingData.filter({
+        agent_name: 'room_importer',
+        overall_status: 'approved'
+      }).catch(() => []);
+
+      const trainingFeedback = trainingData.slice(0, 3).map(t => {
+        const corrections = Object.entries(t.field_feedback || {})
+          .filter(([_, f]) => !f.correct && f.notes)
+          .map(([field, f]) => `- ${field}: ${f.notes}`)
+          .join('\n');
+        return corrections;
+      }).filter(Boolean).join('\n\n');
+
       // Extract room data using LLM
       const extractionResult = await base44.integrations.Core.InvokeLLM({
-        prompt: `Extract all rooms from this document. For each room, provide: name, capacity (as number), room_type (one of: classroom, lab, art_studio, music_room, computer_lab, gymnasium, library, auditorium, other), building (if available), floor (if available).`,
+        prompt: `Extract all rooms from this document. For each room, provide: name, capacity (as number), room_type (one of: classroom, lab, art_studio, music_room, computer_lab, gymnasium, library, auditorium, other), building (if available), floor (if available).
+
+${trainingFeedback ? `LESSONS FROM ADMIN FEEDBACK:\n${trainingFeedback}\n\n` : ''}`,
         file_urls: [uploadResult.file_url],
         response_json_schema: {
           type: "object",
