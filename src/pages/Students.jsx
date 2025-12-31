@@ -477,14 +477,25 @@ export default function Students() {
           progress: `Extracting batch ${batch + 1}/${totalBatches} (${batchNames.length} students)...` 
         }));
 
+        // Include training feedback for this batch
+        const batchTrainingExamples = trainingData.slice(0, 2).map(t => {
+          const corrections = Object.entries(t.field_feedback || {})
+            .filter(([_, f]) => !f.correct && f.notes)
+            .map(([field, f]) => `- When extracting ${field}: ${f.notes}`)
+            .join('\n');
+          return corrections;
+        }).filter(Boolean).join('\n');
+
         const batchResult = await callLLMWithRetry({
           prompt: `Extract ONLY these specific students from the document: ${batchNames.join(', ')}
 
-DOCUMENT PROGRAMME TYPE: ${detectedProgramme}
+        DOCUMENT PROGRAMME TYPE: ${detectedProgramme}
 
-CRITICAL: Copy names EXACTLY as provided above with ALL accents and special characters preserved (é, ñ, ü, ö, ç, etc.).
+        ${batchTrainingExamples ? `LESSONS FROM ADMIN FEEDBACK:\n${batchTrainingExamples}\n\n` : ''}
 
-For each of these ${batchNames.length} students, provide:
+        CRITICAL: Copy names EXACTLY as provided above with ALL accents and special characters preserved (é, ñ, ü, ö, ç, etc.).
+
+        For each of these ${batchNames.length} students, provide:
 - full_name (must match exactly one of the names above)
 - email, student_id (if available)
 - ib_programme: **MUST BE "${detectedProgramme}"** for ALL students in this document
