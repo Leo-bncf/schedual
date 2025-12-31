@@ -7,7 +7,7 @@ import { Badge } from "@/components/ui/badge";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { Alert, AlertDescription } from "@/components/ui/alert";
-import { Upload, Loader2, CheckCircle, XCircle, Edit, Save, Brain, TrendingUp } from 'lucide-react';
+import { Upload, Loader2, CheckCircle, XCircle, Edit, Save, Brain, TrendingUp, Pencil } from 'lucide-react';
 import { toast } from 'sonner';
 import UploadProgressDialog from '../upload/UploadProgressDialog';
 import TrainingChat from './TrainingChat';
@@ -19,6 +19,14 @@ export default function AgentTrainingSection({ agentName, agentTitle, agentDescr
   const [selectedTraining, setSelectedTraining] = useState(null);
   const [editingField, setEditingField] = useState(null);
   const [fieldValue, setFieldValue] = useState('');
+  const [interactiveMode, setInteractiveMode] = useState(false);
+  const [currentFileUrl, setCurrentFileUrl] = useState(null);
+  const [currentFileName, setCurrentFileName] = useState(null);
+  const [currentEntry, setCurrentEntry] = useState(null);
+  const [currentIndex, setCurrentIndex] = useState(0);
+  const [totalEntries, setTotalEntries] = useState(0);
+  const [allNames, setAllNames] = useState([]);
+  const [extracting, setExtracting] = useState(false);
   const queryClient = useQueryClient();
 
   const { data: trainingData = [] } = useQuery({
@@ -32,6 +40,121 @@ export default function AgentTrainingSection({ agentName, agentTitle, agentDescr
     }
   });
 
+  const extractNextEntry = async () => {
+    if (!currentFileUrl || !allNames[currentIndex]) {
+      return;
+    }
+
+    setExtracting(true);
+    try {
+      const name = allNames[currentIndex];
+      
+      let extractionPrompt = '';
+      let schema = {};
+      
+      if (agentName === 'student_importer') {
+        extractionPrompt = `Extract ONLY the student named "${name}" from this document. Provide: full_name, email, student_id, ib_programme (PYP/MYP/DP), year_group, and subjects (with levels for DP).`;
+        schema = {
+          type: "object",
+          properties: {
+            full_name: { type: "string" },
+            email: { type: "string" },
+            student_id: { type: "string" },
+            ib_programme: { type: "string" },
+            year_group: { type: "string" },
+            subjects: { type: "array", items: { type: "object" } }
+          }
+        };
+      } else if (agentName === 'teacher_importer') {
+        extractionPrompt = `Extract ONLY the teacher named "${name}" from this document. Provide: full_name, email, employee_id, subjects they teach, and ib_levels they're qualified for.`;
+        schema = {
+          type: "object",
+          properties: {
+            full_name: { type: "string" },
+            email: { type: "string" },
+            employee_id: { type: "string" },
+            subjects: { type: "array", items: { type: "string" } },
+            ib_levels: { type: "array", items: { type: "string" } }
+          }
+        };
+      } else if (agentName === 'room_importer') {
+        extractionPrompt = `Extract ONLY the room named "${name}" from this document. Provide: name, building, capacity, room_type, and available equipment.`;
+        schema = {
+          type: "object",
+          properties: {
+            name: { type: "string" },
+            building: { type: "string" },
+            capacity: { type: "number" },
+            room_type: { type: "string" },
+            equipment: { type: "array", items: { type: "string" } }
+          }
+        };
+      } else if (agentName === 'subject_importer') {
+        extractionPrompt = `Extract ONLY the subject named "${name}" from this document. Provide: name, code, ib_level, ib_group, and available_levels (HL/SL if DP).`;
+        schema = {
+          type: "object",
+          properties: {
+            name: { type: "string" },
+            code: { type: "string" },
+            ib_level: { type: "string" },
+            ib_group: { type: "string" },
+            available_levels: { type: "array", items: { type: "string" } }
+          }
+        };
+      }
+
+      const extractedData = await base44.integrations.Core.InvokeLLM({
+        prompt: extractionPrompt,
+        file_urls: [currentFileUrl],
+        response_json_schema: schema
+      });
+
+      setCurrentEntry(extractedData);
+    } catch (error) {
+      console.error('Extraction error:', error);
+      toast.error('Failed to extract data');
+    } finally {
+      setExtracting(false);
+    }
+  };
+
+  const handleApproveEntry = async (isCorrect, correctedData = null) => {
+    const dataToSave = correctedData || currentEntry;
+    
+    // Save to training data
+    try {
+      await base44.functions.invoke('aiTrainingUpload', {
+        action: 'upload',
+        agent_name: agentName,
+        file_url: currentFileUrl,
+        file_name: `${currentFileName} - Entry ${currentIndex + 1}`,
+        extracted_data: dataToSave
+      });
+
+      toast.success(isCorrect ? 'Approved' : 'Corrected and saved');
+      
+      // Move to next
+      if (currentIndex < totalEntries - 1) {
+        setCurrentIndex(currentIndex + 1);
+        setCurrentEntry(null);
+      } else {
+        // Done
+        toast.success('All entries processed!');
+        setInteractiveMode(false);
+        setCurrentFileUrl(null);
+        setCurrentFileName(null);
+        setCurrentEntry(null);
+        setCurrentIndex(0);
+        setTotalEntries(0);
+        setAllNames([]);
+        queryClient.invalidateQueries({ queryKey: ['aiTraining', agentName] });
+      }
+    } catch (error) {
+      console.error('Save error:', error);
+      toast.error('Failed to save');
+    }
+  };
+
   const uploadMutation = useMutation({
     mutationFn: async (file) => {
       setUploadStage('uploading');
@@ -41,7 +164,7 @@ export default function AgentTrainingSection({ agentName, agentTitle, agentDescr
       const { file_url } = await base44.integrations.Core.UploadFile({ file });
       
       setUploadStage('extracting');
-      setUploadProgress('Extracting data with AI...');
+      setUploadProgress('Finding all entries...');
       
       // Extract data based on agent type
       let extractionPrompt = '';
@@ -130,37 +253,57 @@ export default function AgentTrainingSection({ agentName, agentTitle, agentDescr
         };
       }
 
-      const extractedData = await base44.integrations.Core.InvokeLLM({
-        prompt: extractionPrompt,
+      // Get list of all names/entries
+      let listPrompt = '';
+      let listSchema = {};
+      
+      if (agentName === 'student_importer') {
+        listPrompt = 'List ALL student names in this document. Return only the names, nothing else.';
+      } else if (agentName === 'teacher_importer') {
+        listPrompt = 'List ALL teacher names in this document. Return only the names, nothing else.';
+      } else if (agentName === 'room_importer') {
+        listPrompt = 'List ALL room names/numbers in this document. Return only the names, nothing else.';
+      } else if (agentName === 'subject_importer') {
+        listPrompt = 'List ALL subject names in this document. Return only the names, nothing else.';
+      }
+      
+      listSchema = {
+        type: "object",
+        properties: {
+          names: { type: "array", items: { type: "string" } }
+        }
+      };
+
+      const listResult = await base44.integrations.Core.InvokeLLM({
+        prompt: listPrompt,
         file_urls: [file_url],
-        response_json_schema: schema
+        response_json_schema: listSchema
       });
 
-      setUploadStage('storing');
-      setUploadProgress('Saving training data...');
-
-      // Store in training data via backend function
-      const { data } = await base44.functions.invoke('aiTrainingUpload', {
-        action: 'upload',
-        agent_name: agentName,
-        file_url,
-        file_name: file.name,
-        extracted_data: extractedData
-      });
+      const names = listResult?.names || [];
+      
+      if (names.length === 0) {
+        throw new Error('No entries found in document');
+      }
       
       setUploadStage('complete');
-      setUploadProgress('Complete!');
+      setUploadProgress(`Found ${names.length} entries. Starting interactive review...`);
       
-      return data?.training;
+      // Start interactive mode
+      setCurrentFileUrl(file_url);
+      setCurrentFileName(file.name);
+      setAllNames(names);
+      setTotalEntries(names.length);
+      setCurrentIndex(0);
+      setInteractiveMode(true);
+      
+      return null;
     },
-    onSuccess: (newTraining) => {
+    onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['aiTraining', agentName] });
-      toast.success('Document uploaded and processed');
       
-      // Auto-open the newly uploaded training for review
       setTimeout(() => {
         setUploadingFile(false);
-        setSelectedTraining(newTraining);
       }, 1500);
     },
     onError: (error) => {
@@ -213,6 +356,13 @@ export default function AgentTrainingSection({ agentName, agentTitle, agentDescr
     setUploadingFile(true);
     uploadMutation.mutate(file);
   };
+
+  // Extract current entry when it changes
+  React.useEffect(() => {
+    if (interactiveMode && currentFileUrl && allNames.length > 0 && !currentEntry && !extracting) {
+      extractNextEntry();
+    }
+  }, [currentIndex, interactiveMode, currentFileUrl, allNames, currentEntry, extracting]);
 
   const renderFieldValue = (value) => {
     if (Array.isArray(value)) {
@@ -464,6 +614,100 @@ export default function AgentTrainingSection({ agentName, agentTitle, agentDescr
             );
           })}
         </div>
+      )}
+
+      {interactiveMode && (
+        <Card className="border-2 border-blue-500">
+          <CardHeader className="bg-blue-50">
+            <div className="flex items-center justify-between">
+              <div>
+                <CardTitle>Interactive Training Mode</CardTitle>
+                <CardDescription>
+                  Review and approve each entry - Entry {currentIndex + 1} of {totalEntries}
+                </CardDescription>
+              </div>
+              <Badge className="bg-blue-600 text-white">
+                {Math.round((currentIndex / totalEntries) * 100)}% Complete
+              </Badge>
+            </div>
+          </CardHeader>
+          <CardContent className="pt-6">
+            {extracting ? (
+              <div className="flex items-center justify-center py-12">
+                <Loader2 className="w-8 h-8 animate-spin text-blue-600" />
+                <span className="ml-3 text-slate-600">Extracting data...</span>
+              </div>
+            ) : currentEntry ? (
+              <div className="space-y-4">
+                {Object.entries(currentEntry).map(([field, value]) => (
+                  <div key={field} className="p-4 bg-slate-50 rounded-lg">
+                    <Label className="text-sm font-semibold text-slate-700 mb-2 block">
+                      {field}
+                    </Label>
+                    {editingField === field ? (
+                      <Input
+                        value={fieldValue}
+                        onChange={(e) => setFieldValue(e.target.value)}
+                        onBlur={() => {
+                          setCurrentEntry({ ...currentEntry, [field]: fieldValue });
+                          setEditingField(null);
+                        }}
+                        autoFocus
+                      />
+                    ) : (
+                      <div className="flex items-center justify-between">
+                        <p className="text-slate-900">
+                          {Array.isArray(value) ? value.join(', ') : typeof value === 'object' ? JSON.stringify(value) : String(value)}
+                        </p>
+                        <Button
+                          size="sm"
+                          variant="ghost"
+                          onClick={() => {
+                            setEditingField(field);
+                            setFieldValue(Array.isArray(value) ? value.join(', ') : typeof value === 'object' ? JSON.stringify(value) : String(value));
+                          }}
+                        >
+                          <Pencil className="w-3 h-3" />
+                        </Button>
+                      </div>
+                    )}
+                  </div>
+                ))}
+
+                <div className="flex gap-3 pt-4">
+                  <Button
+                    onClick={() => handleApproveEntry(true)}
+                    className="flex-1 bg-green-600 hover:bg-green-700"
+                  >
+                    <CheckCircle className="w-4 h-4 mr-2" />
+                    Correct - Approve & Next
+                  </Button>
+                  <Button
+                    onClick={() => handleApproveEntry(false, currentEntry)}
+                    variant="outline"
+                    className="flex-1"
+                  >
+                    Save Corrections & Next
+                  </Button>
+                  <Button
+                    onClick={() => {
+                      setInteractiveMode(false);
+                      setCurrentFileUrl(null);
+                      setCurrentEntry(null);
+                    }}
+                    variant="outline"
+                  >
+                    Cancel
+                  </Button>
+                </div>
+              </div>
+            ) : (
+              <div className="text-center py-8 text-slate-500">
+                Loading next entry...
+              </div>
+            )}
+          </CardContent>
+        </Card>
       )}
 
       <TrainingChat agentName={agentName} agentTitle={agentTitle} />
