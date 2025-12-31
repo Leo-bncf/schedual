@@ -1041,8 +1041,9 @@ Return EXACTLY ${batchNames.length} students with COMPLETE data.`,
                 initial={{ opacity: 0, y: 20 }}
                 animate={{ opacity: 1, y: 0 }}
                 transition={{ delay: index * 0.05 }}
+                whileHover={{ scale: 1.05, y: -8, transition: { duration: 0.2 } }}
               >
-                <Card className={`group hover:shadow-xl transition-all duration-300 border-slate-200 overflow-hidden ${colors.border}`}>
+                <Card className={`group hover:shadow-2xl transition-all duration-300 border-slate-200 overflow-hidden ${colors.border}`}>
                   <CardHeader className={`pb-3 bg-gradient-to-br ${colors.header}`}>
                     <div className="flex items-start justify-between">
                       <div className="flex items-center gap-3">
