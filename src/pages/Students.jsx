@@ -495,10 +495,13 @@ export default function Students() {
           const batchResult = await callLLMWithRetry({
             prompt: `Extract these ${batchNames.length} students: ${batchNames.join(', ')}
 
-PROGRAMME: ${detectedProgramme}
-For each student provide: full_name, email, student_id, ib_programme ("${detectedProgramme}"), year_group (${detectedProgramme === 'DP' ? 'DP1 or DP2' : detectedProgramme === 'MYP' ? 'MYP1-5' : 'PYP-A to F'}), subjects array.
-${detectedProgramme === 'DP' ? 'DP: EXACTLY 6 subjects with "HL" or "SL" level each.' : ''}
-Preserve all accents exactly.`,
+CRITICAL RULES:
+1. Programme: ALL students MUST have ib_programme = "${detectedProgramme}"
+2. Year Group: ${detectedProgramme === 'DP' ? 'Look at document sections/headings - students under "DP1" or "Year 1" = DP1, students under "DP2" or "Year 2" = DP2. If unclear from position, check context.' : detectedProgramme === 'MYP' ? 'Determine from age/grade: MYP1-MYP5' : 'Determine from class letter: PYP-A through PYP-F'}
+3. ${detectedProgramme === 'DP' ? 'Subjects: COUNT and ensure EXACTLY 6 subjects per student. Each subject MUST have a level ("HL" or "SL"). If document shows 5, look harder for the 6th. DP students ALWAYS take 6 subjects.' : 'Subjects: Extract ALL subjects listed for each student'}
+4. Preserve ALL special characters (é, ñ, ü, ö, etc.) EXACTLY as written
+
+For each student return: full_name, email, student_id, ib_programme, year_group, subjects (with name and level for DP).`,
             file_urls: [file_url],
             response_json_schema: {
               type: "object",
@@ -533,6 +536,25 @@ Preserve all accents exactly.`,
           });
 
           const batchStudents = batchResult?.students || [];
+          
+          // Immediate validation and logging for DP students
+          if (detectedProgramme === 'DP') {
+            batchStudents.forEach((student, idx) => {
+              const subjectCount = student.subjects?.length || 0;
+              const hasLevels = student.subjects?.every(s => s.level) || false;
+              
+              if (subjectCount !== 6) {
+                console.warn(`⚠️ ${student.full_name}: Only ${subjectCount} subjects (need 6)`);
+              }
+              if (!hasLevels) {
+                console.warn(`⚠️ ${student.full_name}: Missing HL/SL levels on subjects`);
+              }
+              if (!['DP1', 'DP2'].includes(student.year_group)) {
+                console.warn(`⚠️ ${student.full_name}: Invalid year group "${student.year_group}" (need DP1 or DP2)`);
+              }
+            });
+          }
+          
           allStudents.push(...batchStudents);
           
           console.log(`✅ Batch ${batch + 1}/${totalBatches}: Extracted ${batchStudents.length}/${batchNames.length} students`);
