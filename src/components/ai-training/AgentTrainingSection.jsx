@@ -6,6 +6,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Badge } from "@/components/ui/badge";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
+import { toast } from 'sonner';
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { Upload, Loader2, CheckCircle, XCircle, Edit, Save, Brain, TrendingUp, Pencil } from 'lucide-react';
 import { toast } from 'sonner';
@@ -19,6 +20,8 @@ export default function AgentTrainingSection({ agentName, agentTitle, agentDescr
   const [selectedTraining, setSelectedTraining] = useState(null);
   const [editingField, setEditingField] = useState(null);
   const [fieldValue, setFieldValue] = useState('');
+  const [fieldFeedback, setFieldFeedback] = useState({});
+  const [fieldNotes, setFieldNotes] = useState({});
   const [interactiveMode, setInteractiveMode] = useState(false);
   const [currentFileUrl, setCurrentFileUrl] = useState(null);
   const [currentFileName, setCurrentFileName] = useState(null);
@@ -53,52 +56,71 @@ export default function AgentTrainingSection({ agentName, agentTitle, agentDescr
       let schema = {};
       
       if (agentName === 'student_importer') {
-        extractionPrompt = `Extract ONLY the student named "${name}" from this document. Provide: full_name, email, student_id, ib_programme (PYP/MYP/DP), year_group, and subjects (with levels for DP).`;
+        extractionPrompt = `Extract ONLY the student named "${name}" from this document. 
+
+For each field, provide:
+1. The extracted value
+2. A confidence score (0.0-1.0) indicating how certain you are
+3. The exact text snippet from the document that supports this extraction
+
+Provide: full_name, email, student_id, ib_programme (PYP/MYP/DP), year_group, and subjects (with levels for DP).`;
         schema = {
           type: "object",
           properties: {
-            full_name: { type: "string" },
-            email: { type: "string" },
-            student_id: { type: "string" },
-            ib_programme: { type: "string" },
-            year_group: { type: "string" },
-            subjects: { type: "array", items: { type: "object" } }
+            full_name: { type: "object", properties: { value: { type: "string" }, confidence: { type: "number" }, context: { type: "string" } } },
+            email: { type: "object", properties: { value: { type: "string" }, confidence: { type: "number" }, context: { type: "string" } } },
+            student_id: { type: "object", properties: { value: { type: "string" }, confidence: { type: "number" }, context: { type: "string" } } },
+            ib_programme: { type: "object", properties: { value: { type: "string" }, confidence: { type: "number" }, context: { type: "string" } } },
+            year_group: { type: "object", properties: { value: { type: "string" }, confidence: { type: "number" }, context: { type: "string" } } },
+            subjects: { type: "object", properties: { value: { type: "array" }, confidence: { type: "number" }, context: { type: "string" } } }
           }
         };
       } else if (agentName === 'teacher_importer') {
-        extractionPrompt = `Extract ONLY the teacher named "${name}" from this document. Provide: full_name, email, employee_id, subjects they teach, and ib_levels they're qualified for.`;
+        extractionPrompt = `Extract ONLY the teacher named "${name}" from this document.
+
+For each field, provide the value, confidence (0.0-1.0), and document context snippet.
+
+Provide: full_name, email, employee_id, subjects they teach, and ib_levels they're qualified for.`;
         schema = {
           type: "object",
           properties: {
-            full_name: { type: "string" },
-            email: { type: "string" },
-            employee_id: { type: "string" },
-            subjects: { type: "array", items: { type: "string" } },
-            ib_levels: { type: "array", items: { type: "string" } }
+            full_name: { type: "object", properties: { value: { type: "string" }, confidence: { type: "number" }, context: { type: "string" } } },
+            email: { type: "object", properties: { value: { type: "string" }, confidence: { type: "number" }, context: { type: "string" } } },
+            employee_id: { type: "object", properties: { value: { type: "string" }, confidence: { type: "number" }, context: { type: "string" } } },
+            subjects: { type: "object", properties: { value: { type: "array" }, confidence: { type: "number" }, context: { type: "string" } } },
+            ib_levels: { type: "object", properties: { value: { type: "array" }, confidence: { type: "number" }, context: { type: "string" } } }
           }
         };
       } else if (agentName === 'room_importer') {
-        extractionPrompt = `Extract ONLY the room named "${name}" from this document. Provide: name, building, capacity, room_type, and available equipment.`;
+        extractionPrompt = `Extract ONLY the room named "${name}" from this document.
+
+For each field, provide the value, confidence (0.0-1.0), and document context snippet.
+
+Provide: name, building, capacity, room_type, and available equipment.`;
         schema = {
           type: "object",
           properties: {
-            name: { type: "string" },
-            building: { type: "string" },
-            capacity: { type: "number" },
-            room_type: { type: "string" },
-            equipment: { type: "array", items: { type: "string" } }
+            name: { type: "object", properties: { value: { type: "string" }, confidence: { type: "number" }, context: { type: "string" } } },
+            building: { type: "object", properties: { value: { type: "string" }, confidence: { type: "number" }, context: { type: "string" } } },
+            capacity: { type: "object", properties: { value: { type: "number" }, confidence: { type: "number" }, context: { type: "string" } } },
+            room_type: { type: "object", properties: { value: { type: "string" }, confidence: { type: "number" }, context: { type: "string" } } },
+            equipment: { type: "object", properties: { value: { type: "array" }, confidence: { type: "number" }, context: { type: "string" } } }
           }
         };
       } else if (agentName === 'subject_importer') {
-        extractionPrompt = `Extract ONLY the subject named "${name}" from this document. Provide: name, code, ib_level, ib_group, and available_levels (HL/SL if DP).`;
+        extractionPrompt = `Extract ONLY the subject named "${name}" from this document.
+
+For each field, provide the value, confidence (0.0-1.0), and document context snippet.
+
+Provide: name, code, ib_level, ib_group, and available_levels (HL/SL if DP).`;
         schema = {
           type: "object",
           properties: {
-            name: { type: "string" },
-            code: { type: "string" },
-            ib_level: { type: "string" },
-            ib_group: { type: "string" },
-            available_levels: { type: "array", items: { type: "string" } }
+            name: { type: "object", properties: { value: { type: "string" }, confidence: { type: "number" }, context: { type: "string" } } },
+            code: { type: "object", properties: { value: { type: "string" }, confidence: { type: "number" }, context: { type: "string" } } },
+            ib_level: { type: "object", properties: { value: { type: "string" }, confidence: { type: "number" }, context: { type: "string" } } },
+            ib_group: { type: "object", properties: { value: { type: "string" }, confidence: { type: "number" }, context: { type: "string" } } },
+            available_levels: { type: "object", properties: { value: { type: "array" }, confidence: { type: "number" }, context: { type: "string" } } }
           }
         };
       }
@@ -118,8 +140,36 @@ export default function AgentTrainingSection({ agentName, agentTitle, agentDescr
     }
   };
 
-  const handleApproveEntry = async (isCorrect, correctedData = null) => {
-    const dataToSave = correctedData || currentEntry;
+  const handleApproveEntry = async () => {
+    // Build corrected data from field feedback
+    const correctedData = {};
+    const trainingFeedback = {};
+    
+    Object.entries(currentEntry).forEach(([field, data]) => {
+      const feedback = fieldFeedback[field];
+      if (feedback === 'correct' || feedback === undefined) {
+        // Use original value
+        correctedData[field] = data.value;
+        trainingFeedback[field] = {
+          original: data.value,
+          corrected: data.value,
+          was_correct: true,
+          confidence: data.confidence,
+          context: data.context
+        };
+      } else if (feedback === 'incorrect') {
+        // Use corrected value
+        correctedData[field] = fieldValue;
+        trainingFeedback[field] = {
+          original: data.value,
+          corrected: fieldValue,
+          was_correct: false,
+          confidence: data.confidence,
+          context: data.context,
+          notes: fieldNotes[field] || ''
+        };
+      }
+    });
     
     // Save to training data
     try {
@@ -128,12 +178,16 @@ export default function AgentTrainingSection({ agentName, agentTitle, agentDescr
         agent_name: agentName,
         file_url: currentFileUrl,
         file_name: `${currentFileName} - Entry ${currentIndex + 1}`,
-        extracted_data: dataToSave
+        extracted_data: correctedData,
+        training_feedback: trainingFeedback
       });
 
-      toast.success(isCorrect ? 'Approved' : 'Corrected and saved');
+      toast.success('Training data saved');
       
-      // Move to next
+      // Reset and move to next
+      setFieldFeedback({});
+      setFieldNotes({});
+      
       if (currentIndex < totalEntries - 1) {
         setCurrentIndex(currentIndex + 1);
         setCurrentEntry(null);
@@ -639,61 +693,126 @@ export default function AgentTrainingSection({ agentName, agentTitle, agentDescr
               </div>
             ) : currentEntry ? (
               <div className="space-y-4">
-                {Object.entries(currentEntry).map(([field, value]) => (
-                  <div key={field} className="p-4 bg-slate-50 rounded-lg">
-                    <Label className="text-sm font-semibold text-slate-700 mb-2 block">
-                      {field}
-                    </Label>
-                    {editingField === field ? (
-                      <Input
-                        value={fieldValue}
-                        onChange={(e) => setFieldValue(e.target.value)}
-                        onBlur={() => {
-                          setCurrentEntry({ ...currentEntry, [field]: fieldValue });
-                          setEditingField(null);
-                        }}
-                        autoFocus
-                      />
-                    ) : (
-                      <div className="flex items-center justify-between">
-                        <p className="text-slate-900">
-                          {Array.isArray(value) ? value.join(', ') : typeof value === 'object' ? JSON.stringify(value) : String(value)}
-                        </p>
-                        <Button
-                          size="sm"
-                          variant="ghost"
-                          onClick={() => {
-                            setEditingField(field);
-                            setFieldValue(Array.isArray(value) ? value.join(', ') : typeof value === 'object' ? JSON.stringify(value) : String(value));
-                          }}
-                        >
-                          <Pencil className="w-3 h-3" />
-                        </Button>
+                {Object.entries(currentEntry).map(([field, data]) => {
+                  const value = data.value;
+                  const confidence = data.confidence || 0;
+                  const context = data.context || '';
+                  const feedback = fieldFeedback[field];
+                  const isEditing = editingField === field;
+                  
+                  const confidenceColor = confidence > 0.8 ? 'text-green-600' : confidence > 0.5 ? 'text-amber-600' : 'text-red-600';
+                  const confidenceBg = confidence > 0.8 ? 'bg-green-50' : confidence > 0.5 ? 'bg-amber-50' : 'bg-red-50';
+                  
+                  return (
+                    <div key={field} className={`p-4 rounded-lg border-2 ${
+                      feedback === 'correct' ? 'border-green-500 bg-green-50' : 
+                      feedback === 'incorrect' ? 'border-red-500 bg-red-50' : 
+                      'border-slate-200 bg-slate-50'
+                    }`}>
+                      <div className="flex items-center justify-between mb-2">
+                        <Label className="text-sm font-semibold text-slate-700">
+                          {field}
+                        </Label>
+                        <Badge className={`${confidenceBg} ${confidenceColor} border-0`}>
+                          {Math.round(confidence * 100)}% confidence
+                        </Badge>
                       </div>
-                    )}
-                  </div>
-                ))}
+                      
+                      {context && (
+                        <div className="mb-3 p-2 bg-white rounded text-xs text-slate-600 border border-slate-200">
+                          <span className="font-semibold">Document: </span>
+                          "{context}"
+                        </div>
+                      )}
+                      
+                      {isEditing ? (
+                        <div className="space-y-2">
+                          <Input
+                            value={fieldValue}
+                            onChange={(e) => setFieldValue(e.target.value)}
+                            className="mb-2"
+                            autoFocus
+                          />
+                          <Textarea
+                            placeholder="Why was this incorrect? (optional note for AI learning)"
+                            value={fieldNotes[field] || ''}
+                            onChange={(e) => setFieldNotes({ ...fieldNotes, [field]: e.target.value })}
+                            className="text-xs"
+                            rows={2}
+                          />
+                          <Button
+                            size="sm"
+                            onClick={() => {
+                              setFieldFeedback({ ...fieldFeedback, [field]: 'incorrect' });
+                              setEditingField(null);
+                            }}
+                            className="w-full"
+                          >
+                            Save Correction
+                          </Button>
+                        </div>
+                      ) : (
+                        <>
+                          <p className="text-slate-900 mb-3">
+                            {Array.isArray(value) ? value.join(', ') : typeof value === 'object' ? JSON.stringify(value) : String(value)}
+                          </p>
+                          
+                          {feedback === 'incorrect' && fieldNotes[field] && (
+                            <div className="mb-2 p-2 bg-amber-50 rounded text-xs text-amber-800 border border-amber-200">
+                              <span className="font-semibold">Note: </span>
+                              {fieldNotes[field]}
+                            </div>
+                          )}
+                          
+                          <div className="flex gap-2">
+                            {feedback !== 'correct' && (
+                              <Button
+                                size="sm"
+                                variant="outline"
+                                className="flex-1 border-green-500 text-green-700 hover:bg-green-50"
+                                onClick={() => setFieldFeedback({ ...fieldFeedback, [field]: 'correct' })}
+                              >
+                                <CheckCircle className="w-4 h-4 mr-2" />
+                                Correct
+                              </Button>
+                            )}
+                            {feedback !== 'incorrect' && (
+                              <Button
+                                size="sm"
+                                variant="outline"
+                                className="flex-1 border-red-500 text-red-700 hover:bg-red-50"
+                                onClick={() => {
+                                  setEditingField(field);
+                                  setFieldValue(Array.isArray(value) ? value.join(', ') : typeof value === 'object' ? JSON.stringify(value) : String(value));
+                                }}
+                              >
+                                <XCircle className="w-4 h-4 mr-2" />
+                                Incorrect
+                              </Button>
+                            )}
+                          </div>
+                        </>
+                      )}
+                    </div>
+                  );
+                })}
 
-                <div className="flex gap-3 pt-4">
+                <div className="flex gap-3 pt-4 border-t">
                   <Button
-                    onClick={() => handleApproveEntry(true)}
-                    className="flex-1 bg-green-600 hover:bg-green-700"
+                    onClick={handleApproveEntry}
+                    className="flex-1 bg-blue-600 hover:bg-blue-700"
+                    disabled={Object.keys(fieldFeedback).length === 0}
                   >
                     <CheckCircle className="w-4 h-4 mr-2" />
-                    Correct - Approve & Next
-                  </Button>
-                  <Button
-                    onClick={() => handleApproveEntry(false, currentEntry)}
-                    variant="outline"
-                    className="flex-1"
-                  >
-                    Save Corrections & Next
+                    Save & Next Entry
                   </Button>
                   <Button
                     onClick={() => {
                       setInteractiveMode(false);
                       setCurrentFileUrl(null);
                       setCurrentEntry(null);
+                      setFieldFeedback({});
+                      setFieldNotes({});
                     }}
                     variant="outline"
                   >
