@@ -490,10 +490,11 @@ export default function Students() {
 
         // Include training feedback for this batch - ONLY use approved training data
         const approvedTraining = trainingData.filter(t => t.overall_status === 'approved');
-        const batchTrainingExamples = approvedTraining.slice(0, 3).map(t => {
-          const corrections = Object.entries(t.field_feedback || {})
+        const batchTrainingExamples = approvedTraining.slice(0, 5).map(t => {
+          if (!t.field_feedback) return '';
+          const corrections = Object.entries(t.field_feedback)
             .filter(([_, f]) => f.was_correct === false && f.notes)
-            .map(([field, f]) => `- When extracting ${field}: ${f.notes}. Original was "${f.original}", correct value is "${f.corrected}"`)
+            .map(([field, f]) => `- Field "${field}": ${f.notes}. AI extracted "${f.original}" but correct is "${f.corrected}"`)
             .join('\n');
           return corrections;
         }).filter(Boolean).join('\n\n');

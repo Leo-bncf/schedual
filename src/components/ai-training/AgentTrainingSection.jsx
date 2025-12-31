@@ -187,7 +187,7 @@ Provide: name, code, ib_level, ib_group, and available_levels (HL/SL if DP).`;
         file_url: currentFileUrl,
         file_name: `${currentFileName} - Entry ${currentIndex + 1}`,
         extracted_data: correctedData,
-        training_feedback: trainingFeedback
+        field_feedback: trainingFeedback
       });
 
       // Auto-approve with reviewed status
