@@ -9,7 +9,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { Label } from "@/components/ui/label";
 import { toast } from 'sonner';
 import { Alert, AlertDescription } from "@/components/ui/alert";
-import { Upload, Loader2, CheckCircle, XCircle, Edit, Save, Brain, TrendingUp, Pencil } from 'lucide-react';
+import { Upload, Loader2, CheckCircle, XCircle, Edit, Save, Brain, TrendingUp, Pencil, MessageSquare, ChevronDown, ChevronRight } from 'lucide-react';
 import UploadProgressDialog from '../upload/UploadProgressDialog';
 import TrainingChat from './TrainingChat';
 
@@ -39,6 +39,7 @@ export default function AgentTrainingSection({ agentName, agentTitle, agentDescr
   const [extracting, setExtracting] = useState(false);
   const [textInput, setTextInput] = useState('');
   const [useTextMode, setUseTextMode] = useState(false);
+  const [showChat, setShowChat] = useState(false);
   const queryClient = useQueryClient();
 
   const { data: trainingData = [] } = useQuery({
