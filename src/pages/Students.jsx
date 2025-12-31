@@ -107,6 +107,17 @@ export default function Students() {
     enabled: !!schoolId,
   });
 
+  const { data: trainingData = [] } = useQuery({
+    queryKey: ['aiTraining', 'student_importer'],
+    queryFn: async () => {
+      const { data } = await base44.functions.invoke('aiTrainingUpload', { 
+        action: 'list', 
+        agent_name: 'student_importer' 
+      });
+      return data?.data || [];
+    }
+  });
+
   const createMutation = useMutation({
     mutationFn: (data) => {
       if (!schoolId) throw new Error('No school assigned');
