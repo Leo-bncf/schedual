@@ -30,6 +30,8 @@ export default function AgentTrainingSection({ agentName, agentTitle, agentDescr
   const [totalEntries, setTotalEntries] = useState(0);
   const [allNames, setAllNames] = useState([]);
   const [extracting, setExtracting] = useState(false);
+  const [textInput, setTextInput] = useState('');
+  const [useTextMode, setUseTextMode] = useState(false);
   const queryClient = useQueryClient();
 
   const { data: trainingData = [] } = useQuery({
@@ -210,12 +212,26 @@ Provide: name, code, ib_level, ib_group, and available_levels (HL/SL if DP).`;
   };
 
   const uploadMutation = useMutation({
-    mutationFn: async (file) => {
-      setUploadStage('uploading');
-      setUploadProgress('Uploading document...');
+    mutationFn: async (input) => {
+      let file_url = null;
       
-      // Upload file
-      const { file_url } = await base44.integrations.Core.UploadFile({ file });
+      if (typeof input === 'string') {
+        // Text input mode
+        setUploadStage('uploading');
+        setUploadProgress('Processing text...');
+        
+        // Create a text blob and upload it
+        const blob = new Blob([input], { type: 'text/plain' });
+        const textFile = new File([blob], 'text-input.txt', { type: 'text/plain' });
+        const uploadResult = await base44.integrations.Core.UploadFile({ file: textFile });
+        file_url = uploadResult.file_url;
+      } else {
+        // File upload mode
+        setUploadStage('uploading');
+        setUploadProgress('Uploading document...');
+        const uploadResult = await base44.integrations.Core.UploadFile({ file: input });
+        file_url = uploadResult.file_url;
+      }
       
       setUploadStage('extracting');
       setUploadProgress('Finding all entries...');
@@ -345,7 +361,7 @@ Provide: name, code, ib_level, ib_group, and available_levels (HL/SL if DP).`;
       
       // Start interactive mode
       setCurrentFileUrl(file_url);
-      setCurrentFileName(file.name);
+      setCurrentFileName(typeof input === 'string' ? 'text-input.txt' : input.name);
       setAllNames(names);
       setTotalEntries(names.length);
       setCurrentIndex(0);
@@ -408,7 +424,20 @@ Provide: name, code, ib_level, ib_group, and available_levels (HL/SL if DP).`;
     if (!file) return;
     
     setUploadingFile(true);
+    setUseTextMode(false);
     uploadMutation.mutate(file);
+  };
+
+  const handleTextUpload = async () => {
+    if (!textInput.trim()) {
+      toast.error('Please enter some text');
+      return;
+    }
+    
+    setUploadingFile(true);
+    setUseTextMode(false);
+    uploadMutation.mutate(textInput);
+    setTextInput('');
   };
 
   // Extract current entry when it changes
@@ -459,33 +488,77 @@ Provide: name, code, ib_level, ib_group, and available_levels (HL/SL if DP).`;
                 <CardDescription>{agentDescription}</CardDescription>
               </div>
             </div>
-            <label>
-              <input
-                type="file"
-                className="hidden"
-                onChange={handleFileUpload}
+            <div className="flex gap-2">
+              <Button 
+                variant="outline"
+                onClick={() => setUseTextMode(!useTextMode)}
                 disabled={uploadingFile}
-                accept=".pdf,.png,.jpg,.jpeg,.txt,.csv"
-              />
-              <Button disabled={uploadingFile} className="bg-blue-900 hover:bg-blue-800" asChild>
-                <span>
-                  {uploadingFile ? (
-                    <>
-                      <Loader2 className="w-4 h-4 mr-2 animate-spin" />
-                      Processing...
-                    </>
-                  ) : (
-                    <>
-                      <Upload className="w-4 h-4 mr-2" />
-                      Upload Training Doc
-                    </>
-                  )}
-                </span>
+              >
+                {useTextMode ? 'Upload Doc' : 'Paste Text'}
               </Button>
-            </label>
+              {!useTextMode && (
+                <label>
+                  <input
+                    type="file"
+                    className="hidden"
+                    onChange={handleFileUpload}
+                    disabled={uploadingFile}
+                    accept=".pdf,.png,.jpg,.jpeg,.txt,.csv"
+                  />
+                  <Button disabled={uploadingFile} className="bg-blue-900 hover:bg-blue-800" asChild>
+                    <span>
+                      {uploadingFile ? (
+                        <>
+                          <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+                          Processing...
+                        </>
+                      ) : (
+                        <>
+                          <Upload className="w-4 h-4 mr-2" />
+                          Upload Doc
+                        </>
+                      )}
+                    </span>
+                  </Button>
+                </label>
+              )}
+            </div>
           </div>
         </CardHeader>
         <CardContent>
+          {useTextMode && (
+            <div className="mb-4 space-y-3 p-4 bg-blue-50 border border-blue-200 rounded-lg">
+              <Label htmlFor="textInput" className="text-sm font-medium">
+                Paste training data text
+              </Label>
+              <Textarea
+                id="textInput"
+                value={textInput}
+                onChange={(e) => setTextInput(e.target.value)}
+                placeholder="Paste student/teacher/room/subject data here..."
+                rows={6}
+                className="font-mono text-sm"
+              />
+              <Button 
+                onClick={handleTextUpload}
+                disabled={uploadingFile || !textInput.trim()}
+                className="w-full bg-blue-900 hover:bg-blue-800"
+              >
+                {uploadingFile ? (
+                  <>
+                    <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+                    Processing...
+                  </>
+                ) : (
+                  <>
+                    <Upload className="w-4 h-4 mr-2" />
+                    Process Text
+                  </>
+                )}
+              </Button>
+            </div>
+          )}
+          
           <div className="grid grid-cols-3 gap-4">
             <div className="p-4 bg-slate-50 rounded-lg">
               <p className="text-sm text-slate-600 mb-1">Total Training Data</p>
