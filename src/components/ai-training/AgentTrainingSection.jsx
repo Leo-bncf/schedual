@@ -311,136 +311,174 @@ export default function AgentTrainingSection({ agentName, agentTitle, agentDescr
                   </div>
                 </CardHeader>
                 <CardContent className="pt-4">
-                  {selectedTraining?.id === training.id ? (
-                    <div className="space-y-4">
-                      {entities.map((entity, entityIdx) => (
-                        <Card key={entityIdx} className="border-slate-200">
-                          <CardHeader className="pb-3">
-                            <CardTitle className="text-sm">
-                              Entry #{entityIdx + 1}
-                            </CardTitle>
-                          </CardHeader>
-                          <CardContent className="space-y-3">
-                            {Object.entries(entity).map(([field, value]) => {
-                              const fieldPath = `${entityIdx}.${field}`;
-                              const feedback = training.field_feedback?.[fieldPath];
-                              const isEditing = editingField === fieldPath;
-                              
-                              return (
-                                <div key={field} className="flex items-start gap-3 p-3 bg-slate-50 rounded-lg">
-                                  <div className="flex-1">
-                                    <div className="flex items-center gap-2 mb-1">
-                                      <p className="text-xs font-medium text-slate-700">{field}</p>
-                                      {feedback && (
-                                        <Badge variant="outline" className={feedback.correct ? 'border-green-500 text-green-700' : 'border-red-500 text-red-700'}>
-                                          {feedback.correct ? <CheckCircle className="w-3 h-3 mr-1" /> : <XCircle className="w-3 h-3 mr-1" />}
-                                          {feedback.correct ? 'Correct' : 'Incorrect'}
-                                        </Badge>
-                                      )}
-                                    </div>
-                                    {isEditing ? (
-                                      <Input
-                                        value={fieldValue}
-                                        onChange={(e) => setFieldValue(e.target.value)}
-                                        className="mb-2"
-                                      />
-                                    ) : (
-                                      <p className="text-sm text-slate-900">{renderFieldValue(feedback?.corrected_value || value)}</p>
-                                    )}
-                                    {feedback?.notes && (
-                                      <p className="text-xs text-slate-500 mt-1">{feedback.notes}</p>
-                                    )}
-                                  </div>
-                                  <div className="flex gap-1">
-                                    {isEditing ? (
-                                      <Button
-                                        size="sm"
-                                        variant="ghost"
-                                        onClick={() => {
-                                          updateFieldMutation.mutate({
-                                            trainingId: training.id,
-                                            fieldPath,
-                                            isCorrect: false,
-                                            correctedValue: fieldValue,
-                                            notes: 'Corrected by admin'
-                                          });
-                                        }}
-                                      >
-                                        <Save className="w-3 h-3" />
-                                      </Button>
-                                    ) : (
-                                      <>
-                                        <Button
-                                          size="sm"
-                                          variant="ghost"
-                                          className="text-green-600 hover:text-green-700"
-                                          onClick={() => {
-                                            updateFieldMutation.mutate({
-                                              trainingId: training.id,
-                                              fieldPath,
-                                              isCorrect: true,
-                                              correctedValue: value
-                                            });
-                                          }}
-                                        >
-                                          <CheckCircle className="w-4 h-4" />
-                                        </Button>
-                                        <Button
-                                          size="sm"
-                                          variant="ghost"
-                                          className="text-red-600 hover:text-red-700"
-                                          onClick={() => {
-                                            setEditingField(fieldPath);
-                                            setFieldValue(renderFieldValue(value));
-                                          }}
-                                        >
-                                          <XCircle className="w-4 h-4" />
-                                        </Button>
-                                      </>
-                                    )}
-                                  </div>
-                                </div>
-                              );
-                            })}
-                          </CardContent>
-                        </Card>
-                      ))}
-                      
-                      <div className="flex gap-2 pt-4 border-t">
-                        <Button
-                          onClick={() => approveMutation.mutate({ trainingId: training.id, status: 'approved', notes: 'All fields verified' })}
-                          className="bg-green-600 hover:bg-green-700"
-                        >
-                          <CheckCircle className="w-4 h-4 mr-2" />
-                          Approve All
-                        </Button>
-                        <Button
-                          variant="outline"
-                          onClick={() => approveMutation.mutate({ trainingId: training.id, status: 'partially_approved', notes: 'Some corrections made' })}
-                        >
-                          Save as Partially Approved
-                        </Button>
-                        <Button
-                          variant="outline"
-                          onClick={() => setSelectedTraining(null)}
-                        >
-                          Close
-                        </Button>
-                      </div>
-                    </div>
-                  ) : (
-                    <Button
-                      variant="outline"
-                      onClick={() => setSelectedTraining(training)}
-                      className="w-full"
-                    >
-                      Review Extraction ({entities.length} entries)
-                    </Button>
-                  )}
+                  <Button
+                    variant="outline"
+                    onClick={() => setSelectedTraining(training)}
+                    className="w-full"
+                  >
+                    Review Extraction ({entities.length} entries)
+                  </Button>
                 </CardContent>
               </Card>
             );
           })}
+        </div>
+      )}
+
+      {/* Floating Islands Review Modal */}
+      {selectedTraining && (
+        <div className="fixed inset-0 bg-slate-900/50 backdrop-blur-sm z-50 flex items-center justify-center p-4 overflow-y-auto">
+          <div className="w-full max-w-6xl my-8">
+            <div className="bg-white rounded-2xl shadow-2xl p-6 mb-6 sticky top-4 z-10">
+              <div className="flex items-center justify-between mb-4">
+                <div>
+                  <h3 className="text-lg font-semibold text-slate-900">
+                    {selectedTraining.file_name}
+                  </h3>
+                  <p className="text-sm text-slate-600">
+                    {getEntityData(selectedTraining).length} entries • Review each field
+                  </p>
+                </div>
+                <div className="flex items-center gap-2">
+                  <Button
+                    onClick={() => approveMutation.mutate({ trainingId: selectedTraining.id, status: 'approved', notes: 'All fields verified' })}
+                    className="bg-green-600 hover:bg-green-700"
+                  >
+                    <CheckCircle className="w-4 h-4 mr-2" />
+                    Approve All
+                  </Button>
+                  <Button
+                    variant="outline"
+                    onClick={() => setSelectedTraining(null)}
+                  >
+                    Close
+                  </Button>
+                </div>
+              </div>
+            </div>
+
+            <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+              {getEntityData(selectedTraining).map((entity, entityIdx) => {
+                const allFields = Object.entries(entity);
+                const correctFields = allFields.filter(([field]) => {
+                  const fieldPath = `${entityIdx}.${field}`;
+                  const feedback = selectedTraining.field_feedback?.[fieldPath];
+                  return feedback?.correct === true;
+                }).length;
+                
+                return (
+                  <Card key={entityIdx} className="bg-gradient-to-br from-white to-slate-50 border-2 border-slate-200 hover:border-blue-300 transition-all duration-200 shadow-lg hover:shadow-xl">
+                    <CardHeader className="bg-gradient-to-r from-slate-50 to-slate-100 border-b border-slate-200">
+                      <div className="flex items-center justify-between">
+                        <CardTitle className="text-base font-semibold text-slate-900">
+                          Entry #{entityIdx + 1}
+                        </CardTitle>
+                        <Badge variant="outline" className="bg-white">
+                          {correctFields}/{allFields.length} verified
+                        </Badge>
+                      </div>
+                    </CardHeader>
+                    <CardContent className="pt-4 space-y-3">
+                      {allFields.map(([field, value]) => {
+                        const fieldPath = `${entityIdx}.${field}`;
+                        const feedback = selectedTraining.field_feedback?.[fieldPath];
+                        const isEditing = editingField === fieldPath;
+                        
+                        return (
+                          <div key={field} className="group relative">
+                            <div className={`p-3 rounded-lg border-2 transition-all ${
+                              feedback?.correct === true 
+                                ? 'bg-green-50 border-green-200' 
+                                : feedback?.correct === false 
+                                ? 'bg-red-50 border-red-200' 
+                                : 'bg-slate-50 border-slate-200 hover:border-blue-300'
+                            }`}>
+                              <div className="flex items-start justify-between gap-2">
+                                <div className="flex-1 min-w-0">
+                                  <div className="flex items-center gap-2 mb-1">
+                                    <p className="text-xs font-semibold text-slate-700 uppercase tracking-wide">
+                                      {field.replace(/_/g, ' ')}
+                                    </p>
+                                    {feedback && (
+                                      <Badge variant="outline" className={feedback.correct ? 'border-green-500 text-green-700 text-xs' : 'border-red-500 text-red-700 text-xs'}>
+                                        {feedback.correct ? <CheckCircle className="w-3 h-3 mr-1" /> : <XCircle className="w-3 h-3 mr-1" />}
+                                        {feedback.correct ? 'Correct' : 'Incorrect'}
+                                      </Badge>
+                                    )}
+                                  </div>
+                                  {isEditing ? (
+                                    <Input
+                                      value={fieldValue}
+                                      onChange={(e) => setFieldValue(e.target.value)}
+                                      className="mb-2"
+                                      autoFocus
+                                    />
+                                  ) : (
+                                    <p className="text-sm text-slate-900 font-medium break-words">
+                                      {renderFieldValue(feedback?.corrected_value || value)}
+                                    </p>
+                                  )}
+                                  {feedback?.notes && (
+                                    <p className="text-xs text-slate-500 mt-1 italic">{feedback.notes}</p>
+                                  )}
+                                </div>
+                                <div className="flex gap-1 opacity-100 lg:opacity-0 lg:group-hover:opacity-100 transition-opacity">
+                                  {isEditing ? (
+                                    <Button
+                                      size="sm"
+                                      className="h-8 w-8 p-0 bg-blue-600 hover:bg-blue-700"
+                                      onClick={() => {
+                                        updateFieldMutation.mutate({
+                                          trainingId: selectedTraining.id,
+                                          fieldPath,
+                                          isCorrect: false,
+                                          correctedValue: fieldValue,
+                                          notes: 'Corrected by admin'
+                                        });
+                                      }}
+                                    >
+                                      <Save className="w-4 h-4" />
+                                    </Button>
+                                  ) : (
+                                    <>
+                                      <Button
+                                        size="sm"
+                                        className="h-8 w-8 p-0 bg-green-600 hover:bg-green-700"
+                                        onClick={() => {
+                                          updateFieldMutation.mutate({
+                                            trainingId: selectedTraining.id,
+                                            fieldPath,
+                                            isCorrect: true,
+                                            correctedValue: value
+                                          });
+                                        }}
+                                      >
+                                        <CheckCircle className="w-4 h-4" />
+                                      </Button>
+                                      <Button
+                                        size="sm"
+                                        className="h-8 w-8 p-0 bg-red-600 hover:bg-red-700"
+                                        onClick={() => {
+                                          setEditingField(fieldPath);
+                                          setFieldValue(renderFieldValue(value));
+                                        }}
+                                      >
+                                        <XCircle className="w-4 h-4" />
+                                      </Button>
+                                    </>
+                                  )}
+                                </div>
+                              </div>
+                            </div>
+                          </div>
+                        );
+                      })}
+                    </CardContent>
+                  </Card>
+                );
+              })}
+            </div>
+          </div>
         </div>
       )}
     </div>
