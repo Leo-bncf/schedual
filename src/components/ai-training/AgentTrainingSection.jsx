@@ -539,6 +539,9 @@ Provide: name, code, ib_level, ib_group, and available_levels (HL/SL if DP).`;
                 <CardContent className="pt-4">
                   {selectedTraining?.id === training.id ? (
                     <div className="space-y-4">
+                      <div className="text-sm text-slate-600 mb-3">
+                        Reviewing {entities.length} entries from this training session
+                      </div>
                       {entities.map((entity, entityIdx) => (
                         <Card key={entityIdx} className="border-slate-200">
                           <CardHeader className="pb-3">
