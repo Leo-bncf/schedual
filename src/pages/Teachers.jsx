@@ -510,90 +510,110 @@ Example: {"full_name": "John Smith", "email": "john@school.com", "subjects": ["P
       )}
 
       <Dialog open={isDialogOpen} onOpenChange={(open) => { if (!open) resetForm(); }}>
-        <DialogContent className="sm:max-w-lg">
+        <DialogContent className="sm:max-w-2xl max-h-[90vh] overflow-y-auto">
           <DialogHeader>
-            <DialogTitle>{editingTeacher ? 'Edit Teacher' : 'Add New Teacher'}</DialogTitle>
+            <DialogTitle className="text-2xl">{editingTeacher ? 'Edit Teacher' : 'Add New Teacher'}</DialogTitle>
             <DialogDescription>
               {editingTeacher ? 'Update teacher information and preferences.' : 'Enter the details for the new teacher.'}
             </DialogDescription>
           </DialogHeader>
-          <form onSubmit={handleSubmit} className="space-y-4">
-            <div className="grid grid-cols-2 gap-4">
+          <form onSubmit={handleSubmit} className="space-y-6">
+            <div className="space-y-4">
+              <div className="grid grid-cols-2 gap-4">
+                <div className="space-y-2">
+                  <Label htmlFor="full_name" className="text-sm font-semibold text-slate-700">Full Name *</Label>
+                  <Input 
+                    id="full_name"
+                    value={formData.full_name}
+                    onChange={(e) => setFormData({ ...formData, full_name: e.target.value })}
+                    placeholder="John Smith"
+                    className="h-11"
+                    required
+                  />
+                </div>
+                <div className="space-y-2">
+                  <Label htmlFor="employee_id" className="text-sm font-semibold text-slate-700">Employee ID</Label>
+                  <Input 
+                    id="employee_id"
+                    value={formData.employee_id}
+                    onChange={(e) => setFormData({ ...formData, employee_id: e.target.value })}
+                    placeholder="EMP-001"
+                    className="h-11"
+                  />
+                </div>
+              </div>
+
               <div className="space-y-2">
-                <Label htmlFor="full_name">Full Name *</Label>
+                <Label htmlFor="email" className="text-sm font-semibold text-slate-700">Email *</Label>
                 <Input 
-                  id="full_name"
-                  value={formData.full_name}
-                  onChange={(e) => setFormData({ ...formData, full_name: e.target.value })}
+                  id="email"
+                  type="email"
+                  value={formData.email}
+                  onChange={(e) => setFormData({ ...formData, email: e.target.value })}
+                  placeholder="teacher@school.com"
+                  className="h-11"
                   required
                 />
               </div>
-              <div className="space-y-2">
-                <Label htmlFor="employee_id">Employee ID</Label>
-                <Input 
-                  id="employee_id"
-                  value={formData.employee_id}
-                  onChange={(e) => setFormData({ ...formData, employee_id: e.target.value })}
-                />
+
+              <div className="grid grid-cols-2 gap-4">
+                <div className="space-y-2">
+                  <Label htmlFor="max_hours" className="text-sm font-semibold text-slate-700">Max Hours/Week</Label>
+                  <Input 
+                    id="max_hours"
+                    type="number"
+                    min="1"
+                    max="40"
+                    value={formData.max_hours_per_week}
+                    onChange={(e) => setFormData({ ...formData, max_hours_per_week: parseInt(e.target.value) || 25 })}
+                    className="h-11"
+                  />
+                </div>
+                <div className="space-y-2">
+                  <Label htmlFor="preferred_free_day" className="text-sm font-semibold text-slate-700">Preferred Free Day</Label>
+                  <Select 
+                    value={formData.preferred_free_day || ""} 
+                    onValueChange={(value) => setFormData({ ...formData, preferred_free_day: value })}
+                  >
+                    <SelectTrigger className="h-11">
+                      <SelectValue placeholder="Select day" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value={null}>None</SelectItem>
+                      {DAYS.map(day => (
+                        <SelectItem key={day} value={day}>{day}</SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
               </div>
             </div>
 
-            <div className="space-y-2">
-              <Label htmlFor="email">Email *</Label>
-              <Input 
-                id="email"
-                type="email"
-                value={formData.email}
-                onChange={(e) => setFormData({ ...formData, email: e.target.value })}
-                required
+            <div className="border-t border-slate-200 pt-6">
+              <QualificationManager 
+                subjects={subjects}
+                qualifications={formData.qualifications}
+                onChange={(quals) => setFormData({ ...formData, qualifications: quals })}
               />
             </div>
 
-            <div className="grid grid-cols-2 gap-4">
-              <div className="space-y-2">
-                <Label htmlFor="max_hours">Max Hours/Week</Label>
-                <Input 
-                  id="max_hours"
-                  type="number"
-                  value={formData.max_hours_per_week}
-                  onChange={(e) => setFormData({ ...formData, max_hours_per_week: parseInt(e.target.value) })}
-                />
-              </div>
-              <div className="space-y-2">
-                <Label htmlFor="preferred_free_day">Preferred Free Day</Label>
-                <Select 
-                  value={formData.preferred_free_day} 
-                  onValueChange={(value) => setFormData({ ...formData, preferred_free_day: value })}
-                >
-                  <SelectTrigger>
-                    <SelectValue placeholder="Select day" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value={null}>None</SelectItem>
-                    {DAYS.map(day => (
-                      <SelectItem key={day} value={day}>{day}</SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-              </div>
-            </div>
-
-            <QualificationManager 
-              subjects={subjects}
-              qualifications={formData.qualifications}
-              onChange={(quals) => setFormData({ ...formData, qualifications: quals })}
-            />
-
-            <DialogFooter>
-              <Button type="button" variant="outline" onClick={resetForm}>
+            <DialogFooter className="gap-2 sm:gap-0">
+              <Button type="button" variant="outline" onClick={resetForm} className="h-11">
                 Cancel
               </Button>
               <Button 
                 type="submit" 
-                className="bg-indigo-600 hover:bg-indigo-700"
+                className="bg-gradient-to-r from-indigo-600 to-violet-600 hover:from-indigo-700 hover:to-violet-700 h-11 shadow-lg"
                 disabled={createMutation.isPending || updateMutation.isPending}
               >
-                {editingTeacher ? 'Save Changes' : 'Add Teacher'}
+                {createMutation.isPending || updateMutation.isPending ? (
+                  <>
+                    <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+                    Saving...
+                  </>
+                ) : (
+                  editingTeacher ? 'Save Changes' : 'Add Teacher'
+                )}
               </Button>
             </DialogFooter>
           </form>
