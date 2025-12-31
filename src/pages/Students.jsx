@@ -21,7 +21,7 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { Plus, Search, GraduationCap, MoreHorizontal, Pencil, Trash2, Upload, Loader2, CheckCircle } from 'lucide-react';
+import { Plus, Search, GraduationCap, MoreHorizontal, Pencil, Trash2, Upload, Loader2, CheckCircle, Mail } from 'lucide-react';
 import { AnimatePresence, motion } from 'framer-motion';
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import {
@@ -993,12 +993,120 @@ Return EXACTLY ${batchNames.length} students with COMPLETE data.`,
           action={() => setIsDialogOpen(true)}
           actionLabel="Add Student"
         />
+      ) : isLoading ? (
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+          {[1, 2, 3, 4, 5, 6].map(i => (
+            <div key={i} className="h-48 bg-slate-100 rounded-xl animate-pulse" />
+          ))}
+        </div>
       ) : (
-        <DataTable 
-          columns={columns}
-          data={filteredStudents}
-          isLoading={isLoading}
-        />
+        <motion.div 
+          className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4"
+          initial={{ opacity: 0 }}
+          animate={{ opacity: 1 }}
+        >
+          {filteredStudents.map((student, index) => {
+            const normalizeYearGroup = (yg, prog) => {
+              if (!yg) return yg;
+              if (prog === 'PYP' && yg.toLowerCase().includes('pyp')) return yg;
+              return yg;
+            };
+
+            return (
+              <motion.div
+                key={student.id}
+                initial={{ opacity: 0, y: 20 }}
+                animate={{ opacity: 1, y: 0 }}
+                transition={{ delay: index * 0.05 }}
+              >
+                <Card className="group hover:shadow-xl transition-all duration-300 border-slate-200 overflow-hidden">
+                  <CardHeader className="pb-3 bg-gradient-to-br from-slate-50 to-white">
+                    <div className="flex items-start justify-between">
+                      <div className="flex items-center gap-3">
+                        <div className="w-12 h-12 rounded-full bg-gradient-to-br from-blue-500 to-violet-600 flex items-center justify-center text-white font-semibold text-lg shadow-lg">
+                          {student.full_name?.split(' ').map(n => n[0]).join('').slice(0, 2)}
+                        </div>
+                        <div>
+                          <CardTitle className="text-base font-semibold text-slate-900">{student.full_name}</CardTitle>
+                          <p className="text-xs text-slate-500 mt-0.5">{student.student_id}</p>
+                        </div>
+                      </div>
+                      <DropdownMenu>
+                        <DropdownMenuTrigger asChild>
+                          <Button variant="ghost" size="icon" className="opacity-0 group-hover:opacity-100 transition-opacity">
+                            <MoreHorizontal className="w-4 h-4" />
+                          </Button>
+                        </DropdownMenuTrigger>
+                        <DropdownMenuContent align="end">
+                          <DropdownMenuItem onClick={() => handleEdit(student)}>
+                            <Pencil className="w-4 h-4 mr-2" />
+                            Edit
+                          </DropdownMenuItem>
+                          <DropdownMenuItem 
+                            className="text-rose-600"
+                            onClick={() => deleteMutation.mutate(student.id)}
+                          >
+                            <Trash2 className="w-4 h-4 mr-2" />
+                            Delete
+                          </DropdownMenuItem>
+                        </DropdownMenuContent>
+                      </DropdownMenu>
+                    </div>
+                  </CardHeader>
+                  <CardContent className="pt-4 space-y-3">
+                    <div className="flex items-center gap-2 text-sm">
+                      <GraduationCap className="w-4 h-4 text-slate-400" />
+                      <span className="text-slate-600 truncate">{student.email}</span>
+                    </div>
+                    
+                    <div className="flex items-center gap-2">
+                      <Badge className="bg-blue-100 text-blue-700 border-0">
+                        {student.ib_programme}
+                      </Badge>
+                      <Badge variant="outline" className="text-slate-600">
+                        {normalizeYearGroup(student.year_group, student.ib_programme)}
+                      </Badge>
+                    </div>
+
+                    {student.subject_choices && student.subject_choices.length > 0 && (
+                      <div className="pt-2 border-t border-slate-100">
+                        <p className="text-xs font-medium text-slate-500 mb-2">
+                          {student.ib_programme === 'DP' ? 'Subjects' : `${student.subject_choices.length} Subjects`}
+                        </p>
+                        {student.ib_programme === 'DP' ? (
+                          <div className="flex gap-2">
+                            <Badge variant="secondary" className="bg-rose-50 text-rose-700 border-0">
+                              {getSubjectInfo(student.subject_choices).hl} HL
+                            </Badge>
+                            <Badge variant="secondary" className="bg-amber-50 text-amber-700 border-0">
+                              {getSubjectInfo(student.subject_choices).sl} SL
+                            </Badge>
+                          </div>
+                        ) : (
+                          <div className="flex flex-wrap gap-1.5">
+                            {student.subject_choices.slice(0, 3).map((choice, i) => {
+                              const subject = subjects.find(s => s.id === choice.subject_id);
+                              return subject ? (
+                                <Badge key={i} variant="secondary" className="bg-indigo-50 text-indigo-700 border-0 text-xs">
+                                  {subject.name}
+                                </Badge>
+                              ) : null;
+                            })}
+                            {student.subject_choices.length > 3 && (
+                              <Badge variant="secondary" className="bg-slate-100 text-slate-600 border-0 text-xs">
+                                +{student.subject_choices.length - 3}
+                              </Badge>
+                            )}
+                          </div>
+                        )}
+                      </div>
+                    )}
+                  </CardContent>
+                </Card>
+              </motion.div>
+            );
+          })}
+        </motion.div>
       )}
 
       <AnimatePresence>
