@@ -75,11 +75,13 @@ export default function TrainingChat({ agentName, agentTitle, colors }) {
   };
 
   return (
-    <Card>
+    <Card className="border-0 shadow-lg">
       <CardHeader>
         <div className="flex items-center gap-2">
-          <MessageCircle className="w-5 h-5 text-blue-600" />
-          <CardTitle className="text-base">Training Assistant Chat</CardTitle>
+          <div className={`p-2 rounded-lg bg-gradient-to-br ${colors.gradient}`}>
+            <MessageCircle className="w-4 h-4 text-white" />
+          </div>
+          <CardTitle className="text-base">Ask {agentTitle} AI</CardTitle>
         </div>
         <p className="text-xs text-slate-500">
           Ask questions, provide corrections, or give feedback to improve the AI's extraction accuracy
@@ -103,7 +105,7 @@ export default function TrainingChat({ agentName, agentTitle, colors }) {
                   <div
                     className={`max-w-[80%] rounded-lg px-4 py-2.5 ${
                       msg.role === 'user'
-                        ? 'bg-blue-900 text-white'
+                        ? `bg-gradient-to-r ${colors.gradient} text-white`
                         : 'bg-slate-100 text-slate-900'
                     }`}
                   >
@@ -162,7 +164,7 @@ export default function TrainingChat({ agentName, agentTitle, colors }) {
           <Button
             onClick={handleSend}
             disabled={!input.trim() || sending}
-            className="bg-blue-900 hover:bg-blue-800"
+            className={`bg-gradient-to-r ${colors.gradient} hover:opacity-90`}
           >
             {sending ? (
               <Loader2 className="w-4 h-4 animate-spin" />
