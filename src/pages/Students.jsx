@@ -883,8 +883,8 @@ Return EXACTLY ${batchNames.length} students with COMPLETE data.`,
         error: error?.message || 'An unknown error occurred'
       });
       alert('Failed to process file: ' + (error?.message || 'Unknown error'));
-      }
-      };
+    }
+  };
 
 
 
