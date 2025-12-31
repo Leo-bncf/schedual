@@ -909,34 +909,23 @@ Return EXACTLY 1 student object. Do not skip this student.`,
         }
       }
 
-      // For PYP/MYP: Merge subjects within each year_group BEFORE creating students
-      const yearGroupSubjects = {};
+      // For PYP/MYP: Get ALL subjects for their programme and assign to every student
+      const allSubjects = await base44.entities.Subject.filter({ school_id: schoolId });
       
       studentsToCreate.forEach(student => {
         if (student.ib_programme === 'PYP' || student.ib_programme === 'MYP') {
-          const key = `${student.ib_programme}-${student.year_group}`;
-          if (!yearGroupSubjects[key]) {
-            yearGroupSubjects[key] = [];
-          }
-          // Merge all subjects from this year group
-          student.subject_choices.forEach(subj => {
-            const exists = yearGroupSubjects[key].find(s => s.subject_id === subj.subject_id);
-            if (!exists) {
-              yearGroupSubjects[key].push(subj);
-            }
-          });
+          // Get all subjects matching this student's IB programme
+          const programmeSubjects = allSubjects
+            .filter(subj => subj.ib_level === student.ib_programme && subj.is_active !== false)
+            .map(subj => ({
+              subject_id: subj.id,
+              ib_group: subj.ib_group
+            }));
+          
+          student.subject_choices = programmeSubjects;
+          console.log(`Assigned ${programmeSubjects.length} ${student.ib_programme} subjects to ${student.full_name}`);
         }
       });
-
-      // Apply merged subjects to all students in the same year group
-      studentsToCreate.forEach(student => {
-        if (student.ib_programme === 'PYP' || student.ib_programme === 'MYP') {
-          const key = `${student.ib_programme}-${student.year_group}`;
-          student.subject_choices = yearGroupSubjects[key];
-        }
-      });
-
-      console.log('PYP/MYP subjects merged by year group:', yearGroupSubjects);
 
       // For PYP/MYP students, ensure ClassGroups are created and subjects synced
       const hasPypMypStudents = studentsToCreate.some(s => s.ib_programme === 'PYP' || s.ib_programme === 'MYP');

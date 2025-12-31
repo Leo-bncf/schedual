@@ -116,47 +116,31 @@ Deno.serve(async (req) => {
     // Create ClassGroups
     const createdClassGroups = await base44.asServiceRole.entities.ClassGroup.bulkCreate(classGroupsToCreate);
 
-    // For each year_group, collect ALL subjects from ALL students in that year
-    const yearGroupSubjects = {};
+    // For PYP/MYP: Get ALL subjects for each programme and assign to ALL students
+    const allSubjects = await base44.asServiceRole.entities.Subject.filter({ school_id: schoolId });
     
-    for (const [key, groupData] of Object.entries(studentsByYear)) {
-      const { year_group, ib_programme, students } = groupData;
-      const yearKey = `${ib_programme}_${year_group}`;
-      
-      // Only for PYP/MYP - collect all unique subjects
-      if (ib_programme === 'PYP' || ib_programme === 'MYP') {
-        yearGroupSubjects[yearKey] = [];
-        const seenSubjectIds = new Set();
-        
-        students.forEach(student => {
-          if (student.subject_choices && Array.isArray(student.subject_choices)) {
-            student.subject_choices.forEach(subj => {
-              if (!seenSubjectIds.has(subj.subject_id)) {
-                seenSubjectIds.add(subj.subject_id);
-                yearGroupSubjects[yearKey].push(subj);
-              }
-            });
-          }
-        });
-        
-        console.log(`Year ${year_group}: Merged ${yearGroupSubjects[yearKey].length} unique subjects from ${students.length} students`);
-      }
-    }
+    const programmeSubjects = {
+      PYP: allSubjects
+        .filter(s => s.ib_level === 'PYP' && s.is_active !== false)
+        .map(s => ({ subject_id: s.id, ib_group: s.ib_group })),
+      MYP: allSubjects
+        .filter(s => s.ib_level === 'MYP' && s.is_active !== false)
+        .map(s => ({ subject_id: s.id, ib_group: s.ib_group }))
+    };
 
-    // Update students with their ClassGroup IDs AND synchronized subjects
+    console.log(`Found ${programmeSubjects.PYP.length} PYP subjects and ${programmeSubjects.MYP.length} MYP subjects`);
+
+    // Update students with their ClassGroup IDs AND ALL programme subjects
     let successfulUpdates = 0;
     
     for (const classGroup of createdClassGroups) {
-      const yearKey = `${classGroup.ib_programme}_${classGroup.year_group}`;
-      const mergedSubjects = yearGroupSubjects[yearKey];
-      
       for (const studentId of classGroup.student_ids) {
         try {
           const updateData = { classgroup_id: classGroup.id };
           
-          // For PYP/MYP: Update all students with the merged subject list
-          if (mergedSubjects) {
-            updateData.subject_choices = mergedSubjects;
+          // For PYP/MYP: Assign ALL subjects for their programme
+          if (classGroup.ib_programme === 'PYP' || classGroup.ib_programme === 'MYP') {
+            updateData.subject_choices = programmeSubjects[classGroup.ib_programme];
           }
           
           await base44.asServiceRole.entities.Student.update(studentId, updateData);
