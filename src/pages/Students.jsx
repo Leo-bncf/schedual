@@ -371,251 +371,95 @@ export default function Students() {
     try {
       const { file_url } = await base44.integrations.Core.UploadFile({ file });
 
-      setUploadState(prev => ({ ...prev, stage: 'extracting', progress: 'Finding all student names...' }));
+      setUploadState(prev => ({ ...prev, stage: 'extracting', progress: 'AI Agent analyzing document...' }));
 
-      // Helper function to call LLM with retry on errors
-      const callLLMWithRetry = async (params, maxRetries = 2) => {
-        for (let attempt = 1; attempt <= maxRetries; attempt++) {
-          try {
-            return await base44.integrations.Core.InvokeLLM(params);
-          } catch (error) {
-            const shouldRetry = 
-              error?.message?.includes('502') || 
-              error?.message?.includes('aborted') ||
-              error?.message?.includes('timeout') ||
-              error?.response?.status === 502;
-            
-            if (shouldRetry && attempt < maxRetries) {
-              console.log(`⚠️ Retry ${attempt}/${maxRetries} after error: ${error?.message}...`);
-              await new Promise(resolve => setTimeout(resolve, 1500 * attempt));
-              continue;
-            }
-            throw error;
-          }
-        }
-      };
-
-      // Phase 1: Detect document type and get all student names
-      const documentAnalysis = await callLLMWithRetry({
-        prompt: `Analyze this document to determine what IB programme these students belong to.
-
-      Look for indicators:
-      - DP/Diploma Programme students: taking 6 subjects with HL/SL levels, Groups 1-6, TOK/EE/CAS mentioned
-      - MYP students: Middle Years Programme, years 1-5, interdisciplinary subjects
-      - PYP students: Primary Years Programme, young children, classes A-F
-
-      CRITICAL: If you see HL/SL levels, 6 subjects per student, or IB groups → this is DP
-
-      Then list ALL student names in the document.
-
-      ⚠️ CRITICAL RULES:
-      1. Preserve ALL special characters, accents, and diacritics EXACTLY (é, ñ, ü, ö, ç, ø, å, etc.)
-      2. Include middle names if present
-      3. ONLY extract names that are ACTUALLY VISIBLE in the document
-      4. Do NOT invent, generate, or make up ANY names
-      5. Do NOT add placeholder/example names
-      6. If you can't read a name clearly, skip it rather than guessing
-
-      Return the programme type and complete list of ALL REAL student names.`,
-        file_urls: [file_url],
-        response_json_schema: {
-          type: "object",
-          properties: {
-            detected_programme: { 
-              type: "string",
-              enum: ["DP", "MYP", "PYP"],
-              description: "The IB programme detected from the document"
-            },
-            confidence: {
-              type: "string",
-              enum: ["high", "medium", "low"]
-            },
-            indicators: {
-              type: "array",
-              items: { type: "string" },
-              description: "What indicators led to this conclusion"
-            },
-            total_count: { type: "number" },
-            student_names: {
-              type: "array",
-              items: { type: "string" }
-            }
-          }
-        }
+      // Create conversation with student_importer agent
+      const conversation = await base44.agents.createConversation({
+        agent_name: 'student_importer',
+        metadata: { task: 'bulk_import', file_name: file.name }
       });
 
-      const detectedProgramme = documentAnalysis?.detected_programme || 'DP';
-      const allNames = documentAnalysis?.student_names || [];
+      console.log('📋 Created conversation with student_importer agent:', conversation.id);
 
-      console.log(`📋 Document Analysis: ${detectedProgramme} programme detected (${documentAnalysis?.confidence} confidence)`);
-      console.log(`📋 Indicators: ${documentAnalysis?.indicators?.join(', ')}`);
+      // Send extraction request to agent with file
+      const response = await base44.agents.addMessage(conversation, {
+        role: 'user',
+        content: `Extract ALL students from this document. 
 
-      if (documentAnalysis?.confidence === 'low') {
-        const confirmProgramme = confirm(
-          `⚠️ Low confidence detection: System thinks this is ${detectedProgramme} programme.\n\n` +
-          `Indicators: ${documentAnalysis?.indicators?.join(', ')}\n\n` +
-          `Is this correct? Click OK if yes, Cancel to stop import.`
-        );
-        if (!confirmProgramme) {
-          throw new Error('Import cancelled - please verify document programme type');
-        }
-      }
-      console.log(`First pass found ${allNames.length} students`);
-      
-      // STOP HERE - don't ask for more, it causes hallucinations
-      
-      if (allNames.length === 0) {
-        throw new Error('No student names found in the document');
-      }
+    Return a JSON array of students, each with:
+    - full_name (with accents preserved)
+    - email
+    - student_id
+    - ib_programme (DP, MYP, or PYP)
+    - year_group (DP1/DP2, MYP1-5, or PYP-A to PYP-F)
+    - subjects: array of {name, level} (level required for DP: "HL" or "SL")
 
-      console.log(`Total found: ${allNames.length} student names`);
-      
+    CRITICAL: DP students MUST have exactly 6 subjects with HL/SL levels. Verify year groups from document structure.`,
+        file_urls: [file_url]
+      });
+
+      console.log('📋 Sent extraction request to agent');
+
       setUploadState(prev => ({ 
         ...prev, 
-        progress: `Found ${allNames.length} students. Extracting details...` 
+        progress: 'Agent processing document...' 
       }));
 
-      // Phase 2: Extract full details in larger batches (speed over caution)
-      const extractBatchSize = 30;
-      const totalBatches = Math.ceil(allNames.length / extractBatchSize);
-      const allStudents = [];
+      // Wait for agent to complete (poll messages)
+      let attempts = 0;
+      const maxAttempts = 60;
+      let allStudents = [];
 
-      console.log(`Starting extraction: ${totalBatches} batches of ~${extractBatchSize} students each`);
+      while (attempts < maxAttempts) {
+        await new Promise(resolve => setTimeout(resolve, 2000));
 
-      for (let batch = 0; batch < totalBatches; batch++) {
-        const batchNames = allNames.slice(batch * extractBatchSize, (batch + 1) * extractBatchSize);
-        
-        console.log(`⏳ Batch ${batch + 1}/${totalBatches} starting...`);
+        const updatedConv = await base44.agents.getConversation(conversation.id);
+        const lastMessage = updatedConv.messages[updatedConv.messages.length - 1];
+
+        // Check if agent has responded
+        if (lastMessage.role === 'assistant' && !lastMessage.tool_calls?.some(tc => tc.status === 'running' || tc.status === 'pending')) {
+          console.log('✅ Agent completed extraction');
+
+          // Parse JSON from agent response
+          try {
+            const jsonMatch = lastMessage.content.match(/\[[\s\S]*\]/);
+            if (jsonMatch) {
+              allStudents = JSON.parse(jsonMatch[0]);
+              console.log(`📋 Agent extracted ${allStudents.length} students`);
+              break;
+            }
+          } catch (e) {
+            console.error('Failed to parse agent response:', e);
+          }
+
+          // If no JSON found, try to extract from conversation
+          if (allStudents.length === 0) {
+            throw new Error('Agent did not return valid student data');
+          }
+        }
+
+        attempts++;
         setUploadState(prev => ({ 
           ...prev, 
-          progress: `Extracting batch ${batch + 1}/${totalBatches} (${batchNames.length} students)...` 
+          progress: `Agent working... (${attempts * 2}s)` 
         }));
-
-        try {
-          const batchResult = await callLLMWithRetry({
-            prompt: `Extract these ${batchNames.length} students: ${batchNames.join(', ')}
-
-CRITICAL RULES:
-1. Programme: ALL students MUST have ib_programme = "${detectedProgramme}"
-2. Year Group: ${detectedProgramme === 'DP' ? 'Look at document sections/headings - students under "DP1" or "Year 1" = DP1, students under "DP2" or "Year 2" = DP2. If unclear from position, check context.' : detectedProgramme === 'MYP' ? 'Determine from age/grade: MYP1-MYP5' : 'Determine from class letter: PYP-A through PYP-F'}
-3. ${detectedProgramme === 'DP' ? 'Subjects: COUNT and ensure EXACTLY 6 subjects per student. Each subject MUST have a level ("HL" or "SL"). If document shows 5, look harder for the 6th. DP students ALWAYS take 6 subjects.' : 'Subjects: Extract ALL subjects listed for each student'}
-4. Preserve ALL special characters (é, ñ, ü, ö, etc.) EXACTLY as written
-
-For each student return: full_name, email, student_id, ib_programme, year_group, subjects (with name and level for DP).`,
-            file_urls: [file_url],
-            response_json_schema: {
-              type: "object",
-              properties: {
-                students: {
-                  type: "array",
-                  items: {
-                    type: "object",
-                    properties: {
-                      full_name: { type: "string" },
-                      email: { type: "string" },
-                      student_id: { type: "string" },
-                      ib_programme: { type: "string" },
-                      year_group: { type: "string" },
-                      subjects: {
-                        type: "array",
-                        items: {
-                          type: "object",
-                          properties: {
-                            name: { type: "string" },
-                            level: { type: "string" }
-                          },
-                          required: ["name"]
-                        }
-                      }
-                    },
-                    required: ["full_name", "ib_programme", "year_group"]
-                  }
-                }
-              }
-            }
-          });
-
-          const batchStudents = batchResult?.students || [];
-          
-          // Immediate validation and logging for DP students
-          if (detectedProgramme === 'DP') {
-            batchStudents.forEach((student, idx) => {
-              const subjectCount = student.subjects?.length || 0;
-              const hasLevels = student.subjects?.every(s => s.level) || false;
-              
-              if (subjectCount !== 6) {
-                console.warn(`⚠️ ${student.full_name}: Only ${subjectCount} subjects (need 6)`);
-              }
-              if (!hasLevels) {
-                console.warn(`⚠️ ${student.full_name}: Missing HL/SL levels on subjects`);
-              }
-              if (!['DP1', 'DP2'].includes(student.year_group)) {
-                console.warn(`⚠️ ${student.full_name}: Invalid year group "${student.year_group}" (need DP1 or DP2)`);
-              }
-            });
-          }
-          
-          allStudents.push(...batchStudents);
-          
-          console.log(`✅ Batch ${batch + 1}/${totalBatches}: Extracted ${batchStudents.length}/${batchNames.length} students`);
-          
-          // Minimal delay between batches
-          if (batch < totalBatches - 1) {
-            await new Promise(resolve => setTimeout(resolve, 200));
-          }
-        } catch (error) {
-          console.error(`❌ Batch ${batch + 1} failed:`, error);
-          // Continue with next batch even if this one fails
-        }
-      }
-      
-      console.log(`Total extracted: ${allStudents.length} students across all batches`);
-
-      // STRICT VALIDATION for DP students
-      if (detectedProgramme === 'DP') {
-        const dpValidation = {
-          wrongProgramme: allStudents.filter(s => s.ib_programme !== 'DP'),
-          missingSubjects: allStudents.filter(s => !s.subjects || s.subjects.length < 6),
-          wrongYearGroup: allStudents.filter(s => !['DP1', 'DP2'].includes(s.year_group))
-        };
-
-        // Log validation issues
-        if (dpValidation.wrongProgramme.length > 0) {
-          console.error(`❌ ${dpValidation.wrongProgramme.length} students incorrectly labeled as non-DP:`, 
-            dpValidation.wrongProgramme.map(s => `${s.full_name} (${s.ib_programme})`));
-        }
-
-        if (dpValidation.missingSubjects.length > 0) {
-          console.warn(`⚠️ ${dpValidation.missingSubjects.length} DP students missing subjects - will need manual correction`);
-        }
-
-        if (dpValidation.wrongYearGroup.length > 0) {
-          console.error(`❌ ${dpValidation.wrongYearGroup.length} students with invalid year group:`, 
-            dpValidation.wrongYearGroup.map(s => `${s.full_name} (${s.year_group})`));
-        }
-
-        // Final validation check
-        const stillInvalid = {
-          wrongProgramme: allStudents.filter(s => s.ib_programme !== 'DP').length,
-          incomplete: allStudents.filter(s => !s.subjects || s.subjects.length < 6).length,
-          wrongYear: allStudents.filter(s => !['DP1', 'DP2'].includes(s.year_group)).length
-        };
-
-        if (stillInvalid.wrongProgramme > 0 || stillInvalid.incomplete > 0 || stillInvalid.wrongYear > 0) {
-          const errorMsg = `⚠️ VALIDATION ERRORS:\n` +
-            (stillInvalid.wrongProgramme > 0 ? `- ${stillInvalid.wrongProgramme} students not labeled as DP\n` : '') +
-            (stillInvalid.incomplete > 0 ? `- ${stillInvalid.incomplete} students missing subjects (need 6)\n` : '') +
-            (stillInvalid.wrongYear > 0 ? `- ${stillInvalid.wrongYear} students without DP1/DP2 year group\n` : '') +
-            `\nDo you want to continue anyway? These will need manual correction.`;
-
-          if (!confirm(errorMsg)) {
-            throw new Error('Import cancelled due to validation errors');
-          }
-        }
       }
 
-      // Don't check for "missing" students - causes hallucinations
-      console.log(`Proceeding with ${allStudents.length} extracted students`);
+      if (allStudents.length === 0) {
+        throw new Error('Agent extraction timeout or no students found');
+      }
+
+      console.log(`Total extracted: ${allStudents.length} students from agent`);
+
+      // Validation logging
+      const dpStudents = allStudents.filter(s => s.ib_programme === 'DP');
+      if (dpStudents.length > 0) {
+        const issues = dpStudents.filter(s => s.subjects?.length !== 6 || !s.subjects.every(subj => subj.level));
+        if (issues.length > 0) {
+          console.warn(`⚠️ ${issues.length} DP students with incomplete subjects:`, 
+            issues.map(s => `${s.full_name}: ${s.subjects?.length || 0} subjects`));
+        }
+      }
 
       const rawStudents = allStudents;
       
