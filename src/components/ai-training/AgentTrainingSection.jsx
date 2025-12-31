@@ -468,6 +468,13 @@ export default function AgentTrainingSection({ agentName, agentTitle, agentDescr
           })}
         </div>
       )}
+
+      <UploadProgressDialog 
+        open={uploadingFile}
+        stage={uploadStage}
+        progress={uploadProgress}
+        entityType="Training Data"
+      />
     </div>
   );
 }
