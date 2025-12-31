@@ -1012,6 +1012,29 @@ Return EXACTLY ${batchNames.length} students with COMPLETE data.`,
               return yg;
             };
 
+            const programmeColors = {
+              DP: {
+                border: 'border-l-4 border-l-blue-500',
+                avatar: 'from-blue-500 to-cyan-500',
+                badge: 'bg-blue-100 text-blue-700',
+                header: 'from-blue-50 to-cyan-50'
+              },
+              MYP: {
+                border: 'border-l-4 border-l-emerald-500',
+                avatar: 'from-emerald-500 to-teal-600',
+                badge: 'bg-emerald-100 text-emerald-700',
+                header: 'from-emerald-50 to-teal-50'
+              },
+              PYP: {
+                border: 'border-l-4 border-l-amber-500',
+                avatar: 'from-amber-500 to-orange-500',
+                badge: 'bg-amber-100 text-amber-700',
+                header: 'from-amber-50 to-orange-50'
+              }
+            };
+
+            const colors = programmeColors[student.ib_programme] || programmeColors.DP;
+
             return (
               <motion.div
                 key={student.id}
@@ -1019,11 +1042,11 @@ Return EXACTLY ${batchNames.length} students with COMPLETE data.`,
                 animate={{ opacity: 1, y: 0 }}
                 transition={{ delay: index * 0.05 }}
               >
-                <Card className="group hover:shadow-xl transition-all duration-300 border-slate-200 overflow-hidden">
-                  <CardHeader className="pb-3 bg-gradient-to-br from-slate-50 to-white">
+                <Card className={`group hover:shadow-xl transition-all duration-300 border-slate-200 overflow-hidden ${colors.border}`}>
+                  <CardHeader className={`pb-3 bg-gradient-to-br ${colors.header}`}>
                     <div className="flex items-start justify-between">
                       <div className="flex items-center gap-3">
-                        <div className="w-12 h-12 rounded-full bg-gradient-to-br from-blue-500 to-violet-600 flex items-center justify-center text-white font-semibold text-lg shadow-lg">
+                        <div className={`w-12 h-12 rounded-full bg-gradient-to-br ${colors.avatar} flex items-center justify-center text-white font-semibold text-lg shadow-lg`}>
                           {student.full_name?.split(' ').map(n => n[0]).join('').slice(0, 2)}
                         </div>
                         <div>
@@ -1060,7 +1083,7 @@ Return EXACTLY ${batchNames.length} students with COMPLETE data.`,
                     </div>
                     
                     <div className="flex items-center gap-2">
-                      <Badge className="bg-blue-100 text-blue-700 border-0">
+                      <Badge className={`${colors.badge} border-0`}>
                         {student.ib_programme}
                       </Badge>
                       <Badge variant="outline" className="text-slate-600">
