@@ -475,24 +475,21 @@ export default function Students() {
         progress: `Found ${allNames.length} students. Extracting details...` 
       }));
 
-      // Phase 2: Extract full details in larger batches for speed
-      const extractBatchSize = 25;
+      // Phase 2: Extract full details in optimized batches
+      const extractBatchSize = 15;
       const totalBatches = Math.ceil(allNames.length / extractBatchSize);
       const allStudents = [];
 
-      // Include training feedback ONCE - ONLY use approved training data
+      // Training context (simplified)
       const approvedTraining = trainingData.filter(t => t.overall_status === 'approved');
-      const trainingPrompt = approvedTraining.length > 0 ? `
-LESSONS FROM PAST CORRECTIONS:
-${approvedTraining.slice(0, 3).map(t => {
-  if (!t.field_feedback) return '';
-  return Object.entries(t.field_feedback)
-    .filter(([_, f]) => f.was_correct === false && f.notes)
-    .map(([field, f]) => `- ${field}: ${f.notes}`)
-    .join('\n');
-}).filter(Boolean).join('\n')}
-
-` : '';
+      const hasTraining = approvedTraining.length > 0;
+      const trainingHints = hasTraining ? approvedTraining.slice(0, 2)
+        .map(t => t.field_feedback ? Object.entries(t.field_feedback)
+          .filter(([_, f]) => !f.was_correct && f.notes)
+          .map(([field, f]) => `${field}: ${f.notes}`)
+          .join('; ') : '')
+        .filter(Boolean)
+        .join(' | ') : '';
 
       for (let batch = 0; batch < totalBatches; batch++) {
         const batchNames = allNames.slice(batch * extractBatchSize, (batch + 1) * extractBatchSize);
@@ -503,55 +500,17 @@ ${approvedTraining.slice(0, 3).map(t => {
         }));
 
         const batchResult = await callLLMWithRetry({
-          prompt: `Extract these students: ${batchNames.join(', ')}
+          prompt: `Extract: ${batchNames.join(', ')}
 
-PROGRAMME: ${detectedProgramme}
-${trainingPrompt}
-CRITICAL: Preserve ALL accents (é, ñ, ü, ö, ç).
+Programme: ${detectedProgramme}
+${trainingHints ? `Tips: ${trainingHints}\n` : ''}
+Rules:
+- Preserve accents (é, ñ, ü)
+- Programme: "${detectedProgramme}" for ALL
+- Year: ${detectedProgramme === 'DP' ? 'DP1 or DP2 based on document section' : detectedProgramme === 'MYP' ? 'MYP1-5' : 'PYP-A to PYP-F'}
+${detectedProgramme === 'DP' ? '- Subjects: EXACTLY 6 with HL/SL levels\n- Count subjects before returning' : '- Extract all subjects'}
 
-        For each of these ${batchNames.length} students, provide:
-- full_name (must match exactly one of the names above)
-- email, student_id (if available)
-- ib_programme: **MUST BE "${detectedProgramme}"** for ALL students in this document
-- year_group: **EXTREMELY IMPORTANT - READ THIS CAREFULLY**
-  ${detectedProgramme === 'DP' ? `
-  * This is a DP document - ALL students are DP students
-  * Look at the SECTION/HEADING where each student appears
-  * Students in "DP1" / "Year 1" / "Grade 11" / "First Year" section → use "DP1"
-  * Students in "DP2" / "Year 2" / "Grade 12" / "Second Year" section → use "DP2"
-  * If document has TWO distinct groups/sections of students → one is DP1, the other is DP2
-  * Pay attention to which list/section each student appears in
-  * DO NOT assign all students to the same year group
-  * Each student's year group depends on WHERE in the document they appear
-  ` : detectedProgramme === 'MYP' ? `
-  * Use "MYP1", "MYP2", "MYP3", "MYP4", or "MYP5" based on what's written
-  ` : `
-  * Use "PYP-A", "PYP-B", "PYP-C", "PYP-D", "PYP-E", or "PYP-F" based on class letter
-  `}
-- subjects: ALL their subject choices - DO NOT skip any subjects
-
-${detectedProgramme === 'DP' ? `
-**ABSOLUTELY CRITICAL FOR DP STUDENTS:**
-- EVERY DP student MUST have EXACTLY 6 subjects (no exceptions)
-- You MUST extract ALL 6 subjects for EACH DP student
-- Each subject MUST have a level: "HL" or "SL"
-- If you only find 5 subjects for a student, SEARCH HARDER - there must be a 6th
-- Extract subjects EXACTLY as written: "English HL" → {"name": "English", "level": "HL"}
-- DO NOT add extra words (keep it short like in document)
-- Groups needed: 1-Language, 2-Language, 3-Societies, 4-Science, 5-Math, 6-Arts/Extra
-- Example: [{"name": "English", "level": "HL"}, {"name": "Spanish", "level": "SL"}, {"name": "History", "level": "HL"}, {"name": "Biology", "level": "SL"}, {"name": "Math", "level": "HL"}, {"name": "Economics", "level": "SL"}]
-
-⚠️ VALIDATION: Before returning, COUNT subjects for each student. If count ≠ 6, search document again for missing subjects.
-` : `
-For MYP/PYP: extract all subjects (no level needed).
-`}
-
-⚠️ CRITICAL VALIDATIONS:
-1. ib_programme MUST be "${detectedProgramme}" for ALL students
-2. Each student needs correct year_group based on document section
-3. ${detectedProgramme === 'DP' ? 'EVERY DP student needs EXACTLY 6 subjects with HL/SL' : 'Extract all subjects found'}
-
-Return EXACTLY ${batchNames.length} students with COMPLETE data.`,
+Return ${batchNames.length} students with full data.`,
           file_urls: [file_url],
           response_json_schema: {
             type: "object",
@@ -590,9 +549,9 @@ Return EXACTLY ${batchNames.length} students with COMPLETE data.`,
         
         console.log(`Batch ${batch + 1}/${totalBatches}: Extracted ${batchStudents.length}/${batchNames.length} students`);
         
-        // Short delay between batches
+        // Minimal delay to prevent rate limits
         if (batch < totalBatches - 1) {
-          await new Promise(resolve => setTimeout(resolve, 800));
+          await new Promise(resolve => setTimeout(resolve, 500));
         }
       }
 
