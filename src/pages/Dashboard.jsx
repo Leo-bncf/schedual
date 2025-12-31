@@ -324,17 +324,11 @@ export default function Dashboard() {
                     }}
                   >
                     <div className="flex items-center gap-2 mb-1">
-                      <Badge className={`text-xs border-0 ${
-                    log.severity === 'warning' ? 'border-amber-400 bg-gradient-to-r from-amber-50 to-white' :
-                    log.severity === 'error' ? 'border-rose-400 bg-gradient-to-r from-rose-50 to-white' :
-                    'border-purple-400 bg-gradient-to-r from-purple-50 to-white'
-                  }">
-                    <div className="flex items-center gap-2 mb-1">
-                      <Badge className={`text-xs border-0 ${
-                        log.severity === 'warning' ? 'bg-amber-100 text-amber-700' :
-                        log.severity === 'error' ? 'bg-rose-100 text-rose-700' :
-                        'bg-purple-100 text-purple-700'
-                      }`}>
+                      <Badge className={
+                        log.severity === 'warning' ? 'bg-amber-100 text-amber-700 text-xs border-0' :
+                        log.severity === 'error' ? 'bg-rose-100 text-rose-700 text-xs border-0' :
+                        'bg-purple-100 text-purple-700 text-xs border-0'
+                      }>
                         {log.severity}
                       </Badge>
                       <span className="text-xs text-slate-500 capitalize">{log.agent_type?.replace(/_/g, ' ')}</span>
