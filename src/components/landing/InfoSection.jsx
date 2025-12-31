@@ -1,5 +1,6 @@
 import React from 'react';
 import { Calendar, Users, BookOpen, Building2, Sparkles, Download } from 'lucide-react';
+import { motion } from 'framer-motion';
 
 const features = [
   {
@@ -55,7 +56,14 @@ export default function InfoSection() {
 
         {/* Problems & Solutions */}
         <div className="grid md:grid-cols-2 gap-8 mb-16">
-          <div className="bg-gradient-to-br from-rose-100 to-pink-100 p-8 rounded-2xl border border-rose-200">
+          <motion.div 
+            className="bg-gradient-to-br from-rose-100 to-pink-100 p-8 rounded-2xl border border-rose-200"
+            initial={{ opacity: 0, x: -50 }}
+            whileInView={{ opacity: 1, x: 0 }}
+            viewport={{ once: true }}
+            transition={{ duration: 0.5 }}
+            whileHover={{ scale: 1.05, y: -8 }}
+          >
             <h3 className="text-2xl font-semibold text-rose-900 mb-4">Existing Solutions</h3>
             <ul className="space-y-3 text-slate-700">
               <li className="flex items-start gap-2">
@@ -75,9 +83,16 @@ export default function InfoSection() {
                 <span>IB requirements are complex to manage</span>
               </li>
             </ul>
-          </div>
+          </motion.div>
 
-          <div className="bg-gradient-to-br from-emerald-100 to-teal-100 p-8 rounded-2xl border border-emerald-200">
+          <motion.div 
+            className="bg-gradient-to-br from-emerald-100 to-teal-100 p-8 rounded-2xl border border-emerald-200"
+            initial={{ opacity: 0, x: 50 }}
+            whileInView={{ opacity: 1, x: 0 }}
+            viewport={{ once: true }}
+            transition={{ duration: 0.5 }}
+            whileHover={{ scale: 1.05, y: -8 }}
+          >
             <h3 className="text-2xl font-semibold text-emerald-900 mb-4">IB Schedual Pro</h3>
             <ul className="space-y-3 text-slate-700">
               <li className="flex items-start gap-2">
@@ -97,19 +112,27 @@ export default function InfoSection() {
                 <span>Built-in IB compliance checks</span>
               </li>
             </ul>
-          </div>
+          </motion.div>
         </div>
 
         {/* Features Grid */}
         <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-8">
           {features.map((feature, index) => (
-            <div key={index} className="p-6 rounded-xl bg-gradient-to-br from-white via-blue-50/30 to-white backdrop-blur-sm border-2 border-blue-200 hover:border-blue-400 transition-all hover:shadow-2xl hover:-translate-y-2 group">
+            <motion.div 
+              key={index} 
+              className="p-6 rounded-xl bg-gradient-to-br from-white via-blue-50/30 to-white backdrop-blur-sm border-2 border-blue-200 hover:border-blue-400 transition-all group"
+              initial={{ opacity: 0, y: 50 }}
+              whileInView={{ opacity: 1, y: 0 }}
+              viewport={{ once: true, margin: "-50px" }}
+              transition={{ duration: 0.5, delay: index * 0.1 }}
+              whileHover={{ scale: 1.05, y: -8, boxShadow: "0 20px 25px -5px rgba(0, 0, 0, 0.1), 0 10px 10px -5px rgba(0, 0, 0, 0.04)" }}
+            >
               <div className="w-12 h-12 rounded-lg bg-gradient-to-br from-blue-950 via-blue-900 to-blue-800 flex items-center justify-center mb-4 group-hover:scale-110 transition-transform shadow-lg">
                 <feature.icon className="w-6 h-6 text-white" />
               </div>
               <h3 className="text-lg font-semibold text-slate-900 mb-2">{feature.title}</h3>
               <p className="text-slate-600">{feature.description}</p>
-            </div>
+            </motion.div>
           ))}
         </div>
       </div>

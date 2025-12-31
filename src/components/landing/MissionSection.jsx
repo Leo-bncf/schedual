@@ -1,5 +1,6 @@
 import React from 'react';
 import { GraduationCap, Heart } from 'lucide-react';
+import { motion } from 'framer-motion';
 
 export default function MissionSection() {
   return (
@@ -12,15 +13,27 @@ export default function MissionSection() {
       </div>
 
       <div className="max-w-4xl mx-auto text-center relative z-10">
-        <div className="inline-flex items-center gap-2 mb-6 bg-white/20 backdrop-blur-sm px-6 py-3 rounded-full">
+        <motion.div 
+          className="inline-flex items-center gap-2 mb-6 bg-white/20 backdrop-blur-sm px-6 py-3 rounded-full"
+          initial={{ opacity: 0, y: -20 }}
+          whileInView={{ opacity: 1, y: 0 }}
+          viewport={{ once: true }}
+          transition={{ duration: 0.5 }}
+        >
           <GraduationCap className="w-6 h-6 text-white" />
           <span className="text-white font-semibold text-lg">Built by IB Students, For IB Students</span>
           <Heart className="w-5 h-5 text-white" />
-        </div>
+        </motion.div>
 
-        <p className="text-xl md:text-2xl text-white/95 leading-relaxed font-light">
+        <motion.p 
+          className="text-xl md:text-2xl text-white/95 leading-relaxed font-light"
+          initial={{ opacity: 0, y: 20 }}
+          whileInView={{ opacity: 1, y: 0 }}
+          viewport={{ once: true }}
+          transition={{ duration: 0.5, delay: 0.2 }}
+        >
           We understand the complexity of IB scheduling because we've lived it. Schedual was created by former IB students who experienced firsthand the challenges of timetabling conflicts, teacher availability issues, and the stress of manual schedule management. Our mission is to bring intelligent automation to IB schools worldwide, saving time for what truly matters—education.
-        </p>
+        </motion.p>
       </div>
     </section>
   );

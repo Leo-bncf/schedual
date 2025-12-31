@@ -3,6 +3,7 @@ import { base44 } from '@/api/base44Client';
 import { Button } from "@/components/ui/button";
 import { CheckCircle, Loader2 } from 'lucide-react';
 import { createPageUrl } from '../../utils';
+import { motion } from 'framer-motion';
 
 const plans = [
   {
@@ -87,22 +88,41 @@ export default function PricingSection() {
         <div className="grid lg:grid-cols-12 gap-8 items-center max-w-6xl mx-auto">
           {/* Left Stats */}
           <div className="lg:col-span-3 space-y-6">
-            <div className="bg-gradient-to-br from-blue-50 to-blue-100/80 backdrop-blur-sm p-6 rounded-2xl border border-blue-200 shadow-sm hover:shadow-md transition-shadow">
+            <motion.div 
+              className="bg-gradient-to-br from-blue-50 to-blue-100/80 backdrop-blur-sm p-6 rounded-2xl border border-blue-200 shadow-sm"
+              initial={{ opacity: 0, x: -50 }}
+              whileInView={{ opacity: 1, x: 0 }}
+              viewport={{ once: true }}
+              transition={{ duration: 0.5 }}
+              whileHover={{ scale: 1.05, y: -8, boxShadow: "0 10px 15px -3px rgba(0, 0, 0, 0.1)" }}
+            >
               <div className="text-4xl font-bold text-blue-900 mb-2">500+</div>
               <p className="text-slate-700">Hours Saved Annually</p>
-            </div>
-            <div className="bg-gradient-to-br from-blue-50 to-blue-100/80 backdrop-blur-sm p-6 rounded-2xl border border-blue-200 shadow-sm hover:shadow-md transition-shadow">
+            </motion.div>
+            <motion.div 
+              className="bg-gradient-to-br from-blue-50 to-blue-100/80 backdrop-blur-sm p-6 rounded-2xl border border-blue-200 shadow-sm"
+              initial={{ opacity: 0, x: -50 }}
+              whileInView={{ opacity: 1, x: 0 }}
+              viewport={{ once: true }}
+              transition={{ duration: 0.5, delay: 0.1 }}
+              whileHover={{ scale: 1.05, y: -8, boxShadow: "0 10px 15px -3px rgba(0, 0, 0, 0.1)" }}
+            >
               <div className="text-4xl font-bold text-blue-900 mb-2">100%</div>
               <p className="text-slate-700">IB Compliant</p>
-            </div>
+            </motion.div>
           </div>
 
           {/* Center Pricing Card */}
           <div className="lg:col-span-6">
             {plans.map((plan, index) => (
-              <div 
+              <motion.div 
                 key={index} 
-                className="relative p-10 rounded-3xl bg-white border-2 border-indigo-600 shadow-2xl hover:shadow-3xl transition-all duration-300 transform hover:-translate-y-1"
+                className="relative p-10 rounded-3xl bg-white border-2 border-indigo-600 shadow-2xl"
+                initial={{ opacity: 0, scale: 0.9 }}
+                whileInView={{ opacity: 1, scale: 1 }}
+                viewport={{ once: true }}
+                transition={{ duration: 0.5 }}
+                whileHover={{ scale: 1.05, y: -8, boxShadow: "0 25px 50px -12px rgba(0, 0, 0, 0.25)" }}
               >
                 {plan.popular && (
                   <div className="absolute -top-5 left-1/2 -translate-x-1/2">
@@ -147,20 +167,34 @@ export default function PricingSection() {
                     '🚀 Get Started Now'
                   )}
                 </Button>
-              </div>
+              </motion.div>
             ))}
           </div>
 
           {/* Right Stats */}
           <div className="lg:col-span-3 space-y-6">
-            <div className="bg-gradient-to-br from-emerald-50 to-green-100/80 backdrop-blur-sm p-6 rounded-2xl border border-emerald-200 shadow-sm hover:shadow-md transition-shadow">
+            <motion.div 
+              className="bg-gradient-to-br from-emerald-50 to-green-100/80 backdrop-blur-sm p-6 rounded-2xl border border-emerald-200 shadow-sm"
+              initial={{ opacity: 0, x: 50 }}
+              whileInView={{ opacity: 1, x: 0 }}
+              viewport={{ once: true }}
+              transition={{ duration: 0.5 }}
+              whileHover={{ scale: 1.05, y: -8, boxShadow: "0 10px 15px -3px rgba(0, 0, 0, 0.1)" }}
+            >
               <div className="text-4xl font-bold text-emerald-600 mb-2">24/7</div>
               <p className="text-slate-700">Priority Support</p>
-            </div>
-            <div className="bg-gradient-to-br from-amber-50 to-yellow-100/80 backdrop-blur-sm p-6 rounded-2xl border border-amber-200 shadow-sm hover:shadow-md transition-shadow">
+            </motion.div>
+            <motion.div 
+              className="bg-gradient-to-br from-amber-50 to-yellow-100/80 backdrop-blur-sm p-6 rounded-2xl border border-amber-200 shadow-sm"
+              initial={{ opacity: 0, x: 50 }}
+              whileInView={{ opacity: 1, x: 0 }}
+              viewport={{ once: true }}
+              transition={{ duration: 0.5, delay: 0.1 }}
+              whileHover={{ scale: 1.05, y: -8, boxShadow: "0 10px 15px -3px rgba(0, 0, 0, 0.1)" }}
+            >
               <div className="text-4xl font-bold text-amber-600 mb-2">0</div>
               <p className="text-slate-700">Conflicts Guaranteed</p>
-            </div>
+            </motion.div>
           </div>
         </div>
 

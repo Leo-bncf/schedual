@@ -1,5 +1,6 @@
 import React from 'react';
 import { Building2, Users, Settings, Play, CheckCircle } from 'lucide-react';
+import { motion } from 'framer-motion';
 
 const steps = [
   {
@@ -55,7 +56,14 @@ export default function HowItWorksSection() {
         {/* Steps */}
         <div className="space-y-8">
           {steps.map((step, index) => (
-            <div key={index} className="flex flex-col md:flex-row gap-6 items-start">
+            <motion.div 
+              key={index} 
+              className="flex flex-col md:flex-row gap-6 items-start"
+              initial={{ opacity: 0, y: 50 }}
+              whileInView={{ opacity: 1, y: 0 }}
+              viewport={{ once: true, margin: "-100px" }}
+              transition={{ duration: 0.5, delay: index * 0.1 }}
+            >
               {/* Step Number & Icon */}
               <div className="flex-shrink-0">
                 <div className="w-16 h-16 rounded-2xl bg-gradient-to-br from-blue-950 via-blue-900 to-blue-800 flex items-center justify-center text-2xl font-bold text-white shadow-lg ring-2 ring-blue-400/50">
@@ -64,19 +72,23 @@ export default function HowItWorksSection() {
               </div>
 
               {/* Step Content */}
-              <div className="flex-1 bg-white p-6 rounded-xl border-2 border-blue-100 shadow-lg hover:shadow-xl transition-all">
+              <motion.div 
+                className="flex-1 bg-white p-6 rounded-xl border-2 border-blue-100 shadow-lg hover:shadow-2xl transition-all"
+                whileHover={{ scale: 1.03, y: -8 }}
+                transition={{ duration: 0.2 }}
+              >
                 <div className="flex items-center gap-3 mb-3">
                   <step.icon className="w-6 h-6 text-blue-900" />
                   <h3 className="text-xl font-semibold text-slate-900">{step.title}</h3>
                 </div>
                 <p className="text-slate-600 leading-relaxed">{step.description}</p>
-              </div>
+              </motion.div>
 
               {/* Connector Line */}
               {index < steps.length - 1 && (
                 <div className="hidden md:block w-0.5 h-8 bg-slate-200 ml-8 mt-4"></div>
               )}
-            </div>
+            </motion.div>
           ))}
         </div>
       </div>
