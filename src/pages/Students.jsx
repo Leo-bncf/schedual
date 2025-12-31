@@ -470,13 +470,18 @@ For each of these ${batchNames.length} students, provide:
 - DP students MUST have EXACTLY 6 subjects (Groups 1, 2, 3, 4, 5, 6)
 - You MUST extract ALL 6 subjects for EACH DP student
 - Each subject MUST have a level: "HL" or "SL"
-- Group 1: Language & Literature (e.g., English A, Spanish A)
-- Group 2: Language Acquisition (e.g., Spanish B, French ab initio)
-- Group 3: Individuals & Societies (e.g., History, Economics)
-- Group 4: Sciences (e.g., Biology, Chemistry, Physics)
-- Group 5: Mathematics (e.g., Math AA, Math AI)
-- Group 6: The Arts (e.g., Visual Arts, Music) OR an extra subject from Groups 1-5
-- Example: [{"name": "English A", "level": "HL"}, {"name": "Spanish B", "level": "SL"}, {"name": "History", "level": "HL"}, {"name": "Biology", "level": "SL"}, {"name": "Math AA", "level": "HL"}, {"name": "Economics", "level": "SL"}]
+- IMPORTANT: Extract subjects EXACTLY as written in document (e.g., if it says "English HL", extract as {"name": "English", "level": "HL"})
+- DO NOT add extra words - if document says "English", write "English" (not "English Language and Literature")
+- DO NOT add extra words - if document says "Math", write "Math" (not "Mathematics AA" or "Mathematics AI")
+- DO NOT add extra words - if document says "Spanish", write "Spanish" (not "Spanish A" or "Spanish B")
+- The system will match abbreviated names to full subject names automatically
+- Group 1: Language & Literature (may appear as: English, English A, Language and Literature, etc.)
+- Group 2: Language Acquisition (may appear as: Spanish, French, Spanish B, French ab initio, etc.)
+- Group 3: Individuals & Societies (may appear as: History, Economics, Geography, Business, Psychology, etc.)
+- Group 4: Sciences (may appear as: Biology, Chemistry, Physics, Bio, Chem, etc.)
+- Group 5: Mathematics (may appear as: Math, Maths, Math AA, Math AI, Mathematics, etc.)
+- Group 6: The Arts (may appear as: Visual Arts, Art, Music, Theatre, Film, etc.) OR an extra subject from Groups 1-5
+- Example: [{"name": "English", "level": "HL"}, {"name": "Spanish", "level": "SL"}, {"name": "History", "level": "HL"}, {"name": "Biology", "level": "SL"}, {"name": "Math", "level": "HL"}, {"name": "Economics", "level": "SL"}]
 
 If you cannot find ALL 6 subjects for a DP student, KEEP LOOKING until you find them all. Do not return incomplete data.
 
@@ -547,19 +552,22 @@ Return EXACTLY ${batchNames.length} students with COMPLETE subject lists and ACC
             const completeResult = await callLLMWithRetry({
               prompt: `URGENT: Find ALL 6 subjects for DP student "${student.full_name}".
 
-Current subjects found: ${student.subjects?.map(s => s.name).join(', ') || 'none'}
+            Current subjects found: ${student.subjects?.map(s => s.name).join(', ') || 'none'}
 
-This DP student MUST have EXACTLY 6 subjects covering all IB groups:
-- Group 1: Language & Literature
-- Group 2: Language Acquisition  
-- Group 3: Individuals & Societies
-- Group 4: Sciences
-- Group 5: Mathematics
-- Group 6: The Arts OR extra from Groups 1-5
+            This DP student MUST have EXACTLY 6 subjects covering all IB groups:
+            - Group 1: Language & Literature
+            - Group 2: Language Acquisition  
+            - Group 3: Individuals & Societies
+            - Group 4: Sciences
+            - Group 5: Mathematics
+            - Group 6: The Arts OR extra from Groups 1-5
 
-Each subject needs level (HL or SL).
+            CRITICAL: Extract subject names EXACTLY as they appear in the document (use short form if that's what's written).
+            - If document says "English HL" → extract as {"name": "English", "level": "HL"}
+            - If document says "Math SL" → extract as {"name": "Math", "level": "SL"}
+            - DO NOT expand abbreviations or add words that aren't in the document
 
-Search the document thoroughly and return ALL 6 subjects for ${student.full_name}.`,
+            Search the document thoroughly and return ALL 6 subjects for ${student.full_name}.`,
               file_urls: [file_url],
               response_json_schema: {
                 type: "object",
@@ -661,21 +669,21 @@ Search the document thoroughly and return ALL 6 subjects for ${student.full_name
 
       // Fetch subjects to match names to IDs
       const subjectsList = await base44.entities.Subject.list();
-      
+
       // Get ALL subjects for auto-assignment
       const programmeSubjects = await base44.entities.Subject.filter({ school_id: schoolId });
-      
+
       const pypSubjects = programmeSubjects
         .filter(s => s.ib_level === 'PYP' && s.is_active !== false)
         .map(s => ({ subject_id: s.id, ib_group: s.ib_group }));
-      
+
       const mypSubjects = programmeSubjects
         .filter(s => s.ib_level === 'MYP' && s.is_active !== false)
         .map(s => ({ subject_id: s.id, ib_group: s.ib_group }));
 
       const studentsToCreate = studentsData.map(student => {
         let subjectChoices = [];
-        
+
         // For PYP/MYP: Auto-assign ALL programme subjects
         if (student.ib_programme === 'PYP') {
           subjectChoices = pypSubjects;
@@ -684,19 +692,80 @@ Search the document thoroughly and return ALL 6 subjects for ${student.full_name
           subjectChoices = mypSubjects;
           console.log(`Auto-assigned ${mypSubjects.length} MYP subjects to ${student.full_name}`);
         } else if (student.subjects && Array.isArray(student.subjects)) {
-          // For DP: Process extracted subjects
+          // For DP: Process extracted subjects with intelligent matching
           subjectChoices = student.subjects.map(subj => {
-            const matchedSubject = subjectsList.find(s => 
-              s.name?.toLowerCase().includes(subj.name?.toLowerCase()) ||
-              subj.name?.toLowerCase().includes(s.name?.toLowerCase())
-            );
-            
+            const normalizedExtracted = subj.name?.toLowerCase().trim().replace(/\s+/g, ' ');
+
+            // Try multiple matching strategies
+            const matchedSubject = subjectsList.find(s => {
+              const normalizedDB = s.name?.toLowerCase().trim().replace(/\s+/g, ' ');
+              const codeDB = s.code?.toLowerCase().trim();
+
+              // 1. Exact match
+              if (normalizedDB === normalizedExtracted || codeDB === normalizedExtracted) {
+                return true;
+              }
+
+              // 2. Common abbreviations and variations
+              const variations = {
+                'english': ['english a', 'english language and literature', 'english lang lit', 'language and literature'],
+                'spanish': ['spanish a', 'spanish b', 'spanish language', 'spanish ab initio'],
+                'french': ['french a', 'french b', 'french language', 'french ab initio'],
+                'german': ['german a', 'german b', 'german language', 'german ab initio'],
+                'chinese': ['chinese a', 'chinese b', 'chinese language', 'chinese ab initio'],
+                'math': ['mathematics', 'maths', 'math aa', 'math ai', 'mathematics aa', 'mathematics ai'],
+                'physics': ['physics'],
+                'chemistry': ['chemistry', 'chem'],
+                'biology': ['biology', 'bio'],
+                'history': ['history'],
+                'geography': ['geography', 'geo'],
+                'economics': ['economics', 'econ'],
+                'business': ['business management', 'business studies', 'business'],
+                'psychology': ['psychology', 'psych'],
+                'visual arts': ['visual arts', 'art', 'arts'],
+                'music': ['music'],
+                'theatre': ['theatre', 'theater'],
+                'film': ['film'],
+                'dance': ['dance'],
+                'computer science': ['computer science', 'comp sci', 'cs'],
+                'design technology': ['design technology', 'design tech', 'dt'],
+                'tok': ['theory of knowledge', 'tok'],
+                'ee': ['extended essay', 'ee'],
+                'cas': ['creativity activity service', 'cas']
+              };
+
+              // Check if extracted subject matches any variation
+              for (const [key, varList] of Object.entries(variations)) {
+                const extractedMatchesKey = varList.some(v => normalizedExtracted.includes(v) || v.includes(normalizedExtracted));
+                const dbMatchesKey = varList.some(v => normalizedDB.includes(v) || v.includes(normalizedDB));
+
+                if (extractedMatchesKey && dbMatchesKey) {
+                  return true;
+                }
+              }
+
+              // 3. Partial match (one contains the other)
+              if (normalizedDB.includes(normalizedExtracted) || normalizedExtracted.includes(normalizedDB)) {
+                return true;
+              }
+
+              // 4. Code match
+              if (codeDB && (normalizedExtracted.includes(codeDB) || codeDB.includes(normalizedExtracted))) {
+                return true;
+              }
+
+              return false;
+            });
+
             if (matchedSubject) {
+              console.log(`✓ Matched "${subj.name}" → "${matchedSubject.name}" (${subj.level})`);
               return {
                 subject_id: matchedSubject.id,
                 level: subj.level || 'SL',
                 ib_group: matchedSubject.ib_group
               };
+            } else {
+              console.warn(`✗ Could not match subject: "${subj.name}" (${subj.level})`);
             }
             return null;
           }).filter(Boolean);
