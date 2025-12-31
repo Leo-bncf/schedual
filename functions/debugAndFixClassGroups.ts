@@ -116,21 +116,20 @@ Deno.serve(async (req) => {
     // Create ClassGroups
     const createdClassGroups = await base44.asServiceRole.entities.ClassGroup.bulkCreate(classGroupsToCreate);
 
-    // For PYP/MYP: Get ALL subjects for each programme and assign to ALL students
+    // Get ALL subjects for PYP and MYP
     const allSubjects = await base44.asServiceRole.entities.Subject.filter({ school_id: schoolId });
     
-    const programmeSubjects = {
-      PYP: allSubjects
-        .filter(s => s.ib_level === 'PYP' && s.is_active !== false)
-        .map(s => ({ subject_id: s.id, ib_group: s.ib_group })),
-      MYP: allSubjects
-        .filter(s => s.ib_level === 'MYP' && s.is_active !== false)
-        .map(s => ({ subject_id: s.id, ib_group: s.ib_group }))
-    };
+    const pypSubjects = allSubjects
+      .filter(s => s.ib_level === 'PYP' && s.is_active !== false)
+      .map(s => ({ subject_id: s.id, ib_group: s.ib_group }));
+    
+    const mypSubjects = allSubjects
+      .filter(s => s.ib_level === 'MYP' && s.is_active !== false)
+      .map(s => ({ subject_id: s.id, ib_group: s.ib_group }));
 
-    console.log(`Found ${programmeSubjects.PYP.length} PYP subjects and ${programmeSubjects.MYP.length} MYP subjects`);
+    console.log(`Assigning ${pypSubjects.length} PYP subjects and ${mypSubjects.length} MYP subjects to all students`);
 
-    // Update students with their ClassGroup IDs AND ALL programme subjects
+    // Update ALL students with their ClassGroup IDs and ALL programme subjects
     let successfulUpdates = 0;
     
     for (const classGroup of createdClassGroups) {
@@ -138,9 +137,11 @@ Deno.serve(async (req) => {
         try {
           const updateData = { classgroup_id: classGroup.id };
           
-          // For PYP/MYP: Assign ALL subjects for their programme
-          if (classGroup.ib_programme === 'PYP' || classGroup.ib_programme === 'MYP') {
-            updateData.subject_choices = programmeSubjects[classGroup.ib_programme];
+          // Auto-assign ALL subjects based on programme
+          if (classGroup.ib_programme === 'PYP') {
+            updateData.subject_choices = pypSubjects;
+          } else if (classGroup.ib_programme === 'MYP') {
+            updateData.subject_choices = mypSubjects;
           }
           
           await base44.asServiceRole.entities.Student.update(studentId, updateData);

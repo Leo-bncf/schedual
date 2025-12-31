@@ -167,44 +167,26 @@ export default function Students() {
   const handleSubmit = async (e) => {
     e.preventDefault();
     
-    // For PYP/MYP students, sync subjects across entire ClassGroup
+    // For PYP/MYP: Auto-assign ALL programme subjects
+    let finalFormData = { ...formData };
+    
     if (formData.ib_programme === 'PYP' || formData.ib_programme === 'MYP') {
-      try {
-        // Save the current student first
-        let savedStudentId;
-        if (editingStudent) {
-          await updateMutation.mutateAsync({ id: editingStudent.id, data: formData });
-          savedStudentId = editingStudent.id;
-        } else {
-          const newStudent = await createMutation.mutateAsync(formData);
-          savedStudentId = newStudent.id;
-        }
-
-        // Ensure classgroups exist
-        await base44.functions.invoke('debugAndFixClassGroups');
-        
-        // Sync subjects to all students in the ClassGroup
-        const syncResult = await base44.functions.invoke('syncClassGroupSubjects', {
-          student_id: savedStudentId,
-          subject_choices: formData.subject_choices
-        });
-
-        console.log('Sync result:', syncResult.data);
-
-        queryClient.invalidateQueries({ queryKey: ['students'] });
-        queryClient.invalidateQueries({ queryKey: ['teachingGroups'] });
-        queryClient.invalidateQueries({ queryKey: ['classGroups'] });
-        resetForm();
-      } catch (error) {
-        console.error('Error updating students:', error);
-      }
+      const programmeSubjects = subjects
+        .filter(s => s.ib_level === formData.ib_programme && s.is_active !== false)
+        .map(s => ({
+          subject_id: s.id,
+          ib_group: s.ib_group
+        }));
+      
+      finalFormData.subject_choices = programmeSubjects;
+      console.log(`Auto-assigned ${programmeSubjects.length} ${formData.ib_programme} subjects`);
+    }
+    
+    // Save student
+    if (editingStudent) {
+      updateMutation.mutate({ id: editingStudent.id, data: finalFormData });
     } else {
-      // For DP students, just save normally with manual subject selection
-      if (editingStudent) {
-        updateMutation.mutate({ id: editingStudent.id, data: formData });
-      } else {
-        createMutation.mutate(formData);
-      }
+      createMutation.mutate(finalFormData);
     }
   };
 
@@ -909,12 +891,11 @@ Return EXACTLY 1 student object. Do not skip this student.`,
         }
       }
 
-      // For PYP/MYP: Get ALL subjects for their programme and assign to every student
+      // For PYP/MYP: Get ALL subjects and assign to every student
       const programmeSubjects = await base44.entities.Subject.filter({ school_id: schoolId });
       
       studentsToCreate.forEach(student => {
         if (student.ib_programme === 'PYP' || student.ib_programme === 'MYP') {
-          // Get all subjects matching this student's IB programme
           const studentSubjects = programmeSubjects
             .filter(subj => subj.ib_level === student.ib_programme && subj.is_active !== false)
             .map(subj => ({
@@ -926,32 +907,6 @@ Return EXACTLY 1 student object. Do not skip this student.`,
           console.log(`Assigned ${studentSubjects.length} ${student.ib_programme} subjects to ${student.full_name}`);
         }
       });
-
-      // For PYP/MYP students, ensure ClassGroups are created and subjects synced
-      const hasPypMypStudents = studentsToCreate.some(s => s.ib_programme === 'PYP' || s.ib_programme === 'MYP');
-      
-      if (hasPypMypStudents) {
-        setUploadState(prev => ({ 
-          ...prev, 
-          progress: 'Merging subjects for PYP/MYP year groups...'
-        }));
-        console.log('✅ PYP/MYP students will have identical subjects within their year groups');
-      }
-
-      // After creating students, ensure ClassGroups are set up
-      if (hasPypMypStudents) {
-        setUploadState(prev => ({ 
-          ...prev, 
-          progress: 'Setting up ClassGroups...'
-        }));
-
-        try {
-          await base44.functions.invoke('debugAndFixClassGroups');
-          console.log('✅ ClassGroups created for imported students');
-        } catch (error) {
-          console.error('Error setting up ClassGroups:', error);
-        }
-      }
 
       setUploadState(prev => ({ 
         ...prev, 
