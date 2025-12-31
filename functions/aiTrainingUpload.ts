@@ -14,15 +14,15 @@ Deno.serve(async (req) => {
     const { action, ...params } = await req.json();
 
     if (action === 'upload') {
-      const { file_url, file_name, agent_name, extracted_data } = params;
+      const { file_url, file_name, agent_name, extracted_data, training_feedback } = params;
 
-      // Store in training data using service role
+      // Store in training data using service role with feedback
       const result = await base44.asServiceRole.entities.AITrainingData.create({
         agent_name,
         file_url,
         file_name,
         extracted_data,
-        field_feedback: {},
+        field_feedback: training_feedback || {},
         overall_status: 'pending_review'
       });
 
