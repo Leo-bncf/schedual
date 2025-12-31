@@ -1060,16 +1060,8 @@ Preserve all accents exactly.`,
         </motion.div>
       )}
 
-      <AnimatePresence>
-        {isDialogOpen && (
-          <Dialog open={isDialogOpen} onOpenChange={(open) => { if (!open) resetForm(); }}>
-            <DialogContent className="sm:max-w-3xl max-h-[85vh] flex flex-col p-0" asChild>
-              <motion.div
-                initial={{ opacity: 0, scale: 0.95, y: 10 }}
-                animate={{ opacity: 1, scale: 1, y: 0 }}
-                exit={{ opacity: 0, scale: 0.95, y: 10 }}
-                transition={{ duration: 0.2, ease: "easeOut" }}
-              >
+      <Dialog open={isDialogOpen} onOpenChange={(open) => { if (!open) resetForm(); }}>
+        <DialogContent className="sm:max-w-3xl max-h-[85vh] flex flex-col p-0">
           <DialogHeader className="px-6 pt-6 pb-4 border-b border-slate-200">
             <DialogTitle className="text-2xl">{editingStudent ? 'Edit Student' : 'Add New Student'}</DialogTitle>
             <DialogDescription>
@@ -1229,12 +1221,9 @@ Preserve all accents exactly.`,
                 )}
               </Button>
             </DialogFooter>
-          </form>
-              </motion.div>
+            </form>
             </DialogContent>
-          </Dialog>
-        )}
-      </AnimatePresence>
+            </Dialog>
 
       <UploadProgressDialog 
         open={uploadState.isUploading}
