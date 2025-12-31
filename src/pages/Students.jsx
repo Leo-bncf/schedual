@@ -844,7 +844,7 @@ Return EXACTLY 1 student object. Do not skip this student.`,
       setUploadState(prev => ({ ...prev, stage: 'creating', totalStudents: studentsData.length, progress: `Creating ${studentsData.length} students...` }));
 
       // Fetch subjects to match names to IDs
-      const allSubjects = await base44.entities.Subject.list();
+      const subjectsList = await base44.entities.Subject.list();
       
       const studentsToCreate = studentsData.map(student => {
         let subjectChoices = [];
@@ -853,7 +853,7 @@ Return EXACTLY 1 student object. Do not skip this student.`,
         if (student.subjects && Array.isArray(student.subjects)) {
           subjectChoices = student.subjects.map(subj => {
             // Find matching subject by name (case-insensitive)
-            const matchedSubject = allSubjects.find(s => 
+            const matchedSubject = subjectsList.find(s => 
               s.name?.toLowerCase().includes(subj.name?.toLowerCase()) ||
               subj.name?.toLowerCase().includes(s.name?.toLowerCase())
             );
@@ -910,20 +910,20 @@ Return EXACTLY 1 student object. Do not skip this student.`,
       }
 
       // For PYP/MYP: Get ALL subjects for their programme and assign to every student
-      const allSubjects = await base44.entities.Subject.filter({ school_id: schoolId });
+      const programmeSubjects = await base44.entities.Subject.filter({ school_id: schoolId });
       
       studentsToCreate.forEach(student => {
         if (student.ib_programme === 'PYP' || student.ib_programme === 'MYP') {
           // Get all subjects matching this student's IB programme
-          const programmeSubjects = allSubjects
+          const studentSubjects = programmeSubjects
             .filter(subj => subj.ib_level === student.ib_programme && subj.is_active !== false)
             .map(subj => ({
               subject_id: subj.id,
               ib_group: subj.ib_group
             }));
           
-          student.subject_choices = programmeSubjects;
-          console.log(`Assigned ${programmeSubjects.length} ${student.ib_programme} subjects to ${student.full_name}`);
+          student.subject_choices = studentSubjects;
+          console.log(`Assigned ${studentSubjects.length} ${student.ib_programme} subjects to ${student.full_name}`);
         }
       });
 
