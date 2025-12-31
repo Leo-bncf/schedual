@@ -92,101 +92,113 @@ export default function Dashboard() {
         }
       />
 
-      {/* Stats Grid */}
+      {/* Stats Grid - Quick Access Cards */}
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
-        <motion.div
-          initial={{ opacity: 0, y: 20 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{ duration: 0.3, delay: 0 }}
-          whileHover={{ scale: 1.05, y: -8 }}
-        >
-        <Card className="border-0 shadow-sm bg-gradient-to-br from-blue-500 to-blue-600 text-white overflow-hidden relative">
-          <CardContent className="p-6">
-            <div className="absolute top-0 right-0 -mt-4 -mr-4 w-24 h-24 bg-white/10 rounded-full blur-2xl"></div>
-            <div className="relative">
-              <div className="flex items-center justify-between mb-2">
-                <Users className="w-8 h-8 text-white/90" />
-                <div className="text-right">
-                  <div className="text-3xl font-bold">{activeTeachers}</div>
+        <Link to={createPageUrl('Teachers')}>
+          <motion.div
+            initial={{ opacity: 0, y: 20 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ duration: 0.3, delay: 0 }}
+            whileHover={{ scale: 1.05, y: -8 }}
+            className="cursor-pointer"
+          >
+          <Card className="border-0 shadow-lg bg-gradient-to-r from-blue-600 via-indigo-600 to-blue-700 text-white overflow-hidden relative hover:shadow-2xl transition-shadow">
+            <CardContent className="p-6">
+              <div className="absolute top-0 right-0 -mt-4 -mr-4 w-24 h-24 bg-white/10 rounded-full blur-2xl"></div>
+              <div className="relative">
+                <div className="flex items-center justify-between mb-2">
+                  <Users className="w-8 h-8 text-white/90" />
+                  <div className="text-right">
+                    <div className="text-3xl font-bold">{activeTeachers}</div>
+                  </div>
                 </div>
+                <div className="text-sm font-medium text-blue-100">Teachers</div>
+                <div className="text-xs text-blue-200 mt-1">{teachers.length} total • Click to manage</div>
               </div>
-              <div className="text-sm font-medium text-blue-100">Teachers</div>
-              <div className="text-xs text-blue-200 mt-1">{teachers.length} total</div>
-            </div>
-          </CardContent>
-        </Card>
-        </motion.div>
+            </CardContent>
+          </Card>
+          </motion.div>
+        </Link>
 
-        <motion.div
-          initial={{ opacity: 0, y: 20 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{ duration: 0.3, delay: 0.1 }}
-          whileHover={{ scale: 1.05, y: -8 }}
-        >
-        <Card className="border-0 shadow-sm bg-gradient-to-br from-emerald-500 to-emerald-600 text-white overflow-hidden relative">
-          <CardContent className="p-6">
-            <div className="absolute top-0 right-0 -mt-4 -mr-4 w-24 h-24 bg-white/10 rounded-full blur-2xl"></div>
-            <div className="relative">
-              <div className="flex items-center justify-between mb-2">
-                <GraduationCap className="w-8 h-8 text-white/90" />
-                <div className="text-right">
-                  <div className="text-3xl font-bold">{activeStudents}</div>
+        <Link to={createPageUrl('Students')}>
+          <motion.div
+            initial={{ opacity: 0, y: 20 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ duration: 0.3, delay: 0.1 }}
+            whileHover={{ scale: 1.05, y: -8 }}
+            className="cursor-pointer"
+          >
+          <Card className="border-0 shadow-lg bg-gradient-to-r from-teal-500 via-cyan-600 to-sky-600 text-white overflow-hidden relative hover:shadow-2xl transition-shadow">
+            <CardContent className="p-6">
+              <div className="absolute top-0 right-0 -mt-4 -mr-4 w-24 h-24 bg-white/10 rounded-full blur-2xl"></div>
+              <div className="relative">
+                <div className="flex items-center justify-between mb-2">
+                  <GraduationCap className="w-8 h-8 text-white/90" />
+                  <div className="text-right">
+                    <div className="text-3xl font-bold">{activeStudents}</div>
+                  </div>
+                </div>
+                <div className="text-sm font-medium text-teal-100">Students</div>
+                <div className="text-xs text-teal-200 mt-1">
+                  {students.filter(s => s.year_group === 'DP2').length} DP2, {students.filter(s => s.year_group === 'DP1').length} DP1 • Click to manage
                 </div>
               </div>
-              <div className="text-sm font-medium text-emerald-100">Students</div>
-              <div className="text-xs text-emerald-200 mt-1">
-                {students.filter(s => s.year_group === 'DP2').length} DP2, {students.filter(s => s.year_group === 'DP1').length} DP1
-              </div>
-            </div>
-          </CardContent>
-        </Card>
-        </motion.div>
+            </CardContent>
+          </Card>
+          </motion.div>
+        </Link>
 
-        <motion.div
-          initial={{ opacity: 0, y: 20 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{ duration: 0.3, delay: 0.2 }}
-          whileHover={{ scale: 1.05, y: -8 }}
-        >
-        <Card className="border-0 shadow-sm bg-gradient-to-br from-violet-500 to-violet-600 text-white overflow-hidden relative">
-          <CardContent className="p-6">
-            <div className="absolute top-0 right-0 -mt-4 -mr-4 w-24 h-24 bg-white/10 rounded-full blur-2xl"></div>
-            <div className="relative">
-              <div className="flex items-center justify-between mb-2">
-                <BookOpen className="w-8 h-8 text-white/90" />
-                <div className="text-right">
-                  <div className="text-3xl font-bold">{activeSubjects}</div>
+        <Link to={createPageUrl('Subjects')}>
+          <motion.div
+            initial={{ opacity: 0, y: 20 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ duration: 0.3, delay: 0.2 }}
+            whileHover={{ scale: 1.05, y: -8 }}
+            className="cursor-pointer"
+          >
+          <Card className="border-0 shadow-lg bg-gradient-to-r from-indigo-600 via-violet-600 to-purple-600 text-white overflow-hidden relative hover:shadow-2xl transition-shadow">
+            <CardContent className="p-6">
+              <div className="absolute top-0 right-0 -mt-4 -mr-4 w-24 h-24 bg-white/10 rounded-full blur-2xl"></div>
+              <div className="relative">
+                <div className="flex items-center justify-between mb-2">
+                  <BookOpen className="w-8 h-8 text-white/90" />
+                  <div className="text-right">
+                    <div className="text-3xl font-bold">{activeSubjects}</div>
+                  </div>
                 </div>
+                <div className="text-sm font-medium text-indigo-100">Subjects</div>
+                <div className="text-xs text-indigo-200 mt-1">{subjects.filter(s => s.is_core).length} core • Click to manage</div>
               </div>
-              <div className="text-sm font-medium text-violet-100">Subjects</div>
-              <div className="text-xs text-violet-200 mt-1">{subjects.filter(s => s.is_core).length} core components</div>
-            </div>
-          </CardContent>
-        </Card>
-        </motion.div>
+            </CardContent>
+          </Card>
+          </motion.div>
+        </Link>
 
-        <motion.div
-          initial={{ opacity: 0, y: 20 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{ duration: 0.3, delay: 0.3 }}
-          whileHover={{ scale: 1.05, y: -8 }}
-        >
-        <Card className="border-0 shadow-sm bg-gradient-to-br from-amber-500 to-amber-600 text-white overflow-hidden relative">
-          <CardContent className="p-6">
-            <div className="absolute top-0 right-0 -mt-4 -mr-4 w-24 h-24 bg-white/10 rounded-full blur-2xl"></div>
-            <div className="relative">
-              <div className="flex items-center justify-between mb-2">
-                <Building2 className="w-8 h-8 text-white/90" />
-                <div className="text-right">
-                  <div className="text-3xl font-bold">{activeRooms}</div>
+        <Link to={createPageUrl('Rooms')}>
+          <motion.div
+            initial={{ opacity: 0, y: 20 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ duration: 0.3, delay: 0.3 }}
+            whileHover={{ scale: 1.05, y: -8 }}
+            className="cursor-pointer"
+          >
+          <Card className="border-0 shadow-lg bg-gradient-to-r from-blue-950 via-blue-900 to-blue-800 text-white overflow-hidden relative hover:shadow-2xl transition-shadow">
+            <CardContent className="p-6">
+              <div className="absolute top-0 right-0 -mt-4 -mr-4 w-24 h-24 bg-white/10 rounded-full blur-2xl"></div>
+              <div className="relative">
+                <div className="flex items-center justify-between mb-2">
+                  <Building2 className="w-8 h-8 text-white/90" />
+                  <div className="text-right">
+                    <div className="text-3xl font-bold">{activeRooms}</div>
+                  </div>
                 </div>
+                <div className="text-sm font-medium text-blue-100">Rooms</div>
+                <div className="text-xs text-blue-200 mt-1">{rooms.filter(r => r.room_type === 'lab').length} labs • Click to manage</div>
               </div>
-              <div className="text-sm font-medium text-amber-100">Rooms</div>
-              <div className="text-xs text-amber-200 mt-1">{rooms.filter(r => r.room_type === 'lab').length} labs</div>
-            </div>
-          </CardContent>
-        </Card>
-        </motion.div>
+            </CardContent>
+          </Card>
+          </motion.div>
+        </Link>
       </div>
 
       {/* Main Content Grid */}
@@ -350,66 +362,7 @@ export default function Dashboard() {
         </motion.div>
       </div>
 
-      {/* Quick Actions */}
-      <motion.div
-        initial={{ opacity: 0, y: 30 }}
-        animate={{ opacity: 1, y: 0 }}
-        transition={{ duration: 0.4, delay: 0.6 }}
-      >
-      <Card className="border-0 shadow-lg bg-gradient-to-br from-slate-50 to-blue-50">
-        <CardHeader className="pb-4">
-          <CardTitle className="text-lg font-semibold text-slate-900">Quick Actions</CardTitle>
-        </CardHeader>
-        <CardContent>
-          <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">
-            <Link to={createPageUrl('Teachers')} className="block group">
-              <motion.div 
-                className="p-5 rounded-xl bg-white border-2 border-blue-200 hover:border-blue-500 transition-all text-center"
-                whileHover={{ scale: 1.05, y: -8, boxShadow: "0 10px 15px -3px rgba(0, 0, 0, 0.1)" }}
-              >
-                <div className="w-12 h-12 mx-auto mb-3 rounded-full bg-gradient-to-br from-blue-500 to-blue-600 flex items-center justify-center group-hover:scale-110 transition-transform">
-                  <Users className="w-6 h-6 text-white" />
-                </div>
-                <span className="text-sm font-semibold text-slate-800">Add Teacher</span>
-              </motion.div>
-            </Link>
-            <Link to={createPageUrl('Students')} className="block group">
-              <motion.div 
-                className="p-5 rounded-xl bg-white border-2 border-emerald-200 hover:border-emerald-500 transition-all text-center"
-                whileHover={{ scale: 1.05, y: -8, boxShadow: "0 10px 15px -3px rgba(0, 0, 0, 0.1)" }}
-              >
-                <div className="w-12 h-12 mx-auto mb-3 rounded-full bg-gradient-to-br from-emerald-500 to-emerald-600 flex items-center justify-center group-hover:scale-110 transition-transform">
-                  <GraduationCap className="w-6 h-6 text-white" />
-                </div>
-                <span className="text-sm font-semibold text-slate-800">Add Student</span>
-              </motion.div>
-            </Link>
-            <Link to={createPageUrl('Subjects')} className="block group">
-              <motion.div 
-                className="p-5 rounded-xl bg-white border-2 border-violet-200 hover:border-violet-500 transition-all text-center"
-                whileHover={{ scale: 1.05, y: -8, boxShadow: "0 10px 15px -3px rgba(0, 0, 0, 0.1)" }}
-              >
-                <div className="w-12 h-12 mx-auto mb-3 rounded-full bg-gradient-to-br from-violet-500 to-violet-600 flex items-center justify-center group-hover:scale-110 transition-transform">
-                  <BookOpen className="w-6 h-6 text-white" />
-                </div>
-                <span className="text-sm font-semibold text-slate-800">Add Subject</span>
-              </motion.div>
-            </Link>
-            <Link to={createPageUrl('Schedule')} className="block group">
-              <motion.div 
-                className="p-5 rounded-xl bg-white border-2 border-amber-200 hover:border-amber-500 transition-all text-center"
-                whileHover={{ scale: 1.05, y: -8, boxShadow: "0 10px 15px -3px rgba(0, 0, 0, 0.1)" }}
-              >
-                <div className="w-12 h-12 mx-auto mb-3 rounded-full bg-gradient-to-br from-amber-500 to-amber-600 flex items-center justify-center group-hover:scale-110 transition-transform">
-                  <Calendar className="w-6 h-6 text-white" />
-                </div>
-                <span className="text-sm font-semibold text-slate-800">Generate Schedule</span>
-              </motion.div>
-            </Link>
-          </div>
-        </CardContent>
-      </Card>
-      </motion.div>
+
 
       {/* Support Ticket Form */}
       <motion.div
