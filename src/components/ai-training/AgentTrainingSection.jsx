@@ -6,10 +6,10 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Badge } from "@/components/ui/badge";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
+import { Label } from "@/components/ui/label";
 import { toast } from 'sonner';
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { Upload, Loader2, CheckCircle, XCircle, Edit, Save, Brain, TrendingUp, Pencil } from 'lucide-react';
-import { toast } from 'sonner';
 import UploadProgressDialog from '../upload/UploadProgressDialog';
 import TrainingChat from './TrainingChat';
 
