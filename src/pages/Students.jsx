@@ -374,7 +374,7 @@ export default function Students() {
       setUploadState(prev => ({ ...prev, stage: 'extracting', progress: 'Finding all student names...' }));
 
       // Helper function to call LLM with retry on errors
-      const callLLMWithRetry = async (params, maxRetries = 3) => {
+      const callLLMWithRetry = async (params, maxRetries = 2) => {
         for (let attempt = 1; attempt <= maxRetries; attempt++) {
           try {
             return await base44.integrations.Core.InvokeLLM(params);
@@ -387,7 +387,7 @@ export default function Students() {
             
             if (shouldRetry && attempt < maxRetries) {
               console.log(`⚠️ Retry ${attempt}/${maxRetries} after error: ${error?.message}...`);
-              await new Promise(resolve => setTimeout(resolve, 3000 * attempt)); // Longer exponential backoff
+              await new Promise(resolve => setTimeout(resolve, 1500 * attempt));
               continue;
             }
             throw error;
@@ -475,10 +475,24 @@ export default function Students() {
         progress: `Found ${allNames.length} students. Extracting details...` 
       }));
 
-      // Phase 2: Extract full details in manageable batches
-      const extractBatchSize = 10; // Further reduced to prevent timeouts
+      // Phase 2: Extract full details in larger batches for speed
+      const extractBatchSize = 25;
       const totalBatches = Math.ceil(allNames.length / extractBatchSize);
       const allStudents = [];
+
+      // Include training feedback ONCE - ONLY use approved training data
+      const approvedTraining = trainingData.filter(t => t.overall_status === 'approved');
+      const trainingPrompt = approvedTraining.length > 0 ? `
+LESSONS FROM PAST CORRECTIONS:
+${approvedTraining.slice(0, 3).map(t => {
+  if (!t.field_feedback) return '';
+  return Object.entries(t.field_feedback)
+    .filter(([_, f]) => f.was_correct === false && f.notes)
+    .map(([field, f]) => `- ${field}: ${f.notes}`)
+    .join('\n');
+}).filter(Boolean).join('\n')}
+
+` : '';
 
       for (let batch = 0; batch < totalBatches; batch++) {
         const batchNames = allNames.slice(batch * extractBatchSize, (batch + 1) * extractBatchSize);
@@ -488,25 +502,12 @@ export default function Students() {
           progress: `Extracting batch ${batch + 1}/${totalBatches} (${batchNames.length} students)...` 
         }));
 
-        // Include training feedback for this batch - ONLY use approved training data
-        const approvedTraining = trainingData.filter(t => t.overall_status === 'approved');
-        const batchTrainingExamples = approvedTraining.slice(0, 5).map(t => {
-          if (!t.field_feedback) return '';
-          const corrections = Object.entries(t.field_feedback)
-            .filter(([_, f]) => f.was_correct === false && f.notes)
-            .map(([field, f]) => `- Field "${field}": ${f.notes}. AI extracted "${f.original}" but correct is "${f.corrected}"`)
-            .join('\n');
-          return corrections;
-        }).filter(Boolean).join('\n\n');
-
         const batchResult = await callLLMWithRetry({
-          prompt: `Extract ONLY these specific students from the document: ${batchNames.join(', ')}
+          prompt: `Extract these students: ${batchNames.join(', ')}
 
-        DOCUMENT PROGRAMME TYPE: ${detectedProgramme}
-
-        ${batchTrainingExamples ? `LESSONS FROM ADMIN FEEDBACK:\n${batchTrainingExamples}\n\n` : ''}
-
-        CRITICAL: Copy names EXACTLY as provided above with ALL accents and special characters preserved (é, ñ, ü, ö, ç, etc.).
+PROGRAMME: ${detectedProgramme}
+${trainingPrompt}
+CRITICAL: Preserve ALL accents (é, ñ, ü, ö, ç).
 
         For each of these ${batchNames.length} students, provide:
 - full_name (must match exactly one of the names above)
@@ -589,9 +590,9 @@ Return EXACTLY ${batchNames.length} students with COMPLETE data.`,
         
         console.log(`Batch ${batch + 1}/${totalBatches}: Extracted ${batchStudents.length}/${batchNames.length} students`);
         
-        // Longer delay to avoid rate limits and timeouts
+        // Short delay between batches
         if (batch < totalBatches - 1) {
-          await new Promise(resolve => setTimeout(resolve, 2000));
+          await new Promise(resolve => setTimeout(resolve, 800));
         }
       }
 
@@ -610,58 +611,7 @@ Return EXACTLY ${batchNames.length} students with COMPLETE data.`,
         }
 
         if (dpValidation.missingSubjects.length > 0) {
-          console.warn(`⚠️ ${dpValidation.missingSubjects.length} DP students missing subjects:`, 
-            dpValidation.missingSubjects.map(s => `${s.full_name} (${s.subjects?.length || 0}/6)`));
-
-          // Try to complete missing subjects
-          for (const student of dpValidation.missingSubjects) {
-            setUploadState(prev => ({ 
-              ...prev, 
-              progress: `Completing subjects for ${student.full_name}...` 
-            }));
-
-            try {
-              const completeResult = await callLLMWithRetry({
-                prompt: `URGENT: Find ALL 6 subjects for DP student "${student.full_name}".
-
-      Current subjects: ${student.subjects?.map(s => `${s.name} ${s.level}`).join(', ') || 'none'}
-      Missing: ${6 - (student.subjects?.length || 0)} subjects
-
-      This DP student MUST have EXACTLY 6 subjects. Search the ENTIRE document for "${student.full_name}" and find ALL their subjects.
-
-      Extract EXACTLY as written:
-      - "English HL" → {"name": "English", "level": "HL"}
-      - "Math SL" → {"name": "Math", "level": "SL"}
-
-      Return complete list of ALL 6 subjects.`,
-                file_urls: [file_url],
-                response_json_schema: {
-                  type: "object",
-                  properties: {
-                    subjects: {
-                      type: "array",
-                      items: {
-                        type: "object",
-                        properties: {
-                          name: { type: "string" },
-                          level: { type: "string" }
-                        }
-                      }
-                    }
-                  }
-                }
-              });
-
-              if (completeResult?.subjects && completeResult.subjects.length === 6) {
-                student.subjects = completeResult.subjects;
-                console.log(`✅ Completed subjects for ${student.full_name}`);
-              }
-
-              await new Promise(resolve => setTimeout(resolve, 1000));
-            } catch (error) {
-              console.error(`Failed to complete subjects for ${student.full_name}:`, error);
-            }
-          }
+          console.warn(`⚠️ ${dpValidation.missingSubjects.length} DP students missing subjects - will need manual correction`);
         }
 
         if (dpValidation.wrongYearGroup.length > 0) {
