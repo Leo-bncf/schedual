@@ -22,6 +22,7 @@ import {
 } from "@/components/ui/select";
 import { Plus, Search, Mail, Clock, BookOpen, MoreHorizontal, Pencil, Trash2, Upload, Loader2 } from 'lucide-react';
 import { AnimatePresence, motion } from 'framer-motion';
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -501,12 +502,97 @@ Example: {"full_name": "John Smith", "email": "john@school.com", "subjects": ["P
           action={() => setIsDialogOpen(true)}
           actionLabel="Add Teacher"
         />
+      ) : isLoading ? (
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+          {[1, 2, 3, 4, 5, 6].map(i => (
+            <div key={i} className="h-52 bg-slate-100 rounded-xl animate-pulse" />
+          ))}
+        </div>
       ) : (
-        <DataTable 
-          columns={columns}
-          data={filteredTeachers}
-          isLoading={isLoading}
-        />
+        <motion.div 
+          className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4"
+          initial={{ opacity: 0 }}
+          animate={{ opacity: 1 }}
+        >
+          {filteredTeachers.map((teacher, index) => (
+            <motion.div
+              key={teacher.id}
+              initial={{ opacity: 0, y: 20 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ delay: index * 0.05 }}
+            >
+              <Card className="group hover:shadow-xl transition-all duration-300 border-slate-200 overflow-hidden">
+                <CardHeader className="pb-3 bg-gradient-to-br from-indigo-50 to-white">
+                  <div className="flex items-start justify-between">
+                    <div className="flex items-center gap-3">
+                      <div className="w-12 h-12 rounded-full bg-gradient-to-br from-indigo-500 to-violet-600 flex items-center justify-center text-white font-semibold text-lg shadow-lg">
+                        {teacher.full_name?.split(' ').map(n => n[0]).join('').slice(0, 2)}
+                      </div>
+                      <div>
+                        <CardTitle className="text-base font-semibold text-slate-900">{teacher.full_name}</CardTitle>
+                        <p className="text-xs text-slate-500 mt-0.5">{teacher.employee_id}</p>
+                      </div>
+                    </div>
+                    <DropdownMenu>
+                      <DropdownMenuTrigger asChild>
+                        <Button variant="ghost" size="icon" className="opacity-0 group-hover:opacity-100 transition-opacity">
+                          <MoreHorizontal className="w-4 h-4" />
+                        </Button>
+                      </DropdownMenuTrigger>
+                      <DropdownMenuContent align="end">
+                        <DropdownMenuItem onClick={() => handleEdit(teacher)}>
+                          <Pencil className="w-4 h-4 mr-2" />
+                          Edit
+                        </DropdownMenuItem>
+                        <DropdownMenuItem 
+                          className="text-rose-600"
+                          onClick={() => deleteMutation.mutate(teacher.id)}
+                        >
+                          <Trash2 className="w-4 h-4 mr-2" />
+                          Delete
+                        </DropdownMenuItem>
+                      </DropdownMenuContent>
+                    </DropdownMenu>
+                  </div>
+                </CardHeader>
+                <CardContent className="pt-4 space-y-3">
+                  <div className="flex items-center gap-2 text-sm">
+                    <Mail className="w-4 h-4 text-slate-400" />
+                    <span className="text-slate-600 truncate">{teacher.email}</span>
+                  </div>
+                  
+                  <div className="flex items-center justify-between">
+                    <div className="flex items-center gap-2 text-sm text-slate-600">
+                      <Clock className="w-4 h-4 text-slate-400" />
+                      <span>{teacher.max_hours_per_week || 25}h/week</span>
+                    </div>
+                    <Badge className={teacher.is_active !== false ? 'bg-emerald-100 text-emerald-700 border-0' : 'bg-slate-100 text-slate-600 border-0'}>
+                      {teacher.is_active !== false ? 'Active' : 'Inactive'}
+                    </Badge>
+                  </div>
+
+                  {teacher.subjects && teacher.subjects.length > 0 && (
+                    <div className="pt-2 border-t border-slate-100">
+                      <p className="text-xs font-medium text-slate-500 mb-2">Subjects</p>
+                      <div className="flex flex-wrap gap-1.5">
+                        {getSubjectNames(teacher.subjects).slice(0, 3).map((name, i) => (
+                          <Badge key={i} variant="secondary" className="bg-indigo-50 text-indigo-700 border-0 text-xs">
+                            {name}
+                          </Badge>
+                        ))}
+                        {getSubjectNames(teacher.subjects).length > 3 && (
+                          <Badge variant="secondary" className="bg-slate-100 text-slate-600 border-0 text-xs">
+                            +{getSubjectNames(teacher.subjects).length - 3}
+                          </Badge>
+                        )}
+                      </div>
+                    </div>
+                  )}
+                </CardContent>
+              </Card>
+            </motion.div>
+          ))}
+        </motion.div>
       )}
 
       <AnimatePresence>
