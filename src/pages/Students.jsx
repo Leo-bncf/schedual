@@ -909,6 +909,23 @@ Return EXACTLY 1 student object. Do not skip this student.`,
         }
       }
 
+      // For PYP/MYP students, ensure ClassGroups are created and subjects synced
+      const hasPypMypStudents = studentsToCreate.some(s => s.ib_programme === 'PYP' || s.ib_programme === 'MYP');
+      
+      if (hasPypMypStudents) {
+        setUploadState(prev => ({ 
+          ...prev, 
+          progress: 'Setting up ClassGroups for PYP/MYP students...'
+        }));
+
+        try {
+          await base44.functions.invoke('debugAndFixClassGroups');
+          console.log('✅ ClassGroups created/fixed for imported students');
+        } catch (error) {
+          console.error('Error setting up ClassGroups:', error);
+        }
+      }
+
       setUploadState(prev => ({ 
         ...prev, 
         stage: 'complete',
@@ -924,7 +941,9 @@ Return EXACTLY 1 student object. Do not skip this student.`,
           totalStudents: 0,
           error: null
         });
+        queryClient.invalidateQueries({ queryKey: ['students', schoolId] });
         queryClient.invalidateQueries({ queryKey: ['students'] });
+        queryClient.invalidateQueries({ queryKey: ['classGroups'] });
       }, 2000);
 
     } catch (error) {
