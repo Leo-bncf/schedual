@@ -891,22 +891,38 @@ Return EXACTLY 1 student object. Do not skip this student.`,
         }
       }
 
-      // For PYP/MYP: Get ALL subjects and assign to every student
+      // For PYP/MYP: Get ALL subjects and assign to EVERY student
+      setUploadState(prev => ({ 
+        ...prev, 
+        progress: 'Assigning subjects to PYP/MYP students...'
+      }));
+      
       const programmeSubjects = await base44.entities.Subject.filter({ school_id: schoolId });
       
-      studentsToCreate.forEach(student => {
-        if (student.ib_programme === 'PYP' || student.ib_programme === 'MYP') {
-          const studentSubjects = programmeSubjects
-            .filter(subj => subj.ib_level === student.ib_programme && subj.is_active !== false)
-            .map(subj => ({
-              subject_id: subj.id,
-              ib_group: subj.ib_group
-            }));
-          
-          student.subject_choices = studentSubjects;
-          console.log(`Assigned ${studentSubjects.length} ${student.ib_programme} subjects to ${student.full_name}`);
+      const pypSubjects = programmeSubjects
+        .filter(s => s.ib_level === 'PYP' && s.is_active !== false)
+        .map(s => ({ subject_id: s.id, ib_group: s.ib_group }));
+      
+      const mypSubjects = programmeSubjects
+        .filter(s => s.ib_level === 'MYP' && s.is_active !== false)
+        .map(s => ({ subject_id: s.id, ib_group: s.ib_group }));
+      
+      // Get all created students and update them with ALL subjects
+      const allCreatedStudents = await base44.entities.Student.filter({ school_id: schoolId });
+      
+      for (const student of allCreatedStudents) {
+        if (student.ib_programme === 'PYP') {
+          await base44.entities.Student.update(student.id, {
+            subject_choices: pypSubjects
+          });
+          console.log(`Assigned ${pypSubjects.length} PYP subjects to ${student.full_name}`);
+        } else if (student.ib_programme === 'MYP') {
+          await base44.entities.Student.update(student.id, {
+            subject_choices: mypSubjects
+          });
+          console.log(`Assigned ${mypSubjects.length} MYP subjects to ${student.full_name}`);
         }
-      });
+      }
 
       setUploadState(prev => ({ 
         ...prev, 
@@ -951,6 +967,19 @@ Return EXACTLY 1 student object. Do not skip this student.`,
         description="Manage IB Diploma students and their subject choices"
         actions={
           <div className="flex gap-2">
+            <Button 
+              type="button"
+              variant="outline"
+              onClick={async () => {
+                if (confirm('This will assign ALL PYP/MYP subjects to ALL PYP/MYP students. Continue?')) {
+                  const result = await base44.functions.invoke('fixAllPYPMYPSubjects');
+                  alert(`Fixed ${result.data.fixed_students} students!\nPYP: ${result.data.pyp_students} students with ${result.data.pyp_subjects_assigned} subjects\nMYP: ${result.data.myp_students} students with ${result.data.myp_subjects_assigned} subjects`);
+                  queryClient.invalidateQueries({ queryKey: ['students'] });
+                }
+              }}
+            >
+              Fix PYP/MYP Subjects
+            </Button>
             <Button 
               type="button"
               variant="outline"
@@ -1140,17 +1169,18 @@ Return EXACTLY 1 student object. Do not skip this student.`,
 
             <div className="space-y-2">
               <Label>Subject Choices</Label>
-              {(formData.ib_programme === 'PYP' || formData.ib_programme === 'MYP') && (
-                <p className="text-xs text-blue-600 bg-blue-50 p-3 rounded border border-blue-200 mb-2">
-                  ℹ️ Changes will sync to all students in the same ClassGroup
+              {(formData.ib_programme === 'PYP' || formData.ib_programme === 'MYP') ? (
+                <p className="text-xs text-blue-600 bg-blue-50 p-3 rounded border border-blue-200">
+                  ℹ️ All {formData.ib_programme} subjects will be automatically assigned
                 </p>
+              ) : (
+                <SubjectSelector 
+                  subjects={subjects}
+                  selectedSubjects={formData.subject_choices}
+                  onChange={(choices) => setFormData({ ...formData, subject_choices: choices })}
+                  programme={formData.ib_programme}
+                />
               )}
-              <SubjectSelector 
-                subjects={subjects}
-                selectedSubjects={formData.subject_choices}
-                onChange={(choices) => setFormData({ ...formData, subject_choices: choices })}
-                programme={formData.ib_programme}
-              />
             </div>
 
             {formData.ib_programme === 'DP' && (
