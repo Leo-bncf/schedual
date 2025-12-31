@@ -7,14 +7,19 @@ import { Label } from "@/components/ui/label";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from "@/components/ui/alert-dialog";
-import { User, Mail, Building2, Shield, Lock, Trash2, KeyRound, AlertTriangle } from 'lucide-react';
+import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from "@/components/ui/dialog";
+import { Switch } from "@/components/ui/switch";
+import { User, Mail, Building2, Shield, Lock, Trash2, KeyRound, AlertTriangle, Smartphone } from 'lucide-react';
 import { toast } from 'sonner';
+import TwoFactorSetup from '../components/auth/TwoFactorSetup';
 
 export default function AccountManager() {
   const queryClient = useQueryClient();
   const [isEditingName, setIsEditingName] = useState(false);
   const [isEditingEmail, setIsEditingEmail] = useState(false);
   const [isEditingPassword, setIsEditingPassword] = useState(false);
+  const [show2FASetup, setShow2FASetup] = useState(false);
+  const [isToggling2FA, setIsToggling2FA] = useState(false);
   
   const [formData, setFormData] = useState({
     full_name: '',
@@ -97,6 +102,30 @@ export default function AccountManager() {
       toast.error(error.message || 'Failed to delete account');
     }
   });
+
+  const handle2FAToggle = async (enabled) => {
+    if (enabled) {
+      // Enable 2FA - show setup dialog
+      setShow2FASetup(true);
+    } else {
+      // Disable 2FA
+      setIsToggling2FA(true);
+      try {
+        await base44.functions.invoke('disable2FA');
+        queryClient.invalidateQueries({ queryKey: ['currentUser'] });
+        toast.success('2FA disabled successfully');
+      } catch (error) {
+        toast.error(error.message || 'Failed to disable 2FA');
+      } finally {
+        setIsToggling2FA(false);
+      }
+    }
+  };
+
+  const handle2FASetupComplete = () => {
+    setShow2FASetup(false);
+    queryClient.invalidateQueries({ queryKey: ['currentUser'] });
+  };
 
   const handleUpdateName = () => {
     if (!formData.full_name.trim()) {
@@ -280,6 +309,46 @@ export default function AccountManager() {
                 <Button variant="outline" onClick={() => setIsEditingEmail(true)}>
                   Change Email
                 </Button>
+              )}
+            </CardContent>
+          </Card>
+
+          {/* Two-Factor Authentication */}
+          <Card>
+            <CardHeader>
+              <CardTitle className="flex items-center gap-2">
+                <Smartphone className="w-5 h-5 text-blue-900" />
+                Two-Factor Authentication (2FA)
+              </CardTitle>
+              <CardDescription>Add an extra layer of security with Google Authenticator</CardDescription>
+            </CardHeader>
+            <CardContent className="space-y-4">
+              <div className="flex items-center justify-between p-4 bg-slate-50 rounded-lg">
+                <div className="space-y-1">
+                  <p className="font-medium text-slate-900">
+                    {user?.totp_enabled ? '2FA Enabled' : '2FA Disabled'}
+                  </p>
+                  <p className="text-sm text-slate-600">
+                    {user?.totp_enabled 
+                      ? 'Your account is protected with 2FA' 
+                      : 'Protect your account with an authenticator app'
+                    }
+                  </p>
+                </div>
+                <Switch
+                  checked={user?.totp_enabled || false}
+                  onCheckedChange={handle2FAToggle}
+                  disabled={isToggling2FA}
+                />
+              </div>
+
+              {user?.totp_enabled && (
+                <Alert>
+                  <Shield className="h-4 w-4" />
+                  <AlertDescription>
+                    You'll be asked for a code from your authenticator app when logging in.
+                  </AlertDescription>
+                </Alert>
               )}
             </CardContent>
           </Card>
@@ -480,6 +549,22 @@ export default function AccountManager() {
           </Card>
         </TabsContent>
       </Tabs>
+
+      {/* 2FA Setup Dialog */}
+      <Dialog open={show2FASetup} onOpenChange={setShow2FASetup}>
+        <DialogContent className="sm:max-w-md">
+          <DialogHeader>
+            <DialogTitle>Enable Two-Factor Authentication</DialogTitle>
+            <DialogDescription>
+              Secure your account with Google Authenticator
+            </DialogDescription>
+          </DialogHeader>
+          <TwoFactorSetup
+            onComplete={handle2FASetupComplete}
+            onCancel={() => setShow2FASetup(false)}
+          />
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }
