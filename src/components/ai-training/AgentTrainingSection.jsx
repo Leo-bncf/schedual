@@ -23,8 +23,11 @@ export default function AgentTrainingSection({ agentName, agentTitle, agentDescr
   const { data: trainingData = [] } = useQuery({
     queryKey: ['aiTraining', agentName],
     queryFn: async () => {
-      const data = await base44.entities.AITrainingData.filter({ agent_name: agentName }, '-created_date', 50);
-      return data;
+      const { data } = await base44.functions.invoke('aiTrainingUpload', { 
+        action: 'list', 
+        agent_name: agentName 
+      });
+      return data?.data || [];
     }
   });
 
@@ -135,20 +138,19 @@ export default function AgentTrainingSection({ agentName, agentTitle, agentDescr
       setUploadStage('storing');
       setUploadProgress('Saving training data...');
 
-      // Store in training data
-      const result = await base44.entities.AITrainingData.create({
+      // Store in training data via backend function
+      const { data } = await base44.functions.invoke('aiTrainingUpload', {
+        action: 'upload',
         agent_name: agentName,
         file_url,
         file_name: file.name,
-        extracted_data: extractedData,
-        field_feedback: {},
-        overall_status: 'pending_review'
+        extracted_data: extractedData
       });
       
       setUploadStage('complete');
       setUploadProgress('Complete!');
       
-      return result;
+      return data?.training;
     },
     onSuccess: (newTraining) => {
       queryClient.invalidateQueries({ queryKey: ['aiTraining', agentName] });
@@ -171,18 +173,13 @@ export default function AgentTrainingSection({ agentName, agentTitle, agentDescr
 
   const updateFieldMutation = useMutation({
     mutationFn: async ({ trainingId, fieldPath, isCorrect, correctedValue, notes }) => {
-      const training = trainingData.find(t => t.id === trainingId);
-      const updatedFeedback = {
-        ...training.field_feedback,
-        [fieldPath]: {
-          correct: isCorrect,
-          corrected_value: correctedValue,
-          notes: notes || ''
-        }
-      };
-
-      return base44.entities.AITrainingData.update(trainingId, {
-        field_feedback: updatedFeedback
+      return base44.functions.invoke('aiTrainingUpload', {
+        action: 'updateField',
+        training_id: trainingId,
+        field_path: fieldPath,
+        is_correct: isCorrect,
+        corrected_value: correctedValue,
+        notes: notes || ''
       });
     },
     onSuccess: () => {
@@ -194,12 +191,11 @@ export default function AgentTrainingSection({ agentName, agentTitle, agentDescr
 
   const approveMutation = useMutation({
     mutationFn: async ({ trainingId, status, notes }) => {
-      const user = await base44.auth.me();
-      return base44.entities.AITrainingData.update(trainingId, {
-        overall_status: status,
-        training_notes: notes,
-        reviewed_by: user.email,
-        reviewed_at: new Date().toISOString()
+      return base44.functions.invoke('aiTrainingUpload', {
+        action: 'approve',
+        training_id: trainingId,
+        status,
+        notes
       });
     },
     onSuccess: () => {
