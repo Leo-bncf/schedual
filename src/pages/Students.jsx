@@ -455,7 +455,15 @@ For each of these ${batchNames.length} students, provide:
 - full_name (must match exactly one of the names above)
 - email, student_id (if available)
 - ib_programme (DP, MYP, or PYP)
-- year_group (e.g., DP1, DP2, MYP1-5, PYP-A through PYP-F)
+- year_group: **EXTREMELY IMPORTANT - READ THIS CAREFULLY**
+  * Look for EXPLICIT year/grade indicators in the document NEXT TO the student's name
+  * DP students: Use "DP1" for first year OR "DP2" for second year
+  * MYP students: Use "MYP1", "MYP2", "MYP3", "MYP4", or "MYP5" based on what's written
+  * PYP students: Use "PYP-A", "PYP-B", "PYP-C", "PYP-D", "PYP-E", or "PYP-F" based on class letter
+  * DO NOT GUESS - if you see "Year 1" or "Grade 11" with DP → that's DP1
+  * DO NOT GUESS - if you see "Year 2" or "Grade 12" with DP → that's DP2
+  * Copy the year group information EXACTLY as it appears in the document for that specific student
+  * DO NOT assign all students to the same year - each student has their own year group
 - subjects: ALL their subject choices - DO NOT skip any subjects
 
 **ABSOLUTELY CRITICAL FOR DP STUDENTS:**
@@ -474,7 +482,9 @@ If you cannot find ALL 6 subjects for a DP student, KEEP LOOKING until you find 
 
 For MYP/PYP: extract all subjects (no level needed).
 
-Return EXACTLY ${batchNames.length} students with COMPLETE subject lists.`,
+⚠️ CRITICAL: Each student must have the CORRECT year_group as written in the document. Don't assign the same year to everyone!
+
+Return EXACTLY ${batchNames.length} students with COMPLETE subject lists and ACCURATE year groups.`,
           file_urls: [file_url],
           response_json_schema: {
             type: "object",
