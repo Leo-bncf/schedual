@@ -383,31 +383,46 @@ export default function Students() {
         }
       };
 
-      // Phase 1: Get list of all student names - multiple passes for reliability
-      let allNames = [];
+      // Phase 1: Detect document type and get all student names
+      const documentAnalysis = await callLLMWithRetry({
+        prompt: `Analyze this document to determine what IB programme these students belong to.
 
-      // First pass: Get all names
-      const namesResult1 = await callLLMWithRetry({
-        prompt: `You are extracting student names from a document. This is CRITICAL - you must find EVERY SINGLE student.
+      Look for indicators:
+      - DP/Diploma Programme students: taking 6 subjects with HL/SL levels, Groups 1-6, TOK/EE/CAS mentioned
+      - MYP students: Middle Years Programme, years 1-5, interdisciplinary subjects
+      - PYP students: Primary Years Programme, young children, classes A-F
 
-TASK: List ALL student names in this document. Count them carefully and list every single one.
+      CRITICAL: If you see HL/SL levels, 6 subjects per student, or IB groups → this is DP
 
-⚠️ CRITICAL RULES:
-1. Preserve ALL special characters, accents, and diacritics EXACTLY (é, ñ, ü, ö, ç, ø, å, etc.)
-2. Include middle names if present
-3. ONLY extract names that are ACTUALLY VISIBLE in the document
-4. Do NOT invent, generate, or make up ANY names
-5. Do NOT add placeholder/example names like "John Doe" or "Student A"
-6. If you can't read a name clearly, skip it rather than guessing
-7. Return ONLY the names you can see written in the document
+      Then list ALL student names in the document.
 
-Examples: José María García, François Müller, Søren Ødegård
+      ⚠️ CRITICAL RULES:
+      1. Preserve ALL special characters, accents, and diacritics EXACTLY (é, ñ, ü, ö, ç, ø, å, etc.)
+      2. Include middle names if present
+      3. ONLY extract names that are ACTUALLY VISIBLE in the document
+      4. Do NOT invent, generate, or make up ANY names
+      5. Do NOT add placeholder/example names
+      6. If you can't read a name clearly, skip it rather than guessing
 
-Return the complete list of ALL REAL student names from the document. NO inventions.`,
+      Return the programme type and complete list of ALL REAL student names.`,
         file_urls: [file_url],
         response_json_schema: {
           type: "object",
           properties: {
+            detected_programme: { 
+              type: "string",
+              enum: ["DP", "MYP", "PYP"],
+              description: "The IB programme detected from the document"
+            },
+            confidence: {
+              type: "string",
+              enum: ["high", "medium", "low"]
+            },
+            indicators: {
+              type: "array",
+              items: { type: "string" },
+              description: "What indicators led to this conclusion"
+            },
             total_count: { type: "number" },
             student_names: {
               type: "array",
@@ -417,7 +432,22 @@ Return the complete list of ALL REAL student names from the document. NO inventi
         }
       });
 
-      allNames = namesResult1?.student_names || [];
+      const detectedProgramme = documentAnalysis?.detected_programme || 'DP';
+      const allNames = documentAnalysis?.student_names || [];
+
+      console.log(`📋 Document Analysis: ${detectedProgramme} programme detected (${documentAnalysis?.confidence} confidence)`);
+      console.log(`📋 Indicators: ${documentAnalysis?.indicators?.join(', ')}`);
+
+      if (documentAnalysis?.confidence === 'low') {
+        const confirmProgramme = confirm(
+          `⚠️ Low confidence detection: System thinks this is ${detectedProgramme} programme.\n\n` +
+          `Indicators: ${documentAnalysis?.indicators?.join(', ')}\n\n` +
+          `Is this correct? Click OK if yes, Cancel to stop import.`
+        );
+        if (!confirmProgramme) {
+          throw new Error('Import cancelled - please verify document programme type');
+        }
+      }
       console.log(`First pass found ${allNames.length} students`);
       
       // STOP HERE - don't ask for more, it causes hallucinations
@@ -449,47 +479,53 @@ Return the complete list of ALL REAL student names from the document. NO inventi
         const batchResult = await callLLMWithRetry({
           prompt: `Extract ONLY these specific students from the document: ${batchNames.join(', ')}
 
+DOCUMENT PROGRAMME TYPE: ${detectedProgramme}
+
 CRITICAL: Copy names EXACTLY as provided above with ALL accents and special characters preserved (é, ñ, ü, ö, ç, etc.).
 
 For each of these ${batchNames.length} students, provide:
 - full_name (must match exactly one of the names above)
 - email, student_id (if available)
-- ib_programme (DP, MYP, or PYP)
+- ib_programme: **MUST BE "${detectedProgramme}"** for ALL students in this document
 - year_group: **EXTREMELY IMPORTANT - READ THIS CAREFULLY**
-  * Look for EXPLICIT year/grade indicators in the document NEXT TO the student's name
-  * DP students: Use "DP1" for first year OR "DP2" for second year
-  * MYP students: Use "MYP1", "MYP2", "MYP3", "MYP4", or "MYP5" based on what's written
-  * PYP students: Use "PYP-A", "PYP-B", "PYP-C", "PYP-D", "PYP-E", or "PYP-F" based on class letter
-  * DO NOT GUESS - if you see "Year 1" or "Grade 11" with DP → that's DP1
-  * DO NOT GUESS - if you see "Year 2" or "Grade 12" with DP → that's DP2
-  * Copy the year group information EXACTLY as it appears in the document for that specific student
-  * DO NOT assign all students to the same year - each student has their own year group
+  ${detectedProgramme === 'DP' ? `
+  * This is a DP document - ALL students are DP students
+  * Look at the SECTION/HEADING where each student appears
+  * Students in "DP1" / "Year 1" / "Grade 11" / "First Year" section → use "DP1"
+  * Students in "DP2" / "Year 2" / "Grade 12" / "Second Year" section → use "DP2"
+  * If document has TWO distinct groups/sections of students → one is DP1, the other is DP2
+  * Pay attention to which list/section each student appears in
+  * DO NOT assign all students to the same year group
+  * Each student's year group depends on WHERE in the document they appear
+  ` : detectedProgramme === 'MYP' ? `
+  * Use "MYP1", "MYP2", "MYP3", "MYP4", or "MYP5" based on what's written
+  ` : `
+  * Use "PYP-A", "PYP-B", "PYP-C", "PYP-D", "PYP-E", or "PYP-F" based on class letter
+  `}
 - subjects: ALL their subject choices - DO NOT skip any subjects
 
+${detectedProgramme === 'DP' ? `
 **ABSOLUTELY CRITICAL FOR DP STUDENTS:**
-- DP students MUST have EXACTLY 6 subjects (Groups 1, 2, 3, 4, 5, 6)
+- EVERY DP student MUST have EXACTLY 6 subjects (no exceptions)
 - You MUST extract ALL 6 subjects for EACH DP student
 - Each subject MUST have a level: "HL" or "SL"
-- IMPORTANT: Extract subjects EXACTLY as written in document (e.g., if it says "English HL", extract as {"name": "English", "level": "HL"})
-- DO NOT add extra words - if document says "English", write "English" (not "English Language and Literature")
-- DO NOT add extra words - if document says "Math", write "Math" (not "Mathematics AA" or "Mathematics AI")
-- DO NOT add extra words - if document says "Spanish", write "Spanish" (not "Spanish A" or "Spanish B")
-- The system will match abbreviated names to full subject names automatically
-- Group 1: Language & Literature (may appear as: English, English A, Language and Literature, etc.)
-- Group 2: Language Acquisition (may appear as: Spanish, French, Spanish B, French ab initio, etc.)
-- Group 3: Individuals & Societies (may appear as: History, Economics, Geography, Business, Psychology, etc.)
-- Group 4: Sciences (may appear as: Biology, Chemistry, Physics, Bio, Chem, etc.)
-- Group 5: Mathematics (may appear as: Math, Maths, Math AA, Math AI, Mathematics, etc.)
-- Group 6: The Arts (may appear as: Visual Arts, Art, Music, Theatre, Film, etc.) OR an extra subject from Groups 1-5
+- If you only find 5 subjects for a student, SEARCH HARDER - there must be a 6th
+- Extract subjects EXACTLY as written: "English HL" → {"name": "English", "level": "HL"}
+- DO NOT add extra words (keep it short like in document)
+- Groups needed: 1-Language, 2-Language, 3-Societies, 4-Science, 5-Math, 6-Arts/Extra
 - Example: [{"name": "English", "level": "HL"}, {"name": "Spanish", "level": "SL"}, {"name": "History", "level": "HL"}, {"name": "Biology", "level": "SL"}, {"name": "Math", "level": "HL"}, {"name": "Economics", "level": "SL"}]
 
-If you cannot find ALL 6 subjects for a DP student, KEEP LOOKING until you find them all. Do not return incomplete data.
-
+⚠️ VALIDATION: Before returning, COUNT subjects for each student. If count ≠ 6, search document again for missing subjects.
+` : `
 For MYP/PYP: extract all subjects (no level needed).
+`}
 
-⚠️ CRITICAL: Each student must have the CORRECT year_group as written in the document. Don't assign the same year to everyone!
+⚠️ CRITICAL VALIDATIONS:
+1. ib_programme MUST be "${detectedProgramme}" for ALL students
+2. Each student needs correct year_group based on document section
+3. ${detectedProgramme === 'DP' ? 'EVERY DP student needs EXACTLY 6 subjects with HL/SL' : 'Extract all subjects found'}
 
-Return EXACTLY ${batchNames.length} students with COMPLETE subject lists and ACCURATE year groups.`,
+Return EXACTLY ${batchNames.length} students with COMPLETE data.`,
           file_urls: [file_url],
           response_json_schema: {
             type: "object",
@@ -534,66 +570,96 @@ Return EXACTLY ${batchNames.length} students with COMPLETE subject lists and ACC
         }
       }
 
-      // Verify DP students have 6 subjects
-      const dpStudentsIncomplete = allStudents.filter(s => 
-        s.ib_programme === 'DP' && (!s.subjects || s.subjects.length < 6)
-      );
+      // STRICT VALIDATION for DP students
+      if (detectedProgramme === 'DP') {
+        const dpValidation = {
+          wrongProgramme: allStudents.filter(s => s.ib_programme !== 'DP'),
+          missingSubjects: allStudents.filter(s => !s.subjects || s.subjects.length < 6),
+          wrongYearGroup: allStudents.filter(s => !['DP1', 'DP2'].includes(s.year_group))
+        };
 
-      if (dpStudentsIncomplete.length > 0) {
-        console.warn(`⚠️ ${dpStudentsIncomplete.length} DP students missing subjects:`, dpStudentsIncomplete.map(s => `${s.full_name} (${s.subjects?.length || 0}/6)`));
-        
-        for (const student of dpStudentsIncomplete) {
-          setUploadState(prev => ({ 
-            ...prev, 
-            progress: `Completing subjects for ${student.full_name}...` 
-          }));
+        // Log validation issues
+        if (dpValidation.wrongProgramme.length > 0) {
+          console.error(`❌ ${dpValidation.wrongProgramme.length} students incorrectly labeled as non-DP:`, 
+            dpValidation.wrongProgramme.map(s => `${s.full_name} (${s.ib_programme})`));
+        }
 
-          try {
-            const completeResult = await callLLMWithRetry({
-              prompt: `URGENT: Find ALL 6 subjects for DP student "${student.full_name}".
+        if (dpValidation.missingSubjects.length > 0) {
+          console.warn(`⚠️ ${dpValidation.missingSubjects.length} DP students missing subjects:`, 
+            dpValidation.missingSubjects.map(s => `${s.full_name} (${s.subjects?.length || 0}/6)`));
 
-            Current subjects found: ${student.subjects?.map(s => s.name).join(', ') || 'none'}
+          // Try to complete missing subjects
+          for (const student of dpValidation.missingSubjects) {
+            setUploadState(prev => ({ 
+              ...prev, 
+              progress: `Completing subjects for ${student.full_name}...` 
+            }));
 
-            This DP student MUST have EXACTLY 6 subjects covering all IB groups:
-            - Group 1: Language & Literature
-            - Group 2: Language Acquisition  
-            - Group 3: Individuals & Societies
-            - Group 4: Sciences
-            - Group 5: Mathematics
-            - Group 6: The Arts OR extra from Groups 1-5
+            try {
+              const completeResult = await callLLMWithRetry({
+                prompt: `URGENT: Find ALL 6 subjects for DP student "${student.full_name}".
 
-            CRITICAL: Extract subject names EXACTLY as they appear in the document (use short form if that's what's written).
-            - If document says "English HL" → extract as {"name": "English", "level": "HL"}
-            - If document says "Math SL" → extract as {"name": "Math", "level": "SL"}
-            - DO NOT expand abbreviations or add words that aren't in the document
+      Current subjects: ${student.subjects?.map(s => `${s.name} ${s.level}`).join(', ') || 'none'}
+      Missing: ${6 - (student.subjects?.length || 0)} subjects
 
-            Search the document thoroughly and return ALL 6 subjects for ${student.full_name}.`,
-              file_urls: [file_url],
-              response_json_schema: {
-                type: "object",
-                properties: {
-                  subjects: {
-                    type: "array",
-                    items: {
-                      type: "object",
-                      properties: {
-                        name: { type: "string" },
-                        level: { type: "string" }
+      This DP student MUST have EXACTLY 6 subjects. Search the ENTIRE document for "${student.full_name}" and find ALL their subjects.
+
+      Extract EXACTLY as written:
+      - "English HL" → {"name": "English", "level": "HL"}
+      - "Math SL" → {"name": "Math", "level": "SL"}
+
+      Return complete list of ALL 6 subjects.`,
+                file_urls: [file_url],
+                response_json_schema: {
+                  type: "object",
+                  properties: {
+                    subjects: {
+                      type: "array",
+                      items: {
+                        type: "object",
+                        properties: {
+                          name: { type: "string" },
+                          level: { type: "string" }
+                        }
                       }
                     }
                   }
                 }
+              });
+
+              if (completeResult?.subjects && completeResult.subjects.length === 6) {
+                student.subjects = completeResult.subjects;
+                console.log(`✅ Completed subjects for ${student.full_name}`);
               }
-            });
 
-            if (completeResult?.subjects && completeResult.subjects.length === 6) {
-              student.subjects = completeResult.subjects;
-              console.log(`✅ Completed subjects for ${student.full_name}`);
+              await new Promise(resolve => setTimeout(resolve, 1000));
+            } catch (error) {
+              console.error(`Failed to complete subjects for ${student.full_name}:`, error);
             }
+          }
+        }
 
-            await new Promise(resolve => setTimeout(resolve, 1000));
-          } catch (error) {
-            console.error(`Failed to complete subjects for ${student.full_name}:`, error);
+        if (dpValidation.wrongYearGroup.length > 0) {
+          console.error(`❌ ${dpValidation.wrongYearGroup.length} students with invalid year group:`, 
+            dpValidation.wrongYearGroup.map(s => `${s.full_name} (${s.year_group})`));
+        }
+
+        // Final validation check
+        const stillInvalid = {
+          wrongProgramme: allStudents.filter(s => s.ib_programme !== 'DP').length,
+          incomplete: allStudents.filter(s => !s.subjects || s.subjects.length < 6).length,
+          wrongYear: allStudents.filter(s => !['DP1', 'DP2'].includes(s.year_group)).length
+        };
+
+        if (stillInvalid.wrongProgramme > 0 || stillInvalid.incomplete > 0 || stillInvalid.wrongYear > 0) {
+          const errorMsg = `⚠️ VALIDATION ERRORS:\n` +
+            (stillInvalid.wrongProgramme > 0 ? `- ${stillInvalid.wrongProgramme} students not labeled as DP\n` : '') +
+            (stillInvalid.incomplete > 0 ? `- ${stillInvalid.incomplete} students missing subjects (need 6)\n` : '') +
+            (stillInvalid.wrongYear > 0 ? `- ${stillInvalid.wrongYear} students without DP1/DP2 year group\n` : '') +
+            `\nDo you want to continue anyway? These will need manual correction.`;
+
+          if (!confirm(errorMsg)) {
+            throw new Error('Import cancelled due to validation errors');
           }
         }
       }
