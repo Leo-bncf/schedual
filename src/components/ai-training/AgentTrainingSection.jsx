@@ -498,8 +498,8 @@ Provide: name, code, ib_level, ib_group, and available_levels (HL/SL if DP).`;
   const colors = AGENT_COLORS[agentName] || AGENT_COLORS.student_importer;
 
   return (
-    <div className="space-y-6">
-      <Card className={`border-2 ${colors.border}`}>
+    <div className={`p-6 rounded-xl border-2 ${colors.border} ${colors.bg} space-y-4`}>
+      <Card className="border-0 shadow-lg">
         <CardHeader>
           <div className="flex items-start justify-between">
             <div className="flex items-center gap-3">
@@ -550,7 +550,7 @@ Provide: name, code, ib_level, ib_group, and available_levels (HL/SL if DP).`;
         </CardHeader>
         <CardContent>
           {useTextMode && (
-            <div className="mb-4 space-y-3 p-4 bg-blue-50 border border-blue-200 rounded-lg">
+            <div className={`mb-4 space-y-3 p-4 ${colors.bg} border ${colors.border} rounded-lg`}>
               <Label htmlFor="textInput" className="text-sm font-medium">
                 Paste training data text
               </Label>
@@ -598,160 +598,6 @@ Provide: name, code, ib_level, ib_group, and available_levels (HL/SL if DP).`;
           </div>
         </CardContent>
       </Card>
-
-      {trainingData.length === 0 ? (
-        <Alert>
-          <TrendingUp className="h-4 w-4" />
-          <AlertDescription>
-            No training data yet. Upload documents to start training this AI agent.
-          </AlertDescription>
-        </Alert>
-      ) : (
-        <div className="space-y-4">
-          {trainingData.map((training) => {
-            const entities = getEntityData(training);
-            const feedbackCount = Object.keys(training.field_feedback || {}).length;
-            
-            return (
-              <Card key={training.id} className="overflow-hidden">
-                <CardHeader className="bg-slate-50">
-                  <div className="flex items-center justify-between">
-                    <div>
-                      <CardTitle className="text-base">{training.file_name}</CardTitle>
-                      <CardDescription>
-                        {entities.length} entries extracted • {feedbackCount} fields reviewed
-                      </CardDescription>
-                    </div>
-                    <Badge className={
-                      training.overall_status === 'approved' ? 'bg-green-100 text-green-700' :
-                      training.overall_status === 'rejected' ? 'bg-red-100 text-red-700' :
-                      training.overall_status === 'partially_approved' ? 'bg-blue-100 text-blue-700' :
-                      'bg-amber-100 text-amber-700'
-                    }>
-                      {training.overall_status.replace('_', ' ')}
-                    </Badge>
-                  </div>
-                </CardHeader>
-                <CardContent className="pt-4">
-                  {selectedTraining?.id === training.id ? (
-                    <div className="space-y-4">
-                      {entities.map((entity, entityIdx) => (
-                        <Card key={entityIdx} className="border-slate-200">
-                          <CardHeader className="pb-3">
-                            <CardTitle className="text-sm">
-                              Entry #{entityIdx + 1}
-                            </CardTitle>
-                          </CardHeader>
-                          <CardContent className="space-y-3">
-                            {Object.entries(entity).map(([field, value]) => {
-                              const fieldPath = `${entityIdx}.${field}`;
-                              const feedback = training.field_feedback?.[fieldPath];
-                              const isEditing = editingField === fieldPath;
-                              
-                              return (
-                                <div key={field} className="flex items-start gap-3 p-3 bg-slate-50 rounded-lg">
-                                  <div className="flex-1">
-                                    <div className="flex items-center gap-2 mb-1">
-                                      <p className="text-xs font-medium text-slate-700">{field}</p>
-                                      {feedback && (
-                                        <Badge variant="outline" className={feedback.correct ? 'border-green-500 text-green-700' : 'border-red-500 text-red-700'}>
-                                          {feedback.correct ? <CheckCircle className="w-3 h-3 mr-1" /> : <XCircle className="w-3 h-3 mr-1" />}
-                                          {feedback.correct ? 'Correct' : 'Incorrect'}
-                                        </Badge>
-                                      )}
-                                    </div>
-                                    {isEditing ? (
-                                      <Input
-                                        value={fieldValue}
-                                        onChange={(e) => setFieldValue(e.target.value)}
-                                        className="mb-2"
-                                      />
-                                    ) : (
-                                      <p className="text-sm text-slate-900">{renderFieldValue(feedback?.corrected_value || value)}</p>
-                                    )}
-                                    {feedback?.notes && (
-                                      <p className="text-xs text-slate-500 mt-1">{feedback.notes}</p>
-                                    )}
-                                  </div>
-                                  <div className="flex gap-1">
-                                    {isEditing ? (
-                                      <Button
-                                        size="sm"
-                                        variant="ghost"
-                                        onClick={() => {
-                                          updateFieldMutation.mutate({
-                                            trainingId: training.id,
-                                            fieldPath,
-                                            isCorrect: false,
-                                            correctedValue: fieldValue,
-                                            notes: 'Corrected by admin'
-                                          });
-                                        }}
-                                      >
-                                        <Save className="w-3 h-3" />
-                                      </Button>
-                                    ) : (
-                                      <>
-                                        <Button
-                                          size="sm"
-                                          variant="ghost"
-                                          className="text-green-600 hover:text-green-700"
-                                          onClick={() => {
-                                            updateFieldMutation.mutate({
-                                              trainingId: training.id,
-                                              fieldPath,
-                                              isCorrect: true,
-                                              correctedValue: value
-                                            });
-                                          }}
-                                        >
-                                          <CheckCircle className="w-4 h-4" />
-                                        </Button>
-                                        <Button
-                                          size="sm"
-                                          variant="ghost"
-                                          className="text-red-600 hover:text-red-700"
-                                          onClick={() => {
-                                            setEditingField(fieldPath);
-                                            setFieldValue(renderFieldValue(value));
-                                          }}
-                                        >
-                                          <XCircle className="w-4 h-4" />
-                                        </Button>
-                                      </>
-                                    )}
-                                  </div>
-                                </div>
-                              );
-                            })}
-                          </CardContent>
-                        </Card>
-                      ))}
-                      
-                      <div className="flex justify-end pt-4 border-t">
-                        <Button
-                          variant="outline"
-                          onClick={() => setSelectedTraining(null)}
-                        >
-                          Close
-                        </Button>
-                      </div>
-                    </div>
-                  ) : (
-                    <Button
-                      variant="outline"
-                      onClick={() => setSelectedTraining(training)}
-                      className="w-full"
-                    >
-                      Review Extraction ({entities.length} entries)
-                    </Button>
-                  )}
-                </CardContent>
-              </Card>
-            );
-          })}
-        </div>
-      )}
 
       {interactiveMode && (
         <Card className={`border-2 ${colors.border}`}>
@@ -911,8 +757,6 @@ Provide: name, code, ib_level, ib_group, and available_levels (HL/SL if DP).`;
           </CardContent>
         </Card>
       )}
-
-      <TrainingChat agentName={agentName} agentTitle={agentTitle} />
 
       <UploadProgressDialog 
         open={uploadingFile}

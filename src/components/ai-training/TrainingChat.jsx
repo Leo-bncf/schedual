@@ -7,7 +7,7 @@ import { ScrollArea } from "@/components/ui/scroll-area";
 import { MessageCircle, Send, Loader2 } from 'lucide-react';
 import ReactMarkdown from 'react-markdown';
 
-export default function TrainingChat({ agentName, agentTitle }) {
+export default function TrainingChat({ agentName, agentTitle, colors }) {
   const [conversation, setConversation] = useState(null);
   const [messages, setMessages] = useState([]);
   const [input, setInput] = useState('');
