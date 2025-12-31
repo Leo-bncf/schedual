@@ -116,15 +116,50 @@ Deno.serve(async (req) => {
     // Create ClassGroups
     const createdClassGroups = await base44.asServiceRole.entities.ClassGroup.bulkCreate(classGroupsToCreate);
 
-    // Update students with their ClassGroup IDs
+    // For each year_group, collect ALL subjects from ALL students in that year
+    const yearGroupSubjects = {};
+    
+    for (const [key, groupData] of Object.entries(studentsByYear)) {
+      const { year_group, ib_programme, students } = groupData;
+      const yearKey = `${ib_programme}_${year_group}`;
+      
+      // Only for PYP/MYP - collect all unique subjects
+      if (ib_programme === 'PYP' || ib_programme === 'MYP') {
+        yearGroupSubjects[yearKey] = [];
+        const seenSubjectIds = new Set();
+        
+        students.forEach(student => {
+          if (student.subject_choices && Array.isArray(student.subject_choices)) {
+            student.subject_choices.forEach(subj => {
+              if (!seenSubjectIds.has(subj.subject_id)) {
+                seenSubjectIds.add(subj.subject_id);
+                yearGroupSubjects[yearKey].push(subj);
+              }
+            });
+          }
+        });
+        
+        console.log(`Year ${year_group}: Merged ${yearGroupSubjects[yearKey].length} unique subjects from ${students.length} students`);
+      }
+    }
+
+    // Update students with their ClassGroup IDs AND synchronized subjects
     let successfulUpdates = 0;
     
     for (const classGroup of createdClassGroups) {
+      const yearKey = `${classGroup.ib_programme}_${classGroup.year_group}`;
+      const mergedSubjects = yearGroupSubjects[yearKey];
+      
       for (const studentId of classGroup.student_ids) {
         try {
-          await base44.asServiceRole.entities.Student.update(studentId, {
-            classgroup_id: classGroup.id
-          });
+          const updateData = { classgroup_id: classGroup.id };
+          
+          // For PYP/MYP: Update all students with the merged subject list
+          if (mergedSubjects) {
+            updateData.subject_choices = mergedSubjects;
+          }
+          
+          await base44.asServiceRole.entities.Student.update(studentId, updateData);
           successfulUpdates++;
         } catch (updateError) {
           console.error(`Failed to update student ${studentId}:`, updateError.message);
