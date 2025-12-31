@@ -828,13 +828,30 @@ Return EXACTLY 1 student object. Do not skip this student.`,
       // Fetch subjects to match names to IDs
       const subjectsList = await base44.entities.Subject.list();
       
+      // Get ALL subjects for auto-assignment
+      const programmeSubjects = await base44.entities.Subject.filter({ school_id: schoolId });
+      
+      const pypSubjects = programmeSubjects
+        .filter(s => s.ib_level === 'PYP' && s.is_active !== false)
+        .map(s => ({ subject_id: s.id, ib_group: s.ib_group }));
+      
+      const mypSubjects = programmeSubjects
+        .filter(s => s.ib_level === 'MYP' && s.is_active !== false)
+        .map(s => ({ subject_id: s.id, ib_group: s.ib_group }));
+
       const studentsToCreate = studentsData.map(student => {
         let subjectChoices = [];
         
-        // Process extracted subjects
-        if (student.subjects && Array.isArray(student.subjects)) {
+        // For PYP/MYP: Auto-assign ALL programme subjects
+        if (student.ib_programme === 'PYP') {
+          subjectChoices = pypSubjects;
+          console.log(`Auto-assigned ${pypSubjects.length} PYP subjects to ${student.full_name}`);
+        } else if (student.ib_programme === 'MYP') {
+          subjectChoices = mypSubjects;
+          console.log(`Auto-assigned ${mypSubjects.length} MYP subjects to ${student.full_name}`);
+        } else if (student.subjects && Array.isArray(student.subjects)) {
+          // For DP: Process extracted subjects
           subjectChoices = student.subjects.map(subj => {
-            // Find matching subject by name (case-insensitive)
             const matchedSubject = subjectsList.find(s => 
               s.name?.toLowerCase().includes(subj.name?.toLowerCase()) ||
               subj.name?.toLowerCase().includes(s.name?.toLowerCase())
@@ -843,7 +860,7 @@ Return EXACTLY 1 student object. Do not skip this student.`,
             if (matchedSubject) {
               return {
                 subject_id: matchedSubject.id,
-                level: subj.level || 'SL', // Default to SL if not specified
+                level: subj.level || 'SL',
                 ib_group: matchedSubject.ib_group
               };
             }
