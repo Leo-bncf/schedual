@@ -419,86 +419,8 @@ Return the complete list of ALL REAL student names from the document. NO inventi
 
       allNames = namesResult1?.student_names || [];
       console.log(`First pass found ${allNames.length} students`);
-
-      // Second pass: Double-check we got everyone
-      const namesResult2 = await callLLMWithRetry({
-        prompt: `We found these ${allNames.length} students: ${allNames.join(', ')}
-
-      CRITICAL VERIFICATION: Look through the ENTIRE document one more time and count ALL students.
-
-      IMPORTANT: If the same name appears multiple times in the document (e.g., two different students with the same name), include that name MULTIPLE TIMES in missing_students if we only found it once.
-
-      Return:
-      1. missing_students: Any student names NOT in the list above OR duplicate names that appear multiple times (preserve accents exactly)
-      2. total_count_in_document: Total number of students you found in the document (including duplicates)
-      3. confirmed: true if our list matches the document exactly
-
-      Count carefully and check every page/section.`,
-        file_urls: [file_url],
-        response_json_schema: {
-          type: "object",
-          properties: {
-            missing_students: {
-              type: "array",
-              items: { type: "string" }
-            },
-            total_count_in_document: { type: "number" },
-            confirmed: { type: "boolean" }
-          }
-        }
-      });
-
-      const missingStudents = namesResult2?.missing_students || [];
-      const totalInDoc = namesResult2?.total_count_in_document;
       
-      if (missingStudents.length > 0) {
-        console.log(`Second pass found ${missingStudents.length} additional students:`, missingStudents);
-        allNames = [...allNames, ...missingStudents];
-      }
-      
-      if (totalInDoc && totalInDoc > allNames.length) {
-        console.warn(`⚠️ Document has ${totalInDoc} students but we only found ${allNames.length}. ${totalInDoc - allNames.length} still missing!`);
-      }
-
-      // Verify no hallucinated names - check each name actually exists in document
-      setUploadState(prev => ({ 
-        ...prev, 
-        progress: 'Verifying extracted names...' 
-      }));
-
-      const verificationResult = await callLLMWithRetry({
-        prompt: `VERIFICATION TASK: Check if these names actually exist in the document.
-
-Names to verify: ${allNames.join(', ')}
-
-For EACH name above, search the document and confirm:
-- Does this EXACT name appear in the document? (yes/no)
-
-Return:
-- verified_names: Only names that actually exist in the document
-- hallucinated_names: Names that do NOT appear in the document (likely AI inventions)`,
-        file_urls: [file_url],
-        response_json_schema: {
-          type: "object",
-          properties: {
-            verified_names: {
-              type: "array",
-              items: { type: "string" }
-            },
-            hallucinated_names: {
-              type: "array",
-              items: { type: "string" }
-            }
-          }
-        }
-      });
-
-      if (verificationResult?.hallucinated_names?.length > 0) {
-        console.warn(`⚠️ Removed ${verificationResult.hallucinated_names.length} hallucinated names:`, verificationResult.hallucinated_names);
-        allNames = verificationResult.verified_names || allNames.filter(
-          name => !verificationResult.hallucinated_names.includes(name)
-        );
-      }
+      // STOP HERE - don't ask for more, it causes hallucinations
       
       if (allNames.length === 0) {
         throw new Error('No student names found in the document');
