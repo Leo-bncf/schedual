@@ -374,44 +374,49 @@ export default function Students() {
       setUploadState(prev => ({ ...prev, stage: 'extracting', progress: 'Learning from past corrections...' }));
 
       // Fetch training data to learn from past errors
-      const { data: trainingResponse } = await base44.functions.invoke('aiTrainingUpload', { 
-        action: 'list', 
-        agent_name: 'student_importer' 
-      });
-      const trainingData = trainingResponse?.data || [];
-
-      console.log(`📚 Found ${trainingData.length} training examples`);
-
-      // Build learning context from training data
       let learningContext = '';
-      if (trainingData.length > 0) {
-        const corrections = [];
-        
-        trainingData.forEach(training => {
-          if (training.field_feedback) {
-            Object.entries(training.field_feedback).forEach(([field, feedback]) => {
-              if (!feedback.was_correct && feedback.corrected !== undefined) {
-                corrections.push({
-                  field,
-                  original: feedback.original,
-                  corrected: feedback.corrected,
-                  notes: feedback.notes || ''
-                });
-              }
-            });
-          }
+      try {
+        const { data: trainingResponse } = await base44.functions.invoke('aiTrainingUpload', { 
+          action: 'list', 
+          agent_name: 'student_importer' 
         });
+        const trainingList = trainingResponse?.data || [];
 
-        if (corrections.length > 0) {
-          learningContext = '\n\nLEARNINGS FROM PAST CORRECTIONS:\n';
-          corrections.slice(-20).forEach(c => {
-            learningContext += `- ${c.field}: "${c.original}" was corrected to "${c.corrected}"`;
-            if (c.notes) learningContext += ` (${c.notes})`;
-            learningContext += '\n';
-          });
+        console.log(`📚 Found ${trainingList.length} training examples`);
+
+        // Build learning context from training data
+        if (trainingList.length > 0) {
+          const corrections = [];
           
-          console.log(`📝 Applying ${corrections.length} learnings from training data`);
+          trainingList.forEach(training => {
+            if (training?.field_feedback) {
+              Object.entries(training.field_feedback).forEach(([field, feedback]) => {
+                if (!feedback.was_correct && feedback.corrected !== undefined) {
+                  corrections.push({
+                    field,
+                    original: feedback.original,
+                    corrected: feedback.corrected,
+                    notes: feedback.notes || ''
+                  });
+                }
+              });
+            }
+          });
+
+          if (corrections.length > 0) {
+            learningContext = '\n\nLEARNINGS FROM PAST CORRECTIONS:\n';
+            corrections.slice(-20).forEach(c => {
+              learningContext += `- ${c.field}: "${c.original}" was corrected to "${c.corrected}"`;
+              if (c.notes) learningContext += ` (${c.notes})`;
+              learningContext += '\n';
+            });
+            
+            console.log(`📝 Applying ${corrections.length} learnings from training data`);
+          }
         }
+      } catch (error) {
+        console.warn('Could not fetch training data:', error);
+        // Continue without training context
       }
 
       setUploadState(prev => ({ ...prev, progress: 'AI analyzing document with learned patterns...' }));
