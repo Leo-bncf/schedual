@@ -29,6 +29,12 @@ const ADDITIONAL_USER_YEARLY_PRICE = 200;
 export default function Subscription() {
   const [additionalUsers, setAdditionalUsers] = useState(0);
   const [isProcessing, setIsProcessing] = useState(false);
+  const [buyUsersDialogOpen, setBuyUsersDialogOpen] = useState(false);
+  const [usersToBuy, setUsersToBuy] = useState(1);
+  const [inviteDialogOpen, setInviteDialogOpen] = useState(false);
+  const [inviteEmail, setInviteEmail] = useState('');
+
+  const queryClient = useQueryClient();
   const [hasTriedAutoCheckout, setHasTriedAutoCheckout] = useState(false);
 
   const { data: user, isLoading: userLoading } = useQuery({
