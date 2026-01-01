@@ -202,6 +202,11 @@ export default function Teachers() {
 - subjects: array of subject names they teach (e.g., ["Physics", "Chemistry"])
 - ib_levels: array of IB programme levels they can teach (PYP, MYP, and/or DP)
 
+IMPORTANT SUBJECT RULES:
+- In MYP, there are NO separate Geography or History classes. If a teacher's description mentions Geography or History, they teach "Individuals & Societies"
+- In PYP and MYP, there are NO Math levels (no HL/SL). There is only one type of Math for all PYP and MYP year levels
+- Only DP (Diploma Programme) has subject levels like HL/SL
+
 ${trainingFeedback ? `LESSONS FROM ADMIN FEEDBACK:\n${trainingFeedback}\n\n` : ''}
 
 Example: {"full_name": "John Smith", "email": "john@school.com", "subjects": ["Physics", "Chemistry"], "ib_levels": ["DP"]}`,
