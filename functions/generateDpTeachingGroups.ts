@@ -41,11 +41,23 @@ Deno.serve(async (req) => {
           }
           const subject = subjectById.get(choice.subject_id);
           if (!subject) {
-            warnings.push({ type: 'subject_not_found', student_id: student.id, subject_id: choice.subject_id });
+            warnings.push({ 
+              type: 'subject_not_found', 
+              student_id: student.id, 
+              subject_id: choice.subject_id,
+              message: `Subject ID ${choice.subject_id} not found in Subjects table` 
+            });
             return;
           }
           if (subject.ib_level !== 'DP') {
-            warnings.push({ type: 'not_dp_subject', student_id: student.id, subject_id: choice.subject_id, ib_level: subject.ib_level });
+            warnings.push({ 
+              type: 'not_dp_subject', 
+              student_id: student.id, 
+              subject_id: choice.subject_id, 
+              subject_name: subject.name,
+              ib_level: subject.ib_level,
+              message: `Subject "${subject.name}" is ${subject.ib_level}, not DP` 
+            });
             return;
           }
 

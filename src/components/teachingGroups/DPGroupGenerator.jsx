@@ -84,15 +84,18 @@ export default function DPGroupGenerator({ onComplete }) {
 
             {preview?.warnings > 0 && preview?.warnings_list && (
               <div className="p-4 rounded-lg bg-amber-50 border border-amber-200">
-                <p className="text-sm font-semibold text-amber-900 mb-2">⚠️ Warnings ({preview.warnings}):</p>
+                <p className="text-sm font-semibold text-amber-900 mb-2">⚠️ {preview.warnings} Issues Found</p>
+                <p className="text-xs text-amber-800 mb-3">
+                  Students have subject choices that either don't exist or aren't marked as DP subjects. Go to Subjects page and ensure all subjects have ib_level="DP".
+                </p>
                 <div className="space-y-1 max-h-40 overflow-y-auto">
-                  {preview.warnings_list.slice(0, 20).map((w, i) => (
-                    <p key={i} className="text-xs text-amber-800">
-                      • Student {w.student_id?.slice(-8)} has invalid subject_id: {w.subject_id?.slice(-8) || 'unknown'}
+                  {preview.warnings_list.slice(0, 15).map((w, i) => (
+                    <p key={i} className="text-xs text-amber-800 font-mono">
+                      • {w.message || `Student ${w.student_id?.slice(-8)}: ${w.subject_id?.slice(-8)}`}
                     </p>
                   ))}
-                  {preview.warnings_list.length > 20 && (
-                    <p className="text-xs text-amber-700 italic">...and {preview.warnings_list.length - 20} more</p>
+                  {preview.warnings_list.length > 15 && (
+                    <p className="text-xs text-amber-700 italic mt-2">...and {preview.warnings_list.length - 15} more issues</p>
                   )}
                 </div>
               </div>
