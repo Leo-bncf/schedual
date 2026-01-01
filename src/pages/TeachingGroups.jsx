@@ -162,13 +162,16 @@ export default function TeachingGroups() {
 
       <GenerateInfoDialog
         open={showGenerateDialog}
-        onOpenChange={setShowGenerateDialog}
+        onOpenChange={(open) => {
+          setShowGenerateDialog(open);
+          if (!open && showAIGenerator) setShowAIGenerator(false);
+        }}
         onConfirm={() => setShowAIGenerator(true)}
         type="teachinggroups"
       />
 
       {showAIGenerator && (
-        <AIGroupGenerator onComplete={() => setShowAIGenerator(false)} />
+        <AIGroupGenerator autoStart onComplete={() => setShowAIGenerator(false)} />
       )}
 
       <div className="flex flex-col sm:flex-row gap-4">
