@@ -1021,7 +1021,7 @@ export default function Settings() {
       </Dialog>
 
       {/* Invite Admin Dialog */}
-            <Dialog open={showInviteDialog} onOpenChange={setShowInviteDialog}>
+            <Dialog open={inviteDialogOpen} onOpenChange={setInviteDialogOpen}>
         <DialogContent>
           <DialogHeader>
             <DialogTitle>Invite School Admin</DialogTitle>
