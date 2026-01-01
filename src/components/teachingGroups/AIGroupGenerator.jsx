@@ -267,7 +267,7 @@ export default function AIGroupGenerator({ onComplete, autoStart = true }) {
               <div className="py-6 text-center text-sm text-slate-500">
                 Preparing data...
               </div>
-            )
+            )}
 
             {dpStudents.length === 0 && (
               <Alert>
