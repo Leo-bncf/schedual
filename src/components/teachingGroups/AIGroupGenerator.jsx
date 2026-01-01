@@ -41,6 +41,8 @@ export default function AIGroupGenerator({ onComplete }) {
     enabled: !!user?.school_id,
   });
 
+  const dpStudents = students.filter(s => s.ib_programme === 'DP' && s.is_active !== false);
+
   const createGroupsMutation = useMutation({
     mutationFn: (groups) => base44.entities.TeachingGroup.bulkCreate(groups),
     onSuccess: () => {
@@ -60,7 +62,7 @@ export default function AIGroupGenerator({ onComplete }) {
       // Organize students by subject + level + year_group (DP students in current school)
       const groupMap = {};
 
-      students.forEach(student => {
+      dpStudents.forEach(student => {
         if (!student.is_active) return;
 
         // Only process DP students - PYP/MYP use ClassGroups instead
@@ -200,6 +202,7 @@ export default function AIGroupGenerator({ onComplete }) {
 
     await createGroupsMutation.mutateAsync(groupsToCreate);
     setResults(null);
+    if (onComplete) onComplete();
   };
 
   return (
@@ -225,7 +228,7 @@ export default function AIGroupGenerator({ onComplete }) {
               </div>
               <Button 
                 onClick={generateGroups} 
-                disabled={isGenerating}
+                disabled={isGenerating || dpStudents.length === 0 || subjects.length === 0}
                 className="bg-indigo-600 hover:bg-indigo-700"
               >
                 {isGenerating ? (
@@ -247,6 +250,15 @@ export default function AIGroupGenerator({ onComplete }) {
                 <Loader2 className="w-8 h-8 animate-spin text-indigo-600 mx-auto mb-2" />
                 <p className="text-sm text-slate-500">Analyzing students and subjects...</p>
               </div>
+            )}
+
+            {dpStudents.length === 0 && (
+              <Alert>
+                <AlertCircle className="w-4 h-4" />
+                <AlertDescription className="text-sm">
+                  No DP students found. Please add DP students with subject choices to generate teaching groups.
+                </AlertDescription>
+              </Alert>
             )}
 
             <Alert>
