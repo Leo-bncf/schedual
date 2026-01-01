@@ -15,7 +15,9 @@ import {
   Plus,
   Minus,
   Loader2,
-  Shield
+  Shield,
+  ExternalLink,
+  XCircle
 } from 'lucide-react';
 import PageHeader from '../components/ui-custom/PageHeader';
 
@@ -108,6 +110,15 @@ export default function Subscription() {
   const isActive = school?.subscription_status === 'active';
   const isPastDue = school?.subscription_status === 'past_due';
 
+  const handleManageSubscription = () => {
+    if (school?.stripe_customer_id) {
+      // Redirect to Stripe Customer Portal
+      window.open(`https://billing.stripe.com/p/login/test_${school.stripe_customer_id}`, '_blank');
+    } else {
+      alert('No Stripe customer ID found. Please contact support.');
+    }
+  };
+
   return (
     <div className="space-y-6">
       <PageHeader 
@@ -119,24 +130,29 @@ export default function Subscription() {
       <Card className="border-0 shadow-sm">
         <CardHeader>
           <div className="flex items-center justify-between">
-            <CardTitle className="flex items-center gap-2">
-              <Shield className="w-5 h-5" />
-              Subscription Status
-            </CardTitle>
+            <div>
+              <CardTitle className="flex items-center gap-2 mb-2">
+                <Shield className="w-5 h-5" />
+                Subscription Status
+              </CardTitle>
+              <CardDescription>
+                Manage your plan, billing, and payment details
+              </CardDescription>
+            </div>
             {isActive && (
-              <Badge className="bg-emerald-100 text-emerald-700 border-0">
-                <CheckCircle className="w-3 h-3 mr-1" />
+              <Badge className="bg-emerald-100 text-emerald-700 border-0 text-sm px-3 py-1">
+                <CheckCircle className="w-4 h-4 mr-1.5" />
                 Active
               </Badge>
             )}
             {isPastDue && (
-              <Badge className="bg-amber-100 text-amber-700 border-0">
-                <AlertCircle className="w-3 h-3 mr-1" />
+              <Badge className="bg-amber-100 text-amber-700 border-0 text-sm px-3 py-1">
+                <AlertCircle className="w-4 h-4 mr-1.5" />
                 Payment Required
               </Badge>
             )}
             {!isActive && !isPastDue && (
-              <Badge variant="outline" className="text-slate-600">
+              <Badge variant="outline" className="text-slate-600 text-sm px-3 py-1">
                 Inactive
               </Badge>
             )}
@@ -144,35 +160,71 @@ export default function Subscription() {
         </CardHeader>
         <CardContent>
           {isActive ? (
-            <div className="space-y-4">
+            <div className="space-y-6">
               <div className="grid sm:grid-cols-3 gap-4">
-                <div className="p-4 rounded-lg bg-slate-50">
-                  <p className="text-sm text-slate-500 mb-1">Plan</p>
-                  <p className="text-lg font-semibold text-slate-900">Yearly</p>
+                <div className="p-4 rounded-lg bg-gradient-to-br from-blue-50 to-blue-100 border border-blue-200">
+                  <p className="text-xs font-medium text-blue-700 uppercase tracking-wide mb-2">Plan Type</p>
+                  <p className="text-2xl font-bold text-blue-900">Yearly</p>
+                  <p className="text-xs text-blue-600 mt-1">€{(BASE_YEARLY_PRICE + STORAGE_YEARLY_PRICE) / 12}/month</p>
                 </div>
-                <div className="p-4 rounded-lg bg-slate-50">
-                  <p className="text-sm text-slate-500 mb-1">Next Billing</p>
-                  <p className="text-lg font-semibold text-slate-900">
+                <div className="p-4 rounded-lg bg-gradient-to-br from-emerald-50 to-emerald-100 border border-emerald-200">
+                  <p className="text-xs font-medium text-emerald-700 uppercase tracking-wide mb-2">Next Billing Date</p>
+                  <p className="text-2xl font-bold text-emerald-900">
                     {school.subscription_end_date 
-                      ? new Date(school.subscription_end_date).toLocaleDateString()
+                      ? new Date(school.subscription_end_date).toLocaleDateString('en-US', { month: 'short', day: 'numeric' })
                       : 'N/A'
                     }
                   </p>
-                </div>
-                <div className="p-4 rounded-lg bg-slate-50">
-                  <p className="text-sm text-slate-500 mb-1">Additional Users</p>
-                  <p className="text-lg font-semibold text-slate-900">
-                    {school.max_additional_users || 0} seats
+                  <p className="text-xs text-emerald-600 mt-1">
+                    {school.subscription_end_date 
+                      ? new Date(school.subscription_end_date).toLocaleDateString('en-US', { year: 'numeric' })
+                      : ''
+                    }
                   </p>
                 </div>
+                <div className="p-4 rounded-lg bg-gradient-to-br from-violet-50 to-violet-100 border border-violet-200">
+                  <p className="text-xs font-medium text-violet-700 uppercase tracking-wide mb-2">Extra Users</p>
+                  <p className="text-2xl font-bold text-violet-900">
+                    {school.max_additional_users || 0}
+                  </p>
+                  <p className="text-xs text-violet-600 mt-1">additional seats</p>
+                </div>
+              </div>
+
+              {/* Action Buttons */}
+              <div className="flex flex-col sm:flex-row gap-3 pt-4 border-t border-slate-200">
+                <Button 
+                  variant="outline" 
+                  className="flex-1 border-blue-200 text-blue-700 hover:bg-blue-50"
+                  onClick={handleManageSubscription}
+                >
+                  <ExternalLink className="w-4 h-4 mr-2" />
+                  Manage Payment Methods
+                </Button>
+                <Button 
+                  variant="outline" 
+                  className="flex-1 border-rose-200 text-rose-700 hover:bg-rose-50"
+                  onClick={handleManageSubscription}
+                >
+                  <XCircle className="w-4 h-4 mr-2" />
+                  Cancel Subscription
+                </Button>
+              </div>
+
+              <div className="p-3 rounded-lg bg-blue-50 border border-blue-200">
+                <p className="text-xs text-blue-800">
+                  <strong>Note:</strong> Clicking these buttons will redirect you to Stripe's secure portal where you can manage your subscription, update payment methods, view invoices, and cancel if needed.
+                </p>
               </div>
             </div>
           ) : (
-            <div className="text-center py-6">
-              <AlertCircle className="w-12 h-12 text-amber-500 mx-auto mb-3" />
-              <h3 className="text-lg font-semibold text-slate-900 mb-2">No Active Subscription</h3>
-              <p className="text-slate-600 mb-4">
-                Subscribe to unlock full access to Schedual
+            <div className="text-center py-8">
+              <div className="w-16 h-16 rounded-full bg-amber-100 flex items-center justify-center mx-auto mb-4">
+                <AlertCircle className="w-8 h-8 text-amber-600" />
+              </div>
+              <h3 className="text-xl font-bold text-slate-900 mb-2">No Active Subscription</h3>
+              <p className="text-slate-600 mb-6 max-w-md mx-auto">
+                Subscribe now to unlock AI-powered scheduling, conflict resolution, and IB compliance features for your school.
               </p>
             </div>
           )}
@@ -180,99 +232,122 @@ export default function Subscription() {
       </Card>
 
       {/* Pricing Calculator */}
-      <Card className="border-0 shadow-lg bg-gradient-to-br from-blue-50 to-blue-100">
+      <Card className="border-0 shadow-lg bg-gradient-to-br from-blue-50 via-indigo-50 to-violet-50">
         <CardHeader>
-          <CardTitle className="text-2xl">Yearly Subscription</CardTitle>
-          <CardDescription>All-inclusive pricing with secure data storage</CardDescription>
+          <CardTitle className="text-3xl bg-gradient-to-r from-blue-900 to-violet-900 bg-clip-text text-transparent">
+            Yearly Subscription
+          </CardTitle>
+          <CardDescription className="text-base">
+            Complete scheduling solution with AI-powered features
+          </CardDescription>
         </CardHeader>
         <CardContent className="space-y-6">
           {/* Base Price Breakdown */}
           <div className="space-y-3">
-            <div className="flex justify-between items-center p-4 rounded-lg bg-white">
-              <div className="flex items-center gap-3">
-                <div className="w-10 h-10 rounded-lg bg-blue-100 flex items-center justify-center">
-                  <CreditCard className="w-5 h-5 text-blue-900" />
+            <div className="flex justify-between items-center p-5 rounded-xl bg-white shadow-sm border border-slate-200">
+              <div className="flex items-center gap-4">
+                <div className="w-12 h-12 rounded-xl bg-gradient-to-br from-blue-500 to-blue-600 flex items-center justify-center shadow-md">
+                  <CreditCard className="w-6 h-6 text-white" />
                 </div>
                 <div>
-                  <p className="font-semibold text-slate-900">Base Platform</p>
-                  <p className="text-sm text-slate-500">Full scheduling features</p>
+                  <p className="font-bold text-slate-900 text-lg">Base Platform</p>
+                  <p className="text-sm text-slate-600">Full scheduling + AI features</p>
                 </div>
               </div>
-              <p className="text-lg font-bold text-slate-900">€{BASE_YEARLY_PRICE}/year</p>
+              <div className="text-right">
+                <p className="text-2xl font-bold text-slate-900">€{BASE_YEARLY_PRICE}</p>
+                <p className="text-xs text-slate-500">/year</p>
+              </div>
             </div>
 
-            <div className="flex justify-between items-center p-4 rounded-lg bg-white">
-              <div className="flex items-center gap-3">
-                <div className="w-10 h-10 rounded-lg bg-blue-100 flex items-center justify-center">
-                  <Database className="w-5 h-5 text-blue-900" />
+            <div className="flex justify-between items-center p-5 rounded-xl bg-white shadow-sm border border-slate-200">
+              <div className="flex items-center gap-4">
+                <div className="w-12 h-12 rounded-xl bg-gradient-to-br from-indigo-500 to-indigo-600 flex items-center justify-center shadow-md">
+                  <Database className="w-6 h-6 text-white" />
                 </div>
                 <div>
-                  <p className="font-semibold text-slate-900">Secure Data Storage</p>
-                  <p className="text-sm text-slate-500">€20/month included</p>
+                  <p className="font-bold text-slate-900 text-lg">Cloud Storage</p>
+                  <p className="text-sm text-slate-600">Secure & backed up (€20/month)</p>
                 </div>
               </div>
-              <p className="text-lg font-bold text-slate-900">€{STORAGE_YEARLY_PRICE}/year</p>
+              <div className="text-right">
+                <p className="text-2xl font-bold text-slate-900">€{STORAGE_YEARLY_PRICE}</p>
+                <p className="text-xs text-slate-500">/year</p>
+              </div>
             </div>
 
             {/* Additional Users */}
-            <div className="p-4 rounded-lg bg-white border-2 border-blue-200">
-              <div className="flex justify-between items-start mb-4">
-                <div className="flex items-center gap-3">
-                  <div className="w-10 h-10 rounded-lg bg-emerald-100 flex items-center justify-center">
-                    <Users className="w-5 h-5 text-emerald-600" />
+            <div className="p-6 rounded-xl bg-white shadow-sm border-2 border-emerald-200">
+              <div className="flex justify-between items-center mb-5">
+                <div className="flex items-center gap-4">
+                  <div className="w-12 h-12 rounded-xl bg-gradient-to-br from-emerald-500 to-emerald-600 flex items-center justify-center shadow-md">
+                    <Users className="w-6 h-6 text-white" />
                   </div>
                   <div>
-                    <p className="font-semibold text-slate-900">Additional User Accounts</p>
-                    <p className="text-sm text-slate-500">€{ADDITIONAL_USER_YEARLY_PRICE}/year per account</p>
+                    <p className="font-bold text-slate-900 text-lg">Extra User Accounts</p>
+                    <p className="text-sm text-slate-600">€{ADDITIONAL_USER_YEARLY_PRICE}/year per additional user</p>
                   </div>
                 </div>
               </div>
-              <div className="flex items-center gap-4">
-                <Label className="text-slate-700">Number of extra accounts:</Label>
-                <div className="flex items-center gap-2">
+              <div className="flex flex-col sm:flex-row items-center gap-4">
+                <Label className="text-slate-700 font-medium">How many extra users?</Label>
+                <div className="flex items-center gap-3">
                   <Button
                     variant="outline"
                     size="icon"
+                    className="h-10 w-10 rounded-lg"
                     onClick={() => setAdditionalUsers(Math.max(0, additionalUsers - 1))}
                     disabled={additionalUsers === 0}
                   >
-                    <Minus className="w-4 h-4" />
+                    <Minus className="w-5 h-5" />
                   </Button>
                   <Input
                     type="number"
                     min="0"
                     value={additionalUsers}
                     onChange={(e) => setAdditionalUsers(Math.max(0, parseInt(e.target.value) || 0))}
-                    className="w-20 text-center"
+                    className="w-24 text-center text-xl font-bold h-10"
                   />
                   <Button
                     variant="outline"
                     size="icon"
+                    className="h-10 w-10 rounded-lg"
                     onClick={() => setAdditionalUsers(additionalUsers + 1)}
                   >
-                    <Plus className="w-4 h-4" />
+                    <Plus className="w-5 h-5" />
                   </Button>
                 </div>
-                <p className="text-lg font-bold text-slate-900 ml-auto">
-                  €{additionalUsers * ADDITIONAL_USER_YEARLY_PRICE}/year
-                </p>
+                <div className="text-right ml-auto">
+                  <p className="text-2xl font-bold text-emerald-700">
+                    €{additionalUsers * ADDITIONAL_USER_YEARLY_PRICE}
+                  </p>
+                  <p className="text-xs text-slate-500">/year</p>
+                </div>
               </div>
             </div>
           </div>
 
           {/* Total */}
-          <div className="border-t-2 border-blue-200 pt-4">
-            <div className="flex justify-between items-center">
-              <p className="text-xl font-bold text-slate-900">Total Yearly Price</p>
-              <p className="text-3xl font-bold text-blue-900">€{totalYearlyPrice}/year</p>
+          <div className="border-t-2 border-slate-200 pt-6 mt-2">
+            <div className="flex justify-between items-center p-6 rounded-xl bg-gradient-to-r from-blue-900 to-violet-900 text-white">
+              <div>
+                <p className="text-sm font-medium opacity-90 mb-1">Total Annual Price</p>
+                <p className="text-4xl font-bold">€{totalYearlyPrice}</p>
+                <p className="text-sm opacity-75 mt-2">
+                  That's just €{Math.round(totalYearlyPrice / 12)}/month • Cancel anytime
+                </p>
+              </div>
+              <div className="text-right">
+                <Badge className="bg-white/20 text-white border-0 text-sm px-3 py-1.5">
+                  <CheckCircle className="w-4 h-4 mr-1.5" />
+                  Best Value
+                </Badge>
+              </div>
             </div>
-            <p className="text-sm text-slate-500 text-right mt-1">
-              Billed annually • Cancel anytime
-            </p>
           </div>
 
           {/* Features */}
-          <div className="grid sm:grid-cols-2 gap-3 pt-4">
+          <div className="grid sm:grid-cols-2 gap-3">
             {[
               'Unlimited teachers & students',
               'AI-powered scheduling',
@@ -283,87 +358,64 @@ export default function Subscription() {
               'Regular updates',
               'Export & reporting'
             ].map((feature, i) => (
-              <div key={i} className="flex items-center gap-2">
-                <CheckCircle className="w-4 h-4 text-emerald-600 flex-shrink-0" />
-                <span className="text-sm text-slate-700">{feature}</span>
+              <div key={i} className="flex items-center gap-3 p-3 rounded-lg bg-white/50">
+                <div className="w-5 h-5 rounded-full bg-emerald-100 flex items-center justify-center flex-shrink-0">
+                  <CheckCircle className="w-3.5 h-3.5 text-emerald-600" />
+                </div>
+                <span className="text-sm font-medium text-slate-800">{feature}</span>
               </div>
             ))}
           </div>
 
           {/* Checkout Button */}
           <Button
-            className="w-full py-6 text-lg bg-gradient-to-r from-blue-900 to-blue-800 hover:from-blue-800 hover:to-blue-700"
+            className="w-full py-7 text-xl font-bold bg-gradient-to-r from-emerald-600 to-emerald-500 hover:from-emerald-700 hover:to-emerald-600 shadow-xl hover:shadow-2xl transition-all duration-200 transform hover:scale-[1.02]"
             onClick={handleCheckout}
             disabled={isProcessing || isActive}
           >
             {isProcessing ? (
               <>
-                <Loader2 className="w-5 h-5 mr-2 animate-spin" />
-                Processing...
+                <Loader2 className="w-6 h-6 mr-2 animate-spin" />
+                Processing Payment...
               </>
             ) : isActive ? (
               <>
-                <CheckCircle className="w-5 h-5 mr-2" />
+                <CheckCircle className="w-6 h-6 mr-2" />
                 Already Subscribed
               </>
             ) : (
               <>
-                <CreditCard className="w-5 h-5 mr-2" />
+                <CreditCard className="w-6 h-6 mr-2" />
                 Subscribe Now - €{totalYearlyPrice}/year
               </>
             )}
           </Button>
 
-          <p className="text-xs text-center text-slate-500">
-            Secure payment via Stripe • 30-day money-back guarantee
-          </p>
+          <div className="text-center space-y-2">
+            <p className="text-sm text-slate-600 flex items-center justify-center gap-2">
+              <Shield className="w-4 h-4 text-emerald-600" />
+              Secure payment via Stripe • 30-day money-back guarantee
+            </p>
+          </div>
         </CardContent>
       </Card>
 
-      {/* Manage Subscription for Active Users */}
-      {isActive && (
-        <Card className="border-0 shadow-sm">
-          <CardHeader>
-            <CardTitle className="flex items-center gap-2">
-              <Users className="w-5 h-5" />
-              Add More User Accounts
-            </CardTitle>
-            <CardDescription>
-              Need more team members? Add additional user accounts to your subscription.
-            </CardDescription>
-          </CardHeader>
-          <CardContent className="space-y-4">
-            <div className="p-4 rounded-lg bg-slate-50 border border-slate-200">
-              <div className="flex items-center justify-between mb-3">
-                <div>
-                  <p className="font-semibold text-slate-900">Current Additional Users</p>
-                  <p className="text-sm text-slate-500">Extra accounts beyond base subscription</p>
-                </div>
-                <Badge className="bg-blue-100 text-blue-900 border-0">
-                  {school.max_additional_users || 0} accounts
-                </Badge>
-              </div>
-              <p className="text-sm text-slate-600">
-                To modify your user count, please contact support or manage your subscription through the Stripe customer portal.
-              </p>
-            </div>
-            <Button variant="outline" className="w-full" disabled>
-              <CreditCard className="w-4 h-4 mr-2" />
-              Manage via Stripe Portal (Coming Soon)
-            </Button>
-          </CardContent>
-        </Card>
-      )}
+
 
       {/* Help Card */}
-      <Card className="border-slate-200 bg-slate-50">
+      <Card className="border-blue-200 bg-gradient-to-br from-blue-50 to-indigo-50">
         <CardContent className="p-6">
-          <div className="flex gap-3">
-            <AlertCircle className="w-5 h-5 text-slate-600 flex-shrink-0 mt-0.5" />
-            <div className="text-sm text-slate-700">
-              <p className="font-semibold mb-2">Need Help?</p>
-              <p className="mb-3">
-                If you have questions about your subscription, billing, or need to make changes, contact us at support@schedual-pro.com
+          <div className="flex gap-4">
+            <div className="w-10 h-10 rounded-lg bg-blue-100 flex items-center justify-center flex-shrink-0">
+              <AlertCircle className="w-5 h-5 text-blue-600" />
+            </div>
+            <div>
+              <p className="font-bold text-slate-900 mb-2 text-lg">Need Help?</p>
+              <p className="text-slate-700 mb-3">
+                Have questions about your subscription, billing, or need to make changes? We're here to help!
+              </p>
+              <p className="text-sm text-slate-600">
+                Email us at <a href="mailto:support@schedual-pro.com" className="text-blue-700 font-semibold hover:underline">support@schedual-pro.com</a>
               </p>
             </div>
           </div>
