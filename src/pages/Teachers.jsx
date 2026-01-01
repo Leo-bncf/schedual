@@ -704,7 +704,14 @@ Example: {"full_name": "John Smith", "email": "john@school.com", "subjects": ["P
               <QualificationManager 
                 subjects={subjects}
                 qualifications={formData.qualifications}
-                onChange={(quals) => setFormData({ ...formData, qualifications: quals })}
+                onChange={(quals) => {
+                  // Update qualifications
+                  setFormData({ ...formData, qualifications: quals });
+                  
+                  // Sync subjects array with qualifications
+                  const subjectIds = quals.map(q => q.subject_id);
+                  setFormData(prev => ({ ...prev, subjects: subjectIds, qualifications: quals }));
+                }}
               />
             </div>
 
