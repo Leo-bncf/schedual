@@ -35,21 +35,17 @@ Deno.serve(async (req) => {
         if (choices.length === 0) return;
 
         choices.forEach((choice) => {
-          if (!choice?.subject_id) {
-            warnings.push({ type: 'missing_subject_id', student_id: student.id, subject_id: 'none' });
-            return;
-          }
+          if (!choice?.subject_id) return;
+          
           const subject = subjectById.get(choice.subject_id);
           if (!subject) {
             warnings.push({ 
               type: 'subject_not_found', 
               student_id: student.id, 
-              subject_id: choice.subject_id,
-              message: `Subject ID ${choice.subject_id} not found in Subjects table` 
+              subject_id: choice.subject_id 
             });
             return;
           }
-          // No ib_level check - if DP student chose it, group it
 
           const level = choice.level === 'HL' ? 'HL' : 'SL';
           const yearGroup = student.year_group || 'DP1';
