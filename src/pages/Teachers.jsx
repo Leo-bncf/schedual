@@ -612,16 +612,8 @@ Example: {"full_name": "John Smith", "email": "john@school.com", "subjects": ["P
         </motion.div>
       )}
 
-      <AnimatePresence>
-        {isDialogOpen && (
-          <Dialog open={isDialogOpen} onOpenChange={(open) => { if (!open) resetForm(); }}>
-            <DialogContent className="sm:max-w-2xl max-h-[90vh] overflow-y-auto" asChild>
-              <motion.div
-                initial={{ opacity: 0, scale: 0.95, y: 10 }}
-                animate={{ opacity: 1, scale: 1, y: 0 }}
-                exit={{ opacity: 0, scale: 0.95, y: 10 }}
-                transition={{ duration: 0.2, ease: "easeOut" }}
-              >
+      <Dialog open={isDialogOpen} onOpenChange={(open) => { if (!open) resetForm(); }}>
+        <DialogContent className="sm:max-w-2xl max-h-[90vh] overflow-y-auto">
           <DialogHeader>
             <DialogTitle className="text-2xl">{editingTeacher ? 'Edit Teacher' : 'Add New Teacher'}</DialogTitle>
             <DialogDescription>
@@ -728,11 +720,8 @@ Example: {"full_name": "John Smith", "email": "john@school.com", "subjects": ["P
               </Button>
             </DialogFooter>
           </form>
-              </motion.div>
-            </DialogContent>
-          </Dialog>
-        )}
-      </AnimatePresence>
+        </DialogContent>
+      </Dialog>
 
       <UploadProgressDialog 
         open={uploadState.isUploading}
