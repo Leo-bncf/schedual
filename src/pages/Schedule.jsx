@@ -405,34 +405,34 @@ export default function Schedule() {
             teacherSchedules[teacherId] = [];
           }
 
-        // If no students assigned, try to find matching students
+        // If no students assigned, try to find matching students from their ClassGroup
         if (studentIds.length === 0 && group.subject_id && group.year_group) {
           const matchingStudents = students.filter(s => {
-            // Match by year_group
-            if (s.year_group !== group.year_group) return false;
-            
             // Skip inactive students
             if (s.is_active === false) return false;
+            
+            // Match by year_group
+            if (s.year_group !== group.year_group) return false;
 
-            // For DP students, check subject choices
+            // For DP students, check subject choices AND ClassGroup
             if (s.ib_programme === 'DP' && s.subject_choices) {
-              return s.subject_choices.some(choice => choice.subject_id === group.subject_id);
-            }
-
-            // For MYP/PYP, ALL students in the same year group take ALL subjects together
-            if (s.ib_programme === 'MYP' || s.ib_programme === 'PYP') {
-              // Check if subject is for the correct programme
-              const subject = subjects.find(subj => subj.id === group.subject_id);
-              if (subject && subject.ib_level === s.ib_programme) {
-                return true;
-              }
+              // Check if student chose this subject at this level
+              const hasSubject = s.subject_choices.some(choice => 
+                choice.subject_id === group.subject_id && 
+                (!group.level || choice.level === group.level)
+              );
+              return hasSubject;
             }
 
             return false;
           });
 
           studentIds = matchingStudents.map(s => s.id);
-          console.log(`Auto-assigned ${studentIds.length} ${level} students to "${group.name}"`);
+          
+          // Get all unique ClassGroups these students belong to
+          const studentClassGroups = new Set(matchingStudents.map(s => s.classgroup_id).filter(Boolean));
+          
+          console.log(`Auto-assigned ${studentIds.length} DP students from ${studentClassGroups.size} ClassGroup(s) to "${group.name}"`);
           
           // Update the teaching group with student assignments
           if (studentIds.length > 0) {
