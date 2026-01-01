@@ -38,7 +38,13 @@ import {
   Mail,
   UserPlus,
   AlertCircle,
-  XCircle
+  XCircle,
+  Info,
+  Globe,
+  MapPin,
+  Hash,
+  School,
+  Timer
 } from 'lucide-react';
 import PageHeader from '../components/ui-custom/PageHeader';
 import { toast } from 'sonner';
@@ -236,67 +242,147 @@ export default function Settings() {
       />
 
       <Tabs defaultValue="school" className="space-y-6">
-        <TabsList className="bg-slate-100">
-          <TabsTrigger value="school" className="flex items-center gap-2">
-            <Building2 className="w-4 h-4" />
-            School Info
+        <TabsList className="grid grid-cols-4 w-full max-w-2xl bg-gradient-to-r from-slate-100 to-slate-200 p-1 h-auto">
+          <TabsTrigger value="school" className="flex flex-col items-center gap-1.5 py-3 data-[state=active]:bg-white data-[state=active]:shadow-md">
+            <Building2 className="w-5 h-5" />
+            <span className="text-xs font-medium">School Info</span>
           </TabsTrigger>
-          <TabsTrigger value="schedule" className="flex items-center gap-2">
-            <Calendar className="w-4 h-4" />
-            Schedule Settings
+          <TabsTrigger value="schedule" className="flex flex-col items-center gap-1.5 py-3 data-[state=active]:bg-white data-[state=active]:shadow-md">
+            <Calendar className="w-5 h-5" />
+            <span className="text-xs font-medium">Schedule</span>
           </TabsTrigger>
-          <TabsTrigger value="subscription" className="flex items-center gap-2">
-            <CreditCard className="w-4 h-4" />
-            Subscription
+          <TabsTrigger value="subscription" className="flex flex-col items-center gap-1.5 py-3 data-[state=active]:bg-white data-[state=active]:shadow-md">
+            <CreditCard className="w-5 h-5" />
+            <span className="text-xs font-medium">Billing</span>
           </TabsTrigger>
-          <TabsTrigger value="notifications" className="flex items-center gap-2">
-            <Bell className="w-4 h-4" />
-            Notifications
+          <TabsTrigger value="notifications" className="flex flex-col items-center gap-1.5 py-3 data-[state=active]:bg-white data-[state=active]:shadow-md">
+            <Bell className="w-5 h-5" />
+            <span className="text-xs font-medium">Alerts</span>
           </TabsTrigger>
         </TabsList>
 
         <TabsContent value="school">
-          <Card className="border-0 shadow-sm">
-            <CardHeader>
-              <CardTitle>School Information</CardTitle>
-              <CardDescription>Basic information about your school</CardDescription>
-            </CardHeader>
-            <CardContent className="space-y-6">
-              <div className="grid sm:grid-cols-2 gap-6">
+          <div className="space-y-6">
+            {/* Basic Information */}
+            <Card className="border-0 shadow-md">
+              <CardHeader className="bg-gradient-to-r from-blue-50 to-indigo-50">
+                <div className="flex items-center gap-3">
+                  <div className="p-2 rounded-lg bg-blue-100">
+                    <School className="w-5 h-5 text-blue-700" />
+                  </div>
+                  <div>
+                    <CardTitle className="text-lg">Basic Information</CardTitle>
+                    <CardDescription>Essential details about your school</CardDescription>
+                  </div>
+                </div>
+              </CardHeader>
+              <CardContent className="pt-6">
+                <div className="grid sm:grid-cols-2 gap-6">
+                  <div className="space-y-2">
+                    <Label htmlFor="name" className="flex items-center gap-2 text-sm font-semibold">
+                      <Building2 className="w-4 h-4 text-indigo-600" />
+                      School Name *
+                    </Label>
+                    <Input 
+                      id="name"
+                      value={formData.name}
+                      onChange={(e) => setFormData({ ...formData, name: e.target.value })}
+                      placeholder="e.g., International School of Geneva"
+                      className="h-11"
+                    />
+                    <p className="text-xs text-slate-500">Official name of your institution</p>
+                  </div>
+                  <div className="space-y-2">
+                    <Label htmlFor="code" className="flex items-center gap-2 text-sm font-semibold">
+                      <Hash className="w-4 h-4 text-indigo-600" />
+                      School Code *
+                    </Label>
+                    <Input 
+                      id="code"
+                      value={formData.code}
+                      onChange={(e) => setFormData({ ...formData, code: e.target.value })}
+                      placeholder="e.g., ISG"
+                      className="h-11"
+                    />
+                    <p className="text-xs text-slate-500">Short identifier for your school</p>
+                  </div>
+                  <div className="space-y-2">
+                    <Label htmlFor="ib_school_code" className="flex items-center gap-2 text-sm font-semibold">
+                      <Shield className="w-4 h-4 text-indigo-600" />
+                      IB World School Code
+                    </Label>
+                    <Input 
+                      id="ib_school_code"
+                      value={formData.ib_school_code}
+                      onChange={(e) => setFormData({ ...formData, ib_school_code: e.target.value })}
+                      placeholder="e.g., 001234"
+                      className="h-11"
+                    />
+                    <p className="text-xs text-slate-500">Official IB organization code</p>
+                  </div>
+                  <div className="space-y-2">
+                    <Label htmlFor="academic_year" className="flex items-center gap-2 text-sm font-semibold">
+                      <Calendar className="w-4 h-4 text-indigo-600" />
+                      Academic Year
+                    </Label>
+                    <Select 
+                      value={formData.academic_year} 
+                      onValueChange={(value) => setFormData({ ...formData, academic_year: value })}
+                    >
+                      <SelectTrigger className="h-11">
+                        <SelectValue />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="2023-2024">2023-2024</SelectItem>
+                        <SelectItem value="2024-2025">2024-2025</SelectItem>
+                        <SelectItem value="2025-2026">2025-2026</SelectItem>
+                        <SelectItem value="2026-2027">2026-2027</SelectItem>
+                      </SelectContent>
+                    </Select>
+                    <p className="text-xs text-slate-500">Current academic year</p>
+                  </div>
+                </div>
+              </CardContent>
+            </Card>
+
+            {/* Location & Timezone */}
+            <Card className="border-0 shadow-md">
+              <CardHeader className="bg-gradient-to-r from-emerald-50 to-teal-50">
+                <div className="flex items-center gap-3">
+                  <div className="p-2 rounded-lg bg-emerald-100">
+                    <Globe className="w-5 h-5 text-emerald-700" />
+                  </div>
+                  <div>
+                    <CardTitle className="text-lg">Location & Timezone</CardTitle>
+                    <CardDescription>Where your school is located</CardDescription>
+                  </div>
+                </div>
+              </CardHeader>
+              <CardContent className="pt-6 space-y-6">
                 <div className="space-y-2">
-                  <Label htmlFor="name">School Name *</Label>
+                  <Label htmlFor="address" className="flex items-center gap-2 text-sm font-semibold">
+                    <MapPin className="w-4 h-4 text-emerald-600" />
+                    School Address
+                  </Label>
                   <Input 
-                    id="name"
-                    value={formData.name}
-                    onChange={(e) => setFormData({ ...formData, name: e.target.value })}
-                    placeholder="e.g., International School of Geneva"
+                    id="address"
+                    value={formData.address}
+                    onChange={(e) => setFormData({ ...formData, address: e.target.value })}
+                    placeholder="123 Education Street, City, Country"
+                    className="h-11"
                   />
+                  <p className="text-xs text-slate-500">Physical location of your school</p>
                 </div>
                 <div className="space-y-2">
-                  <Label htmlFor="code">School Code *</Label>
-                  <Input 
-                    id="code"
-                    value={formData.code}
-                    onChange={(e) => setFormData({ ...formData, code: e.target.value })}
-                    placeholder="e.g., ISG"
-                  />
-                </div>
-                <div className="space-y-2">
-                  <Label htmlFor="ib_school_code">IB World School Code</Label>
-                  <Input 
-                    id="ib_school_code"
-                    value={formData.ib_school_code}
-                    onChange={(e) => setFormData({ ...formData, ib_school_code: e.target.value })}
-                    placeholder="e.g., 001234"
-                  />
-                </div>
-                <div className="space-y-2">
-                  <Label htmlFor="timezone">Timezone</Label>
+                  <Label htmlFor="timezone" className="flex items-center gap-2 text-sm font-semibold">
+                    <Clock className="w-4 h-4 text-emerald-600" />
+                    Timezone
+                  </Label>
                   <Select 
                     value={formData.timezone} 
                     onValueChange={(value) => setFormData({ ...formData, timezone: value })}
                   >
-                    <SelectTrigger>
+                    <SelectTrigger className="h-11">
                       <SelectValue />
                     </SelectTrigger>
                     <SelectContent>
@@ -305,144 +391,214 @@ export default function Settings() {
                       ))}
                     </SelectContent>
                   </Select>
+                  <p className="text-xs text-slate-500">Used for scheduling and notifications</p>
                 </div>
-              </div>
+              </CardContent>
+            </Card>
 
-              <div className="space-y-2">
-                <Label htmlFor="address">Address</Label>
-                <Input 
-                  id="address"
-                  value={formData.address}
-                  onChange={(e) => setFormData({ ...formData, address: e.target.value })}
-                  placeholder="School address"
-                />
-              </div>
-
-              <div className="space-y-2">
-                <Label htmlFor="academic_year">Current Academic Year</Label>
-                <Select 
-                  value={formData.academic_year} 
-                  onValueChange={(value) => setFormData({ ...formData, academic_year: value })}
-                >
-                  <SelectTrigger className="w-48">
-                    <SelectValue />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="2023-2024">2023-2024</SelectItem>
-                    <SelectItem value="2024-2025">2024-2025</SelectItem>
-                    <SelectItem value="2025-2026">2025-2026</SelectItem>
-                  </SelectContent>
-                </Select>
-              </div>
-
-              <Separator />
-
-              <div className="space-y-2">
-                <Label>School ID</Label>
-                <div className="p-3 rounded-lg bg-slate-50 border border-slate-200">
-                  <p className="text-sm font-mono text-slate-700">{school?.id || 'Not available'}</p>
-                  <p className="text-xs text-slate-500 mt-1">Use this ID when uploading documents to import data</p>
+            {/* System Information */}
+            <Card className="border-0 shadow-md">
+              <CardHeader className="bg-gradient-to-r from-violet-50 to-purple-50">
+                <div className="flex items-center gap-3">
+                  <div className="p-2 rounded-lg bg-violet-100">
+                    <Info className="w-5 h-5 text-violet-700" />
+                  </div>
+                  <div>
+                    <CardTitle className="text-lg">System Information</CardTitle>
+                    <CardDescription>Read-only system identifiers</CardDescription>
+                  </div>
                 </div>
-              </div>
-            </CardContent>
-          </Card>
+              </CardHeader>
+              <CardContent className="pt-6">
+                <div className="space-y-2">
+                  <Label className="text-sm font-semibold">School ID</Label>
+                  <div className="p-4 rounded-lg bg-gradient-to-r from-slate-50 to-slate-100 border-2 border-slate-200">
+                    <p className="text-sm font-mono text-slate-900 font-semibold mb-2">{school?.id || 'Not available'}</p>
+                    <div className="flex items-start gap-2 text-xs text-slate-600">
+                      <Info className="w-3 h-3 mt-0.5 flex-shrink-0" />
+                      <p>This unique ID is used internally for data imports and integrations. Keep it secure and only share with authorized personnel.</p>
+                    </div>
+                  </div>
+                </div>
+              </CardContent>
+            </Card>
+          </div>
         </TabsContent>
 
         <TabsContent value="schedule">
-          <Card className="border-0 shadow-sm">
-            <CardHeader>
-              <CardTitle>Schedule Configuration</CardTitle>
-              <CardDescription>Define your school's daily schedule structure</CardDescription>
-            </CardHeader>
-            <CardContent className="space-y-6">
-              <div className="grid sm:grid-cols-2 lg:grid-cols-4 gap-6">
-                <div className="space-y-2">
-                  <Label htmlFor="periods_per_day">Periods Per Day</Label>
-                  <Input 
-                    id="periods_per_day"
-                    type="number"
-                    min="4"
-                    max="12"
-                    value={formData.periods_per_day}
-                    onChange={(e) => setFormData({ ...formData, periods_per_day: parseInt(e.target.value) })}
-                  />
-                </div>
-                <div className="space-y-2">
-                  <Label htmlFor="period_duration">Period Duration (min)</Label>
-                  <Input 
-                    id="period_duration"
-                    type="number"
-                    min="30"
-                    max="90"
-                    value={formData.period_duration_minutes}
-                    onChange={(e) => setFormData({ ...formData, period_duration_minutes: parseInt(e.target.value) })}
-                  />
-                </div>
-                <div className="space-y-2">
-                  <Label htmlFor="days_per_week">Days Per Week</Label>
-                  <Select 
-                    value={String(formData.days_per_week)} 
-                    onValueChange={(value) => setFormData({ ...formData, days_per_week: parseInt(value) })}
-                  >
-                    <SelectTrigger>
-                      <SelectValue />
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="5">5 (Mon-Fri)</SelectItem>
-                      <SelectItem value="6">6 (Mon-Sat)</SelectItem>
-                    </SelectContent>
-                  </Select>
-                </div>
-                <div className="space-y-2">
-                  <Label htmlFor="start_time">School Start Time</Label>
-                  <Input 
-                    id="start_time"
-                    type="time"
-                    value={formData.school_start_time}
-                    onChange={(e) => setFormData({ ...formData, school_start_time: e.target.value })}
-                  />
-                </div>
-              </div>
-
-              <Separator />
-
-              <div>
-                <h3 className="text-sm font-medium text-slate-900 mb-4">IB Diploma Requirements</h3>
-                <div className="grid sm:grid-cols-2 gap-4">
-                  <div className="flex items-center justify-between p-4 rounded-lg bg-slate-50">
-                    <div>
-                      <p className="font-medium text-slate-700">HL Hours Per Week</p>
-                      <p className="text-sm text-slate-500">Standard: 6 hours</p>
-                    </div>
-                    <Input 
-                      type="number"
-                      className="w-20"
-                      value={formData.settings?.hl_hours || 6}
-                      onChange={(e) => setFormData({ 
-                        ...formData, 
-                        settings: { ...formData.settings, hl_hours: parseInt(e.target.value) }
-                      })}
-                    />
+          <div className="space-y-6">
+            {/* Daily Schedule */}
+            <Card className="border-0 shadow-md">
+              <CardHeader className="bg-gradient-to-r from-amber-50 to-orange-50">
+                <div className="flex items-center gap-3">
+                  <div className="p-2 rounded-lg bg-amber-100">
+                    <Clock className="w-5 h-5 text-amber-700" />
                   </div>
-                  <div className="flex items-center justify-between p-4 rounded-lg bg-slate-50">
-                    <div>
-                      <p className="font-medium text-slate-700">SL Hours Per Week</p>
-                      <p className="text-sm text-slate-500">Standard: 4 hours</p>
-                    </div>
-                    <Input 
-                      type="number"
-                      className="w-20"
-                      value={formData.settings?.sl_hours || 4}
-                      onChange={(e) => setFormData({ 
-                        ...formData, 
-                        settings: { ...formData.settings, sl_hours: parseInt(e.target.value) }
-                      })}
-                    />
+                  <div>
+                    <CardTitle className="text-lg">Daily Schedule</CardTitle>
+                    <CardDescription>Configure your school's daily timetable structure</CardDescription>
                   </div>
                 </div>
-              </div>
-            </CardContent>
-          </Card>
+              </CardHeader>
+              <CardContent className="pt-6">
+                <div className="grid sm:grid-cols-2 gap-6">
+                  <div className="p-5 rounded-xl bg-gradient-to-br from-blue-50 to-blue-100 border-2 border-blue-200">
+                    <Label htmlFor="periods_per_day" className="flex items-center gap-2 text-sm font-semibold text-blue-900 mb-3">
+                      <Hash className="w-4 h-4" />
+                      Periods Per Day
+                    </Label>
+                    <Input 
+                      id="periods_per_day"
+                      type="number"
+                      min="4"
+                      max="12"
+                      value={formData.periods_per_day}
+                      onChange={(e) => setFormData({ ...formData, periods_per_day: parseInt(e.target.value) })}
+                      className="h-12 text-lg font-semibold border-blue-300"
+                    />
+                    <p className="text-xs text-blue-700 mt-2">Total teaching periods (4-12)</p>
+                  </div>
+
+                  <div className="p-5 rounded-xl bg-gradient-to-br from-emerald-50 to-emerald-100 border-2 border-emerald-200">
+                    <Label htmlFor="period_duration" className="flex items-center gap-2 text-sm font-semibold text-emerald-900 mb-3">
+                      <Timer className="w-4 h-4" />
+                      Period Length
+                    </Label>
+                    <div className="flex items-center gap-2">
+                      <Input 
+                        id="period_duration"
+                        type="number"
+                        min="30"
+                        max="90"
+                        value={formData.period_duration_minutes}
+                        onChange={(e) => setFormData({ ...formData, period_duration_minutes: parseInt(e.target.value) })}
+                        className="h-12 text-lg font-semibold border-emerald-300"
+                      />
+                      <span className="text-lg font-semibold text-emerald-700">min</span>
+                    </div>
+                    <p className="text-xs text-emerald-700 mt-2">Duration per period (30-90 min)</p>
+                  </div>
+
+                  <div className="p-5 rounded-xl bg-gradient-to-br from-violet-50 to-violet-100 border-2 border-violet-200">
+                    <Label htmlFor="days_per_week" className="flex items-center gap-2 text-sm font-semibold text-violet-900 mb-3">
+                      <Calendar className="w-4 h-4" />
+                      School Week
+                    </Label>
+                    <Select 
+                      value={String(formData.days_per_week)} 
+                      onValueChange={(value) => setFormData({ ...formData, days_per_week: parseInt(value) })}
+                    >
+                      <SelectTrigger className="h-12 text-lg font-semibold border-violet-300">
+                        <SelectValue />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="5">5 Days (Mon-Fri)</SelectItem>
+                        <SelectItem value="6">6 Days (Mon-Sat)</SelectItem>
+                      </SelectContent>
+                    </Select>
+                    <p className="text-xs text-violet-700 mt-2">Teaching days per week</p>
+                  </div>
+
+                  <div className="p-5 rounded-xl bg-gradient-to-br from-rose-50 to-rose-100 border-2 border-rose-200">
+                    <Label htmlFor="start_time" className="flex items-center gap-2 text-sm font-semibold text-rose-900 mb-3">
+                      <Clock className="w-4 h-4" />
+                      Start Time
+                    </Label>
+                    <Input 
+                      id="start_time"
+                      type="time"
+                      value={formData.school_start_time}
+                      onChange={(e) => setFormData({ ...formData, school_start_time: e.target.value })}
+                      className="h-12 text-lg font-semibold border-rose-300"
+                    />
+                    <p className="text-xs text-rose-700 mt-2">First period begins at</p>
+                  </div>
+                </div>
+
+                <div className="mt-6 p-4 rounded-lg bg-blue-50 border border-blue-200">
+                  <div className="flex gap-2">
+                    <Info className="w-4 h-4 text-blue-600 mt-0.5 flex-shrink-0" />
+                    <div className="text-xs text-blue-800">
+                      <p className="font-semibold mb-1">Schedule Preview:</p>
+                      <p>With your current settings, the school day runs from <strong>{formData.school_start_time}</strong> with <strong>{formData.periods_per_day}</strong> periods of <strong>{formData.period_duration_minutes}</strong> minutes each, over <strong>{formData.days_per_week}</strong> days per week.</p>
+                    </div>
+                  </div>
+                </div>
+              </CardContent>
+            </Card>
+
+            {/* IB Requirements */}
+            <Card className="border-0 shadow-md">
+              <CardHeader className="bg-gradient-to-r from-indigo-50 to-blue-50">
+                <div className="flex items-center gap-3">
+                  <div className="p-2 rounded-lg bg-indigo-100">
+                    <Shield className="w-5 h-5 text-indigo-700" />
+                  </div>
+                  <div>
+                    <CardTitle className="text-lg">IB Diploma Programme Requirements</CardTitle>
+                    <CardDescription>Set teaching hours for HL and SL courses</CardDescription>
+                  </div>
+                </div>
+              </CardHeader>
+              <CardContent className="pt-6">
+                <div className="grid sm:grid-cols-2 gap-6">
+                  <div className="p-6 rounded-xl bg-gradient-to-br from-purple-50 to-purple-100 border-2 border-purple-200">
+                    <div className="flex items-center justify-between mb-4">
+                      <div>
+                        <p className="font-bold text-purple-900 text-lg">Higher Level (HL)</p>
+                        <p className="text-sm text-purple-700">Weekly teaching hours</p>
+                      </div>
+                      <div className="w-16 h-16 rounded-full bg-purple-200 flex items-center justify-center">
+                        <span className="text-2xl font-bold text-purple-900">{formData.settings?.hl_hours || 6}</span>
+                      </div>
+                    </div>
+                    <div className="flex items-center gap-3">
+                      <Input 
+                        type="number"
+                        min="4"
+                        max="10"
+                        className="h-11 text-center font-semibold border-purple-300"
+                        value={formData.settings?.hl_hours || 6}
+                        onChange={(e) => setFormData({ 
+                          ...formData, 
+                          settings: { ...formData.settings, hl_hours: parseInt(e.target.value) }
+                        })}
+                      />
+                      <span className="text-sm text-purple-700 font-medium">hours/week</span>
+                    </div>
+                    <p className="text-xs text-purple-600 mt-3">IB recommends 240 hours over 2 years (6h/week)</p>
+                  </div>
+
+                  <div className="p-6 rounded-xl bg-gradient-to-br from-teal-50 to-teal-100 border-2 border-teal-200">
+                    <div className="flex items-center justify-between mb-4">
+                      <div>
+                        <p className="font-bold text-teal-900 text-lg">Standard Level (SL)</p>
+                        <p className="text-sm text-teal-700">Weekly teaching hours</p>
+                      </div>
+                      <div className="w-16 h-16 rounded-full bg-teal-200 flex items-center justify-center">
+                        <span className="text-2xl font-bold text-teal-900">{formData.settings?.sl_hours || 4}</span>
+                      </div>
+                    </div>
+                    <div className="flex items-center gap-3">
+                      <Input 
+                        type="number"
+                        min="3"
+                        max="8"
+                        className="h-11 text-center font-semibold border-teal-300"
+                        value={formData.settings?.sl_hours || 4}
+                        onChange={(e) => setFormData({ 
+                          ...formData, 
+                          settings: { ...formData.settings, sl_hours: parseInt(e.target.value) }
+                        })}
+                      />
+                      <span className="text-sm text-teal-700 font-medium">hours/week</span>
+                    </div>
+                    <p className="text-xs text-teal-600 mt-3">IB recommends 150 hours over 2 years (4h/week)</p>
+                  </div>
+                </div>
+              </CardContent>
+            </Card>
+          </div>
         </TabsContent>
 
         <TabsContent value="subscription">
