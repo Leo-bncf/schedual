@@ -23,7 +23,7 @@ import {
 } from "@/components/ui/dropdown-menu";
 import PageHeader from '../components/ui-custom/PageHeader';
 import GroupBuilder from '../components/teachingGroups/GroupBuilder';
-import AIGroupGenerator from '../components/teachingGroups/AIGroupGenerator';
+import DPGroupGenerator from '../components/teachingGroups/DPGroupGenerator';
 import EmptyState from '../components/ui-custom/EmptyState';
 import GenerateInfoDialog from '../components/ui-custom/GenerateInfoDialog';
 
@@ -171,7 +171,7 @@ export default function TeachingGroups() {
       />
 
       {showAIGenerator && (
-        <AIGroupGenerator autoStart onComplete={() => setShowAIGenerator(false)} />
+        <DPGroupGenerator onComplete={() => setShowAIGenerator(false)} />
       )}
 
       <div className="flex flex-col sm:flex-row gap-4">
