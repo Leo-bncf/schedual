@@ -373,21 +373,18 @@ export default function Students() {
 
       setUploadState(prev => ({ ...prev, stage: 'extracting', progress: 'Learning from past corrections...' }));
 
-      // Fetch training data to learn from past errors
+      // Fetch training data to learn from past errors (limit to recent 10)
       let learningContext = '';
       try {
         const { data: trainingResponse } = await base44.functions.invoke('aiTrainingUpload', { 
           action: 'list', 
           agent_name: 'student_importer' 
         });
-        const trainingList = trainingResponse?.data || [];
+        const trainingList = (trainingResponse?.data || []).slice(-10); // Only last 10
 
-        console.log(`📚 Found ${trainingList.length} training examples`);
-
-        // Build learning context from training data
         if (trainingList.length > 0) {
           const corrections = [];
-          
+
           trainingList.forEach(training => {
             if (training?.field_feedback) {
               Object.entries(training.field_feedback).forEach(([field, feedback]) => {
@@ -395,8 +392,7 @@ export default function Students() {
                   corrections.push({
                     field,
                     original: feedback.original,
-                    corrected: feedback.corrected,
-                    notes: feedback.notes || ''
+                    corrected: feedback.corrected
                   });
                 }
               });
@@ -404,19 +400,14 @@ export default function Students() {
           });
 
           if (corrections.length > 0) {
-            learningContext = '\n\nLEARNINGS FROM PAST CORRECTIONS:\n';
-            corrections.slice(-20).forEach(c => {
-              learningContext += `- ${c.field}: "${c.original}" was corrected to "${c.corrected}"`;
-              if (c.notes) learningContext += ` (${c.notes})`;
-              learningContext += '\n';
+            learningContext = '\n\nLEARNINGS:\n';
+            corrections.slice(-10).forEach(c => {
+              learningContext += `- ${c.field}: "${c.original}" → "${c.corrected}"\n`;
             });
-            
-            console.log(`📝 Applying ${corrections.length} learnings from training data`);
           }
         }
       } catch (error) {
-        console.warn('Could not fetch training data:', error);
-        // Continue without training context
+        console.warn('Training data unavailable');
       }
 
       setUploadState(prev => ({ ...prev, progress: 'AI analyzing document with learned patterns...' }));
@@ -688,30 +679,24 @@ Return ONLY students array, no other text.`,
         };
       });
 
-      // Batch create with rate limit handling
-      const batchSize = 10;
+      // Batch create
+      const batchSize = 25;
       let created = 0;
-      
+
       for (let i = 0; i < studentsToCreate.length; i += batchSize) {
         const batch = studentsToCreate.slice(i, i + batchSize);
-        
+
         try {
           await base44.entities.Student.bulkCreate(batch);
           created += batch.length;
-          
+
           setUploadState(prev => ({ 
             ...prev, 
             studentsCreated: created,
             progress: `Created ${created} of ${studentsData.length} students...`
           }));
-          
-          // Small delay between batches to avoid rate limits
-          if (i + batchSize < studentsToCreate.length) {
-            await new Promise(resolve => setTimeout(resolve, 500));
-          }
         } catch (error) {
-          console.error('Batch creation error:', error);
-          // Continue with next batch even if one fails
+          console.error('Batch error:', error);
         }
       }
 
