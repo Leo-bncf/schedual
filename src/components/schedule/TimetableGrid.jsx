@@ -183,7 +183,7 @@ export default function TimetableGrid({ slots = [], groups = [], rooms = [], sub
                             className="cursor-pointer hover:shadow-md transition-all rounded-lg overflow-hidden"
                             onClick={() => handleSlotClick(slot)}
                           >
-                            {subject && (
+                            {subject ? (
                               <div className={`p-3 border-l-4 ${colorClass} border border-slate-200`}>
                                 <div className="font-bold text-sm text-slate-900 leading-tight mb-1.5">
                                   {subject.name}
@@ -192,8 +192,10 @@ export default function TimetableGrid({ slots = [], groups = [], rooms = [], sub
                                   {level}
                                 </Badge>
                                 <div className="text-xs text-slate-700 space-y-1">
-                                  {teacher && (
+                                  {teacher ? (
                                     <div className="font-medium">👤 {teacher.full_name}</div>
+                                  ) : (
+                                    <div className="font-medium text-amber-600">👤 No teacher assigned</div>
                                   )}
                                   <div className="font-medium">📍 {room?.name || 'TBD'}</div>
                                 </div>
@@ -202,6 +204,20 @@ export default function TimetableGrid({ slots = [], groups = [], rooms = [], sub
                                     {span} periods
                                   </div>
                                 )}
+                              </div>
+                            ) : (
+                              <div className="p-3 border-l-4 border-slate-300 bg-slate-50 border border-slate-200">
+                                <div className="font-bold text-sm text-slate-600 leading-tight mb-1.5">
+                                  Unassigned Class
+                                </div>
+                                <div className="text-xs text-slate-500 space-y-1">
+                                  {teacher ? (
+                                    <div className="font-medium">👤 {teacher.full_name}</div>
+                                  ) : (
+                                    <div className="font-medium text-amber-600">👤 No teacher assigned</div>
+                                  )}
+                                  <div className="font-medium">📍 {room?.name || 'TBD'}</div>
+                                </div>
                               </div>
                             )}
                           </div>
