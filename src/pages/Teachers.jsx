@@ -205,6 +205,7 @@ export default function Teachers() {
 IMPORTANT SUBJECT RULES:
 - In MYP, there are NO separate Geography or History classes. If a teacher's description mentions Geography or History, they teach "Individuals & Societies"
 - In MYP, there are NO separate Chemistry, Biology, or Physics classes. If a teacher's description mentions Chemistry, Biology, or Physics for MYP, they teach "Sciences"
+- In MYP Design subjects: If the document specifically mentions "Digital Design", use "Digital Design". If it specifically mentions "Product Design", use "Product Design". If it just says "Design" without specifying, use "Design" (which can cover both digital and product design). Schools can offer Digital Design only, Product Design only, both as separate classes, or one unified Design class.
 - In PYP and MYP, there are NO Math levels (no HL/SL). There is only one type of Math for all PYP and MYP year levels
 - Only DP (Diploma Programme) has subject levels like HL/SL
 - If a teacher is described as a homeroom teacher, class teacher, or form teacher for PYP, add "Homeroom" to their subjects
