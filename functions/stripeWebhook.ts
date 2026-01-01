@@ -37,12 +37,15 @@ Deno.serve(async (req) => {
         const endDate = new Date();
         endDate.setFullYear(endDate.getFullYear() + 1);
 
-        // Create new school
+        // Check if user already has a school (for existing schools)
+        const users = await base44.asServiceRole.entities.User.filter({ id: userId });
+        const user = users[0];
+        
         let school;
-        try {
-          school = await base44.asServiceRole.entities.School.create({
-            name: `${userName}'s School`,
-            code: `SCH-${Date.now()}`,
+        if (user?.school_id) {
+          // User already has a school - update its Stripe info
+          console.log(`✅ User already has school ${user.school_id}, updating Stripe info`);
+          school = await base44.asServiceRole.entities.School.update(user.school_id, {
             subscription_status: 'active',
             subscription_plan: 'yearly',
             stripe_customer_id: session.customer,
@@ -51,21 +54,37 @@ Deno.serve(async (req) => {
             subscription_end_date: endDate.toISOString(),
             max_additional_users: additionalUsers,
           });
-          console.log(`✅ School ${school.id} created successfully`);
-        } catch (error) {
-          console.error(`❌ Failed to create school:`, error);
-          throw error;
-        }
+          console.log(`✅ School ${school.id} updated with Stripe info`);
+        } else {
+          // No school yet - create new one
+          try {
+            school = await base44.asServiceRole.entities.School.create({
+              name: `${userName}'s School`,
+              code: `SCH-${Date.now()}`,
+              subscription_status: 'active',
+              subscription_plan: 'yearly',
+              stripe_customer_id: session.customer,
+              stripe_subscription_id: session.subscription,
+              subscription_start_date: new Date().toISOString(),
+              subscription_end_date: endDate.toISOString(),
+              max_additional_users: additionalUsers,
+            });
+            console.log(`✅ School ${school.id} created successfully`);
+          } catch (error) {
+            console.error(`❌ Failed to create school:`, error);
+            throw error;
+          }
 
-        // Assign school to user
-        try {
-          await base44.asServiceRole.entities.User.update(userId, {
-            school_id: school.id
-          });
-          console.log(`✅ User ${userEmail} (${userId}) assigned to school ${school.id}`);
-        } catch (error) {
-          console.error(`❌ Failed to update user ${userEmail}:`, error);
-          throw error;
+          // Assign school to user
+          try {
+            await base44.asServiceRole.entities.User.update(userId, {
+              school_id: school.id
+            });
+            console.log(`✅ User ${userEmail} (${userId}) assigned to school ${school.id}`);
+          } catch (error) {
+            console.error(`❌ Failed to update user ${userEmail}:`, error);
+            throw error;
+          }
         }
 
         console.log(`✅ Subscription activated for school ${school.id}`);

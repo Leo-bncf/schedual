@@ -28,7 +28,8 @@ export default function Panel() {
     ib_school_code: '',
     address: '',
     timezone: 'UTC',
-    academic_year: '2024-2025'
+    academic_year: '2024-2025',
+    stripe_customer_id: ''
   });
   const [userFormData, setUserFormData] = useState({
     email: '',
@@ -192,7 +193,8 @@ export default function Panel() {
       ib_school_code: '',
       address: '',
       timezone: 'UTC',
-      academic_year: '2024-2025'
+      academic_year: '2024-2025',
+      stripe_customer_id: ''
     });
     setEditingSchool(null);
   };
@@ -205,7 +207,8 @@ export default function Panel() {
       ib_school_code: school.ib_school_code || '',
       address: school.address || '',
       timezone: school.timezone || 'UTC',
-      academic_year: school.academic_year || '2024-2025'
+      academic_year: school.academic_year || '2024-2025',
+      stripe_customer_id: school.stripe_customer_id || ''
     });
     setIsSchoolDialogOpen(true);
   };
@@ -609,6 +612,16 @@ export default function Panel() {
                 value={schoolFormData.address}
                 onChange={(e) => setSchoolFormData({ ...schoolFormData, address: e.target.value })}
               />
+            </div>
+            <div className="space-y-2">
+              <Label htmlFor="stripe_customer_id">Stripe Customer ID</Label>
+              <Input 
+                id="stripe_customer_id"
+                value={schoolFormData.stripe_customer_id}
+                onChange={(e) => setSchoolFormData({ ...schoolFormData, stripe_customer_id: e.target.value })}
+                placeholder="cus_..."
+              />
+              <p className="text-xs text-slate-500">Optional - Auto-filled on payment</p>
             </div>
             <div className="grid grid-cols-2 gap-4">
               <div className="space-y-2">
