@@ -92,11 +92,29 @@ export default function TimetableGrid({ slots = [], groups = [], rooms = [], sub
 
   const handleSlotClick = (slot) => {
     if (!slot) return;
-    const group = getGroupInfo(slot.teaching_group_id);
-    const room = getRoomInfo(slot.room_id);
-    const subject = group ? getSubjectInfo(group.subject_id) : null;
-    const teacher = group ? getTeacherInfo(group.teacher_id) : null;
     
+    let group, subject, teacher;
+    
+    // PYP/MYP: data is directly on the slot
+    if (slot.subject_id) {
+      const classGroup = classGroups.find(cg => cg.id === slot.classgroup_id);
+      subject = getSubjectInfo(slot.subject_id);
+      teacher = getTeacherInfo(slot.teacher_id);
+      
+      // Create a group-like object for modal compatibility
+      group = {
+        name: classGroup?.name || 'Class',
+        level: classGroup?.year_group || subject?.ib_level,
+        student_ids: classGroup?.student_ids || []
+      };
+    } else {
+      // DP: use teaching group
+      group = getGroupInfo(slot.teaching_group_id);
+      subject = group ? getSubjectInfo(group.subject_id) : null;
+      teacher = group ? getTeacherInfo(group.teacher_id) : null;
+    }
+    
+    const room = getRoomInfo(slot.room_id);
     setSelectedSlot({ slot, group, room, subject, teacher });
   };
 
