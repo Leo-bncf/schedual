@@ -364,28 +364,28 @@ export default function Settings() {
                     <p className="font-medium text-slate-700">Schedule Conflict Alerts</p>
                     <p className="text-sm text-slate-500">Get notified when scheduling conflicts are detected</p>
                   </div>
-                  <Switch defaultChecked />
+                  <Switch defaultChecked className="data-[state=checked]:bg-emerald-500 data-[state=unchecked]:bg-rose-500" />
                 </div>
                 <div className="flex items-center justify-between p-4 rounded-lg bg-slate-50">
                   <div>
                     <p className="font-medium text-slate-700">AI Recommendations</p>
                     <p className="text-sm text-slate-500">Receive AI advisor suggestions and insights</p>
                   </div>
-                  <Switch defaultChecked />
+                  <Switch defaultChecked className="data-[state=checked]:bg-emerald-500 data-[state=unchecked]:bg-rose-500" />
                 </div>
                 <div className="flex items-center justify-between p-4 rounded-lg bg-slate-50">
                   <div>
                     <p className="font-medium text-slate-700">Schedule Published</p>
                     <p className="text-sm text-slate-500">Notify when a new schedule is published</p>
                   </div>
-                  <Switch defaultChecked />
+                  <Switch defaultChecked className="data-[state=checked]:bg-emerald-500 data-[state=unchecked]:bg-rose-500" />
                 </div>
                 <div className="flex items-center justify-between p-4 rounded-lg bg-slate-50">
                   <div>
                     <p className="font-medium text-slate-700">Weekly Summary</p>
                     <p className="text-sm text-slate-500">Receive weekly scheduling summary reports</p>
                   </div>
-                  <Switch />
+                  <Switch className="data-[state=checked]:bg-emerald-500 data-[state=unchecked]:bg-rose-500" />
                 </div>
               </div>
             </CardContent>
