@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { base44 } from '@/api/base44Client';
 import { Button } from "@/components/ui/button";
@@ -7,7 +7,7 @@ import { Alert, AlertDescription } from "@/components/ui/alert";
 import { Badge } from "@/components/ui/badge";
 import { Sparkles, Loader2, CheckCircle, AlertCircle, Users } from 'lucide-react';
 
-export default function AIGroupGenerator({ onComplete }) {
+export default function AIGroupGenerator({ onComplete, autoStart = true }) {
   const [isGenerating, setIsGenerating] = useState(false);
   const [results, setResults] = useState(null);
   const queryClient = useQueryClient();
@@ -17,19 +17,19 @@ export default function AIGroupGenerator({ onComplete }) {
     queryFn: () => base44.auth.me(),
   });
 
-  const { data: students = [] } = useQuery({
+  const { data: students = [], isLoading: isLoadingStudents } = useQuery({
     queryKey: ['students', user?.school_id],
     queryFn: () => (user?.school_id ? base44.entities.Student.filter({ school_id: user.school_id }) : []),
     enabled: !!user?.school_id,
   });
 
-  const { data: subjects = [] } = useQuery({
+  const { data: subjects = [], isLoading: isLoadingSubjects } = useQuery({
     queryKey: ['subjects', user?.school_id],
     queryFn: () => (user?.school_id ? base44.entities.Subject.filter({ school_id: user.school_id }) : []),
     enabled: !!user?.school_id,
   });
 
-  const { data: teachers = [] } = useQuery({
+  const { data: teachers = [], isLoading: isLoadingTeachers } = useQuery({
     queryKey: ['teachers', user?.school_id],
     queryFn: () => (user?.school_id ? base44.entities.Teacher.filter({ school_id: user.school_id }) : []),
     enabled: !!user?.school_id,
@@ -42,6 +42,17 @@ export default function AIGroupGenerator({ onComplete }) {
   });
 
   const dpStudents = students.filter(s => s.ib_programme === 'DP' && s.is_active !== false);
+
+  // Auto-start generation when component opens and data is ready
+  useEffect(() => {
+    if (!autoStart) return;
+    if (isGenerating || results) return;
+    if (!user?.school_id) return;
+    if (isLoadingStudents || isLoadingSubjects || isLoadingTeachers) return;
+    // Start generation automatically when everything is loaded
+    generateGroups();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [autoStart, user?.school_id, isLoadingStudents, isLoadingSubjects, isLoadingTeachers]);
 
   const createGroupsMutation = useMutation({
     mutationFn: (groups) => base44.entities.TeachingGroup.bulkCreate(groups),
