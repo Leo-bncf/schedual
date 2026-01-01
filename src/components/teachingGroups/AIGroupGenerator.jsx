@@ -45,6 +45,9 @@ export default function AIGroupGenerator({ onComplete }) {
     setResults(null);
 
     try {
+      // Add delay to show loading state
+      await new Promise(resolve => setTimeout(resolve, 500));
+      
       // Organize students by subject + level + year_group
       const groupMap = {};
 
@@ -161,9 +164,16 @@ export default function AIGroupGenerator({ onComplete }) {
     
     const groupsToCreate = readyGroups.map(group => {
       const subject = subjects.find(s => s.id === group.subject_id);
-      const hoursPerWeek = group.level === 'HL' 
-        ? (subject?.hl_hours_per_week || 6) 
-        : (subject?.sl_hours_per_week || 4);
+      
+      // Get hours from subject configuration, not hardcoded defaults
+      let hoursPerWeek;
+      if (group.level === 'HL') {
+        hoursPerWeek = subject?.hl_hours_per_week || 6;
+      } else if (group.level === 'SL') {
+        hoursPerWeek = subject?.sl_hours_per_week || 4;
+      } else {
+        hoursPerWeek = subject?.pyp_myp_hours_per_week || 4;
+      }
 
       return {
         school_id: schoolId,
