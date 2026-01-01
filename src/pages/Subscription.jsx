@@ -323,56 +323,6 @@ export default function Subscription() {
                 <p className="text-xs text-slate-500">/year</p>
               </div>
             </div>
-
-            {/* Additional Users */}
-            <div className="p-6 rounded-xl bg-white shadow-sm border-2 border-emerald-200">
-              <div className="flex justify-between items-center mb-5">
-                <div className="flex items-center gap-4">
-                  <div className="w-12 h-12 rounded-xl bg-gradient-to-br from-emerald-500 to-emerald-600 flex items-center justify-center shadow-md">
-                    <Users className="w-6 h-6 text-white" />
-                  </div>
-                  <div>
-                    <p className="font-bold text-slate-900 text-lg">Extra User Accounts</p>
-                    <p className="text-sm text-slate-600">€{ADDITIONAL_USER_YEARLY_PRICE}/year per additional user</p>
-                  </div>
-                </div>
-              </div>
-              <div className="flex flex-col sm:flex-row items-center gap-4">
-                <Label className="text-slate-700 font-medium">How many extra users?</Label>
-                <div className="flex items-center gap-3">
-                  <Button
-                    variant="outline"
-                    size="icon"
-                    className="h-10 w-10 rounded-lg"
-                    onClick={() => setAdditionalUsers(Math.max(0, additionalUsers - 1))}
-                    disabled={additionalUsers === 0}
-                  >
-                    <Minus className="w-5 h-5" />
-                  </Button>
-                  <Input
-                    type="number"
-                    min="0"
-                    value={additionalUsers}
-                    onChange={(e) => setAdditionalUsers(Math.max(0, parseInt(e.target.value) || 0))}
-                    className="w-24 text-center text-xl font-bold h-10"
-                  />
-                  <Button
-                    variant="outline"
-                    size="icon"
-                    className="h-10 w-10 rounded-lg"
-                    onClick={() => setAdditionalUsers(additionalUsers + 1)}
-                  >
-                    <Plus className="w-5 h-5" />
-                  </Button>
-                </div>
-                <div className="text-right ml-auto">
-                  <p className="text-2xl font-bold text-emerald-700">
-                    €{additionalUsers * ADDITIONAL_USER_YEARLY_PRICE}
-                  </p>
-                  <p className="text-xs text-slate-500">/year</p>
-                </div>
-              </div>
-            </div>
           </div>
 
           {/* Total */}
