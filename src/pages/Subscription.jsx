@@ -38,7 +38,6 @@ const STORAGE_YEARLY_PRICE = 240;
 const ADDITIONAL_USER_YEARLY_PRICE = 200;
 
 export default function Subscription() {
-  const [additionalUsers, setAdditionalUsers] = useState(0);
   const [isProcessing, setIsProcessing] = useState(false);
   const [buyUsersDialogOpen, setBuyUsersDialogOpen] = useState(false);
   const [usersToBuy, setUsersToBuy] = useState(1);
@@ -83,33 +82,6 @@ export default function Subscription() {
       toast.error(error.message || 'Failed to send invitation');
     }
   });
-
-  const totalYearlyPrice = BASE_YEARLY_PRICE + STORAGE_YEARLY_PRICE + (additionalUsers * ADDITIONAL_USER_YEARLY_PRICE);
-
-  const handleCheckout = async () => {
-    if (isProcessing) return;
-    
-    setIsProcessing(true);
-    try {
-      const response = await base44.functions.invoke('createCheckout', {
-        additionalUsers
-      });
-
-      if (response.data?.error) {
-        throw new Error(response.data.error);
-      }
-
-      if (response.data?.url) {
-        window.location.href = response.data.url;
-      } else {
-        throw new Error('No checkout URL received from Stripe');
-      }
-    } catch (error) {
-      console.error('Checkout error:', error);
-      alert(error.message || 'Failed to start checkout process');
-      setIsProcessing(false);
-    }
-  };
 
   const handleBuyAdditionalUsers = async (quantity) => {
     setIsProcessing(true);
@@ -279,124 +251,7 @@ export default function Subscription() {
         </CardContent>
       </Card>
 
-      {/* Pricing Calculator */}
-      <Card className="border-0 shadow-lg bg-gradient-to-br from-blue-50 via-indigo-50 to-violet-50">
-        <CardHeader>
-          <CardTitle className="text-3xl bg-gradient-to-r from-blue-900 to-violet-900 bg-clip-text text-transparent">
-            Yearly Subscription
-          </CardTitle>
-          <CardDescription className="text-base">
-            Complete scheduling solution with AI-powered features
-          </CardDescription>
-        </CardHeader>
-        <CardContent className="space-y-6">
-          {/* Base Price Breakdown */}
-          <div className="space-y-3">
-            <div className="flex justify-between items-center p-5 rounded-xl bg-white shadow-sm border border-slate-200">
-              <div className="flex items-center gap-4">
-                <div className="w-12 h-12 rounded-xl bg-gradient-to-br from-blue-500 to-blue-600 flex items-center justify-center shadow-md">
-                  <CreditCard className="w-6 h-6 text-white" />
-                </div>
-                <div>
-                  <p className="font-bold text-slate-900 text-lg">Base Platform</p>
-                  <p className="text-sm text-slate-600">Full scheduling + AI features</p>
-                </div>
-              </div>
-              <div className="text-right">
-                <p className="text-2xl font-bold text-slate-900">€{BASE_YEARLY_PRICE}</p>
-                <p className="text-xs text-slate-500">/year</p>
-              </div>
-            </div>
 
-            <div className="flex justify-between items-center p-5 rounded-xl bg-white shadow-sm border border-slate-200">
-              <div className="flex items-center gap-4">
-                <div className="w-12 h-12 rounded-xl bg-gradient-to-br from-indigo-500 to-indigo-600 flex items-center justify-center shadow-md">
-                  <Database className="w-6 h-6 text-white" />
-                </div>
-                <div>
-                  <p className="font-bold text-slate-900 text-lg">Cloud Storage</p>
-                  <p className="text-sm text-slate-600">Secure & backed up (€20/month)</p>
-                </div>
-              </div>
-              <div className="text-right">
-                <p className="text-2xl font-bold text-slate-900">€{STORAGE_YEARLY_PRICE}</p>
-                <p className="text-xs text-slate-500">/year</p>
-              </div>
-            </div>
-          </div>
-
-          {/* Total */}
-          <div className="border-t-2 border-slate-200 pt-6 mt-2">
-            <div className="flex justify-between items-center p-6 rounded-xl bg-gradient-to-r from-blue-900 to-violet-900 text-white">
-              <div>
-                <p className="text-sm font-medium opacity-90 mb-1">Total Annual Price</p>
-                <p className="text-4xl font-bold">€{totalYearlyPrice}</p>
-                <p className="text-sm opacity-75 mt-2">
-                  That's just €{Math.round(totalYearlyPrice / 12)}/month • Cancel anytime
-                </p>
-              </div>
-              <div className="text-right">
-                <Badge className="bg-white/20 text-white border-0 text-sm px-3 py-1.5">
-                  <CheckCircle className="w-4 h-4 mr-1.5" />
-                  Best Value
-                </Badge>
-              </div>
-            </div>
-          </div>
-
-          {/* Features */}
-          <div className="grid sm:grid-cols-2 gap-3">
-            {[
-              'Unlimited teachers & students',
-              'AI-powered scheduling',
-              'Conflict resolution',
-              'IB compliance checking',
-              'Secure cloud storage',
-              'Priority support',
-              'Regular updates',
-              'Export & reporting'
-            ].map((feature, i) => (
-              <div key={i} className="flex items-center gap-3 p-3 rounded-lg bg-white/50">
-                <div className="w-5 h-5 rounded-full bg-emerald-100 flex items-center justify-center flex-shrink-0">
-                  <CheckCircle className="w-3.5 h-3.5 text-emerald-600" />
-                </div>
-                <span className="text-sm font-medium text-slate-800">{feature}</span>
-              </div>
-            ))}
-          </div>
-
-          {/* Checkout Button */}
-          <Button
-            className="w-full py-7 text-xl font-bold bg-gradient-to-r from-emerald-600 to-emerald-500 hover:from-emerald-700 hover:to-emerald-600 shadow-xl hover:shadow-2xl transition-all duration-200 transform hover:scale-[1.02]"
-            onClick={handleCheckout}
-            disabled={isProcessing || isActive}
-          >
-            {isProcessing ? (
-              <>
-                <Loader2 className="w-6 h-6 mr-2 animate-spin" />
-                Processing Payment...
-              </>
-            ) : isActive ? (
-              <>
-                <CheckCircle className="w-6 h-6 mr-2" />
-                Already Subscribed
-              </>
-            ) : (
-              <>
-                <CreditCard className="w-6 h-6 mr-2" />
-                Subscribe Now - €{totalYearlyPrice}/year
-              </>
-            )}
-          </Button>
-
-          <div className="text-center space-y-2">
-            <p className="text-sm text-slate-600 flex items-center justify-center gap-2">
-              <Shield className="w-4 h-4 text-emerald-600" />
-              Secure payment via Stripe • 30-day money-back guarantee
-            </p>
-          </div>
-        </CardContent>
-      </Card>
 
       {/* Help Card */}
       <Card className="border-blue-200 bg-gradient-to-br from-blue-50 to-indigo-50">
