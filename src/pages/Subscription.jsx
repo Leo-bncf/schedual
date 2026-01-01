@@ -1,11 +1,19 @@
 import React, { useState } from 'react';
-import { useQuery } from '@tanstack/react-query';
+import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { base44 } from '@/api/base44Client';
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogHeader,
+  DialogTitle,
+  DialogFooter,
+} from "@/components/ui/dialog";
 import { 
   CreditCard, 
   Users, 
@@ -17,9 +25,12 @@ import {
   Loader2,
   Shield,
   ExternalLink,
-  XCircle
+  XCircle,
+  Mail,
+  UserPlus
 } from 'lucide-react';
 import PageHeader from '../components/ui-custom/PageHeader';
+import { toast } from 'sonner';
 
 const STRIPE_PUBLIC_KEY = import.meta.env.VITE_STRIPE_PUBLIC_KEY;
 const BASE_YEARLY_PRICE = 1999;
@@ -35,7 +46,6 @@ export default function Subscription() {
   const [inviteEmail, setInviteEmail] = useState('');
 
   const queryClient = useQueryClient();
-  const [hasTriedAutoCheckout, setHasTriedAutoCheckout] = useState(false);
 
   const { data: user, isLoading: userLoading } = useQuery({
     queryKey: ['currentUser'],
@@ -50,6 +60,30 @@ export default function Subscription() {
 
   const school = schools[0];
 
+  const { data: schoolAdmins = [] } = useQuery({
+    queryKey: ['schoolAdmins', user?.school_id],
+    queryFn: async () => {
+      const { data } = await base44.functions.invoke('getSchoolAdmins');
+      return data?.admins || [];
+    },
+    enabled: !!user?.school_id && school?.subscription_status === 'active',
+  });
+
+  const inviteUserMutation = useMutation({
+    mutationFn: async (email) => {
+      await base44.users.inviteUser(email, 'admin');
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['schoolAdmins'] });
+      toast.success('Invitation sent successfully');
+      setInviteEmail('');
+      setInviteDialogOpen(false);
+    },
+    onError: (error) => {
+      toast.error(error.message || 'Failed to send invitation');
+    }
+  });
+
   const totalYearlyPrice = BASE_YEARLY_PRICE + STORAGE_YEARLY_PRICE + (additionalUsers * ADDITIONAL_USER_YEARLY_PRICE);
 
   const handleCheckout = async () => {
@@ -57,14 +91,9 @@ export default function Subscription() {
     
     setIsProcessing(true);
     try {
-      console.log('Starting checkout with:', { additionalUsers });
       const response = await base44.functions.invoke('createCheckout', {
         additionalUsers
       });
-
-      console.log('Checkout response:', response);
-      console.log('Response status:', response.status);
-      console.log('Response data:', response.data);
 
       if (response.data?.error) {
         throw new Error(response.data.error);
@@ -76,54 +105,51 @@ export default function Subscription() {
         throw new Error('No checkout URL received from Stripe');
       }
     } catch (error) {
-      console.error('=== CHECKOUT ERROR DEBUG ===');
-      console.error('Error object:', error);
-      console.error('Error message:', error.message);
-      console.error('Error response:', error.response);
-      console.error('Response data:', error.response?.data);
-      console.error('Response status:', error.response?.status);
+      console.error('Checkout error:', error);
+      alert(error.message || 'Failed to start checkout process');
+      setIsProcessing(false);
+    }
+  };
 
-      let errorMessage = 'Payment Error:\n\n';
-
-      // Check if it's an axios response error
-      if (error.response?.data) {
-        const errorData = error.response.data;
-        console.error('Parsed error data:', errorData);
-        
-        errorMessage += errorData.error || 'Unknown error occurred';
-        
-        if (errorData.code) {
-          errorMessage += `\n\nStripe Error Code: ${errorData.code}`;
-        }
-        if (errorData.param) {
-          errorMessage += `\nProblem with: ${errorData.param}`;
-        }
-        if (errorData.type) {
-          errorMessage += `\nError Type: ${errorData.type}`;
-        }
-        if (errorData.statusCode) {
-          errorMessage += `\nStatus: ${errorData.statusCode}`;
-        }
-      } else {
-        errorMessage += error.message || 'Unknown error';
+  const handleBuyAdditionalUsers = async (quantity) => {
+    setIsProcessing(true);
+    try {
+      const { data } = await base44.functions.invoke('createCheckout', {
+        additional_users_only: true,
+        quantity
+      });
+      
+      if (data.url) {
+        window.location.href = data.url;
       }
+    } catch (error) {
+      console.error('Checkout error:', error);
+      alert('Failed to start checkout process');
+    } finally {
+      setIsProcessing(false);
+    }
+  };
 
-      alert(errorMessage);
+  const handleManageSubscription = async () => {
+    setIsProcessing(true);
+    try {
+      const { data } = await base44.functions.invoke('createCheckout', {
+        manage_subscription: true
+      });
+      
+      if (data.url) {
+        window.location.href = data.url;
+      }
+    } catch (error) {
+      console.error('Portal error:', error);
+      alert('Failed to open billing portal');
+    } finally {
       setIsProcessing(false);
     }
   };
 
   const isActive = school?.subscription_status === 'active';
   const isPastDue = school?.subscription_status === 'past_due';
-
-  const handleManageSubscription = () => {
-    if (school?.stripe_customer_id) {
-      // Redirect to Stripe Customer Portal
-      window.open(`https://billing.stripe.com/p/login/test_${school.stripe_customer_id}`, '_blank');
-    } else {
-      alert('No Stripe customer ID found. Please contact support.');
-    }
-  };
 
   return (
     <div className="space-y-6">
@@ -198,28 +224,44 @@ export default function Subscription() {
               </div>
 
               {/* Action Buttons */}
-              <div className="flex flex-col sm:flex-row gap-3 pt-4 border-t border-slate-200">
+              <div className="space-y-3">
                 <Button 
+                  size="lg"
                   variant="outline" 
-                  className="flex-1 border-blue-200 text-blue-700 hover:bg-blue-50"
+                  className="w-full border-blue-200 text-blue-700 hover:bg-blue-50"
                   onClick={handleManageSubscription}
+                  disabled={isProcessing}
                 >
-                  <ExternalLink className="w-4 h-4 mr-2" />
-                  Manage Payment Methods
+                  <CreditCard className="w-4 h-4 mr-2" />
+                  Manage Subscription
                 </Button>
+                
                 <Button 
-                  variant="outline" 
-                  className="flex-1 border-rose-200 text-rose-700 hover:bg-rose-50"
-                  onClick={handleManageSubscription}
+                  size="lg" 
+                  variant="outline"
+                  className="w-full font-semibold border-2"
+                  onClick={() => setBuyUsersDialogOpen(true)}
+                  disabled={isProcessing}
                 >
-                  <XCircle className="w-4 h-4 mr-2" />
-                  Cancel Subscription
+                  <UserPlus className="w-5 h-5 mr-2" />
+                  Buy Additional Users
+                </Button>
+
+                <Button 
+                  size="lg" 
+                  variant="outline"
+                  className="w-full font-semibold border-2 border-emerald-300 text-emerald-700 hover:bg-emerald-50"
+                  onClick={() => setInviteDialogOpen(true)}
+                  disabled={isProcessing || !school?.max_additional_users || schoolAdmins.length >= (school.max_additional_users + 1)}
+                >
+                  <Mail className="w-5 h-5 mr-2" />
+                  Invite School Admin
                 </Button>
               </div>
 
               <div className="p-3 rounded-lg bg-blue-50 border border-blue-200">
                 <p className="text-xs text-blue-800">
-                  <strong>Note:</strong> Clicking these buttons will redirect you to Stripe's secure portal where you can manage your subscription, update payment methods, view invoices, and cancel if needed.
+                  <strong>Note:</strong> "Manage Subscription" opens Stripe's portal for payment methods, invoices, and cancellation.
                 </p>
               </div>
             </div>
@@ -406,8 +448,6 @@ export default function Subscription() {
         </CardContent>
       </Card>
 
-
-
       {/* Help Card */}
       <Card className="border-blue-200 bg-gradient-to-br from-blue-50 to-indigo-50">
         <CardContent className="p-6">
@@ -427,6 +467,155 @@ export default function Subscription() {
           </div>
         </CardContent>
       </Card>
+
+      {/* Buy Additional Users Dialog */}
+      <Dialog open={buyUsersDialogOpen} onOpenChange={setBuyUsersDialogOpen}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Purchase Additional User Seats</DialogTitle>
+            <DialogDescription>
+              Add more admin accounts for your school. Each additional user costs $50/year.
+            </DialogDescription>
+          </DialogHeader>
+          <div className="space-y-4 py-4">
+            <div className="space-y-2">
+              <Label htmlFor="quantity">Number of Additional Users</Label>
+              <Input 
+                id="quantity"
+                type="number"
+                min="1"
+                max="50"
+                value={usersToBuy}
+                onChange={(e) => setUsersToBuy(Math.max(1, parseInt(e.target.value) || 1))}
+              />
+            </div>
+            <div className="bg-slate-50 rounded-lg p-4">
+              <div className="flex justify-between items-center mb-2">
+                <span className="text-slate-600">Additional Users</span>
+                <span className="font-semibold">{usersToBuy}</span>
+              </div>
+              <div className="flex justify-between items-center mb-2">
+                <span className="text-slate-600">Price per user</span>
+                <span className="font-semibold">$50/year</span>
+              </div>
+              <div className="border-t border-slate-200 mt-3 pt-3 flex justify-between items-center">
+                <span className="font-bold text-lg">Total</span>
+                <span className="font-bold text-2xl text-blue-900">${usersToBuy * 50}</span>
+              </div>
+            </div>
+          </div>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setBuyUsersDialogOpen(false)}>
+              Cancel
+            </Button>
+            <Button 
+              className="bg-blue-900 hover:bg-blue-800"
+              onClick={() => {
+                handleBuyAdditionalUsers(usersToBuy);
+                setBuyUsersDialogOpen(false);
+              }}
+              disabled={isProcessing}
+            >
+              {isProcessing ? (
+                <>
+                  <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+                  Processing...
+                </>
+              ) : (
+                <>
+                  <CreditCard className="w-4 h-4 mr-2" />
+                  Proceed to Payment
+                </>
+              )}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* Invite Admin Dialog */}
+      <Dialog open={inviteDialogOpen} onOpenChange={setInviteDialogOpen}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Invite School Admin</DialogTitle>
+            <DialogDescription>
+              Invite another administrator to manage your school. They will have full admin access to your school only.
+            </DialogDescription>
+          </DialogHeader>
+          <div className="space-y-4 py-4">
+            <div className="bg-blue-50 border border-blue-200 rounded-lg p-4">
+              <div className="flex items-start gap-3">
+                <Users className="w-5 h-5 text-blue-600 mt-0.5" />
+                <div>
+                  <p className="text-sm font-medium text-blue-900">
+                    Available Seats: {(school?.max_additional_users || 0) + 1 - schoolAdmins.length} / {(school?.max_additional_users || 0) + 1}
+                  </p>
+                  <p className="text-xs text-blue-700 mt-1">
+                    {schoolAdmins.length} admin(s) currently invited
+                  </p>
+                </div>
+              </div>
+            </div>
+            
+            <div className="space-y-2">
+              <Label htmlFor="invite-email">Admin Email Address</Label>
+              <Input 
+                id="invite-email"
+                type="email"
+                placeholder="admin@example.com"
+                value={inviteEmail}
+                onChange={(e) => setInviteEmail(e.target.value)}
+              />
+              <p className="text-xs text-slate-500">
+                They will receive an invitation email to join as a school administrator
+              </p>
+            </div>
+
+            {schoolAdmins.length > 0 && (
+              <div className="space-y-2">
+                <Label>Current Admins</Label>
+                <div className="space-y-2 max-h-40 overflow-y-auto">
+                  {schoolAdmins.map((admin, i) => (
+                    <div key={i} className="flex items-center gap-2 p-2 bg-slate-50 rounded-lg">
+                      <div className="w-8 h-8 rounded-full bg-blue-100 flex items-center justify-center">
+                        <Users className="w-4 h-4 text-blue-600" />
+                      </div>
+                      <div className="flex-1 min-w-0">
+                        <p className="text-sm font-medium text-slate-900 truncate">{admin.full_name || admin.email}</p>
+                        <p className="text-xs text-slate-500 truncate">{admin.email}</p>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            )}
+          </div>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => {
+              setInviteDialogOpen(false);
+              setInviteEmail('');
+            }}>
+              Cancel
+            </Button>
+            <Button 
+              className="bg-emerald-600 hover:bg-emerald-700"
+              onClick={() => inviteUserMutation.mutate(inviteEmail)}
+              disabled={inviteUserMutation.isPending || !inviteEmail || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(inviteEmail)}
+            >
+              {inviteUserMutation.isPending ? (
+                <>
+                  <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+                  Sending...
+                </>
+              ) : (
+                <>
+                  <Mail className="w-4 h-4 mr-2" />
+                  Send Invitation
+                </>
+              )}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }
