@@ -795,8 +795,9 @@ export default function Schedule() {
         }
       });
 
-      // Refresh slots
+      // Refresh slots and teaching groups
       queryClient.invalidateQueries({ queryKey: ['scheduleSlots'] });
+      queryClient.invalidateQueries({ queryKey: ['teachingGroups'] });
       
       setGenerationProgress({
         stage: 'Complete',
