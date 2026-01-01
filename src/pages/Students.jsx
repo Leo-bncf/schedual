@@ -382,19 +382,29 @@ export default function Students() {
       console.log('📋 Created conversation with student_importer agent:', conversation.id);
 
       // Send extraction request to agent with file
-      const response = await base44.agents.addMessage(conversation, {
+      await base44.agents.addMessage(conversation, {
         role: 'user',
         content: `Extract ALL students from this document. 
 
-    Return a JSON array of students, each with:
-    - full_name (with accents preserved)
-    - email
-    - student_id
-    - ib_programme (DP, MYP, or PYP)
-    - year_group (DP1/DP2, MYP1-5, or PYP-A to PYP-F)
-    - subjects: array of {name, level} (level required for DP: "HL" or "SL")
+Return ONLY a JSON array (no other text) with this exact structure:
+[
+  {
+    "full_name": "Student Name",
+    "email": "email@example.com",
+    "student_id": "ID123",
+    "ib_programme": "DP",
+    "year_group": "DP1",
+    "subjects": [
+      {"name": "Mathematics", "level": "HL"},
+      {"name": "English", "level": "SL"}
+    ]
+  }
+]
 
-    CRITICAL: DP students MUST have exactly 6 subjects with HL/SL levels. Verify year groups from document structure.`,
+CRITICAL RULES:
+- DP students MUST have exactly 6 subjects with HL/SL levels
+- Verify year groups from document structure (DP1/DP2, MYP1-5, PYP-A to PYP-F)
+- Return ONLY the JSON array, no additional text or explanations`,
         file_urls: [file_url]
       });
 
