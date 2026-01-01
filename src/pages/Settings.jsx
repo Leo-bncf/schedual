@@ -72,8 +72,8 @@ export default function Settings() {
   const [inviteDialogOpen, setInviteDialogOpen] = useState(false);
   const [inviteEmail, setInviteEmail] = useState('');
   const [isProcessing, setIsProcessing] = useState(false);
-  const [showBuyUsersDialog, setShowBuyUsersDialog] = useState(false);
-  const [showInviteDialog, setShowInviteDialog] = useState(false);
+  const [buyUsersDialogOpen, setBuyUsersDialogOpen] = useState(false);
+  const [inviteDialogOpen, setInviteDialogOpen] = useState(false);
   const queryClient = useQueryClient();
 
   const { data: user } = useQuery({
@@ -640,7 +640,7 @@ export default function Settings() {
                   </div>
                 </div>
                 <Button
-                  onClick={() => setShowInviteDialog(true)}
+                  onClick={() => setInviteDialogOpen(true)}
                   className="bg-indigo-600 hover:bg-indigo-700"
                   disabled={!school || schoolAdmins.length >= ((school?.max_additional_users || 0) + 1)}
                 >
@@ -668,7 +668,7 @@ export default function Settings() {
                   </div>
                   {schoolAdmins && schoolAdmins.length >= ((school?.max_additional_users || 0) + 1) && (
                     <Button
-                      onClick={() => setShowBuyUsersDialog(true)}
+                      onClick={() => setBuyUsersDialogOpen(true)}
                       className="bg-blue-600 hover:bg-blue-700"
                     >
                       <Plus className="w-4 h-4 mr-2" />
@@ -1023,7 +1023,7 @@ export default function Settings() {
       </Dialog>
 
       {/* Invite Admin Dialog */}
-      <Dialog open={inviteDialogOpen} onOpenChange={setInviteDialogOpen}>
+            <Dialog open={showInviteDialog} onOpenChange={setShowInviteDialog}>
         <DialogContent>
           <DialogHeader>
             <DialogTitle>Invite School Admin</DialogTitle>
