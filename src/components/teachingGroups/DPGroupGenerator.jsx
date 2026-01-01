@@ -82,6 +82,22 @@ export default function DPGroupGenerator({ onComplete }) {
               </div>
             </div>
 
+            {preview?.warnings > 0 && preview?.warnings_list && (
+              <div className="p-4 rounded-lg bg-amber-50 border border-amber-200">
+                <p className="text-sm font-semibold text-amber-900 mb-2">⚠️ Warnings ({preview.warnings}):</p>
+                <div className="space-y-1 max-h-40 overflow-y-auto">
+                  {preview.warnings_list.slice(0, 20).map((w, i) => (
+                    <p key={i} className="text-xs text-amber-800">
+                      • Student {w.student_id?.slice(-8)} has invalid subject_id: {w.subject_id?.slice(-8) || 'unknown'}
+                    </p>
+                  ))}
+                  {preview.warnings_list.length > 20 && (
+                    <p className="text-xs text-amber-700 italic">...and {preview.warnings_list.length - 20} more</p>
+                  )}
+                </div>
+              </div>
+            )}
+
             <div className="max-h-96 overflow-y-auto space-y-2 p-4 rounded-lg bg-slate-50 border border-slate-200">
               {preview?.groups?.map((g, i) => (
                 <div key={i} className="p-3 rounded-lg border bg-white border-slate-200">
@@ -102,7 +118,9 @@ export default function DPGroupGenerator({ onComplete }) {
                 </div>
               ))}
               {(!preview?.groups || preview.groups.length === 0) && (
-                <div className="text-sm text-slate-500 text-center py-4">No DP groups proposed. Ensure DP students have subject choices.</div>
+                <div className="text-sm text-slate-500 text-center py-4">
+                  No DP groups proposed. Check warnings above - likely students have invalid subject IDs or subjects are not marked as DP level.
+                </div>
               )}
             </div>
 

@@ -20,7 +20,9 @@ Deno.serve(async (req) => {
 
     // Map subjects for quick lookup and ensure DP-only
     const subjectById = new Map();
-    (subjects || []).forEach((s) => subjectById.set(s.id, s));
+    (subjects || []).forEach((s) => {
+      if (s?.id) subjectById.set(s.id, s);
+    });
 
     // Group DP students by subject_id + level + year_group
     const groupMap = new Map();
@@ -33,12 +35,19 @@ Deno.serve(async (req) => {
         if (choices.length === 0) return;
 
         choices.forEach((choice) => {
-          const subject = subjectById.get(choice.subject_id);
-          if (!subject) {
-            warnings.push({ type: 'missing_subject', student_id: student.id, subject_id: choice.subject_id });
+          if (!choice?.subject_id) {
+            warnings.push({ type: 'missing_subject_id', student_id: student.id, subject_id: 'none' });
             return;
           }
-          if (subject.ib_level !== 'DP') return; // DP only
+          const subject = subjectById.get(choice.subject_id);
+          if (!subject) {
+            warnings.push({ type: 'subject_not_found', student_id: student.id, subject_id: choice.subject_id });
+            return;
+          }
+          if (subject.ib_level !== 'DP') {
+            warnings.push({ type: 'not_dp_subject', student_id: student.id, subject_id: choice.subject_id, ib_level: subject.ib_level });
+            return;
+          }
 
           const level = choice.level === 'HL' ? 'HL' : 'SL';
           const yearGroup = student.year_group || 'DP1';
