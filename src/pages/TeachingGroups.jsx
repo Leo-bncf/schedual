@@ -25,6 +25,7 @@ import PageHeader from '../components/ui-custom/PageHeader';
 import GroupBuilder from '../components/teachingGroups/GroupBuilder';
 import AIGroupGenerator from '../components/teachingGroups/AIGroupGenerator';
 import EmptyState from '../components/ui-custom/EmptyState';
+import GenerateInfoDialog from '../components/ui-custom/GenerateInfoDialog';
 
 export default function TeachingGroups() {
   const [isDialogOpen, setIsDialogOpen] = useState(false);
@@ -34,6 +35,7 @@ export default function TeachingGroups() {
   const [levelFilter, setLevelFilter] = useState('all');
   const [yearFilter, setYearFilter] = useState('all');
   const [showAIGenerator, setShowAIGenerator] = useState(false);
+  const [showGenerateDialog, setShowGenerateDialog] = useState(false);
 
   const queryClient = useQueryClient();
 
@@ -143,7 +145,7 @@ export default function TeachingGroups() {
         actions={
           <div className="flex gap-2">
             <Button 
-              onClick={() => setShowAIGenerator(!showAIGenerator)} 
+              onClick={() => setShowGenerateDialog(true)} 
               variant="outline"
               className="border-indigo-200 text-indigo-700 hover:bg-indigo-50"
             >
@@ -156,6 +158,13 @@ export default function TeachingGroups() {
             </Button>
           </div>
         }
+      />
+
+      <GenerateInfoDialog
+        open={showGenerateDialog}
+        onOpenChange={setShowGenerateDialog}
+        onConfirm={() => setShowAIGenerator(true)}
+        type="teachinggroups"
       />
 
       {showAIGenerator && (

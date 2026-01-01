@@ -16,11 +16,13 @@ import {
 } from "@/components/ui/dialog";
 import PageHeader from '../components/ui-custom/PageHeader';
 import EmptyState from '../components/ui-custom/EmptyState';
+import GenerateInfoDialog from '../components/ui-custom/GenerateInfoDialog';
 
 export default function ClassGroups() {
   const [searchQuery, setSearchQuery] = useState('');
   const [isGenerating, setIsGenerating] = useState(false);
   const [selectedGroup, setSelectedGroup] = useState(null);
+  const [showGenerateDialog, setShowGenerateDialog] = useState(false);
   const queryClient = useQueryClient();
 
   const { data: user } = useQuery({
@@ -134,21 +136,12 @@ export default function ClassGroups() {
         description="Batches of students organized by year level (max 20 students per batch)"
         actions={
           <Button
-            onClick={handleAutoGenerate}
+            onClick={() => setShowGenerateDialog(true)}
             disabled={isGenerating}
             className="bg-indigo-600 hover:bg-indigo-700"
           >
-            {isGenerating ? (
-              <>
-                <RefreshCw className="w-4 h-4 mr-2 animate-spin" />
-                Generating...
-              </>
-            ) : (
-              <>
-                <Sparkles className="w-4 h-4 mr-2" />
-                Create Batches
-              </>
-            )}
+            <Sparkles className="w-4 h-4 mr-2" />
+            Create Batches
           </Button>
         }
       />
@@ -311,6 +304,15 @@ export default function ClassGroups() {
           })}
         </div>
       )}
+
+      {/* Generate Info Dialog */}
+      <GenerateInfoDialog
+        open={showGenerateDialog}
+        onOpenChange={setShowGenerateDialog}
+        onConfirm={handleAutoGenerate}
+        type="classgroups"
+        isGenerating={isGenerating}
+      />
 
       {/* ClassGroup Detail Dialog */}
       <Dialog open={!!selectedGroup} onOpenChange={() => setSelectedGroup(null)}>
