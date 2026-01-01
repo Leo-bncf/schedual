@@ -1,5 +1,5 @@
 import React from 'react';
-import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 import { motion } from 'framer-motion';
 import { Sparkles, Users, Zap, CheckCircle2, Loader2 } from 'lucide-react';
@@ -59,7 +59,9 @@ export default function GenerateInfoDialog({ open, onOpenChange, onConfirm, type
                 {current.title}
               </DialogTitle>
             </div>
-            <p className="text-white/90 text-sm">{current.description}</p>
+            <DialogDescription className="text-white/90 text-sm">
+              {current.description}
+            </DialogDescription>
           </DialogHeader>
         </div>
 

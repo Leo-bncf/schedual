@@ -70,6 +70,53 @@ export default function AIGroupGenerator({ onComplete, autoStart = true }) {
       // Add delay to show loading state
       await new Promise(resolve => setTimeout(resolve, 500));
       
+      // If no data available, fallback to LLM backend generator
+      if (dpStudents.length === 0 || subjects.length === 0) {
+        const { data } = await base44.functions.invoke('generateTeachingGroupsLLM', {});
+        const llmGroups = data?.groups || [];
+        const maxGroupSize = 20;
+        const proposedGroups = [];
+        llmGroups.forEach(g => {
+          const subject = subjects.find(s => s.id === g.subject_id);
+          if (!subject) return;
+          const base = {
+            subject_id: g.subject_id,
+            subject_name: subject.name,
+            level: g.level || 'SL',
+            year_group: g.year_group,
+            student_ids: g.student_ids || [],
+            group_suffix: g.group_suffix,
+            ib_group: subject.ib_group
+          };
+          if ((g.student_ids || []).length > maxGroupSize) {
+            const numGroups = Math.ceil(g.student_ids.length / maxGroupSize);
+            const per = Math.ceil(g.student_ids.length / numGroups);
+            for (let i = 0; i < numGroups; i++) {
+              const start = i * per;
+              const end = start + per;
+              proposedGroups.push({ ...base, student_ids: g.student_ids.slice(start, end), group_suffix: String.fromCharCode(65 + i), status: 'ready' });
+            }
+          } else {
+            proposedGroups.push({ ...base, status: (base.student_ids.length < 1 ? 'warning' : 'ready') });
+          }
+        });
+        // Suggest teachers based on qualifications
+        proposedGroups.forEach(group => {
+          const subject = subjects.find(s => s.id === group.subject_id);
+          const qualifiedTeachers = teachers.filter(t => t.is_active && t.qualifications?.some(qual => qual.subject_id === group.subject_id && qual.ib_levels?.includes(subject?.ib_level)));
+          group.qualified_teachers = qualifiedTeachers;
+          group.suggested_teacher_id = qualifiedTeachers[0]?.id;
+        });
+        setResults({
+          total: proposedGroups.length,
+          ready: proposedGroups.filter(g => g.status === 'ready').length,
+          warnings: proposedGroups.filter(g => g.status === 'warning').length,
+          groups: proposedGroups,
+        });
+        setIsGenerating(false);
+        return;
+      }
+      
       // Organize students by subject + level + year_group (DP students in current school)
       const groupMap = {};
 
@@ -239,7 +286,7 @@ export default function AIGroupGenerator({ onComplete, autoStart = true }) {
               </div>
               <Button 
                 onClick={generateGroups} 
-                disabled
+                disabled={isGenerating || dpStudents.length === 0 || subjects.length === 0}
                 className="bg-indigo-600 hover:bg-indigo-700"
               >
                 {isGenerating ? (
