@@ -12,24 +12,33 @@ export default function AIGroupGenerator({ onComplete }) {
   const [results, setResults] = useState(null);
   const queryClient = useQueryClient();
 
+  const { data: user } = useQuery({
+    queryKey: ['currentUser'],
+    queryFn: () => base44.auth.me(),
+  });
+
   const { data: students = [] } = useQuery({
-    queryKey: ['students'],
-    queryFn: () => base44.entities.Student.list(),
+    queryKey: ['students', user?.school_id],
+    queryFn: () => (user?.school_id ? base44.entities.Student.filter({ school_id: user.school_id }) : []),
+    enabled: !!user?.school_id,
   });
 
   const { data: subjects = [] } = useQuery({
-    queryKey: ['subjects'],
-    queryFn: () => base44.entities.Subject.list(),
+    queryKey: ['subjects', user?.school_id],
+    queryFn: () => (user?.school_id ? base44.entities.Subject.filter({ school_id: user.school_id, ib_level: 'DP' }) : []),
+    enabled: !!user?.school_id,
   });
 
   const { data: teachers = [] } = useQuery({
-    queryKey: ['teachers'],
-    queryFn: () => base44.entities.Teacher.list(),
+    queryKey: ['teachers', user?.school_id],
+    queryFn: () => (user?.school_id ? base44.entities.Teacher.filter({ school_id: user.school_id }) : []),
+    enabled: !!user?.school_id,
   });
 
   const { data: schools = [] } = useQuery({
-    queryKey: ['schools'],
-    queryFn: () => base44.entities.School.list(),
+    queryKey: ['schools', user?.school_id],
+    queryFn: () => (user?.school_id ? base44.entities.School.filter({ id: user.school_id }) : []),
+    enabled: !!user?.school_id,
   });
 
   const createGroupsMutation = useMutation({
@@ -48,7 +57,7 @@ export default function AIGroupGenerator({ onComplete }) {
       // Add delay to show loading state
       await new Promise(resolve => setTimeout(resolve, 500));
       
-      // Organize students by subject + level + year_group
+      // Organize students by subject + level + year_group (DP students in current school)
       const groupMap = {};
 
       students.forEach(student => {
@@ -60,7 +69,7 @@ export default function AIGroupGenerator({ onComplete }) {
             const subject = subjects.find(s => s.id === choice.subject_id);
             if (!subject) return;
 
-            const key = `${choice.subject_id}_${choice.level}_${student.year_group}`;
+            const key = `${choice.subject_id}_${choice.level || ''}_${student.year_group}`;
             
             if (!groupMap[key]) {
               groupMap[key] = {
@@ -210,7 +219,7 @@ export default function AIGroupGenerator({ onComplete }) {
               <div>
                 <p className="font-medium text-slate-900">Ready to generate</p>
                 <p className="text-sm text-slate-500 mt-1">
-                  {students.length} students • {subjects.length} subjects • {teachers.length} teachers
+                  {students.filter(s => s.ib_programme === 'DP' && s.is_active !== false).length} students • {subjects.length} subjects • {teachers.length} teachers
                 </p>
               </div>
               <Button 
