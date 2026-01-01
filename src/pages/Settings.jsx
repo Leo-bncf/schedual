@@ -149,12 +149,19 @@ export default function Settings() {
 
   const inviteUserMutation = useMutation({
     mutationFn: async (email) => {
-      const { data } = await base44.functions.invoke('inviteSchoolAdmin', { email });
-      return data;
+      const response = await base44.functions.invoke('inviteSchoolAdmin', { email });
+      if (response.data?.error) {
+        throw new Error(response.data.error);
+      }
+      return response.data;
     },
-    onSuccess: () => {
+    onSuccess: (data) => {
       queryClient.invalidateQueries({ queryKey: ['schoolAdmins'] });
-      toast.success('Invitation sent successfully');
+      if (data?.action === 'assigned_existing_user') {
+        toast.success('✅ User added as administrator successfully');
+      } else {
+        toast.success('✅ Invitation email sent successfully');
+      }
       setInviteEmail('');
       setInviteDialogOpen(false);
     },
@@ -1081,7 +1088,11 @@ export default function Settings() {
             </Button>
             <Button 
               className="bg-emerald-600 hover:bg-emerald-700"
-              onClick={() => inviteUserMutation.mutate(inviteEmail)}
+              onClick={() => {
+                if (inviteEmail && /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(inviteEmail)) {
+                  inviteUserMutation.mutate(inviteEmail);
+                }
+              }}
               disabled={inviteUserMutation.isPending || !inviteEmail || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(inviteEmail)}
             >
               {inviteUserMutation.isPending ? (

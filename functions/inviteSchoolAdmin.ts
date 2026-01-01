@@ -73,11 +73,17 @@ Deno.serve(async (req) => {
       });
     }
 
-    // User doesn't exist - send invitation
+    // User doesn't exist - send invitation via Base44
     await base44.users.inviteUser(email, 'admin');
     
-    // Also assign school_id immediately so when they sign up, they're already assigned
-    // We'll create a placeholder that will be merged when they accept
+    // Also send a custom email with school details
+    await base44.integrations.Core.SendEmail({
+      to: email,
+      subject: `Invitation to join ${school.name} on Schedual`,
+      body: `Hello,\n\nYou have been invited to join ${school.name} as a school administrator on Schedual.\n\nSchedulal is an IB school scheduling platform that helps manage teachers, students, subjects, and timetables.\n\nTo accept this invitation:\n1. Visit: ${Deno.env.get('BASE44_APP_URL') || 'https://app.schedual-pro.com'}\n2. Sign up or log in with this email address: ${email}\n3. You will automatically be assigned as an administrator for ${school.name}\n\nIf you have any questions, please contact support@schedual-pro.com\n\nBest regards,\nThe Schedual Team`
+    });
+    
+    // Create a placeholder user record that will be linked when they sign up
     await base44.asServiceRole.entities.User.create({
       email,
       full_name: email.split('@')[0],
