@@ -49,7 +49,7 @@ Deno.serve(async (req) => {
         return Response.json({ error: 'Active subscription required' }, { status: 400 });
       }
 
-      const ADDITIONAL_USER_PRICE = 50;
+      const ADDITIONAL_USER_PRICE = 200;
       const session = await stripe.checkout.sessions.create({
         payment_method_types: ['card'],
         mode: 'payment',

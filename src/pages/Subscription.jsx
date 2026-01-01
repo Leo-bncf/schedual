@@ -474,7 +474,7 @@ export default function Subscription() {
           <DialogHeader>
             <DialogTitle>Purchase Additional User Seats</DialogTitle>
             <DialogDescription>
-              Add more admin accounts for your school. Each additional user costs $50/year.
+              Add more admin accounts for your school. Each additional user costs €200/year.
             </DialogDescription>
           </DialogHeader>
           <div className="space-y-4 py-4">
@@ -496,11 +496,11 @@ export default function Subscription() {
               </div>
               <div className="flex justify-between items-center mb-2">
                 <span className="text-slate-600">Price per user</span>
-                <span className="font-semibold">$50/year</span>
+                <span className="font-semibold">€200/year</span>
               </div>
               <div className="border-t border-slate-200 mt-3 pt-3 flex justify-between items-center">
                 <span className="font-bold text-lg">Total</span>
-                <span className="font-bold text-2xl text-blue-900">${usersToBuy * 50}</span>
+                <span className="font-bold text-2xl text-blue-900">€{usersToBuy * 200}</span>
               </div>
             </div>
           </div>
