@@ -24,7 +24,61 @@ Deno.serve(async (req) => {
       return Response.json({ error: 'SuperAdmin accounts cannot subscribe' }, { status: 403 });
     }
 
-    const { additionalUsers = 0 } = await req.json();
+    const { additionalUsers = 0, additional_users_only = false, quantity = 0, manage_subscription = false } = await req.json();
+
+    // Handle billing portal for existing subscriptions
+    if (manage_subscription && user.school_id) {
+      const schools = await base44.asServiceRole.entities.School.filter({ id: user.school_id });
+      const school = schools[0];
+      
+      if (school?.stripe_customer_id) {
+        const portalSession = await stripe.billingPortal.sessions.create({
+          customer: school.stripe_customer_id,
+          return_url: `${req.headers.get('origin') || 'https://' + req.headers.get('host')}/Subscription`,
+        });
+        return Response.json({ url: portalSession.url });
+      }
+    }
+
+    // Handle purchase of additional users only
+    if (additional_users_only && user.school_id) {
+      const schools = await base44.asServiceRole.entities.School.filter({ id: user.school_id });
+      const school = schools[0];
+      
+      if (!school || school.subscription_status !== 'active') {
+        return Response.json({ error: 'Active subscription required' }, { status: 400 });
+      }
+
+      const ADDITIONAL_USER_PRICE = 50;
+      const session = await stripe.checkout.sessions.create({
+        payment_method_types: ['card'],
+        mode: 'payment',
+        customer: school.stripe_customer_id || undefined,
+        customer_email: school.stripe_customer_id ? undefined : user.email,
+        line_items: [
+          {
+            price_data: {
+              currency: 'usd',
+              product_data: {
+                name: 'Additional Admin User Seats',
+                description: `${quantity} additional admin user(s) for your school`,
+              },
+              unit_amount: ADDITIONAL_USER_PRICE * 100,
+            },
+            quantity,
+          },
+        ],
+        metadata: {
+          type: 'additional_users',
+          school_id: school.id,
+          quantity: String(quantity),
+        },
+        success_url: `${req.headers.get('origin') || 'https://' + req.headers.get('host')}/Subscription?purchase=success`,
+        cancel_url: `${req.headers.get('origin') || 'https://' + req.headers.get('host')}/Subscription?purchase=cancelled`,
+      });
+      
+      return Response.json({ sessionId: session.id, url: session.url });
+    }
 
     // Check if user already has active subscription
     if (user.school_id) {
