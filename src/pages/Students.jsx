@@ -422,7 +422,7 @@ export default function Students() {
       setUploadState(prev => ({ ...prev, progress: 'AI analyzing document with learned patterns...' }));
 
       // Extract using LLM with training context
-      const allStudents = await base44.integrations.Core.InvokeLLM({
+      const llmResponse = await base44.integrations.Core.InvokeLLM({
         prompt: `Extract ALL students from this document.${learningContext}
 
 CRITICAL INSTRUCTIONS:
@@ -465,7 +465,7 @@ Return ONLY students array, no other text.`,
         }
       });
 
-      const extractedStudents = allStudents?.students || [];
+      const extractedStudents = llmResponse?.students || [];
       
       if (extractedStudents.length === 0) {
         throw new Error('No students found in document');
