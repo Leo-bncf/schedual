@@ -263,6 +263,12 @@ export default function AIGroupGenerator({ onComplete, autoStart = true }) {
               </div>
             )}
 
+            {!isGenerating && !results && (
+              <div className="py-6 text-center text-sm text-slate-500">
+                Preparing data...
+              </div>
+            )
+
             {dpStudents.length === 0 && (
               <Alert>
                 <AlertCircle className="w-4 h-4" />
