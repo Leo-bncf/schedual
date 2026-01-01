@@ -479,6 +479,7 @@ Return ONLY students array, no other text.`,
       }
 
       const allStudents = extractedStudents;
+      console.log(`Total extracted: ${allStudents.length} students from AI`);
 
       // Validation logging
       const dpStudents = allStudents.filter(s => s.ib_programme === 'DP');
