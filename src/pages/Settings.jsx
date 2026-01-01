@@ -24,6 +24,12 @@ import {
   DialogFooter,
 } from "@/components/ui/dialog";
 import { Badge } from "@/components/ui/badge";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
 import { 
   Building2, 
   Clock, 
@@ -44,7 +50,10 @@ import {
   MapPin,
   Hash,
   School,
-  Timer
+  Timer,
+  MoreHorizontal,
+  Trash2,
+  Plus
 } from 'lucide-react';
 import PageHeader from '../components/ui-custom/PageHeader';
 import { toast } from 'sonner';
@@ -63,6 +72,8 @@ export default function Settings() {
   const [inviteDialogOpen, setInviteDialogOpen] = useState(false);
   const [inviteEmail, setInviteEmail] = useState('');
   const [isProcessing, setIsProcessing] = useState(false);
+  const [showBuyUsersDialog, setShowBuyUsersDialog] = useState(false);
+  const [showInviteDialog, setShowInviteDialog] = useState(false);
   const queryClient = useQueryClient();
 
   const { data: user } = useQuery({
@@ -77,13 +88,13 @@ export default function Settings() {
 
   const school = schools[0];
 
-  const { data: schoolAdmins = [] } = useQuery({
+  const { data: schoolAdmins = [], isLoading: isLoadingAdmins } = useQuery({
     queryKey: ['schoolAdmins', user?.school_id],
     queryFn: async () => {
       const { data } = await base44.functions.invoke('getSchoolAdmins');
       return data?.admins || [];
     },
-    enabled: !!user?.school_id && school?.subscription_status === 'active',
+    enabled: !!user?.school_id,
   });
 
   const [formData, setFormData] = useState({
@@ -242,7 +253,7 @@ export default function Settings() {
       />
 
       <Tabs defaultValue="school" className="space-y-6">
-        <TabsList className="grid grid-cols-4 w-full max-w-2xl bg-gradient-to-r from-slate-100 to-slate-200 p-1 h-auto">
+        <TabsList className="grid grid-cols-5 w-full max-w-3xl bg-gradient-to-r from-slate-100 to-slate-200 p-1 h-auto">
           <TabsTrigger value="school" className="flex flex-col items-center gap-1.5 py-3 data-[state=active]:bg-white data-[state=active]:shadow-md">
             <Building2 className="w-5 h-5" />
             <span className="text-xs font-medium">School Info</span>
@@ -250,6 +261,10 @@ export default function Settings() {
           <TabsTrigger value="schedule" className="flex flex-col items-center gap-1.5 py-3 data-[state=active]:bg-white data-[state=active]:shadow-md">
             <Calendar className="w-5 h-5" />
             <span className="text-xs font-medium">Schedule</span>
+          </TabsTrigger>
+          <TabsTrigger value="admins" className="flex flex-col items-center gap-1.5 py-3 data-[state=active]:bg-white data-[state=active]:shadow-md">
+            <Users className="w-5 h-5" />
+            <span className="text-xs font-medium">Admins</span>
           </TabsTrigger>
           <TabsTrigger value="subscription" className="flex flex-col items-center gap-1.5 py-3 data-[state=active]:bg-white data-[state=active]:shadow-md">
             <CreditCard className="w-5 h-5" />
@@ -599,6 +614,154 @@ export default function Settings() {
               </CardContent>
             </Card>
           </div>
+        </TabsContent>
+
+        <TabsContent value="admins">
+          <Card className="border-0 shadow-md">
+            <CardHeader className="bg-gradient-to-r from-indigo-50 to-violet-50">
+              <div className="flex items-center justify-between">
+                <div className="flex items-center gap-3">
+                  <div className="p-2 rounded-lg bg-indigo-100">
+                    <Users className="w-5 h-5 text-indigo-700" />
+                  </div>
+                  <div>
+                    <CardTitle className="text-lg">Administrator Management</CardTitle>
+                    <CardDescription className="mt-1">
+                      Manage who has admin access to your school. All admins have full permissions.
+                    </CardDescription>
+                  </div>
+                </div>
+                <Button
+                  onClick={() => setShowInviteDialog(true)}
+                  className="bg-indigo-600 hover:bg-indigo-700"
+                  disabled={!school || schoolAdmins.length >= ((school?.max_additional_users || 0) + 1)}
+                >
+                  <Plus className="w-4 h-4 mr-2" />
+                  Invite Admin
+                </Button>
+              </div>
+            </CardHeader>
+            <CardContent className="pt-6 space-y-6">
+              {/* Seats Info */}
+              <div className="p-5 rounded-xl bg-gradient-to-br from-blue-50 to-indigo-50 border-2 border-blue-200">
+                <div className="flex items-center justify-between">
+                  <div className="flex items-center gap-4">
+                    <div className="w-14 h-14 rounded-full bg-blue-100 flex items-center justify-center">
+                      <Users className="w-7 h-7 text-blue-600" />
+                    </div>
+                    <div>
+                      <p className="text-2xl font-bold text-blue-900">
+                        {schoolAdmins?.length || 0} / {(school?.max_additional_users || 0) + 1}
+                      </p>
+                      <p className="text-sm text-blue-700 font-medium">
+                        Admin seats used
+                      </p>
+                    </div>
+                  </div>
+                  {schoolAdmins && schoolAdmins.length >= ((school?.max_additional_users || 0) + 1) && (
+                    <Button
+                      onClick={() => setShowBuyUsersDialog(true)}
+                      className="bg-blue-600 hover:bg-blue-700"
+                    >
+                      <Plus className="w-4 h-4 mr-2" />
+                      Buy More Seats
+                    </Button>
+                  )}
+                </div>
+              </div>
+
+              {/* Admin List */}
+              <div className="space-y-3">
+                {isLoadingAdmins ? (
+                  <div className="text-center py-12">
+                    <div className="w-10 h-10 border-4 border-indigo-600 border-t-transparent rounded-full animate-spin mx-auto mb-3"></div>
+                    <p className="text-sm text-slate-500">Loading administrators...</p>
+                  </div>
+                ) : schoolAdmins?.length > 0 ? (
+                  schoolAdmins.map((admin) => (
+                    <Card key={admin.id} className="border-2 border-slate-200 hover:border-indigo-300 transition-all duration-200">
+                      <CardContent className="p-5">
+                        <div className="flex items-center justify-between">
+                          <div className="flex items-center gap-4">
+                            <div className="w-14 h-14 rounded-full bg-gradient-to-br from-indigo-500 to-violet-600 flex items-center justify-center shadow-lg">
+                              <span className="text-white font-bold text-xl">
+                                {admin.full_name?.charAt(0)?.toUpperCase() || admin.email?.charAt(0)?.toUpperCase() || 'A'}
+                              </span>
+                            </div>
+                            <div>
+                              <p className="font-semibold text-slate-900 text-lg">{admin.full_name || 'Administrator'}</p>
+                              <p className="text-sm text-slate-500">{admin.email}</p>
+                              <div className="flex items-center gap-2 mt-1.5">
+                                <Badge className="bg-indigo-100 text-indigo-700 border-0 text-xs">
+                                  Administrator
+                                </Badge>
+                                {admin.email === user?.email && (
+                                  <Badge className="bg-green-100 text-green-700 border-0 text-xs">
+                                    You
+                                  </Badge>
+                                )}
+                              </div>
+                            </div>
+                          </div>
+                          {admin.email !== user?.email && (
+                            <DropdownMenu>
+                              <DropdownMenuTrigger asChild>
+                                <Button variant="ghost" size="icon" className="h-9 w-9">
+                                  <MoreHorizontal className="w-5 h-5" />
+                                </Button>
+                              </DropdownMenuTrigger>
+                              <DropdownMenuContent align="end">
+                                <DropdownMenuItem
+                                  className="text-rose-600 focus:text-rose-600"
+                                  onClick={async () => {
+                                    if (confirm(`Remove ${admin.full_name || admin.email} as administrator?\n\nThey will lose all access to school management. This action cannot be undone.`)) {
+                                      try {
+                                        await base44.entities.User.update(admin.id, { school_id: null });
+                                        queryClient.invalidateQueries({ queryKey: ['schoolAdmins'] });
+                                        toast.success('Administrator removed successfully');
+                                      } catch (error) {
+                                        toast.error('Failed to remove administrator');
+                                      }
+                                    }
+                                  }}
+                                >
+                                  <Trash2 className="w-4 h-4 mr-2" />
+                                  Remove Admin Access
+                                </DropdownMenuItem>
+                              </DropdownMenuContent>
+                            </DropdownMenu>
+                          )}
+                        </div>
+                      </CardContent>
+                    </Card>
+                  ))
+                ) : (
+                  <div className="text-center py-12 text-slate-500">
+                    <div className="w-16 h-16 rounded-full bg-slate-100 flex items-center justify-center mx-auto mb-3">
+                      <Users className="w-8 h-8 text-slate-300" />
+                    </div>
+                    <p className="font-medium">No administrators found</p>
+                    <p className="text-sm mt-1">Invite admins to manage your school</p>
+                  </div>
+                )}
+              </div>
+
+              {/* Important Notice */}
+              <div className="p-4 rounded-lg bg-amber-50 border border-amber-200">
+                <div className="flex gap-3">
+                  <AlertCircle className="w-5 h-5 text-amber-600 flex-shrink-0 mt-0.5" />
+                  <div className="text-sm text-amber-800">
+                    <p className="font-semibold mb-1">⚠️ Admin Permissions</p>
+                    <ul className="space-y-1 list-disc list-inside">
+                      <li>All admins have <strong>full access</strong> to manage students, teachers, subjects, and schedules</li>
+                      <li>Admins can <strong>add or remove other admins</strong> (including you)</li>
+                      <li>Only grant admin access to <strong>trusted individuals</strong></li>
+                    </ul>
+                  </div>
+                </div>
+              </div>
+            </CardContent>
+          </Card>
         </TabsContent>
 
         <TabsContent value="subscription">
