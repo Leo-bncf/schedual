@@ -204,8 +204,10 @@ export default function Teachers() {
 
 IMPORTANT SUBJECT RULES:
 - In MYP, there are NO separate Geography or History classes. If a teacher's description mentions Geography or History, they teach "Individuals & Societies"
+- In MYP, there are NO separate Chemistry, Biology, or Physics classes. If a teacher's description mentions Chemistry, Biology, or Physics for MYP, they teach "Sciences"
 - In PYP and MYP, there are NO Math levels (no HL/SL). There is only one type of Math for all PYP and MYP year levels
 - Only DP (Diploma Programme) has subject levels like HL/SL
+- If a teacher is described as a homeroom teacher, class teacher, or form teacher for PYP, add "Homeroom" to their subjects
 
 ${trainingFeedback ? `LESSONS FROM ADMIN FEEDBACK:\n${trainingFeedback}\n\n` : ''}
 
