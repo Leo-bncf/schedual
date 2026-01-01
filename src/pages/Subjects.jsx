@@ -457,9 +457,12 @@ ${trainingFeedback ? `LESSONS FROM ADMIN FEEDBACK:\n${trainingFeedback}\n\n` : '
                           <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-orange-500 to-amber-600 flex items-center justify-center">
                             <BookOpen className="w-5 h-5 text-white" />
                           </div>
-                          <div>
+                          <div className="flex-1">
                             <p className="font-semibold text-slate-900">{subject.name}</p>
                             <p className="text-sm text-slate-500">{subject.code}</p>
+                            <Badge className="mt-2 bg-orange-100 text-orange-700 border-0 text-xs">
+                              {subject.pyp_myp_hours_per_week || 4}h/week
+                            </Badge>
                           </div>
                         </div>
                         <DropdownMenu>
