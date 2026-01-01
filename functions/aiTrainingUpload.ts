@@ -5,13 +5,15 @@ Deno.serve(async (req) => {
     const base44 = createClientFromRequest(req);
     const user = await base44.auth.me();
 
-    // Only super admins can upload training data
+    const { action, ...params } = await req.json();
+    
+    // Check super admin for write operations only
     const { data: superAdminCheck } = await base44.functions.invoke('getSuperAdminEmails');
-    if (!superAdminCheck?.isSuperAdmin) {
+    const isSuperAdmin = superAdminCheck?.isSuperAdmin;
+    
+    if (['upload', 'updateField', 'approve'].includes(action) && !isSuperAdmin) {
       return Response.json({ error: 'Unauthorized - Super Admin access required' }, { status: 403 });
     }
-
-    const { action, ...params } = await req.json();
 
     if (action === 'upload') {
       const { file_url, file_name, agent_name, extracted_data, training_feedback } = params;
