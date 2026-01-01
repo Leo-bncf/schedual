@@ -49,17 +49,7 @@ Deno.serve(async (req) => {
             });
             return;
           }
-          if (subject.ib_level !== 'DP') {
-            warnings.push({ 
-              type: 'not_dp_subject', 
-              student_id: student.id, 
-              subject_id: choice.subject_id, 
-              subject_name: subject.name,
-              ib_level: subject.ib_level,
-              message: `Subject "${subject.name}" is ${subject.ib_level}, not DP` 
-            });
-            return;
-          }
+          // No ib_level check - if DP student chose it, group it
 
           const level = choice.level === 'HL' ? 'HL' : 'SL';
           const yearGroup = student.year_group || 'DP1';
