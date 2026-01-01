@@ -692,6 +692,38 @@ export default function Settings() {
                       <strong>Note:</strong> "Manage Subscription" opens Stripe's portal for payment methods, invoices, and cancellation.
                     </p>
                   </div>
+
+                  {/* Current Admins List */}
+                  {schoolAdmins.length > 0 && (
+                    <div className="mt-6 p-4 rounded-lg border-2 border-slate-200 bg-slate-50">
+                      <div className="flex items-center justify-between mb-4">
+                        <h4 className="font-semibold text-slate-900 flex items-center gap-2">
+                          <Users className="w-4 h-4" />
+                          School Administrators ({schoolAdmins.length}/{(school?.max_additional_users || 0) + 1})
+                        </h4>
+                      </div>
+                      <div className="space-y-2">
+                        {schoolAdmins.map((admin, i) => (
+                          <div key={i} className="flex items-center justify-between p-3 bg-white rounded-lg border border-slate-200">
+                            <div className="flex items-center gap-3">
+                              <div className="w-10 h-10 rounded-full bg-gradient-to-br from-blue-500 to-indigo-600 flex items-center justify-center">
+                                <span className="text-white font-semibold text-sm">
+                                  {admin.full_name?.charAt(0) || admin.email?.charAt(0) || 'A'}
+                                </span>
+                              </div>
+                              <div>
+                                <p className="font-medium text-slate-900">{admin.full_name || 'Admin User'}</p>
+                                <p className="text-sm text-slate-500">{admin.email}</p>
+                              </div>
+                            </div>
+                            <Badge variant="outline" className="text-blue-700 border-blue-300">
+                              Admin
+                            </Badge>
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+                  )}
                 </div>
               ) : (
                 <div className="text-center py-8">
