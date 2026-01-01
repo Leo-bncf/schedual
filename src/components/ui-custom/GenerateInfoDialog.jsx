@@ -2,7 +2,7 @@ import React from 'react';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 import { motion } from 'framer-motion';
-import { Sparkles, Users, Zap, CheckCircle2 } from 'lucide-react';
+import { Sparkles, Users, Zap, CheckCircle2, Loader2 } from 'lucide-react';
 
 export default function GenerateInfoDialog({ open, onOpenChange, onConfirm, type = 'classgroups', isGenerating = false }) {
   const config = {
@@ -54,12 +54,7 @@ export default function GenerateInfoDialog({ open, onOpenChange, onConfirm, type
           />
           <DialogHeader className="relative">
             <div className="flex items-center gap-3 mb-2">
-              <motion.div
-                animate={{ rotate: 360 }}
-                transition={{ duration: 2, repeat: Infinity, ease: 'linear' }}
-              >
-                <Sparkles className="w-8 h-8 text-white" />
-              </motion.div>
+              <Sparkles className="w-8 h-8 text-white hover:animate-shake" />
               <DialogTitle className="text-2xl font-bold text-white">
                 {current.title}
               </DialogTitle>
@@ -125,18 +120,12 @@ export default function GenerateInfoDialog({ open, onOpenChange, onConfirm, type
             >
               {isGenerating ? (
                 <>
-                  <motion.div
-                    animate={{ rotate: 360 }}
-                    transition={{ duration: 1, repeat: Infinity, ease: 'linear' }}
-                    className="mr-2"
-                  >
-                    <Sparkles className="w-4 h-4" />
-                  </motion.div>
+                  <Loader2 className="w-4 h-4 mr-2 animate-spin" />
                   Generating...
                 </>
               ) : (
                 <>
-                  <Sparkles className="w-4 h-4 mr-2" />
+                  <Sparkles className="w-4 h-4 mr-2 hover:animate-shake" />
                   Start Generation
                 </>
               )}
