@@ -66,6 +66,7 @@ export default function Subjects() {
     available_levels: ['HL', 'SL'],
     hl_hours_per_week: 6,
     sl_hours_per_week: 4,
+    pyp_myp_hours_per_week: 4,
     requires_lab: false,
     requires_special_room: '',
     is_core: false,
@@ -121,6 +122,7 @@ export default function Subjects() {
       available_levels: ['HL', 'SL'],
       hl_hours_per_week: 6,
       sl_hours_per_week: 4,
+      pyp_myp_hours_per_week: 4,
       requires_lab: false,
       requires_special_room: '',
       is_core: false,
@@ -141,6 +143,7 @@ export default function Subjects() {
       available_levels: subject.available_levels || ['HL', 'SL'],
       hl_hours_per_week: subject.hl_hours_per_week || 6,
       sl_hours_per_week: subject.sl_hours_per_week || 4,
+      pyp_myp_hours_per_week: subject.pyp_myp_hours_per_week || 4,
       requires_lab: subject.requires_lab || false,
       requires_special_room: subject.requires_special_room || '',
       is_core: subject.is_core || false,
@@ -212,7 +215,11 @@ export default function Subjects() {
       }).filter(Boolean).join('\n\n');
 
       const extractionResult = await base44.integrations.Core.InvokeLLM({
-        prompt: `Extract all subjects/classes from this document. For each subject, provide: name, code, ib_level (one of: DP, MYP, PYP), and for DP subjects also include ib_group (string: "1", "2", "3", "4", "5", or "6") and available_levels (array of HL and/or SL).
+        prompt: `Extract all subjects/classes from this document. For each subject, provide:
+- name, code, ib_level (one of: DP, MYP, PYP)
+- For DP subjects: ib_group (string: "1", "2", "3", "4", "5", or "6") and available_levels (array of HL and/or SL)
+- For PYP/MYP subjects: pyp_myp_hours_per_week (number, default 4 if not specified)
+  Look for phrases like "4 periods per week", "5 hours weekly", "3h/week" to extract teaching hours
 
 ${trainingFeedback ? `LESSONS FROM ADMIN FEEDBACK:\n${trainingFeedback}\n\n` : ''}`,
         file_urls: [file_url],
@@ -228,7 +235,8 @@ ${trainingFeedback ? `LESSONS FROM ADMIN FEEDBACK:\n${trainingFeedback}\n\n` : '
                   code: { type: "string" },
                   ib_level: { type: "string" },
                   ib_group: { type: "string" },
-                  available_levels: { type: "array", items: { type: "string" } }
+                  available_levels: { type: "array", items: { type: "string" } },
+                  pyp_myp_hours_per_week: { type: "number" }
                 },
                 required: ["name", "code", "ib_level"]
               }
@@ -260,6 +268,7 @@ ${trainingFeedback ? `LESSONS FROM ADMIN FEEDBACK:\n${trainingFeedback}\n\n` : '
           available_levels: subject.available_levels || ['HL', 'SL'],
           hl_hours_per_week: 6,
           sl_hours_per_week: 4,
+          pyp_myp_hours_per_week: subject.pyp_myp_hours_per_week || 4,
           requires_lab: false,
           is_core: false,
           is_active: true
@@ -392,12 +401,15 @@ ${trainingFeedback ? `LESSONS FROM ADMIN FEEDBACK:\n${trainingFeedback}\n\n` : '
                           <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-green-500 to-emerald-600 flex items-center justify-center">
                             <BookOpen className="w-5 h-5 text-white" />
                           </div>
-                          <div>
+                          <div className="flex-1">
                             <p className="font-semibold text-slate-900">{subject.name}</p>
                             <p className="text-sm text-slate-500">{subject.code}</p>
+                            <Badge className="mt-2 bg-green-100 text-green-700 border-0 text-xs">
+                              {subject.pyp_myp_hours_per_week || 4}h/week
+                            </Badge>
                           </div>
-                        </div>
-                        <DropdownMenu>
+                          </div>
+                          <DropdownMenu>
                           <DropdownMenuTrigger asChild>
                             <Button variant="ghost" size="icon" className="h-8 w-8">
                               <MoreHorizontal className="w-4 h-4" />
@@ -411,15 +423,15 @@ ${trainingFeedback ? `LESSONS FROM ADMIN FEEDBACK:\n${trainingFeedback}\n\n` : '
                               <Trash2 className="w-4 h-4 mr-2" /> Delete
                             </DropdownMenuItem>
                           </DropdownMenuContent>
-                        </DropdownMenu>
-                        </div>
-                        </CardContent>
-                        </Card>
-                        </motion.div>
-                        ))}
-                        </div>
-                        </div>
-                        )}
+                          </DropdownMenu>
+                          </div>
+                          </CardContent>
+                          </Card>
+                          </motion.div>
+                          ))}
+                          </div>
+                          </div>
+                          )}
 
                         {/* MYP Subjects */}
           {mypSubjects.length > 0 && (
@@ -678,26 +690,48 @@ ${trainingFeedback ? `LESSONS FROM ADMIN FEEDBACK:\n${trainingFeedback}\n\n` : '
               </Select>
             </div>
 
-            <div className="grid grid-cols-2 gap-4">
-              <div className="space-y-2">
-                <Label htmlFor="hl_hours">HL Hours/Week</Label>
-                <Input 
-                  id="hl_hours"
-                  type="number"
-                  value={formData.hl_hours_per_week}
-                  onChange={(e) => setFormData({ ...formData, hl_hours_per_week: parseInt(e.target.value) })}
-                />
+            {formData.ib_level === 'DP' ? (
+              <div className="grid grid-cols-2 gap-4">
+                <div className="space-y-2">
+                  <Label htmlFor="hl_hours">HL Hours/Week</Label>
+                  <Input 
+                    id="hl_hours"
+                    type="number"
+                    min="1"
+                    max="10"
+                    value={formData.hl_hours_per_week}
+                    onChange={(e) => setFormData({ ...formData, hl_hours_per_week: parseInt(e.target.value) || 6 })}
+                  />
+                </div>
+                <div className="space-y-2">
+                  <Label htmlFor="sl_hours">SL Hours/Week</Label>
+                  <Input 
+                    id="sl_hours"
+                    type="number"
+                    min="1"
+                    max="10"
+                    value={formData.sl_hours_per_week}
+                    onChange={(e) => setFormData({ ...formData, sl_hours_per_week: parseInt(e.target.value) || 4 })}
+                  />
+                </div>
               </div>
+            ) : (
               <div className="space-y-2">
-                <Label htmlFor="sl_hours">SL Hours/Week</Label>
+                <Label htmlFor="pyp_myp_hours">Teaching Hours Per Week *</Label>
                 <Input 
-                  id="sl_hours"
+                  id="pyp_myp_hours"
                   type="number"
-                  value={formData.sl_hours_per_week}
-                  onChange={(e) => setFormData({ ...formData, sl_hours_per_week: parseInt(e.target.value) })}
+                  min="1"
+                  max="10"
+                  value={formData.pyp_myp_hours_per_week}
+                  onChange={(e) => setFormData({ ...formData, pyp_myp_hours_per_week: parseInt(e.target.value) || 4 })}
+                  placeholder="e.g., 4"
                 />
+                <p className="text-xs text-slate-500">
+                  Allocated teaching hours per week for this {formData.ib_level} subject
+                </p>
               </div>
-            </div>
+            )}
 
             <div className="flex items-center gap-6">
               <div className="flex items-center gap-2">
