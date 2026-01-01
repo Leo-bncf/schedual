@@ -149,7 +149,8 @@ export default function Settings() {
 
   const inviteUserMutation = useMutation({
     mutationFn: async (email) => {
-      await base44.users.inviteUser(email, 'admin');
+      const { data } = await base44.functions.invoke('inviteSchoolAdmin', { email });
+      return data;
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['schoolAdmins'] });
