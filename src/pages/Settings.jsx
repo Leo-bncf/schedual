@@ -72,8 +72,6 @@ export default function Settings() {
   const [inviteDialogOpen, setInviteDialogOpen] = useState(false);
   const [inviteEmail, setInviteEmail] = useState('');
   const [isProcessing, setIsProcessing] = useState(false);
-  const [buyUsersDialogOpen, setBuyUsersDialogOpen] = useState(false);
-  const [inviteDialogOpen, setInviteDialogOpen] = useState(false);
   const queryClient = useQueryClient();
 
   const { data: user } = useQuery({
