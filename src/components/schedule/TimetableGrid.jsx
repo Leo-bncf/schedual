@@ -95,11 +95,17 @@ export default function TimetableGrid({ slots = [], groups = [], rooms = [], sub
     
     let group, subject, teacher;
     
-    // First try: PYP/MYP style (direct subject_id/teacher_id on slot)
-    if (slot.subject_id && slot.teacher_id) {
+    // DP style: teaching_group_id on slot (check this first!)
+    if (slot.teaching_group_id) {
+      group = getGroupInfo(slot.teaching_group_id);
+      subject = group ? getSubjectInfo(group.subject_id) : null;
+      teacher = group ? getTeacherInfo(group.teacher_id) : null;
+    }
+    // PYP/MYP style: direct subject_id on slot
+    else if (slot.subject_id) {
       const classGroup = classGroups.find(cg => cg.id === slot.classgroup_id);
       subject = getSubjectInfo(slot.subject_id);
-      teacher = getTeacherInfo(slot.teacher_id);
+      teacher = slot.teacher_id ? getTeacherInfo(slot.teacher_id) : null;
       
       // Create a group-like object for modal compatibility
       group = {
@@ -107,17 +113,10 @@ export default function TimetableGrid({ slots = [], groups = [], rooms = [], sub
         level: classGroup?.year_group || subject?.ib_level,
         student_ids: classGroup?.student_ids || []
       };
-    } 
-    // Second try: DP style (teaching_group_id on slot)
-    else if (slot.teaching_group_id) {
-      group = getGroupInfo(slot.teaching_group_id);
-      subject = group ? getSubjectInfo(group.subject_id) : null;
-      teacher = group ? getTeacherInfo(group.teacher_id) : null;
     }
-    // Fallback: try to get any info from slot directly
-    else {
-      subject = slot.subject_id ? getSubjectInfo(slot.subject_id) : null;
-      teacher = slot.teacher_id ? getTeacherInfo(slot.teacher_id) : null;
+    // Fallback: slot with direct teacher_id only
+    else if (slot.teacher_id) {
+      teacher = getTeacherInfo(slot.teacher_id);
     }
     
     const room = getRoomInfo(slot.room_id);
@@ -181,16 +180,8 @@ export default function TimetableGrid({ slots = [], groups = [], rooms = [], sub
                         let level = '';
                         let displayName = '';
                         
-                        // First try: PYP/MYP style (subject_id directly on slot)
-                        if (slot.subject_id && slot.teacher_id) {
-                          subject = getSubjectInfo(slot.subject_id);
-                          teacher = getTeacherInfo(slot.teacher_id);
-                          const classGroup = classGroups.find(cg => cg.id === slot.classgroup_id);
-                          level = classGroup?.ib_programme || '';
-                          displayName = classGroup?.name || '';
-                        } 
-                        // Second try: DP style (teaching_group_id on slot)
-                        else if (slot.teaching_group_id) {
+                        // DP style: teaching_group_id on slot (check this first!)
+                        if (slot.teaching_group_id) {
                           const group = getGroupInfo(slot.teaching_group_id);
                           if (group) {
                             subject = getSubjectInfo(group.subject_id);
@@ -199,10 +190,17 @@ export default function TimetableGrid({ slots = [], groups = [], rooms = [], sub
                             displayName = group.name;
                           }
                         }
-                        // Fallback: check if slot has direct subject/teacher even without classgroup_id
-                        else if (slot.subject_id || slot.teacher_id) {
-                          subject = slot.subject_id ? getSubjectInfo(slot.subject_id) : null;
+                        // PYP/MYP style: subject_id directly on slot
+                        else if (slot.subject_id) {
+                          subject = getSubjectInfo(slot.subject_id);
                           teacher = slot.teacher_id ? getTeacherInfo(slot.teacher_id) : null;
+                          const classGroup = classGroups.find(cg => cg.id === slot.classgroup_id);
+                          level = classGroup?.ib_programme || '';
+                          displayName = classGroup?.name || '';
+                        }
+                        // Fallback: slot with direct teacher_id only
+                        else if (slot.teacher_id) {
+                          teacher = getTeacherInfo(slot.teacher_id);
                         }
                         
                         const colorClass = subject ? subjectColors[subject.ib_group || 1] : '';
