@@ -425,11 +425,20 @@ export default function Students() {
       const llmResponse = await base44.integrations.Core.InvokeLLM({
         prompt: `Extract ALL students from this document.${learningContext}
 
-CRITICAL INSTRUCTIONS:
+CRITICAL INSTRUCTIONS - YEAR GROUPS ARE MANDATORY:
 1. PROGRAMME DETECTION: Look for HL/SL (DP), year numbers (MYP), or class letters (PYP)
-2. YEAR GROUP: Check document structure/headings for DP1/DP2, MYP1-5, or PYP-A to PYP-F
+
+2. YEAR GROUP ASSIGNMENT - STRICT FORMAT REQUIRED:
+   - DP Programme: MUST be "DP1" or "DP2" exactly (check which year based on document structure/headings)
+   - MYP Programme: MUST be "MYP1", "MYP2", "MYP3", "MYP4", or "MYP5" exactly
+   - PYP Programme: MUST be "PYP-A", "PYP-B", "PYP-C", "PYP-D", "PYP-E", or "PYP-F" exactly (match the class letter)
+   
+   NEVER output generic "DP", "MYP", or "PYP" - ALWAYS include the specific year/class level.
+
 3. DP STUDENTS: MUST have EXACTLY 6 subjects with HL/SL levels
+
 4. Subject matching: Use learned corrections above for common variations
+
 5. Preserve all accents in names (é, ñ, ü, ö, etc.)
 
 Return ONLY students array, no other text.`,
