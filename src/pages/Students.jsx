@@ -371,122 +371,114 @@ export default function Students() {
     try {
       const { file_url } = await base44.integrations.Core.UploadFile({ file });
 
-      setUploadState(prev => ({ ...prev, stage: 'extracting', progress: 'AI Agent analyzing document...' }));
+      setUploadState(prev => ({ ...prev, stage: 'extracting', progress: 'Learning from past corrections...' }));
 
-      // Create conversation with student_importer agent
-      const conversation = await base44.agents.createConversation({
-        agent_name: 'student_importer',
-        metadata: { task: 'bulk_import', file_name: file.name }
+      // Fetch training data to learn from past errors
+      const { data: trainingResponse } = await base44.functions.invoke('aiTrainingUpload', { 
+        action: 'list', 
+        agent_name: 'student_importer' 
       });
+      const trainingData = trainingResponse?.data || [];
 
-      console.log('📋 Created conversation with student_importer agent:', conversation.id);
+      console.log(`📚 Found ${trainingData.length} training examples`);
 
-      // Send extraction request to agent with file
-      await base44.agents.addMessage(conversation, {
-        role: 'user',
-        content: `Extract ALL students from this document. 
-
-Return ONLY a JSON array (no other text) with this exact structure:
-[
-  {
-    "full_name": "Student Name",
-    "email": "email@example.com",
-    "student_id": "ID123",
-    "ib_programme": "DP",
-    "year_group": "DP1",
-    "subjects": [
-      {"name": "Mathematics", "level": "HL"},
-      {"name": "English", "level": "SL"}
-    ]
-  }
-]
-
-CRITICAL RULES:
-- DP students MUST have exactly 6 subjects with HL/SL levels
-- Verify year groups from document structure (DP1/DP2, MYP1-5, PYP-A to PYP-F)
-- Return ONLY the JSON array, no additional text or explanations`,
-        file_urls: [file_url]
-      });
-
-      console.log('📋 Sent extraction request to agent');
-
-      setUploadState(prev => ({ 
-        ...prev, 
-        progress: 'Agent processing document...' 
-      }));
-
-      // Wait for agent to complete (poll messages)
-      let attempts = 0;
-      const maxAttempts = 90; // 3 minutes max
-      let allStudents = [];
-
-      while (attempts < maxAttempts) {
-        await new Promise(resolve => setTimeout(resolve, 2000));
-
-        const updatedConv = await base44.agents.getConversation(conversation.id);
-        const lastMessage = updatedConv.messages[updatedConv.messages.length - 1];
-
-        // Check if agent has responded
-        if (lastMessage.role === 'assistant' && !lastMessage.tool_calls?.some(tc => tc.status === 'running' || tc.status === 'pending')) {
-          console.log('✅ Agent completed extraction');
-          console.log('📄 Agent response:', lastMessage.content);
-
-          // Multiple parsing strategies
-          try {
-            // Strategy 1: Find JSON array
-            const jsonArrayMatch = lastMessage.content.match(/\[[\s\S]*\]/);
-            if (jsonArrayMatch) {
-              allStudents = JSON.parse(jsonArrayMatch[0]);
-              console.log(`📋 Strategy 1: Parsed ${allStudents.length} students from JSON array`);
-              break;
-            }
-
-            // Strategy 2: Find JSON in code block
-            const codeBlockMatch = lastMessage.content.match(/```json\n?([\s\S]*?)\n?```/);
-            if (codeBlockMatch) {
-              allStudents = JSON.parse(codeBlockMatch[1]);
-              console.log(`📋 Strategy 2: Parsed ${allStudents.length} students from code block`);
-              break;
-            }
-
-            // Strategy 3: Try parsing entire content
-            allStudents = JSON.parse(lastMessage.content);
-            console.log(`📋 Strategy 3: Parsed ${allStudents.length} students from full content`);
-            break;
-          } catch (e) {
-            console.error('Failed to parse agent response:', e);
-            console.error('Response content:', lastMessage.content);
+      // Build learning context from training data
+      let learningContext = '';
+      if (trainingData.length > 0) {
+        const corrections = [];
+        
+        trainingData.forEach(training => {
+          if (training.field_feedback) {
+            Object.entries(training.field_feedback).forEach(([field, feedback]) => {
+              if (!feedback.was_correct && feedback.corrected !== undefined) {
+                corrections.push({
+                  field,
+                  original: feedback.original,
+                  corrected: feedback.corrected,
+                  notes: feedback.notes || ''
+                });
+              }
+            });
           }
+        });
 
-          // If we got here, parsing failed
-          throw new Error('Agent response was not valid JSON. Please try again or use a different document format.');
+        if (corrections.length > 0) {
+          learningContext = '\n\nLEARNINGS FROM PAST CORRECTIONS:\n';
+          corrections.slice(-20).forEach(c => {
+            learningContext += `- ${c.field}: "${c.original}" was corrected to "${c.corrected}"`;
+            if (c.notes) learningContext += ` (${c.notes})`;
+            learningContext += '\n';
+          });
+          
+          console.log(`📝 Applying ${corrections.length} learnings from training data`);
         }
-
-        attempts++;
-        if (attempts % 10 === 0) {
-          console.log(`⏳ Still waiting for agent... (${attempts * 2}s elapsed)`);
-        }
-        setUploadState(prev => ({ 
-          ...prev, 
-          progress: `Agent analyzing document... (${attempts * 2}s)` 
-        }));
       }
 
-      if (allStudents.length === 0) {
-        throw new Error('Agent extraction timeout or no students found. Please try again or contact support.');
+      setUploadState(prev => ({ ...prev, progress: 'AI analyzing document with learned patterns...' }));
+
+      // Extract using LLM with training context
+      const allStudents = await base44.integrations.Core.InvokeLLM({
+        prompt: `Extract ALL students from this document.${learningContext}
+
+CRITICAL INSTRUCTIONS:
+1. PROGRAMME DETECTION: Look for HL/SL (DP), year numbers (MYP), or class letters (PYP)
+2. YEAR GROUP: Check document structure/headings for DP1/DP2, MYP1-5, or PYP-A to PYP-F
+3. DP STUDENTS: MUST have EXACTLY 6 subjects with HL/SL levels
+4. Subject matching: Use learned corrections above for common variations
+5. Preserve all accents in names (é, ñ, ü, ö, etc.)
+
+Return ONLY students array, no other text.`,
+        file_urls: [file_url],
+        response_json_schema: {
+          type: "object",
+          properties: {
+            students: {
+              type: "array",
+              items: {
+                type: "object",
+                properties: {
+                  full_name: { type: "string" },
+                  email: { type: "string" },
+                  student_id: { type: "string" },
+                  ib_programme: { type: "string", enum: ["DP", "MYP", "PYP"] },
+                  year_group: { type: "string" },
+                  subjects: {
+                    type: "array",
+                    items: {
+                      type: "object",
+                      properties: {
+                        name: { type: "string" },
+                        level: { type: "string" }
+                      }
+                    }
+                  }
+                },
+                required: ["full_name", "ib_programme", "year_group"]
+              }
+            }
+          }
+        }
+      });
+
+      const extractedStudents = allStudents?.students || [];
+      
+      if (extractedStudents.length === 0) {
+        throw new Error('No students found in document');
       }
 
-      // Validate agent output structure
-      const invalidStudents = allStudents.filter(s => 
+      console.log(`✅ Extracted ${extractedStudents.length} students with training-enhanced AI`);
+
+      // Validate LLM output structure
+      const invalidStudents = extractedStudents.filter(s => 
         !s.full_name || !s.ib_programme || !s.year_group
       );
 
       if (invalidStudents.length > 0) {
-        console.error('❌ Invalid student data from agent:', invalidStudents);
-        throw new Error(`Agent returned incomplete data for ${invalidStudents.length} students. Please try again.`);
+        console.error('❌ Invalid student data:', invalidStudents);
+        throw new Error(`AI returned incomplete data for ${invalidStudents.length} students. Please try again.`);
       }
 
-      console.log(`Total extracted: ${allStudents.length} students from agent`);
+      const allStudents = extractedStudents;
 
       // Validation logging
       const dpStudents = allStudents.filter(s => s.ib_programme === 'DP');
