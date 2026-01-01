@@ -428,9 +428,16 @@ CRITICAL INSTRUCTIONS - YEAR GROUPS ARE MANDATORY:
 
 3. DP STUDENTS: MUST have EXACTLY 6 subjects with HL/SL levels
 
-4. Subject matching: Use learned corrections above for common variations
+4. CRITICAL - MATH FOR PYP/MYP STUDENTS:
+   - For PYP and MYP students, there is NO "Math AI" or "Math AA" distinction
+   - ALL math for PYP students should be reported as "Mathematics" (no AI/AA suffix)
+   - ALL math for MYP students should be reported as "Mathematics" (no AI/AA suffix)
+   - ONLY DP students can have "Math AI" or "Math AA"
+   - If you see "Math AI" or "Math AA" for a PYP/MYP student, output just "Mathematics"
 
-5. Preserve all accents in names (é, ñ, ü, ö, etc.)
+5. Subject matching: Use learned corrections above for common variations
+
+6. Preserve all accents in names (é, ñ, ü, ö, etc.)
 
 Return ONLY students array, no other text.`,
         file_urls: [file_url],
@@ -608,7 +615,7 @@ Return ONLY students array, no other text.`,
                 'french': ['french a', 'french b', 'french language', 'french ab initio'],
                 'german': ['german a', 'german b', 'german language', 'german ab initio'],
                 'chinese': ['chinese a', 'chinese b', 'chinese language', 'chinese ab initio'],
-                'math': ['mathematics', 'maths', 'math aa', 'math ai', 'mathematics aa', 'mathematics ai'],
+                'math': ['mathematics', 'maths', 'math aa', 'math ai', 'mathematics aa', 'mathematics ai', 'math analysis', 'math applications'],
                 'physics': ['physics'],
                 'chemistry': ['chemistry', 'chem'],
                 'biology': ['biology', 'bio'],
