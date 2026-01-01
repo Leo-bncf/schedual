@@ -25,7 +25,7 @@ export default function AIGroupGenerator({ onComplete }) {
 
   const { data: subjects = [] } = useQuery({
     queryKey: ['subjects', user?.school_id],
-    queryFn: () => (user?.school_id ? base44.entities.Subject.filter({ school_id: user.school_id, ib_level: 'DP' }) : []),
+    queryFn: () => (user?.school_id ? base44.entities.Subject.filter({ school_id: user.school_id }) : []),
     enabled: !!user?.school_id,
   });
 
@@ -69,13 +69,14 @@ export default function AIGroupGenerator({ onComplete }) {
             const subject = subjects.find(s => s.id === choice.subject_id);
             if (!subject) return;
 
-            const key = `${choice.subject_id}_${choice.level || ''}_${student.year_group}`;
+            const level = choice.level || (subject.available_levels?.[0] || 'SL');
+            const key = `${choice.subject_id}_${level}_${student.year_group}`;
             
             if (!groupMap[key]) {
               groupMap[key] = {
                 subject_id: choice.subject_id,
                 subject_name: subject.name,
-                level: choice.level,
+                level,
                 year_group: student.year_group,
                 student_ids: [],
                 ib_group: choice.ib_group,
@@ -240,6 +241,13 @@ export default function AIGroupGenerator({ onComplete }) {
                 )}
               </Button>
             </div>
+
+            {isGenerating && (
+              <div className="py-10 text-center">
+                <Loader2 className="w-8 h-8 animate-spin text-indigo-600 mx-auto mb-2" />
+                <p className="text-sm text-slate-500">Analyzing students and subjects...</p>
+              </div>
+            )}
 
             <Alert>
               <AlertCircle className="w-4 h-4" />
