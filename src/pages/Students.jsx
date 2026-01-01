@@ -407,7 +407,7 @@ export default function Students() {
 
       // Wait for agent to complete (poll messages)
       let attempts = 0;
-      const maxAttempts = 60;
+      const maxAttempts = 90; // 3 minutes max
       let allStudents = [];
 
       while (attempts < maxAttempts) {
@@ -419,34 +419,61 @@ export default function Students() {
         // Check if agent has responded
         if (lastMessage.role === 'assistant' && !lastMessage.tool_calls?.some(tc => tc.status === 'running' || tc.status === 'pending')) {
           console.log('✅ Agent completed extraction');
+          console.log('📄 Agent response:', lastMessage.content);
 
-          // Parse JSON from agent response
+          // Multiple parsing strategies
           try {
-            const jsonMatch = lastMessage.content.match(/\[[\s\S]*\]/);
-            if (jsonMatch) {
-              allStudents = JSON.parse(jsonMatch[0]);
-              console.log(`📋 Agent extracted ${allStudents.length} students`);
+            // Strategy 1: Find JSON array
+            const jsonArrayMatch = lastMessage.content.match(/\[[\s\S]*\]/);
+            if (jsonArrayMatch) {
+              allStudents = JSON.parse(jsonArrayMatch[0]);
+              console.log(`📋 Strategy 1: Parsed ${allStudents.length} students from JSON array`);
               break;
             }
+
+            // Strategy 2: Find JSON in code block
+            const codeBlockMatch = lastMessage.content.match(/```json\n?([\s\S]*?)\n?```/);
+            if (codeBlockMatch) {
+              allStudents = JSON.parse(codeBlockMatch[1]);
+              console.log(`📋 Strategy 2: Parsed ${allStudents.length} students from code block`);
+              break;
+            }
+
+            // Strategy 3: Try parsing entire content
+            allStudents = JSON.parse(lastMessage.content);
+            console.log(`📋 Strategy 3: Parsed ${allStudents.length} students from full content`);
+            break;
           } catch (e) {
             console.error('Failed to parse agent response:', e);
+            console.error('Response content:', lastMessage.content);
           }
 
-          // If no JSON found, try to extract from conversation
-          if (allStudents.length === 0) {
-            throw new Error('Agent did not return valid student data');
-          }
+          // If we got here, parsing failed
+          throw new Error('Agent response was not valid JSON. Please try again or use a different document format.');
         }
 
         attempts++;
+        if (attempts % 10 === 0) {
+          console.log(`⏳ Still waiting for agent... (${attempts * 2}s elapsed)`);
+        }
         setUploadState(prev => ({ 
           ...prev, 
-          progress: `Agent working... (${attempts * 2}s)` 
+          progress: `Agent analyzing document... (${attempts * 2}s)` 
         }));
       }
 
       if (allStudents.length === 0) {
-        throw new Error('Agent extraction timeout or no students found');
+        throw new Error('Agent extraction timeout or no students found. Please try again or contact support.');
+      }
+
+      // Validate agent output structure
+      const invalidStudents = allStudents.filter(s => 
+        !s.full_name || !s.ib_programme || !s.year_group
+      );
+
+      if (invalidStudents.length > 0) {
+        console.error('❌ Invalid student data from agent:', invalidStudents);
+        throw new Error(`Agent returned incomplete data for ${invalidStudents.length} students. Please try again.`);
       }
 
       console.log(`Total extracted: ${allStudents.length} students from agent`);
