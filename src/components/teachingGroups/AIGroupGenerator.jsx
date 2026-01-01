@@ -239,7 +239,7 @@ export default function AIGroupGenerator({ onComplete, autoStart = true }) {
               </div>
               <Button 
                 onClick={generateGroups} 
-                disabled={isGenerating || dpStudents.length === 0 || subjects.length === 0}
+                disabled
                 className="bg-indigo-600 hover:bg-indigo-700"
               >
                 {isGenerating ? (
