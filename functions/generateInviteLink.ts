@@ -53,8 +53,8 @@ Deno.serve(async (req) => {
     }
 
     // Generate invitation URL
-    const appUrl = Deno.env.get('APP_URL') || req.headers.get('origin') || 'https://app.schedual-pro.com';
-    const inviteUrl = `${appUrl}/accept-invite?email=${encodeURIComponent(email)}&school=${user.school_id}`;
+    const origin = req.headers.get('origin') || req.headers.get('referer')?.split('/').slice(0, 3).join('/') || 'https://app.schedual-pro.com';
+    const inviteUrl = `${origin}?invitation=pending&email=${encodeURIComponent(email)}`;
 
     return Response.json({
       success: true,
