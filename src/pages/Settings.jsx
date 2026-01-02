@@ -53,9 +53,15 @@ import {
   Timer,
   MoreHorizontal,
   Trash2,
-  Plus
+  Plus,
+  Filter,
+  Search,
+  Star
 } from 'lucide-react';
 import PageHeader from '../components/ui-custom/PageHeader';
+import ConstraintCard from '../components/constraints/ConstraintCard';
+import ConstraintBuilder from '../components/constraints/ConstraintBuilder';
+import EmptyState from '../components/ui-custom/EmptyState';
 import { toast } from 'sonner';
 
 const TIMEZONES = [
@@ -72,6 +78,10 @@ export default function Settings() {
   const [inviteDialogOpen, setInviteDialogOpen] = useState(false);
   const [inviteEmail, setInviteEmail] = useState('');
   const [isProcessing, setIsProcessing] = useState(false);
+  const [constraintDialogOpen, setConstraintDialogOpen] = useState(false);
+  const [editingConstraint, setEditingConstraint] = useState(null);
+  const [searchQuery, setSearchQuery] = useState('');
+  const [typeFilter, setTypeFilter] = useState('all');
   const queryClient = useQueryClient();
 
   const { data: user } = useQuery({
@@ -93,6 +103,11 @@ export default function Settings() {
       return data?.admins || [];
     },
     enabled: !!user?.school_id,
+  });
+
+  const { data: constraints = [] } = useQuery({
+    queryKey: ['constraints'],
+    queryFn: () => base44.entities.Constraint.list(),
   });
 
   const [formData, setFormData] = useState({
@@ -169,6 +184,34 @@ export default function Settings() {
     }
   });
 
+  const createConstraintMutation = useMutation({
+    mutationFn: (data) => base44.entities.Constraint.create({ ...data, source: 'admin' }),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['constraints'] });
+      setConstraintDialogOpen(false);
+      setEditingConstraint(null);
+      toast.success('Constraint created successfully');
+    },
+  });
+
+  const updateConstraintMutation = useMutation({
+    mutationFn: ({ id, data }) => base44.entities.Constraint.update(id, data),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['constraints'] });
+      setConstraintDialogOpen(false);
+      setEditingConstraint(null);
+      toast.success('Constraint updated successfully');
+    },
+  });
+
+  const deleteConstraintMutation = useMutation({
+    mutationFn: (id) => base44.entities.Constraint.delete(id),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['constraints'] });
+      toast.success('Constraint deleted successfully');
+    },
+  });
+
   const handleSave = async () => {
     if (!formData.name || !formData.code) {
       alert('Please fill in School Name and School Code');
@@ -224,6 +267,43 @@ export default function Settings() {
       setIsProcessing(false);
     }
   };
+
+  const handleEditConstraint = (constraint) => {
+    setEditingConstraint(constraint);
+    setConstraintDialogOpen(true);
+  };
+
+  const handleToggleConstraint = async (constraint) => {
+    await updateConstraintMutation.mutateAsync({
+      id: constraint.id,
+      data: { is_active: !constraint.is_active }
+    });
+  };
+
+  const handleWeightChange = async (constraint, weight) => {
+    await updateConstraintMutation.mutateAsync({
+      id: constraint.id,
+      data: { weight }
+    });
+  };
+
+  const handleSubmitConstraint = (data) => {
+    if (editingConstraint) {
+      updateConstraintMutation.mutate({ id: editingConstraint.id, data });
+    } else {
+      createConstraintMutation.mutate(data);
+    }
+  };
+
+  const filteredConstraints = constraints.filter(c => {
+    const matchesSearch = c.name?.toLowerCase().includes(searchQuery.toLowerCase()) ||
+      c.description?.toLowerCase().includes(searchQuery.toLowerCase());
+    const matchesType = typeFilter === 'all' || c.type === typeFilter;
+    return matchesSearch && matchesType;
+  });
+
+  const hardConstraints = filteredConstraints.filter(c => c.type === 'hard');
+  const softConstraints = filteredConstraints.filter(c => c.type === 'soft');
 
   const isActive = school?.subscription_status === 'active';
   const isPastDue = school?.subscription_status === 'past_due';
@@ -618,6 +698,164 @@ export default function Settings() {
                     <p className="text-xs text-teal-600 mt-3">IB recommends 150 hours over 2 years (4h/week)</p>
                   </div>
                 </div>
+              </CardContent>
+            </Card>
+
+            {/* Scheduling Constraints */}
+            <Card className="border-0 shadow-md">
+              <CardHeader className="bg-gradient-to-r from-rose-50 to-pink-50">
+                <div className="flex items-center justify-between">
+                  <div className="flex items-center gap-3">
+                    <div className="p-2 rounded-lg bg-rose-100">
+                      <Shield className="w-5 h-5 text-rose-700" />
+                    </div>
+                    <div>
+                      <CardTitle className="text-lg">Scheduling Constraints</CardTitle>
+                      <CardDescription>Rules and preferences for schedule generation</CardDescription>
+                    </div>
+                  </div>
+                  <Button onClick={() => setConstraintDialogOpen(true)} className="bg-rose-600 hover:bg-rose-700">
+                    <Plus className="w-4 h-4 mr-2" />
+                    Add Constraint
+                  </Button>
+                </div>
+              </CardHeader>
+              <CardContent className="pt-6 space-y-6">
+                {/* Search */}
+                <div className="relative max-w-sm">
+                  <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400" />
+                  <Input 
+                    placeholder="Search constraints..." 
+                    className="pl-10"
+                    value={searchQuery}
+                    onChange={(e) => setSearchQuery(e.target.value)}
+                  />
+                </div>
+
+                {/* Stats */}
+                <div className="grid sm:grid-cols-3 gap-4">
+                  <div className="p-4 rounded-xl bg-gradient-to-br from-slate-50 to-slate-100 border-2 border-slate-200">
+                    <p className="text-xs font-medium text-slate-600 uppercase tracking-wide mb-1">Total</p>
+                    <p className="text-2xl font-bold text-slate-900">{constraints.length}</p>
+                  </div>
+                  <div className="p-4 rounded-xl bg-gradient-to-br from-red-50 to-red-100 border-2 border-red-200">
+                    <p className="text-xs font-medium text-red-700 uppercase tracking-wide mb-1 flex items-center gap-1">
+                      <Shield className="w-3 h-3" /> Hard
+                    </p>
+                    <p className="text-2xl font-bold text-red-900">{hardConstraints.length}</p>
+                  </div>
+                  <div className="p-4 rounded-xl bg-gradient-to-br from-amber-50 to-amber-100 border-2 border-amber-200">
+                    <p className="text-xs font-medium text-amber-700 uppercase tracking-wide mb-1 flex items-center gap-1">
+                      <Star className="w-3 h-3" /> Soft
+                    </p>
+                    <p className="text-2xl font-bold text-amber-900">{softConstraints.length}</p>
+                  </div>
+                </div>
+
+                {/* Constraints List */}
+                <Tabs value={typeFilter} onValueChange={setTypeFilter}>
+                  <TabsList className="bg-slate-100">
+                    <TabsTrigger value="all">All ({constraints.length})</TabsTrigger>
+                    <TabsTrigger value="hard">
+                      <Shield className="w-4 h-4 mr-1" />
+                      Hard ({hardConstraints.length})
+                    </TabsTrigger>
+                    <TabsTrigger value="soft">
+                      <Star className="w-4 h-4 mr-1" />
+                      Soft ({softConstraints.length})
+                    </TabsTrigger>
+                  </TabsList>
+
+                  <TabsContent value="all" className="space-y-6 mt-6">
+                    {hardConstraints.length > 0 && (
+                      <div className="space-y-3">
+                        <h4 className="text-sm font-semibold text-slate-600 uppercase tracking-wide flex items-center gap-2">
+                          <Shield className="w-4 h-4" />
+                          Hard Constraints
+                        </h4>
+                        {hardConstraints.map(constraint => (
+                          <ConstraintCard 
+                            key={constraint.id}
+                            constraint={constraint}
+                            onEdit={handleEditConstraint}
+                            onDelete={(c) => deleteConstraintMutation.mutate(c.id)}
+                            onToggle={handleToggleConstraint}
+                            onWeightChange={handleWeightChange}
+                          />
+                        ))}
+                      </div>
+                    )}
+
+                    {softConstraints.length > 0 && (
+                      <div className="space-y-3">
+                        <h4 className="text-sm font-semibold text-slate-600 uppercase tracking-wide flex items-center gap-2">
+                          <Star className="w-4 h-4" />
+                          Soft Constraints
+                        </h4>
+                        {softConstraints.map(constraint => (
+                          <ConstraintCard 
+                            key={constraint.id}
+                            constraint={constraint}
+                            onEdit={handleEditConstraint}
+                            onDelete={(c) => deleteConstraintMutation.mutate(c.id)}
+                            onToggle={handleToggleConstraint}
+                            onWeightChange={handleWeightChange}
+                          />
+                        ))}
+                      </div>
+                    )}
+
+                    {filteredConstraints.length === 0 && (
+                      <EmptyState 
+                        icon={Shield}
+                        title="No constraints yet"
+                        description="Add scheduling rules to control how your timetable is generated."
+                        action={() => setConstraintDialogOpen(true)}
+                        actionLabel="Add First Constraint"
+                      />
+                    )}
+                  </TabsContent>
+
+                  <TabsContent value="hard" className="space-y-3 mt-6">
+                    {hardConstraints.map(constraint => (
+                      <ConstraintCard 
+                        key={constraint.id}
+                        constraint={constraint}
+                        onEdit={handleEditConstraint}
+                        onDelete={(c) => deleteConstraintMutation.mutate(c.id)}
+                        onToggle={handleToggleConstraint}
+                        onWeightChange={handleWeightChange}
+                      />
+                    ))}
+                    {hardConstraints.length === 0 && (
+                      <EmptyState 
+                        icon={Shield}
+                        title="No hard constraints"
+                        description="Hard constraints are strictly enforced during scheduling."
+                      />
+                    )}
+                  </TabsContent>
+
+                  <TabsContent value="soft" className="space-y-3 mt-6">
+                    {softConstraints.map(constraint => (
+                      <ConstraintCard 
+                        key={constraint.id}
+                        constraint={constraint}
+                        onEdit={handleEditConstraint}
+                        onDelete={(c) => deleteConstraintMutation.mutate(c.id)}
+                        onToggle={handleToggleConstraint}
+                        onWeightChange={handleWeightChange}
+                      />
+                    ))}
+                    {softConstraints.length === 0 && (
+                      <EmptyState 
+                        icon={Star}
+                        title="No soft constraints"
+                        description="Soft constraints are preferences the optimizer tries to satisfy."
+                      />
+                    )}
+                  </TabsContent>
+                </Tabs>
               </CardContent>
             </Card>
           </div>
@@ -1142,6 +1380,32 @@ export default function Settings() {
               )}
             </Button>
           </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* Constraint Dialog */}
+      <Dialog open={constraintDialogOpen} onOpenChange={(open) => {
+        if (!open) {
+          setConstraintDialogOpen(false);
+          setEditingConstraint(null);
+        }
+      }}>
+        <DialogContent className="sm:max-w-2xl max-h-[90vh] overflow-y-auto">
+          <DialogHeader>
+            <DialogTitle>
+              {editingConstraint ? 'Edit Constraint' : 'Create New Constraint'}
+            </DialogTitle>
+            <DialogDescription>
+              {editingConstraint 
+                ? 'Modify the constraint details and settings.' 
+                : 'Define a scheduling rule or preference using templates or custom settings.'
+              }
+            </DialogDescription>
+          </DialogHeader>
+          <ConstraintBuilder 
+            onSubmit={handleSubmitConstraint}
+            initialData={editingConstraint}
+          />
         </DialogContent>
       </Dialog>
     </div>
