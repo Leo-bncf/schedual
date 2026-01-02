@@ -104,6 +104,7 @@ export default function LandingHeader() {
               </>
             )}
             </div>
+            </div>
           </div>
         </div>
       </div>
