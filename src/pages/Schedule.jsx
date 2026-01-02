@@ -179,7 +179,12 @@ export default function Schedule() {
 
   const { data: constraints = [], refetch: refetchConstraints } = useQuery({
     queryKey: ['constraints', schoolId],
-    queryFn: () => base44.entities.Constraint.filter({ school_id: schoolId }),
+    queryFn: async () => {
+      console.log('Fetching constraints for school:', schoolId);
+      const result = await base44.entities.Constraint.filter({ school_id: schoolId });
+      console.log('Fetched constraints:', result);
+      return result;
+    },
     enabled: !!schoolId,
   });
 
@@ -1877,6 +1882,11 @@ Now process the user's input and return ONLY the JSON object.`,
                         </div>
                       </CardHeader>
                       <CardContent>
+                        {(() => {
+                          console.log('Rendering constraints tab. Total constraints:', constraints.length);
+                          console.log('Constraints data:', constraints);
+                          return null;
+                        })()}
                         {constraints.length === 0 ? (
                           <div className="text-center py-12 text-slate-500">
                             <AlertTriangle className="w-12 h-12 mx-auto mb-3 text-slate-300" />
