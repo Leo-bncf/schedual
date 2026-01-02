@@ -81,7 +81,11 @@ export default function Schedule() {
     days_per_week: 5,
     school_start_time: '08:00',
     hl_hours: 6,
-    sl_hours: 4
+    sl_hours: 4,
+    lunch_duration_minutes: 30,
+    lunch_period: 4,
+    break_duration_minutes: 15,
+    break_periods: [2, 6]
   });
   const [isSavingConfig, setIsSavingConfig] = useState(false);
 
@@ -110,7 +114,11 @@ export default function Schedule() {
         days_per_week: school.days_per_week || 5,
         school_start_time: school.school_start_time || '08:00',
         hl_hours: school.settings?.hl_hours || 6,
-        sl_hours: school.settings?.sl_hours || 4
+        sl_hours: school.settings?.sl_hours || 4,
+        lunch_duration_minutes: school.settings?.lunch_duration_minutes || 30,
+        lunch_period: school.settings?.lunch_period || 4,
+        break_duration_minutes: school.settings?.break_duration_minutes || 15,
+        break_periods: school.settings?.break_periods || [2, 6]
       });
     }
   }, [school]);
@@ -218,7 +226,11 @@ export default function Schedule() {
           settings: {
             ...school.settings,
             hl_hours: schoolConfig.hl_hours,
-            sl_hours: schoolConfig.sl_hours
+            sl_hours: schoolConfig.sl_hours,
+            lunch_duration_minutes: schoolConfig.lunch_duration_minutes,
+            lunch_period: schoolConfig.lunch_period,
+            break_duration_minutes: schoolConfig.break_duration_minutes,
+            break_periods: schoolConfig.break_periods
           }
         }
       });
@@ -1528,6 +1540,140 @@ export default function Schedule() {
                             <div className="text-xs text-blue-800">
                               <p className="font-semibold mb-1">Schedule Preview:</p>
                               <p>School day runs from <strong>{schoolConfig.school_start_time}</strong> with <strong>{schoolConfig.periods_per_day}</strong> periods of <strong>{schoolConfig.period_duration_minutes}</strong> minutes each, over <strong>{schoolConfig.days_per_week}</strong> days per week.</p>
+                            </div>
+                          </div>
+                        </div>
+                      </CardContent>
+                    </Card>
+
+                    {/* Breaks & Lunch */}
+                    <Card className="border-0 shadow-md">
+                      <CardHeader className="bg-gradient-to-r from-green-50 to-emerald-50">
+                        <div className="flex items-center gap-3">
+                          <div className="p-2 rounded-lg bg-green-100">
+                            <Timer className="w-5 h-5 text-green-700" />
+                          </div>
+                          <div>
+                            <CardTitle className="text-lg">Breaks & Lunch Configuration</CardTitle>
+                            <CardDescription>Set mandatory break and lunch times per local regulations</CardDescription>
+                          </div>
+                        </div>
+                      </CardHeader>
+                      <CardContent className="pt-6 space-y-6">
+                        <div className="grid sm:grid-cols-2 gap-6">
+                          {/* Lunch Settings */}
+                          <div className="p-5 rounded-xl bg-gradient-to-br from-orange-50 to-orange-100 border-2 border-orange-200">
+                            <div className="flex items-center gap-2 mb-4">
+                              <div className="w-10 h-10 rounded-full bg-orange-200 flex items-center justify-center">
+                                <Clock className="w-5 h-5 text-orange-700" />
+                              </div>
+                              <div>
+                                <p className="font-bold text-orange-900 text-base">Lunch Break</p>
+                                <p className="text-xs text-orange-700">Required duration & timing</p>
+                              </div>
+                            </div>
+                            <div className="space-y-3">
+                              <div>
+                                <Label className="text-xs text-orange-800 mb-1.5 block">Duration (minutes)</Label>
+                                <div className="flex items-center gap-2">
+                                  <Input 
+                                    type="number"
+                                    min="20"
+                                    max="60"
+                                    className="h-10 text-center font-semibold border-orange-300"
+                                    value={schoolConfig.lunch_duration_minutes}
+                                    onChange={(e) => setSchoolConfig({...schoolConfig, lunch_duration_minutes: parseInt(e.target.value)})}
+                                  />
+                                  <span className="text-sm text-orange-700 font-medium">min</span>
+                                </div>
+                              </div>
+                              <div>
+                                <Label className="text-xs text-orange-800 mb-1.5 block">After Period</Label>
+                                <Select 
+                                  value={String(schoolConfig.lunch_period)} 
+                                  onValueChange={(value) => setSchoolConfig({...schoolConfig, lunch_period: parseInt(value)})}
+                                >
+                                  <SelectTrigger className="h-10 font-semibold border-orange-300">
+                                    <SelectValue />
+                                  </SelectTrigger>
+                                  <SelectContent>
+                                    {Array.from({length: schoolConfig.periods_per_day}, (_, i) => i + 1).map(p => (
+                                      <SelectItem key={p} value={String(p)}>Period {p}</SelectItem>
+                                    ))}
+                                  </SelectContent>
+                                </Select>
+                              </div>
+                            </div>
+                            <p className="text-xs text-orange-600 mt-3">Lunch occurs after this period</p>
+                          </div>
+
+                          {/* Break Settings */}
+                          <div className="p-5 rounded-xl bg-gradient-to-br from-cyan-50 to-cyan-100 border-2 border-cyan-200">
+                            <div className="flex items-center gap-2 mb-4">
+                              <div className="w-10 h-10 rounded-full bg-cyan-200 flex items-center justify-center">
+                                <Timer className="w-5 h-5 text-cyan-700" />
+                              </div>
+                              <div>
+                                <p className="font-bold text-cyan-900 text-base">Short Breaks</p>
+                                <p className="text-xs text-cyan-700">Spread throughout day</p>
+                              </div>
+                            </div>
+                            <div className="space-y-3">
+                              <div>
+                                <Label className="text-xs text-cyan-800 mb-1.5 block">Duration (minutes)</Label>
+                                <div className="flex items-center gap-2">
+                                  <Input 
+                                    type="number"
+                                    min="5"
+                                    max="30"
+                                    className="h-10 text-center font-semibold border-cyan-300"
+                                    value={schoolConfig.break_duration_minutes}
+                                    onChange={(e) => setSchoolConfig({...schoolConfig, break_duration_minutes: parseInt(e.target.value)})}
+                                  />
+                                  <span className="text-sm text-cyan-700 font-medium">min</span>
+                                </div>
+                              </div>
+                              <div>
+                                <Label className="text-xs text-cyan-800 mb-1.5 block">After Periods</Label>
+                                <div className="flex flex-wrap gap-2">
+                                  {Array.from({length: schoolConfig.periods_per_day}, (_, i) => i + 1)
+                                    .filter(p => p !== schoolConfig.lunch_period)
+                                    .map(period => (
+                                    <button
+                                      key={period}
+                                      type="button"
+                                      onClick={() => {
+                                        const current = schoolConfig.break_periods || [];
+                                        const updated = current.includes(period)
+                                          ? current.filter(p => p !== period)
+                                          : [...current, period].sort((a, b) => a - b);
+                                        setSchoolConfig({...schoolConfig, break_periods: updated});
+                                      }}
+                                      className={`px-3 py-1.5 rounded-lg text-xs font-semibold transition-all ${
+                                        (schoolConfig.break_periods || []).includes(period)
+                                          ? 'bg-cyan-600 text-white shadow-md'
+                                          : 'bg-white text-cyan-700 border-2 border-cyan-200 hover:bg-cyan-50'
+                                      }`}
+                                    >
+                                      {period}
+                                    </button>
+                                  ))}
+                                </div>
+                              </div>
+                            </div>
+                            <p className="text-xs text-cyan-600 mt-3">Select periods for breaks ({(schoolConfig.break_periods || []).length} selected)</p>
+                          </div>
+                        </div>
+
+                        <div className="p-4 rounded-lg bg-green-50 border border-green-200">
+                          <div className="flex gap-2">
+                            <Info className="w-4 h-4 text-green-600 mt-0.5 flex-shrink-0" />
+                            <div className="text-xs text-green-800">
+                              <p className="font-semibold mb-1">Daily Break Schedule:</p>
+                              <p>
+                                <strong>{(schoolConfig.break_periods || []).length}</strong> short breaks of <strong>{schoolConfig.break_duration_minutes} min</strong> after periods {(schoolConfig.break_periods || []).join(', ')}, 
+                                and <strong>1</strong> lunch break of <strong>{schoolConfig.lunch_duration_minutes} min</strong> after period <strong>{schoolConfig.lunch_period}</strong>.
+                              </p>
                             </div>
                           </div>
                         </div>
