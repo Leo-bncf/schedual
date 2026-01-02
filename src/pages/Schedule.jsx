@@ -266,6 +266,14 @@ export default function Schedule() {
       console.log('Teachers:', teachers.length);
       console.log('Students:', students.length);
       console.log('Rooms:', rooms.length);
+      console.log('Active Constraints:', constraints.filter(c => c.is_active).length);
+      
+      // Load active constraints
+      const activeConstraints = constraints.filter(c => c.is_active);
+      const hardConstraints = activeConstraints.filter(c => c.type === 'hard');
+      const softConstraints = activeConstraints.filter(c => c.type === 'soft');
+      console.log('Hard Constraints:', hardConstraints.length);
+      console.log('Soft Constraints:', softConstraints.length);
       
       // Step 1: Assign teachers to teaching groups
       setGenerationProgress(prev => ({
@@ -602,6 +610,28 @@ export default function Schedule() {
               teacherFree = !teacherSchedules[teacherId]?.some(s => s.day === day && s.period === period);
               const teacher = teachers.find(t => t.id === teacherId);
               teacherAvailable = !teacher?.unavailable_slots?.some(u => u.day === day && u.period === period);
+              
+              // Apply teacher-specific hard constraints
+              const teacherConstraints = hardConstraints.filter(c => 
+                c.category === 'teacher' && 
+                c.rule?.teacher_id === teacherId
+              );
+              for (const constraint of teacherConstraints) {
+                if (constraint.rule?.max_consecutive_periods) {
+                  const consecutiveCount = teacherSchedules[teacherId]
+                    ?.filter(s => s.day === day && s.period < period && s.period >= period - constraint.rule.max_consecutive_periods)
+                    .length || 0;
+                  if (consecutiveCount >= constraint.rule.max_consecutive_periods) {
+                    teacherFree = false;
+                  }
+                }
+                if (constraint.rule?.unavailable_slots) {
+                  const isUnavailable = constraint.rule.unavailable_slots.some(u => 
+                    u.day === day && u.period === period
+                  );
+                  if (isUnavailable) teacherAvailable = false;
+                }
+              }
             }
 
             if (studentsFree && teacherFree && teacherAvailable) {
@@ -706,6 +736,28 @@ export default function Schedule() {
                 teacherFree = !teacherSchedules[teacherId]?.some(s => s.day === day && s.period === period);
                 const teacher = teachers.find(t => t.id === teacherId);
                 teacherAvailable = !teacher?.unavailable_slots?.some(u => u.day === day && u.period === period);
+                
+                // Apply teacher-specific hard constraints
+                const teacherConstraints = hardConstraints.filter(c => 
+                  c.category === 'teacher' && 
+                  c.rule?.teacher_id === teacherId
+                );
+                for (const constraint of teacherConstraints) {
+                  if (constraint.rule?.max_consecutive_periods) {
+                    const consecutiveCount = teacherSchedules[teacherId]
+                      ?.filter(s => s.day === day && s.period < period && s.period >= period - constraint.rule.max_consecutive_periods)
+                      .length || 0;
+                    if (consecutiveCount >= constraint.rule.max_consecutive_periods) {
+                      teacherFree = false;
+                    }
+                  }
+                  if (constraint.rule?.unavailable_slots) {
+                    const isUnavailable = constraint.rule.unavailable_slots.some(u => 
+                      u.day === day && u.period === period
+                    );
+                    if (isUnavailable) teacherAvailable = false;
+                  }
+                }
                 }
 
                 if (studentsFree && teacherFree && teacherAvailable) {
@@ -856,6 +908,18 @@ export default function Schedule() {
 
       const totalGroups = Object.values(groupsByLevel).flat().length;
 
+      // Calculate constraint violations
+      let constraintViolations = 0;
+      softConstraints.forEach(constraint => {
+        if (constraint.category === 'teacher' && constraint.rule?.max_hours_per_week) {
+          Object.entries(teacherSchedules).forEach(([teacherId, schedule]) => {
+            if (schedule.length > constraint.rule.max_hours_per_week) {
+              constraintViolations++;
+            }
+          });
+        }
+      });
+
       // Update version with stats
       setGenerationProgress(prev => ({
         ...prev,
@@ -872,8 +936,8 @@ export default function Schedule() {
           generated_at: new Date().toISOString(),
           score: Math.floor((newSlots.length / (totalGroups * 6)) * 100),
           conflicts_count: 0,
-          warnings_count: totalGroups - scheduledGroups.size,
-          notes: `DP: ${groupsByLevel.DP.length} groups, MYP: ${groupsByLevel.MYP.length} groups, PYP: ${groupsByLevel.PYP.length} groups | Scheduled ${scheduledStudents.size}/${students.length} students, ${scheduledGroups.size}/${totalGroups} groups (${allTeachersInGroups.size} teachers) across ${newSlots.length} periods.`
+          warnings_count: totalGroups - scheduledGroups.size + constraintViolations,
+          notes: `DP: ${groupsByLevel.DP.length} groups, MYP: ${groupsByLevel.MYP.length} groups, PYP: ${groupsByLevel.PYP.length} groups | Scheduled ${scheduledStudents.size}/${students.length} students, ${scheduledGroups.size}/${totalGroups} groups (${allTeachersInGroups.size} teachers) across ${newSlots.length} periods. Applied ${activeConstraints.length} constraints.`
         }
       });
 
