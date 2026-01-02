@@ -23,9 +23,10 @@ Deno.serve(async (req) => {
       return Response.json({ error: 'School not found' }, { status: 404 });
     }
 
-    // Get current admins
-    const { data: adminData } = await base44.functions.invoke('getSchoolAdmins');
-    const currentAdmins = adminData?.admins || [];
+    // Get current admins directly
+    const currentAdmins = await base44.asServiceRole.entities.User.filter({ 
+      school_id: user.school_id 
+    });
     const maxSeats = (school.max_additional_users || 0) + 1;
 
     if (currentAdmins.length >= maxSeats) {
@@ -73,12 +74,20 @@ Deno.serve(async (req) => {
       });
     }
 
-    // User doesn't exist - send custom invitation email
-    await base44.integrations.Core.SendEmail({
-      to: email,
-      subject: `Invitation to join ${school.name} on Schedual`,
-      body: `Hello,\n\nYou have been invited to join ${school.name} as a school administrator on Schedual.\n\nSchedulal is an IB school scheduling platform that helps manage teachers, students, subjects, and timetables.\n\nTo accept this invitation:\n1. Visit: ${Deno.env.get('BASE44_APP_URL') || 'https://app.schedual-pro.com'}\n2. Sign up with this email address: ${email}\n3. After signing up, contact your school administrator to complete the setup\n\nIf you have any questions, please contact support@schedual-pro.com\n\nBest regards,\nThe Schedual Team`
-    });
+    // User doesn't exist - invite them using base44's built-in invite system
+    await base44.users.inviteUser(email, "admin");
+    
+    // Then immediately assign them to this school
+    // Wait a moment for the user to be created
+    await new Promise(resolve => setTimeout(resolve, 1000));
+    
+    // Find the newly created user and assign school_id
+    const newUsers = await base44.asServiceRole.entities.User.filter({ email });
+    if (newUsers.length > 0) {
+      await base44.asServiceRole.entities.User.update(newUsers[0].id, {
+        school_id: user.school_id
+      });
+    }
 
     return Response.json({ 
       success: true, 
