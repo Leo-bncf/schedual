@@ -1086,6 +1086,27 @@ Return ONLY students array, no other text.`,
                     ℹ️ Changes will sync to all students in the same ClassGroup
                   </p>
                 )}
+                
+                {editingStudent && formData.subject_choices && formData.subject_choices.length > 0 && (
+                  <div className="mb-4 p-4 bg-slate-50 rounded-lg border border-slate-200">
+                    <p className="text-xs font-medium text-slate-600 mb-3">Current Subjects:</p>
+                    <div className="flex flex-wrap gap-2">
+                      {formData.subject_choices.map((choice, idx) => {
+                        const subject = subjects.find(s => s.id === choice.subject_id);
+                        return subject ? (
+                          <Badge key={idx} variant="secondary" className="bg-white border border-slate-300 text-slate-700">
+                            {subject.name} {choice.level ? `(${choice.level})` : ''}
+                          </Badge>
+                        ) : (
+                          <Badge key={idx} variant="secondary" className="bg-amber-50 border border-amber-300 text-amber-700">
+                            Unknown Subject {choice.level ? `(${choice.level})` : ''}
+                          </Badge>
+                        );
+                      })}
+                    </div>
+                  </div>
+                )}
+
                 <SubjectSelector 
                   subjects={subjects}
                   selectedSubjects={formData.subject_choices}
