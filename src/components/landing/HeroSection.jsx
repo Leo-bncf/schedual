@@ -1,10 +1,44 @@
 import React, { useEffect, useState } from 'react';
 import { Button } from "@/components/ui/button";
-import { ArrowRight, Calendar, Users, BookOpen } from 'lucide-react';
+import { ArrowRight, Calendar, Users, BookOpen, Building2, Sparkles, Download } from 'lucide-react';
 import { motion } from 'framer-motion';
+
+const features = [
+  {
+    icon: Calendar,
+    title: 'Automated Schedule Generation',
+    description: 'Generate complete school timetables in minutes, not weeks. Our AI handles all the complexity.',
+  },
+  {
+    icon: Users,
+    title: 'Teacher & Student Management',
+    description: 'Track qualifications, availability, and preferences. Ensure every teacher and student gets an optimal schedule.',
+  },
+  {
+    icon: BookOpen,
+    title: 'IB Programme Support',
+    description: 'Full support for PYP, MYP, and DP programmes. Manage subject groups, HL/SL levels, and core components.',
+  },
+  {
+    icon: Building2,
+    title: 'Room Allocation',
+    description: 'Automatically assign classrooms based on capacity, equipment, and special requirements like labs.',
+  },
+  {
+    icon: Sparkles,
+    title: 'AI-Powered Optimization',
+    description: 'Smart conflict resolution and constraint satisfaction. Get suggestions for improving your schedule.',
+  },
+  {
+    icon: Download,
+    title: 'Export & Share',
+    description: 'Export schedules for students, teachers, and administrators. Print or share digitally.',
+  },
+];
 
 export default function HeroSection() {
   const [scrollProgress, setScrollProgress] = useState(0);
+  const [currentIndex, setCurrentIndex] = useState(0);
 
   useEffect(() => {
     const handleScroll = () => {
@@ -16,6 +50,13 @@ export default function HeroSection() {
 
     window.addEventListener('scroll', handleScroll);
     return () => window.removeEventListener('scroll', handleScroll);
+  }, []);
+
+  useEffect(() => {
+    const interval = setInterval(() => {
+      setCurrentIndex((prev) => (prev + 1) % features.length);
+    }, 3000);
+    return () => clearInterval(interval);
   }, []);
 
   const scrollToInfo = () => {
@@ -56,43 +97,64 @@ export default function HeroSection() {
           Experience next generation schedule creation powered by AI. Generate perfect, conflict-free timetables for all IB programmes in minutes, not weeks.
         </motion.p>
 
-        {/* Feature Cards */}
+        {/* Rotating Feature Cards */}
         <motion.div 
           initial={{ opacity: 0, y: 100 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ duration: 1, delay: 0.8, ease: [0.16, 1, 0.3, 1] }}
-          className="grid md:grid-cols-3 gap-6 mt-20 max-w-4xl mx-auto"
+          className="mt-20 max-w-4xl mx-auto relative h-64 overflow-hidden"
           style={{ opacity: 1 - scrollProgress * 1.2, transform: `translateY(${scrollProgress * -30}px) scale(${1 - scrollProgress * 0.15})` }}
         >
-          <div 
-            className="bg-white/95 backdrop-blur-xl rounded-2xl shadow-2xl p-6 border-2 border-transparent hover:border-purple-700 transition-all duration-500 hover:shadow-[0_0_0_2px_rgb(126,34,206),0_0_20px_rgba(126,34,206,0.3)]"
-          >
-            <div className="w-14 h-14 bg-gradient-to-br from-blue-900 to-blue-800 rounded-xl flex items-center justify-center mx-auto mb-4">
-              <Calendar className="w-8 h-8 text-white" />
-            </div>
-            <div className="font-bold text-slate-900 text-lg mb-2">AI-Powered</div>
-            <div className="text-sm text-slate-700">Intelligent optimization in seconds</div>
-          </div>
-
-            <div 
-            className="bg-white/95 backdrop-blur-xl rounded-2xl shadow-2xl p-6 border-2 border-transparent hover:border-purple-700 transition-all duration-500 hover:shadow-[0_0_0_2px_rgb(126,34,206),0_0_20px_rgba(126,34,206,0.3)]"
-          >
-            <div className="w-14 h-14 bg-gradient-to-br from-blue-900 to-blue-800 rounded-xl flex items-center justify-center mx-auto mb-4">
-              <Users className="w-8 h-8 text-white" />
-            </div>
-            <div className="font-bold text-slate-900 text-lg mb-2">Smart Constraints</div>
-            <div className="text-sm text-slate-700">Manage complex rules effortlessly</div>
-          </div>
-
-            <div 
-            className="bg-white/95 backdrop-blur-xl rounded-2xl shadow-2xl p-6 border-2 border-transparent hover:border-purple-700 transition-all duration-500 hover:shadow-[0_0_0_2px_rgb(126,34,206),0_0_20px_rgba(126,34,206,0.3)]"
-          >
-            <div className="w-14 h-14 bg-gradient-to-br from-blue-900 to-blue-800 rounded-xl flex items-center justify-center mx-auto mb-4">
-              <BookOpen className="w-8 h-8 text-white" />
-            </div>
-            <div className="font-bold text-slate-900 text-lg mb-2">IB Compliant</div>
-            <div className="text-sm text-slate-700">Full PYP, MYP, DP support</div>
-          </div>
+          {features.map((feature, index) => {
+            const position = (index - currentIndex + features.length) % features.length;
+            const isCenter = position === 0;
+            const isLeft = position === features.length - 1;
+            const isRight = position === 1;
+            
+            let xOffset = 0;
+            let scale = 0.8;
+            let opacity = 0;
+            let zIndex = 0;
+            
+            if (isCenter) {
+              xOffset = 0;
+              scale = 1;
+              opacity = 1;
+              zIndex = 30;
+            } else if (isLeft) {
+              xOffset = -400;
+              scale = 0.85;
+              opacity = 0.4;
+              zIndex = 20;
+            } else if (isRight) {
+              xOffset = 400;
+              scale = 0.85;
+              opacity = 0.4;
+              zIndex = 20;
+            }
+            
+            return (
+              <motion.div
+                key={index}
+                className="absolute top-0 left-1/2 w-80"
+                animate={{
+                  x: `calc(-50% + ${xOffset}px)`,
+                  scale,
+                  opacity,
+                  zIndex,
+                }}
+                transition={{ duration: 0.6, ease: [0.16, 1, 0.3, 1] }}
+              >
+                <div className="bg-white/95 backdrop-blur-xl rounded-2xl shadow-2xl p-6 border-2 border-transparent hover:border-purple-700 transition-all duration-500 hover:shadow-[0_0_0_2px_rgb(126,34,206),0_0_20px_rgba(126,34,206,0.3)]">
+                  <div className="w-14 h-14 bg-gradient-to-br from-blue-900 to-blue-800 rounded-xl flex items-center justify-center mx-auto mb-4">
+                    <feature.icon className="w-8 h-8 text-white" />
+                  </div>
+                  <h3 className="font-bold text-slate-900 text-lg mb-2">{feature.title}</h3>
+                  <p className="text-sm text-slate-700">{feature.description}</p>
+                </div>
+              </motion.div>
+            );
+          })}
         </motion.div>
       </div>
     </section>
