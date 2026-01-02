@@ -45,19 +45,19 @@ export default function LandingHeader() {
 
       {/* Semi-transparent navigation strip */}
       <div className={`mx-4 mt-2 transition-all duration-300 ${isScrolled ? 'shadow-lg' : ''}`}>
-        <div className="bg-white/90 backdrop-blur-lg border border-slate-200/50 rounded-full shadow-md">
-          <div className="max-w-7xl mx-auto px-6 sm:px-8 lg:px-10">
-            <div className="flex items-center justify-between h-16">
+        <div className="bg-white/90 backdrop-blur-lg border border-slate-200/50 rounded-full shadow-md overflow-hidden">
+          <div className="max-w-5xl mx-auto px-6">
+            <div className="flex items-center justify-between h-12">
           {/* Logo */}
-          <div className="flex items-center gap-3">
-            <div className="w-9 h-9 rounded-xl bg-gradient-to-br from-blue-900 to-blue-800 flex items-center justify-center">
-              <Calendar className="w-5 h-5 text-white" />
+          <div className="flex items-center gap-2">
+            <div className="w-7 h-7 rounded-lg bg-gradient-to-br from-blue-900 to-blue-800 flex items-center justify-center">
+              <Calendar className="w-4 h-4 text-white" />
             </div>
-            <span className="text-lg font-semibold text-slate-900">Schedual</span>
+            <span className="text-base font-semibold text-slate-900">Schedual</span>
           </div>
 
           {/* Navigation */}
-          <nav className="hidden md:flex items-center gap-8">
+          <nav className="hidden md:flex items-center gap-6">
             <button 
               onClick={() => scrollToSection('info')} 
               className="text-slate-600 hover:text-slate-900 transition-colors"
@@ -79,25 +79,27 @@ export default function LandingHeader() {
           </nav>
 
           {/* CTA Buttons */}
-          <div className="flex items-center gap-3">
+          <div className="flex items-center gap-2">
             {isAuthenticated ? (
               <Link to={createPageUrl(['leo.bancroft34@icloud.com', 'erik.gerbst@gmail.com'].includes(user?.email?.toLowerCase()) ? 'Panel' : 'Dashboard')}>
-                <Button className="bg-blue-900 hover:bg-blue-800">
+                <Button size="sm" className="bg-blue-900 hover:bg-blue-800 h-8">
                   {['leo.bancroft34@icloud.com', 'erik.gerbst@gmail.com'].includes(user?.email?.toLowerCase()) ? 'Go to Panel' : 'Go to Dashboard'}
                 </Button>
               </Link>
             ) : (
               <>
                 <Button 
+                  size="sm"
                   variant="ghost"
                   onClick={() => base44.auth.redirectToLogin('/Dashboard')}
-                  className="text-slate-600 hover:text-slate-900"
+                  className="text-slate-600 hover:text-slate-900 h-8"
                 >
                   Login
                 </Button>
                 <Button 
+                  size="sm"
                   onClick={() => base44.auth.redirectToLogin('/Dashboard')}
-                  className="bg-blue-900 hover:bg-blue-800"
+                  className="bg-blue-900 hover:bg-blue-800 h-8"
                 >
                   Sign Up
                 </Button>
