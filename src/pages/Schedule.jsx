@@ -810,9 +810,10 @@ export default function Schedule() {
         }
       });
 
-      // Refresh slots and teaching groups
-      queryClient.invalidateQueries({ queryKey: ['scheduleSlots'] });
-      queryClient.invalidateQueries({ queryKey: ['teachingGroups'] });
+      // Refresh slots and version data
+      await queryClient.invalidateQueries({ queryKey: ['scheduleSlots'] });
+      await queryClient.invalidateQueries({ queryKey: ['scheduleVersions'] });
+      await queryClient.invalidateQueries({ queryKey: ['teachingGroups'] });
       
       setGenerationProgress({
         stage: 'Complete',
@@ -944,7 +945,7 @@ export default function Schedule() {
             </CardContent>
           </Card>
           <Card className={`border-0 shadow-sm ${
-            selectedVersion.conflicts_count > 0 
+            (selectedVersion?.conflicts_count || 0) > 0 
               ? 'bg-gradient-to-br from-rose-50 to-white' 
               : 'bg-gradient-to-br from-slate-50 to-white'
           }`}>
@@ -953,12 +954,12 @@ export default function Schedule() {
                 <div>
                   <p className="text-xs text-slate-600 mb-1">Issues</p>
                   <p className={`text-2xl font-bold ${
-                    selectedVersion.conflicts_count > 0 ? 'text-rose-900' : 'text-slate-900'
+                    (selectedVersion?.conflicts_count || 0) > 0 ? 'text-rose-900' : 'text-slate-900'
                   }`}>
-                    {(selectedVersion.conflicts_count || 0) + (selectedVersion.warnings_count || 0)}
+                    {(selectedVersion?.conflicts_count || 0) + (selectedVersion?.warnings_count || 0)}
                   </p>
                 </div>
-                {selectedVersion.conflicts_count > 0 ? (
+                {(selectedVersion?.conflicts_count || 0) > 0 ? (
                   <AlertTriangle className="w-8 h-8 text-rose-600" />
                 ) : (
                   <CheckCircle className="w-8 h-8 text-emerald-600" />
@@ -1069,23 +1070,23 @@ export default function Schedule() {
         {selectedVersion ? (
           <>
             {/* Conflicts/Warnings */}
-              {selectedVersion && (selectedVersion.conflicts_count > 0 || selectedVersion.warnings_count > 0) && (
+              {selectedVersion && ((selectedVersion.conflicts_count || 0) > 0 || (selectedVersion.warnings_count || 0) > 0) && (
                 <div className="space-y-3">
-                  {selectedVersion.conflicts_count > 0 && (
+                  {(selectedVersion.conflicts_count || 0) > 0 && (
                     <ConflictAlert 
                       severity="error"
-                      title={`${selectedVersion.conflicts_count} Scheduling Conflicts`}
+                      title={`${selectedVersion.conflicts_count || 0} Scheduling Conflicts`}
                       description="There are unresolved conflicts that need attention before publishing."
                     />
                   )}
-                  {selectedVersion.warnings_count > 0 && (
+                  {(selectedVersion.warnings_count || 0) > 0 && (
                     <ConflictAlert 
                       severity="warning"
-                      title={`${selectedVersion.warnings_count} Warnings`}
+                      title={`${selectedVersion.warnings_count || 0} Warnings`}
                       description="Review these soft constraint violations for optimal scheduling."
                     />
                   )}
-                  {selectedVersion.id && <ConflictViewer scheduleVersionId={selectedVersion.id} />}
+                  {selectedVersion?.id && <ConflictViewer scheduleVersionId={selectedVersion.id} />}
                 </div>
               )}
 
