@@ -64,7 +64,7 @@ Deno.serve(async (req) => {
       await base44.integrations.Core.SendEmail({
         to: email,
         subject: 'You have been added as a school administrator',
-        body: `Hello,\n\nYou have been added as an administrator for ${school.name}.\n\nYou can now log in to Schedual and access the school management features.\n\nLogin at: ${Deno.env.get('BASE44_APP_URL') || 'https://schedual-pro.com'}\n\nBest regards,\nThe Schedual Team`
+        body: `Hello,\n\nYou have been added as an administrator for ${school.name}.\n\nYou can now log in to Schedual and access the school management features.\n\nLogin at: https://schedual-pro.com\n\nBest regards,\nThe Schedual Team`
       });
       
       return Response.json({ 
@@ -95,6 +95,10 @@ Deno.serve(async (req) => {
     });
   } catch (error) {
     console.error('Invitation error:', error);
-    return Response.json({ error: error.message || 'Failed to send invitation' }, { status: 500 });
+    console.error('Error stack:', error.stack);
+    return Response.json({ 
+      error: error.message || 'Failed to send invitation',
+      details: error.stack 
+    }, { status: 500 });
   }
 });
