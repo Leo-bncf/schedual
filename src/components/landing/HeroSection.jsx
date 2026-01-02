@@ -51,7 +51,7 @@ export default function HeroSection() {
           animate={{ opacity: 1, y: 0 }}
           transition={{ duration: 0.8, delay: 0.2, ease: "easeOut" }}
           style={{ opacity: 1 - scrollProgress * 0.8, transform: `translateY(${scrollProgress * -40}px)`, fontFamily: "'Poppins', 'Inter', sans-serif" }}
-          className="text-2xl text-slate-800 mb-12 leading-relaxed max-w-3xl mx-auto font-light tracking-wide"
+          className="text-xl text-slate-800 mb-12 leading-relaxed max-w-3xl mx-auto font-normal tracking-wide"
         >
           Experience next generation schedule creation powered by AI. Generate perfect, conflict-free timetables for all IB programmes in minutes, not weeks.
         </motion.p>
