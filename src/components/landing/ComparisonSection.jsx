@@ -7,7 +7,7 @@ export default function ComparisonSection() {
       <div className="max-w-7xl mx-auto">
         <div className="grid md:grid-cols-2 gap-8">
           <div 
-            className="bg-white p-8 rounded-2xl border-2 border-transparent hover:border-purple-700 group hover:bg-gradient-to-br hover:from-blue-900 hover:to-blue-950 transition-all duration-500 cursor-pointer hover:shadow-[0_0_0_2px_rgb(126,34,206),0_0_20px_rgba(126,34,206,0.3)]"
+            className="bg-white p-8 rounded-2xl shadow-lg hover:border-2 hover:border-purple-700 group hover:bg-gradient-to-br hover:from-blue-900 hover:to-blue-950 transition-all duration-500 cursor-pointer hover:shadow-[0_0_0_2px_rgb(126,34,206),0_0_20px_rgba(126,34,206,0.3)]"
           >
             <h3 className="text-2xl font-semibold text-slate-900 mb-4 group-hover:text-white transition-colors">Existing Solutions</h3>
             <ul className="space-y-3 text-slate-700 group-hover:text-blue-100 transition-colors">
@@ -31,7 +31,7 @@ export default function ComparisonSection() {
           </div>
 
           <div 
-            className="bg-white p-8 rounded-2xl border-2 border-transparent hover:border-purple-700 group hover:bg-gradient-to-br hover:from-blue-900 hover:to-blue-950 transition-all duration-500 cursor-pointer hover:shadow-[0_0_0_2px_rgb(126,34,206),0_0_20px_rgba(126,34,206,0.3)]"
+            className="bg-white p-8 rounded-2xl shadow-lg hover:border-2 hover:border-purple-700 group hover:bg-gradient-to-br hover:from-blue-900 hover:to-blue-950 transition-all duration-500 cursor-pointer hover:shadow-[0_0_0_2px_rgb(126,34,206),0_0_20px_rgba(126,34,206,0.3)]"
           >
             <h3 className="text-2xl font-semibold text-slate-900 mb-4 group-hover:text-white transition-colors">IB Schedual Pro</h3>
             <ul className="space-y-3 text-slate-700 group-hover:text-blue-100 transition-colors">
