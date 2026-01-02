@@ -196,15 +196,15 @@ export default function PricingSection() {
         <div className="mt-20 text-center">
           <p className="text-slate-600 text-lg mb-6 font-medium">Trusted by IB schools worldwide 🌍</p>
           <div className="flex flex-wrap justify-center items-center gap-6 md:gap-12">
-            <div className="flex items-center gap-2 text-slate-700 bg-gradient-to-r from-blue-50 to-blue-100 backdrop-blur-sm px-6 py-3 rounded-full"
+            <div className="flex items-center gap-2 text-slate-700 bg-gradient-to-r from-blue-50 to-blue-100 backdrop-blur-sm px-6 py-3 rounded-full">
               <CheckCircle className="w-5 h-5 text-emerald-600" />
               <span className="font-medium">Secure Stripe Payments</span>
             </div>
-            <div className="flex items-center gap-2 text-slate-700 bg-gradient-to-r from-blue-50 to-blue-100 backdrop-blur-sm px-6 py-3 rounded-full"
+            <div className="flex items-center gap-2 text-slate-700 bg-gradient-to-r from-blue-50 to-blue-100 backdrop-blur-sm px-6 py-3 rounded-full">
               <CheckCircle className="w-5 h-5 text-emerald-600" />
               <span className="font-medium">Cancel Anytime</span>
             </div>
-            <div className="flex items-center gap-2 text-slate-700 bg-gradient-to-r from-blue-50 to-blue-100 backdrop-blur-sm px-6 py-3 rounded-full"
+            <div className="flex items-center gap-2 text-slate-700 bg-gradient-to-r from-blue-50 to-blue-100 backdrop-blur-sm px-6 py-3 rounded-full">
               <CheckCircle className="w-5 h-5 text-emerald-600" />
               <span className="font-medium">30-Day Money Back</span>
             </div>
