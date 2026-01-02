@@ -34,7 +34,10 @@ import {
   Eye,
   Archive,
   Loader2,
-  Trash2
+  Trash2,
+  Users,
+  GraduationCap,
+  List
 } from 'lucide-react';
 import PageHeader from '../components/ui-custom/PageHeader';
 import TimetableGrid from '../components/schedule/TimetableGrid';
@@ -1132,14 +1135,31 @@ export default function Schedule() {
               )}
 
               {/* Timetable */}
-              <Tabs defaultValue="grid">
-                <div className="flex items-center justify-between mb-4">
-                  <TabsList className="bg-slate-100">
-                    <TabsTrigger value="grid">Master Schedule</TabsTrigger>
-                    <TabsTrigger value="student">Student View</TabsTrigger>
-                    <TabsTrigger value="teacher">Teacher View</TabsTrigger>
-                    <TabsTrigger value="list">List View</TabsTrigger>
+              <Tabs defaultValue="grid" className="space-y-6">
+                <div className="flex items-center justify-between">
+                  <TabsList className="bg-slate-100 p-1 rounded-xl">
+                    <TabsTrigger value="grid" className="rounded-lg data-[state=active]:bg-white data-[state=active]:shadow-sm">
+                      <Calendar className="w-4 h-4 mr-2" />
+                      Master Schedule
+                    </TabsTrigger>
+                    <TabsTrigger value="student" className="rounded-lg data-[state=active]:bg-white data-[state=active]:shadow-sm">
+                      <GraduationCap className="w-4 h-4 mr-2" />
+                      Student View
+                    </TabsTrigger>
+                    <TabsTrigger value="teacher" className="rounded-lg data-[state=active]:bg-white data-[state=active]:shadow-sm">
+                      <Users className="w-4 h-4 mr-2" />
+                      Teacher View
+                    </TabsTrigger>
+                    <TabsTrigger value="list" className="rounded-lg data-[state=active]:bg-white data-[state=active]:shadow-sm">
+                      <List className="w-4 h-4 mr-2" />
+                      Period List
+                    </TabsTrigger>
                   </TabsList>
+                  {scheduleSlots.length > 0 && (
+                    <div className="text-sm text-slate-500">
+                      {scheduleSlots.length} periods scheduled
+                    </div>
+                  )}
                 </div>
                 
                 <TabsContent value="grid">
