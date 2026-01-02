@@ -223,6 +223,10 @@ export default function Schedule() {
     setIsGeneratingConstraint(true);
     
     try {
+      console.log('Generating constraint with input:', constraintInput);
+      console.log('Constraint type:', constraintType);
+      console.log('School ID:', schoolId);
+      
       const response = await base44.integrations.Core.InvokeLLM({
         prompt: `You are a school scheduling constraint expert. Convert this natural language preference into a structured scheduling constraint:
 
@@ -231,17 +235,16 @@ export default function Schedule() {
 Return a JSON object with these fields:
 - name: short descriptive name (max 50 chars)
 - description: detailed explanation
-- type: "hard" (must follow) or "soft" (optimize for)
 - category: one of: teacher, student, room, subject, time, ib_requirement, custom
 - rule: object with specific constraint rules (e.g., {max_consecutive_periods: 4, teacher_id: "xyz"})
 - weight: 0-1 for soft constraints (1 = highest priority)
 
 Examples:
 Input: "Teachers should not have more than 4 consecutive periods"
-Output: {"name": "Max 4 consecutive periods", "description": "Limits teacher workload to 4 consecutive teaching periods", "type": "hard", "category": "teacher", "rule": {"max_consecutive_periods": 4}, "weight": 1}
+Output: {"name": "Max 4 consecutive periods", "description": "Limits teacher workload to 4 consecutive teaching periods", "category": "teacher", "rule": {"max_consecutive_periods": 4}, "weight": 1}
 
 Input: "Dr. Smith prefers not to teach on Wednesday afternoons"
-Output: {"name": "Dr. Smith - No Wed PM", "description": "Dr. Smith prefers to avoid Wednesday afternoon slots", "type": "soft", "category": "teacher", "rule": {"unavailable_slots": [{"day": "Wednesday", "period": 5}, {"day": "Wednesday", "period": 6}, {"day": "Wednesday", "period": 7}, {"day": "Wednesday", "period": 8}]}, "weight": 0.8}
+Output: {"name": "Dr. Smith - No Wed PM", "description": "Dr. Smith prefers to avoid Wednesday afternoon slots", "category": "teacher", "rule": {"unavailable_slots": [{"day": "Wednesday", "period": 5}, {"day": "Wednesday", "period": 6}, {"day": "Wednesday", "period": 7}, {"day": "Wednesday", "period": 8}]}, "weight": 0.8}
 
 Now process the user's input and return ONLY the JSON object.`,
         response_json_schema: {
@@ -249,24 +252,33 @@ Now process the user's input and return ONLY the JSON object.`,
           properties: {
             name: { type: "string" },
             description: { type: "string" },
-            type: { type: "string", enum: ["hard", "soft"] },
             category: { type: "string", enum: ["teacher", "student", "room", "subject", "time", "ib_requirement", "custom"] },
             rule: { type: "object" },
             weight: { type: "number" }
           },
-          required: ["name", "description", "type", "category", "rule", "weight"]
+          required: ["name", "description", "category", "rule", "weight"]
         }
       });
 
+      console.log('LLM response:', response);
+
       const constraintData = {
-        ...response,
+        name: response.name,
+        description: response.description,
         type: constraintType,
+        category: response.category,
+        rule: response.rule,
+        weight: response.weight,
         school_id: schoolId,
         is_active: true,
         source: 'ai_suggested'
       };
 
-      await base44.entities.Constraint.create(constraintData);
+      console.log('Creating constraint with data:', constraintData);
+
+      const created = await base44.entities.Constraint.create(constraintData);
+      console.log('Constraint created:', created);
+      
       await queryClient.invalidateQueries({ queryKey: ['constraints', schoolId] });
       await refetchConstraints();
       
@@ -276,7 +288,8 @@ Now process the user's input and return ONLY the JSON object.`,
       toast.success('✨ Constraint created from AI suggestion');
     } catch (error) {
       console.error('Error generating constraint:', error);
-      toast.error('Failed to generate constraint. Please try again.');
+      console.error('Error details:', error.response?.data || error.message);
+      toast.error(`Failed to generate constraint: ${error.message}`);
     } finally {
       setIsGeneratingConstraint(false);
     }
