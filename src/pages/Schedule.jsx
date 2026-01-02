@@ -267,10 +267,11 @@ Now process the user's input and return ONLY the JSON object.`,
       };
 
       await base44.entities.Constraint.create(constraintData);
-      queryClient.invalidateQueries({ queryKey: ['constraints'] });
+      await queryClient.invalidateQueries({ queryKey: ['constraints', schoolId] });
       
       setConstraintDialogOpen(false);
       setConstraintInput('');
+      setConstraintType('hard');
       toast.success('✨ Constraint created from AI suggestion');
     } catch (error) {
       console.error('Error generating constraint:', error);
