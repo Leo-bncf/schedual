@@ -1,6 +1,7 @@
 import React from 'react';
-import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
 import { Progress } from "@/components/ui/progress";
+import { Button } from "@/components/ui/button";
 import { CheckCircle, Loader2, Play } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 
@@ -94,6 +95,25 @@ export default function GenerationProgress({ open, progress, onClose, onCancel }
             })}
           </div>
         </div>
+
+        <DialogFooter>
+          {!completed && onCancel && (
+            <Button 
+              onClick={onCancel}
+              variant="outline"
+              className="mr-auto"
+            >
+              Cancel
+            </Button>
+          )}
+          <Button 
+            onClick={onClose}
+            disabled={!completed}
+            className="bg-indigo-600 hover:bg-indigo-700"
+          >
+            {completed ? 'Close' : 'Generating...'}
+          </Button>
+        </DialogFooter>
       </DialogContent>
     </Dialog>
   );
