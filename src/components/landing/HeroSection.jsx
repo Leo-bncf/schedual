@@ -26,7 +26,7 @@ export default function HeroSection() {
   };
 
   return (
-    <section className="relative min-h-screen pt-64 pb-20 px-4 sm:px-6 lg:px-8 overflow-hidden bg-white">
+    <section className="relative min-h-screen pt-64 pb-20 px-4 sm:px-6 lg:px-8 overflow-hidden bg-slate-900">
       <style>{`
         @import url('https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;600&display=swap');
       `}</style>
