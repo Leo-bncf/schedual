@@ -60,7 +60,7 @@ export default function PricingSection() {
   };
 
   return (
-    <section id="pricing" className="relative py-24 px-4 sm:px-6 lg:px-8 bg-white overflow-hidden">
+    <section id="pricing" className="relative py-24 px-4 sm:px-6 lg:px-8 bg-transparent overflow-hidden">
 
       <div className="max-w-7xl mx-auto relative">
         {/* Section Header */}
@@ -111,7 +111,7 @@ export default function PricingSection() {
             {plans.map((plan, index) => (
               <motion.div 
                 key={index} 
-                className="relative p-10 rounded-3xl bg-white shadow-2xl"
+                className="relative p-10 rounded-3xl bg-white/80 backdrop-blur-md shadow-2xl"
                 initial={{ opacity: 0, scale: 0.9 }}
                 whileInView={{ opacity: 1, scale: 1 }}
                 viewport={{ once: true }}
@@ -168,7 +168,7 @@ export default function PricingSection() {
           {/* Right Stats */}
           <div className="lg:col-span-3 space-y-6">
             <motion.div 
-              className="bg-gradient-to-br from-emerald-50 to-green-100/80 backdrop-blur-sm p-6 rounded-2xl shadow-sm"
+              className="bg-gradient-to-br from-emerald-50/70 to-green-100/50 backdrop-blur-md p-6 rounded-2xl shadow-sm"
               initial={{ opacity: 0, x: 50 }}
               whileInView={{ opacity: 1, x: 0 }}
               viewport={{ once: true }}
@@ -179,7 +179,7 @@ export default function PricingSection() {
               <p className="text-slate-700">Priority Support</p>
             </motion.div>
             <motion.div 
-              className="bg-gradient-to-br from-amber-50 to-yellow-100/80 backdrop-blur-sm p-6 rounded-2xl shadow-sm"
+              className="bg-gradient-to-br from-amber-50/70 to-yellow-100/50 backdrop-blur-md p-6 rounded-2xl shadow-sm"
               initial={{ opacity: 0, x: 50 }}
               whileInView={{ opacity: 1, x: 0 }}
               viewport={{ once: true }}

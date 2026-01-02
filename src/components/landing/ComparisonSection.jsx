@@ -3,8 +3,8 @@ import { motion } from 'framer-motion';
 
 export default function ComparisonSection() {
   return (
-    <section className="py-20 px-4 sm:px-6 lg:px-8 bg-white">
-      <div className="max-w-7xl mx-auto">
+    <section className="relative py-20 px-4 sm:px-6 lg:px-8 bg-white z-20">
+      <div className="max-w-7xl mx-auto relative z-20">
         <div className="grid md:grid-cols-2 gap-8">
           <div 
             className="bg-white p-8 rounded-2xl shadow-lg group hover:bg-gradient-to-br hover:from-blue-900 hover:to-blue-950 transition-all duration-500 cursor-pointer"
