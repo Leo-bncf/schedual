@@ -696,6 +696,35 @@ Now process the user's input and return ONLY the JSON object.`,
               continue; 
             }
 
+            // CHECK HARD CONSTRAINTS - subject/day restrictions
+            let violatesHardConstraint = false;
+            for (const constraint of hardConstraints) {
+              if (constraint.category === 'subject' && constraint.rule?.subject_id === group.subject_id) {
+                // Check if this subject is prohibited on this day
+                if (constraint.rule?.prohibited_days?.includes(day)) {
+                  violatesHardConstraint = true;
+                  console.log(`Hard constraint violated: ${constraint.name} - ${subject?.name || 'Subject'} cannot be scheduled on ${day}`);
+                  break;
+                }
+                // Check if this subject is prohibited on specific day/period combinations
+                if (constraint.rule?.prohibited_slots?.some(slot => slot.day === day && (!slot.period || slot.period === period))) {
+                  violatesHardConstraint = true;
+                  console.log(`Hard constraint violated: ${constraint.name} - ${subject?.name || 'Subject'} cannot be scheduled on ${day} period ${period}`);
+                  break;
+                }
+              }
+              // Check time-based constraints
+              if (constraint.category === 'time' && constraint.rule?.prohibited_slots) {
+                if (constraint.rule.prohibited_slots.some(slot => slot.day === day && slot.period === period)) {
+                  violatesHardConstraint = true;
+                  console.log(`Hard constraint violated: ${constraint.name} - Period ${day} ${period} is prohibited`);
+                  break;
+                }
+              }
+            }
+
+            if (violatesHardConstraint) continue;
+
             // Check if all students are available (or no students assigned yet)
             const studentsFree = studentIds.length === 0 || studentIds.every(studentId => {
               const schedule = studentSchedules[studentId] || [];
@@ -824,32 +853,55 @@ Now process the user's input and return ONLY the JSON object.`,
                 if (periodsScheduled >= periodsNeeded) break;
 
                 for (const period of periods) {
-                if (periodsScheduled >= periodsNeeded) break;
+                  if (periodsScheduled >= periodsNeeded) break;
 
-                const studentsFree = studentIds.length === 0 || studentIds.every(studentId => {
-                const schedule = studentSchedules[studentId] || [];
-                const isSlotFree = !schedule.some(s => s.day === day && s.period === period);
-
-                if (!isSlotFree) return false;
-
-                if (period > 1) {
-                  const daySchedule = schedule.filter(s => s.day === day && s.period < period);
-                  const sortedSchedule = daySchedule.sort((a, b) => b.period - a.period);
-
-                  if (sortedSchedule.length >= 2) {
-                    const prev1 = sortedSchedule.find(s => s.period === period - 1);
-                    const prev2 = sortedSchedule.find(s => s.period === period - 2);
-
-                    if (prev1 && prev2 && 
-                        prev1.subjectId === group.subject_id && 
-                        prev2.subjectId === group.subject_id) {
-                      return false;
+                  // CHECK HARD CONSTRAINTS - subject/day restrictions
+                  let violatesHardConstraint = false;
+                  for (const constraint of hardConstraints) {
+                    if (constraint.category === 'subject' && constraint.rule?.subject_id === group.subject_id) {
+                      if (constraint.rule?.prohibited_days?.includes(day)) {
+                        violatesHardConstraint = true;
+                        break;
+                      }
+                      if (constraint.rule?.prohibited_slots?.some(slot => slot.day === day && (!slot.period || slot.period === period))) {
+                        violatesHardConstraint = true;
+                        break;
+                      }
+                    }
+                    if (constraint.category === 'time' && constraint.rule?.prohibited_slots) {
+                      if (constraint.rule.prohibited_slots.some(slot => slot.day === day && slot.period === period)) {
+                        violatesHardConstraint = true;
+                        break;
+                      }
                     }
                   }
-                }
 
-                return true;
-                });
+                  if (violatesHardConstraint) continue;
+
+                  const studentsFree = studentIds.length === 0 || studentIds.every(studentId => {
+                    const schedule = studentSchedules[studentId] || [];
+                    const isSlotFree = !schedule.some(s => s.day === day && s.period === period);
+
+                    if (!isSlotFree) return false;
+
+                    if (period > 1) {
+                      const daySchedule = schedule.filter(s => s.day === day && s.period < period);
+                      const sortedSchedule = daySchedule.sort((a, b) => b.period - a.period);
+
+                      if (sortedSchedule.length >= 2) {
+                        const prev1 = sortedSchedule.find(s => s.period === period - 1);
+                        const prev2 = sortedSchedule.find(s => s.period === period - 2);
+
+                        if (prev1 && prev2 && 
+                            prev1.subjectId === group.subject_id && 
+                            prev2.subjectId === group.subject_id) {
+                          return false;
+                        }
+                      }
+                    }
+
+                    return true;
+                  });
 
                 let teacherFree = true;
                 let teacherAvailable = true;
