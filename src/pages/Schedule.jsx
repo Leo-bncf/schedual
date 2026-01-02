@@ -23,6 +23,7 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { toast } from 'sonner';
+import { Textarea } from "@/components/ui/textarea";
 import { 
   Plus, 
   Calendar, 
