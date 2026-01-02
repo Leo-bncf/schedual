@@ -37,9 +37,9 @@ export default function HeroSection() {
 
       <div className="max-w-5xl mx-auto relative z-10 text-center">
         <motion.h1 
-          initial={{ opacity: 0, y: 30 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{ duration: 0.8, ease: "easeOut" }}
+          initial={{ opacity: 0, y: 80, scale: 0.9 }}
+          animate={{ opacity: 1, y: 0, scale: 1 }}
+          transition={{ duration: 1, ease: [0.16, 1, 0.3, 1] }}
           style={{ opacity: 1 - scrollProgress * 0.8, transform: `translateY(${scrollProgress * -50}px) scale(${1 - scrollProgress * 0.1})`, fontFamily: "'Poppins', 'Space Grotesk', sans-serif" }}
           className="text-6xl sm:text-7xl font-semibold text-slate-900 leading-tight mb-8 tracking-wide"
         >
@@ -47,9 +47,9 @@ export default function HeroSection() {
         </motion.h1>
         
         <motion.p 
-          initial={{ opacity: 0, y: 30 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{ duration: 0.8, delay: 0.2, ease: "easeOut" }}
+          initial={{ opacity: 0, y: 60, scale: 0.95 }}
+          animate={{ opacity: 1, y: 0, scale: 1 }}
+          transition={{ duration: 1, delay: 0.3, ease: [0.16, 1, 0.3, 1] }}
           style={{ opacity: 1 - scrollProgress * 0.8, transform: `translateY(${scrollProgress * -40}px)`, fontFamily: "'Poppins', 'Inter', sans-serif" }}
           className="text-xl text-slate-800 mb-12 leading-relaxed max-w-3xl mx-auto font-normal tracking-wide"
         >
