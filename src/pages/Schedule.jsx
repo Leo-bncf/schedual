@@ -51,6 +51,7 @@ export default function Schedule() {
   const [isDialogOpen, setIsDialogOpen] = useState(false);
   const [selectedVersion, setSelectedVersion] = useState(null);
   const [isGenerating, setIsGenerating] = useState(false);
+  const [hasAutoSelected, setHasAutoSelected] = useState(false);
   const [generationProgress, setGenerationProgress] = useState({
     stage: '',
     percent: 0,
@@ -847,121 +848,227 @@ export default function Schedule() {
   const publishedVersion = scheduleVersions.find(v => v.status === 'published');
   const draftVersions = scheduleVersions.filter(v => v.status === 'draft');
 
+  // Auto-select latest version on load
+  React.useEffect(() => {
+    if (!hasAutoSelected && scheduleVersions.length > 0 && !selectedVersion) {
+      const latest = publishedVersion || draftVersions[0];
+      if (latest) {
+        setSelectedVersion(latest);
+        setHasAutoSelected(true);
+      }
+    }
+  }, [scheduleVersions, selectedVersion, publishedVersion, draftVersions, hasAutoSelected]);
+
+  // Calculate stats for selected version
+  const stats = React.useMemo(() => {
+    if (!selectedVersion || scheduleSlots.length === 0) {
+      return { studentsScheduled: 0, teachersAssigned: 0, totalSlots: 0, coverage: 0 };
+    }
+
+    const scheduledStudents = new Set();
+    const scheduledTeachers = new Set();
+
+    scheduleSlots.forEach(slot => {
+      if (slot.teacher_id) scheduledTeachers.add(slot.teacher_id);
+      
+      // For classgroup-based slots (PYP/MYP)
+      if (slot.classgroup_id) {
+        const cg = classGroups.find(c => c.id === slot.classgroup_id);
+        cg?.student_ids?.forEach(sid => scheduledStudents.add(sid));
+      }
+      
+      // For teaching group-based slots (DP)
+      if (slot.teaching_group_id) {
+        const tg = teachingGroups.find(g => g.id === slot.teaching_group_id);
+        tg?.student_ids?.forEach(sid => scheduledStudents.add(sid));
+      }
+    });
+
+    const coverage = students.length > 0 ? Math.round((scheduledStudents.size / students.length) * 100) : 0;
+
+    return {
+      studentsScheduled: scheduledStudents.size,
+      teachersAssigned: scheduledTeachers.size,
+      totalSlots: scheduleSlots.length,
+      coverage
+    };
+  }, [selectedVersion, scheduleSlots, students, teachingGroups, classGroups]);
+
   return (
     <div className="space-y-6">
-      <div className="flex items-start justify-between gap-4">
-        <PageHeader 
-          title="Schedule"
-          description="Create and manage IB Diploma Programme timetables"
-        />
-
-        {/* Version Selector - Moved to top */}
-        <div className="flex items-center gap-3">
-          <Select value={selectedVersion?.id} onValueChange={(id) => setSelectedVersion(scheduleVersions.find(v => v.id === id))}>
-            <SelectTrigger className="w-[280px]">
-              <SelectValue placeholder="Select a version" />
-            </SelectTrigger>
-            <SelectContent>
-              {publishedVersion && (
-                <>
-                  <SelectItem value={publishedVersion.id}>
-                    <div className="flex items-center gap-2">
-                      <CheckCircle className="w-4 h-4 text-emerald-600" />
-                      <span className="font-medium">{publishedVersion.name}</span>
-                      <Badge className="ml-2 bg-emerald-100 text-emerald-700 border-0 text-xs">Published</Badge>
-                    </div>
-                  </SelectItem>
-                </>
-              )}
-              {draftVersions.map(version => (
-                <SelectItem key={version.id} value={version.id}>
-                  <div className="flex items-center gap-2">
-                    <Clock className="w-4 h-4 text-slate-400" />
-                    <span>{version.name}</span>
-                    <Badge variant="outline" className="ml-2 text-xs">Draft</Badge>
-                  </div>
-                </SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
+      <PageHeader 
+        title="Master Schedule"
+        description="Generate and manage timetables for all IB programmes (PYP, MYP, DP)"
+        actions={
           <Button onClick={() => setIsDialogOpen(true)} className="bg-indigo-600 hover:bg-indigo-700">
             <Plus className="w-4 h-4 mr-2" />
             New Version
           </Button>
+        }
+      />
+
+      {/* Quick Stats Bar */}
+      {selectedVersion && scheduleSlots.length > 0 && (
+        <div className="grid grid-cols-4 gap-4">
+          <Card className="border-0 shadow-sm bg-gradient-to-br from-blue-50 to-white">
+            <CardContent className="p-4">
+              <div className="flex items-center justify-between">
+                <div>
+                  <p className="text-xs text-slate-600 mb-1">Students Scheduled</p>
+                  <p className="text-2xl font-bold text-blue-900">{stats.studentsScheduled}/{students.length}</p>
+                </div>
+                <div className="text-3xl font-bold text-blue-600">{stats.coverage}%</div>
+              </div>
+            </CardContent>
+          </Card>
+          <Card className="border-0 shadow-sm bg-gradient-to-br from-emerald-50 to-white">
+            <CardContent className="p-4">
+              <div className="flex items-center justify-between">
+                <div>
+                  <p className="text-xs text-slate-600 mb-1">Teachers Assigned</p>
+                  <p className="text-2xl font-bold text-emerald-900">{stats.teachersAssigned}/{teachers.length}</p>
+                </div>
+                <Users className="w-8 h-8 text-emerald-600" />
+              </div>
+            </CardContent>
+          </Card>
+          <Card className="border-0 shadow-sm bg-gradient-to-br from-violet-50 to-white">
+            <CardContent className="p-4">
+              <div className="flex items-center justify-between">
+                <div>
+                  <p className="text-xs text-slate-600 mb-1">Total Periods</p>
+                  <p className="text-2xl font-bold text-violet-900">{stats.totalSlots}</p>
+                </div>
+                <Calendar className="w-8 h-8 text-violet-600" />
+              </div>
+            </CardContent>
+          </Card>
+          <Card className={`border-0 shadow-sm ${
+            selectedVersion.conflicts_count > 0 
+              ? 'bg-gradient-to-br from-rose-50 to-white' 
+              : 'bg-gradient-to-br from-slate-50 to-white'
+          }`}>
+            <CardContent className="p-4">
+              <div className="flex items-center justify-between">
+                <div>
+                  <p className="text-xs text-slate-600 mb-1">Issues</p>
+                  <p className={`text-2xl font-bold ${
+                    selectedVersion.conflicts_count > 0 ? 'text-rose-900' : 'text-slate-900'
+                  }`}>
+                    {(selectedVersion.conflicts_count || 0) + (selectedVersion.warnings_count || 0)}
+                  </p>
+                </div>
+                {selectedVersion.conflicts_count > 0 ? (
+                  <AlertTriangle className="w-8 h-8 text-rose-600" />
+                ) : (
+                  <CheckCircle className="w-8 h-8 text-emerald-600" />
+                )}
+              </div>
+            </CardContent>
+          </Card>
         </div>
-      </div>
+      )}
+
+      {/* Version Selector Card */}
+      <Card className="border-0 shadow-sm">
+        <CardContent className="p-6">
+          <div className="flex items-center justify-between">
+            <div className="flex items-center gap-4 flex-1">
+              <div>
+                <Label className="text-sm text-slate-600 mb-2 block">Active Version</Label>
+                <Select value={selectedVersion?.id || ''} onValueChange={(id) => setSelectedVersion(scheduleVersions.find(v => v.id === id))}>
+                  <SelectTrigger className="w-[320px]">
+                    <SelectValue placeholder="Select a schedule version" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {scheduleVersions.length === 0 ? (
+                      <div className="p-4 text-sm text-slate-500">No versions yet. Create one to start.</div>
+                    ) : (
+                      <>
+                        {publishedVersion && (
+                          <SelectItem value={publishedVersion.id}>
+                            <div className="flex items-center gap-2">
+                              <CheckCircle className="w-4 h-4 text-emerald-600" />
+                              <span className="font-medium">{publishedVersion.name}</span>
+                              <Badge className="ml-2 bg-emerald-100 text-emerald-700 border-0 text-xs">Published</Badge>
+                            </div>
+                          </SelectItem>
+                        )}
+                        {draftVersions.map(version => (
+                          <SelectItem key={version.id} value={version.id}>
+                            <div className="flex items-center gap-2">
+                              <Clock className="w-4 h-4 text-slate-400" />
+                              <span>{version.name}</span>
+                              <Badge variant="outline" className="ml-2 text-xs">Draft</Badge>
+                            </div>
+                          </SelectItem>
+                        ))}
+                      </>
+                    )}
+                  </SelectContent>
+                </Select>
+              </div>
+              {selectedVersion && (
+                <div className="flex items-center gap-2 text-sm text-slate-500">
+                  <span>•</span>
+                  <span>{selectedVersion.academic_year}</span>
+                  <span>•</span>
+                  <span>{selectedVersion.term || 'Full Year'}</span>
+                </div>
+              )}
+            </div>
+            {selectedVersion && (
+              <div className="flex gap-2">
+                <Button 
+                  onClick={handleGenerateSchedule}
+                  disabled={isGenerating}
+                  className="bg-indigo-600 hover:bg-indigo-700"
+                  size="lg"
+                >
+                  {isGenerating ? (
+                    <>
+                      <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+                      Generating...
+                    </>
+                  ) : (
+                    <>
+                      <Sparkles className="w-4 h-4 mr-2" />
+                      Generate Schedule
+                    </>
+                  )}
+                </Button>
+                {selectedVersion.status === 'draft' && scheduleSlots.length > 0 && (
+                  <Button 
+                    className="bg-emerald-600 hover:bg-emerald-700"
+                    onClick={() => handlePublish(selectedVersion)}
+                  >
+                    <CheckCircle className="w-4 h-4 mr-2" />
+                    Publish
+                  </Button>
+                )}
+                {selectedVersion.status === 'draft' && (
+                  <Button 
+                    variant="outline"
+                    className="text-rose-600 hover:text-rose-700 hover:bg-rose-50"
+                    onClick={() => {
+                      if (confirm(`Delete "${selectedVersion.name}"?`)) {
+                        deleteVersionMutation.mutate(selectedVersion.id);
+                      }
+                    }}
+                  >
+                    <Trash2 className="w-4 h-4" />
+                  </Button>
+                )}
+              </div>
+            )}
+          </div>
+        </CardContent>
+      </Card>
 
       <div className="space-y-4">
-        {/* Main Content - Now full width */}
-        <div className="space-y-4">
-
-          {selectedVersion ? (
-            <>
-              {/* Version Header */}
-              <Card className="border-0 shadow-sm">
-                <CardContent className="p-6">
-                  <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
-                    <div>
-                      <div className="flex items-center gap-3 mb-2">
-                        <h2 className="text-xl font-semibold text-slate-900">{selectedVersion.name}</h2>
-                        <Badge className={
-                          selectedVersion.status === 'published' 
-                            ? 'bg-emerald-100 text-emerald-700 border-0' 
-                            : 'bg-slate-100 text-slate-600 border-0'
-                        }>
-                          {selectedVersion.status}
-                        </Badge>
-                      </div>
-                      <p className="text-slate-500 text-sm">
-                        {selectedVersion.academic_year} • {selectedVersion.term || 'Full Year'}
-                      </p>
-                      {selectedVersion.notes && (
-                        <p className="text-xs text-slate-400 mt-1">{selectedVersion.notes}</p>
-                      )}
-                    </div>
-                    <div className="flex gap-2">
-                      <Button 
-                        variant="outline" 
-                        onClick={handleGenerateSchedule}
-                        disabled={isGenerating}
-                      >
-                        {isGenerating ? (
-                          <>
-                            <Loader2 className="w-4 h-4 mr-2 animate-spin" />
-                            Generating...
-                          </>
-                        ) : (
-                          <>
-                            <Play className="w-4 h-4 mr-2" />
-                            Generate
-                          </>
-                        )}
-                      </Button>
-                      {selectedVersion.status === 'draft' && (
-                        <>
-                          <Button 
-                            className="bg-emerald-600 hover:bg-emerald-700"
-                            onClick={() => handlePublish(selectedVersion)}
-                          >
-                            <CheckCircle className="w-4 h-4 mr-2" />
-                            Publish
-                          </Button>
-                          <Button 
-                            variant="outline"
-                            className="text-rose-600 hover:text-rose-700 hover:bg-rose-50"
-                            onClick={() => deleteVersionMutation.mutate(selectedVersion.id)}
-                          >
-                            <Trash2 className="w-4 h-4 mr-2" />
-                            Delete
-                          </Button>
-                        </>
-                      )}
-                    </div>
-                  </div>
-                </CardContent>
-              </Card>
-
-              {/* Conflicts/Warnings */}
+        {selectedVersion ? (
+          <>
+            {/* Conflicts/Warnings */}
               {selectedVersion && (selectedVersion.conflicts_count > 0 || selectedVersion.warnings_count > 0) && (
                 <div className="space-y-3">
                   {selectedVersion.conflicts_count > 0 && (
@@ -994,37 +1101,56 @@ export default function Schedule() {
                 </div>
                 
                 <TabsContent value="grid">
-                  <div className="space-y-4">
-                    <div className="flex items-center justify-between">
-                      <div className="flex items-center gap-3">
-                        <Label className="text-sm text-slate-600">ClassGroup:</Label>
-                        <Select 
-                          value={selectedClassGroupId || ''} 
-                          onValueChange={setSelectedClassGroupId}
+                  {scheduleSlots.length === 0 ? (
+                    <Card className="border-0 shadow-sm">
+                      <CardContent className="py-16 text-center">
+                        <Calendar className="w-16 h-16 text-slate-300 mx-auto mb-4" />
+                        <h3 className="text-lg font-semibold text-slate-900 mb-2">No Schedule Generated Yet</h3>
+                        <p className="text-slate-500 mb-6">Click "Generate Schedule" above to create timetables for all programmes</p>
+                        <Button 
+                          onClick={handleGenerateSchedule}
+                          disabled={isGenerating}
+                          className="bg-indigo-600 hover:bg-indigo-700"
                         >
-                          <SelectTrigger className="w-[280px]">
-                            <SelectValue placeholder="Select a ClassGroup" />
-                          </SelectTrigger>
-                          <SelectContent>
-                            {classGroups.map(cg => (
-                              <SelectItem key={cg.id} value={cg.id}>
-                                {cg.name} ({cg.ib_programme})
-                              </SelectItem>
-                            ))}
-                          </SelectContent>
-                        </Select>
+                          <Sparkles className="w-4 h-4 mr-2" />
+                          Generate Schedule Now
+                        </Button>
+                      </CardContent>
+                    </Card>
+                  ) : (
+                    <div className="space-y-4">
+                      <div className="flex items-center justify-between">
+                        <div className="flex items-center gap-3">
+                          <Label className="text-sm font-medium text-slate-700">View ClassGroup:</Label>
+                          <Select 
+                            value={selectedClassGroupId || ''} 
+                            onValueChange={setSelectedClassGroupId}
+                          >
+                            <SelectTrigger className="w-[320px]">
+                              <SelectValue placeholder="Select a ClassGroup to view" />
+                            </SelectTrigger>
+                            <SelectContent>
+                              {classGroups.map(cg => (
+                                <SelectItem key={cg.id} value={cg.id}>
+                                  {cg.name} ({cg.ib_programme} - {cg.year_group})
+                                </SelectItem>
+                              ))}
+                            </SelectContent>
+                          </Select>
+                        </div>
+                        {selectedClassGroupId && (
+                          <ScheduleExporter 
+                            elementId="master-schedule-grid"
+                            filename={`master-schedule-${classGroups.find(cg => cg.id === selectedClassGroupId)?.name || 'schedule'}`}
+                            label="Export Schedule"
+                            headerData={{
+                              schoolName: school?.name || '',
+                              studentName: classGroups.find(cg => cg.id === selectedClassGroupId)?.name || '',
+                              lastUpdated: selectedVersion?.generated_at ? new Date(selectedVersion.generated_at).toLocaleDateString() : ''
+                            }}
+                          />
+                        )}
                       </div>
-                      <ScheduleExporter 
-                        elementId="master-schedule-grid"
-                        filename={`master-schedule-${classGroups.find(cg => cg.id === selectedClassGroupId)?.name || 'schedule'}`}
-                        label="Export Master Schedule"
-                        headerData={{
-                          schoolName: school?.name || '',
-                          studentName: classGroups.find(cg => cg.id === selectedClassGroupId)?.name || '',
-                          lastUpdated: selectedVersion?.generated_at ? new Date(selectedVersion.generated_at).toLocaleDateString() : ''
-                        }}
-                      />
-                    </div>
                     {selectedClassGroupId ? (
                      <div id="master-schedule-grid">
                        <TimetableGrid 
@@ -1057,12 +1183,14 @@ export default function Schedule() {
                       <Card className="border-0 shadow-sm">
                         <CardContent className="py-16 text-center">
                           <Calendar className="w-12 h-12 text-slate-300 mx-auto mb-3" />
-                          <p className="text-slate-500">Select a ClassGroup to view their master schedule</p>
+                          <h4 className="font-medium text-slate-900 mb-1">Select a ClassGroup</h4>
+                          <p className="text-sm text-slate-500">Choose a ClassGroup above to view their weekly schedule</p>
                         </CardContent>
                       </Card>
                     )}
-                  </div>
-                </TabsContent>
+                    </div>
+                    )}
+                    </TabsContent>
 
                 <TabsContent value="student">
                   <div className="space-y-4">
@@ -1155,29 +1283,28 @@ export default function Schedule() {
                 </TabsContent>
               </Tabs>
             </>
-          ) : (
-            <Card className="border-0 shadow-sm">
-              <CardContent className="py-16">
-                <EmptyState 
-                  icon={Calendar}
-                  title="Select a Schedule Version"
-                  description="Choose a version from the sidebar or create a new one to start editing."
-                  action={() => setIsDialogOpen(true)}
-                  actionLabel="Create New Version"
-                />
-              </CardContent>
-            </Card>
-          )}
-        </div>
+        ) : (
+          <Card className="border-0 shadow-sm">
+            <CardContent className="py-16">
+              <EmptyState 
+                icon={Calendar}
+                title="No Schedule Version Selected"
+                description="Create your first schedule version to organize classes for all IB programmes (PYP, MYP, DP). The system will automatically assign teachers, students, and rooms across the week."
+                action={() => setIsDialogOpen(true)}
+                actionLabel="Create First Schedule"
+              />
+            </CardContent>
+          </Card>
+        )}
       </div>
 
       {/* Create Version Dialog */}
       <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
         <DialogContent className="sm:max-w-md">
           <DialogHeader>
-            <DialogTitle>Create Master Schedule</DialogTitle>
+            <DialogTitle>Create New Schedule Version</DialogTitle>
             <DialogDescription>
-              This will create a master schedule that includes all students (PYP, MYP, DP), all teachers, and all rooms. Each student and teacher will have their own synchronized schedule.
+              Create a schedule version for all IB programmes. You can generate multiple versions to compare and choose the best one.
             </DialogDescription>
           </DialogHeader>
           <form onSubmit={(e) => { e.preventDefault(); createVersionMutation.mutate(formData); }} className="space-y-4">
@@ -1231,7 +1358,7 @@ export default function Schedule() {
                 Cancel
               </Button>
               <Button type="submit" className="bg-indigo-600 hover:bg-indigo-700" disabled={createVersionMutation.isPending}>
-                Create Master Schedule
+                {createVersionMutation.isPending ? 'Creating...' : 'Create Version'}
               </Button>
             </DialogFooter>
           </form>
