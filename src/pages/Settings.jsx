@@ -159,11 +159,7 @@ export default function Settings() {
     onSuccess: (data) => {
       console.log('Invitation success:', data);
       queryClient.invalidateQueries({ queryKey: ['schoolAdmins'] });
-      if (data?.action === 'assigned_existing_user') {
-        toast.success('✅ User added as administrator successfully');
-      } else {
-        toast.success('✅ Invitation email sent successfully');
-      }
+      toast.success('✅ Admin access granted successfully!');
       setInviteEmail('');
       setInviteDialogOpen(false);
     },
@@ -1027,39 +1023,69 @@ export default function Settings() {
 
       {/* Invite Admin Dialog */}
             <Dialog open={inviteDialogOpen} onOpenChange={setInviteDialogOpen}>
-        <DialogContent>
+        <DialogContent className="max-w-xl">
           <DialogHeader>
-            <DialogTitle>Invite School Admin</DialogTitle>
+            <DialogTitle className="flex items-center gap-2 text-xl">
+              <UserPlus className="w-6 h-6 text-indigo-600" />
+              Add School Administrator
+            </DialogTitle>
             <DialogDescription>
-              Invite another administrator to manage your school. They will have full admin access to your school only.
+              Grant admin access to a colleague who already has an account on Schedual.
             </DialogDescription>
           </DialogHeader>
-          <div className="space-y-4 py-4">
-            <div className="bg-blue-50 border border-blue-200 rounded-lg p-4">
+          <div className="space-y-5 py-4">
+            {/* Important Notice */}
+            <div className="bg-gradient-to-br from-blue-50 to-indigo-50 border-2 border-blue-200 rounded-xl p-5">
               <div className="flex items-start gap-3">
-                <Users className="w-5 h-5 text-blue-600 mt-0.5" />
-                <div>
-                  <p className="text-sm font-medium text-blue-900">
-                    Available Seats: {(school?.max_additional_users || 0) + 1 - schoolAdmins.length} / {(school?.max_additional_users || 0) + 1}
+                <div className="w-10 h-10 rounded-full bg-blue-100 flex items-center justify-center flex-shrink-0">
+                  <Info className="w-5 h-5 text-blue-600" />
+                </div>
+                <div className="space-y-2">
+                  <p className="font-semibold text-blue-900 text-sm">Account Required</p>
+                  <p className="text-sm text-blue-800 leading-relaxed">
+                    The person you want to add must <strong>already have a Schedual account</strong>. If they don't have one yet, ask them to register at <a href="https://schedual-pro.com" target="_blank" rel="noopener noreferrer" className="underline font-medium">schedual-pro.com</a> first.
                   </p>
-                  <p className="text-xs text-blue-700 mt-1">
-                    {schoolAdmins.length} admin(s) currently invited
+                  <p className="text-sm text-blue-800 leading-relaxed">
+                    Once they're registered, enter their email below to instantly grant them admin access to your school.
+                  </p>
+                </div>
+              </div>
+            </div>
+
+            {/* Available Seats */}
+            <div className="bg-gradient-to-br from-emerald-50 to-teal-50 border-2 border-emerald-200 rounded-xl p-4">
+              <div className="flex items-center gap-3">
+                <div className="w-12 h-12 rounded-full bg-emerald-100 flex items-center justify-center">
+                  <Users className="w-6 h-6 text-emerald-600" />
+                </div>
+                <div>
+                  <p className="text-lg font-bold text-emerald-900">
+                    {(school?.max_additional_users || 0) + 1 - schoolAdmins.length} seats available
+                  </p>
+                  <p className="text-sm text-emerald-700">
+                    {schoolAdmins.length} of {(school?.max_additional_users || 0) + 1} admin seats used
                   </p>
                 </div>
               </div>
             </div>
             
+            {/* Email Input */}
             <div className="space-y-2">
-              <Label htmlFor="invite-email">Admin Email Address</Label>
+              <Label htmlFor="invite-email" className="text-sm font-semibold flex items-center gap-2">
+                <Mail className="w-4 h-4 text-slate-600" />
+                Registered User's Email
+              </Label>
               <Input 
                 id="invite-email"
                 type="email"
-                placeholder="admin@example.com"
+                placeholder="colleague@example.com"
                 value={inviteEmail}
                 onChange={(e) => setInviteEmail(e.target.value)}
+                className="h-11 text-base"
               />
-              <p className="text-xs text-slate-500">
-                They will receive an invitation email to join as a school administrator
+              <p className="text-xs text-slate-500 flex items-start gap-1.5">
+                <AlertCircle className="w-3 h-3 mt-0.5 flex-shrink-0" />
+                <span>Enter the email address they used to create their Schedual account</span>
               </p>
             </div>
 
@@ -1090,7 +1116,7 @@ export default function Settings() {
               Cancel
             </Button>
             <Button 
-              className="bg-emerald-600 hover:bg-emerald-700"
+              className="bg-indigo-600 hover:bg-indigo-700"
               onClick={() => {
                 console.log('Button clicked, email:', inviteEmail);
                 if (inviteEmail && /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(inviteEmail)) {
@@ -1106,12 +1132,12 @@ export default function Settings() {
               {inviteUserMutation.isPending ? (
                 <>
                   <Loader2 className="w-4 h-4 mr-2 animate-spin" />
-                  Sending...
+                  Adding Admin...
                 </>
               ) : (
                 <>
-                  <Mail className="w-4 h-4 mr-2" />
-                  Send Invitation
+                  <UserPlus className="w-4 h-4 mr-2" />
+                  Grant Admin Access
                 </>
               )}
             </Button>
