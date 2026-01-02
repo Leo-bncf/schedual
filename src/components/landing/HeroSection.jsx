@@ -27,7 +27,7 @@ export default function HeroSection() {
   return (
     <section className="relative min-h-screen pt-32 pb-20 px-4 sm:px-6 lg:px-8 overflow-hidden bg-white">
       {/* Blue splat effect at top */}
-      <div className="absolute -top-40 left-1/2 -translate-x-1/2 w-[1200px] h-[600px] bg-gradient-to-br from-blue-400/30 via-indigo-400/20 to-purple-400/30 rounded-full blur-3xl"></div>
+      <div className="absolute -top-40 left-1/2 -translate-x-1/2 w-[1200px] h-[600px] bg-gradient-to-br from-blue-500/50 via-indigo-500/40 to-purple-500/50 rounded-full blur-3xl"></div>
 
       <div className="max-w-5xl mx-auto relative z-10 text-center">
         <div className="inline-block mb-6 bg-blue-100 px-6 py-3 rounded-full">
