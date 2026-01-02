@@ -110,22 +110,15 @@ export default function HeroSection() {
         </div>
       </div>
       
-      {/* Gradient transition to next section - animated on scroll */}
+      {/* Smooth gradient transition to next section */}
       <div 
-        className="absolute -bottom-40 left-0 right-0 h-[500px] bg-gradient-to-b from-transparent via-blue-900/5 to-slate-50"
+        className="absolute -bottom-40 left-0 right-0 h-[600px] pointer-events-none"
         style={{ 
-          opacity: 1 - scrollProgress * 0.2,
-          transition: 'opacity 0.1s ease-out'
-        }}
-      ></div>
-      
-      {/* Animated overlay that grows as you scroll */}
-      <div 
-        className="absolute inset-0 bg-gradient-to-b from-transparent via-slate-50/50 to-slate-50 pointer-events-none"
-        style={{ 
-          opacity: scrollProgress * 0.9,
-          transform: `translateY(${scrollProgress * 150}px)`,
-          transition: 'opacity 0.1s ease-out, transform 0.1s ease-out'
+          background: `linear-gradient(to bottom, 
+            transparent 0%, 
+            rgba(15, 23, 42, 0.02) 40%,
+            rgba(248, 250, 252, 0.6) 70%,
+            rgb(248, 250, 252) 100%)`
         }}
       ></div>
     </section>
