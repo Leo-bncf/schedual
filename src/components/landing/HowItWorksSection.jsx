@@ -170,7 +170,7 @@ const steps = [
 ];
 
 export default function HowItWorksSection() {
-  const [selectedStep, setSelectedStep] = useState(null);
+  const [selectedStep, setSelectedStep] = useState(0);
   return (
     <section id="how-it-works" className="py-20 px-4 sm:px-6 lg:px-8 bg-transparent relative overflow-hidden">
       <div className="max-w-7xl mx-auto relative z-10">
@@ -233,8 +233,7 @@ export default function HowItWorksSection() {
           {/* Preview Panel */}
           <div className="lg:sticky lg:top-24">
             <AnimatePresence mode="wait">
-              {selectedStep !== null ? (
-                <motion.div
+              <motion.div
                   key={selectedStep}
                   initial={{ opacity: 0, x: 20 }}
                   animate={{ opacity: 1, x: 0 }}
@@ -264,18 +263,6 @@ export default function HowItWorksSection() {
                     </div>
                   </div>
                 </motion.div>
-              ) : (
-                <motion.div
-                  initial={{ opacity: 0 }}
-                  animate={{ opacity: 1 }}
-                  className="bg-gradient-to-br from-slate-100 to-slate-200 rounded-2xl h-96 flex items-center justify-center border-2 border-dashed border-slate-300"
-                >
-                  <div className="text-center">
-                    <div className="text-4xl mb-3">👈</div>
-                    <p className="text-slate-600 font-medium">Click on a step to see it in action</p>
-                  </div>
-                </motion.div>
-              )}
             </AnimatePresence>
           </div>
         </div>
