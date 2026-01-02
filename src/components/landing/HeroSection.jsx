@@ -128,7 +128,3 @@ export default function HeroSection() {
     </section>
   );
 }
-      </div>
-    </section>
-  );
-}
