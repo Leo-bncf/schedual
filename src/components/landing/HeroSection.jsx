@@ -64,27 +64,21 @@ export default function HeroSection() {
       <div className="fixed inset-0 z-0 pointer-events-none overflow-hidden">
         <style>{`
           @keyframes float-blob-1 {
-            0%, 100% { transform: translate(-50%, 0) scale(1) rotate(0deg); opacity: 0.6; }
-            25% { transform: translate(-40%, -60px) scale(1.15) rotate(5deg); opacity: 0.75; }
-            50% { transform: translate(-60%, 40px) scale(0.85) rotate(-8deg); opacity: 0.65; }
-            75% { transform: translate(-45%, -30px) scale(1.1) rotate(3deg); opacity: 0.7; }
+            0% { transform: translate(-50%, 0) scale(0.8); opacity: 0; }
+            100% { transform: translate(-50%, 0) scale(1.2); opacity: 0.8; }
           }
           @keyframes float-blob-2 {
-            0%, 100% { transform: translate(0, 0) scale(1) rotate(0deg); opacity: 0.55; }
-            25% { transform: translate(70px, -80px) scale(1.2) rotate(-10deg); opacity: 0.7; }
-            50% { transform: translate(-50px, 50px) scale(0.8) rotate(12deg); opacity: 0.6; }
-            75% { transform: translate(40px, -40px) scale(1.15) rotate(-6deg); opacity: 0.65; }
+            0% { transform: translate(0, 0) scale(0.8); opacity: 0; }
+            100% { transform: translate(0, 0) scale(1.2); opacity: 0.75; }
           }
           @keyframes float-blob-3 {
-            0%, 100% { transform: translate(0, 0) scale(1) rotate(0deg); opacity: 0.45; }
-            25% { transform: translate(-80px, 70px) scale(0.85) rotate(8deg); opacity: 0.6; }
-            50% { transform: translate(60px, -90px) scale(1.25) rotate(-15deg); opacity: 0.55; }
-            75% { transform: translate(-40px, 30px) scale(1.05) rotate(5deg); opacity: 0.5; }
+            0% { transform: translate(0, 0) scale(0.8); opacity: 0; }
+            100% { transform: translate(0, 0) scale(1.2); opacity: 0.7; }
           }
-          .animate-float-1 { animation: float-blob-1 45s ease-in-out infinite; }
-          .animate-float-2 { animation: float-blob-2 55s ease-in-out infinite; }
-          .animate-float-3 { animation: float-blob-3 50s ease-in-out infinite; }
-        `}</style>
+          .animate-float-1 { animation: float-blob-1 2s ease-out forwards; }
+          .animate-float-2 { animation: float-blob-2 2s ease-out forwards; animation-delay: 0.2s; }
+          .animate-float-3 { animation: float-blob-3 2s ease-out forwards; animation-delay: 0.4s; }
+        `}
         <motion.div 
           initial={{ opacity: 0, scale: 0.8 }}
           animate={{ opacity: 1, scale: 1 }}
