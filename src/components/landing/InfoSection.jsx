@@ -61,7 +61,7 @@ export default function InfoSection() {
           {features.map((feature, index) => (
             <motion.div 
               key={index} 
-              className="p-6 rounded-xl bg-gradient-to-br from-white via-blue-50/30 to-white backdrop-blur-sm border-2 border-transparent hover:border-purple-700 group hover:bg-gradient-to-br hover:from-blue-900 hover:to-blue-950 transition-all duration-500 hover:shadow-[0_0_0_2px_rgb(126,34,206),0_0_20px_rgba(126,34,206,0.3)]"
+              className="p-6 rounded-xl bg-gradient-to-br from-white via-blue-50/30 to-white backdrop-blur-sm border-2 border-transparent shadow-lg hover:border-purple-700 group hover:bg-gradient-to-br hover:from-blue-900 hover:to-blue-950 transition-all duration-500 hover:shadow-[0_0_0_2px_rgb(126,34,206),0_0_20px_rgba(126,34,206,0.3)]"
               initial={{ opacity: 0, y: 60 }}
               whileInView={{ opacity: 1, y: 0 }}
               viewport={{ once: true }}
