@@ -34,7 +34,8 @@ import {
   Eye,
   Archive,
   Loader2,
-  Trash2
+  Trash2,
+  Users
 } from 'lucide-react';
 import PageHeader from '../components/ui-custom/PageHeader';
 import TimetableGrid from '../components/schedule/TimetableGrid';
