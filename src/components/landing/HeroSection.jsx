@@ -35,79 +35,52 @@ export default function HeroSection() {
         <div className="absolute top-1/2 left-1/2 w-64 h-64 bg-teal-400 rounded-full blur-3xl animate-pulse"></div>
       </div>
 
-      <div className="max-w-7xl mx-auto relative z-10">
-        <div className="grid lg:grid-cols-2 gap-12 items-center">
-          {/* Left Content */}
-          <div>
-            <div className="inline-block mb-4 bg-white/20 backdrop-blur-sm px-4 py-2 rounded-full">
-              <span className="text-white font-semibold">✨ AI-Powered Scheduling</span>
-            </div>
-            <h1 className="text-5xl sm:text-6xl font-bold text-white leading-tight mb-6">
-              All-in-One Automated IB Schedule Generation
-            </h1>
-            <p className="text-xl text-white/90 mb-8 leading-relaxed">
-              Create conflict-free timetables for your IB school in minutes. 
-              Manage teachers, students, and constraints effortlessly with AI-powered optimization.
-            </p>
-            <Button 
-              size="lg" 
-              className="bg-white text-blue-900 hover:bg-white/90 text-lg px-8 py-6 shadow-xl"
-              onClick={scrollToInfo}
-            >
-              Learn More
-              <ArrowRight className="w-5 h-5 ml-2" />
-            </Button>
+      <div className="max-w-5xl mx-auto relative z-10 text-center">
+        <div className="inline-block mb-6 bg-white/20 backdrop-blur-sm px-6 py-3 rounded-full">
+          <span className="text-white font-semibold text-lg">✨ Next Generation Schedule Creation</span>
+        </div>
+        
+        <h1 className="text-6xl sm:text-7xl font-bold text-white leading-tight mb-8">
+          The Future of IB School Scheduling
+        </h1>
+        
+        <p className="text-2xl text-white/90 mb-12 leading-relaxed max-w-3xl mx-auto">
+          Experience next generation schedule creation powered by AI. Generate perfect, conflict-free timetables for all IB programmes in minutes, not weeks.
+        </p>
+        
+        <Button 
+          size="lg" 
+          className="bg-white text-blue-900 hover:bg-white/90 text-lg px-10 py-7 shadow-2xl text-xl"
+          onClick={scrollToInfo}
+        >
+          Discover How It Works
+          <ArrowRight className="w-6 h-6 ml-2" />
+        </Button>
 
-            {/* Stats */}
-            <div className="grid grid-cols-3 gap-6 mt-12">
-              <div className="bg-white/10 backdrop-blur-sm p-4 rounded-xl border border-white/20">
-                <div className="text-3xl font-bold text-white">500+</div>
-                <div className="text-sm text-white/80">Hours Saved</div>
-              </div>
-              <div className="bg-white/10 backdrop-blur-sm p-4 rounded-xl border border-white/20">
-                <div className="text-3xl font-bold text-white">100%</div>
-                <div className="text-sm text-white/80">Safe & Encrypted</div>
-              </div>
-              <div className="bg-white/10 backdrop-blur-sm p-4 rounded-xl border border-white/20">
-                <div className="text-3xl font-bold text-white">24/7</div>
-                <div className="text-sm text-white/80">Access & Support</div>
-              </div>
+        {/* Feature Cards */}
+        <div className="grid md:grid-cols-3 gap-6 mt-20 max-w-4xl mx-auto">
+          <div className="bg-white/95 backdrop-blur-xl rounded-2xl shadow-2xl p-6 border border-white/50">
+            <div className="w-14 h-14 bg-gradient-to-br from-blue-600 to-indigo-700 rounded-xl flex items-center justify-center mx-auto mb-4">
+              <Calendar className="w-8 h-8 text-white" />
             </div>
+            <div className="font-bold text-slate-900 text-lg mb-2">AI-Powered</div>
+            <div className="text-sm text-slate-600">Intelligent optimization in seconds</div>
           </div>
-
-          {/* Right Content - Visual */}
-          <div className="relative">
-            <div className="bg-white/95 backdrop-blur-xl rounded-2xl shadow-2xl p-8 border border-white/50">
-              <div className="space-y-4">
-                <div className="flex items-center gap-3 p-4 bg-gradient-to-r from-blue-600 via-indigo-600 to-blue-700 rounded-xl shadow-lg hover:shadow-xl transition-all">
-                  <div className="w-10 h-10 bg-white/20 rounded-lg flex items-center justify-center">
-                    <Calendar className="w-6 h-6 text-white" />
-                  </div>
-                  <div>
-                    <div className="font-semibold text-white">Automated Scheduling</div>
-                    <div className="text-sm text-blue-100">Generate in seconds</div>
-                  </div>
-                </div>
-                <div className="flex items-center gap-3 p-4 bg-gradient-to-r from-teal-500 via-cyan-600 to-sky-600 rounded-xl shadow-lg hover:shadow-xl transition-all">
-                  <div className="w-10 h-10 bg-white/20 rounded-lg flex items-center justify-center">
-                    <Users className="w-6 h-6 text-white" />
-                  </div>
-                  <div>
-                    <div className="font-semibold text-white">Teacher & Student Rules</div>
-                    <div className="text-sm text-teal-100">Constraint management</div>
-                  </div>
-                </div>
-                <div className="flex items-center gap-3 p-4 bg-gradient-to-r from-indigo-600 via-violet-600 to-purple-600 rounded-xl shadow-lg hover:shadow-xl transition-all">
-                  <div className="w-10 h-10 bg-white/20 rounded-lg flex items-center justify-center">
-                    <BookOpen className="w-6 h-6 text-white" />
-                  </div>
-                  <div>
-                    <div className="font-semibold text-white">IB Compliance</div>
-                    <div className="text-sm text-indigo-100">PYP, MYP, DP support</div>
-                  </div>
-                </div>
-              </div>
+          
+          <div className="bg-white/95 backdrop-blur-xl rounded-2xl shadow-2xl p-6 border border-white/50">
+            <div className="w-14 h-14 bg-gradient-to-br from-teal-500 to-cyan-600 rounded-xl flex items-center justify-center mx-auto mb-4">
+              <Users className="w-8 h-8 text-white" />
             </div>
+            <div className="font-bold text-slate-900 text-lg mb-2">Smart Constraints</div>
+            <div className="text-sm text-slate-600">Manage complex rules effortlessly</div>
+          </div>
+          
+          <div className="bg-white/95 backdrop-blur-xl rounded-2xl shadow-2xl p-6 border border-white/50">
+            <div className="w-14 h-14 bg-gradient-to-br from-purple-600 to-violet-700 rounded-xl flex items-center justify-center mx-auto mb-4">
+              <BookOpen className="w-8 h-8 text-white" />
+            </div>
+            <div className="font-bold text-slate-900 text-lg mb-2">IB Compliant</div>
+            <div className="text-sm text-slate-600">Full PYP, MYP, DP support</div>
           </div>
         </div>
       </div>
