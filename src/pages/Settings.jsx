@@ -147,13 +147,17 @@ export default function Settings() {
 
   const inviteUserMutation = useMutation({
     mutationFn: async (email) => {
+      console.log('Sending invitation to:', email);
       const response = await base44.functions.invoke('inviteSchoolAdmin', { email });
+      console.log('Invitation response:', response);
+      
       if (response.data?.error) {
         throw new Error(response.data.error);
       }
       return response.data;
     },
     onSuccess: (data) => {
+      console.log('Invitation success:', data);
       queryClient.invalidateQueries({ queryKey: ['schoolAdmins'] });
       if (data?.action === 'assigned_existing_user') {
         toast.success('✅ User added as administrator successfully');
@@ -164,6 +168,7 @@ export default function Settings() {
       setInviteDialogOpen(false);
     },
     onError: (error) => {
+      console.error('Invitation error:', error);
       toast.error(error.message || 'Failed to send invitation');
     }
   });
@@ -1087,8 +1092,13 @@ export default function Settings() {
             <Button 
               className="bg-emerald-600 hover:bg-emerald-700"
               onClick={() => {
+                console.log('Button clicked, email:', inviteEmail);
                 if (inviteEmail && /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(inviteEmail)) {
+                  console.log('Email valid, calling mutation');
                   inviteUserMutation.mutate(inviteEmail);
+                } else {
+                  console.log('Email invalid or empty');
+                  toast.error('Please enter a valid email address');
                 }
               }}
               disabled={inviteUserMutation.isPending || !inviteEmail || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(inviteEmail)}
