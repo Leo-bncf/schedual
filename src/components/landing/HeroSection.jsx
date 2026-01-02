@@ -110,25 +110,30 @@ export default function HeroSection() {
         </div>
       </div>
       
-      {/* Smooth gradient transition to next section */}
+      {/* Smooth two-way gradient transition */}
       <div 
-        className="absolute -bottom-40 left-0 right-0 h-[800px] pointer-events-none"
+        className="absolute -bottom-60 left-0 right-0 h-[900px] pointer-events-none"
         style={{ 
           background: `linear-gradient(to bottom, 
             rgba(30, 58, 138, 0) 0%,
-            rgba(30, 64, 175, 0.015) 15%,
-            rgba(37, 99, 235, 0.03) 25%,
-            rgba(59, 130, 246, 0.05) 35%,
-            rgba(96, 165, 250, 0.08) 42%,
-            rgba(147, 197, 253, 0.12) 48%,
-            rgba(186, 230, 253, 0.18) 54%,
-            rgba(207, 238, 254, 0.25) 60%,
-            rgba(224, 242, 254, 0.35) 66%,
-            rgba(236, 245, 254, 0.48) 72%,
-            rgba(241, 245, 249, 0.63) 78%,
-            rgba(244, 246, 250, 0.78) 84%,
-            rgba(247, 248, 251, 0.89) 90%,
-            rgb(248, 250, 252) 100%)`
+            rgba(30, 64, 175, 0.012) 12%,
+            rgba(37, 99, 235, 0.025) 20%,
+            rgba(59, 130, 246, 0.04) 28%,
+            rgba(96, 165, 250, 0.06) 34%,
+            rgba(147, 197, 253, 0.09) 40%,
+            rgba(186, 230, 253, 0.13) 46%,
+            rgba(207, 238, 254, 0.19) 51%,
+            rgba(224, 242, 254, 0.27) 56%,
+            rgba(236, 245, 254, 0.38) 61%,
+            rgba(241, 245, 249, 0.52) 66%,
+            rgba(244, 246, 250, 0.68) 71%,
+            rgba(247, 248, 251, 0.82) 77%,
+            rgb(248, 250, 252) 83%,
+            rgba(247, 248, 251, 0.82) 87%,
+            rgba(244, 246, 250, 0.68) 91%,
+            rgba(236, 245, 254, 0.38) 95%,
+            rgba(224, 242, 254, 0.15) 98%,
+            rgba(186, 230, 253, 0) 100%)`
         }}
       ></div>
     </section>
