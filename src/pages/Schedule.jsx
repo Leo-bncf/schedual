@@ -34,10 +34,7 @@ import {
   Eye,
   Archive,
   Loader2,
-  Trash2,
-  Users,
-  GraduationCap,
-  List
+  Trash2
 } from 'lucide-react';
 import PageHeader from '../components/ui-custom/PageHeader';
 import TimetableGrid from '../components/schedule/TimetableGrid';
@@ -912,107 +909,75 @@ export default function Schedule() {
 
       {/* Quick Stats Bar */}
       {selectedVersion && scheduleSlots.length > 0 && (
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
-          <Card className="border-0 shadow-sm bg-gradient-to-br from-blue-500 to-blue-600 overflow-hidden relative group hover:shadow-md transition-all">
-            <div className="absolute inset-0 bg-gradient-to-br from-white/10 to-transparent opacity-0 group-hover:opacity-100 transition-opacity" />
-            <CardContent className="p-5 relative">
-              <div className="flex items-start justify-between">
-                <div className="flex-1">
-                  <p className="text-xs text-blue-100 mb-2 font-medium">Students Scheduled</p>
-                  <p className="text-3xl font-bold text-white mb-1">{stats.studentsScheduled}<span className="text-lg text-blue-100">/{students.length}</span></p>
-                  <div className="h-1.5 bg-blue-400/30 rounded-full overflow-hidden mt-2">
-                    <div className="h-full bg-white rounded-full transition-all" style={{ width: `${stats.coverage}%` }} />
-                  </div>
-                </div>
-                <div className="text-4xl font-bold text-white/90">{stats.coverage}%</div>
-              </div>
-            </CardContent>
-          </Card>
-          
-          <Card className="border-0 shadow-sm bg-gradient-to-br from-emerald-500 to-emerald-600 overflow-hidden relative group hover:shadow-md transition-all">
-            <div className="absolute inset-0 bg-gradient-to-br from-white/10 to-transparent opacity-0 group-hover:opacity-100 transition-opacity" />
-            <CardContent className="p-5 relative">
-              <div className="flex items-start justify-between">
+        <div className="grid grid-cols-4 gap-4">
+          <Card className="border-0 shadow-sm bg-gradient-to-br from-blue-50 to-white">
+            <CardContent className="p-4">
+              <div className="flex items-center justify-between">
                 <div>
-                  <p className="text-xs text-emerald-100 mb-2 font-medium">Teachers Assigned</p>
-                  <p className="text-3xl font-bold text-white">{stats.teachersAssigned}<span className="text-lg text-emerald-100">/{teachers.length}</span></p>
-                  <p className="text-xs text-emerald-100 mt-2">
-                    {teachers.length > 0 ? Math.round((stats.teachersAssigned/teachers.length)*100) : 0}% Utilization
-                  </p>
+                  <p className="text-xs text-slate-600 mb-1">Students Scheduled</p>
+                  <p className="text-2xl font-bold text-blue-900">{stats.studentsScheduled}/{students.length}</p>
                 </div>
-                <div className="w-12 h-12 rounded-xl bg-white/20 flex items-center justify-center">
-                  <Users className="w-6 h-6 text-white" />
-                </div>
+                <div className="text-3xl font-bold text-blue-600">{stats.coverage}%</div>
               </div>
             </CardContent>
           </Card>
-          
-          <Card className="border-0 shadow-sm bg-gradient-to-br from-violet-500 to-violet-600 overflow-hidden relative group hover:shadow-md transition-all">
-            <div className="absolute inset-0 bg-gradient-to-br from-white/10 to-transparent opacity-0 group-hover:opacity-100 transition-opacity" />
-            <CardContent className="p-5 relative">
-              <div className="flex items-start justify-between">
+          <Card className="border-0 shadow-sm bg-gradient-to-br from-emerald-50 to-white">
+            <CardContent className="p-4">
+              <div className="flex items-center justify-between">
                 <div>
-                  <p className="text-xs text-violet-100 mb-2 font-medium">Total Periods</p>
-                  <p className="text-3xl font-bold text-white">{stats.totalSlots}</p>
-                  <p className="text-xs text-violet-100 mt-2">
-                    {Math.floor(stats.totalSlots / 5)} per day avg
-                  </p>
+                  <p className="text-xs text-slate-600 mb-1">Teachers Assigned</p>
+                  <p className="text-2xl font-bold text-emerald-900">{stats.teachersAssigned}/{teachers.length}</p>
                 </div>
-                <div className="w-12 h-12 rounded-xl bg-white/20 flex items-center justify-center">
-                  <Calendar className="w-6 h-6 text-white" />
-                </div>
+                <Users className="w-8 h-8 text-emerald-600" />
               </div>
             </CardContent>
           </Card>
-          
-          <Card className={`border-0 shadow-sm overflow-hidden relative group hover:shadow-md transition-all ${
+          <Card className="border-0 shadow-sm bg-gradient-to-br from-violet-50 to-white">
+            <CardContent className="p-4">
+              <div className="flex items-center justify-between">
+                <div>
+                  <p className="text-xs text-slate-600 mb-1">Total Periods</p>
+                  <p className="text-2xl font-bold text-violet-900">{stats.totalSlots}</p>
+                </div>
+                <Calendar className="w-8 h-8 text-violet-600" />
+              </div>
+            </CardContent>
+          </Card>
+          <Card className={`border-0 shadow-sm ${
             selectedVersion.conflicts_count > 0 
-              ? 'bg-gradient-to-br from-rose-500 to-rose-600' 
-              : 'bg-gradient-to-br from-emerald-500 to-emerald-600'
+              ? 'bg-gradient-to-br from-rose-50 to-white' 
+              : 'bg-gradient-to-br from-slate-50 to-white'
           }`}>
-            <div className="absolute inset-0 bg-gradient-to-br from-white/10 to-transparent opacity-0 group-hover:opacity-100 transition-opacity" />
-            <CardContent className="p-5 relative">
-              <div className="flex items-start justify-between">
+            <CardContent className="p-4">
+              <div className="flex items-center justify-between">
                 <div>
-                  <p className={`text-xs mb-2 font-medium ${
-                    selectedVersion.conflicts_count > 0 ? 'text-rose-100' : 'text-emerald-100'
+                  <p className="text-xs text-slate-600 mb-1">Issues</p>
+                  <p className={`text-2xl font-bold ${
+                    selectedVersion.conflicts_count > 0 ? 'text-rose-900' : 'text-slate-900'
                   }`}>
-                    {selectedVersion.conflicts_count > 0 ? 'Issues Found' : 'All Clear'}
-                  </p>
-                  <p className="text-3xl font-bold text-white">
                     {(selectedVersion.conflicts_count || 0) + (selectedVersion.warnings_count || 0)}
                   </p>
-                  <p className={`text-xs mt-2 ${
-                    selectedVersion.conflicts_count > 0 ? 'text-rose-100' : 'text-emerald-100'
-                  }`}>
-                    {selectedVersion.conflicts_count > 0 ? 'Needs attention' : 'Ready to publish'}
-                  </p>
                 </div>
-                <div className={`w-12 h-12 rounded-xl flex items-center justify-center ${
-                  selectedVersion.conflicts_count > 0 ? 'bg-white/20' : 'bg-white/20'
-                }`}>
-                  {selectedVersion.conflicts_count > 0 ? (
-                    <AlertTriangle className="w-6 h-6 text-white" />
-                  ) : (
-                    <CheckCircle className="w-6 h-6 text-white" />
-                  )}
-                </div>
+                {selectedVersion.conflicts_count > 0 ? (
+                  <AlertTriangle className="w-8 h-8 text-rose-600" />
+                ) : (
+                  <CheckCircle className="w-8 h-8 text-emerald-600" />
+                )}
               </div>
             </CardContent>
           </Card>
         </div>
       )}
 
-      {/* Version Control Card */}
-      <Card className="border-0 shadow-sm bg-white overflow-hidden">
-        <div className="bg-gradient-to-r from-indigo-500 to-violet-500 h-1" />
+      {/* Version Selector Card */}
+      <Card className="border-0 shadow-sm">
         <CardContent className="p-6">
-          <div className="flex flex-col lg:flex-row lg:items-center lg:justify-between gap-4">
+          <div className="flex items-center justify-between">
             <div className="flex items-center gap-4 flex-1">
-              <div className="flex-1">
-                <Label className="text-xs font-semibold text-slate-500 uppercase tracking-wider mb-2 block">Active Schedule Version</Label>
+              <div>
+                <Label className="text-sm text-slate-600 mb-2 block">Active Version</Label>
                 <Select value={selectedVersion?.id || ''} onValueChange={(id) => setSelectedVersion(scheduleVersions.find(v => v.id === id))}>
-                  <SelectTrigger className="w-full lg:w-[360px] h-12 border-slate-200">
+                  <SelectTrigger className="w-[320px]">
                     <SelectValue placeholder="Select a schedule version" />
                   </SelectTrigger>
                   <SelectContent>
@@ -1022,17 +987,17 @@ export default function Schedule() {
                       <>
                         {publishedVersion && (
                           <SelectItem value={publishedVersion.id}>
-                            <div className="flex items-center gap-2 py-1">
-                              <div className="w-2 h-2 rounded-full bg-emerald-500" />
+                            <div className="flex items-center gap-2">
+                              <CheckCircle className="w-4 h-4 text-emerald-600" />
                               <span className="font-medium">{publishedVersion.name}</span>
-                              <Badge className="ml-2 bg-emerald-100 text-emerald-700 border-0 text-xs">Live</Badge>
+                              <Badge className="ml-2 bg-emerald-100 text-emerald-700 border-0 text-xs">Published</Badge>
                             </div>
                           </SelectItem>
                         )}
                         {draftVersions.map(version => (
                           <SelectItem key={version.id} value={version.id}>
-                            <div className="flex items-center gap-2 py-1">
-                              <div className="w-2 h-2 rounded-full bg-slate-400" />
+                            <div className="flex items-center gap-2">
+                              <Clock className="w-4 h-4 text-slate-400" />
                               <span>{version.name}</span>
                               <Badge variant="outline" className="ml-2 text-xs">Draft</Badge>
                             </div>
@@ -1042,30 +1007,22 @@ export default function Schedule() {
                     )}
                   </SelectContent>
                 </Select>
-                {selectedVersion && (
-                  <div className="flex items-center gap-3 mt-2 text-xs text-slate-500">
-                    <div className="flex items-center gap-1">
-                      <Calendar className="w-3 h-3" />
-                      <span>{selectedVersion.academic_year}</span>
-                    </div>
-                    <span>•</span>
-                    <span>{selectedVersion.term || 'Full Year'}</span>
-                    {selectedVersion.generated_at && (
-                      <>
-                        <span>•</span>
-                        <span>Updated {new Date(selectedVersion.generated_at).toLocaleDateString()}</span>
-                      </>
-                    )}
-                  </div>
-                )}
               </div>
+              {selectedVersion && (
+                <div className="flex items-center gap-2 text-sm text-slate-500">
+                  <span>•</span>
+                  <span>{selectedVersion.academic_year}</span>
+                  <span>•</span>
+                  <span>{selectedVersion.term || 'Full Year'}</span>
+                </div>
+              )}
             </div>
             {selectedVersion && (
-              <div className="flex gap-2 flex-wrap">
+              <div className="flex gap-2">
                 <Button 
                   onClick={handleGenerateSchedule}
                   disabled={isGenerating}
-                  className="bg-gradient-to-r from-indigo-600 to-violet-600 hover:from-indigo-700 hover:to-violet-700 text-white border-0 shadow-sm"
+                  className="bg-indigo-600 hover:bg-indigo-700"
                   size="lg"
                 >
                   {isGenerating ? (
@@ -1082,9 +1039,8 @@ export default function Schedule() {
                 </Button>
                 {selectedVersion.status === 'draft' && scheduleSlots.length > 0 && (
                   <Button 
-                    className="bg-emerald-600 hover:bg-emerald-700 text-white shadow-sm"
+                    className="bg-emerald-600 hover:bg-emerald-700"
                     onClick={() => handlePublish(selectedVersion)}
-                    size="lg"
                   >
                     <CheckCircle className="w-4 h-4 mr-2" />
                     Publish
@@ -1093,8 +1049,7 @@ export default function Schedule() {
                 {selectedVersion.status === 'draft' && (
                   <Button 
                     variant="outline"
-                    size="lg"
-                    className="text-rose-600 hover:text-rose-700 hover:bg-rose-50 border-rose-200"
+                    className="text-rose-600 hover:text-rose-700 hover:bg-rose-50"
                     onClick={() => {
                       if (confirm(`Delete "${selectedVersion.name}"?`)) {
                         deleteVersionMutation.mutate(selectedVersion.id);
@@ -1135,52 +1090,29 @@ export default function Schedule() {
               )}
 
               {/* Timetable */}
-              <Tabs defaultValue="grid" className="space-y-6">
-                <div className="flex items-center justify-between">
-                  <TabsList className="bg-slate-100 p-1 rounded-xl">
-                    <TabsTrigger value="grid" className="rounded-lg data-[state=active]:bg-white data-[state=active]:shadow-sm">
-                      <Calendar className="w-4 h-4 mr-2" />
-                      Master Schedule
-                    </TabsTrigger>
-                    <TabsTrigger value="student" className="rounded-lg data-[state=active]:bg-white data-[state=active]:shadow-sm">
-                      <GraduationCap className="w-4 h-4 mr-2" />
-                      Student View
-                    </TabsTrigger>
-                    <TabsTrigger value="teacher" className="rounded-lg data-[state=active]:bg-white data-[state=active]:shadow-sm">
-                      <Users className="w-4 h-4 mr-2" />
-                      Teacher View
-                    </TabsTrigger>
-                    <TabsTrigger value="list" className="rounded-lg data-[state=active]:bg-white data-[state=active]:shadow-sm">
-                      <List className="w-4 h-4 mr-2" />
-                      Period List
-                    </TabsTrigger>
+              <Tabs defaultValue="grid">
+                <div className="flex items-center justify-between mb-4">
+                  <TabsList className="bg-slate-100">
+                    <TabsTrigger value="grid">Master Schedule</TabsTrigger>
+                    <TabsTrigger value="student">Student View</TabsTrigger>
+                    <TabsTrigger value="teacher">Teacher View</TabsTrigger>
+                    <TabsTrigger value="list">List View</TabsTrigger>
                   </TabsList>
-                  {scheduleSlots.length > 0 && (
-                    <div className="text-sm text-slate-500">
-                      {scheduleSlots.length} periods scheduled
-                    </div>
-                  )}
                 </div>
                 
                 <TabsContent value="grid">
                   {scheduleSlots.length === 0 ? (
-                    <Card className="border-0 shadow-sm bg-gradient-to-br from-slate-50 to-white overflow-hidden relative">
-                      <div className="absolute inset-0 bg-gradient-to-br from-indigo-500/5 to-violet-500/5" />
-                      <CardContent className="py-20 text-center relative">
-                        <div className="w-20 h-20 rounded-2xl bg-gradient-to-br from-indigo-500 to-violet-500 flex items-center justify-center mx-auto mb-6 shadow-lg">
-                          <Calendar className="w-10 h-10 text-white" />
-                        </div>
-                        <h3 className="text-2xl font-bold text-slate-900 mb-3">Ready to Generate Your Schedule</h3>
-                        <p className="text-slate-500 mb-8 max-w-md mx-auto">
-                          Create an optimized timetable for all your students, teachers, and classrooms with one click
-                        </p>
+                    <Card className="border-0 shadow-sm">
+                      <CardContent className="py-16 text-center">
+                        <Calendar className="w-16 h-16 text-slate-300 mx-auto mb-4" />
+                        <h3 className="text-lg font-semibold text-slate-900 mb-2">No Schedule Generated Yet</h3>
+                        <p className="text-slate-500 mb-6">Click "Generate Schedule" above to create timetables for all programmes</p>
                         <Button 
                           onClick={handleGenerateSchedule}
                           disabled={isGenerating}
-                          size="lg"
-                          className="bg-gradient-to-r from-indigo-600 to-violet-600 hover:from-indigo-700 hover:to-violet-700 text-white shadow-lg"
+                          className="bg-indigo-600 hover:bg-indigo-700"
                         >
-                          <Sparkles className="w-5 h-5 mr-2" />
+                          <Sparkles className="w-4 h-4 mr-2" />
                           Generate Schedule Now
                         </Button>
                       </CardContent>
@@ -1352,50 +1284,15 @@ export default function Schedule() {
               </Tabs>
             </>
         ) : (
-          <Card className="border-0 shadow-sm bg-gradient-to-br from-slate-50 to-white overflow-hidden relative">
-            <div className="absolute inset-0 bg-gradient-to-br from-indigo-500/5 to-violet-500/5" />
-            <CardContent className="py-20 relative">
-              <div className="text-center max-w-2xl mx-auto">
-                <div className="w-24 h-24 rounded-3xl bg-gradient-to-br from-indigo-500 to-violet-500 flex items-center justify-center mx-auto mb-8 shadow-xl">
-                  <Calendar className="w-12 h-12 text-white" />
-                </div>
-                <h2 className="text-3xl font-bold text-slate-900 mb-4">Welcome to Schedule Management</h2>
-                <p className="text-lg text-slate-600 mb-8">
-                  Create your first schedule version to organize classes for all IB programmes (PYP, MYP, DP). 
-                  The system will automatically assign teachers, students, and rooms across the week.
-                </p>
-                <Button 
-                  onClick={() => setIsDialogOpen(true)}
-                  size="lg"
-                  className="bg-gradient-to-r from-indigo-600 to-violet-600 hover:from-indigo-700 hover:to-violet-700 text-white shadow-lg"
-                >
-                  <Plus className="w-5 h-5 mr-2" />
-                  Create Your First Schedule
-                </Button>
-                <div className="grid grid-cols-3 gap-6 mt-12 text-left">
-                  <div className="bg-white rounded-xl p-4 shadow-sm">
-                    <div className="w-10 h-10 rounded-lg bg-blue-100 flex items-center justify-center mb-3">
-                      <GraduationCap className="w-5 h-5 text-blue-600" />
-                    </div>
-                    <h4 className="font-semibold text-slate-900 mb-1">Auto-assign Students</h4>
-                    <p className="text-sm text-slate-500">Intelligent placement based on subject choices</p>
-                  </div>
-                  <div className="bg-white rounded-xl p-4 shadow-sm">
-                    <div className="w-10 h-10 rounded-lg bg-emerald-100 flex items-center justify-center mb-3">
-                      <Users className="w-5 h-5 text-emerald-600" />
-                    </div>
-                    <h4 className="font-semibold text-slate-900 mb-1">Optimize Teachers</h4>
-                    <p className="text-sm text-slate-500">Balanced workload distribution</p>
-                  </div>
-                  <div className="bg-white rounded-xl p-4 shadow-sm">
-                    <div className="w-10 h-10 rounded-lg bg-violet-100 flex items-center justify-center mb-3">
-                      <Calendar className="w-5 h-5 text-violet-600" />
-                    </div>
-                    <h4 className="font-semibold text-slate-900 mb-1">Conflict Detection</h4>
-                    <p className="text-sm text-slate-500">Automatic validation and warnings</p>
-                  </div>
-                </div>
-              </div>
+          <Card className="border-0 shadow-sm">
+            <CardContent className="py-16">
+              <EmptyState 
+                icon={Calendar}
+                title="No Schedule Version Selected"
+                description="Create your first schedule version to organize classes for all IB programmes (PYP, MYP, DP). The system will automatically assign teachers, students, and rooms across the week."
+                action={() => setIsDialogOpen(true)}
+                actionLabel="Create First Schedule"
+              />
             </CardContent>
           </Card>
         )}
