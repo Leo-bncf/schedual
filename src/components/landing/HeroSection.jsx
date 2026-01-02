@@ -91,12 +91,12 @@ export default function HeroSection() {
 
       </div>
 
-      {/* Scrolling Feature Cards */}
+      {/* Scrolling Feature Cards - Full Width */}
       <motion.div 
         initial={{ opacity: 0, y: 100 }}
         animate={{ opacity: 1, y: 0 }}
         transition={{ duration: 1, delay: 0.8, ease: [0.16, 1, 0.3, 1] }}
-        className="mt-40 w-full h-64 overflow-hidden relative z-10"
+        className="absolute left-0 right-0 mt-40 h-64 overflow-hidden z-10"
         style={{ opacity: 1 - scrollProgress * 1.2, transform: `translateY(${scrollProgress * -30}px) scale(${1 - scrollProgress * 0.15})` }}
       >
         <style>{`
@@ -114,12 +114,12 @@ export default function HeroSection() {
               key={index}
               className="flex-shrink-0 w-80 h-64"
             >
-              <div className="bg-white/95 backdrop-blur-xl rounded-2xl border border-slate-200 p-6 h-full flex flex-col">
-                <div className="w-14 h-14 bg-gradient-to-br from-blue-900 to-blue-800 rounded-xl flex items-center justify-center mx-auto mb-4 flex-shrink-0">
+              <div className="bg-white/95 backdrop-blur-xl rounded-2xl border border-slate-200 p-6 h-full flex flex-col group hover:bg-gradient-to-br hover:from-blue-900 hover:to-blue-950 transition-all duration-500 cursor-pointer">
+                <div className="w-14 h-14 bg-gradient-to-br from-blue-900 to-blue-800 rounded-xl flex items-center justify-center mx-auto mb-4 flex-shrink-0 group-hover:from-sky-400 group-hover:via-fuchsia-500 group-hover:to-blue-500 transition-all">
                   <feature.icon className="w-8 h-8 text-white" />
                 </div>
-                <h3 className="font-bold text-slate-900 text-lg mb-2 flex-shrink-0">{feature.title}</h3>
-                <p className="text-sm text-slate-700 flex-grow">{feature.description}</p>
+                <h3 className="font-bold text-slate-900 text-lg mb-2 flex-shrink-0 group-hover:text-white transition-colors">{feature.title}</h3>
+                <p className="text-sm text-slate-700 flex-grow group-hover:text-blue-100 transition-colors">{feature.description}</p>
               </div>
             </div>
           ))}
