@@ -13,44 +13,10 @@ Deno.serve(async (req) => {
     const schoolId = user.school_id;
     if (!schoolId) return Response.json({ error: 'No school found for user' }, { status: 400 });
 
-    const [students, rawSubjects] = await Promise.all([
+    const [students, subjects] = await Promise.all([
       base44.entities.Student.filter({ school_id: schoolId }),
       base44.entities.Subject.filter({ school_id: schoolId })
     ]);
-
-    // Auto-create missing subjects that DP students reference
-    const existingSubjectIds = new Set(rawSubjects.map(s => s.id));
-    const missingSubjectIds = new Set();
-    
-    students
-      .filter(s => s?.ib_programme === 'DP' && s?.is_active !== false)
-      .forEach(student => {
-        const choices = Array.isArray(student.subject_choices) ? student.subject_choices : [];
-        choices.forEach(choice => {
-          if (choice?.subject_id && !existingSubjectIds.has(choice.subject_id)) {
-            missingSubjectIds.add(choice.subject_id);
-          }
-        });
-      });
-    
-    if (missingSubjectIds.size > 0) {
-      const subjectsToCreate = Array.from(missingSubjectIds).map(id => ({
-        id,
-        school_id: schoolId,
-        name: `Subject ${id.slice(0, 8)}`,
-        code: id.slice(0, 8),
-        ib_level: 'DP',
-        ib_group: '1',
-        available_levels: ['HL', 'SL'],
-        hl_hours_per_week: 6,
-        sl_hours_per_week: 4,
-        is_active: true
-      }));
-      
-      await base44.asServiceRole.entities.Subject.bulkCreate(subjectsToCreate);
-    }
-
-    const subjects = await base44.entities.Subject.filter({ school_id: schoolId });
 
     // Map subjects for quick lookup
     const subjectById = new Map();
