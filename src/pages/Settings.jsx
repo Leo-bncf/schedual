@@ -53,9 +53,15 @@ import {
   Timer,
   MoreHorizontal,
   Trash2,
-  Plus
+  Plus,
+  Filter,
+  Search,
+  Star
 } from 'lucide-react';
 import PageHeader from '../components/ui-custom/PageHeader';
+import ConstraintCard from '../components/constraints/ConstraintCard';
+import ConstraintBuilder from '../components/constraints/ConstraintBuilder';
+import EmptyState from '../components/ui-custom/EmptyState';
 import { toast } from 'sonner';
 
 const TIMEZONES = [
@@ -72,6 +78,10 @@ export default function Settings() {
   const [inviteDialogOpen, setInviteDialogOpen] = useState(false);
   const [inviteEmail, setInviteEmail] = useState('');
   const [isProcessing, setIsProcessing] = useState(false);
+  const [constraintDialogOpen, setConstraintDialogOpen] = useState(false);
+  const [editingConstraint, setEditingConstraint] = useState(null);
+  const [searchQuery, setSearchQuery] = useState('');
+  const [typeFilter, setTypeFilter] = useState('all');
   const queryClient = useQueryClient();
 
   const { data: user } = useQuery({
@@ -93,6 +103,11 @@ export default function Settings() {
       return data?.admins || [];
     },
     enabled: !!user?.school_id,
+  });
+
+  const { data: constraints = [] } = useQuery({
+    queryKey: ['constraints'],
+    queryFn: () => base44.entities.Constraint.list(),
   });
 
   const [formData, setFormData] = useState({
@@ -169,6 +184,34 @@ export default function Settings() {
     }
   });
 
+  const createConstraintMutation = useMutation({
+    mutationFn: (data) => base44.entities.Constraint.create({ ...data, source: 'admin' }),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['constraints'] });
+      setConstraintDialogOpen(false);
+      setEditingConstraint(null);
+      toast.success('Constraint created successfully');
+    },
+  });
+
+  const updateConstraintMutation = useMutation({
+    mutationFn: ({ id, data }) => base44.entities.Constraint.update(id, data),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['constraints'] });
+      setConstraintDialogOpen(false);
+      setEditingConstraint(null);
+      toast.success('Constraint updated successfully');
+    },
+  });
+
+  const deleteConstraintMutation = useMutation({
+    mutationFn: (id) => base44.entities.Constraint.delete(id),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['constraints'] });
+      toast.success('Constraint deleted successfully');
+    },
+  });
+
   const handleSave = async () => {
     if (!formData.name || !formData.code) {
       alert('Please fill in School Name and School Code');
@@ -224,6 +267,43 @@ export default function Settings() {
       setIsProcessing(false);
     }
   };
+
+  const handleEditConstraint = (constraint) => {
+    setEditingConstraint(constraint);
+    setConstraintDialogOpen(true);
+  };
+
+  const handleToggleConstraint = async (constraint) => {
+    await updateConstraintMutation.mutateAsync({
+      id: constraint.id,
+      data: { is_active: !constraint.is_active }
+    });
+  };
+
+  const handleWeightChange = async (constraint, weight) => {
+    await updateConstraintMutation.mutateAsync({
+      id: constraint.id,
+      data: { weight }
+    });
+  };
+
+  const handleSubmitConstraint = (data) => {
+    if (editingConstraint) {
+      updateConstraintMutation.mutate({ id: editingConstraint.id, data });
+    } else {
+      createConstraintMutation.mutate(data);
+    }
+  };
+
+  const filteredConstraints = constraints.filter(c => {
+    const matchesSearch = c.name?.toLowerCase().includes(searchQuery.toLowerCase()) ||
+      c.description?.toLowerCase().includes(searchQuery.toLowerCase());
+    const matchesType = typeFilter === 'all' || c.type === typeFilter;
+    return matchesSearch && matchesType;
+  });
+
+  const hardConstraints = filteredConstraints.filter(c => c.type === 'hard');
+  const softConstraints = filteredConstraints.filter(c => c.type === 'soft');
 
   const isActive = school?.subscription_status === 'active';
   const isPastDue = school?.subscription_status === 'past_due';
@@ -1142,6 +1222,32 @@ export default function Settings() {
               )}
             </Button>
           </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* Constraint Dialog */}
+      <Dialog open={constraintDialogOpen} onOpenChange={(open) => {
+        if (!open) {
+          setConstraintDialogOpen(false);
+          setEditingConstraint(null);
+        }
+      }}>
+        <DialogContent className="sm:max-w-2xl max-h-[90vh] overflow-y-auto">
+          <DialogHeader>
+            <DialogTitle>
+              {editingConstraint ? 'Edit Constraint' : 'Create New Constraint'}
+            </DialogTitle>
+            <DialogDescription>
+              {editingConstraint 
+                ? 'Modify the constraint details and settings.' 
+                : 'Define a scheduling rule or preference using templates or custom settings.'
+              }
+            </DialogDescription>
+          </DialogHeader>
+          <ConstraintBuilder 
+            onSubmit={handleSubmitConstraint}
+            initialData={editingConstraint}
+          />
         </DialogContent>
       </Dialog>
     </div>
