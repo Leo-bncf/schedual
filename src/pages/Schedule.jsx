@@ -69,11 +69,21 @@ export default function Schedule() {
   const [selectedStudentId, setSelectedStudentId] = useState(null);
   const [selectedTeacherId, setSelectedTeacherId] = useState(null);
   const [selectedClassGroupId, setSelectedClassGroupId] = useState(null);
+  const [constraintDialogOpen, setConstraintDialogOpen] = useState(false);
   const [formData, setFormData] = useState({
     name: '',
     academic_year: '2024-2025',
     term: 'Fall',
     status: 'draft'
+  });
+  const [constraintForm, setConstraintForm] = useState({
+    name: '',
+    description: '',
+    type: 'hard',
+    category: 'teacher',
+    rule: {},
+    weight: 1,
+    is_active: true
   });
   const [schoolConfig, setSchoolConfig] = useState({
     periods_per_day: 8,
@@ -209,6 +219,27 @@ export default function Schedule() {
     mutationFn: ({ id, data }) => base44.entities.School.update(id, data),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['school'] });
+    },
+  });
+
+  const createConstraintMutation = useMutation({
+    mutationFn: (data) => {
+      if (!schoolId) throw new Error('No school assigned');
+      return base44.entities.Constraint.create({ ...data, school_id: schoolId });
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['constraints'] });
+      setConstraintDialogOpen(false);
+      setConstraintForm({
+        name: '',
+        description: '',
+        type: 'hard',
+        category: 'teacher',
+        rule: {},
+        weight: 1,
+        is_active: true
+      });
+      toast.success('Constraint created successfully');
     },
   });
 
@@ -1757,7 +1788,10 @@ export default function Schedule() {
                             <CardTitle>Scheduling Constraints</CardTitle>
                             <CardDescription>Define rules and constraints for intelligent schedule generation</CardDescription>
                           </div>
-                          <Button className="bg-indigo-600 hover:bg-indigo-700">
+                          <Button 
+                            className="bg-indigo-600 hover:bg-indigo-700"
+                            onClick={() => setConstraintDialogOpen(true)}
+                          >
                             <Plus className="w-4 h-4 mr-2" />
                             Add Constraint
                           </Button>
@@ -1908,6 +1942,105 @@ export default function Schedule() {
           });
         }}
       />
+
+      {/* Add Constraint Dialog */}
+      <Dialog open={constraintDialogOpen} onOpenChange={setConstraintDialogOpen}>
+        <DialogContent className="sm:max-w-lg">
+          <DialogHeader>
+            <DialogTitle>Add Scheduling Constraint</DialogTitle>
+            <DialogDescription>
+              Define a rule that the schedule generator must follow or optimize for.
+            </DialogDescription>
+          </DialogHeader>
+          <form onSubmit={(e) => { 
+            e.preventDefault(); 
+            createConstraintMutation.mutate(constraintForm); 
+          }} className="space-y-4">
+            <div className="space-y-2">
+              <Label htmlFor="constraint-name">Constraint Name *</Label>
+              <Input 
+                id="constraint-name"
+                value={constraintForm.name}
+                onChange={(e) => setConstraintForm({ ...constraintForm, name: e.target.value })}
+                placeholder="e.g., Maximum 4 consecutive periods"
+                required
+              />
+            </div>
+
+            <div className="space-y-2">
+              <Label htmlFor="constraint-desc">Description</Label>
+              <Input 
+                id="constraint-desc"
+                value={constraintForm.description}
+                onChange={(e) => setConstraintForm({ ...constraintForm, description: e.target.value })}
+                placeholder="Brief explanation of this constraint"
+              />
+            </div>
+
+            <div className="grid grid-cols-2 gap-4">
+              <div className="space-y-2">
+                <Label>Constraint Type</Label>
+                <Select 
+                  value={constraintForm.type} 
+                  onValueChange={(value) => setConstraintForm({ ...constraintForm, type: value })}
+                >
+                  <SelectTrigger>
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="hard">Hard (Must follow)</SelectItem>
+                    <SelectItem value="soft">Soft (Optimize for)</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+
+              <div className="space-y-2">
+                <Label>Category</Label>
+                <Select 
+                  value={constraintForm.category} 
+                  onValueChange={(value) => setConstraintForm({ ...constraintForm, category: value })}
+                >
+                  <SelectTrigger>
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="teacher">Teacher</SelectItem>
+                    <SelectItem value="student">Student</SelectItem>
+                    <SelectItem value="room">Room</SelectItem>
+                    <SelectItem value="subject">Subject</SelectItem>
+                    <SelectItem value="time">Time</SelectItem>
+                    <SelectItem value="ib_requirement">IB Requirement</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+            </div>
+
+            {constraintForm.type === 'soft' && (
+              <div className="space-y-2">
+                <Label>Priority Weight (0-1)</Label>
+                <Input 
+                  type="number"
+                  min="0"
+                  max="1"
+                  step="0.1"
+                  value={constraintForm.weight}
+                  onChange={(e) => setConstraintForm({ ...constraintForm, weight: parseFloat(e.target.value) })}
+                />
+                <p className="text-xs text-slate-500">Higher = more important (1.0 = highest priority)</p>
+              </div>
+            )}
+
+            <DialogFooter>
+              <Button type="button" variant="outline" onClick={() => setConstraintDialogOpen(false)}>
+                Cancel
+              </Button>
+              <Button type="submit" className="bg-indigo-600 hover:bg-indigo-700" disabled={createConstraintMutation.isPending}>
+                {createConstraintMutation.isPending ? 'Creating...' : 'Create Constraint'}
+              </Button>
+            </DialogFooter>
+          </form>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }
