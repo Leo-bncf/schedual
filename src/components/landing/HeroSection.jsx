@@ -78,37 +78,6 @@ export default function HeroSection() {
           </div>
         </div>
       </div>
-      
-      {/* Smooth gradient fade to white and back to colors */}
-      <div 
-        className="absolute -bottom-80 left-0 right-0 h-[1000px] pointer-events-none"
-        style={{ 
-          background: `linear-gradient(to bottom, 
-            rgba(30, 64, 175, 0) 0%,
-            rgba(59, 130, 246, 0.02) 15%,
-            rgba(20, 184, 166, 0.04) 25%,
-            rgba(168, 85, 247, 0.07) 33%,
-            rgba(147, 197, 253, 0.11) 40%,
-            rgba(186, 230, 253, 0.16) 46%,
-            rgba(207, 238, 254, 0.23) 51%,
-            rgba(224, 242, 254, 0.32) 55%,
-            rgba(236, 245, 254, 0.44) 59%,
-            rgba(241, 245, 249, 0.58) 63%,
-            rgba(244, 246, 250, 0.73) 67%,
-            rgba(247, 248, 251, 0.86) 71%,
-            rgb(248, 250, 252) 75%,
-            rgba(247, 248, 251, 0.86) 79%,
-            rgba(244, 246, 250, 0.73) 83%,
-            rgba(236, 245, 254, 0.58) 87%,
-            rgba(224, 242, 254, 0.44) 90%,
-            rgba(186, 230, 253, 0.23) 92%,
-            rgba(168, 85, 247, 0.16) 94%,
-            rgba(20, 184, 166, 0.09) 96%,
-            rgba(59, 130, 246, 0.04) 97.5%,
-            rgba(30, 64, 175, 0.015) 99%,
-            rgba(30, 64, 175, 0) 100%)`
-        }}
-      ></div>
     </section>
   );
 }
