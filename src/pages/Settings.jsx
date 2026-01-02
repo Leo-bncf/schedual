@@ -80,8 +80,9 @@ export default function Settings() {
   });
 
   const { data: schools = [], isLoading } = useQuery({
-    queryKey: ['schools'],
-    queryFn: () => base44.entities.School.list(),
+    queryKey: ['schools', user?.school_id],
+    queryFn: () => user?.school_id ? base44.entities.School.filter({ id: user.school_id }) : [],
+    enabled: !!user?.school_id,
   });
 
   const school = schools[0];
