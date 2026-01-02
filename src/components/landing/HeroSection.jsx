@@ -41,7 +41,7 @@ export default function HeroSection() {
           animate={{ opacity: 1, y: 0, scale: 1 }}
           transition={{ duration: 1, ease: [0.16, 1, 0.3, 1] }}
           style={{ opacity: 1 - scrollProgress * 0.8, transform: `translateY(${scrollProgress * -50}px) scale(${1 - scrollProgress * 0.1})`, fontFamily: "'Poppins', 'Space Grotesk', sans-serif" }}
-          className="text-6xl sm:text-7xl font-semibold text-purple-700 leading-tight mb-8 tracking-wide"
+          className="text-6xl sm:text-7xl font-semibold text-purple-900 leading-tight mb-8 tracking-wide"
         >
           The Future of IB Scheduling
         </motion.h1>
@@ -51,7 +51,7 @@ export default function HeroSection() {
           animate={{ opacity: 1, y: 0, scale: 1 }}
           transition={{ duration: 1, delay: 0.3, ease: [0.16, 1, 0.3, 1] }}
           style={{ opacity: 1 - scrollProgress * 0.8, transform: `translateY(${scrollProgress * -40}px)`, fontFamily: "'Poppins', 'Inter', sans-serif" }}
-          className="text-xl text-purple-700 mb-12 leading-relaxed max-w-3xl mx-auto font-normal tracking-wide"
+          className="text-xl text-purple-900 mb-12 leading-relaxed max-w-3xl mx-auto font-normal tracking-wide"
         >
           Experience next generation schedule creation powered by AI. Generate perfect, conflict-free timetables for all IB programmes in minutes, not weeks.
         </motion.p>
@@ -62,7 +62,7 @@ export default function HeroSection() {
           style={{ opacity: 1 - scrollProgress * 1.2, transform: `translateY(${scrollProgress * -30}px) scale(${1 - scrollProgress * 0.15})` }}
         >
           <div 
-            className="bg-white/95 backdrop-blur-xl rounded-2xl shadow-2xl p-6 border-2 border-transparent hover:border-purple-700 transition-all duration-500 hover:shadow-[0_0_0_2px_rgb(126,34,206),0_0_20px_rgba(126,34,206,0.3)]"
+            className="bg-white/95 backdrop-blur-xl rounded-2xl shadow-2xl p-6 border-2 border-transparent hover:border-purple-900 transition-all duration-500 hover:shadow-[0_0_0_2px_rgb(88,28,135),0_0_20px_rgba(88,28,135,0.3)]"
           >
             <div className="w-14 h-14 bg-gradient-to-br from-blue-900 to-blue-800 rounded-xl flex items-center justify-center mx-auto mb-4">
               <Calendar className="w-8 h-8 text-white" />
@@ -72,7 +72,7 @@ export default function HeroSection() {
           </div>
 
             <div 
-            className="bg-white/95 backdrop-blur-xl rounded-2xl shadow-2xl p-6 border-2 border-transparent hover:border-purple-700 transition-all duration-500 hover:shadow-[0_0_0_2px_rgb(126,34,206),0_0_20px_rgba(126,34,206,0.3)]"
+            className="bg-white/95 backdrop-blur-xl rounded-2xl shadow-2xl p-6 border-2 border-transparent hover:border-purple-900 transition-all duration-500 hover:shadow-[0_0_0_2px_rgb(88,28,135),0_0_20px_rgba(88,28,135,0.3)]"
           >
             <div className="w-14 h-14 bg-gradient-to-br from-blue-900 to-blue-800 rounded-xl flex items-center justify-center mx-auto mb-4">
               <Users className="w-8 h-8 text-white" />
@@ -82,7 +82,7 @@ export default function HeroSection() {
           </div>
 
             <div 
-            className="bg-white/95 backdrop-blur-xl rounded-2xl shadow-2xl p-6 border-2 border-transparent hover:border-purple-700 transition-all duration-500 hover:shadow-[0_0_0_2px_rgb(126,34,206),0_0_20px_rgba(126,34,206,0.3)]"
+            className="bg-white/95 backdrop-blur-xl rounded-2xl shadow-2xl p-6 border-2 border-transparent hover:border-purple-900 transition-all duration-500 hover:shadow-[0_0_0_2px_rgb(88,28,135),0_0_20px_rgba(88,28,135,0.3)]"
           >
             <div className="w-14 h-14 bg-gradient-to-br from-blue-900 to-blue-800 rounded-xl flex items-center justify-center mx-auto mb-4">
               <BookOpen className="w-8 h-8 text-white" />
