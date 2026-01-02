@@ -112,12 +112,16 @@ export default function HeroSection() {
       
       {/* Smooth gradient transition to next section */}
       <div 
-        className="absolute -bottom-40 left-0 right-0 h-[600px] pointer-events-none"
+        className="absolute -bottom-40 left-0 right-0 h-[700px] pointer-events-none"
         style={{ 
           background: `linear-gradient(to bottom, 
-            transparent 0%, 
-            rgba(15, 23, 42, 0.02) 40%,
-            rgba(248, 250, 252, 0.6) 70%,
+            transparent 0%,
+            rgba(30, 58, 138, 0.03) 20%,
+            rgba(30, 58, 138, 0.08) 35%,
+            rgba(71, 85, 105, 0.15) 50%,
+            rgba(148, 163, 184, 0.3) 65%,
+            rgba(226, 232, 240, 0.6) 80%,
+            rgba(248, 250, 252, 0.9) 92%,
             rgb(248, 250, 252) 100%)`
         }}
       ></div>
