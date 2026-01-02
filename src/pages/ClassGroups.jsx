@@ -17,12 +17,15 @@ import {
 import PageHeader from '../components/ui-custom/PageHeader';
 import EmptyState from '../components/ui-custom/EmptyState';
 import GenerateInfoDialog from '../components/ui-custom/GenerateInfoDialog';
+import GenerationProgress from '../components/schedule/GenerationProgress';
 
 export default function ClassGroups() {
   const [searchQuery, setSearchQuery] = useState('');
   const [isGenerating, setIsGenerating] = useState(false);
   const [selectedGroup, setSelectedGroup] = useState(null);
   const [showGenerateDialog, setShowGenerateDialog] = useState(false);
+  const [generationProgress, setGenerationProgress] = useState(0);
+  const [generationStatus, setGenerationStatus] = useState('');
   const queryClient = useQueryClient();
 
   const { data: user } = useQuery({
@@ -82,11 +85,24 @@ export default function ClassGroups() {
 
   const handleAutoGenerate = async () => {
     setIsGenerating(true);
+    setGenerationProgress(0);
+    setGenerationStatus('Analyzing students...');
+    
     try {
+      setGenerationProgress(20);
+      setGenerationStatus('Creating class groups...');
+      
       const response = await base44.functions.invoke('createClassGroupBatches');
+      
+      setGenerationProgress(60);
+      setGenerationStatus('Assigning students to groups...');
+      
       if (response.data.success) {
+        setGenerationProgress(80);
+        setGenerationStatus('Finalizing changes...');
+        
         // Wait for backend updates to complete
-        await new Promise(resolve => setTimeout(resolve, 2000));
+        await new Promise(resolve => setTimeout(resolve, 1500));
         
         // Force hard refresh - clear cache completely
         queryClient.removeQueries({ queryKey: ['classGroups'] });
@@ -97,6 +113,11 @@ export default function ClassGroups() {
           queryClient.refetchQueries({ queryKey: ['classGroups'] }),
           queryClient.refetchQueries({ queryKey: ['students'] })
         ]);
+
+        setGenerationProgress(100);
+        setGenerationStatus('Complete! Created class groups.');
+        
+        await new Promise(resolve => setTimeout(resolve, 1500));
 
         let message = response.data.message;
         if (response.data.ineligibleStudents > 0) {
@@ -110,8 +131,11 @@ export default function ClassGroups() {
     } catch (error) {
       console.error('Error generating ClassGroups:', error);
       alert('Failed to generate ClassGroups. Check console for details.');
+    } finally {
+      setIsGenerating(false);
+      setGenerationProgress(0);
+      setGenerationStatus('');
     }
-    setIsGenerating(false);
   };
 
   const filteredGroups = classGroups.filter(group =>
@@ -312,6 +336,13 @@ export default function ClassGroups() {
         onConfirm={handleAutoGenerate}
         type="classgroups"
         isGenerating={isGenerating}
+      />
+
+      {/* Generation Progress Dialog */}
+      <GenerationProgress
+        open={isGenerating}
+        progress={generationProgress}
+        status={generationStatus}
       />
 
       {/* ClassGroup Detail Dialog */}
