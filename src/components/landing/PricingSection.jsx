@@ -60,13 +60,7 @@ export default function PricingSection() {
   };
 
   return (
-    <section id="pricing" className="relative py-24 px-4 sm:px-6 lg:px-8 bg-gradient-to-br from-slate-50 via-blue-100 to-cyan-50 overflow-hidden">
-      {/* Background decorations */}
-      <div className="absolute inset-0 overflow-hidden pointer-events-none">
-        <div className="absolute -top-40 -right-40 w-96 h-96 bg-blue-400/30 rounded-full blur-3xl animate-pulse"></div>
-        <div className="absolute -bottom-40 -left-40 w-96 h-96 bg-cyan-400/30 rounded-full blur-3xl animate-pulse"></div>
-        <div className="absolute top-1/2 left-1/2 w-[500px] h-[500px] bg-sky-300/20 rounded-full blur-3xl"></div>
-      </div>
+    <section id="pricing" className="relative py-24 px-4 sm:px-6 lg:px-8 bg-white overflow-hidden">
 
       <div className="max-w-7xl mx-auto relative">
         {/* Section Header */}

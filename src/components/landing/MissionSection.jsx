@@ -4,29 +4,23 @@ import { motion } from 'framer-motion';
 
 export default function MissionSection() {
   return (
-    <section className="py-16 px-4 sm:px-6 lg:px-8 bg-gradient-to-br from-blue-950 via-blue-900 to-blue-800 relative overflow-hidden">
-      {/* Background Pattern */}
-      <div className="absolute inset-0 opacity-20">
-        <div className="absolute top-0 left-0 w-64 h-64 bg-cyan-400 rounded-full blur-3xl"></div>
-        <div className="absolute bottom-0 right-0 w-64 h-64 bg-sky-400 rounded-full blur-3xl"></div>
-        <div className="absolute top-1/2 left-1/2 w-96 h-96 bg-blue-500 rounded-full blur-3xl"></div>
-      </div>
+    <section className="py-16 px-4 sm:px-6 lg:px-8 bg-white relative overflow-hidden">
 
       <div className="max-w-4xl mx-auto text-center relative z-10">
         <motion.div 
-          className="inline-flex items-center gap-2 mb-6 bg-white/20 backdrop-blur-sm px-6 py-3 rounded-full"
+          className="inline-flex items-center gap-2 mb-6 bg-blue-50 border border-blue-200 px-6 py-3 rounded-full"
           initial={{ opacity: 0, y: -20 }}
           whileInView={{ opacity: 1, y: 0 }}
           viewport={{ once: true }}
           transition={{ duration: 0.5 }}
         >
-          <GraduationCap className="w-6 h-6 text-white" />
-          <span className="text-white font-semibold text-lg">Built by IB Students, For IB Students</span>
-          <Heart className="w-5 h-5 text-white" />
+          <GraduationCap className="w-6 h-6 text-blue-900" />
+          <span className="text-blue-900 font-semibold text-lg">Built by IB Students, For IB Students</span>
+          <Heart className="w-5 h-5 text-blue-900" />
         </motion.div>
 
         <motion.p 
-          className="text-xl md:text-2xl text-white/95 leading-relaxed font-light"
+          className="text-xl md:text-2xl text-slate-700 leading-relaxed font-light"
           initial={{ opacity: 0, y: 20 }}
           whileInView={{ opacity: 1, y: 0 }}
           viewport={{ once: true }}
