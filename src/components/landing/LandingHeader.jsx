@@ -37,9 +37,9 @@ export default function LandingHeader() {
   return (
     <header className="fixed top-0 left-0 right-0 z-50">
       {/* Top dark blue band - hidden when scrolled */}
-      <div className={`bg-gradient-to-r from-blue-950 via-blue-900 to-blue-950 transition-all duration-300 ${isScrolled ? 'h-0 opacity-0' : 'h-20'} overflow-hidden`}>
+      <div className={`bg-gradient-to-r from-blue-950 via-blue-900 to-blue-950 transition-all duration-300 ${isScrolled ? 'h-0 opacity-0' : 'h-14'} overflow-hidden`}>
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 h-full flex items-center justify-between">
-          <div className="text-white/80 text-sm">Schedual</div>
+          <div className="text-white/80 text-base">Schedual</div>
         </div>
       </div>
 
