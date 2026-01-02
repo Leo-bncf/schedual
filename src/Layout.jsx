@@ -44,7 +44,6 @@ const navigation = [
   { name: 'Students', page: 'Students', icon: GraduationCap, schoolOnly: true },
   { name: 'Subjects', page: 'Subjects', icon: BookOpen, schoolOnly: true },
   { name: 'Rooms', page: 'Rooms', icon: Building2, schoolOnly: true },
-  { name: 'AI Advisor', page: 'AIAdvisor', icon: Sparkles, schoolOnly: true },
   { name: 'Settings', page: 'Settings', icon: Settings, schoolOnly: true },
   
   // SuperAdmin Pages

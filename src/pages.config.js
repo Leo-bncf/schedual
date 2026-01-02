@@ -1,4 +1,3 @@
-import AIAdvisor from './pages/AIAdvisor';
 import AccountManager from './pages/AccountManager';
 import ClassGroups from './pages/ClassGroups';
 import Constraints from './pages/Constraints';
@@ -30,7 +29,6 @@ import __Layout from './Layout.jsx';
 
 
 export const PAGES = {
-    "AIAdvisor": AIAdvisor,
     "AccountManager": AccountManager,
     "ClassGroups": ClassGroups,
     "Constraints": Constraints,
