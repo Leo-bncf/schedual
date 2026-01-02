@@ -27,9 +27,9 @@ export default function HeroSection() {
   return (
     <section className="relative min-h-screen pt-64 pb-20 px-4 sm:px-6 lg:px-8 overflow-hidden bg-white">
       {/* Blue splat effect at top */}
-      <div className="absolute -top-40 left-1/2 -translate-x-1/2 w-[1400px] h-[700px] bg-gradient-to-br from-blue-600/50 via-blue-500/40 to-indigo-600/50 rounded-full blur-3xl"></div>
-      <div className="absolute -top-20 left-1/3 w-[800px] h-[800px] bg-gradient-to-bl from-purple-700/35 via-violet-600/30 to-blue-700/35 rounded-full blur-3xl"></div>
-      <div className="absolute top-10 right-1/4 w-[600px] h-[600px] bg-gradient-to-tr from-blue-800/30 via-indigo-700/35 to-blue-600/30 rounded-full blur-3xl"></div>
+      <div className="absolute -top-40 left-1/2 -translate-x-1/2 w-[1400px] h-[700px] bg-gradient-to-br from-sky-400/60 via-cyan-500/50 to-blue-500/60 rounded-full blur-3xl"></div>
+      <div className="absolute -top-20 left-1/3 w-[800px] h-[800px] bg-gradient-to-bl from-purple-500/55 via-fuchsia-500/50 to-violet-500/55 rounded-full blur-3xl"></div>
+      <div className="absolute top-10 right-1/4 w-[600px] h-[600px] bg-gradient-to-tr from-cyan-400/45 via-sky-500/50 to-blue-400/45 rounded-full blur-3xl"></div>
 
       <div className="max-w-5xl mx-auto relative z-10 text-center">
         <h1 className="text-6xl sm:text-7xl font-bold text-blue-950 leading-tight mb-8">
