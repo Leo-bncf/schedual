@@ -18,7 +18,7 @@ Deno.serve(async (req) => {
     if (action === 'upload') {
       const { file_url, file_name, agent_name, extracted_data, training_feedback } = params;
 
-      // Store in training data using service role with feedback (shared across all schools)
+      // Store in training data using service role with feedback
       const result = await base44.asServiceRole.entities.AITrainingData.create({
         agent_name,
         file_url,
@@ -33,7 +33,6 @@ Deno.serve(async (req) => {
 
     if (action === 'list') {
       const { agent_name } = params;
-      // All schools share the same training data
       const data = await base44.asServiceRole.entities.AITrainingData.filter(
         { agent_name }, 
         '-created_date', 
@@ -45,7 +44,7 @@ Deno.serve(async (req) => {
     if (action === 'updateField') {
       const { training_id, field_path, is_correct, corrected_value, notes } = params;
       
-      // Get current training (shared across all schools)
+      // Get current training
       const training = await base44.asServiceRole.entities.AITrainingData.filter({ id: training_id });
       if (!training || training.length === 0) {
         return Response.json({ error: 'Training not found' }, { status: 404 });
@@ -71,7 +70,6 @@ Deno.serve(async (req) => {
     if (action === 'approve') {
       const { training_id, status, notes } = params;
 
-      // Training data is shared across all schools (no school_id check)
       await base44.asServiceRole.entities.AITrainingData.update(training_id, {
         overall_status: status,
         training_notes: notes,
