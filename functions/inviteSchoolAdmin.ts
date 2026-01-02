@@ -86,7 +86,7 @@ Deno.serve(async (req) => {
     });
     
     // Send invite via base44's built-in system
-    await base44.users.inviteUser(email, "admin");
+    await base44.asServiceRole.users.inviteUser(email, "admin");
 
     return Response.json({ 
       success: true, 
