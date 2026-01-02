@@ -62,9 +62,44 @@ export default function HeroSection() {
     <>
       {/* Fixed background blobs that follow scroll */}
       <div className="fixed inset-0 z-0 pointer-events-none overflow-hidden">
-        <div className="absolute -top-40 left-1/2 -translate-x-1/2 w-[1400px] h-[700px] bg-gradient-to-br from-sky-400/60 via-cyan-500/50 to-blue-500/60 rounded-full blur-3xl"></div>
-        <div className="absolute -top-20 left-1/3 w-[800px] h-[800px] bg-gradient-to-bl from-purple-500/55 via-fuchsia-500/50 to-violet-500/55 rounded-full blur-3xl"></div>
-        <div className="absolute top-10 right-1/4 w-[600px] h-[600px] bg-gradient-to-tr from-cyan-400/45 via-sky-500/50 to-blue-400/45 rounded-full blur-3xl"></div>
+        <style>{`
+          @keyframes float-blob-1 {
+            0%, 100% { transform: translate(-50%, 0) scale(1); }
+            33% { transform: translate(-45%, -20px) scale(1.05); }
+            66% { transform: translate(-55%, 10px) scale(0.95); }
+          }
+          @keyframes float-blob-2 {
+            0%, 100% { transform: translate(0, 0) scale(1); }
+            33% { transform: translate(30px, -25px) scale(1.08); }
+            66% { transform: translate(-20px, 15px) scale(0.92); }
+          }
+          @keyframes float-blob-3 {
+            0%, 100% { transform: translate(0, 0) scale(1); }
+            33% { transform: translate(-25px, 20px) scale(0.95); }
+            66% { transform: translate(15px, -30px) scale(1.06); }
+          }
+          .animate-float-1 { animation: float-blob-1 20s ease-in-out infinite; }
+          .animate-float-2 { animation: float-blob-2 25s ease-in-out infinite; }
+          .animate-float-3 { animation: float-blob-3 22s ease-in-out infinite; }
+        `}</style>
+        <motion.div 
+          initial={{ opacity: 0, scale: 0.8 }}
+          animate={{ opacity: 1, scale: 1 }}
+          transition={{ duration: 1.5, ease: "easeOut" }}
+          className="absolute -top-40 left-1/2 -translate-x-1/2 w-[1400px] h-[700px] bg-gradient-to-br from-sky-400/60 via-cyan-500/50 to-blue-500/60 rounded-full blur-3xl animate-float-1"
+        ></motion.div>
+        <motion.div 
+          initial={{ opacity: 0, scale: 0.8 }}
+          animate={{ opacity: 1, scale: 1 }}
+          transition={{ duration: 1.5, delay: 0.2, ease: "easeOut" }}
+          className="absolute -top-20 left-1/3 w-[800px] h-[800px] bg-gradient-to-bl from-purple-500/55 via-fuchsia-500/50 to-violet-500/55 rounded-full blur-3xl animate-float-2"
+        ></motion.div>
+        <motion.div 
+          initial={{ opacity: 0, scale: 0.8 }}
+          animate={{ opacity: 1, scale: 1 }}
+          transition={{ duration: 1.5, delay: 0.4, ease: "easeOut" }}
+          className="absolute top-10 right-1/4 w-[600px] h-[600px] bg-gradient-to-tr from-cyan-400/45 via-sky-500/50 to-blue-400/45 rounded-full blur-3xl animate-float-3"
+        ></motion.div>
       </div>
       
       <section className="relative min-h-screen pt-64 pb-[32rem] px-4 sm:px-6 lg:px-8 overflow-hidden bg-transparent">
