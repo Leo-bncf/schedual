@@ -3,7 +3,7 @@ import { motion } from 'framer-motion';
 
 export default function ComparisonSection() {
   return (
-    <section className="py-20 px-4 sm:px-6 lg:px-8 bg-slate-900">
+    <section className="py-20 px-4 sm:px-6 lg:px-8 bg-white">
       <div className="max-w-7xl mx-auto">
         <div className="grid md:grid-cols-2 gap-8">
           <div 
