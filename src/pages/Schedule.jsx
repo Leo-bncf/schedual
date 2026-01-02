@@ -456,32 +456,46 @@ export default function Schedule() {
           if (preferred) preferredRooms = [preferred, ...preferredRooms.filter(r => r.id !== preferred.id)];
         }
 
-        // Calculate ideal distribution across the week
+        // Calculate ideal distribution across the week - VARIED SCHEDULING
         const daysToUse = Math.min(periodsNeeded, 5); // Spread across max 5 days
-        const periodsPerDay = Math.ceil(periodsNeeded / daysToUse);
+        const basePeriodsPerDay = Math.floor(periodsNeeded / daysToUse);
+        const extraPeriods = periodsNeeded % daysToUse;
 
         // Track periods scheduled per day for this group
         const dayPeriodCount = {};
         const usedDayPeriods = new Set(); // Track day-period combos to avoid repetition
         days.forEach(d => { dayPeriodCount[d] = 0; });
 
-        // Randomize period order to create variety across days
-        const shuffledPeriods = [...periods].sort(() => Math.random() - 0.5);
+        // Create DIFFERENT period assignments for each day to maximize variety
+        const periodsByDay = {};
+        days.forEach((day, dayIndex) => {
+          // Each day gets a different starting period offset
+          const offset = dayIndex * 2; // Shift by 2 periods each day
+          const dayPeriods = [...periods]
+            .map(p => ((p - 1 + offset) % 12) + 1) // Rotate periods differently for each day
+            .sort(() => Math.random() - 0.5); // Then shuffle for extra randomness
+          periodsByDay[day] = dayPeriods;
+        });
 
-        // Try to schedule periods for this group - distribute across week with variation
+        // Try to schedule periods for this group - distribute across week with MAXIMUM VARIATION
         for (const day of days) {
           if (periodsScheduled >= periodsNeeded) break;
 
-          for (const period of shuffledPeriods) {
+          // Each day should get different periods to avoid repetition
+          const targetForDay = dayPeriodCount[day] < basePeriodsPerDay 
+            ? basePeriodsPerDay 
+            : (dayPeriodCount[day] < basePeriodsPerDay + 1 && extraPeriods > 0) 
+              ? basePeriodsPerDay + 1 
+              : 0;
+
+          for (const period of periodsByDay[day]) {
             if (periodsScheduled >= periodsNeeded) break;
+            if (dayPeriodCount[day] >= targetForDay) break;
 
-            // Skip if this day already has enough periods for this subject
-            if (dayPeriodCount[day] >= periodsPerDay) continue;
-
-            // Try to avoid same period across consecutive days for variety
+            // Avoid using same period on consecutive days (creates variety)
             const prevDay = days[days.indexOf(day) - 1];
             if (prevDay && usedDayPeriods.has(`${prevDay}-${period}`)) {
-              continue; // Skip this period to create variation
+              continue; 
             }
 
             // Check if all students are available (or no students assigned yet)
