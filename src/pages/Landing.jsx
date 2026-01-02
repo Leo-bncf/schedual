@@ -1,6 +1,7 @@
 import React from 'react';
 import LandingHeader from '../components/landing/LandingHeader';
 import HeroSection from '../components/landing/HeroSection';
+import DashboardPreview from '../components/landing/DashboardPreview';
 import MissionSection from '../components/landing/MissionSection';
 import HowItWorksSection from '../components/landing/HowItWorksSection';
 import ComparisonSection from '../components/landing/ComparisonSection';
@@ -14,6 +15,7 @@ export default function Landing() {
       <TermsAcceptanceDialog />
       <LandingHeader />
       <HeroSection />
+      <DashboardPreview />
       <MissionSection />
       <HowItWorksSection />
       <ComparisonSection />
