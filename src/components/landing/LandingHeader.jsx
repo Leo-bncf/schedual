@@ -45,7 +45,7 @@ export default function LandingHeader() {
 
       {/* Semi-transparent navigation strip */}
       <div className="flex justify-center mt-2">
-        <div className={`bg-white/90 backdrop-blur-lg border border-slate-200/50 rounded-full transition-all duration-300 ${isScrolled ? 'shadow-lg' : 'shadow-md'}`}>
+        <div className={`bg-white/90 backdrop-blur-lg border border-slate-200/50 rounded-full transition-all duration-300 w-full max-w-4xl mx-4 ${isScrolled ? 'shadow-lg' : 'shadow-md'}`}>
           <div className="flex items-center justify-between gap-10 h-14 px-8">
           {/* Logo */}
           <div className="flex items-center gap-2">
