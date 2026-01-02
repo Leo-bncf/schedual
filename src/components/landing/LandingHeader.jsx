@@ -40,6 +40,17 @@ export default function LandingHeader() {
       <div className={`bg-gradient-to-r from-blue-950 via-blue-900 to-blue-950 transition-all duration-300 ${isScrolled ? 'h-0 opacity-0' : 'h-14'} overflow-hidden`}>
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 h-full flex items-center justify-between">
           <div className="text-white/80 text-base">Schedual</div>
+          <div className="flex items-center gap-6 text-sm">
+            <Link to={createPageUrl('PrivacyPolicy')} className="text-white/70 hover:text-white transition-colors">
+              Privacy Policy
+            </Link>
+            <Link to={createPageUrl('TermsOfUse')} className="text-white/70 hover:text-white transition-colors">
+              Terms of Use
+            </Link>
+            <Link to={createPageUrl('ContactUs')} className="text-white/70 hover:text-white transition-colors">
+              Contact Us
+            </Link>
+          </div>
         </div>
       </div>
 
