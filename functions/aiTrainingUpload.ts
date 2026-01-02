@@ -18,9 +18,8 @@ Deno.serve(async (req) => {
     if (action === 'upload') {
       const { file_url, file_name, agent_name, extracted_data, training_feedback } = params;
 
-      // Store in training data using service role with feedback
+      // Store in training data using service role with feedback (shared across all schools)
       const result = await base44.asServiceRole.entities.AITrainingData.create({
-        school_id: user.school_id,
         agent_name,
         file_url,
         file_name,
@@ -34,8 +33,9 @@ Deno.serve(async (req) => {
 
     if (action === 'list') {
       const { agent_name } = params;
+      // All schools share the same training data
       const data = await base44.asServiceRole.entities.AITrainingData.filter(
-        { agent_name, school_id: user.school_id }, 
+        { agent_name }, 
         '-created_date', 
         50
       );
@@ -45,11 +45,8 @@ Deno.serve(async (req) => {
     if (action === 'updateField') {
       const { training_id, field_path, is_correct, corrected_value, notes } = params;
       
-      // Get current training - ensure it belongs to user's school
-      const training = await base44.asServiceRole.entities.AITrainingData.filter({ 
-        id: training_id, 
-        school_id: user.school_id 
-      });
+      // Get current training (shared across all schools)
+      const training = await base44.asServiceRole.entities.AITrainingData.filter({ id: training_id });
       if (!training || training.length === 0) {
         return Response.json({ error: 'Training not found' }, { status: 404 });
       }
@@ -74,15 +71,7 @@ Deno.serve(async (req) => {
     if (action === 'approve') {
       const { training_id, status, notes } = params;
 
-      // Verify training belongs to user's school
-      const training = await base44.asServiceRole.entities.AITrainingData.filter({ 
-        id: training_id, 
-        school_id: user.school_id 
-      });
-      if (!training || training.length === 0) {
-        return Response.json({ error: 'Training not found' }, { status: 404 });
-      }
-
+      // Training data is shared across all schools (no school_id check)
       await base44.asServiceRole.entities.AITrainingData.update(training_id, {
         overall_status: status,
         training_notes: notes,
