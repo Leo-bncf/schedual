@@ -61,7 +61,7 @@ export default function InfoSection() {
           {features.map((feature, index) => (
             <div 
               key={index} 
-              className="p-6 rounded-xl bg-gradient-to-br from-white via-blue-50/30 to-white backdrop-blur-sm border-2 border-transparent hover:border-purple-900 group hover:bg-gradient-to-br hover:from-blue-900 hover:to-blue-950 transition-all duration-500 hover:shadow-[0_0_0_2px_rgb(88,28,135),0_0_20px_rgba(88,28,135,0.3)]"
+              className="p-6 rounded-xl bg-gradient-to-br from-white via-blue-50/30 to-white backdrop-blur-sm border-2 border-transparent hover:border-purple-700 group hover:bg-gradient-to-br hover:from-blue-900 hover:to-blue-950 transition-all duration-500 hover:shadow-[0_0_0_2px_rgb(126,34,206),0_0_20px_rgba(126,34,206,0.3)]"
             >
               <div className="w-12 h-12 rounded-lg bg-gradient-to-br from-blue-950 via-blue-900 to-blue-800 flex items-center justify-center mb-4 group-hover:scale-110 transition-all shadow-lg group-hover:from-sky-400 group-hover:via-fuchsia-500 group-hover:to-blue-500">
                 <feature.icon className="w-6 h-6 text-white" />

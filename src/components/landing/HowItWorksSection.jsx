@@ -73,7 +73,7 @@ export default function HowItWorksSection() {
 
               {/* Step Content */}
               <div 
-                className="flex-1 bg-white p-6 rounded-xl border-2 border-transparent hover:border-purple-900 shadow-lg hover:shadow-2xl transition-all duration-500 hover:shadow-[0_0_0_2px_rgb(88,28,135),0_0_20px_rgba(88,28,135,0.3)]"
+                className="flex-1 bg-white p-6 rounded-xl border-2 border-transparent hover:border-purple-700 shadow-lg hover:shadow-2xl transition-all duration-500 hover:shadow-[0_0_0_2px_rgb(126,34,206),0_0_20px_rgba(126,34,206,0.3)]"
               >
                 <div className="flex items-center gap-3 mb-3">
                   <step.icon className="w-6 h-6 text-blue-900" />
