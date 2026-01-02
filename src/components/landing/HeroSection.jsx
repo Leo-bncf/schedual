@@ -78,7 +78,7 @@ export default function HeroSection() {
           .animate-float-1 { animation: float-blob-1 2s ease-out forwards; }
           .animate-float-2 { animation: float-blob-2 2s ease-out forwards; animation-delay: 0.2s; }
           .animate-float-3 { animation: float-blob-3 2s ease-out forwards; animation-delay: 0.4s; }
-        `}
+        `}</style>
         <motion.div 
           initial={{ opacity: 0, scale: 0.8 }}
           animate={{ opacity: 1, scale: 1 }}
