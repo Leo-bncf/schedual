@@ -8,6 +8,7 @@ import { createPageUrl } from '../../utils';
 export default function LandingHeader() {
   const [isAuthenticated, setIsAuthenticated] = useState(false);
   const [user, setUser] = useState(null);
+  const [isScrolled, setIsScrolled] = useState(false);
 
   useEffect(() => {
     base44.auth.isAuthenticated().then(authenticated => {
@@ -18,6 +19,14 @@ export default function LandingHeader() {
     });
   }, []);
 
+  useEffect(() => {
+    const handleScroll = () => {
+      setIsScrolled(window.scrollY > 50);
+    };
+    window.addEventListener('scroll', handleScroll);
+    return () => window.removeEventListener('scroll', handleScroll);
+  }, []);
+
   const scrollToSection = (id) => {
     const element = document.getElementById(id);
     if (element) {
@@ -26,9 +35,18 @@ export default function LandingHeader() {
   };
 
   return (
-    <header className="fixed top-0 left-0 right-0 z-50 bg-white/80 backdrop-blur-md border-b border-slate-200">
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-        <div className="flex items-center justify-between h-16">
+    <header className="fixed top-0 left-0 right-0 z-50">
+      {/* Top dark blue band - hidden when scrolled */}
+      <div className={`bg-gradient-to-r from-blue-950 via-blue-900 to-blue-950 transition-all duration-300 ${isScrolled ? 'h-0 opacity-0' : 'h-10'} overflow-hidden`}>
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 h-full flex items-center justify-between">
+          <div className="text-white/80 text-sm">Schedual</div>
+        </div>
+      </div>
+
+      {/* Semi-transparent navigation strip */}
+      <div className={`bg-white/90 backdrop-blur-lg border-b border-slate-200/50 transition-all duration-300 ${isScrolled ? 'shadow-lg rounded-b-2xl mx-4' : ''}`}>
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+          <div className="flex items-center justify-between h-16">
           {/* Logo */}
           <div className="flex items-center gap-3">
             <div className="w-9 h-9 rounded-xl bg-gradient-to-br from-blue-900 to-blue-800 flex items-center justify-center">
