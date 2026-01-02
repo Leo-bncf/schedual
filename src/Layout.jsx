@@ -115,7 +115,21 @@ export default function Layout({ children, currentPageName }) {
           setTimeout(checkUserUpdate, 2000);
         } else {
           const userData = await base44.auth.me();
-          setUser(userData);
+          
+          // Check for pending invitations
+          try {
+            const { data: inviteData } = await base44.functions.invoke('checkPendingInvitations');
+            if (inviteData?.schoolAssigned) {
+              // Refresh user data after school assignment
+              const updatedUser = await base44.auth.me();
+              setUser(updatedUser);
+            } else {
+              setUser(userData);
+            }
+          } catch (inviteError) {
+            console.error('Pending invitation check error:', inviteError);
+            setUser(userData);
+          }
           
           const { data } = await base44.functions.invoke('getSuperAdminEmails');
           setIsSuperAdmin(data?.isSuperAdmin || false);

@@ -74,20 +74,19 @@ Deno.serve(async (req) => {
       });
     }
 
-    // User doesn't exist - invite them using base44's built-in invite system
+    // User doesn't exist - create pending invitation
+    const expiresAt = new Date();
+    expiresAt.setDate(expiresAt.getDate() + 30); // 30 days expiry
+    
+    await base44.asServiceRole.entities.PendingInvitation.create({
+      email,
+      school_id: user.school_id,
+      invited_by: user.email,
+      expires_at: expiresAt.toISOString()
+    });
+    
+    // Send invite via base44's built-in system
     await base44.users.inviteUser(email, "admin");
-    
-    // Then immediately assign them to this school
-    // Wait a moment for the user to be created
-    await new Promise(resolve => setTimeout(resolve, 1000));
-    
-    // Find the newly created user and assign school_id
-    const newUsers = await base44.asServiceRole.entities.User.filter({ email });
-    if (newUsers.length > 0) {
-      await base44.asServiceRole.entities.User.update(newUsers[0].id, {
-        school_id: user.school_id
-      });
-    }
 
     return Response.json({ 
       success: true, 
