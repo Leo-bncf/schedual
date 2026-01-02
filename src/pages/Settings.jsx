@@ -549,11 +549,15 @@ export default function Settings() {
                                   onClick={async () => {
                                     if (confirm(`Remove ${admin.full_name || admin.email} as administrator?\n\nThey will lose all access to school management. This action cannot be undone.`)) {
                                       try {
-                                        await base44.entities.User.update(admin.id, { school_id: null });
-                                        queryClient.invalidateQueries({ queryKey: ['schoolAdmins'] });
-                                        toast.success('Administrator removed successfully');
+                                        const { data } = await base44.functions.invoke('removeSchoolAdmin', { admin_id: admin.id });
+                                        if (data.success) {
+                                          queryClient.invalidateQueries({ queryKey: ['schoolAdmins'] });
+                                          toast.success('Administrator removed successfully');
+                                        } else {
+                                          toast.error(data.error || 'Failed to remove administrator');
+                                        }
                                       } catch (error) {
-                                        toast.error('Failed to remove administrator');
+                                        toast.error(error.message || 'Failed to remove administrator');
                                       }
                                     }
                                   }}
