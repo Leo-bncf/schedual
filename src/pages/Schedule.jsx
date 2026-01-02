@@ -73,6 +73,7 @@ export default function Schedule() {
   const [constraintDialogOpen, setConstraintDialogOpen] = useState(false);
   const [constraintInput, setConstraintInput] = useState('');
   const [isGeneratingConstraint, setIsGeneratingConstraint] = useState(false);
+  const [constraintType, setConstraintType] = useState('hard');
   const [formData, setFormData] = useState({
     name: '',
     academic_year: '2024-2025',
@@ -259,6 +260,7 @@ Now process the user's input and return ONLY the JSON object.`,
 
       const constraintData = {
         ...response,
+        type: constraintType,
         school_id: schoolId,
         is_active: true,
         source: 'ai_suggested'
@@ -1980,61 +1982,115 @@ Now process the user's input and return ONLY the JSON object.`,
 
       {/* Add Constraint Dialog with AI */}
       <Dialog open={constraintDialogOpen} onOpenChange={setConstraintDialogOpen}>
-        <DialogContent className="sm:max-w-lg">
+        <DialogContent className="sm:max-w-2xl">
           <DialogHeader>
             <DialogTitle className="flex items-center gap-2">
               <Sparkles className="w-5 h-5 text-violet-600" />
               Add Scheduling Constraint
             </DialogTitle>
             <DialogDescription>
-              Describe your scheduling preference in natural language and AI will create the constraint.
+              Choose constraint type and describe your preference in natural language
             </DialogDescription>
           </DialogHeader>
-          <div className="space-y-4">
-            <div className="space-y-2">
-              <Label htmlFor="constraint-input">Describe Your Preference</Label>
-              <Textarea 
-                id="constraint-input"
-                value={constraintInput}
-                onChange={(e) => setConstraintInput(e.target.value)}
-                placeholder="e.g., 'Teachers should not teach more than 4 consecutive periods' or 'Dr. Smith prefers not to teach on Wednesday afternoons'"
-                className="min-h-[120px] resize-none"
-              />
-              <p className="text-xs text-slate-500">
-                Examples: "No double periods for MYP students", "Avoid scheduling labs in the morning", "Maximum 25 hours per week for teachers"
-              </p>
-            </div>
+          
+          <Tabs value={constraintType} onValueChange={setConstraintType} className="w-full">
+            <TabsList className="grid w-full grid-cols-2">
+              <TabsTrigger value="hard" className="data-[state=active]:bg-rose-600 data-[state=active]:text-white">
+                <Shield className="w-4 h-4 mr-2" />
+                Hard Constraint
+              </TabsTrigger>
+              <TabsTrigger value="soft" className="data-[state=active]:bg-blue-600 data-[state=active]:text-white">
+                <Info className="w-4 h-4 mr-2" />
+                Soft Constraint
+              </TabsTrigger>
+            </TabsList>
 
-            <DialogFooter>
-              <Button 
-                type="button" 
-                variant="outline" 
-                onClick={() => {
-                  setConstraintDialogOpen(false);
-                  setConstraintInput('');
-                }}
-              >
-                Cancel
-              </Button>
-              <Button 
-                onClick={handleGenerateConstraint}
-                disabled={!constraintInput.trim() || isGeneratingConstraint}
-                className="bg-gradient-to-r from-violet-600 to-indigo-600 hover:from-violet-700 hover:to-indigo-700"
-              >
-                {isGeneratingConstraint ? (
-                  <>
-                    <Loader2 className="w-4 h-4 mr-2 animate-spin" />
-                    Generating...
-                  </>
-                ) : (
-                  <>
-                    <Sparkles className="w-4 h-4 mr-2" />
-                    Generate Constraint
-                  </>
-                )}
-              </Button>
-            </DialogFooter>
-          </div>
+            <TabsContent value="hard" className="space-y-4 mt-4">
+              <div className="p-4 bg-rose-50 border-2 border-rose-200 rounded-lg">
+                <div className="flex items-start gap-3">
+                  <Shield className="w-5 h-5 text-rose-600 mt-0.5 flex-shrink-0" />
+                  <div className="text-sm">
+                    <p className="font-semibold text-rose-900 mb-1">Hard Constraint - Must Be Respected</p>
+                    <p className="text-rose-700">This constraint <strong>must</strong> be followed no matter what, even if it requires regenerating the entire schedule. The system will never violate this rule.</p>
+                  </div>
+                </div>
+              </div>
+              
+              <div className="space-y-2">
+                <Label htmlFor="hard-constraint-input">Describe Your Hard Constraint</Label>
+                <Textarea 
+                  id="hard-constraint-input"
+                  value={constraintInput}
+                  onChange={(e) => setConstraintInput(e.target.value)}
+                  placeholder="e.g., 'Teachers cannot teach more than 4 consecutive periods' or 'No teacher can work on Fridays'"
+                  className="min-h-[120px] resize-none border-rose-200 focus:ring-rose-500"
+                />
+                <p className="text-xs text-slate-500">
+                  Examples: "Students must have lunch after period 4", "Room 101 is unavailable on Mondays", "Teachers maximum 25 hours per week"
+                </p>
+              </div>
+            </TabsContent>
+
+            <TabsContent value="soft" className="space-y-4 mt-4">
+              <div className="p-4 bg-blue-50 border-2 border-blue-200 rounded-lg">
+                <div className="flex items-start gap-3">
+                  <Info className="w-5 h-5 text-blue-600 mt-0.5 flex-shrink-0" />
+                  <div className="text-sm">
+                    <p className="font-semibold text-blue-900 mb-1">Soft Constraint - Optimize When Possible</p>
+                    <p className="text-blue-700">This constraint will be followed <strong>only if possible</strong> without violating any hard constraints. The system will try its best but may ignore it if necessary.</p>
+                  </div>
+                </div>
+              </div>
+              
+              <div className="space-y-2">
+                <Label htmlFor="soft-constraint-input">Describe Your Soft Constraint</Label>
+                <Textarea 
+                  id="soft-constraint-input"
+                  value={constraintInput}
+                  onChange={(e) => setConstraintInput(e.target.value)}
+                  placeholder="e.g., 'Dr. Smith prefers not to teach on Wednesday afternoons' or 'Try to schedule labs in the morning'"
+                  className="min-h-[120px] resize-none border-blue-200 focus:ring-blue-500"
+                />
+                <p className="text-xs text-slate-500">
+                  Examples: "Prefer morning slots for science labs", "Balance teacher workload evenly", "Avoid back-to-back classes for the same subject"
+                </p>
+              </div>
+            </TabsContent>
+          </Tabs>
+
+          <DialogFooter>
+            <Button 
+              type="button" 
+              variant="outline" 
+              onClick={() => {
+                setConstraintDialogOpen(false);
+                setConstraintInput('');
+                setConstraintType('hard');
+              }}
+            >
+              Cancel
+            </Button>
+            <Button 
+              onClick={handleGenerateConstraint}
+              disabled={!constraintInput.trim() || isGeneratingConstraint}
+              className={constraintType === 'hard' 
+                ? 'bg-gradient-to-r from-rose-600 to-red-600 hover:from-rose-700 hover:to-red-700'
+                : 'bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-700 hover:to-indigo-700'
+              }
+            >
+              {isGeneratingConstraint ? (
+                <>
+                  <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+                  Generating...
+                </>
+              ) : (
+                <>
+                  <Sparkles className="w-4 h-4 mr-2" />
+                  Generate {constraintType === 'hard' ? 'Hard' : 'Soft'} Constraint
+                </>
+              )}
+            </Button>
+          </DialogFooter>
         </DialogContent>
       </Dialog>
     </div>
