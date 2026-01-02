@@ -4,7 +4,7 @@ import { Progress } from "@/components/ui/progress";
 import { CheckCircle, Loader2, Play } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 
-export default function GenerationProgress({ open, progress, onClose }) {
+export default function GenerationProgress({ open, progress, onClose, onCancel }) {
   const { stage, percent, message, completed } = progress;
 
   return (

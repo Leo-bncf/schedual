@@ -59,6 +59,7 @@ export default function Schedule() {
   const [selectedVersion, setSelectedVersion] = useState(null);
   const [isGenerating, setIsGenerating] = useState(false);
   const [hasAutoSelected, setHasAutoSelected] = useState(false);
+  const [cancelGeneration, setCancelGeneration] = useState(false);
   const [generationProgress, setGenerationProgress] = useState({
     stage: '',
     percent: 0,
@@ -344,6 +345,7 @@ Now process the user's input and return ONLY the JSON object.`,
     if (!selectedVersion) return;
     
     setIsGenerating(true);
+    setCancelGeneration(false);
     setGenerationProgress({
       stage: 'Initializing',
       percent: 0,
@@ -354,6 +356,18 @@ Now process the user's input and return ONLY the JSON object.`,
     });
     
     try {
+      if (cancelGeneration) {
+        setGenerationProgress({
+          stage: 'Cancelled',
+          percent: 0,
+          message: 'Schedule generation was cancelled',
+          currentStep: '',
+          completedSteps: [],
+          completed: true
+        });
+        return;
+      }
+
       console.log('=== SCHEDULE GENERATION START ===');
       console.log('School ID:', schoolId);
       console.log('Selected Version:', selectedVersion);
@@ -371,6 +385,8 @@ Now process the user's input and return ONLY the JSON object.`,
       console.log('Soft Constraints:', softConstraints.length);
       
       // Step 1: Assign teachers to teaching groups
+      if (cancelGeneration) throw new Error('Cancelled by user');
+      
       setGenerationProgress(prev => ({
         ...prev,
         stage: 'Assigning Teachers',
@@ -382,6 +398,8 @@ Now process the user's input and return ONLY the JSON object.`,
       console.log('Teacher assignments:', assignmentResult);
       
       // Refresh teaching groups to get updated teacher assignments
+      if (cancelGeneration) throw new Error('Cancelled by user');
+      
       setGenerationProgress(prev => ({
         ...prev,
         stage: 'Preparing Data',
@@ -395,6 +413,8 @@ Now process the user's input and return ONLY the JSON object.`,
       console.log('Updated groups with teachers:', updatedGroups.filter(g => g.teacher_id).length);
       
       // Delete existing slots for this version (batch to avoid rate limits)
+      if (cancelGeneration) throw new Error('Cancelled by user');
+      
       setGenerationProgress(prev => ({
         ...prev,
         percent: 20,
@@ -487,6 +507,8 @@ Now process the user's input and return ONLY the JSON object.`,
       const scheduleLevels = ['DP', 'MYP', 'PYP'];
       
       for (const level of scheduleLevels) {
+        if (cancelGeneration) throw new Error('Cancelled by user');
+        
         console.log(`\n=== Scheduling ${level} ===`);
 
         // PYP/MYP: Use ClassGroups-based scheduling
@@ -920,6 +942,8 @@ Now process the user's input and return ONLY the JSON object.`,
       }
 
       // Create all slots in batches to avoid rate limits
+      if (cancelGeneration) throw new Error('Cancelled by user');
+      
       setGenerationProgress(prev => ({
         ...prev,
         stage: 'Creating Schedule Slots',
@@ -1057,10 +1081,12 @@ Now process the user's input and return ONLY the JSON object.`,
       console.error('Error message:', error.message);
       console.error('Error stack:', error.stack);
       
+      const wasCancelled = error.message === 'Cancelled by user' || cancelGeneration;
+      
       setGenerationProgress({
-        stage: 'Error',
+        stage: wasCancelled ? 'Cancelled' : 'Error',
         percent: 0,
-        message: `Generation failed: ${error.message}`,
+        message: wasCancelled ? 'Schedule generation was cancelled' : `Generation failed: ${error.message}`,
         currentStep: '',
         completedSteps: [],
         completed: true
@@ -1069,6 +1095,7 @@ Now process the user's input and return ONLY the JSON object.`,
     
     setTimeout(() => {
       setIsGenerating(false);
+      setCancelGeneration(false);
     }, 2000);
   };
 
@@ -1984,6 +2011,7 @@ Now process the user's input and return ONLY the JSON object.`,
         progress={generationProgress}
         onClose={() => {
           setIsGenerating(false);
+          setCancelGeneration(false);
           setGenerationProgress({
             stage: '',
             percent: 0,
@@ -1992,6 +2020,10 @@ Now process the user's input and return ONLY the JSON object.`,
             completedSteps: [],
             completed: false
           });
+        }}
+        onCancel={() => {
+          setCancelGeneration(true);
+          toast.info('Cancelling schedule generation...');
         }}
       />
 
