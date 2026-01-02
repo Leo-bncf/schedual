@@ -58,10 +58,20 @@ export default function InfoSection() {
 
         {/* Features Grid */}
         <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-8">
-          {features.map((feature, index) => (
+          {features.map((feature, index) => {
+            const colors = [
+              { border: 'hover:border-sky-400', shadow: 'hover:shadow-[0_0_0_2px_rgb(56,189,248),0_0_20px_rgba(56,189,248,0.3)]' },
+              { border: 'hover:border-cyan-400', shadow: 'hover:shadow-[0_0_0_2px_rgb(34,211,238),0_0_20px_rgba(34,211,238,0.3)]' },
+              { border: 'hover:border-blue-400', shadow: 'hover:shadow-[0_0_0_2px_rgb(96,165,250),0_0_20px_rgba(96,165,250,0.3)]' },
+              { border: 'hover:border-sky-500', shadow: 'hover:shadow-[0_0_0_2px_rgb(14,165,233),0_0_20px_rgba(14,165,233,0.3)]' },
+              { border: 'hover:border-cyan-500', shadow: 'hover:shadow-[0_0_0_2px_rgb(6,182,212),0_0_20px_rgba(6,182,212,0.3)]' },
+              { border: 'hover:border-blue-500', shadow: 'hover:shadow-[0_0_0_2px_rgb(59,130,246),0_0_20px_rgba(59,130,246,0.3)]' },
+            ];
+            const colorClass = colors[index % colors.length];
+            return (
             <div 
               key={index} 
-              className="p-6 rounded-xl bg-gradient-to-br from-white via-blue-50/30 to-white backdrop-blur-sm border-2 border-transparent hover:border-fuchsia-500 group hover:bg-gradient-to-br hover:from-blue-900 hover:to-blue-950 transition-all hover:shadow-[0_0_0_2px_rgb(217,70,239),0_0_20px_rgba(217,70,239,0.3)]"
+              className={`p-6 rounded-xl bg-gradient-to-br from-white via-blue-50/30 to-white backdrop-blur-sm border-2 border-transparent ${colorClass.border} group hover:bg-gradient-to-br hover:from-blue-900 hover:to-blue-950 transition-all duration-500 ${colorClass.shadow}`}
             >
               <div className="w-12 h-12 rounded-lg bg-gradient-to-br from-blue-950 via-blue-900 to-blue-800 flex items-center justify-center mb-4 group-hover:scale-110 transition-all shadow-lg group-hover:from-sky-400 group-hover:via-fuchsia-500 group-hover:to-blue-500">
                 <feature.icon className="w-6 h-6 text-white" />
@@ -69,7 +79,8 @@ export default function InfoSection() {
               <h3 className="text-lg font-semibold text-slate-900 mb-2 group-hover:text-white transition-colors">{feature.title}</h3>
               <p className="text-slate-600 group-hover:text-blue-100 transition-colors">{feature.description}</p>
             </div>
-          ))}
+          );
+          })}
         </div>
       </div>
     </section>
