@@ -96,11 +96,40 @@ Deno.serve(async (req) => {
           .filter(s => s.classgroup_id === classGroup.id)
           .map(s => ({ day: s.day, period: s.period }));
 
-        // Schedule 1 period per day (5 days = full week coverage)
-        for (const day of days) {
-          let scheduled = false;
+        // Determine periods needed based on subject hours
+        const hoursPerWeek = subject.pyp_myp_hours_per_week || 4;
+        const periodsNeeded = Math.ceil(hoursPerWeek);
+        
+        // Distribute across the week with variety
+        const daysToUse = Math.min(periodsNeeded, 5);
+        const periodsPerDay = Math.ceil(periodsNeeded / daysToUse);
+        let periodsScheduled = 0;
 
-          for (const period of periods) {
+        // Create varied period assignments for each day
+        const periodsByDay = {};
+        days.forEach((day, dayIndex) => {
+          const offset = dayIndex * 2;
+          const dayPeriods = [...periods]
+            .map(p => ((p - 1 + offset) % 12) + 1)
+            .sort(() => Math.random() - 0.5);
+          periodsByDay[day] = dayPeriods;
+        });
+
+        const dayPeriodCount = {};
+        days.forEach(d => { dayPeriodCount[d] = 0; });
+
+        // First pass: Try to schedule with variety
+        for (const day of days) {
+          if (periodsScheduled >= periodsNeeded) break;
+
+          const targetForDay = dayPeriodCount[day] < Math.floor(periodsNeeded / daysToUse) 
+            ? Math.floor(periodsNeeded / daysToUse)
+            : (periodsScheduled < periodsNeeded ? 1 : 0);
+
+          for (const period of periodsByDay[day]) {
+            if (periodsScheduled >= periodsNeeded) break;
+            if (dayPeriodCount[day] >= targetForDay && targetForDay > 0) break;
+
             // Check ClassGroup availability
             const classGroupBusy = classGroupSchedule.some(s => s.day === day && s.period === period);
             if (classGroupBusy) continue;
@@ -142,13 +171,63 @@ Deno.serve(async (req) => {
               teacherSchedules[assignedTeacher.id].push({ day, period });
             }
             roomSchedules[assignedRoom.id].push({ day, period });
-            scheduled = true;
-            break; // Move to next day
+            periodsScheduled++;
+            dayPeriodCount[day]++;
           }
+        }
 
-          if (!scheduled) {
-            console.warn(`Could not schedule ${subject.name} for ${classGroup.name} on ${day}`);
+        // Second pass: Fill remaining periods more flexibly if needed
+        if (periodsScheduled < periodsNeeded) {
+          for (const day of days) {
+            if (periodsScheduled >= periodsNeeded) break;
+
+            for (const period of periods) {
+              if (periodsScheduled >= periodsNeeded) break;
+
+              const classGroupBusy = classGroupSchedule.some(s => s.day === day && s.period === period);
+              if (classGroupBusy) continue;
+
+              if (assignedTeacher) {
+                const teacherBusy = teacherSchedules[assignedTeacher.id]?.some(s => s.day === day && s.period === period);
+                if (teacherBusy) continue;
+              }
+
+              let assignedRoom = null;
+              for (const room of rooms) {
+                const roomBusy = roomSchedules[room.id]?.some(s => s.day === day && s.period === period);
+                if (!roomBusy) {
+                  assignedRoom = room;
+                  break;
+                }
+              }
+
+              if (!assignedRoom) continue;
+
+              const slot = {
+                school_id: user.school_id,
+                schedule_version: schedule_version_id,
+                classgroup_id: classGroup.id,
+                subject_id: subject.id,
+                teacher_id: assignedTeacher ? assignedTeacher.id : null,
+                room_id: assignedRoom.id,
+                day,
+                period,
+                status: assignedTeacher ? 'scheduled' : 'tentative'
+              };
+
+              slots.push(slot);
+              classGroupSchedule.push({ day, period });
+              if (assignedTeacher) {
+                teacherSchedules[assignedTeacher.id].push({ day, period });
+              }
+              roomSchedules[assignedRoom.id].push({ day, period });
+              periodsScheduled++;
+            }
           }
+        }
+
+        if (periodsScheduled < periodsNeeded) {
+          console.warn(`${subject.name} for ${classGroup.name}: only scheduled ${periodsScheduled}/${periodsNeeded} periods`);
         }
       }
     }
