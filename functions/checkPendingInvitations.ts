@@ -32,6 +32,14 @@ Deno.serve(async (req) => {
       });
     }
 
+    // Check if user already has a school assigned
+    if (user.school_id) {
+      return Response.json({ 
+        hasPendingInvite: false,
+        message: 'You are already assigned to a school'
+      });
+    }
+
     // Assign user to school
     await base44.asServiceRole.entities.User.update(user.id, {
       school_id: invite.school_id
