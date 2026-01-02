@@ -120,7 +120,7 @@ export default function InfoSection() {
           {features.map((feature, index) => (
             <motion.div 
               key={index} 
-              className="p-6 rounded-xl bg-gradient-to-br from-white via-blue-50/30 to-white backdrop-blur-sm border-2 border-blue-200 hover:border-blue-400 transition-all group"
+              className="p-6 rounded-xl bg-gradient-to-br from-white via-blue-50/30 to-white backdrop-blur-sm border-2 border-blue-200 transition-all group hover:bg-gradient-to-br hover:from-blue-900 hover:to-blue-950 hover:border-blue-900"
               initial={{ opacity: 0, y: 50 }}
               whileInView={{ opacity: 1, y: 0 }}
               viewport={{ once: true, margin: "-50px" }}
@@ -130,8 +130,8 @@ export default function InfoSection() {
               <div className="w-12 h-12 rounded-lg bg-gradient-to-br from-blue-950 via-blue-900 to-blue-800 flex items-center justify-center mb-4 group-hover:scale-110 transition-transform shadow-lg">
                 <feature.icon className="w-6 h-6 text-white" />
               </div>
-              <h3 className="text-lg font-semibold text-slate-900 mb-2">{feature.title}</h3>
-              <p className="text-slate-600">{feature.description}</p>
+              <h3 className="text-lg font-semibold text-slate-900 mb-2 group-hover:text-white transition-colors">{feature.title}</h3>
+              <p className="text-slate-600 group-hover:text-blue-100 transition-colors">{feature.description}</p>
             </motion.div>
           ))}
         </div>
