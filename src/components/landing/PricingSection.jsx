@@ -111,7 +111,7 @@ export default function PricingSection() {
             {plans.map((plan, index) => (
               <motion.div 
                 key={index} 
-                className="relative p-10 rounded-3xl bg-white border-2 border-indigo-600 shadow-2xl"
+                className="relative p-10 rounded-3xl bg-white shadow-2xl"
                 initial={{ opacity: 0, scale: 0.9 }}
                 whileInView={{ opacity: 1, scale: 1 }}
                 viewport={{ once: true }}
@@ -168,7 +168,7 @@ export default function PricingSection() {
           {/* Right Stats */}
           <div className="lg:col-span-3 space-y-6">
             <motion.div 
-              className="bg-gradient-to-br from-emerald-50 to-green-100/80 backdrop-blur-sm p-6 rounded-2xl border border-emerald-200 shadow-sm"
+              className="bg-gradient-to-br from-emerald-50 to-green-100/80 backdrop-blur-sm p-6 rounded-2xl shadow-sm"
               initial={{ opacity: 0, x: 50 }}
               whileInView={{ opacity: 1, x: 0 }}
               viewport={{ once: true }}
@@ -179,7 +179,7 @@ export default function PricingSection() {
               <p className="text-slate-700">Priority Support</p>
             </motion.div>
             <motion.div 
-              className="bg-gradient-to-br from-amber-50 to-yellow-100/80 backdrop-blur-sm p-6 rounded-2xl border border-amber-200 shadow-sm"
+              className="bg-gradient-to-br from-amber-50 to-yellow-100/80 backdrop-blur-sm p-6 rounded-2xl shadow-sm"
               initial={{ opacity: 0, x: 50 }}
               whileInView={{ opacity: 1, x: 0 }}
               viewport={{ once: true }}
@@ -196,15 +196,15 @@ export default function PricingSection() {
         <div className="mt-20 text-center">
           <p className="text-slate-600 text-lg mb-6 font-medium">Trusted by IB schools worldwide 🌍</p>
           <div className="flex flex-wrap justify-center items-center gap-6 md:gap-12">
-            <div className="flex items-center gap-2 text-slate-700 bg-gradient-to-r from-blue-50 to-blue-100 backdrop-blur-sm px-6 py-3 rounded-full border border-blue-200">
+            <div className="flex items-center gap-2 text-slate-700 bg-gradient-to-r from-blue-50 to-blue-100 backdrop-blur-sm px-6 py-3 rounded-full"
               <CheckCircle className="w-5 h-5 text-emerald-600" />
               <span className="font-medium">Secure Stripe Payments</span>
             </div>
-            <div className="flex items-center gap-2 text-slate-700 bg-gradient-to-r from-blue-50 to-blue-100 backdrop-blur-sm px-6 py-3 rounded-full border border-blue-200">
+            <div className="flex items-center gap-2 text-slate-700 bg-gradient-to-r from-blue-50 to-blue-100 backdrop-blur-sm px-6 py-3 rounded-full"
               <CheckCircle className="w-5 h-5 text-emerald-600" />
               <span className="font-medium">Cancel Anytime</span>
             </div>
-            <div className="flex items-center gap-2 text-slate-700 bg-gradient-to-r from-blue-50 to-blue-100 backdrop-blur-sm px-6 py-3 rounded-full border border-blue-200">
+            <div className="flex items-center gap-2 text-slate-700 bg-gradient-to-r from-blue-50 to-blue-100 backdrop-blur-sm px-6 py-3 rounded-full"
               <CheckCircle className="w-5 h-5 text-emerald-600" />
               <span className="font-medium">30-Day Money Back</span>
             </div>

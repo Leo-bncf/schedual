@@ -8,7 +8,7 @@ export default function MissionSection() {
 
       <div className="max-w-4xl mx-auto text-center relative z-10">
         <motion.div 
-          className="inline-flex items-center gap-2 mb-6 bg-blue-50 border border-blue-200 px-6 py-3 rounded-full"
+          className="inline-flex items-center gap-2 mb-6 bg-blue-50 px-6 py-3 rounded-full"
           initial={{ opacity: 0, y: -20 }}
           whileInView={{ opacity: 1, y: 0 }}
           viewport={{ once: true }}
