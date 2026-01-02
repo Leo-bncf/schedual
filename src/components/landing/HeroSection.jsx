@@ -25,32 +25,26 @@ export default function HeroSection() {
   };
 
   return (
-    <section className="relative min-h-screen pt-32 pb-60 px-4 sm:px-6 lg:px-8 overflow-hidden" style={{
-      background: 'linear-gradient(135deg, #3B82F6 0%, #14B8A6 33%, #A855F7 66%, #1E40AF 100%)'
-    }}>
-      {/* Animated background elements */}
-      <div className="absolute inset-0 opacity-20">
-        <div className="absolute top-20 left-10 w-72 h-72 bg-cyan-300 rounded-full blur-3xl animate-pulse"></div>
-        <div className="absolute bottom-20 right-10 w-96 h-96 bg-purple-500 rounded-full blur-3xl animate-pulse"></div>
-        <div className="absolute top-1/2 left-1/2 w-64 h-64 bg-teal-400 rounded-full blur-3xl animate-pulse"></div>
-      </div>
+    <section className="relative min-h-screen pt-32 pb-20 px-4 sm:px-6 lg:px-8 overflow-hidden bg-white">
+      {/* Blue splat effect at top */}
+      <div className="absolute -top-40 left-1/2 -translate-x-1/2 w-[1200px] h-[600px] bg-gradient-to-br from-blue-400/30 via-indigo-400/20 to-purple-400/30 rounded-full blur-3xl"></div>
 
       <div className="max-w-5xl mx-auto relative z-10 text-center">
-        <div className="inline-block mb-6 bg-white/20 backdrop-blur-sm px-6 py-3 rounded-full">
-          <span className="text-white font-semibold text-lg">✨ Next Generation Schedule Creation</span>
+        <div className="inline-block mb-6 bg-blue-100 px-6 py-3 rounded-full">
+          <span className="text-blue-900 font-semibold text-lg">✨ Next Generation Schedule Creation</span>
         </div>
         
-        <h1 className="text-6xl sm:text-7xl font-bold text-white leading-tight mb-8">
+        <h1 className="text-6xl sm:text-7xl font-bold text-slate-900 leading-tight mb-8">
           The Future of IB School Scheduling
         </h1>
         
-        <p className="text-2xl text-white/90 mb-12 leading-relaxed max-w-3xl mx-auto">
+        <p className="text-2xl text-slate-600 mb-12 leading-relaxed max-w-3xl mx-auto">
           Experience next generation schedule creation powered by AI. Generate perfect, conflict-free timetables for all IB programmes in minutes, not weeks.
         </p>
         
         <Button 
           size="lg" 
-          className="bg-white text-blue-900 hover:bg-white/90 text-lg px-10 py-7 shadow-2xl text-xl"
+          className="bg-blue-900 text-white hover:bg-blue-950 text-lg px-10 py-7 shadow-2xl text-xl"
           onClick={scrollToInfo}
         >
           Discover How It Works
