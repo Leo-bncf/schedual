@@ -1,6 +1,7 @@
 import React, { useEffect, useState } from 'react';
 import { Button } from "@/components/ui/button";
 import { ArrowRight, Calendar, Users, BookOpen } from 'lucide-react';
+import { motion } from 'framer-motion';
 
 export default function HeroSection() {
   const [scrollProgress, setScrollProgress] = useState(0);
@@ -32,40 +33,70 @@ export default function HeroSection() {
       <div className="absolute top-10 right-1/4 w-[600px] h-[600px] bg-gradient-to-tr from-cyan-400/45 via-sky-500/50 to-blue-400/45 rounded-full blur-3xl"></div>
 
       <div className="max-w-5xl mx-auto relative z-10 text-center">
-        <h1 className="text-6xl sm:text-7xl font-bold text-slate-900 leading-tight mb-8">
+        <motion.h1 
+          initial={{ opacity: 0, y: 30 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ duration: 0.8, ease: "easeOut" }}
+          style={{ opacity: 1 - scrollProgress * 0.8, transform: `translateY(${scrollProgress * -50}px) scale(${1 - scrollProgress * 0.1})` }}
+          className="text-6xl sm:text-7xl font-bold text-slate-900 leading-tight mb-8"
+        >
           The Future of IB Scheduling
-        </h1>
+        </motion.h1>
         
-        <p className="text-2xl text-slate-800 mb-12 leading-relaxed max-w-3xl mx-auto">
+        <motion.p 
+          initial={{ opacity: 0, y: 30 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ duration: 0.8, delay: 0.2, ease: "easeOut" }}
+          style={{ opacity: 1 - scrollProgress * 0.8, transform: `translateY(${scrollProgress * -40}px)` }}
+          className="text-2xl text-slate-800 mb-12 leading-relaxed max-w-3xl mx-auto"
+        >
           Experience next generation schedule creation powered by AI. Generate perfect, conflict-free timetables for all IB programmes in minutes, not weeks.
-        </p>
+        </motion.p>
 
         {/* Feature Cards */}
-        <div className="grid md:grid-cols-3 gap-6 mt-20 max-w-4xl mx-auto">
-          <div className="bg-white/95 backdrop-blur-xl rounded-2xl shadow-2xl p-6 border border-white/50">
+        <motion.div 
+          className="grid md:grid-cols-3 gap-6 mt-20 max-w-4xl mx-auto"
+          style={{ opacity: 1 - scrollProgress * 1.2, transform: `translateY(${scrollProgress * -30}px) scale(${1 - scrollProgress * 0.15})` }}
+        >
+          <motion.div 
+            initial={{ opacity: 0, y: 50, scale: 0.9 }}
+            animate={{ opacity: 1, y: 0, scale: 1 }}
+            transition={{ duration: 0.6, delay: 0.4, ease: "easeOut" }}
+            className="bg-white/95 backdrop-blur-xl rounded-2xl shadow-2xl p-6 border border-white/50"
+          >
             <div className="w-14 h-14 bg-gradient-to-br from-blue-900 to-blue-800 rounded-xl flex items-center justify-center mx-auto mb-4">
               <Calendar className="w-8 h-8 text-white" />
             </div>
             <div className="font-bold text-slate-900 text-lg mb-2">AI-Powered</div>
             <div className="text-sm text-slate-700">Intelligent optimization in seconds</div>
-          </div>
+          </motion.div>
           
-          <div className="bg-white/95 backdrop-blur-xl rounded-2xl shadow-2xl p-6 border border-white/50">
+          <motion.div 
+            initial={{ opacity: 0, y: 50, scale: 0.9 }}
+            animate={{ opacity: 1, y: 0, scale: 1 }}
+            transition={{ duration: 0.6, delay: 0.5, ease: "easeOut" }}
+            className="bg-white/95 backdrop-blur-xl rounded-2xl shadow-2xl p-6 border border-white/50"
+          >
             <div className="w-14 h-14 bg-gradient-to-br from-blue-900 to-blue-800 rounded-xl flex items-center justify-center mx-auto mb-4">
               <Users className="w-8 h-8 text-white" />
             </div>
             <div className="font-bold text-slate-900 text-lg mb-2">Smart Constraints</div>
             <div className="text-sm text-slate-700">Manage complex rules effortlessly</div>
-          </div>
+          </motion.div>
           
-          <div className="bg-white/95 backdrop-blur-xl rounded-2xl shadow-2xl p-6 border border-white/50">
+          <motion.div 
+            initial={{ opacity: 0, y: 50, scale: 0.9 }}
+            animate={{ opacity: 1, y: 0, scale: 1 }}
+            transition={{ duration: 0.6, delay: 0.6, ease: "easeOut" }}
+            className="bg-white/95 backdrop-blur-xl rounded-2xl shadow-2xl p-6 border border-white/50"
+          >
             <div className="w-14 h-14 bg-gradient-to-br from-blue-900 to-blue-800 rounded-xl flex items-center justify-center mx-auto mb-4">
               <BookOpen className="w-8 h-8 text-white" />
             </div>
             <div className="font-bold text-slate-900 text-lg mb-2">IB Compliant</div>
             <div className="text-sm text-slate-700">Full PYP, MYP, DP support</div>
-          </div>
-        </div>
+          </motion.div>
+        </motion.div>
       </div>
     </section>
   );
