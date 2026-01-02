@@ -96,20 +96,11 @@ Deno.serve(async (req) => {
           .filter(s => s.classgroup_id === classGroup.id)
           .map(s => ({ day: s.day, period: s.period }));
 
-        // Calculate periods needed for this subject
-        const hoursPerWeek = subject.pyp_myp_hours_per_week || 4;
-        const periodsNeeded = Math.min(hoursPerWeek, 5); // Max 1 per day
-        
-        // Distribute across different days for variety
-        const daysToUse = [...days].sort(() => Math.random() - 0.5).slice(0, periodsNeeded);
-        
-        for (const day of daysToUse) {
+        // Schedule 1 period per day (5 days = full week coverage)
+        for (const day of days) {
           let scheduled = false;
 
-          // Randomize period order for variety
-          const shuffledPeriods = [...periods].sort(() => Math.random() - 0.5);
-
-          for (const period of shuffledPeriods) {
+          for (const period of periods) {
             // Check ClassGroup availability
             const classGroupBusy = classGroupSchedule.some(s => s.day === day && s.period === period);
             if (classGroupBusy) continue;
@@ -152,11 +143,11 @@ Deno.serve(async (req) => {
             }
             roomSchedules[assignedRoom.id].push({ day, period });
             scheduled = true;
-            break;
+            break; // Move to next day
           }
 
           if (!scheduled) {
-            console.warn(`Could not schedule ${subject.name} for ${classGroup.name} on ${day} - trying next period slot`);
+            console.warn(`Could not schedule ${subject.name} for ${classGroup.name} on ${day}`);
           }
         }
       }
