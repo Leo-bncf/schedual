@@ -176,7 +176,7 @@ export default function Schedule() {
     enabled: !!schoolId,
   });
 
-  const { data: constraints = [] } = useQuery({
+  const { data: constraints = [], refetch: refetchConstraints } = useQuery({
     queryKey: ['constraints', schoolId],
     queryFn: () => base44.entities.Constraint.filter({ school_id: schoolId }),
     enabled: !!schoolId,
@@ -268,6 +268,7 @@ Now process the user's input and return ONLY the JSON object.`,
 
       await base44.entities.Constraint.create(constraintData);
       await queryClient.invalidateQueries({ queryKey: ['constraints', schoolId] });
+      await refetchConstraints();
       
       setConstraintDialogOpen(false);
       setConstraintInput('');
