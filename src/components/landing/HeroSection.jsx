@@ -62,7 +62,7 @@ export default function HeroSection() {
           style={{ opacity: 1 - scrollProgress * 1.2, transform: `translateY(${scrollProgress * -30}px) scale(${1 - scrollProgress * 0.15})` }}
         >
           <div 
-            className="bg-white/95 backdrop-blur-xl rounded-2xl shadow-2xl p-6 border-2 border-transparent hover:border-cyan-500 transition-all duration-500 hover:shadow-[0_0_0_2px_rgb(6,182,212),0_0_20px_rgba(6,182,212,0.3)]"
+            className="bg-white/95 backdrop-blur-xl rounded-2xl shadow-2xl p-6 border-2 border-transparent hover:border-purple-700 transition-all duration-500 hover:shadow-[0_0_0_2px_rgb(126,34,206),0_0_20px_rgba(126,34,206,0.3)]"
           >
             <div className="w-14 h-14 bg-gradient-to-br from-blue-900 to-blue-800 rounded-xl flex items-center justify-center mx-auto mb-4">
               <Calendar className="w-8 h-8 text-white" />
@@ -72,7 +72,7 @@ export default function HeroSection() {
           </div>
 
             <div 
-            className="bg-white/95 backdrop-blur-xl rounded-2xl shadow-2xl p-6 border-2 border-transparent hover:border-fuchsia-500 transition-all duration-500 hover:shadow-[0_0_0_2px_rgb(217,70,239),0_0_20px_rgba(217,70,239,0.3)]"
+            className="bg-white/95 backdrop-blur-xl rounded-2xl shadow-2xl p-6 border-2 border-transparent hover:border-purple-700 transition-all duration-500 hover:shadow-[0_0_0_2px_rgb(126,34,206),0_0_20px_rgba(126,34,206,0.3)]"
           >
             <div className="w-14 h-14 bg-gradient-to-br from-blue-900 to-blue-800 rounded-xl flex items-center justify-center mx-auto mb-4">
               <Users className="w-8 h-8 text-white" />
@@ -82,7 +82,7 @@ export default function HeroSection() {
           </div>
 
             <div 
-            className="bg-white/95 backdrop-blur-xl rounded-2xl shadow-2xl p-6 border-2 border-transparent hover:border-blue-500 transition-all duration-500 hover:shadow-[0_0_0_2px_rgb(59,130,246),0_0_20px_rgba(59,130,246,0.3)]"
+            className="bg-white/95 backdrop-blur-xl rounded-2xl shadow-2xl p-6 border-2 border-transparent hover:border-purple-700 transition-all duration-500 hover:shadow-[0_0_0_2px_rgb(126,34,206),0_0_20px_rgba(126,34,206,0.3)]"
           >
             <div className="w-14 h-14 bg-gradient-to-br from-blue-900 to-blue-800 rounded-xl flex items-center justify-center mx-auto mb-4">
               <BookOpen className="w-8 h-8 text-white" />
