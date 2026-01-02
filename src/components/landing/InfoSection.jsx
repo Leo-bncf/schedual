@@ -44,7 +44,13 @@ export default function InfoSection() {
       </div>
       <div className="max-w-7xl mx-auto relative z-10">
         {/* Section Header */}
-        <div className="text-center mb-16">
+        <motion.div 
+          className="text-center mb-16"
+          initial={{ opacity: 0, y: 50 }}
+          whileInView={{ opacity: 1, y: 0 }}
+          viewport={{ once: true }}
+          transition={{ duration: 0.8 }}
+        >
           <h2 className="text-4xl font-bold text-slate-900 mb-4">
             Everything You Need for IB Scheduling
           </h2>
@@ -52,23 +58,25 @@ export default function InfoSection() {
             Stop spending weeks on manual scheduling. Our platform automates the entire process 
             while respecting all your constraints and requirements.
           </p>
-        </div>
-
-
+        </motion.div>
 
         {/* Features Grid */}
         <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-8">
           {features.map((feature, index) => (
-            <div 
+            <motion.div 
               key={index} 
               className="p-6 rounded-xl bg-gradient-to-br from-white via-blue-50/30 to-white backdrop-blur-sm border-2 border-transparent hover:border-purple-700 group hover:bg-gradient-to-br hover:from-blue-900 hover:to-blue-950 transition-all duration-500 hover:shadow-[0_0_0_2px_rgb(126,34,206),0_0_20px_rgba(126,34,206,0.3)]"
+              initial={{ opacity: 0, y: 60 }}
+              whileInView={{ opacity: 1, y: 0 }}
+              viewport={{ once: true }}
+              transition={{ duration: 0.6, delay: index * 0.1 }}
             >
               <div className="w-12 h-12 rounded-lg bg-gradient-to-br from-blue-950 via-blue-900 to-blue-800 flex items-center justify-center mb-4 group-hover:scale-110 transition-all shadow-lg group-hover:from-sky-400 group-hover:via-fuchsia-500 group-hover:to-blue-500">
                 <feature.icon className="w-6 h-6 text-white" />
               </div>
               <h3 className="text-lg font-semibold text-slate-900 mb-2 group-hover:text-white transition-colors">{feature.title}</h3>
               <p className="text-slate-600 group-hover:text-blue-100 transition-colors">{feature.description}</p>
-            </div>
+            </motion.div>
           ))}
         </div>
       </div>
