@@ -6,13 +6,9 @@ export default function ComparisonSection() {
     <section className="py-20 px-4 sm:px-6 lg:px-8 bg-slate-50">
       <div className="max-w-7xl mx-auto">
         <div className="grid md:grid-cols-2 gap-8">
-          <motion.div 
-            className="bg-white p-8 rounded-2xl border-2 border-slate-200 group hover:bg-gradient-to-br hover:from-blue-900 hover:to-blue-950 hover:border-blue-900 transition-all cursor-pointer"
-            initial={{ opacity: 0, x: -50 }}
-            whileInView={{ opacity: 1, x: 0 }}
-            viewport={{ once: true }}
-            transition={{ duration: 0.5 }}
-            whileHover={{ scale: 1.05, y: -8 }}
+          <div 
+            className="bg-white p-8 rounded-2xl border-2 border-transparent group hover:bg-gradient-to-br hover:from-blue-900 hover:to-blue-950 transition-all cursor-pointer"
+            style={{ borderImage: 'linear-gradient(to right, rgb(56, 189, 248), rgb(217, 70, 239), rgb(59, 130, 246)) 1' }}
           >
             <h3 className="text-2xl font-semibold text-slate-900 mb-4 group-hover:text-white transition-colors">Existing Solutions</h3>
             <ul className="space-y-3 text-slate-700 group-hover:text-blue-100 transition-colors">
@@ -33,15 +29,11 @@ export default function ComparisonSection() {
                 <span>IB requirements are complex to manage</span>
               </li>
             </ul>
-          </motion.div>
+          </div>
 
-          <motion.div 
-            className="bg-white p-8 rounded-2xl border-2 border-slate-200 group hover:bg-gradient-to-br hover:from-blue-900 hover:to-blue-950 hover:border-blue-900 transition-all cursor-pointer"
-            initial={{ opacity: 0, x: 50 }}
-            whileInView={{ opacity: 1, x: 0 }}
-            viewport={{ once: true }}
-            transition={{ duration: 0.5 }}
-            whileHover={{ scale: 1.05, y: -8 }}
+          <div 
+            className="bg-white p-8 rounded-2xl border-2 border-transparent group hover:bg-gradient-to-br hover:from-blue-900 hover:to-blue-950 transition-all cursor-pointer"
+            style={{ borderImage: 'linear-gradient(to right, rgb(56, 189, 248), rgb(217, 70, 239), rgb(59, 130, 246)) 1' }}
           >
             <h3 className="text-2xl font-semibold text-slate-900 mb-4 group-hover:text-white transition-colors">IB Schedual Pro</h3>
             <ul className="space-y-3 text-slate-700 group-hover:text-blue-100 transition-colors">
@@ -62,7 +54,7 @@ export default function ComparisonSection() {
                 <span>Built-in IB compliance checks</span>
               </li>
             </ul>
-          </motion.div>
+          </div>
         </div>
       </div>
     </section>

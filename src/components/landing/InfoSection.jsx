@@ -59,21 +59,17 @@ export default function InfoSection() {
         {/* Features Grid */}
         <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-8">
           {features.map((feature, index) => (
-            <motion.div 
+            <div 
               key={index} 
-              className="p-6 rounded-xl bg-gradient-to-br from-white via-blue-50/30 to-white backdrop-blur-sm border-2 border-blue-200 transition-all group hover:bg-gradient-to-br hover:from-blue-900 hover:to-blue-950 hover:border-blue-900"
-              initial={{ opacity: 0, y: 50 }}
-              whileInView={{ opacity: 1, y: 0 }}
-              viewport={{ once: true, margin: "-50px" }}
-              transition={{ duration: 0.5, delay: index * 0.1 }}
-              whileHover={{ scale: 1.05, y: -8, boxShadow: "0 20px 25px -5px rgba(0, 0, 0, 0.1), 0 10px 10px -5px rgba(0, 0, 0, 0.04)" }}
+              className="p-6 rounded-xl bg-gradient-to-br from-white via-blue-50/30 to-white backdrop-blur-sm border-2 hover:border-transparent group hover:bg-gradient-to-br hover:from-blue-900 hover:to-blue-950 transition-all"
+              style={{ borderImage: 'linear-gradient(to right, rgb(56, 189, 248), rgb(217, 70, 239), rgb(59, 130, 246)) 1' }}
             >
               <div className="w-12 h-12 rounded-lg bg-gradient-to-br from-blue-950 via-blue-900 to-blue-800 flex items-center justify-center mb-4 group-hover:scale-110 transition-all shadow-lg group-hover:from-sky-400 group-hover:via-fuchsia-500 group-hover:to-blue-500">
                 <feature.icon className="w-6 h-6 text-white" />
               </div>
               <h3 className="text-lg font-semibold text-slate-900 mb-2 group-hover:text-white transition-colors">{feature.title}</h3>
               <p className="text-slate-600 group-hover:text-blue-100 transition-colors">{feature.description}</p>
-            </motion.div>
+            </div>
           ))}
         </div>
       </div>

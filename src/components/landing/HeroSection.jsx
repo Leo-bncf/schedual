@@ -61,44 +61,38 @@ export default function HeroSection() {
           className="grid md:grid-cols-3 gap-6 mt-20 max-w-4xl mx-auto"
           style={{ opacity: 1 - scrollProgress * 1.2, transform: `translateY(${scrollProgress * -30}px) scale(${1 - scrollProgress * 0.15})` }}
         >
-          <motion.div 
-            initial={{ opacity: 0, y: 50, scale: 0.9 }}
-            animate={{ opacity: 1, y: 0, scale: 1 }}
-            transition={{ duration: 0.6, delay: 0.4, ease: "easeOut" }}
-            className="bg-white/95 backdrop-blur-xl rounded-2xl shadow-2xl p-6 border border-white/50"
+          <div 
+            className="bg-white/95 backdrop-blur-xl rounded-2xl shadow-2xl p-6 border-2 border-transparent hover:border-gradient-to-r hover:from-sky-400 hover:via-fuchsia-500 hover:to-blue-500 transition-all"
+            style={{ borderImage: 'linear-gradient(to right, rgb(56, 189, 248), rgb(217, 70, 239), rgb(59, 130, 246)) 1' }}
           >
             <div className="w-14 h-14 bg-gradient-to-br from-blue-900 to-blue-800 rounded-xl flex items-center justify-center mx-auto mb-4">
               <Calendar className="w-8 h-8 text-white" />
             </div>
             <div className="font-bold text-slate-900 text-lg mb-2">AI-Powered</div>
             <div className="text-sm text-slate-700">Intelligent optimization in seconds</div>
-          </motion.div>
-          
-          <motion.div 
-            initial={{ opacity: 0, y: 50, scale: 0.9 }}
-            animate={{ opacity: 1, y: 0, scale: 1 }}
-            transition={{ duration: 0.6, delay: 0.5, ease: "easeOut" }}
-            className="bg-white/95 backdrop-blur-xl rounded-2xl shadow-2xl p-6 border border-white/50"
+          </div>
+
+            <div 
+            className="bg-white/95 backdrop-blur-xl rounded-2xl shadow-2xl p-6 border-2 border-transparent hover:border-gradient-to-r hover:from-sky-400 hover:via-fuchsia-500 hover:to-blue-500 transition-all"
+            style={{ borderImage: 'linear-gradient(to right, rgb(56, 189, 248), rgb(217, 70, 239), rgb(59, 130, 246)) 1' }}
           >
             <div className="w-14 h-14 bg-gradient-to-br from-blue-900 to-blue-800 rounded-xl flex items-center justify-center mx-auto mb-4">
               <Users className="w-8 h-8 text-white" />
             </div>
             <div className="font-bold text-slate-900 text-lg mb-2">Smart Constraints</div>
             <div className="text-sm text-slate-700">Manage complex rules effortlessly</div>
-          </motion.div>
-          
-          <motion.div 
-            initial={{ opacity: 0, y: 50, scale: 0.9 }}
-            animate={{ opacity: 1, y: 0, scale: 1 }}
-            transition={{ duration: 0.6, delay: 0.6, ease: "easeOut" }}
-            className="bg-white/95 backdrop-blur-xl rounded-2xl shadow-2xl p-6 border border-white/50"
+          </div>
+
+            <div 
+            className="bg-white/95 backdrop-blur-xl rounded-2xl shadow-2xl p-6 border-2 border-transparent hover:border-gradient-to-r hover:from-sky-400 hover:via-fuchsia-500 hover:to-blue-500 transition-all"
+            style={{ borderImage: 'linear-gradient(to right, rgb(56, 189, 248), rgb(217, 70, 239), rgb(59, 130, 246)) 1' }}
           >
             <div className="w-14 h-14 bg-gradient-to-br from-blue-900 to-blue-800 rounded-xl flex items-center justify-center mx-auto mb-4">
               <BookOpen className="w-8 h-8 text-white" />
             </div>
             <div className="font-bold text-slate-900 text-lg mb-2">IB Compliant</div>
             <div className="text-sm text-slate-700">Full PYP, MYP, DP support</div>
-          </motion.div>
+          </div>
         </motion.div>
       </div>
     </section>

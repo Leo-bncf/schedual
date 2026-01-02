@@ -72,17 +72,16 @@ export default function HowItWorksSection() {
               </div>
 
               {/* Step Content */}
-              <motion.div 
-                className="flex-1 bg-white p-6 rounded-xl border-2 border-blue-100 shadow-lg hover:shadow-2xl transition-all"
-                whileHover={{ scale: 1.03, y: -8 }}
-                transition={{ duration: 0.2 }}
+              <div 
+                className="flex-1 bg-white p-6 rounded-xl border-2 border-transparent shadow-lg hover:shadow-2xl transition-all"
+                style={{ borderImage: 'linear-gradient(to right, rgb(56, 189, 248), rgb(217, 70, 239), rgb(59, 130, 246)) 1' }}
               >
                 <div className="flex items-center gap-3 mb-3">
                   <step.icon className="w-6 h-6 text-blue-900" />
                   <h3 className="text-xl font-semibold text-slate-900">{step.title}</h3>
                 </div>
                 <p className="text-slate-600 leading-relaxed">{step.description}</p>
-              </motion.div>
+              </div>
 
               {/* Connector Line */}
               {index < steps.length - 1 && (
