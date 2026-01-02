@@ -32,11 +32,11 @@ export default function HeroSection() {
       <div className="absolute top-10 right-1/4 w-[600px] h-[600px] bg-gradient-to-tr from-blue-800/30 via-indigo-700/35 to-blue-600/30 rounded-full blur-3xl"></div>
 
       <div className="max-w-5xl mx-auto relative z-10 text-center">
-        <h1 className="text-6xl sm:text-7xl font-bold text-blue-900 leading-tight mb-8">
+        <h1 className="text-6xl sm:text-7xl font-bold text-blue-950 leading-tight mb-8">
           The Future of IB Scheduling
         </h1>
         
-        <p className="text-2xl text-blue-800 mb-12 leading-relaxed max-w-3xl mx-auto">
+        <p className="text-2xl text-blue-900 mb-12 leading-relaxed max-w-3xl mx-auto">
           Experience next generation schedule creation powered by AI. Generate perfect, conflict-free timetables for all IB programmes in minutes, not weeks.
         </p>
 
@@ -46,24 +46,24 @@ export default function HeroSection() {
             <div className="w-14 h-14 bg-gradient-to-br from-blue-900 to-blue-800 rounded-xl flex items-center justify-center mx-auto mb-4">
               <Calendar className="w-8 h-8 text-white" />
             </div>
-            <div className="font-bold text-blue-900 text-lg mb-2">AI-Powered</div>
-            <div className="text-sm text-blue-800">Intelligent optimization in seconds</div>
+            <div className="font-bold text-blue-950 text-lg mb-2">AI-Powered</div>
+            <div className="text-sm text-blue-900">Intelligent optimization in seconds</div>
           </div>
           
           <div className="bg-white/95 backdrop-blur-xl rounded-2xl shadow-2xl p-6 border border-white/50">
             <div className="w-14 h-14 bg-gradient-to-br from-blue-900 to-blue-800 rounded-xl flex items-center justify-center mx-auto mb-4">
               <Users className="w-8 h-8 text-white" />
             </div>
-            <div className="font-bold text-blue-900 text-lg mb-2">Smart Constraints</div>
-            <div className="text-sm text-blue-800">Manage complex rules effortlessly</div>
+            <div className="font-bold text-blue-950 text-lg mb-2">Smart Constraints</div>
+            <div className="text-sm text-blue-900">Manage complex rules effortlessly</div>
           </div>
           
           <div className="bg-white/95 backdrop-blur-xl rounded-2xl shadow-2xl p-6 border border-white/50">
             <div className="w-14 h-14 bg-gradient-to-br from-blue-900 to-blue-800 rounded-xl flex items-center justify-center mx-auto mb-4">
               <BookOpen className="w-8 h-8 text-white" />
             </div>
-            <div className="font-bold text-blue-900 text-lg mb-2">IB Compliant</div>
-            <div className="text-sm text-blue-800">Full PYP, MYP, DP support</div>
+            <div className="font-bold text-blue-950 text-lg mb-2">IB Compliant</div>
+            <div className="text-sm text-blue-900">Full PYP, MYP, DP support</div>
           </div>
         </div>
       </div>
