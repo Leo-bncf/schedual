@@ -35,7 +35,11 @@ import {
   Archive,
   Loader2,
   Trash2,
-  Users
+  Users,
+  Hash,
+  Timer,
+  Shield,
+  Info
 } from 'lucide-react';
 import PageHeader from '../components/ui-custom/PageHeader';
 import TimetableGrid from '../components/schedule/TimetableGrid';
@@ -1099,6 +1103,8 @@ export default function Schedule() {
                     <TabsTrigger value="student">Student View</TabsTrigger>
                     <TabsTrigger value="teacher">Teacher View</TabsTrigger>
                     <TabsTrigger value="list">List View</TabsTrigger>
+                    <TabsTrigger value="config">Configuration</TabsTrigger>
+                    <TabsTrigger value="constraints">Constraints</TabsTrigger>
                   </TabsList>
                 </div>
                 
@@ -1283,9 +1289,137 @@ export default function Schedule() {
                     </CardContent>
                   </Card>
                 </TabsContent>
-              </Tabs>
-            </>
-        ) : (
+
+                <TabsContent value="config">
+                 <div className="space-y-6">
+                   {/* Daily Schedule */}
+                   <Card className="border-0 shadow-md">
+                     <CardHeader className="bg-gradient-to-r from-amber-50 to-orange-50">
+                       <div className="flex items-center gap-3">
+                         <div className="p-2 rounded-lg bg-amber-100">
+                           <Clock className="w-5 h-5 text-amber-700" />
+                         </div>
+                         <div>
+                           <CardTitle className="text-lg">Daily Schedule Configuration</CardTitle>
+                           <CardDescription>Configure your school's daily timetable structure</CardDescription>
+                         </div>
+                       </div>
+                     </CardHeader>
+                     <CardContent className="pt-6">
+                       <div className="grid sm:grid-cols-2 gap-6">
+                         <div className="p-5 rounded-xl bg-gradient-to-br from-blue-50 to-blue-100 border-2 border-blue-200">
+                           <Label className="flex items-center gap-2 text-sm font-semibold text-blue-900 mb-3">
+                             <Hash className="w-4 h-4" />
+                             Periods Per Day
+                           </Label>
+                           <div className="text-3xl font-bold text-blue-900 mb-2">{school?.periods_per_day || 8}</div>
+                           <p className="text-xs text-blue-700">Teaching periods per day</p>
+                         </div>
+
+                         <div className="p-5 rounded-xl bg-gradient-to-br from-emerald-50 to-emerald-100 border-2 border-emerald-200">
+                           <Label className="flex items-center gap-2 text-sm font-semibold text-emerald-900 mb-3">
+                             <Timer className="w-4 h-4" />
+                             Period Length
+                           </Label>
+                           <div className="text-3xl font-bold text-emerald-900 mb-2">{school?.period_duration_minutes || 45} min</div>
+                           <p className="text-xs text-emerald-700">Duration per period</p>
+                         </div>
+
+                         <div className="p-5 rounded-xl bg-gradient-to-br from-violet-50 to-violet-100 border-2 border-violet-200">
+                           <Label className="flex items-center gap-2 text-sm font-semibold text-violet-900 mb-3">
+                             <Calendar className="w-4 h-4" />
+                             School Week
+                           </Label>
+                           <div className="text-3xl font-bold text-violet-900 mb-2">{school?.days_per_week || 5} Days</div>
+                           <p className="text-xs text-violet-700">Teaching days per week</p>
+                         </div>
+
+                         <div className="p-5 rounded-xl bg-gradient-to-br from-rose-50 to-rose-100 border-2 border-rose-200">
+                           <Label className="flex items-center gap-2 text-sm font-semibold text-rose-900 mb-3">
+                             <Clock className="w-4 h-4" />
+                             Start Time
+                           </Label>
+                           <div className="text-3xl font-bold text-rose-900 mb-2">{school?.school_start_time || '08:00'}</div>
+                           <p className="text-xs text-rose-700">First period begins at</p>
+                         </div>
+                       </div>
+
+                       <div className="mt-6 p-4 rounded-lg bg-blue-50 border border-blue-200">
+                         <div className="flex gap-2">
+                           <Info className="w-4 h-4 text-blue-600 mt-0.5 flex-shrink-0" />
+                           <div className="text-xs text-blue-800">
+                             <p className="font-semibold mb-1">Need to change these settings?</p>
+                             <p>Visit the Settings page to modify school schedule configuration.</p>
+                           </div>
+                         </div>
+                       </div>
+                     </CardContent>
+                   </Card>
+
+                   {/* IB Requirements */}
+                   <Card className="border-0 shadow-md">
+                     <CardHeader className="bg-gradient-to-r from-indigo-50 to-blue-50">
+                       <div className="flex items-center gap-3">
+                         <div className="p-2 rounded-lg bg-indigo-100">
+                           <Shield className="w-5 h-5 text-indigo-700" />
+                         </div>
+                         <div>
+                           <CardTitle className="text-lg">IB Diploma Programme Requirements</CardTitle>
+                           <CardDescription>Teaching hours for HL and SL courses</CardDescription>
+                         </div>
+                       </div>
+                     </CardHeader>
+                     <CardContent className="pt-6">
+                       <div className="grid sm:grid-cols-2 gap-6">
+                         <div className="p-6 rounded-xl bg-gradient-to-br from-purple-50 to-purple-100 border-2 border-purple-200">
+                           <div className="flex items-center justify-between mb-4">
+                             <div>
+                               <p className="font-bold text-purple-900 text-lg">Higher Level (HL)</p>
+                               <p className="text-sm text-purple-700">Weekly teaching hours</p>
+                             </div>
+                             <div className="w-16 h-16 rounded-full bg-purple-200 flex items-center justify-center">
+                               <span className="text-2xl font-bold text-purple-900">{school?.settings?.hl_hours || 6}</span>
+                             </div>
+                           </div>
+                           <p className="text-xs text-purple-600 mt-3">IB recommends 240 hours over 2 years (6h/week)</p>
+                         </div>
+
+                         <div className="p-6 rounded-xl bg-gradient-to-br from-teal-50 to-teal-100 border-2 border-teal-200">
+                           <div className="flex items-center justify-between mb-4">
+                             <div>
+                               <p className="font-bold text-teal-900 text-lg">Standard Level (SL)</p>
+                               <p className="text-sm text-teal-700">Weekly teaching hours</p>
+                             </div>
+                             <div className="w-16 h-16 rounded-full bg-teal-200 flex items-center justify-center">
+                               <span className="text-2xl font-bold text-teal-900">{school?.settings?.sl_hours || 4}</span>
+                             </div>
+                           </div>
+                           <p className="text-xs text-teal-600 mt-3">IB recommends 150 hours over 2 years (4h/week)</p>
+                         </div>
+                       </div>
+                     </CardContent>
+                   </Card>
+                 </div>
+                </TabsContent>
+
+                <TabsContent value="constraints">
+                 <Card className="border-0 shadow-sm">
+                   <CardHeader>
+                     <CardTitle>Scheduling Constraints</CardTitle>
+                     <CardDescription>Define rules and constraints for schedule generation</CardDescription>
+                   </CardHeader>
+                   <CardContent>
+                     <div className="text-center py-12 text-slate-500">
+                       <AlertTriangle className="w-12 h-12 mx-auto mb-3 text-slate-300" />
+                       <p className="font-medium">Constraints feature coming soon</p>
+                       <p className="text-sm mt-1">Define custom rules and constraints for intelligent schedule generation</p>
+                     </div>
+                   </CardContent>
+                 </Card>
+                </TabsContent>
+                </Tabs>
+                </>
+                ) : (
           <Card className="border-0 shadow-sm">
             <CardContent className="py-16">
               <EmptyState 

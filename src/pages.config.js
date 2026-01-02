@@ -13,8 +13,7 @@ import OptimizationEngine from './pages/OptimizationEngine';
 import Panel from './pages/Panel';
 import PrivacyPolicy from './pages/PrivacyPolicy';
 import Rooms from './pages/Rooms';
-import Settings from './pages/Settings';
-import Students from './pages/Students';
+import Schedule from './pages/Schedule';
 import Subjects from './pages/Subjects';
 import Subscription from './pages/Subscription';
 import SubscriptionsOverview from './pages/SubscriptionsOverview';
@@ -25,7 +24,8 @@ import TeachingGroups from './pages/TeachingGroups';
 import TermsOfUse from './pages/TermsOfUse';
 import TestData from './pages/TestData';
 import UserManagement from './pages/UserManagement';
-import Schedule from './pages/Schedule';
+import Students from './pages/Students';
+import Settings from './pages/Settings';
 import __Layout from './Layout.jsx';
 
 
@@ -45,8 +45,7 @@ export const PAGES = {
     "Panel": Panel,
     "PrivacyPolicy": PrivacyPolicy,
     "Rooms": Rooms,
-    "Settings": Settings,
-    "Students": Students,
+    "Schedule": Schedule,
     "Subjects": Subjects,
     "Subscription": Subscription,
     "SubscriptionsOverview": SubscriptionsOverview,
@@ -57,7 +56,8 @@ export const PAGES = {
     "TermsOfUse": TermsOfUse,
     "TestData": TestData,
     "UserManagement": UserManagement,
-    "Schedule": Schedule,
+    "Students": Students,
+    "Settings": Settings,
 }
 
 export const pagesConfig = {
