@@ -73,8 +73,7 @@ export default function HowItWorksSection() {
 
               {/* Step Content */}
               <div 
-                className="flex-1 bg-white p-6 rounded-xl border-2 border-transparent shadow-lg hover:shadow-2xl transition-all"
-                style={{ borderImage: 'linear-gradient(to right, rgb(56, 189, 248), rgb(217, 70, 239), rgb(59, 130, 246)) 1' }}
+                className="flex-1 bg-white p-6 rounded-xl border-2 border-transparent hover:border-sky-400 shadow-lg hover:shadow-2xl transition-all hover:shadow-[0_0_0_2px_rgb(56,189,248),0_0_20px_rgba(56,189,248,0.3)]"
               >
                 <div className="flex items-center gap-3 mb-3">
                   <step.icon className="w-6 h-6 text-blue-900" />
