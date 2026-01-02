@@ -30,26 +30,13 @@ export default function HeroSection() {
       <div className="absolute -top-40 left-1/2 -translate-x-1/2 w-[1200px] h-[600px] bg-gradient-to-br from-blue-500/50 via-indigo-500/40 to-purple-500/50 rounded-full blur-3xl"></div>
 
       <div className="max-w-5xl mx-auto relative z-10 text-center">
-        <div className="inline-block mb-6 bg-blue-100 px-6 py-3 rounded-full">
-          <span className="text-blue-900 font-semibold text-lg">✨ Next Generation Schedule Creation</span>
-        </div>
-        
         <h1 className="text-6xl sm:text-7xl font-bold text-slate-900 leading-tight mb-8">
-          The Future of IB School Scheduling
+          The Future of IB Scheduling
         </h1>
         
         <p className="text-2xl text-slate-600 mb-12 leading-relaxed max-w-3xl mx-auto">
           Experience next generation schedule creation powered by AI. Generate perfect, conflict-free timetables for all IB programmes in minutes, not weeks.
         </p>
-        
-        <Button 
-          size="lg" 
-          className="bg-blue-900 text-white hover:bg-blue-950 text-lg px-10 py-7 shadow-2xl text-xl"
-          onClick={scrollToInfo}
-        >
-          Discover How It Works
-          <ArrowRight className="w-6 h-6 ml-2" />
-        </Button>
 
         {/* Feature Cards */}
         <div className="grid md:grid-cols-3 gap-6 mt-20 max-w-4xl mx-auto">
