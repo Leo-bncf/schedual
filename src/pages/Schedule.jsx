@@ -70,20 +70,13 @@ export default function Schedule() {
   const [selectedTeacherId, setSelectedTeacherId] = useState(null);
   const [selectedClassGroupId, setSelectedClassGroupId] = useState(null);
   const [constraintDialogOpen, setConstraintDialogOpen] = useState(false);
+  const [constraintInput, setConstraintInput] = useState('');
+  const [isGeneratingConstraint, setIsGeneratingConstraint] = useState(false);
   const [formData, setFormData] = useState({
     name: '',
     academic_year: '2024-2025',
     term: 'Fall',
     status: 'draft'
-  });
-  const [constraintForm, setConstraintForm] = useState({
-    name: '',
-    description: '',
-    type: 'hard',
-    category: 'teacher',
-    rule: {},
-    weight: 1,
-    is_active: true
   });
   const [schoolConfig, setSchoolConfig] = useState({
     periods_per_day: 8,
@@ -222,26 +215,67 @@ export default function Schedule() {
     },
   });
 
-  const createConstraintMutation = useMutation({
-    mutationFn: (data) => {
-      if (!schoolId) throw new Error('No school assigned');
-      return base44.entities.Constraint.create({ ...data, school_id: schoolId });
-    },
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['constraints'] });
-      setConstraintDialogOpen(false);
-      setConstraintForm({
-        name: '',
-        description: '',
-        type: 'hard',
-        category: 'teacher',
-        rule: {},
-        weight: 1,
-        is_active: true
+  const handleGenerateConstraint = async () => {
+    if (!constraintInput.trim()) return;
+    
+    setIsGeneratingConstraint(true);
+    
+    try {
+      const response = await base44.integrations.Core.InvokeLLM({
+        prompt: `You are a school scheduling constraint expert. Convert this natural language preference into a structured scheduling constraint:
+
+"${constraintInput}"
+
+Return a JSON object with these fields:
+- name: short descriptive name (max 50 chars)
+- description: detailed explanation
+- type: "hard" (must follow) or "soft" (optimize for)
+- category: one of: teacher, student, room, subject, time, ib_requirement, custom
+- rule: object with specific constraint rules (e.g., {max_consecutive_periods: 4, teacher_id: "xyz"})
+- weight: 0-1 for soft constraints (1 = highest priority)
+
+Examples:
+Input: "Teachers should not have more than 4 consecutive periods"
+Output: {"name": "Max 4 consecutive periods", "description": "Limits teacher workload to 4 consecutive teaching periods", "type": "hard", "category": "teacher", "rule": {"max_consecutive_periods": 4}, "weight": 1}
+
+Input: "Dr. Smith prefers not to teach on Wednesday afternoons"
+Output: {"name": "Dr. Smith - No Wed PM", "description": "Dr. Smith prefers to avoid Wednesday afternoon slots", "type": "soft", "category": "teacher", "rule": {"unavailable_slots": [{"day": "Wednesday", "period": 5}, {"day": "Wednesday", "period": 6}, {"day": "Wednesday", "period": 7}, {"day": "Wednesday", "period": 8}]}, "weight": 0.8}
+
+Now process the user's input and return ONLY the JSON object.`,
+        response_json_schema: {
+          type: "object",
+          properties: {
+            name: { type: "string" },
+            description: { type: "string" },
+            type: { type: "string", enum: ["hard", "soft"] },
+            category: { type: "string", enum: ["teacher", "student", "room", "subject", "time", "ib_requirement", "custom"] },
+            rule: { type: "object" },
+            weight: { type: "number" }
+          },
+          required: ["name", "description", "type", "category", "rule", "weight"]
+        }
       });
-      toast.success('Constraint created successfully');
-    },
-  });
+
+      const constraintData = {
+        ...response,
+        school_id: schoolId,
+        is_active: true,
+        source: 'ai_suggested'
+      };
+
+      await base44.entities.Constraint.create(constraintData);
+      queryClient.invalidateQueries({ queryKey: ['constraints'] });
+      
+      setConstraintDialogOpen(false);
+      setConstraintInput('');
+      toast.success('✨ Constraint created from AI suggestion');
+    } catch (error) {
+      console.error('Error generating constraint:', error);
+      toast.error('Failed to generate constraint. Please try again.');
+    } finally {
+      setIsGeneratingConstraint(false);
+    }
+  };
 
   const handleSaveConfig = async () => {
     if (!school) return;
@@ -1943,102 +1977,63 @@ export default function Schedule() {
         }}
       />
 
-      {/* Add Constraint Dialog */}
+      {/* Add Constraint Dialog with AI */}
       <Dialog open={constraintDialogOpen} onOpenChange={setConstraintDialogOpen}>
         <DialogContent className="sm:max-w-lg">
           <DialogHeader>
-            <DialogTitle>Add Scheduling Constraint</DialogTitle>
+            <DialogTitle className="flex items-center gap-2">
+              <Sparkles className="w-5 h-5 text-violet-600" />
+              Add Scheduling Constraint
+            </DialogTitle>
             <DialogDescription>
-              Define a rule that the schedule generator must follow or optimize for.
+              Describe your scheduling preference in natural language and AI will create the constraint.
             </DialogDescription>
           </DialogHeader>
-          <form onSubmit={(e) => { 
-            e.preventDefault(); 
-            createConstraintMutation.mutate(constraintForm); 
-          }} className="space-y-4">
+          <div className="space-y-4">
             <div className="space-y-2">
-              <Label htmlFor="constraint-name">Constraint Name *</Label>
-              <Input 
-                id="constraint-name"
-                value={constraintForm.name}
-                onChange={(e) => setConstraintForm({ ...constraintForm, name: e.target.value })}
-                placeholder="e.g., Maximum 4 consecutive periods"
-                required
+              <Label htmlFor="constraint-input">Describe Your Preference</Label>
+              <Textarea 
+                id="constraint-input"
+                value={constraintInput}
+                onChange={(e) => setConstraintInput(e.target.value)}
+                placeholder="e.g., 'Teachers should not teach more than 4 consecutive periods' or 'Dr. Smith prefers not to teach on Wednesday afternoons'"
+                className="min-h-[120px] resize-none"
               />
+              <p className="text-xs text-slate-500">
+                Examples: "No double periods for MYP students", "Avoid scheduling labs in the morning", "Maximum 25 hours per week for teachers"
+              </p>
             </div>
-
-            <div className="space-y-2">
-              <Label htmlFor="constraint-desc">Description</Label>
-              <Input 
-                id="constraint-desc"
-                value={constraintForm.description}
-                onChange={(e) => setConstraintForm({ ...constraintForm, description: e.target.value })}
-                placeholder="Brief explanation of this constraint"
-              />
-            </div>
-
-            <div className="grid grid-cols-2 gap-4">
-              <div className="space-y-2">
-                <Label>Constraint Type</Label>
-                <Select 
-                  value={constraintForm.type} 
-                  onValueChange={(value) => setConstraintForm({ ...constraintForm, type: value })}
-                >
-                  <SelectTrigger>
-                    <SelectValue />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="hard">Hard (Must follow)</SelectItem>
-                    <SelectItem value="soft">Soft (Optimize for)</SelectItem>
-                  </SelectContent>
-                </Select>
-              </div>
-
-              <div className="space-y-2">
-                <Label>Category</Label>
-                <Select 
-                  value={constraintForm.category} 
-                  onValueChange={(value) => setConstraintForm({ ...constraintForm, category: value })}
-                >
-                  <SelectTrigger>
-                    <SelectValue />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="teacher">Teacher</SelectItem>
-                    <SelectItem value="student">Student</SelectItem>
-                    <SelectItem value="room">Room</SelectItem>
-                    <SelectItem value="subject">Subject</SelectItem>
-                    <SelectItem value="time">Time</SelectItem>
-                    <SelectItem value="ib_requirement">IB Requirement</SelectItem>
-                  </SelectContent>
-                </Select>
-              </div>
-            </div>
-
-            {constraintForm.type === 'soft' && (
-              <div className="space-y-2">
-                <Label>Priority Weight (0-1)</Label>
-                <Input 
-                  type="number"
-                  min="0"
-                  max="1"
-                  step="0.1"
-                  value={constraintForm.weight}
-                  onChange={(e) => setConstraintForm({ ...constraintForm, weight: parseFloat(e.target.value) })}
-                />
-                <p className="text-xs text-slate-500">Higher = more important (1.0 = highest priority)</p>
-              </div>
-            )}
 
             <DialogFooter>
-              <Button type="button" variant="outline" onClick={() => setConstraintDialogOpen(false)}>
+              <Button 
+                type="button" 
+                variant="outline" 
+                onClick={() => {
+                  setConstraintDialogOpen(false);
+                  setConstraintInput('');
+                }}
+              >
                 Cancel
               </Button>
-              <Button type="submit" className="bg-indigo-600 hover:bg-indigo-700" disabled={createConstraintMutation.isPending}>
-                {createConstraintMutation.isPending ? 'Creating...' : 'Create Constraint'}
+              <Button 
+                onClick={handleGenerateConstraint}
+                disabled={!constraintInput.trim() || isGeneratingConstraint}
+                className="bg-gradient-to-r from-violet-600 to-indigo-600 hover:from-violet-700 hover:to-indigo-700"
+              >
+                {isGeneratingConstraint ? (
+                  <>
+                    <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+                    Generating...
+                  </>
+                ) : (
+                  <>
+                    <Sparkles className="w-4 h-4 mr-2" />
+                    Generate Constraint
+                  </>
+                )}
               </Button>
             </DialogFooter>
-          </form>
+          </div>
         </DialogContent>
       </Dialog>
     </div>
