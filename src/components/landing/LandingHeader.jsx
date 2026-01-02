@@ -81,24 +81,22 @@ export default function LandingHeader() {
           <div className="flex items-center gap-2">
             {isAuthenticated ? (
               <Link to={createPageUrl(['leo.bancroft34@icloud.com', 'erik.gerbst@gmail.com'].includes(user?.email?.toLowerCase()) ? 'Panel' : 'Dashboard')}>
-                <Button size="sm" className="bg-blue-900 hover:bg-blue-800 h-8">
+                <Button className="bg-blue-900 hover:bg-blue-800 h-10 px-6 rounded-full">
                   {['leo.bancroft34@icloud.com', 'erik.gerbst@gmail.com'].includes(user?.email?.toLowerCase()) ? 'Go to Panel' : 'Go to Dashboard'}
                 </Button>
               </Link>
             ) : (
               <>
                 <Button 
-                  size="sm"
                   variant="ghost"
                   onClick={() => base44.auth.redirectToLogin('/Dashboard')}
-                  className="text-slate-600 hover:text-slate-900 h-8"
+                  className="text-slate-600 hover:text-slate-900 h-10 px-6 rounded-full"
                 >
                   Login
                 </Button>
                 <Button 
-                  size="sm"
                   onClick={() => base44.auth.redirectToLogin('/Dashboard')}
-                  className="bg-blue-900 hover:bg-blue-800 h-8"
+                  className="bg-blue-900 hover:bg-blue-800 h-10 px-6 rounded-full"
                 >
                   Sign Up
                 </Button>
