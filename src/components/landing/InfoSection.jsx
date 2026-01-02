@@ -54,66 +54,7 @@ export default function InfoSection() {
           </p>
         </div>
 
-        {/* Problems & Solutions */}
-        <div className="grid md:grid-cols-2 gap-8 mb-16">
-          <motion.div 
-            className="bg-gradient-to-br from-rose-100 to-pink-100 p-8 rounded-2xl border border-rose-200"
-            initial={{ opacity: 0, x: -50 }}
-            whileInView={{ opacity: 1, x: 0 }}
-            viewport={{ once: true }}
-            transition={{ duration: 0.5 }}
-            whileHover={{ scale: 1.05, y: -8 }}
-          >
-            <h3 className="text-2xl font-semibold text-rose-900 mb-4">Existing Solutions</h3>
-            <ul className="space-y-3 text-slate-700">
-              <li className="flex items-start gap-2">
-                <span className="text-rose-600 mt-1">•</span>
-                <span>Manual scheduling takes weeks of work</span>
-              </li>
-              <li className="flex items-start gap-2">
-                <span className="text-rose-600 mt-1">•</span>
-                <span>Teacher and room conflicts are common</span>
-              </li>
-              <li className="flex items-start gap-2">
-                <span className="text-rose-600 mt-1">•</span>
-                <span>Changes require starting from scratch</span>
-              </li>
-              <li className="flex items-start gap-2">
-                <span className="text-rose-600 mt-1">•</span>
-                <span>IB requirements are complex to manage</span>
-              </li>
-            </ul>
-          </motion.div>
 
-          <motion.div 
-            className="bg-gradient-to-br from-emerald-100 to-teal-100 p-8 rounded-2xl border border-emerald-200"
-            initial={{ opacity: 0, x: 50 }}
-            whileInView={{ opacity: 1, x: 0 }}
-            viewport={{ once: true }}
-            transition={{ duration: 0.5 }}
-            whileHover={{ scale: 1.05, y: -8 }}
-          >
-            <h3 className="text-2xl font-semibold text-emerald-900 mb-4">IB Schedual Pro</h3>
-            <ul className="space-y-3 text-slate-700">
-              <li className="flex items-start gap-2">
-                <span className="text-emerald-600 mt-1">✓</span>
-                <span>Generate schedules in minutes with AI</span>
-              </li>
-              <li className="flex items-start gap-2">
-                <span className="text-emerald-600 mt-1">✓</span>
-                <span>Automatic conflict detection and resolution</span>
-              </li>
-              <li className="flex items-start gap-2">
-                <span className="text-emerald-600 mt-1">✓</span>
-                <span>Instant regeneration when rules change</span>
-              </li>
-              <li className="flex items-start gap-2">
-                <span className="text-emerald-600 mt-1">✓</span>
-                <span>Built-in IB compliance checks</span>
-              </li>
-            </ul>
-          </motion.div>
-        </div>
 
         {/* Features Grid */}
         <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-8">
