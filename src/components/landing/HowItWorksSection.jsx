@@ -10,7 +10,6 @@ const steps = [
     description: 'Set up your school details, academic year, and basic scheduling parameters like period duration and school hours.',
     previewTitle: 'School Settings Page',
     previewDescription: 'Configure your school\'s basic information including name, academic year, daily schedule structure, and timezone. This forms the foundation for all your scheduling.',
-    additionalInfo: 'Start by defining your school\'s basic structure. Set the number of periods per day, their duration, and start time. These settings will be used as constraints when generating schedules. You can always update these later, and the AI will regenerate schedules accordingly.',
     previewImage: (
       <div className="space-y-3">
         <div className="bg-slate-100 rounded-lg p-3">
@@ -40,7 +39,6 @@ const steps = [
     description: 'Import or manually add your teachers with qualifications, students with subject choices, and all your IB subjects.',
     previewTitle: 'Data Management',
     previewDescription: 'Easily manage your school\'s personnel and curriculum. Add teachers with their qualifications, students with subject selections, and define all IB subjects across PYP, MYP, and DP programmes.',
-    additionalInfo: 'Build your school\'s database by adding all teachers with their subject qualifications and IB level expertise. Input students with their chosen subjects and levels (HL/SL for DP). The system supports bulk imports via spreadsheets, or you can add entries manually. The more accurate your data, the better the AI can optimize your schedule.',
     previewImage: (
       <div className="space-y-3">
         <div className="bg-slate-100 rounded-lg p-3">
@@ -77,7 +75,6 @@ const steps = [
     description: 'Set teacher availability, room requirements, student groupings, and any special scheduling rules.',
     previewTitle: 'Constraints Builder',
     previewDescription: 'Define scheduling rules and constraints to ensure optimal timetables. Set teacher preferences, room requirements, and custom rules that the AI will respect during generation.',
-    additionalInfo: 'Constraints are rules the AI must follow when creating schedules. Examples include: teachers can\'t have more than 4 consecutive periods, science HL classes need lab rooms, or specific teachers prefer morning slots. You can set hard constraints (must be satisfied) and soft constraints (preferred but flexible). The AI will find the optimal solution respecting all your rules.',
     previewImage: (
       <div className="space-y-2">
         {[
@@ -106,7 +103,6 @@ const steps = [
     description: 'Click generate and watch the AI create a complete, conflict-free timetable in seconds.',
     previewTitle: 'AI Schedule Generator',
     previewDescription: 'Our AI engine analyzes all your data and constraints to generate optimal schedules in seconds. Watch real-time progress as it creates conflict-free timetables for all teachers and students.',
-    additionalInfo: 'Once you hit generate, our AI algorithms analyze thousands of possible combinations to find the perfect schedule. The system uses constraint satisfaction and optimization techniques to ensure zero conflicts while maximizing teacher preferences and student needs. Generation typically takes 30-90 seconds depending on school size. You can generate multiple versions and compare them.',
     previewImage: (
       <div className="space-y-3">
         <div className="bg-gradient-to-r from-blue-900 to-blue-800 rounded-lg p-4 text-white text-center">
@@ -141,7 +137,6 @@ const steps = [
     description: 'Review the schedule, make any adjustments, and export for students, teachers, and rooms.',
     previewTitle: 'Schedule Dashboard',
     previewDescription: 'View your completed schedule in multiple formats. Export customized timetables for teachers, students, and rooms. Make manual adjustments if needed.',
-    additionalInfo: 'Review your generated schedule from multiple perspectives: by teacher, by student, by room, or by class. The system highlights any remaining conflicts and provides suggestions. Export individual timetables as PDF or share them digitally. If you need to make manual tweaks, simply drag and drop to adjust time slots, and the system will warn you of any new conflicts.',
     previewImage: (
       <div className="space-y-3">
         <div className="bg-green-50 border border-green-200 rounded-lg p-3">
@@ -265,19 +260,6 @@ export default function HowItWorksSection() {
                     
                     <div className="bg-slate-50 rounded-xl p-4 border border-slate-200">
                       {steps[selectedStep].previewImage}
-                    </div>
-
-                    {/* Additional Info Section */}
-                    <div className="mt-6 bg-gradient-to-br from-blue-50 to-purple-50 rounded-xl p-5 border border-blue-200">
-                      <div className="flex items-start gap-3">
-                        <div className="w-8 h-8 rounded-lg bg-gradient-to-br from-blue-900 to-purple-600 flex items-center justify-center flex-shrink-0 mt-0.5">
-                          <Sparkles className="w-4 h-4 text-white" />
-                        </div>
-                        <div>
-                          <h5 className="font-semibold text-slate-900 mb-2">Pro Tip</h5>
-                          <p className="text-sm text-slate-700 leading-relaxed">{steps[selectedStep].additionalInfo}</p>
-                        </div>
-                      </div>
                     </div>
                   </div>
                 </motion.div>
