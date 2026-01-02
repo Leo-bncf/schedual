@@ -594,13 +594,19 @@ Return ONLY students array, no other text.`,
           subjectChoices = mypSubjects;
           console.log(`Auto-assigned ${mypSubjects.length} MYP subjects to ${student.full_name}`);
         } else if (student.subjects && Array.isArray(student.subjects)) {
-          // For DP: Process extracted subjects with intelligent matching
+          // For DP: Process extracted subjects with enhanced matching
           subjectChoices = student.subjects.map(subj => {
-            const normalizedExtracted = subj.name?.toLowerCase().trim().replace(/\s+/g, ' ');
+            const normalizedExtracted = subj.name?.toLowerCase().trim()
+              .replace(/[&\/\\#,+()$~%.'":*?<>{}]/g, ' ')
+              .replace(/\s+/g, ' ')
+              .trim();
 
             // Try multiple matching strategies
             const matchedSubject = subjectsList.find(s => {
-              const normalizedDB = s.name?.toLowerCase().trim().replace(/\s+/g, ' ');
+              const normalizedDB = s.name?.toLowerCase().trim()
+                .replace(/[&\/\\#,+()$~%.'":*?<>{}]/g, ' ')
+                .replace(/\s+/g, ' ')
+                .trim();
               const codeDB = s.code?.toLowerCase().trim();
 
               // 1. Exact match
@@ -608,51 +614,71 @@ Return ONLY students array, no other text.`,
                 return true;
               }
 
-              // 2. Common abbreviations and variations
+              // 2. Enhanced variations map with more flexible matching
               const variations = {
-                'english': ['english a', 'english language and literature', 'english lang lit', 'language and literature'],
-                'spanish': ['spanish a', 'spanish b', 'spanish language', 'spanish ab initio'],
-                'french': ['french a', 'french b', 'french language', 'french ab initio'],
-                'german': ['german a', 'german b', 'german language', 'german ab initio'],
-                'chinese': ['chinese a', 'chinese b', 'chinese language', 'chinese ab initio'],
-                'math': ['mathematics', 'maths', 'math aa', 'math ai', 'mathematics aa', 'mathematics ai', 'math analysis', 'math applications'],
-                'physics': ['physics'],
+                'english': ['english a', 'english language and literature', 'english lang lit', 'language and literature', 'english literature', 'eng lit', 'english lang', 'lang lit'],
+                'spanish': ['spanish a', 'spanish b', 'spanish language', 'spanish ab initio', 'spanish ab', 'spanish lang'],
+                'french': ['french a', 'french b', 'french language', 'french ab initio', 'french ab', 'french lang'],
+                'german': ['german a', 'german b', 'german language', 'german ab initio', 'german ab', 'german lang'],
+                'chinese': ['chinese a', 'chinese b', 'chinese language', 'chinese ab initio', 'chinese ab', 'chinese lang', 'mandarin'],
+                'math': ['mathematics', 'maths', 'math aa', 'math ai', 'mathematics aa', 'mathematics ai', 'math analysis', 'math applications', 'mathematics analysis', 'mathematics applications', 'analysis and approaches', 'applications and interpretation'],
+                'physics': ['physics', 'phys'],
                 'chemistry': ['chemistry', 'chem'],
                 'biology': ['biology', 'bio'],
-                'history': ['history'],
-                'geography': ['geography', 'geo'],
-                'economics': ['economics', 'econ'],
-                'business': ['business management', 'business studies', 'business'],
+                'history': ['history', 'hist'],
+                'geography': ['geography', 'geo', 'geog'],
+                'economics': ['economics', 'econ', 'eco'],
+                'business': ['business management', 'business studies', 'business', 'business man', 'bm'],
                 'psychology': ['psychology', 'psych'],
-                'visual arts': ['visual arts', 'art', 'arts'],
+                'environmental': ['environmental systems and societies', 'ess', 'environmental systems', 'environmental', 'env systems'],
+                'visual arts': ['visual arts', 'art', 'arts', 'va'],
                 'music': ['music'],
-                'theatre': ['theatre', 'theater'],
-                'film': ['film'],
+                'theatre': ['theatre', 'theater', 'drama', 'theatre arts'],
+                'film': ['film', 'film studies'],
                 'dance': ['dance'],
-                'computer science': ['computer science', 'comp sci', 'cs'],
-                'design technology': ['design technology', 'design tech', 'dt'],
+                'computer science': ['computer science', 'comp sci', 'cs', 'computing', 'computer'],
+                'design technology': ['design technology', 'design tech', 'dt', 'design', 'technology'],
                 'tok': ['theory of knowledge', 'tok'],
                 'ee': ['extended essay', 'ee'],
                 'cas': ['creativity activity service', 'cas']
               };
 
-              // Check if extracted subject matches any variation
+              // Check variations with flexible matching
               for (const [key, varList] of Object.entries(variations)) {
-                const extractedMatchesKey = varList.some(v => normalizedExtracted.includes(v) || v.includes(normalizedExtracted));
-                const dbMatchesKey = varList.some(v => normalizedDB.includes(v) || v.includes(normalizedDB));
+                const extractedMatchesKey = varList.some(v => {
+                  const normalized = v.replace(/\s+/g, ' ').trim();
+                  return normalizedExtracted.includes(normalized) || 
+                         normalized.includes(normalizedExtracted) ||
+                         normalizedExtracted.replace(/\s/g, '').includes(normalized.replace(/\s/g, ''));
+                });
+                const dbMatchesKey = varList.some(v => {
+                  const normalized = v.replace(/\s+/g, ' ').trim();
+                  return normalizedDB.includes(normalized) || 
+                         normalized.includes(normalizedDB) ||
+                         normalizedDB.replace(/\s/g, '').includes(normalized.replace(/\s/g, ''));
+                });
 
                 if (extractedMatchesKey && dbMatchesKey) {
                   return true;
                 }
               }
 
-              // 3. Partial match (one contains the other)
+              // 3. Enhanced partial match - check core words
+              const extractedWords = normalizedExtracted.split(' ').filter(w => w.length > 2);
+              const dbWords = normalizedDB.split(' ').filter(w => w.length > 2);
+              
+              const commonWords = extractedWords.filter(w => dbWords.includes(w));
+              if (commonWords.length >= Math.min(extractedWords.length, dbWords.length, 2)) {
+                return true;
+              }
+
+              // 4. Substring match (more flexible)
               if (normalizedDB.includes(normalizedExtracted) || normalizedExtracted.includes(normalizedDB)) {
                 return true;
               }
 
-              // 4. Code match
-              if (codeDB && (normalizedExtracted.includes(codeDB) || codeDB.includes(normalizedExtracted))) {
+              // 5. Code match with flexibility
+              if (codeDB && (normalizedExtracted.includes(codeDB) || codeDB.includes(normalizedExtracted) || normalizedExtracted.replace(/\s/g, '') === codeDB.replace(/\s/g, ''))) {
                 return true;
               }
 
@@ -660,14 +686,14 @@ Return ONLY students array, no other text.`,
             });
 
             if (matchedSubject) {
-              console.log(`✓ Matched "${subj.name}" → "${matchedSubject.name}" (${subj.level})`);
+              console.log(`✅ Matched "${subj.name}" → "${matchedSubject.name}" (${subj.level})`);
               return {
                 subject_id: matchedSubject.id,
                 level: subj.level || 'SL',
                 ib_group: matchedSubject.ib_group
               };
             } else {
-              console.warn(`✗ Could not match subject: "${subj.name}" (${subj.level})`);
+              console.warn(`❌ No match for: "${subj.name}" (${subj.level})`);
             }
             return null;
           }).filter(Boolean);
