@@ -63,10 +63,10 @@ export default function HeroSection() {
       <style>{`
         @import url('https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;600&display=swap');
       `}</style>
-      {/* Blue splat effect at top */}
-      <div className="absolute -top-40 left-1/2 -translate-x-1/2 w-[1400px] h-[700px] bg-gradient-to-br from-sky-400/60 via-cyan-500/50 to-blue-500/60 rounded-full blur-3xl"></div>
-      <div className="absolute -top-20 left-1/3 w-[800px] h-[800px] bg-gradient-to-bl from-purple-500/55 via-fuchsia-500/50 to-violet-500/55 rounded-full blur-3xl"></div>
-      <div className="absolute top-10 right-1/4 w-[600px] h-[600px] bg-gradient-to-tr from-cyan-400/45 via-sky-500/50 to-blue-400/45 rounded-full blur-3xl"></div>
+      {/* Blue splat effect at top - fixed to follow scroll */}
+      <div className="fixed -top-40 left-1/2 -translate-x-1/2 w-[1400px] h-[700px] bg-gradient-to-br from-sky-400/60 via-cyan-500/50 to-blue-500/60 rounded-full blur-3xl"></div>
+      <div className="fixed -top-20 left-1/3 w-[800px] h-[800px] bg-gradient-to-bl from-purple-500/55 via-fuchsia-500/50 to-violet-500/55 rounded-full blur-3xl"></div>
+      <div className="fixed top-10 right-1/4 w-[600px] h-[600px] bg-gradient-to-tr from-cyan-400/45 via-sky-500/50 to-blue-400/45 rounded-full blur-3xl"></div>
 
       <div className="max-w-5xl mx-auto relative z-10 text-center">
         <motion.h1 
