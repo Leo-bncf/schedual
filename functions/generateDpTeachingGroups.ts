@@ -38,14 +38,7 @@ Deno.serve(async (req) => {
           if (!choice?.subject_id) return;
           
           const subject = subjectById.get(choice.subject_id);
-          if (!subject) {
-            warnings.push({ 
-              type: 'subject_not_found', 
-              student_id: student.id, 
-              subject_id: choice.subject_id 
-            });
-            return;
-          }
+          if (!subject) return; // Silently skip invalid subject_ids
 
           const level = choice.level === 'HL' ? 'HL' : 'SL';
           const yearGroup = student.year_group || 'DP1';
