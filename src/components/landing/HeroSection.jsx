@@ -38,7 +38,6 @@ const features = [
 
 export default function HeroSection() {
   const [scrollProgress, setScrollProgress] = useState(0);
-  const [currentIndex, setCurrentIndex] = useState(0);
 
   useEffect(() => {
     const handleScroll = () => {
@@ -50,13 +49,6 @@ export default function HeroSection() {
 
     window.addEventListener('scroll', handleScroll);
     return () => window.removeEventListener('scroll', handleScroll);
-  }, []);
-
-  useEffect(() => {
-    const interval = setInterval(() => {
-      setCurrentIndex((prev) => (prev + 1) % features.length);
-    }, 3000);
-    return () => clearInterval(interval);
   }, []);
 
   const scrollToInfo = () => {
@@ -97,46 +89,38 @@ export default function HeroSection() {
           Experience next generation schedule creation powered by AI. Generate perfect, conflict-free timetables for all IB programmes in minutes, not weeks.
         </motion.p>
 
-        {/* Rotating Feature Cards */}
+        {/* Scrolling Feature Cards */}
         <motion.div 
           initial={{ opacity: 0, y: 100 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ duration: 1, delay: 0.8, ease: [0.16, 1, 0.3, 1] }}
-          className="mt-20 max-w-6xl mx-auto relative h-64"
+          className="mt-20 w-full relative h-64 overflow-hidden"
           style={{ opacity: 1 - scrollProgress * 1.2, transform: `translateY(${scrollProgress * -30}px) scale(${1 - scrollProgress * 0.15})` }}
         >
-          <div className="relative h-full flex items-center justify-center overflow-visible">
-            {features.map((feature, index) => {
-              const position = (index - currentIndex + features.length) % features.length;
-              const angle = (position * 360) / features.length;
-              const radius = 450;
-              const xOffset = Math.sin((angle * Math.PI) / 180) * radius;
-              const zOffset = Math.cos((angle * Math.PI) / 180) * radius;
-              const scale = 0.7 + (zOffset + radius) / (radius * 3);
-              const opacity = 0.3 + (zOffset + radius) / (radius * 2);
-              
-              return (
-                <motion.div
-                  key={index}
-                  className="absolute left-1/2 w-80"
-                  animate={{
-                    x: `calc(-50% + ${xOffset}px)`,
-                    scale,
-                    opacity,
-                    zIndex: Math.round(zOffset),
-                  }}
-                  transition={{ duration: 0.6, ease: [0.16, 1, 0.3, 1] }}
-                >
-                  <div className="bg-white/95 backdrop-blur-xl rounded-2xl shadow-2xl p-6 border-2 border-transparent hover:border-purple-700 transition-all duration-500 hover:shadow-[0_0_0_2px_rgb(126,34,206),0_0_20px_rgba(126,34,206,0.3)]">
-                    <div className="w-14 h-14 bg-gradient-to-br from-blue-900 to-blue-800 rounded-xl flex items-center justify-center mx-auto mb-4">
-                      <feature.icon className="w-8 h-8 text-white" />
-                    </div>
-                    <h3 className="font-bold text-slate-900 text-lg mb-2">{feature.title}</h3>
-                    <p className="text-sm text-slate-700">{feature.description}</p>
+          <style>{`
+            @keyframes scroll-left {
+              0% { transform: translateX(0); }
+              100% { transform: translateX(-50%); }
+            }
+            .animate-scroll {
+              animation: scroll-left 30s linear infinite;
+            }
+          `}</style>
+          <div className="flex gap-6 animate-scroll">
+            {[...features, ...features].map((feature, index) => (
+              <div
+                key={index}
+                className="flex-shrink-0 w-80"
+              >
+                <div className="bg-white/95 backdrop-blur-xl rounded-2xl shadow-2xl p-6 border-2 border-transparent hover:border-purple-700 transition-all duration-500 hover:shadow-[0_0_0_2px_rgb(126,34,206),0_0_20px_rgba(126,34,206,0.3)]">
+                  <div className="w-14 h-14 bg-gradient-to-br from-blue-900 to-blue-800 rounded-xl flex items-center justify-center mx-auto mb-4">
+                    <feature.icon className="w-8 h-8 text-white" />
                   </div>
-                </motion.div>
-              );
-            })}
+                  <h3 className="font-bold text-slate-900 text-lg mb-2">{feature.title}</h3>
+                  <p className="text-sm text-slate-700">{feature.description}</p>
+                </div>
+              </div>
+            ))}
           </div>
         </motion.div>
       </div>
