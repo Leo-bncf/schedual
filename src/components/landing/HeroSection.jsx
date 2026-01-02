@@ -41,7 +41,7 @@ export default function HeroSection() {
           animate={{ opacity: 1, y: 0, scale: 1 }}
           transition={{ duration: 1, ease: [0.16, 1, 0.3, 1] }}
           style={{ opacity: 1 - scrollProgress * 0.8, transform: `translateY(${scrollProgress * -50}px) scale(${1 - scrollProgress * 0.1})`, fontFamily: "'Poppins', 'Space Grotesk', sans-serif" }}
-          className="text-6xl sm:text-7xl font-semibold text-purple-700 leading-tight mb-8 tracking-wide"
+          className="text-6xl sm:text-7xl font-semibold text-slate-900 leading-tight mb-8 tracking-wide"
         >
           The Future of IB Scheduling
         </motion.h1>
@@ -51,7 +51,7 @@ export default function HeroSection() {
           animate={{ opacity: 1, y: 0, scale: 1 }}
           transition={{ duration: 1, delay: 0.3, ease: [0.16, 1, 0.3, 1] }}
           style={{ opacity: 1 - scrollProgress * 0.8, transform: `translateY(${scrollProgress * -40}px)`, fontFamily: "'Poppins', 'Inter', sans-serif" }}
-          className="text-xl text-purple-700 mb-12 leading-relaxed max-w-3xl mx-auto font-normal tracking-wide"
+          className="text-xl text-slate-800 mb-12 leading-relaxed max-w-3xl mx-auto font-normal tracking-wide"
         >
           Experience next generation schedule creation powered by AI. Generate perfect, conflict-free timetables for all IB programmes in minutes, not weeks.
         </motion.p>
