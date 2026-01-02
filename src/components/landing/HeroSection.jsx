@@ -112,14 +112,14 @@ export default function HeroSection() {
           {[...features, ...features].map((feature, index) => (
             <div
               key={index}
-              className="flex-shrink-0 w-80"
+              className="flex-shrink-0 w-80 h-64"
             >
-              <div className="bg-white/95 backdrop-blur-xl rounded-2xl shadow-2xl p-6 border-2 border-transparent hover:border-purple-700 transition-all duration-500 hover:shadow-[0_0_0_2px_rgb(126,34,206),0_0_20px_rgba(126,34,206,0.3)]">
-                <div className="w-14 h-14 bg-gradient-to-br from-blue-900 to-blue-800 rounded-xl flex items-center justify-center mx-auto mb-4">
+              <div className="bg-white/95 backdrop-blur-xl rounded-2xl border border-slate-200 p-6 h-full flex flex-col">
+                <div className="w-14 h-14 bg-gradient-to-br from-blue-900 to-blue-800 rounded-xl flex items-center justify-center mx-auto mb-4 flex-shrink-0">
                   <feature.icon className="w-8 h-8 text-white" />
                 </div>
-                <h3 className="font-bold text-slate-900 text-lg mb-2">{feature.title}</h3>
-                <p className="text-sm text-slate-700">{feature.description}</p>
+                <h3 className="font-bold text-slate-900 text-lg mb-2 flex-shrink-0">{feature.title}</h3>
+                <p className="text-sm text-slate-700 flex-grow">{feature.description}</p>
               </div>
             </div>
           ))}
