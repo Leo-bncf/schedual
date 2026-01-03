@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { Calendar, Users, GraduationCap, BookOpen, Building2, ChevronDown } from 'lucide-react';
 
