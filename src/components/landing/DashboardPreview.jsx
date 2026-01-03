@@ -85,7 +85,7 @@ export default function DashboardPreview() {
         <div className="relative">
           <div className="grid lg:grid-cols-2 gap-8">
             {/* Left Column - Text */}
-            <div className="lg:w-96 lg:sticky lg:top-32">
+            <div className="lg:w-96 lg:sticky lg:top-24 lg:self-start">
               <div className="max-w-xl">
               <div className="text-sm font-semibold text-purple-600 mb-3">Benefits</div>
               <h3 className="text-4xl font-bold text-slate-900 mb-6">
