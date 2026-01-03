@@ -1,8 +1,43 @@
-import React from 'react';
-import { motion } from 'framer-motion';
-import { Calendar, Users, GraduationCap, BookOpen, Building2, Sparkles } from 'lucide-react';
+import React, { useState } from 'react';
+import { motion, AnimatePresence } from 'framer-motion';
+import { Calendar, Users, GraduationCap, BookOpen, Building2, ChevronDown } from 'lucide-react';
+
+const features = [
+  {
+    icon: Building2,
+    title: 'Beautifully streamlined processes to increase your school\'s efficiency',
+    description: 'Ditch the hassle of patchwork solutions that slow you down and hinder communication.',
+    color: 'from-orange-400 to-pink-500',
+  },
+  {
+    icon: Users,
+    title: 'Bring your community together!',
+    description: 'From announcements to progress tracking, we keep your community connected.',
+    color: 'from-orange-400 to-pink-500',
+  },
+  {
+    icon: BookOpen,
+    title: 'Craft exceptional education experiences',
+    description: 'Manage your teaching journey—from curriculum planning to report cards—in one simple solution.',
+    color: 'from-orange-400 to-pink-500',
+  },
+  {
+    icon: Calendar,
+    title: 'A tailorable solution',
+    description: 'Flexible features enable you to tailor learning experiences to meet the specific needs of your students.',
+    color: 'from-orange-400 to-pink-500',
+  },
+  {
+    icon: GraduationCap,
+    title: 'Built for the modern classroom',
+    description: 'Everything you need to manage students, schedules, and success in one place.',
+    color: 'from-orange-400 to-pink-500',
+  },
+];
 
 export default function DashboardPreview() {
+  const [expandedIndex, setExpandedIndex] = useState(null);
+
   return (
     <section className="relative py-24 px-4 sm:px-6 lg:px-8 bg-transparent overflow-hidden">
       <div className="max-w-7xl mx-auto relative z-10">
@@ -12,98 +47,133 @@ export default function DashboardPreview() {
             See It In Action
           </h2>
           <p className="text-xl text-slate-600 max-w-3xl mx-auto">
-            A glimpse into your powerful scheduling dashboard
+            Explore the features that make scheduling effortless
           </p>
         </div>
 
-        {/* Dashboard Preview */}
-        <motion.div 
-          initial={{ opacity: 0, y: 50 }}
-          whileInView={{ opacity: 1, y: 0 }}
-          viewport={{ once: true }}
-          transition={{ duration: 0.8 }}
-          className="relative"
-        >
-          {/* Browser Chrome */}
-          <div className="bg-slate-800 rounded-t-2xl p-3 flex items-center gap-2">
-            <div className="flex gap-2">
-              <div className="w-3 h-3 rounded-full bg-red-500"></div>
-              <div className="w-3 h-3 rounded-full bg-yellow-500"></div>
-              <div className="w-3 h-3 rounded-full bg-green-500"></div>
-            </div>
-            <div className="flex-1 bg-slate-700 rounded-md px-4 py-1 text-xs text-slate-400 text-center">
-              schedual.app/dashboard
+        {/* Feature Cards Grid */}
+        <div className="grid lg:grid-cols-2 gap-8">
+          {/* Left Column - Text */}
+          <div className="flex items-center">
+            <div>
+              <h3 className="text-3xl font-bold text-slate-900 mb-4">
+                Everything you need in one place
+              </h3>
+              <p className="text-lg text-slate-600 leading-relaxed">
+                Schedual brings together all the tools you need to manage your IB school efficiently. From scheduling to communication, we've got you covered.
+              </p>
             </div>
           </div>
 
-          {/* Dashboard Content */}
-          <div className="bg-gradient-to-br from-slate-50 to-slate-100 rounded-b-2xl p-8 border-4 border-slate-800 shadow-2xl">
-            {/* Header */}
-            <div className="mb-8">
-              <h3 className="text-2xl font-bold text-slate-900 mb-2">Dashboard Overview</h3>
-              <p className="text-slate-600">Welcome back! Here's your school at a glance.</p>
-            </div>
-
-            {/* Stats Grid */}
-            <div className="grid grid-cols-2 md:grid-cols-3 gap-4 mb-8">
-              {[
-                { icon: Users, label: 'Teachers', value: '45', color: 'from-blue-500 to-blue-600' },
-                { icon: GraduationCap, label: 'Students', value: '327', color: 'from-purple-500 to-purple-600' },
-                { icon: BookOpen, label: 'Subjects', value: '24', color: 'from-emerald-500 to-emerald-600' },
-                { icon: Building2, label: 'Rooms', value: '18', color: 'from-amber-500 to-amber-600' },
-                { icon: Calendar, label: 'Schedules', value: '3', color: 'from-rose-500 to-rose-600' },
-                { icon: Sparkles, label: 'AI Insights', value: '12', color: 'from-cyan-500 to-cyan-600' },
-              ].map((stat, index) => (
-                <motion.div
-                  key={index}
-                  initial={{ opacity: 0, scale: 0.9 }}
-                  whileInView={{ opacity: 1, scale: 1 }}
+          {/* Right Column - Feature Cards */}
+          <div className="space-y-4">
+            {features.map((feature, index) => (
+              <div key={index}>
+                <motion.button
+                  onClick={() => setExpandedIndex(expandedIndex === index ? null : index)}
+                  className="w-full text-left"
+                  initial={{ opacity: 0, x: 20 }}
+                  whileInView={{ opacity: 1, x: 0 }}
                   viewport={{ once: true }}
-                  transition={{ duration: 0.3, delay: index * 0.1 }}
-                  className="bg-white rounded-xl p-4 border border-slate-200 shadow-sm"
+                  transition={{ duration: 0.5, delay: index * 0.1 }}
                 >
-                  <div className={`w-10 h-10 rounded-lg bg-gradient-to-br ${stat.color} flex items-center justify-center mb-3`}>
-                    <stat.icon className="w-5 h-5 text-white" />
+                  <div className={`bg-white/80 backdrop-blur-md rounded-2xl p-6 border-2 transition-all duration-300 ${
+                    expandedIndex === index 
+                      ? 'border-orange-400 shadow-lg' 
+                      : 'border-slate-200 hover:border-orange-300 hover:shadow-md'
+                  }`}>
+                    <div className="flex items-start gap-4">
+                      <div className={`w-12 h-12 rounded-xl bg-gradient-to-br ${feature.color} flex items-center justify-center flex-shrink-0`}>
+                        <feature.icon className="w-6 h-6 text-white" />
+                      </div>
+                      <div className="flex-1">
+                        <h4 className="text-lg font-semibold text-slate-900 mb-2">{feature.title}</h4>
+                        <p className="text-sm text-slate-600">{feature.description}</p>
+                      </div>
+                      <ChevronDown className={`w-5 h-5 text-slate-400 transition-transform duration-300 flex-shrink-0 mt-1 ${
+                        expandedIndex === index ? 'rotate-180' : ''
+                      }`} />
+                    </div>
                   </div>
-                  <div className="text-3xl font-bold text-slate-900 mb-1">{stat.value}</div>
-                  <div className="text-sm text-slate-600">{stat.label}</div>
-                </motion.div>
-              ))}
-            </div>
+                </motion.button>
 
-            {/* Schedule Preview */}
-            <div className="bg-white rounded-xl p-6 border border-slate-200 shadow-sm">
-              <h4 className="text-lg font-semibold text-slate-900 mb-4">Recent Schedule Activity</h4>
-              <div className="space-y-3">
-                {[
-                  { status: 'published', title: 'DP Schedule 2024-25', time: '2 hours ago' },
-                  { status: 'draft', title: 'MYP Schedule (Draft v2)', time: 'Yesterday' },
-                  { status: 'generating', title: 'PYP Fall Term', time: 'In progress...' },
-                ].map((item, index) => (
-                  <div key={index} className="flex items-center gap-4 p-3 rounded-lg bg-slate-50 border border-slate-200">
-                    <div className={`w-2 h-2 rounded-full ${
-                      item.status === 'published' ? 'bg-green-500' :
-                      item.status === 'draft' ? 'bg-amber-500' : 'bg-blue-500 animate-pulse'
-                    }`}></div>
-                    <div className="flex-1">
-                      <div className="font-medium text-slate-900">{item.title}</div>
-                      <div className="text-xs text-slate-500">{item.time}</div>
-                    </div>
-                    <div className={`px-3 py-1 rounded-full text-xs font-medium ${
-                      item.status === 'published' ? 'bg-green-100 text-green-700' :
-                      item.status === 'draft' ? 'bg-amber-100 text-amber-700' : 'bg-blue-100 text-blue-700'
-                    }`}>
-                      {item.status}
-                    </div>
-                  </div>
-                ))}
+                {/* Expanded Screenshot */}
+                <AnimatePresence>
+                  {expandedIndex === index && (
+                    <motion.div
+                      initial={{ height: 0, opacity: 0 }}
+                      animate={{ height: 'auto', opacity: 1 }}
+                      exit={{ height: 0, opacity: 0 }}
+                      transition={{ duration: 0.3 }}
+                      className="overflow-hidden"
+                    >
+                      <div className="pt-4 px-2">
+                        <div className="bg-white rounded-xl shadow-xl border border-slate-200 overflow-hidden">
+                          {/* Browser Chrome */}
+                          <div className="bg-slate-800 px-4 py-2 flex items-center gap-2">
+                            <div className="flex gap-1.5">
+                              <div className="w-2.5 h-2.5 rounded-full bg-red-500"></div>
+                              <div className="w-2.5 h-2.5 rounded-full bg-yellow-500"></div>
+                              <div className="w-2.5 h-2.5 rounded-full bg-green-500"></div>
+                            </div>
+                            <div className="flex-1 bg-slate-700 rounded px-3 py-1 text-xs text-slate-300 text-center">
+                              schedual.app/dashboard
+                            </div>
+                          </div>
+
+                          {/* Screenshot Content */}
+                          <div className="bg-gradient-to-br from-slate-50 to-slate-100 p-6">
+                            <div className="grid grid-cols-3 gap-3 mb-4">
+                              <div className="bg-white rounded-lg p-3 border border-slate-200">
+                                <div className="w-8 h-8 rounded-lg bg-gradient-to-br from-blue-500 to-blue-600 flex items-center justify-center mb-2">
+                                  <Users className="w-4 h-4 text-white" />
+                                </div>
+                                <div className="text-2xl font-bold text-slate-900">45</div>
+                                <div className="text-xs text-slate-600">Teachers</div>
+                              </div>
+                              <div className="bg-white rounded-lg p-3 border border-slate-200">
+                                <div className="w-8 h-8 rounded-lg bg-gradient-to-br from-purple-500 to-purple-600 flex items-center justify-center mb-2">
+                                  <GraduationCap className="w-4 h-4 text-white" />
+                                </div>
+                                <div className="text-2xl font-bold text-slate-900">327</div>
+                                <div className="text-xs text-slate-600">Students</div>
+                              </div>
+                              <div className="bg-white rounded-lg p-3 border border-slate-200">
+                                <div className="w-8 h-8 rounded-lg bg-gradient-to-br from-emerald-500 to-emerald-600 flex items-center justify-center mb-2">
+                                  <BookOpen className="w-4 h-4 text-white" />
+                                </div>
+                                <div className="text-2xl font-bold text-slate-900">24</div>
+                                <div className="text-xs text-slate-600">Subjects</div>
+                              </div>
+                            </div>
+
+                            <div className="bg-white rounded-lg p-4 border border-slate-200">
+                              <div className="text-sm font-semibold text-slate-900 mb-3">Recent Activity</div>
+                              <div className="space-y-2">
+                                {[
+                                  { status: 'success', title: 'DP Schedule 2024-25', time: '2h ago' },
+                                  { status: 'pending', title: 'MYP Schedule Draft', time: 'Yesterday' },
+                                ].map((item, i) => (
+                                  <div key={i} className="flex items-center gap-3 p-2 rounded bg-slate-50">
+                                    <div className={`w-2 h-2 rounded-full ${item.status === 'success' ? 'bg-green-500' : 'bg-amber-500'}`}></div>
+                                    <div className="flex-1">
+                                      <div className="text-xs font-medium text-slate-900">{item.title}</div>
+                                      <div className="text-xs text-slate-500">{item.time}</div>
+                                    </div>
+                                  </div>
+                                ))}
+                              </div>
+                            </div>
+                          </div>
+                        </div>
+                      </div>
+                    </motion.div>
+                  )}
+                </AnimatePresence>
               </div>
-            </div>
+            ))}
           </div>
-
-          {/* Glow effect */}
-          <div className="absolute -inset-4 bg-gradient-to-r from-blue-500/20 via-purple-500/20 to-cyan-500/20 rounded-3xl blur-2xl -z-10"></div>
-        </motion.div>
+        </div>
       </div>
     </section>
   );
