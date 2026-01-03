@@ -186,6 +186,7 @@ export default function DashboardPreview() {
           </div>
         </div>
       </div>
+      </div>
     </section>
   );
 }
