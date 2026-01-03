@@ -30,21 +30,25 @@ export default function AccountManager() {
     confirmPassword: ''
   });
 
-  const { data: profileData, isLoading } = useQuery({
-    queryKey: ['userProfile'],
-    queryFn: async () => {
-      const { data } = await base44.functions.invoke('getUserProfile');
-      return data;
-    },
+  const { data: user, isLoading } = useQuery({
+    queryKey: ['currentUser'],
+    queryFn: () => base44.auth.me(),
   });
 
-  const user = profileData?.user;
-  const school = profileData?.school;
+  const { data: school } = useQuery({
+    queryKey: ['userSchool', user?.school_id],
+    queryFn: async () => {
+      if (!user?.school_id) return null;
+      const schools = await base44.entities.School.list();
+      return schools.find(s => s.id === user.school_id);
+    },
+    enabled: !!user?.school_id
+  });
 
   const updateNameMutation = useMutation({
     mutationFn: (data) => base44.auth.updateMe(data),
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['userProfile'] });
+      queryClient.invalidateQueries({ queryKey: ['currentUser'] });
       setIsEditingName(false);
       toast.success('Name updated successfully');
     },
@@ -59,7 +63,7 @@ export default function AccountManager() {
       await base44.functions.invoke('updateUserEmail', { newEmail });
     },
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['userProfile'] });
+      queryClient.invalidateQueries({ queryKey: ['currentUser'] });
       setIsEditingEmail(false);
       setFormData({ ...formData, newEmail: '' });
       toast.success('Email updated successfully');
@@ -108,7 +112,7 @@ export default function AccountManager() {
       setIsToggling2FA(true);
       try {
         await base44.functions.invoke('disable2FA');
-        queryClient.invalidateQueries({ queryKey: ['userProfile'] });
+        queryClient.invalidateQueries({ queryKey: ['currentUser'] });
         toast.success('2FA disabled successfully');
       } catch (error) {
         toast.error(error.message || 'Failed to disable 2FA');
@@ -120,7 +124,7 @@ export default function AccountManager() {
 
   const handle2FASetupComplete = () => {
     setShow2FASetup(false);
-    queryClient.invalidateQueries({ queryKey: ['userProfile'] });
+    queryClient.invalidateQueries({ queryKey: ['currentUser'] });
   };
 
   const handleUpdateName = () => {

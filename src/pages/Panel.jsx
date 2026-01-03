@@ -49,20 +49,61 @@ export default function Panel() {
 
   const queryClient = useQueryClient();
 
-  const { data: adminData, isLoading: loadingSchools } = useQuery({
-    queryKey: ['adminPanelData'],
+  const { data: schools = [], isLoading: loadingSchools } = useQuery({
+    queryKey: ['allSchools'],
     queryFn: async () => {
-      const { data } = await base44.functions.invoke('getAdminPanelData');
-      return data;
+      const { data } = await base44.functions.invoke('adminManageSchool', { action: 'list' });
+      return data.schools || [];
     },
-    refetchInterval: 5000,
+    refetchInterval: 5000, // Auto-refetch every 5 seconds to catch webhook updates
   });
 
-  const schools = adminData?.schools || [];
-  const allUsers = adminData?.users || [];
-  const allTeachers = adminData?.teachers || [];
-  const allStudents = adminData?.students || [];
-  const allSchedules = adminData?.schedules || [];
+  const { data: allUsers = [] } = useQuery({
+    queryKey: ['allUsers'],
+    queryFn: async () => {
+      const { data } = await base44.functions.invoke('adminManageUser', { action: 'list' });
+      return data.users || [];
+    },
+  });
+
+  const { data: allTeachers = [] } = useQuery({
+    queryKey: ['allTeachers'],
+    queryFn: async () => {
+      try {
+        const { data } = await base44.functions.invoke('adminGetAllData', { entityType: 'Teacher' });
+        return data.records || [];
+      } catch (error) {
+        console.error('Error fetching teachers:', error);
+        return [];
+      }
+    },
+  });
+
+  const { data: allStudents = [] } = useQuery({
+    queryKey: ['allStudents'],
+    queryFn: async () => {
+      try {
+        const { data } = await base44.functions.invoke('adminGetAllData', { entityType: 'Student' });
+        return data.records || [];
+      } catch (error) {
+        console.error('Error fetching students:', error);
+        return [];
+      }
+    },
+  });
+
+  const { data: allSchedules = [] } = useQuery({
+    queryKey: ['allSchedules'],
+    queryFn: async () => {
+      try {
+        const { data } = await base44.functions.invoke('adminGetAllData', { entityType: 'ScheduleVersion' });
+        return data.records || [];
+      } catch (error) {
+        console.error('Error fetching schedules:', error);
+        return [];
+      }
+    },
+  });
 
   const createSchoolMutation = useMutation({
     mutationFn: (data) => base44.functions.invoke('adminManageSchool', { action: 'create', data }),

@@ -21,49 +21,6 @@ Deno.serve(async (req) => {
 
     const email = user.email;
 
-    // Check for existing valid session
-    const existingSessions = await base44.asServiceRole.entities.LoginSession.filter({
-      user_email: email,
-      verified: true
-    });
-
-    for (const session of existingSessions) {
-      if (new Date(session.expires_at) > new Date()) {
-        return Response.json({ 
-          success: true,
-          sessionToken: session.session_token,
-          alreadyVerified: true,
-          message: 'Session already verified'
-        });
-      }
-    }
-
-    // Check if user is super admin - skip 2FA for super admins
-    const superAdminEmailsStr = Deno.env.get("SUPER_ADMIN_EMAILS") || '';
-    const superAdminEmails = superAdminEmailsStr
-      .split(',')
-      .map(email => email.trim().toLowerCase())
-      .filter(email => email.length > 0);
-    
-    if (superAdminEmails.includes(email.toLowerCase())) {
-      const sessionToken = randomBytes(32).toString('hex');
-      const sessionExpiresAt = new Date(Date.now() + 24 * 60 * 60 * 1000);
-      
-      await base44.asServiceRole.entities.LoginSession.create({
-        user_email: email,
-        session_token: sessionToken,
-        verified: true,
-        expires_at: sessionExpiresAt.toISOString()
-      });
-
-      return Response.json({ 
-        success: true,
-        sessionToken,
-        superAdmin: true,
-        message: 'Super admin - verification skipped'
-      });
-    }
-
     // Check for recent codes (rate limiting)
     const recentCodes = await base44.asServiceRole.entities.EmailVerificationCode.filter({
       user_email: email,
@@ -109,7 +66,19 @@ Deno.serve(async (req) => {
     await base44.asServiceRole.integrations.Core.SendEmail({
       to: email,
       subject: 'Login verification code - Schedual',
-      body: `<div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto;"><h2 style="color: #1e3a8a;">Verify your login</h2><p>A login attempt was made to your Schedual account. To continue, please enter this verification code:</p><div style="background: #f1f5f9; padding: 20px; border-radius: 8px; text-align: center; margin: 20px 0;"><h1 style="color: #1e3a8a; font-size: 36px; letter-spacing: 8px; margin: 0;">${code}</h1></div><p style="color: #64748b;">This code will expire in 10 minutes.</p><p style="color: #ef4444; font-size: 14px;"><strong>If you didn't attempt to log in, please secure your account immediately.</strong></p><hr style="border: none; border-top: 1px solid #e2e8f0; margin: 20px 0;"><p style="color: #94a3b8; font-size: 12px;">Schedual - Intelligent IB Scheduling</p></div>`
+      body: `
+        <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto;">
+          <h2 style="color: #1e3a8a;">Verify your login</h2>
+          <p>A login attempt was made to your Schedual account. To continue, please enter this verification code:</p>
+          <div style="background: #f1f5f9; padding: 20px; border-radius: 8px; text-align: center; margin: 20px 0;">
+            <h1 style="color: #1e3a8a; font-size: 36px; letter-spacing: 8px; margin: 0;">${code}</h1>
+          </div>
+          <p style="color: #64748b;">This code will expire in 10 minutes.</p>
+          <p style="color: #ef4444; font-size: 14px;"><strong>If you didn't attempt to log in, please secure your account immediately.</strong></p>
+          <hr style="border: none; border-top: 1px solid #e2e8f0; margin: 20px 0;">
+          <p style="color: #94a3b8; font-size: 12px;">Schedual - Intelligent IB Scheduling</p>
+        </div>
+      `
     });
 
     // Create unverified session

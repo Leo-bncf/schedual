@@ -9,20 +9,6 @@ Deno.serve(async (req) => {
       return Response.json({ error: 'Unauthorized' }, { status: 401 });
     }
 
-    // Check if user is super admin - they don't need invitations
-    const superAdminEmailsStr = Deno.env.get("SUPER_ADMIN_EMAILS") || '';
-    const superAdminEmails = superAdminEmailsStr
-      .split(',')
-      .map(email => email.trim().toLowerCase())
-      .filter(email => email.length > 0);
-    
-    if (superAdminEmails.includes(user.email.toLowerCase())) {
-      return Response.json({ 
-        hasPendingInvite: false,
-        message: 'Super admin - no invitations needed'
-      });
-    }
-
     // Check for pending invitations
     const pendingInvites = await base44.asServiceRole.entities.PendingInvitation.filter({
       email: user.email
