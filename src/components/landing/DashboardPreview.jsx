@@ -139,18 +139,18 @@ export default function DashboardPreview() {
                   viewport={{ once: true }}
                   transition={{ duration: 0.5, delay: index * 0.1 }}
                 >
-                  <div className={`bg-white/80 backdrop-blur-md rounded-2xl p-6 border-2 transition-all duration-300 ${
+                  <div className={`bg-white/80 backdrop-blur-md rounded-2xl p-6 border-2 transition-all duration-300 max-w-xl h-48 flex items-center ${
                     expandedIndex === index 
                       ? 'border-blue-600 shadow-lg' 
                       : 'border-slate-200 hover:border-blue-400 hover:shadow-md'
                   }`}>
-                    <div className="flex items-start gap-4">
+                    <div className="flex items-start gap-4 w-full">
                       <div className={`w-12 h-12 rounded-xl bg-gradient-to-br ${feature.color} flex items-center justify-center flex-shrink-0`}>
                         <feature.icon className="w-6 h-6 text-white" />
                       </div>
                       <div className="flex-1">
                         <h4 className="text-lg font-semibold text-slate-900 mb-2">{feature.title}</h4>
-                        <p className="text-sm text-slate-600">{feature.description}</p>
+                        <p className="text-sm text-slate-600 leading-relaxed">{feature.description}</p>
                       </div>
                       <ChevronDown className={`w-5 h-5 text-slate-400 transition-transform duration-300 flex-shrink-0 mt-1 ${
                         expandedIndex === index ? 'rotate-180' : ''
