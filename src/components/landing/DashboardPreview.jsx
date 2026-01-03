@@ -76,7 +76,7 @@ export default function DashboardPreview() {
         <div className="relative">
           <div className="grid lg:grid-cols-2 gap-8">
             {/* Left Column - Text (Fixed & Centered) */}
-            <div className="lg:fixed lg:left-1/4 lg:-translate-x-1/2 lg:top-1/2 lg:-translate-y-1/2 lg:w-96">
+            <div className={`lg:w-96 transition-opacity duration-300 ${isInView ? 'lg:fixed lg:left-1/4 lg:-translate-x-1/2 lg:top-1/2 lg:-translate-y-1/2 opacity-100' : 'opacity-0'}`}>
               <div className="max-w-xl">
               <div className="text-sm font-semibold text-purple-600 mb-3">Benefits</div>
               <h3 className="text-4xl font-bold text-slate-900 mb-6">
