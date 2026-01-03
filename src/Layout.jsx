@@ -226,22 +226,19 @@ export default function Layout({ children, currentPageName }) {
   };
 
   return (
-    <div className="min-h-screen bg-slate-50">
+    <div className="min-h-screen bg-white">
       <style>{`
-        @import url('https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;600;700&display=swap');
-
         :root {
-          --primary: 99 102 241;
+          --primary: 0 122 255;
           --primary-foreground: 255 255 255;
         }
         body {
-          font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
-          -webkit-font-smoothing: antialiased;
-          -moz-osx-font-smoothing: grayscale;
+          font-family: -apple-system, BlinkMacSystemFont, 'SF Pro Display', 'Segoe UI', sans-serif;
         }
         h1, h2, h3, h4, h5, h6 {
-          font-family: 'Space Grotesk', 'Inter', sans-serif;
-          letter-spacing: -0.02em;
+          font-family: -apple-system, BlinkMacSystemFont, 'SF Pro Display', 'Segoe UI', sans-serif;
+          font-weight: 600;
+          letter-spacing: -0.025em;
         }
       `}</style>
 
@@ -255,19 +252,19 @@ export default function Layout({ children, currentPageName }) {
 
       {/* Sidebar */}
       <aside className={`
-        fixed top-0 left-0 z-50 h-full w-64 bg-white border-r border-slate-200 
-        transform transition-transform duration-300 ease-in-out
+        fixed top-0 left-0 z-50 h-full w-64 bg-white/80 backdrop-blur-2xl border-r border-slate-200/50
+        transform transition-all duration-300 ease-out
         ${sidebarOpen ? 'translate-x-0' : '-translate-x-full'}
         lg:translate-x-0
       `}>
         <div className="flex flex-col h-full">
           {/* Logo */}
-          <div className="flex items-center justify-between h-16 px-6 border-b border-slate-100">
-            <Link to={createPageUrl('Landing')} className="flex items-center gap-3">
-              <div className="w-9 h-9 rounded-xl bg-gradient-to-br from-blue-900 to-blue-800 flex items-center justify-center">
-                <Calendar className="w-5 h-5 text-white" />
+          <div className="flex items-center justify-between h-16 px-6">
+            <Link to={createPageUrl('Landing')} className="flex items-center gap-2.5 transition-opacity hover:opacity-70">
+              <div className="w-8 h-8 rounded-lg bg-gradient-to-br from-blue-500 to-blue-600 flex items-center justify-center shadow-sm">
+                <Calendar className="w-4.5 h-4.5 text-white" />
               </div>
-              <span className="text-lg font-semibold text-slate-900">Schedual</span>
+              <span className="text-lg font-semibold text-slate-900 tracking-tight">Schedual</span>
             </Link>
             <Button 
               variant="ghost" 
@@ -280,7 +277,7 @@ export default function Layout({ children, currentPageName }) {
           </div>
 
           {/* Navigation */}
-          <nav className="flex-1 px-4 py-6 space-y-1 overflow-y-auto">
+          <nav className="flex-1 px-3 py-4 space-y-0.5 overflow-y-auto">
             {navigation.filter(item => {
               if (item.superAdminOnly && !isSuperAdmin) return false;
               if (item.schoolOnly && !isSchoolAdmin(user)) return false;
@@ -304,16 +301,16 @@ export default function Layout({ children, currentPageName }) {
                     key={item.name}
                     to={createPageUrl(item.page)}
                     className={`
-                      flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-medium
-                      transition-all duration-200
+                      flex items-center gap-3 px-3 py-2 rounded-lg text-[13px] font-medium
+                      transition-all duration-150
                       ${isActive 
-                        ? 'bg-blue-50 text-blue-900' 
-                        : 'text-slate-600 hover:bg-slate-100 hover:text-slate-900'
+                        ? 'bg-slate-100 text-slate-900' 
+                        : 'text-slate-600 hover:bg-slate-50 hover:text-slate-900'
                       }
                     `}
                     onClick={() => setSidebarOpen(false)}
                   >
-                    <item.icon className={`w-5 h-5 ${isActive ? 'text-blue-900' : 'text-slate-400'}`} />
+                    <item.icon className={`w-[18px] h-[18px] ${isActive ? 'text-slate-900' : 'text-slate-400'}`} />
                     {item.name}
                   </Link>
                 );
@@ -360,7 +357,7 @@ export default function Layout({ children, currentPageName }) {
       {/* Main content */}
       <div className="lg:pl-64">
         {/* Top bar */}
-        <header className="sticky top-0 z-30 flex items-center justify-between h-16 px-4 sm:px-6 bg-white/80 backdrop-blur-md border-b border-slate-200">
+        <header className="sticky top-0 z-30 flex items-center justify-between h-14 px-4 sm:px-6 bg-white/70 backdrop-blur-2xl border-b border-slate-200/50">
           <Button 
             variant="ghost" 
             size="icon" 
@@ -374,14 +371,14 @@ export default function Layout({ children, currentPageName }) {
           {isSuperAdmin ? (
             <Link 
               to={createPageUrl('SupportTickets')}
-              className="px-4 py-2 text-sm font-medium text-white bg-blue-900 hover:bg-blue-800 rounded-lg transition-colors"
+              className="px-3.5 py-1.5 text-[13px] font-medium text-white bg-blue-500 hover:bg-blue-600 rounded-lg transition-all shadow-sm"
             >
               Support Tickets
             </Link>
           ) : isSchoolAdmin(user) && (
             <Link 
               to={createPageUrl('Support')}
-              className="px-4 py-2 text-sm font-medium text-white bg-blue-900 hover:bg-blue-800 rounded-lg transition-colors"
+              className="px-3.5 py-1.5 text-[13px] font-medium text-white bg-blue-500 hover:bg-blue-600 rounded-lg transition-all shadow-sm"
             >
               Support Ticket
             </Link>
@@ -390,7 +387,7 @@ export default function Layout({ children, currentPageName }) {
         </header>
 
         {/* Page content */}
-        <main className="p-4 sm:p-6 lg:p-8">
+        <main className="p-6 sm:p-8 lg:p-10">
           {children}
         </main>
       </div>
