@@ -21,6 +21,33 @@ Deno.serve(async (req) => {
 
     const email = user.email;
 
+    // Check if user is super admin - skip 2FA for super admins
+    const superAdminEmailsStr = Deno.env.get("SUPER_ADMIN_EMAILS") || '';
+    const superAdminEmails = superAdminEmailsStr
+      .split(',')
+      .map(email => email.trim().toLowerCase())
+      .filter(email => email.length > 0);
+    
+    if (superAdminEmails.includes(email.toLowerCase())) {
+      // Create verified session for super admin
+      const sessionToken = randomBytes(32).toString('hex');
+      const sessionExpiresAt = new Date(Date.now() + 24 * 60 * 60 * 1000);
+      
+      await base44.asServiceRole.entities.LoginSession.create({
+        user_email: email,
+        session_token: sessionToken,
+        verified: true,
+        expires_at: sessionExpiresAt.toISOString()
+      });
+
+      return Response.json({ 
+        success: true,
+        sessionToken,
+        superAdmin: true,
+        message: 'Super admin - verification skipped'
+      });
+    }
+
     // Check for recent codes (rate limiting)
     const recentCodes = await base44.asServiceRole.entities.EmailVerificationCode.filter({
       user_email: email,
