@@ -144,24 +144,12 @@ export default function Layout({ children, currentPageName }) {
 
     const checkLoginVerification = async (userData) => {
       try {
-        // Check for verified session in last 24 hours
-        const sessions = await base44.entities.LoginSession.filter({
-          user_email: userData.email,
-          verified: true
-        }).catch(() => []);
-
-        if (sessions.length > 0) {
-          const session = sessions[0];
-          if (new Date(session.expires_at) > new Date()) {
-            // Valid session exists
+        const response = await base44.functions.invoke('sendLoginVerification');
+        if (response.data.success) {
+          if (response.data.alreadyVerified || response.data.superAdmin) {
             setIsLoading(false);
             return;
           }
-        }
-
-        // No valid session - need verification
-        const response = await base44.functions.invoke('sendLoginVerification');
-        if (response.data.success) {
           setSessionToken(response.data.sessionToken);
           setNeedsVerification(true);
           setIsLoading(false);

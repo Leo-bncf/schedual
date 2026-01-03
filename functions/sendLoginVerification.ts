@@ -21,6 +21,23 @@ Deno.serve(async (req) => {
 
     const email = user.email;
 
+    // Check for existing valid session
+    const existingSessions = await base44.asServiceRole.entities.LoginSession.filter({
+      user_email: email,
+      verified: true
+    });
+
+    for (const session of existingSessions) {
+      if (new Date(session.expires_at) > new Date()) {
+        return Response.json({ 
+          success: true,
+          sessionToken: session.session_token,
+          alreadyVerified: true,
+          message: 'Session already verified'
+        });
+      }
+    }
+
     // Check if user is super admin - skip 2FA for super admins
     const superAdminEmailsStr = Deno.env.get("SUPER_ADMIN_EMAILS") || '';
     const superAdminEmails = superAdminEmailsStr
@@ -29,7 +46,6 @@ Deno.serve(async (req) => {
       .filter(email => email.length > 0);
     
     if (superAdminEmails.includes(email.toLowerCase())) {
-      // Create verified session for super admin
       const sessionToken = randomBytes(32).toString('hex');
       const sessionExpiresAt = new Date(Date.now() + 24 * 60 * 60 * 1000);
       
