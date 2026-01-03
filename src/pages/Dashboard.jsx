@@ -24,49 +24,21 @@ import PageHeader from '../components/ui-custom/PageHeader';
 import SupportTicketForm from '../components/support/SupportTicketForm';
 
 export default function Dashboard() {
-  const { data: user } = useQuery({
-    queryKey: ['currentUser'],
-    queryFn: () => base44.auth.me(),
-  });
-
-  const { data: teachers = [], isLoading: loadingTeachers } = useQuery({
-    queryKey: ['teachers', user?.school_id],
-    queryFn: () => base44.entities.Teacher.list(),
-    enabled: !!user?.school_id,
-  });
-
-  const { data: students = [], isLoading: loadingStudents } = useQuery({
-    queryKey: ['students', user?.school_id],
-    queryFn: () => base44.entities.Student.list(),
-    enabled: !!user?.school_id,
-  });
-
-  const { data: subjects = [], isLoading: loadingSubjects } = useQuery({
-    queryKey: ['subjects', user?.school_id],
-    queryFn: () => base44.entities.Subject.list(),
-    enabled: !!user?.school_id,
-  });
-
-  const { data: rooms = [], isLoading: loadingRooms } = useQuery({
-    queryKey: ['rooms', user?.school_id],
-    queryFn: () => base44.entities.Room.list(),
-    enabled: !!user?.school_id,
-  });
-
-  const { data: scheduleVersions = [], isLoading: loadingSchedules } = useQuery({
-    queryKey: ['scheduleVersions', user?.school_id],
-    queryFn: () => base44.entities.ScheduleVersion.list('-created_date', 5),
-    enabled: !!user?.school_id,
-  });
-
-  const { data: aiLogs = [], isLoading: loadingLogs } = useQuery({
-    queryKey: ['aiLogs', user?.school_id],
+  const { data: dashboardData, isLoading: loadingTeachers } = useQuery({
+    queryKey: ['dashboardData'],
     queryFn: async () => {
-      const logs = await base44.entities.AIAdvisorLog.list('-created_date', 50);
-      return logs.filter(log => log.status === 'pending').slice(0, 5);
+      const { data } = await base44.functions.invoke('getDashboardData');
+      return data;
     },
-    enabled: !!user?.school_id,
   });
+
+  const teachers = dashboardData?.teachers || [];
+  const students = dashboardData?.students || [];
+  const subjects = dashboardData?.subjects || [];
+  const rooms = dashboardData?.rooms || [];
+  const scheduleVersions = dashboardData?.scheduleVersions || [];
+  const aiLogs = dashboardData?.aiLogs || [];
+  const loadingSchedules = loadingTeachers;
 
   // School dashboard stats
   const activeTeachers = teachers.filter(t => t.is_active !== false).length;
