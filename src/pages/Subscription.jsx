@@ -272,9 +272,46 @@ export default function Subscription() {
               <p className="text-slate-600 mb-6 max-w-md mx-auto">
                 Subscribe now to unlock AI-powered scheduling, conflict resolution, and IB compliance features for your school.
               </p>
+              
+              {/* Pricing Breakdown */}
+              <div className="bg-slate-50 border border-slate-200 rounded-xl p-6 mb-6 max-w-md mx-auto">
+                <div className="space-y-3">
+                  <div className="flex justify-between items-center">
+                    <span className="text-slate-700">Base Platform</span>
+                    <span className="font-semibold text-slate-900">€{BASE_YEARLY_PRICE / 100}</span>
+                  </div>
+                  <div className="flex justify-between items-center">
+                    <span className="text-slate-700">Cloud Storage</span>
+                    <span className="font-semibold text-slate-900">€{STORAGE_YEARLY_PRICE / 100}</span>
+                  </div>
+                  <div className="border-t border-slate-300 pt-3 flex justify-between items-center">
+                    <span className="font-bold text-slate-900 text-lg">Total per year</span>
+                    <span className="font-bold text-2xl text-blue-900">€{(BASE_YEARLY_PRICE + STORAGE_YEARLY_PRICE) / 100}</span>
+                  </div>
+                  <p className="text-xs text-slate-500 text-center">
+                    That's only €{((BASE_YEARLY_PRICE + STORAGE_YEARLY_PRICE) / 12 / 100).toFixed(2)}/month
+                  </p>
+                </div>
+              </div>
+
+              {/* Info Box about Additional Users */}
+              <div className="bg-blue-50 border border-blue-200 rounded-lg p-4 mb-6 max-w-md mx-auto">
+                <div className="flex items-start gap-3">
+                  <Users className="w-5 h-5 text-blue-600 mt-0.5 flex-shrink-0" />
+                  <div>
+                    <p className="text-sm font-semibold text-blue-900 mb-1">
+                      Multiple Administrators
+                    </p>
+                    <p className="text-xs text-blue-700">
+                      Purchase additional admin seats (€200/year each) after subscribing. Manage your school team from your dashboard.
+                    </p>
+                  </div>
+                </div>
+              </div>
+
               <Button 
                 size="lg"
-                className="bg-gradient-to-r from-blue-900 to-blue-800 hover:from-blue-800 hover:to-blue-700 text-white font-semibold"
+                className="bg-gradient-to-r from-blue-900 to-blue-800 hover:from-blue-800 hover:to-blue-700 text-white font-semibold px-8 py-6 text-base"
                 onClick={handleSubscribe}
                 disabled={isProcessing}
               >
