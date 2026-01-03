@@ -7,31 +7,31 @@ const features = [
     icon: Building2,
     title: 'Beautifully streamlined processes to increase your school\'s efficiency',
     description: 'Ditch the hassle of patchwork solutions that slow you down and hinder communication.',
-    color: 'from-orange-400 to-pink-500',
+    color: 'from-blue-900 to-blue-800',
   },
   {
     icon: Users,
     title: 'Bring your community together!',
     description: 'From announcements to progress tracking, we keep your community connected.',
-    color: 'from-orange-400 to-pink-500',
+    color: 'from-blue-900 to-blue-800',
   },
   {
     icon: BookOpen,
     title: 'Craft exceptional education experiences',
     description: 'Manage your teaching journey—from curriculum planning to report cards—in one simple solution.',
-    color: 'from-orange-400 to-pink-500',
+    color: 'from-blue-900 to-blue-800',
   },
   {
     icon: Calendar,
     title: 'A tailorable solution',
     description: 'Flexible features enable you to tailor learning experiences to meet the specific needs of your students.',
-    color: 'from-orange-400 to-pink-500',
+    color: 'from-blue-900 to-blue-800',
   },
   {
     icon: GraduationCap,
     title: 'Built for the modern classroom',
     description: 'Everything you need to manage students, schedules, and success in one place.',
-    color: 'from-orange-400 to-pink-500',
+    color: 'from-blue-900 to-blue-800',
   },
 ];
 
@@ -53,15 +53,21 @@ export default function DashboardPreview() {
 
         {/* Feature Cards Grid */}
         <div className="grid lg:grid-cols-2 gap-8">
-          {/* Left Column - Text */}
-          <div className="flex items-center">
+          {/* Left Column - Text (Sticky) */}
+          <div className="lg:sticky lg:top-24 lg:self-start">
             <div>
-              <h3 className="text-3xl font-bold text-slate-900 mb-4">
+              <h3 className="text-4xl font-bold text-slate-900 mb-6">
                 Everything you need in one place
               </h3>
-              <p className="text-lg text-slate-600 leading-relaxed">
+              <p className="text-lg text-slate-600 leading-relaxed mb-6">
                 Schedual brings together all the tools you need to manage your IB school efficiently. From scheduling to communication, we've got you covered.
               </p>
+              <div className="bg-gradient-to-br from-blue-50 to-purple-50 rounded-2xl p-6 border border-blue-100">
+                <div className="text-sm font-semibold text-blue-900 mb-2">Built by IB Students, for IB Students</div>
+                <p className="text-slate-700 leading-relaxed">
+                  We understand the unique challenges of IB scheduling because we've lived them. Our solution was born from real IB student experiences, designed to solve the complex timetabling problems that traditional tools can't handle.
+                </p>
+              </div>
             </div>
           </div>
 
@@ -79,8 +85,8 @@ export default function DashboardPreview() {
                 >
                   <div className={`bg-white/80 backdrop-blur-md rounded-2xl p-6 border-2 transition-all duration-300 ${
                     expandedIndex === index 
-                      ? 'border-orange-400 shadow-lg' 
-                      : 'border-slate-200 hover:border-orange-300 hover:shadow-md'
+                      ? 'border-blue-600 shadow-lg' 
+                      : 'border-slate-200 hover:border-blue-400 hover:shadow-md'
                   }`}>
                     <div className="flex items-start gap-4">
                       <div className={`w-12 h-12 rounded-xl bg-gradient-to-br ${feature.color} flex items-center justify-center flex-shrink-0`}>
