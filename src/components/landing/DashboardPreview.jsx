@@ -82,9 +82,9 @@ export default function DashboardPreview() {
         </div>
 
         {/* Feature Cards Grid */}
-        <div className="relative flex flex-col lg:flex-row gap-8 lg:items-start">
+        <div className="relative flex flex-col lg:flex-row gap-8">
             {/* Left Column - Text */}
-            <div className="lg:w-[400px] lg:sticky lg:top-24 lg:self-start">
+            <div className="lg:w-[400px] lg:sticky lg:top-24 lg:h-fit">
               <div className="text-sm font-semibold text-purple-600 mb-3">Benefits</div>
               <h3 className="text-4xl font-bold text-slate-900 mb-6">
                 Everything you need in one place

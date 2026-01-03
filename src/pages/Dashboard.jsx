@@ -84,7 +84,7 @@ export default function Dashboard() {
         description="Overview of your scheduling system"
         actions={
           <Link to={createPageUrl('Schedule')}>
-            <Button className="bg-blue-500 hover:bg-blue-600 text-white shadow-sm">
+            <Button className="bg-blue-900 hover:bg-blue-800">
               <Calendar className="w-4 h-4 mr-2" />
               View Schedule
             </Button>
@@ -102,16 +102,19 @@ export default function Dashboard() {
             whileHover={{ scale: 1.05, y: -8 }}
             className="cursor-pointer"
           >
-          <Card className="border-0 shadow-sm bg-white hover:shadow-md transition-all duration-200">
-            <CardContent className="p-5">
-              <div className="flex items-center justify-between mb-3">
-                <div className="w-10 h-10 rounded-xl bg-blue-500/10 flex items-center justify-center">
-                  <Users className="w-5 h-5 text-blue-500" />
+          <Card className="border-0 shadow-lg bg-gradient-to-r from-blue-600 via-indigo-600 to-blue-700 text-white overflow-hidden relative hover:shadow-2xl transition-shadow">
+            <CardContent className="p-6">
+              <div className="absolute top-0 right-0 -mt-4 -mr-4 w-24 h-24 bg-white/10 rounded-full blur-2xl"></div>
+              <div className="relative">
+                <div className="flex items-center justify-between mb-2">
+                  <Users className="w-8 h-8 text-white/90" />
+                  <div className="text-right">
+                    <div className="text-3xl font-bold">{activeTeachers}</div>
+                  </div>
                 </div>
-                <div className="text-3xl font-semibold text-slate-900">{activeTeachers}</div>
+                <div className="text-sm font-medium text-blue-100">Teachers</div>
+                <div className="text-xs text-blue-200 mt-1">{teachers.length} total • Click to manage</div>
               </div>
-              <div className="text-[13px] font-medium text-slate-600">Teachers</div>
-              <div className="text-xs text-slate-400 mt-1">{teachers.length} total</div>
             </CardContent>
           </Card>
           </motion.div>
@@ -125,17 +128,20 @@ export default function Dashboard() {
             whileHover={{ scale: 1.05, y: -8 }}
             className="cursor-pointer"
           >
-          <Card className="border-0 shadow-sm bg-white hover:shadow-md transition-all duration-200">
-            <CardContent className="p-5">
-              <div className="flex items-center justify-between mb-3">
-                <div className="w-10 h-10 rounded-xl bg-emerald-500/10 flex items-center justify-center">
-                  <GraduationCap className="w-5 h-5 text-emerald-500" />
+          <Card className="border-0 shadow-lg bg-gradient-to-r from-teal-500 via-cyan-600 to-sky-600 text-white overflow-hidden relative hover:shadow-2xl transition-shadow">
+            <CardContent className="p-6">
+              <div className="absolute top-0 right-0 -mt-4 -mr-4 w-24 h-24 bg-white/10 rounded-full blur-2xl"></div>
+              <div className="relative">
+                <div className="flex items-center justify-between mb-2">
+                  <GraduationCap className="w-8 h-8 text-white/90" />
+                  <div className="text-right">
+                    <div className="text-3xl font-bold">{activeStudents}</div>
+                  </div>
                 </div>
-                <div className="text-3xl font-semibold text-slate-900">{activeStudents}</div>
-              </div>
-              <div className="text-[13px] font-medium text-slate-600">Students</div>
-              <div className="text-xs text-slate-400 mt-1">
-                {students.filter(s => s.year_group === 'DP2').length} DP2, {students.filter(s => s.year_group === 'DP1').length} DP1
+                <div className="text-sm font-medium text-teal-100">Students</div>
+                <div className="text-xs text-teal-200 mt-1">
+                  {students.filter(s => s.year_group === 'DP2').length} DP2, {students.filter(s => s.year_group === 'DP1').length} DP1 • Click to manage
+                </div>
               </div>
             </CardContent>
           </Card>
@@ -150,16 +156,19 @@ export default function Dashboard() {
             whileHover={{ scale: 1.05, y: -8 }}
             className="cursor-pointer"
           >
-          <Card className="border-0 shadow-sm bg-white hover:shadow-md transition-all duration-200">
-            <CardContent className="p-5">
-              <div className="flex items-center justify-between mb-3">
-                <div className="w-10 h-10 rounded-xl bg-purple-500/10 flex items-center justify-center">
-                  <BookOpen className="w-5 h-5 text-purple-500" />
+          <Card className="border-0 shadow-lg bg-gradient-to-r from-indigo-600 via-violet-600 to-purple-600 text-white overflow-hidden relative hover:shadow-2xl transition-shadow">
+            <CardContent className="p-6">
+              <div className="absolute top-0 right-0 -mt-4 -mr-4 w-24 h-24 bg-white/10 rounded-full blur-2xl"></div>
+              <div className="relative">
+                <div className="flex items-center justify-between mb-2">
+                  <BookOpen className="w-8 h-8 text-white/90" />
+                  <div className="text-right">
+                    <div className="text-3xl font-bold">{activeSubjects}</div>
+                  </div>
                 </div>
-                <div className="text-3xl font-semibold text-slate-900">{activeSubjects}</div>
+                <div className="text-sm font-medium text-indigo-100">Subjects</div>
+                <div className="text-xs text-indigo-200 mt-1">{subjects.filter(s => s.is_core).length} core • Click to manage</div>
               </div>
-              <div className="text-[13px] font-medium text-slate-600">Subjects</div>
-              <div className="text-xs text-slate-400 mt-1">{subjects.filter(s => s.is_core).length} core</div>
             </CardContent>
           </Card>
           </motion.div>
@@ -173,16 +182,19 @@ export default function Dashboard() {
             whileHover={{ scale: 1.05, y: -8 }}
             className="cursor-pointer"
           >
-          <Card className="border-0 shadow-sm bg-white hover:shadow-md transition-all duration-200">
-            <CardContent className="p-5">
-              <div className="flex items-center justify-between mb-3">
-                <div className="w-10 h-10 rounded-xl bg-orange-500/10 flex items-center justify-center">
-                  <Building2 className="w-5 h-5 text-orange-500" />
+          <Card className="border-0 shadow-lg bg-gradient-to-r from-blue-950 via-blue-900 to-blue-800 text-white overflow-hidden relative hover:shadow-2xl transition-shadow">
+            <CardContent className="p-6">
+              <div className="absolute top-0 right-0 -mt-4 -mr-4 w-24 h-24 bg-white/10 rounded-full blur-2xl"></div>
+              <div className="relative">
+                <div className="flex items-center justify-between mb-2">
+                  <Building2 className="w-8 h-8 text-white/90" />
+                  <div className="text-right">
+                    <div className="text-3xl font-bold">{activeRooms}</div>
+                  </div>
                 </div>
-                <div className="text-3xl font-semibold text-slate-900">{activeRooms}</div>
+                <div className="text-sm font-medium text-blue-100">Rooms</div>
+                <div className="text-xs text-blue-200 mt-1">{rooms.filter(r => r.room_type === 'lab').length} labs • Click to manage</div>
               </div>
-              <div className="text-[13px] font-medium text-slate-600">Rooms</div>
-              <div className="text-xs text-slate-400 mt-1">{rooms.filter(r => r.room_type === 'lab').length} labs</div>
             </CardContent>
           </Card>
           </motion.div>
@@ -198,15 +210,15 @@ export default function Dashboard() {
           transition={{ duration: 0.4, delay: 0.4 }}
           className="lg:col-span-2"
         >
-        <Card className="border-0 shadow-sm bg-white">
-          <CardHeader className="pb-4">
+        <Card className="border-0 shadow-lg bg-white">
+          <CardHeader className="pb-4 bg-gradient-to-r from-blue-50 to-indigo-50 border-b border-blue-100">
             <div className="flex items-center justify-between">
               <CardTitle className="text-lg font-semibold text-slate-900 flex items-center gap-2">
                 <Calendar className="w-5 h-5 text-blue-600" />
                 Schedule Status
               </CardTitle>
               <Link to={createPageUrl('Schedule')}>
-                <Button variant="ghost" size="sm" className="text-blue-500 hover:text-blue-600 text-[13px]">
+                <Button variant="ghost" size="sm" className="text-blue-900 hover:text-blue-800">
                   View All <ArrowRight className="w-4 h-4 ml-1" />
                 </Button>
               </Link>
@@ -273,7 +285,7 @@ export default function Dashboard() {
                 <Calendar className="w-12 h-12 text-slate-300 mx-auto mb-3" />
                 <p className="text-slate-500">No schedules created yet</p>
                 <Link to={createPageUrl('Schedule')}>
-                  <Button className="mt-4 bg-blue-500 hover:bg-blue-600 shadow-sm">
+                  <Button className="mt-4 bg-blue-900 hover:bg-blue-800">
                     Create First Schedule
                   </Button>
                 </Link>
@@ -289,7 +301,7 @@ export default function Dashboard() {
           animate={{ opacity: 1, y: 0 }}
           transition={{ duration: 0.4, delay: 0.5 }}
         >
-        <Card className="border-0 shadow-sm bg-white">
+        <Card className="border-0 shadow-lg bg-gradient-to-br from-purple-50 to-pink-50">
           <CardHeader className="pb-4">
             <div className="flex items-center justify-between">
               <CardTitle className="text-lg font-semibold text-slate-900 flex items-center gap-2">
@@ -297,7 +309,7 @@ export default function Dashboard() {
                 AI Insights
               </CardTitle>
               <Link to={createPageUrl('AIAdvisor')}>
-                <Button variant="ghost" size="sm" className="text-blue-500 hover:text-blue-600 text-[13px]">
+                <Button variant="ghost" size="sm" className="text-purple-700 hover:text-purple-900">
                   View All
                 </Button>
               </Link>
