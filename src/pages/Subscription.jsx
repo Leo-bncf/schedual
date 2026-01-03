@@ -110,6 +110,24 @@ export default function Subscription() {
     }
   };
 
+  const handleSubscribe = async () => {
+    setIsProcessing(true);
+    try {
+      const { data } = await base44.functions.invoke('createCheckout', {
+        new_subscription: true
+      });
+      
+      if (data.url) {
+        window.location.href = data.url;
+      }
+    } catch (error) {
+      console.error('Checkout error:', error);
+      toast.error('Failed to start checkout process');
+    } finally {
+      setIsProcessing(false);
+    }
+  };
+
   const handleManageSubscription = async () => {
     setIsProcessing(true);
     try {
@@ -254,6 +272,24 @@ export default function Subscription() {
               <p className="text-slate-600 mb-6 max-w-md mx-auto">
                 Subscribe now to unlock AI-powered scheduling, conflict resolution, and IB compliance features for your school.
               </p>
+              <Button 
+                size="lg"
+                className="bg-gradient-to-r from-blue-900 to-blue-800 hover:from-blue-800 hover:to-blue-700 text-white font-semibold"
+                onClick={handleSubscribe}
+                disabled={isProcessing}
+              >
+                {isProcessing ? (
+                  <>
+                    <Loader2 className="w-5 h-5 mr-2 animate-spin" />
+                    Processing...
+                  </>
+                ) : (
+                  <>
+                    <CreditCard className="w-5 h-5 mr-2" />
+                    Subscribe Now - €{(BASE_YEARLY_PRICE + STORAGE_YEARLY_PRICE) / 100}/year
+                  </>
+                )}
+              </Button>
             </div>
           )}
         </CardContent>
