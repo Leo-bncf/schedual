@@ -52,10 +52,11 @@ export default function DashboardPreview() {
         </div>
 
         {/* Feature Cards Grid */}
-        <div className="grid lg:grid-cols-2 gap-8 lg:items-start">
-          {/* Left Column - Text (Sticky & Centered) */}
-          <div className="lg:sticky lg:top-32">
-            <div className="max-w-xl">
+        <div className="relative">
+          <div className="grid lg:grid-cols-2 gap-8">
+            {/* Left Column - Text (Fixed & Centered) */}
+            <div className="lg:fixed lg:left-1/4 lg:-translate-x-1/2 lg:top-1/2 lg:-translate-y-1/2 lg:w-96">
+              <div className="max-w-xl">
               <div className="text-sm font-semibold text-purple-600 mb-3">Benefits</div>
               <h3 className="text-4xl font-bold text-slate-900 mb-6">
                 Everything you need in one place
