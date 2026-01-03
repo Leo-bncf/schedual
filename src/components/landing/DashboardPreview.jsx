@@ -174,11 +174,10 @@ export default function DashboardPreview() {
                                   </div>
                                 ))}
                               </div>
-                              </div>
-                              </div>
-                              </div>
-                              </div>
-                              </div>
+                            </div>
+                          </div>
+                        </div>
+                      </div>
                     </motion.div>
                   )}
                 </AnimatePresence>
