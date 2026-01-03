@@ -128,7 +128,7 @@ export default function DashboardPreview() {
           </div>
 
           {/* Right Column - Feature Cards */}
-          <div className="lg:col-start-2 space-y-16">
+          <div className="lg:col-start-2 space-y-8">
             {features.map((feature, index) => (
               <div key={index}>
                 <motion.button
