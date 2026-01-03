@@ -54,18 +54,21 @@ export default function DashboardPreview() {
         {/* Feature Cards Grid */}
         <div className="grid lg:grid-cols-2 gap-8">
           {/* Left Column - Text (Sticky) */}
-          <div className="lg:sticky lg:top-24 lg:self-start">
-            <div>
-              <h3 className="text-4xl font-bold text-slate-900 mb-6">
+          <div className="lg:sticky lg:top-24 lg:self-start flex items-center justify-center">
+            <div className="max-w-xl">
+              <h3 className="text-4xl font-bold text-slate-900 mb-6 text-center">
                 Everything you need in one place
               </h3>
-              <p className="text-lg text-slate-600 leading-relaxed mb-6">
+              <p className="text-lg text-slate-600 leading-relaxed mb-4 text-center">
                 Schedual brings together all the tools you need to manage your IB school efficiently. From scheduling to communication, we've got you covered.
               </p>
+              <p className="text-base text-slate-600 leading-relaxed mb-6 text-center">
+                No more juggling between spreadsheets, emails, and outdated scheduling tools. Our platform consolidates everything into one seamless experience—built specifically for the complexities of IB programmes across PYP, MYP, and DP levels.
+              </p>
               <div className="bg-gradient-to-br from-blue-50 to-purple-50 rounded-2xl p-6 border border-blue-100">
-                <div className="text-sm font-semibold text-blue-900 mb-2">Built by IB Students, for IB Students</div>
-                <p className="text-slate-700 leading-relaxed">
-                  We understand the unique challenges of IB scheduling because we've lived them. Our solution was born from real IB student experiences, designed to solve the complex timetabling problems that traditional tools can't handle.
+                <div className="text-sm font-semibold text-blue-900 mb-3 text-center">Built by IB Students, for IB Students</div>
+                <p className="text-slate-700 leading-relaxed text-center">
+                  We understand the unique challenges of IB scheduling because we've lived them. Our solution was born from real IB student experiences, designed to solve the complex timetabling problems that traditional tools can't handle. We know the pain of conflicting HL classes, the challenge of balancing CAS commitments, and the complexity of managing subject groups across multiple grade levels.
                 </p>
               </div>
             </div>
