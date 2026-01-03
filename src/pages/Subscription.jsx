@@ -33,9 +33,9 @@ import PageHeader from '../components/ui-custom/PageHeader';
 import { toast } from 'sonner';
 
 const STRIPE_PUBLIC_KEY = import.meta.env.VITE_STRIPE_PUBLIC_KEY;
-const BASE_YEARLY_PRICE = 1999;
-const STORAGE_YEARLY_PRICE = 240;
-const ADDITIONAL_USER_YEARLY_PRICE = 200;
+const BASE_YEARLY_PRICE = 199900;
+const STORAGE_YEARLY_PRICE = 24000;
+const ADDITIONAL_USER_YEARLY_PRICE = 20000;
 
 export default function Subscription() {
   const [isProcessing, setIsProcessing] = useState(false);
