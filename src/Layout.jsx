@@ -84,20 +84,18 @@ export default function Layout({ children, currentPageName }) {
           const checkUserUpdate = async () => {
             attempts++;
             try {
-              const userData = await base44.auth.me();
-              if (userData.school_id) {
-                setUser(userData);
-                const { data } = await base44.functions.invoke('getSuperAdminEmails');
-                setIsSuperAdmin(data?.isSuperAdmin || false);
-                await checkLoginVerification(userData);
+              const { data: profileData } = await base44.functions.invoke('getUserProfile');
+              if (profileData.user.school_id) {
+                setUser(profileData.user);
+                setIsSuperAdmin(profileData.isSuperAdmin);
+                await checkLoginVerification(profileData.user);
                 window.history.replaceState({}, '', window.location.pathname);
               } else if (attempts < maxAttempts) {
                 setTimeout(checkUserUpdate, 2000);
               } else {
-                setUser(userData);
-                const { data } = await base44.functions.invoke('getSuperAdminEmails');
-                setIsSuperAdmin(data?.isSuperAdmin || false);
-                await checkLoginVerification(userData);
+                setUser(profileData.user);
+                setIsSuperAdmin(profileData.isSuperAdmin);
+                await checkLoginVerification(profileData.user);
                 window.history.replaceState({}, '', window.location.pathname);
               }
             } catch (error) {
@@ -113,27 +111,19 @@ export default function Layout({ children, currentPageName }) {
           
           setTimeout(checkUserUpdate, 2000);
         } else {
-          const userData = await base44.auth.me();
-          
-          // Check for pending invitations
           try {
             const { data: inviteData } = await base44.functions.invoke('checkPendingInvitations');
-            if (inviteData?.schoolAssigned) {
-              // Refresh user data after school assignment
-              const updatedUser = await base44.auth.me();
-              setUser(updatedUser);
-            } else {
-              setUser(userData);
-            }
-          } catch (inviteError) {
-            console.error('Pending invitation check error:', inviteError);
-            setUser(userData);
+            const { data: profileData } = await base44.functions.invoke('getUserProfile');
+            
+            setUser(profileData.user);
+            setIsSuperAdmin(profileData.isSuperAdmin);
+            
+            await checkLoginVerification(profileData.user);
+          } catch (error) {
+            console.error('Auth error:', error);
+            setIsLoading(false);
+            base44.auth.redirectToLogin(window.location.pathname);
           }
-          
-          const { data } = await base44.functions.invoke('getSuperAdminEmails');
-          setIsSuperAdmin(data?.isSuperAdmin || false);
-          
-          await checkLoginVerification(userData);
         }
       } catch (error) {
         console.error('Auth error:', error);
