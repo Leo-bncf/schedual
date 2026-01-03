@@ -78,7 +78,7 @@ export default function Dashboard() {
   const draftSchedules = scheduleVersions.filter(s => s.status === 'draft');
 
   return (
-    <div className="space-y-8">
+    <div className="space-y-10 max-w-7xl">
       <PageHeader 
         title="Dashboard"
         description="Overview of your scheduling system"
@@ -93,7 +93,7 @@ export default function Dashboard() {
       />
 
       {/* Stats Grid - Quick Access Cards */}
-      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
         <Link to={createPageUrl('Teachers')}>
           <motion.div
             initial={{ opacity: 0, y: 20 }}
@@ -102,19 +102,18 @@ export default function Dashboard() {
             whileHover={{ scale: 1.05, y: -8 }}
             className="cursor-pointer"
           >
-          <Card className="border-0 shadow-lg bg-gradient-to-r from-blue-600 via-indigo-600 to-blue-700 text-white overflow-hidden relative hover:shadow-2xl transition-shadow">
-            <CardContent className="p-6">
-              <div className="absolute top-0 right-0 -mt-4 -mr-4 w-24 h-24 bg-white/10 rounded-full blur-2xl"></div>
-              <div className="relative">
-                <div className="flex items-center justify-between mb-2">
-                  <Users className="w-8 h-8 text-white/90" />
-                  <div className="text-right">
-                    <div className="text-3xl font-bold">{activeTeachers}</div>
-                  </div>
+          <Card className="border-0 shadow-sm bg-white hover:shadow-xl transition-all duration-300 overflow-hidden">
+            <CardContent className="p-8">
+              <div className="flex items-center gap-4 mb-4">
+                <div className="w-14 h-14 rounded-2xl bg-blue-500 flex items-center justify-center">
+                  <Users className="w-7 h-7 text-white" />
                 </div>
-                <div className="text-sm font-medium text-blue-100">Teachers</div>
-                <div className="text-xs text-blue-200 mt-1">{teachers.length} total • Click to manage</div>
+                <div>
+                  <div className="text-4xl font-bold text-slate-900">{activeTeachers}</div>
+                  <div className="text-sm font-medium text-slate-500">Teachers</div>
+                </div>
               </div>
+              <div className="text-xs text-slate-400">{teachers.length} total</div>
             </CardContent>
           </Card>
           </motion.div>
@@ -128,20 +127,19 @@ export default function Dashboard() {
             whileHover={{ scale: 1.05, y: -8 }}
             className="cursor-pointer"
           >
-          <Card className="border-0 shadow-lg bg-gradient-to-r from-teal-500 via-cyan-600 to-sky-600 text-white overflow-hidden relative hover:shadow-2xl transition-shadow">
-            <CardContent className="p-6">
-              <div className="absolute top-0 right-0 -mt-4 -mr-4 w-24 h-24 bg-white/10 rounded-full blur-2xl"></div>
-              <div className="relative">
-                <div className="flex items-center justify-between mb-2">
-                  <GraduationCap className="w-8 h-8 text-white/90" />
-                  <div className="text-right">
-                    <div className="text-3xl font-bold">{activeStudents}</div>
-                  </div>
+          <Card className="border-0 shadow-sm bg-white hover:shadow-xl transition-all duration-300 overflow-hidden">
+            <CardContent className="p-8">
+              <div className="flex items-center gap-4 mb-4">
+                <div className="w-14 h-14 rounded-2xl bg-emerald-500 flex items-center justify-center">
+                  <GraduationCap className="w-7 h-7 text-white" />
                 </div>
-                <div className="text-sm font-medium text-teal-100">Students</div>
-                <div className="text-xs text-teal-200 mt-1">
-                  {students.filter(s => s.year_group === 'DP2').length} DP2, {students.filter(s => s.year_group === 'DP1').length} DP1 • Click to manage
+                <div>
+                  <div className="text-4xl font-bold text-slate-900">{activeStudents}</div>
+                  <div className="text-sm font-medium text-slate-500">Students</div>
                 </div>
+              </div>
+              <div className="text-xs text-slate-400">
+                {students.filter(s => s.year_group === 'DP2').length} DP2, {students.filter(s => s.year_group === 'DP1').length} DP1
               </div>
             </CardContent>
           </Card>
@@ -156,19 +154,18 @@ export default function Dashboard() {
             whileHover={{ scale: 1.05, y: -8 }}
             className="cursor-pointer"
           >
-          <Card className="border-0 shadow-lg bg-gradient-to-r from-indigo-600 via-violet-600 to-purple-600 text-white overflow-hidden relative hover:shadow-2xl transition-shadow">
-            <CardContent className="p-6">
-              <div className="absolute top-0 right-0 -mt-4 -mr-4 w-24 h-24 bg-white/10 rounded-full blur-2xl"></div>
-              <div className="relative">
-                <div className="flex items-center justify-between mb-2">
-                  <BookOpen className="w-8 h-8 text-white/90" />
-                  <div className="text-right">
-                    <div className="text-3xl font-bold">{activeSubjects}</div>
-                  </div>
+          <Card className="border-0 shadow-sm bg-white hover:shadow-xl transition-all duration-300 overflow-hidden">
+            <CardContent className="p-8">
+              <div className="flex items-center gap-4 mb-4">
+                <div className="w-14 h-14 rounded-2xl bg-violet-500 flex items-center justify-center">
+                  <BookOpen className="w-7 h-7 text-white" />
                 </div>
-                <div className="text-sm font-medium text-indigo-100">Subjects</div>
-                <div className="text-xs text-indigo-200 mt-1">{subjects.filter(s => s.is_core).length} core • Click to manage</div>
+                <div>
+                  <div className="text-4xl font-bold text-slate-900">{activeSubjects}</div>
+                  <div className="text-sm font-medium text-slate-500">Subjects</div>
+                </div>
               </div>
+              <div className="text-xs text-slate-400">{subjects.filter(s => s.is_core).length} core</div>
             </CardContent>
           </Card>
           </motion.div>
@@ -182,19 +179,18 @@ export default function Dashboard() {
             whileHover={{ scale: 1.05, y: -8 }}
             className="cursor-pointer"
           >
-          <Card className="border-0 shadow-lg bg-gradient-to-r from-blue-950 via-blue-900 to-blue-800 text-white overflow-hidden relative hover:shadow-2xl transition-shadow">
-            <CardContent className="p-6">
-              <div className="absolute top-0 right-0 -mt-4 -mr-4 w-24 h-24 bg-white/10 rounded-full blur-2xl"></div>
-              <div className="relative">
-                <div className="flex items-center justify-between mb-2">
-                  <Building2 className="w-8 h-8 text-white/90" />
-                  <div className="text-right">
-                    <div className="text-3xl font-bold">{activeRooms}</div>
-                  </div>
+          <Card className="border-0 shadow-sm bg-white hover:shadow-xl transition-all duration-300 overflow-hidden">
+            <CardContent className="p-8">
+              <div className="flex items-center gap-4 mb-4">
+                <div className="w-14 h-14 rounded-2xl bg-orange-500 flex items-center justify-center">
+                  <Building2 className="w-7 h-7 text-white" />
                 </div>
-                <div className="text-sm font-medium text-blue-100">Rooms</div>
-                <div className="text-xs text-blue-200 mt-1">{rooms.filter(r => r.room_type === 'lab').length} labs • Click to manage</div>
+                <div>
+                  <div className="text-4xl font-bold text-slate-900">{activeRooms}</div>
+                  <div className="text-sm font-medium text-slate-500">Rooms</div>
+                </div>
               </div>
+              <div className="text-xs text-slate-400">{rooms.filter(r => r.room_type === 'lab').length} labs</div>
             </CardContent>
           </Card>
           </motion.div>
@@ -210,15 +206,17 @@ export default function Dashboard() {
           transition={{ duration: 0.4, delay: 0.4 }}
           className="lg:col-span-2"
         >
-        <Card className="border-0 shadow-lg bg-white">
-          <CardHeader className="pb-4 bg-gradient-to-r from-blue-50 to-indigo-50 border-b border-blue-100">
+        <Card className="border-0 shadow-sm bg-white rounded-3xl">
+          <CardHeader className="pb-6 border-b border-slate-100">
             <div className="flex items-center justify-between">
-              <CardTitle className="text-lg font-semibold text-slate-900 flex items-center gap-2">
-                <Calendar className="w-5 h-5 text-blue-600" />
+              <CardTitle className="text-xl font-semibold text-slate-900 flex items-center gap-3">
+                <div className="w-10 h-10 rounded-xl bg-blue-100 flex items-center justify-center">
+                  <Calendar className="w-5 h-5 text-blue-600" />
+                </div>
                 Schedule Status
               </CardTitle>
               <Link to={createPageUrl('Schedule')}>
-                <Button variant="ghost" size="sm" className="text-blue-900 hover:text-blue-800">
+                <Button variant="ghost" size="sm" className="text-slate-600 hover:text-slate-900 hover:bg-slate-100 rounded-xl">
                   View All <ArrowRight className="w-4 h-4 ml-1" />
                 </Button>
               </Link>
@@ -301,15 +299,17 @@ export default function Dashboard() {
           animate={{ opacity: 1, y: 0 }}
           transition={{ duration: 0.4, delay: 0.5 }}
         >
-        <Card className="border-0 shadow-lg bg-gradient-to-br from-purple-50 to-pink-50">
-          <CardHeader className="pb-4">
+        <Card className="border-0 shadow-sm bg-white rounded-3xl">
+          <CardHeader className="pb-6 border-b border-slate-100">
             <div className="flex items-center justify-between">
-              <CardTitle className="text-lg font-semibold text-slate-900 flex items-center gap-2">
-                <Sparkles className="w-5 h-5 text-purple-600" />
+              <CardTitle className="text-xl font-semibold text-slate-900 flex items-center gap-3">
+                <div className="w-10 h-10 rounded-xl bg-purple-100 flex items-center justify-center">
+                  <Sparkles className="w-5 h-5 text-purple-600" />
+                </div>
                 AI Insights
               </CardTitle>
               <Link to={createPageUrl('AIAdvisor')}>
-                <Button variant="ghost" size="sm" className="text-purple-700 hover:text-purple-900">
+                <Button variant="ghost" size="sm" className="text-slate-600 hover:text-slate-900 hover:bg-slate-100 rounded-xl">
                   View All
                 </Button>
               </Link>
@@ -321,7 +321,7 @@ export default function Dashboard() {
                 {aiLogs.slice(0, 4).map((log, index) => (
                   <motion.div 
                     key={log.id} 
-                    className="p-3 rounded-lg bg-white border-l-4 shadow-sm hover:shadow-md transition-shadow cursor-pointer"
+                    className="p-4 rounded-2xl bg-slate-50 border border-slate-200 hover:shadow-md hover:border-slate-300 transition-all cursor-pointer"
                     initial={{ opacity: 0, x: -20 }}
                     animate={{ opacity: 1, x: 0 }}
                     transition={{ duration: 0.3, delay: 0.6 + index * 0.1 }}

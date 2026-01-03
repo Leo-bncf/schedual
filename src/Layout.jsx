@@ -259,10 +259,10 @@ export default function Layout({ children, currentPageName }) {
         transform transition-transform duration-300 ease-in-out
         ${sidebarOpen ? 'translate-x-0' : '-translate-x-full'}
         lg:translate-x-0
-      `}>
-        <div className="flex flex-col h-full">
-          {/* Logo */}
-          <div className="flex items-center justify-between h-16 px-6 border-b border-slate-100">
+        `}>
+          <div className="flex flex-col h-full">
+            {/* Logo */}
+            <div className="flex items-center justify-between h-20 px-6 border-b border-slate-100">
             <Link to={createPageUrl('Landing')} className="flex items-center gap-3">
               <div className="w-9 h-9 rounded-xl bg-gradient-to-br from-blue-900 to-blue-800 flex items-center justify-center">
                 <Calendar className="w-5 h-5 text-white" />
@@ -280,7 +280,7 @@ export default function Layout({ children, currentPageName }) {
           </div>
 
           {/* Navigation */}
-          <nav className="flex-1 px-4 py-6 space-y-1 overflow-y-auto">
+          <nav className="flex-1 px-4 py-8 space-y-2 overflow-y-auto">
             {navigation.filter(item => {
               if (item.superAdminOnly && !isSuperAdmin) return false;
               if (item.schoolOnly && !isSchoolAdmin(user)) return false;
@@ -304,10 +304,10 @@ export default function Layout({ children, currentPageName }) {
                     key={item.name}
                     to={createPageUrl(item.page)}
                     className={`
-                      flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-medium
+                      flex items-center gap-3 px-4 py-3 rounded-xl text-sm font-medium
                       transition-all duration-200
                       ${isActive 
-                        ? 'bg-blue-50 text-blue-900' 
+                        ? 'bg-slate-900 text-white shadow-lg' 
                         : 'text-slate-600 hover:bg-slate-100 hover:text-slate-900'
                       }
                     `}
@@ -360,7 +360,7 @@ export default function Layout({ children, currentPageName }) {
       {/* Main content */}
       <div className="lg:pl-64">
         {/* Top bar */}
-        <header className="sticky top-0 z-30 flex items-center justify-between h-16 px-4 sm:px-6 bg-white/80 backdrop-blur-md border-b border-slate-200">
+        <header className="sticky top-0 z-30 flex items-center justify-between h-20 px-6 sm:px-8 bg-white/60 backdrop-blur-xl border-b border-slate-200/50">
           <Button 
             variant="ghost" 
             size="icon" 
@@ -390,7 +390,7 @@ export default function Layout({ children, currentPageName }) {
         </header>
 
         {/* Page content */}
-        <main className="p-4 sm:p-6 lg:p-8">
+        <main className="p-6 sm:p-8 lg:p-12 bg-slate-50">
           {children}
         </main>
       </div>
