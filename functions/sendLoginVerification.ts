@@ -90,23 +90,30 @@ Deno.serve(async (req) => {
     });
 
     // Send email
-    await base44.asServiceRole.integrations.Core.SendEmail({
-      to: email,
-      subject: 'Login verification code - Schedual',
-      body: `
-        <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto;">
-          <h2 style="color: #1e3a8a;">Verify your login</h2>
-          <p>A login attempt was made to your Schedual account. To continue, please enter this verification code:</p>
-          <div style="background: #f1f5f9; padding: 20px; border-radius: 8px; text-align: center; margin: 20px 0;">
-            <h1 style="color: #1e3a8a; font-size: 36px; letter-spacing: 8px; margin: 0;">${code}</h1>
+    console.log(`Sending verification code to ${email}...`);
+    try {
+      await base44.asServiceRole.integrations.Core.SendEmail({
+        to: email,
+        subject: 'Login verification code - Schedual',
+        body: `
+          <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto;">
+            <h2 style="color: #1e3a8a;">Verify your login</h2>
+            <p>A login attempt was made to your Schedual account. To continue, please enter this verification code:</p>
+            <div style="background: #f1f5f9; padding: 20px; border-radius: 8px; text-align: center; margin: 20px 0;">
+              <h1 style="color: #1e3a8a; font-size: 36px; letter-spacing: 8px; margin: 0;">${code}</h1>
+            </div>
+            <p style="color: #64748b;">This code will expire in 10 minutes.</p>
+            <p style="color: #ef4444; font-size: 14px;"><strong>If you didn't attempt to log in, please secure your account immediately.</strong></p>
+            <hr style="border: none; border-top: 1px solid #e2e8f0; margin: 20px 0;">
+            <p style="color: #94a3b8; font-size: 12px;">Schedual - Intelligent IB Scheduling</p>
           </div>
-          <p style="color: #64748b;">This code will expire in 10 minutes.</p>
-          <p style="color: #ef4444; font-size: 14px;"><strong>If you didn't attempt to log in, please secure your account immediately.</strong></p>
-          <hr style="border: none; border-top: 1px solid #e2e8f0; margin: 20px 0;">
-          <p style="color: #94a3b8; font-size: 12px;">Schedual - Intelligent IB Scheduling</p>
-        </div>
-      `
-    });
+        `
+      });
+      console.log(`✅ Verification code sent successfully to ${email}`);
+    } catch (emailError) {
+      console.error(`❌ Failed to send email to ${email}:`, emailError);
+      throw new Error(`Failed to send verification email: ${emailError.message}`);
+    }
 
     // Create unverified session
     const sessionToken = randomBytes(32).toString('hex');
