@@ -224,7 +224,7 @@ export default function Dashboard() {
           </CardHeader>
           <CardContent>
             {publishedSchedule ? (
-              <div className="p-4 rounded-xl bg-gradient-to-br from-emerald-50 to-teal-50 border border-emerald-100 mb-4">
+              <div className="p-4 rounded-2xl bg-emerald-50 border border-emerald-200 mb-4">
                 <div className="flex items-center gap-3 mb-2">
                   <CheckCircle className="w-5 h-5 text-emerald-600" />
                   <span className="font-semibold text-emerald-900">Published Schedule</span>
@@ -236,7 +236,7 @@ export default function Dashboard() {
                 </p>
               </div>
             ) : (
-              <div className="p-4 rounded-xl bg-gradient-to-br from-amber-50 to-orange-50 border border-amber-100 mb-4">
+              <div className="p-4 rounded-2xl bg-amber-50 border border-amber-200 mb-4">
                 <div className="flex items-center gap-3 mb-2">
                   <AlertTriangle className="w-5 h-5 text-amber-600" />
                   <span className="font-semibold text-amber-900">No Published Schedule</span>
@@ -253,7 +253,7 @@ export default function Dashboard() {
                 {draftSchedules.slice(0, 3).map((schedule, index) => (
                   <motion.div 
                     key={schedule.id} 
-                    className="flex items-center justify-between p-3 rounded-lg bg-slate-50 hover:bg-slate-100 transition-colors cursor-pointer"
+                    className="flex items-center justify-between p-4 rounded-2xl bg-slate-50 hover:bg-slate-100 transition-colors cursor-pointer"
                     initial={{ opacity: 0, x: -20 }}
                     animate={{ opacity: 1, x: 0 }}
                     transition={{ duration: 0.3, delay: 0.5 + index * 0.1 }}
@@ -325,27 +325,19 @@ export default function Dashboard() {
                     initial={{ opacity: 0, x: -20 }}
                     animate={{ opacity: 1, x: 0 }}
                     transition={{ duration: 0.3, delay: 0.6 + index * 0.1 }}
-                    whileHover={{ scale: 1.02, x: 5 }}
-                    style={{
-                      borderLeftColor: log.severity === 'warning' ? '#f59e0b' :
-                                      log.severity === 'error' ? '#ef4444' :
-                                      '#a855f7',
-                      backgroundImage: log.severity === 'warning' ? 'linear-gradient(to right, #fffbeb, white)' :
-                                      log.severity === 'error' ? 'linear-gradient(to right, #fef2f2, white)' :
-                                      'linear-gradient(to right, #faf5ff, white)'
-                    }}
+                    whileHover={{ scale: 1.02 }}
                   >
-                    <div className="flex items-center gap-2 mb-1">
+                    <div className="flex items-center gap-2 mb-2">
                       <Badge className={
-                        log.severity === 'warning' ? 'bg-amber-100 text-amber-700 text-xs border-0' :
-                        log.severity === 'error' ? 'bg-rose-100 text-rose-700 text-xs border-0' :
-                        'bg-purple-100 text-purple-700 text-xs border-0'
+                        log.severity === 'warning' ? 'bg-amber-100 text-amber-600 text-xs border-0' :
+                        log.severity === 'error' ? 'bg-rose-100 text-rose-600 text-xs border-0' :
+                        'bg-purple-100 text-purple-600 text-xs border-0'
                       }>
                         {log.severity}
                       </Badge>
-                      <span className="text-xs text-slate-500 capitalize">{log.agent_type?.replace(/_/g, ' ')}</span>
+                      <span className="text-xs text-slate-400 capitalize">{log.agent_type?.replace(/_/g, ' ')}</span>
                     </div>
-                    <p className="text-sm text-slate-700 line-clamp-2">
+                    <p className="text-sm text-slate-600 line-clamp-2">
                       {log.output?.message || 'New insight available'}
                     </p>
                   </motion.div>

@@ -187,7 +187,7 @@ export default function Onboarding() {
   const progress = (completedSteps / steps.length) * 100;
 
   return (
-    <div className="max-w-5xl mx-auto space-y-8 py-8 px-4">
+    <div className="max-w-4xl mx-auto space-y-12 py-12 px-4">
       <motion.div 
         className="text-center space-y-6"
         initial={{ opacity: 0, y: -20 }}
@@ -243,24 +243,24 @@ export default function Onboarding() {
               } : {}}
             >
               <Card 
-                className={`border-2 transition-all duration-300 ${
+                className={`border-0 transition-all duration-300 rounded-3xl ${
                   step.completed 
-                    ? 'border-emerald-400 bg-gradient-to-br from-emerald-50 via-teal-50 to-cyan-50 shadow-xl' 
+                    ? 'bg-white shadow-sm hover:shadow-xl' 
                     : isEnabled 
-                      ? 'border-indigo-300 hover:border-indigo-500 shadow-lg hover:shadow-2xl bg-gradient-to-br from-white to-indigo-50/30' 
-                      : 'border-slate-200 opacity-60 grayscale'
+                      ? 'bg-white shadow-sm hover:shadow-xl' 
+                      : 'bg-slate-50 opacity-60'
                 }`}
               >
-                <CardContent className="p-6">
+                <CardContent className="p-8">
                   <div className="space-y-4">
                     <div className="flex items-start justify-between">
                       <div className="flex items-start gap-4 flex-1">
                         <motion.div 
-                          className={`w-14 h-14 rounded-xl flex items-center justify-center flex-shrink-0 shadow-lg ${
+                          className={`w-16 h-16 rounded-2xl flex items-center justify-center flex-shrink-0 ${
                             step.completed 
-                              ? 'bg-gradient-to-br from-emerald-500 to-teal-600' 
+                              ? 'bg-emerald-500' 
                               : isEnabled 
-                                ? 'bg-gradient-to-br from-indigo-500 to-violet-600' 
+                                ? 'bg-slate-900' 
                                 : 'bg-slate-300'
                           }`}
                           whileHover={isEnabled ? { 
@@ -281,13 +281,13 @@ export default function Onboarding() {
                         </motion.div>
                         
                         <div className="flex-1">
-                          <div className="flex items-center gap-3 mb-2">
-                            <h3 className="text-xl font-bold text-slate-900">
-                              {index + 1}. {step.title}
+                          <div className="flex items-center gap-3 mb-3">
+                            <h3 className="text-2xl font-semibold text-slate-900">
+                              {step.title}
                             </h3>
                             {step.completed && (
-                              <Badge className="bg-emerald-500 text-white border-0">
-                                ✓ Complete
+                              <Badge className="bg-emerald-100 text-emerald-700 border-0">
+                                Complete
                               </Badge>
                             )}
                             {!step.completed && step.count !== undefined && step.required && (
@@ -300,7 +300,7 @@ export default function Onboarding() {
                           
                           {/* Instructions */}
                           <motion.div 
-                            className="bg-white/80 rounded-lg p-4 mb-3 border-2 border-indigo-100 shadow-sm"
+                            className="bg-slate-50 rounded-2xl p-4 mb-3 border border-slate-200"
                             whileHover={{ 
                               scale: 1.02,
                               borderColor: "rgb(165, 180, 252)",
@@ -313,7 +313,7 @@ export default function Onboarding() {
                           {/* Quick Tips */}
                           {step.quickTips && (
                             <motion.div 
-                              className="space-y-2 bg-amber-50/50 rounded-lg p-3 border border-amber-200"
+                              className="space-y-2 bg-blue-50 rounded-2xl p-4 border border-blue-200"
                               initial={{ opacity: 0, height: 0 }}
                               animate={{ opacity: 1, height: "auto" }}
                               transition={{ delay: 0.3 }}
@@ -323,21 +323,21 @@ export default function Onboarding() {
                                   animate={{ rotate: [0, 15, -15, 0] }}
                                   transition={{ duration: 2, repeat: Infinity }}
                                 >
-                                  <Zap className="w-4 h-4 text-amber-600" />
+                                  <Zap className="w-4 h-4 text-blue-600" />
                                 </motion.div>
-                                <span className="text-xs font-bold text-amber-700 uppercase tracking-wide">Quick Tips</span>
+                                <span className="text-xs font-bold text-blue-700 uppercase tracking-wide">Quick Tips</span>
                               </div>
                               {step.quickTips.map((tip, tipIndex) => (
                                 <motion.div 
                                   key={tipIndex} 
-                                  className="flex items-start gap-3 p-2 rounded hover:bg-amber-100/50 transition-colors"
+                                  className="flex items-start gap-3 p-2 rounded-xl hover:bg-blue-100/50 transition-colors"
                                   initial={{ opacity: 0, x: -10 }}
                                   animate={{ opacity: 1, x: 0 }}
                                   transition={{ delay: 0.4 + tipIndex * 0.1 }}
                                   whileHover={{ x: 5 }}
                                 >
-                                  <div className="w-2 h-2 rounded-full bg-gradient-to-r from-amber-400 to-orange-500 mt-1.5 flex-shrink-0" />
-                                  <p className="text-sm text-slate-700 font-medium">{tip}</p>
+                                  <div className="w-2 h-2 rounded-full bg-blue-500 mt-1.5 flex-shrink-0" />
+                                  <p className="text-sm text-slate-600">{tip}</p>
                                 </motion.div>
                               ))}
                             </motion.div>
@@ -353,10 +353,10 @@ export default function Onboarding() {
                           <Link to={createPageUrl(step.page)}>
                             <Button 
                               size="lg"
-                              className={`shadow-md ${
+                              className={`rounded-xl h-12 font-medium ${
                                 step.completed 
-                                  ? 'bg-gradient-to-r from-emerald-600 to-teal-600 hover:from-emerald-700 hover:to-teal-700' 
-                                  : 'bg-gradient-to-r from-indigo-600 to-violet-600 hover:from-indigo-700 hover:to-violet-700'
+                                  ? 'bg-emerald-500 hover:bg-emerald-600' 
+                                  : 'bg-slate-900 hover:bg-slate-800'
                               }`}
                             >
                               {step.completed ? 'Review' : 'Start'}
@@ -380,10 +380,10 @@ export default function Onboarding() {
           animate={{ opacity: 1, scale: 1 }}
           transition={{ duration: 0.5 }}
         >
-          <Card className="border-2 border-violet-300 bg-gradient-to-br from-violet-50 via-indigo-50 to-purple-50 shadow-2xl">
-            <CardContent className="p-10 text-center">
+          <Card className="border-0 bg-white shadow-sm rounded-3xl">
+            <CardContent className="p-12 text-center">
               <motion.div 
-                className="w-20 h-20 rounded-full bg-gradient-to-br from-violet-500 to-indigo-600 flex items-center justify-center mx-auto mb-6 shadow-lg"
+                className="w-20 h-20 rounded-3xl bg-emerald-500 flex items-center justify-center mx-auto mb-6"
                 animate={{ rotate: [0, 10, -10, 0] }}
                 transition={{ duration: 2, repeat: Infinity }}
               >
@@ -400,7 +400,7 @@ export default function Onboarding() {
                 whileTap={{ scale: 0.95 }}
               >
                 <Link to={createPageUrl('Dashboard')}>
-                  <Button size="lg" className="bg-gradient-to-r from-indigo-600 to-violet-600 hover:from-indigo-700 hover:to-violet-700 shadow-lg text-lg px-8">
+                  <Button size="lg" className="bg-slate-900 hover:bg-slate-800 rounded-xl text-lg px-10 h-14">
                     Go to Dashboard
                     <ArrowRight className="w-6 h-6 ml-2" />
                   </Button>
