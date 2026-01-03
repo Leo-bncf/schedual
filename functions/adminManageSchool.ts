@@ -28,19 +28,25 @@ Deno.serve(async (req) => {
 
     switch (action) {
       case 'create':
+        console.log('Creating school with data:', data);
         const newSchool = await base44.asServiceRole.entities.School.create(data);
+        console.log('School created successfully:', newSchool.id);
         return Response.json({ success: true, school: newSchool });
 
       case 'update':
+        console.log('Updating school:', schoolId);
         await base44.asServiceRole.entities.School.update(schoolId, data);
         return Response.json({ success: true });
 
       case 'delete':
+        console.log('Deleting school:', schoolId);
         await base44.asServiceRole.entities.School.delete(schoolId);
         return Response.json({ success: true });
 
       case 'list':
+        console.log('Fetching all schools as superadmin...');
         const schools = await base44.asServiceRole.entities.School.filter({});
+        console.log(`Found ${schools.length} schools:`, schools.map(s => ({ id: s.id, name: s.name })));
         return Response.json({ success: true, schools });
 
       default:
