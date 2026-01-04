@@ -105,6 +105,19 @@ export default function Panel() {
     },
   });
 
+  const { data: loginSessions = [] } = useQuery({
+    queryKey: ['loginSessions'],
+    queryFn: async () => {
+      try {
+        const { data } = await base44.functions.invoke('adminGetAllData', { entityType: 'LoginSession' });
+        return data.records || [];
+      } catch (error) {
+        console.error('Error fetching login sessions:', error);
+        return [];
+      }
+    },
+  });
+
   const createSchoolMutation = useMutation({
     mutationFn: (data) => base44.functions.invoke('adminManageSchool', { action: 'create', data }),
     onSuccess: () => {
@@ -437,6 +450,7 @@ export default function Panel() {
           <TabsTrigger value="schools">Schools</TabsTrigger>
           <TabsTrigger value="users">Users</TabsTrigger>
           <TabsTrigger value="analytics">Analytics</TabsTrigger>
+          <TabsTrigger value="login-sessions">Login Sessions</TabsTrigger>
           <TabsTrigger value="ai-training">
             <Brain className="w-4 h-4 mr-2" />
             AI Training
@@ -511,6 +525,70 @@ export default function Panel() {
               );
             })}
           </div>
+        </TabsContent>
+
+        <TabsContent value="login-sessions">
+          <Card className="border-0 shadow-sm">
+            <CardHeader>
+              <CardTitle>Recent Login Sessions</CardTitle>
+            </CardHeader>
+            <CardContent>
+              <DataTable 
+                columns={[
+                  {
+                    header: 'User',
+                    cell: (row) => (
+                      <div>
+                        <p className="font-medium text-slate-900">{row.user_email}</p>
+                        <p className="text-xs text-slate-500">
+                          {new Date(row.created_date).toLocaleString()}
+                        </p>
+                      </div>
+                    )
+                  },
+                  {
+                    header: 'IP Address',
+                    accessor: 'ip_address',
+                    cell: (row) => (
+                      <span className="font-mono text-sm text-slate-700">{row.ip_address || 'unknown'}</span>
+                    )
+                  },
+                  {
+                    header: 'Status',
+                    cell: (row) => (
+                      <Badge className={row.verified ? 'bg-emerald-100 text-emerald-700 border-0' : 'bg-amber-100 text-amber-700 border-0'}>
+                        {row.verified ? 'Verified' : 'Pending'}
+                      </Badge>
+                    )
+                  },
+                  {
+                    header: 'Browser',
+                    cell: (row) => {
+                      const ua = row.user_agent || '';
+                      let browser = 'Unknown';
+                      if (ua.includes('Chrome')) browser = 'Chrome';
+                      else if (ua.includes('Firefox')) browser = 'Firefox';
+                      else if (ua.includes('Safari')) browser = 'Safari';
+                      else if (ua.includes('Edge')) browser = 'Edge';
+                      return <span className="text-sm text-slate-600">{browser}</span>;
+                    }
+                  },
+                  {
+                    header: 'Expires',
+                    cell: (row) => {
+                      const isExpired = new Date(row.expires_at) < new Date();
+                      return (
+                        <span className={`text-xs ${isExpired ? 'text-rose-600' : 'text-slate-600'}`}>
+                          {isExpired ? 'Expired' : new Date(row.expires_at).toLocaleDateString()}
+                        </span>
+                      );
+                    }
+                  }
+                ]}
+                data={loginSessions.sort((a, b) => new Date(b.created_date) - new Date(a.created_date))}
+              />
+            </CardContent>
+          </Card>
         </TabsContent>
 
         <TabsContent value="ai-training">
