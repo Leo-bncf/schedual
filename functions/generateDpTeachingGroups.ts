@@ -1,4 +1,5 @@
 import { createClientFromRequest } from 'npm:@base44/sdk@0.8.6';
+import { getUserSchoolId } from './securityHelper.js';
 
 Deno.serve(async (req) => {
   try {
@@ -10,8 +11,7 @@ Deno.serve(async (req) => {
     const action = body.action || 'preview';
     const maxGroupSize = Number(body.max_group_size) > 0 ? Number(body.max_group_size) : 20;
 
-    const schoolId = user.school_id;
-    if (!schoolId) return Response.json({ error: 'No school found for user' }, { status: 400 });
+    const schoolId = await getUserSchoolId(base44);
 
     const [students, subjects] = await Promise.all([
       base44.entities.Student.filter({ school_id: schoolId }),

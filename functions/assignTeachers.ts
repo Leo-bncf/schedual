@@ -1,27 +1,24 @@
 import { createClientFromRequest } from 'npm:@base44/sdk@0.8.6';
+import { getUserSchoolId } from './securityHelper.js';
 
 Deno.serve(async (req) => {
   try {
     const base44 = createClientFromRequest(req);
-    const user = await base44.auth.me();
-
-    if (!user?.school_id) {
-      return Response.json({ error: 'Unauthorized' }, { status: 401 });
-    }
+    const schoolId = await getUserSchoolId(base44);
 
     // Fetch all teaching groups, teachers, and subjects
     const teachingGroups = await base44.asServiceRole.entities.TeachingGroup.filter({
-      school_id: user.school_id,
+      school_id: schoolId,
       is_active: true
     });
 
     const teachers = await base44.asServiceRole.entities.Teacher.filter({
-      school_id: user.school_id,
+      school_id: schoolId,
       is_active: true
     });
 
     const subjects = await base44.asServiceRole.entities.Subject.filter({
-      school_id: user.school_id
+      school_id: schoolId
     });
 
     // Helper to get IB level from year_group

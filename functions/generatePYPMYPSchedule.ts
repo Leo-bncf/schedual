@@ -1,13 +1,10 @@
 import { createClientFromRequest } from 'npm:@base44/sdk@0.8.6';
+import { getUserSchoolId } from './securityHelper.js';
 
 Deno.serve(async (req) => {
   try {
     const base44 = createClientFromRequest(req);
-    const user = await base44.auth.me();
-    
-    if (!user || !user.school_id) {
-      return Response.json({ error: 'Unauthorized' }, { status: 401 });
-    }
+    const schoolId = await getUserSchoolId(base44);
 
     const { schedule_version_id, level } = await req.json();
     
@@ -19,25 +16,25 @@ Deno.serve(async (req) => {
 
     // Fetch data
     const classGroups = await base44.entities.ClassGroup.filter({ 
-      school_id: user.school_id,
+      school_id: schoolId,
       ib_programme: level 
     });
     
     const students = await base44.entities.Student.filter({ 
-      school_id: user.school_id,
+      school_id: schoolId,
       ib_programme: level
     });
     
     const subjects = await base44.entities.Subject.filter({ 
-      school_id: user.school_id 
+      school_id: schoolId 
     });
     
     const teachers = await base44.entities.Teacher.filter({ 
-      school_id: user.school_id 
+      school_id: schoolId 
     });
     
     const rooms = await base44.entities.Room.filter({ 
-      school_id: user.school_id,
+      school_id: schoolId,
       is_active: true 
     });
 
@@ -154,7 +151,7 @@ Deno.serve(async (req) => {
 
             // Create slot
             const slot = {
-              school_id: user.school_id,
+              school_id: schoolId,
               schedule_version: schedule_version_id,
               classgroup_id: classGroup.id,
               subject_id: subject.id,
@@ -204,7 +201,7 @@ Deno.serve(async (req) => {
               if (!assignedRoom) continue;
 
               const slot = {
-                school_id: user.school_id,
+                school_id: schoolId,
                 schedule_version: schedule_version_id,
                 classgroup_id: classGroup.id,
                 subject_id: subject.id,
