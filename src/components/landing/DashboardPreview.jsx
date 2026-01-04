@@ -77,17 +77,16 @@ export default function DashboardPreview() {
 
       const sectionRect = sectionRef.current.getBoundingClientRect();
       const textHeight = textRef.current.offsetHeight;
-      const sectionBottom = sectionRect.bottom;
-      const viewportHeight = window.innerHeight;
-
-      // Stop being sticky when there's not enough room at the bottom
-      // Text becomes relative when section bottom is close to bottom of viewport + text height
-      const shouldStick = sectionBottom > viewportHeight + textHeight / 2;
+      
+      // Check if we're near the bottom - switch from sticky to absolute
+      const distanceFromBottom = sectionRect.bottom - window.innerHeight;
+      const shouldStick = distanceFromBottom > textHeight / 2;
+      
       setIsSticky(shouldStick);
     };
 
     window.addEventListener('scroll', handleScroll);
-    handleScroll(); // Initial check
+    handleScroll();
 
     return () => window.removeEventListener('scroll', handleScroll);
   }, []);
@@ -106,12 +105,14 @@ export default function DashboardPreview() {
         </div>
 
         {/* Feature Cards Grid */}
-        <div className="relative flex flex-col lg:flex-row gap-8">
+        <div className="relative flex flex-col lg:flex-row gap-8 lg:min-h-[200vh]">
             {/* Left Column - Text */}
             <div 
               ref={textRef}
-              className={`lg:w-[400px] lg:h-fit transition-all duration-300 ${
-                isSticky ? 'lg:sticky lg:top-[50vh] lg:-translate-y-1/2' : 'lg:relative'
+              className={`lg:w-[400px] lg:h-fit ${
+                isSticky 
+                  ? 'lg:sticky lg:top-[50vh] lg:-translate-y-1/2' 
+                  : 'lg:absolute lg:bottom-0'
               }`}
             >
               <div className="text-sm font-semibold text-purple-600 mb-3">Benefits</div>
