@@ -53,7 +53,8 @@ import {
   Timer,
   MoreHorizontal,
   Trash2,
-  Plus
+  Plus,
+  GraduationCap
 } from 'lucide-react';
 import PageHeader from '../components/ui-custom/PageHeader';
 import YearAdvancement from '../components/settings/YearAdvancement';
