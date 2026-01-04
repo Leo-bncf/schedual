@@ -53,6 +53,7 @@ import ConflictAlert from '../components/schedule/ConflictAlert';
 import ConflictViewer from '../components/schedule/ConflictViewer';
 import EmptyState from '../components/ui-custom/EmptyState';
 import GenerationProgress from '../components/schedule/GenerationProgress';
+import ScheduleUpdateBanner from '../components/schedule/ScheduleUpdateBanner';
 
 export default function Schedule() {
   const [isDialogOpen, setIsDialogOpen] = useState(false);
@@ -75,6 +76,7 @@ export default function Schedule() {
   const [constraintInput, setConstraintInput] = useState('');
   const [isGeneratingConstraint, setIsGeneratingConstraint] = useState(false);
   const [constraintType, setConstraintType] = useState('hard');
+  const [showUpdateBanner, setShowUpdateBanner] = useState(false);
   const [formData, setFormData] = useState({
     name: '',
     academic_year: '2024-2025',
@@ -187,6 +189,20 @@ export default function Schedule() {
     },
     enabled: !!schoolId,
   });
+
+  // Detect data changes to suggest regeneration
+  React.useEffect(() => {
+    if (selectedVersion?.generated_at) {
+      const generatedTime = new Date(selectedVersion.generated_at).getTime();
+      const hasRecentChanges = 
+        teachers.some(t => new Date(t.updated_date).getTime() > generatedTime) ||
+        students.some(s => new Date(s.updated_date).getTime() > generatedTime) ||
+        rooms.some(r => new Date(r.updated_date).getTime() > generatedTime) ||
+        teachingGroups.some(g => new Date(g.updated_date).getTime() > generatedTime);
+      
+      setShowUpdateBanner(hasRecentChanges);
+    }
+  }, [selectedVersion, teachers, students, rooms, teachingGroups]);
 
   const createVersionMutation = useMutation({
     mutationFn: (data) => {
@@ -1211,11 +1227,18 @@ Now process the user's input and return ONLY the JSON object.`,
         title="Master Schedule"
         description="Generate and manage timetables for all IB programmes (PYP, MYP, DP)"
         actions={
-          <Button onClick={() => setIsDialogOpen(true)} className="bg-indigo-600 hover:bg-indigo-700">
+          <Button onClick={() => setIsDialogOpen(true)} className="bg-slate-900 hover:bg-slate-800 rounded-xl">
             <Plus className="w-4 h-4 mr-2" />
             New Version
           </Button>
         }
+      />
+
+      <ScheduleUpdateBanner 
+        show={showUpdateBanner && selectedVersion && scheduleSlots.length > 0}
+        onRegenerate={handleGenerateSchedule}
+        onDismiss={() => setShowUpdateBanner(false)}
+        isGenerating={isGenerating}
       />
 
       {/* Quick Stats Bar */}

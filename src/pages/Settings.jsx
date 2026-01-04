@@ -56,6 +56,7 @@ import {
   Plus
 } from 'lucide-react';
 import PageHeader from '../components/ui-custom/PageHeader';
+import YearAdvancement from '../components/settings/YearAdvancement';
 import { toast } from 'sonner';
 
 const TIMEZONES = [
@@ -256,20 +257,24 @@ export default function Settings() {
       />
 
       <Tabs defaultValue="school" className="space-y-6">
-        <TabsList className="grid grid-cols-4 w-full max-w-3xl bg-gradient-to-r from-slate-100 to-slate-200 p-1 h-auto">
-          <TabsTrigger value="school" className="flex flex-col items-center gap-1.5 py-3 data-[state=active]:bg-white data-[state=active]:shadow-md">
+        <TabsList className="grid grid-cols-5 w-full max-w-4xl bg-slate-100 p-1 h-auto rounded-2xl">
+          <TabsTrigger value="school" className="flex flex-col items-center gap-1.5 py-3 rounded-xl data-[state=active]:bg-white data-[state=active]:shadow-sm">
             <Building2 className="w-5 h-5" />
             <span className="text-xs font-medium">School Info</span>
           </TabsTrigger>
-          <TabsTrigger value="admins" className="flex flex-col items-center gap-1.5 py-3 data-[state=active]:bg-white data-[state=active]:shadow-md">
+          <TabsTrigger value="admins" className="flex flex-col items-center gap-1.5 py-3 rounded-xl data-[state=active]:bg-white data-[state=active]:shadow-sm">
             <Users className="w-5 h-5" />
             <span className="text-xs font-medium">Admins</span>
           </TabsTrigger>
-          <TabsTrigger value="subscription" className="flex flex-col items-center gap-1.5 py-3 data-[state=active]:bg-white data-[state=active]:shadow-md">
+          <TabsTrigger value="academic" className="flex flex-col items-center gap-1.5 py-3 rounded-xl data-[state=active]:bg-white data-[state=active]:shadow-sm">
+            <GraduationCap className="w-5 h-5" />
+            <span className="text-xs font-medium">Academic</span>
+          </TabsTrigger>
+          <TabsTrigger value="subscription" className="flex flex-col items-center gap-1.5 py-3 rounded-xl data-[state=active]:bg-white data-[state=active]:shadow-sm">
             <CreditCard className="w-5 h-5" />
             <span className="text-xs font-medium">Billing</span>
           </TabsTrigger>
-          <TabsTrigger value="notifications" className="flex flex-col items-center gap-1.5 py-3 data-[state=active]:bg-white data-[state=active]:shadow-md">
+          <TabsTrigger value="notifications" className="flex flex-col items-center gap-1.5 py-3 rounded-xl data-[state=active]:bg-white data-[state=active]:shadow-sm">
             <Bell className="w-5 h-5" />
             <span className="text-xs font-medium">Alerts</span>
           </TabsTrigger>
@@ -591,6 +596,12 @@ export default function Settings() {
               </div>
             </CardContent>
           </Card>
+        </TabsContent>
+
+        <TabsContent value="academic">
+          <div className="space-y-6">
+            <YearAdvancement />
+          </div>
         </TabsContent>
 
         <TabsContent value="subscription">
