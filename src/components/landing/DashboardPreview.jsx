@@ -115,11 +115,11 @@ export default function DashboardPreview() {
         </div>
 
         {/* Feature Cards Grid */}
-        <div className="relative flex flex-col lg:flex-row gap-8">
+        <div className={`relative transition-all duration-500 ${expandedIndex !== null ? '' : 'flex flex-col lg:flex-row gap-8'}`}>
             {/* Left Column - Text */}
             <div ref={textContainerRef} className={`lg:w-[400px] lg:shrink-0 transition-opacity duration-300 ${
-              expandedIndex !== null ? 'opacity-0 pointer-events-none' : 'opacity-100'
-            }`}>
+          expandedIndex !== null ? 'opacity-0 pointer-events-none absolute' : 'opacity-100'
+        }`}>
               <div className={`transition-all duration-300 ${
                 isSticky 
                   ? 'lg:fixed lg:top-1/2 lg:-translate-y-1/2 lg:w-[400px] lg:left-[max(2rem,calc(50%-44rem))]' 
@@ -145,7 +145,9 @@ export default function DashboardPreview() {
             </div>
 
           {/* Right Column - Feature Cards */}
-          <div className="flex-1 space-y-8 lg:min-w-0">
+          <div className={`space-y-8 transition-all duration-500 ${
+            expandedIndex !== null ? 'w-full' : 'flex-1 lg:min-w-0'
+          }`}>
             {features.map((feature, index) => (
               <motion.div 
                 key={index}
@@ -154,7 +156,7 @@ export default function DashboardPreview() {
                 viewport={{ once: true }}
                 transition={{ duration: 0.5, delay: index * 0.1 }}
                 className={`transition-all duration-500 ${
-                  expandedIndex === index ? 'max-w-none' : 'max-w-xl'
+                  expandedIndex === index ? 'w-full' : 'max-w-xl'
                 }`}
               >
                 <button
@@ -189,47 +191,133 @@ export default function DashboardPreview() {
                       transition={{ duration: 0.4 }}
                       className="overflow-hidden"
                     >
-                      <div className="mt-6 bg-white rounded-2xl shadow-xl border-2 border-blue-200 overflow-hidden">
+                      <div className="mt-6 bg-white rounded-2xl shadow-2xl border-2 border-blue-200 overflow-hidden">
                         <div className="grid lg:grid-cols-3 gap-0">
                           {/* Left side - Preview */}
                           <div className="lg:col-span-2 bg-gradient-to-br from-slate-50 to-slate-100 p-8">
                             {/* Browser Chrome */}
-                            <div className="bg-slate-800 rounded-t-lg px-4 py-2 flex items-center gap-2 mb-4">
+                            <div className="bg-slate-800 rounded-t-lg px-4 py-2 flex items-center gap-2 mb-6">
                               <div className="flex gap-1.5">
                                 <div className="w-2.5 h-2.5 rounded-full bg-red-500"></div>
                                 <div className="w-2.5 h-2.5 rounded-full bg-yellow-500"></div>
                                 <div className="w-2.5 h-2.5 rounded-full bg-green-500"></div>
                               </div>
                               <div className="flex-1 bg-slate-700 rounded px-3 py-1 text-xs text-slate-300 text-center">
-                                schedual.app/{index === 0 ? 'dashboard' : index === 3 ? 'schedule' : 'dashboard'}
+                                schedual.app/{['dashboard', 'community', 'curriculum', 'schedule', 'compliance', 'groups', 'resources', 'conflicts', 'workload', 'student-schedules'][index]}
                               </div>
                             </div>
 
-                            {/* Preview Content */}
-                            <div className="bg-white rounded-lg border border-slate-200 p-6">
+                            {/* Preview Content - Different for each feature */}
+                            <div className="bg-white rounded-lg border border-slate-200 p-6 min-h-[400px]">
                               {index === 0 && (
-                                <div className="space-y-4">
-                                  <div className="grid grid-cols-3 gap-3">
+                                <div className="space-y-6">
+                                  <div className="grid grid-cols-3 gap-4">
                                     {[
-                                      { icon: Users, value: '45', label: 'Teachers', color: 'blue' },
-                                      { icon: GraduationCap, value: '327', label: 'Students', color: 'purple' },
-                                      { icon: BookOpen, value: '24', label: 'Subjects', color: 'emerald' }
+                                      { icon: Users, value: '45', label: 'Active Teachers', color: 'from-blue-500 to-blue-600', trend: '+12%' },
+                                      { icon: GraduationCap, value: '327', label: 'Students', color: 'from-purple-500 to-purple-600', trend: '+8%' },
+                                      { icon: BookOpen, value: '24', label: 'Subjects', color: 'from-emerald-500 to-emerald-600', trend: '6 new' }
                                     ].map((stat, i) => (
-                                      <div key={i} className="bg-slate-50 rounded-lg p-4">
-                                        <div className={`w-10 h-10 rounded-lg bg-gradient-to-br from-${stat.color}-500 to-${stat.color}-600 flex items-center justify-center mb-2`}>
-                                          <stat.icon className="w-5 h-5 text-white" />
+                                      <div key={i} className="bg-gradient-to-br from-slate-50 to-white rounded-xl p-4 border border-slate-100 shadow-sm">
+                                        <div className={`w-12 h-12 rounded-xl bg-gradient-to-br ${stat.color} flex items-center justify-center mb-3 shadow-lg`}>
+                                          <stat.icon className="w-6 h-6 text-white" />
                                         </div>
-                                        <div className="text-2xl font-bold text-slate-900">{stat.value}</div>
-                                        <div className="text-xs text-slate-600">{stat.label}</div>
+                                        <div className="text-3xl font-bold text-slate-900 mb-1">{stat.value}</div>
+                                        <div className="text-xs text-slate-600 mb-2">{stat.label}</div>
+                                        <div className="text-xs text-emerald-600 font-semibold">{stat.trend}</div>
+                                      </div>
+                                    ))}
+                                  </div>
+                                  <div className="bg-gradient-to-br from-blue-50 to-white rounded-xl p-5 border border-blue-100">
+                                    <div className="flex items-center justify-between mb-3">
+                                      <div className="text-sm font-semibold text-slate-900">Current Schedule Status</div>
+                                      <div className="px-3 py-1 rounded-full bg-emerald-100 text-emerald-700 text-xs font-bold">98% Optimized</div>
+                                    </div>
+                                    <div className="h-2.5 bg-slate-100 rounded-full overflow-hidden">
+                                      <div className="h-full bg-gradient-to-r from-emerald-500 to-blue-500 rounded-full transition-all" style={{ width: '98%' }}></div>
+                                    </div>
+                                  </div>
+                                </div>
+                              )}
+                              {index === 1 && (
+                                <div className="space-y-4">
+                                  <div className="flex items-center justify-between mb-4">
+                                    <h4 className="text-lg font-semibold text-slate-900">Community Hub</h4>
+                                    <div className="px-3 py-1 bg-blue-100 text-blue-700 rounded-full text-xs font-semibold">8 New Updates</div>
+                                  </div>
+                                  {[
+                                    { type: 'announcement', title: 'Parent-Teacher Conference', time: '2h ago', user: 'Admin', color: 'blue' },
+                                    { type: 'update', title: 'Report cards published', time: '5h ago', user: 'Mr. Johnson', color: 'emerald' },
+                                    { type: 'event', title: 'Science Fair - Next Week', time: '1d ago', user: 'Ms. Chen', color: 'purple' },
+                                    { type: 'message', title: 'Grade 10 Field Trip Details', time: '2d ago', user: 'Mrs. Davis', color: 'amber' }
+                                  ].map((item, i) => (
+                                    <div key={i} className="flex items-start gap-3 p-4 rounded-lg bg-gradient-to-r from-slate-50 to-white border border-slate-100 hover:shadow-md transition-all">
+                                      <div className={`w-10 h-10 rounded-lg bg-gradient-to-br from-${item.color}-400 to-${item.color}-600 flex items-center justify-center flex-shrink-0`}>
+                                        <Users className="w-5 h-5 text-white" />
+                                      </div>
+                                      <div className="flex-1 min-w-0">
+                                        <div className="text-sm font-semibold text-slate-900">{item.title}</div>
+                                        <div className="text-xs text-slate-500 mt-1">Posted by {item.user} • {item.time}</div>
+                                      </div>
+                                    </div>
+                                  ))}
+                                </div>
+                              )}
+                              {index === 2 && (
+                                <div className="space-y-4">
+                                  <h4 className="text-lg font-semibold text-slate-900 mb-4">Curriculum Planning</h4>
+                                  <div className="grid grid-cols-2 gap-4">
+                                    {[
+                                      { subject: 'Physics HL', progress: 75, units: '6/8', color: 'blue' },
+                                      { subject: 'Math AA SL', progress: 90, units: '7/8', color: 'purple' },
+                                      { subject: 'English A', progress: 60, units: '5/8', color: 'emerald' },
+                                      { subject: 'Chemistry HL', progress: 85, units: '7/8', color: 'orange' }
+                                    ].map((item, i) => (
+                                      <div key={i} className="bg-gradient-to-br from-slate-50 to-white rounded-xl p-4 border border-slate-100">
+                                        <div className="flex items-center justify-between mb-3">
+                                          <div className="text-sm font-semibold text-slate-900">{item.subject}</div>
+                                          <div className="text-xs font-bold text-slate-600">{item.units}</div>
+                                        </div>
+                                        <div className="h-2 bg-slate-100 rounded-full overflow-hidden mb-2">
+                                          <div className={`h-full bg-gradient-to-r from-${item.color}-400 to-${item.color}-600 rounded-full`} style={{ width: `${item.progress}%` }}></div>
+                                        </div>
+                                        <div className="text-xs text-slate-500">{item.progress}% Complete</div>
                                       </div>
                                     ))}
                                   </div>
                                 </div>
                               )}
-                              {index !== 0 && (
-                                <div className="text-center py-8">
-                                  <feature.icon className="w-16 h-16 mx-auto mb-4 text-slate-300" />
-                                  <p className="text-slate-600">{feature.title} Preview</p>
+                              {index === 3 && (
+                                <div className="space-y-4">
+                                  <h4 className="text-lg font-semibold text-slate-900 mb-4">AI-Generated Schedule</h4>
+                                  <div className="grid grid-cols-5 gap-2">
+                                    <div className="text-xs font-semibold text-slate-600 text-center py-2"></div>
+                                    {['Mon', 'Tue', 'Wed', 'Thu', 'Fri'].map(day => (
+                                      <div key={day} className="text-xs font-semibold text-slate-700 text-center py-2 bg-slate-100 rounded">{day}</div>
+                                    ))}
+                                    {[1,2,3,4,5].map(period => (
+                                      <React.Fragment key={period}>
+                                        <div className="text-xs font-semibold text-slate-600 text-center py-3 bg-slate-50 rounded">{period}</div>
+                                        {['Physics HL', 'Math AA', 'English', 'Chemistry', 'TOK'].map((subject, i) => (
+                                          <div key={i} className={`text-xs p-2 rounded-lg text-white font-medium text-center bg-gradient-to-br ${
+                                            ['from-blue-500 to-blue-600', 'from-purple-500 to-purple-600', 'from-emerald-500 to-emerald-600', 'from-orange-500 to-orange-600', 'from-pink-500 to-pink-600'][i]
+                                          }`}>
+                                            {subject}
+                                          </div>
+                                        ))}
+                                      </React.Fragment>
+                                    ))}
+                                  </div>
+                                </div>
+                              )}
+                              {index > 3 && (
+                                <div className="flex items-center justify-center h-full">
+                                  <div className="text-center">
+                                    <div className={`w-20 h-20 rounded-2xl bg-gradient-to-br ${feature.color} flex items-center justify-center mx-auto mb-4 shadow-xl`}>
+                                      <feature.icon className="w-10 h-10 text-white" />
+                                    </div>
+                                    <div className="text-lg font-semibold text-slate-900 mb-2">{feature.title}</div>
+                                    <p className="text-sm text-slate-600 max-w-md">{feature.description.substring(0, 120)}...</p>
+                                  </div>
                                 </div>
                               )}
                             </div>
@@ -237,29 +325,25 @@ export default function DashboardPreview() {
 
                           {/* Right side - Explanation */}
                           <div className="bg-white p-8 lg:border-l border-slate-200">
-                            <h5 className="text-lg font-semibold text-slate-900 mb-4">How it works</h5>
-                            <p className="text-sm text-slate-600 leading-relaxed mb-6">
+                            <h5 className="text-xl font-bold text-slate-900 mb-4">How it works</h5>
+                            <p className="text-sm text-slate-600 leading-relaxed mb-8">
                               {feature.description}
                             </p>
-                            <div className="space-y-3">
-                              <div className="flex items-start gap-3">
-                                <div className="w-6 h-6 rounded-full bg-blue-100 flex items-center justify-center flex-shrink-0 mt-0.5">
-                                  <span className="text-xs font-semibold text-blue-600">1</span>
+                            <div className="space-y-4">
+                              {['Quick setup and configuration', 'Automatic optimization and smart suggestions', 'Real-time updates and seamless collaboration'].map((step, i) => (
+                                <div key={i} className="flex items-start gap-3">
+                                  <div className="w-8 h-8 rounded-full bg-gradient-to-br from-blue-500 to-blue-600 flex items-center justify-center flex-shrink-0 shadow-lg">
+                                    <span className="text-sm font-bold text-white">{i + 1}</span>
+                                  </div>
+                                  <p className="text-sm text-slate-700 pt-1.5">{step}</p>
                                 </div>
-                                <p className="text-sm text-slate-600">Quick setup and configuration</p>
-                              </div>
-                              <div className="flex items-start gap-3">
-                                <div className="w-6 h-6 rounded-full bg-blue-100 flex items-center justify-center flex-shrink-0 mt-0.5">
-                                  <span className="text-xs font-semibold text-blue-600">2</span>
-                                </div>
-                                <p className="text-sm text-slate-600">Automatic optimization and validation</p>
-                              </div>
-                              <div className="flex items-start gap-3">
-                                <div className="w-6 h-6 rounded-full bg-blue-100 flex items-center justify-center flex-shrink-0 mt-0.5">
-                                  <span className="text-xs font-semibold text-blue-600">3</span>
-                                </div>
-                                <p className="text-sm text-slate-600">Real-time updates and collaboration</p>
-                              </div>
+                              ))}
+                            </div>
+                            <div className="mt-8 p-4 bg-gradient-to-br from-blue-50 to-purple-50 rounded-xl border border-blue-100">
+                              <div className="text-xs font-semibold text-blue-900 mb-2">💡 Pro Tip</div>
+                              <p className="text-xs text-slate-700 leading-relaxed">
+                                This feature integrates seamlessly with your existing workflow and requires zero manual intervention after initial setup.
+                              </p>
                             </div>
                           </div>
                         </div>
