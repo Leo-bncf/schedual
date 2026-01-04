@@ -67,6 +67,7 @@ const features = [
 
 export default function DashboardPreview() {
   const [expandedIndex, setExpandedIndex] = useState(null);
+  const [fullscreenIndex, setFullscreenIndex] = useState(null);
   const [isSticky, setIsSticky] = useState(false);
   const sectionRef = useRef(null);
   const textContainerRef = useRef(null);
@@ -117,7 +118,9 @@ export default function DashboardPreview() {
         {/* Feature Cards Grid */}
         <div className="relative flex flex-col lg:flex-row gap-8">
             {/* Left Column - Text */}
-            <div ref={textContainerRef} className="lg:w-[400px] lg:shrink-0">
+            <div ref={textContainerRef} className={`lg:w-[400px] lg:shrink-0 transition-opacity duration-300 ${
+              fullscreenIndex !== null ? 'opacity-0 pointer-events-none' : 'opacity-100'
+            }`}>
               <div className={`transition-all duration-300 ${
                 isSticky 
                   ? 'lg:fixed lg:top-1/2 lg:-translate-y-1/2 lg:w-[400px] lg:left-[max(2rem,calc(50%-44rem))]' 
@@ -147,17 +150,15 @@ export default function DashboardPreview() {
             {features.map((feature, index) => (
               <div key={index}>
                 <motion.button
-                  onClick={() => setExpandedIndex(expandedIndex === index ? null : index)}
+                  onClick={() => setFullscreenIndex(index)}
                   className="w-full text-left"
                   initial={{ opacity: 0, x: 20 }}
                   whileInView={{ opacity: 1, x: 0 }}
                   viewport={{ once: true }}
                   transition={{ duration: 0.5, delay: index * 0.1 }}
                 >
-                  <div className={`bg-white/80 backdrop-blur-md rounded-2xl p-6 border-2 transition-all duration-300 max-w-xl h-48 flex items-center ${
-                    expandedIndex === index 
-                      ? 'border-blue-600 shadow-lg' 
-                      : 'border-slate-200 hover:border-blue-400 hover:shadow-md'
+                  <div className={`bg-white/80 backdrop-blur-md rounded-2xl p-6 border-2 transition-all duration-300 max-w-xl h-48 flex items-center cursor-pointer ${
+                    'border-slate-200 hover:border-blue-400 hover:shadow-md'
                   }`}>
                     <div className="flex items-start gap-4 w-full">
                       <div className={`w-12 h-12 rounded-xl bg-gradient-to-br ${feature.color} flex items-center justify-center flex-shrink-0`}>
@@ -167,91 +168,161 @@ export default function DashboardPreview() {
                         <h4 className="text-lg font-semibold text-slate-900 mb-2">{feature.title}</h4>
                         <p className="text-sm text-slate-600 leading-relaxed">{feature.description}</p>
                       </div>
-                      <ChevronDown className={`w-5 h-5 text-slate-400 transition-transform duration-300 flex-shrink-0 mt-1 ${
-                        expandedIndex === index ? 'rotate-180' : ''
-                      }`} />
-                    </div>
-                  </div>
-                </motion.button>
-
-                {/* Expanded Screenshot */}
-                <AnimatePresence>
-                  {expandedIndex === index && (
-                    <motion.div
-                      initial={{ height: 0, opacity: 0 }}
-                      animate={{ height: 'auto', opacity: 1 }}
-                      exit={{ height: 0, opacity: 0 }}
-                      transition={{ duration: 0.3 }}
-                      className="overflow-hidden"
-                    >
-                      <div className="pt-4 px-2">
-                        <div className="bg-white rounded-xl shadow-xl border border-slate-200 overflow-hidden">
-                          {/* Browser Chrome */}
-                          <div className="bg-slate-800 px-4 py-2 flex items-center gap-2">
-                            <div className="flex gap-1.5">
-                              <div className="w-2.5 h-2.5 rounded-full bg-red-500"></div>
-                              <div className="w-2.5 h-2.5 rounded-full bg-yellow-500"></div>
-                              <div className="w-2.5 h-2.5 rounded-full bg-green-500"></div>
-                            </div>
-                            <div className="flex-1 bg-slate-700 rounded px-3 py-1 text-xs text-slate-300 text-center">
-                              schedual.app/dashboard
-                            </div>
-                          </div>
-
-                          {/* Screenshot Content */}
-                          <div className="bg-gradient-to-br from-slate-50 to-slate-100 p-6">
-                            <div className="grid grid-cols-3 gap-3 mb-4">
-                              <div className="bg-white rounded-lg p-3 border border-slate-200">
-                                <div className="w-8 h-8 rounded-lg bg-gradient-to-br from-blue-500 to-blue-600 flex items-center justify-center mb-2">
-                                  <Users className="w-4 h-4 text-white" />
-                                </div>
-                                <div className="text-2xl font-bold text-slate-900">45</div>
-                                <div className="text-xs text-slate-600">Teachers</div>
-                              </div>
-                              <div className="bg-white rounded-lg p-3 border border-slate-200">
-                                <div className="w-8 h-8 rounded-lg bg-gradient-to-br from-purple-500 to-purple-600 flex items-center justify-center mb-2">
-                                  <GraduationCap className="w-4 h-4 text-white" />
-                                </div>
-                                <div className="text-2xl font-bold text-slate-900">327</div>
-                                <div className="text-xs text-slate-600">Students</div>
-                              </div>
-                              <div className="bg-white rounded-lg p-3 border border-slate-200">
-                                <div className="w-8 h-8 rounded-lg bg-gradient-to-br from-emerald-500 to-emerald-600 flex items-center justify-center mb-2">
-                                  <BookOpen className="w-4 h-4 text-white" />
-                                </div>
-                                <div className="text-2xl font-bold text-slate-900">24</div>
-                                <div className="text-xs text-slate-600">Subjects</div>
-                              </div>
-                            </div>
-
-                            <div className="bg-white rounded-lg p-4 border border-slate-200">
-                              <div className="text-sm font-semibold text-slate-900 mb-3">Recent Activity</div>
-                              <div className="space-y-2">
-                                {[
-                                  { status: 'success', title: 'DP Schedule 2024-25', time: '2h ago' },
-                                  { status: 'pending', title: 'MYP Schedule Draft', time: 'Yesterday' },
-                                ].map((item, i) => (
-                                  <div key={i} className="flex items-center gap-3 p-2 rounded bg-slate-50">
-                                    <div className={`w-2 h-2 rounded-full ${item.status === 'success' ? 'bg-green-500' : 'bg-amber-500'}`}></div>
-                                    <div className="flex-1">
-                                      <div className="text-xs font-medium text-slate-900">{item.title}</div>
-                                      <div className="text-xs text-slate-500">{item.time}</div>
-                                    </div>
-                                  </div>
-                                ))}
-                              </div>
-                            </div>
-                          </div>
-                        </div>
                       </div>
-                    </motion.div>
-                  )}
-                </AnimatePresence>
+                      </div>
+                      </motion.button>
               </div>
             ))}
           </div>
-        </div>
-      </div>
-    </section>
-  );
-}
+          </div>
+          </div>
+
+          {/* Fullscreen Preview Modal */}
+          <AnimatePresence>
+          {fullscreenIndex !== null && (
+          <motion.div
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/80 backdrop-blur-sm"
+            onClick={() => setFullscreenIndex(null)}
+          >
+            <motion.div
+              initial={{ scale: 0.9, opacity: 0 }}
+              animate={{ scale: 1, opacity: 1 }}
+              exit={{ scale: 0.9, opacity: 0 }}
+              transition={{ duration: 0.3 }}
+              className="relative w-full max-w-6xl max-h-[90vh] bg-white rounded-2xl shadow-2xl overflow-hidden"
+              onClick={(e) => e.stopPropagation()}
+            >
+              {/* Close Button */}
+              <button
+                onClick={() => setFullscreenIndex(null)}
+                className="absolute top-4 right-4 z-10 w-10 h-10 rounded-full bg-slate-900/80 hover:bg-slate-900 flex items-center justify-center text-white transition-colors"
+              >
+                ✕
+              </button>
+
+              {/* Browser Chrome */}
+              <div className="bg-slate-800 px-6 py-3 flex items-center gap-3">
+                <div className="flex gap-2">
+                  <div className="w-3 h-3 rounded-full bg-red-500"></div>
+                  <div className="w-3 h-3 rounded-full bg-yellow-500"></div>
+                  <div className="w-3 h-3 rounded-full bg-green-500"></div>
+                </div>
+                <div className="flex-1 bg-slate-700 rounded px-4 py-2 text-sm text-slate-300 text-center">
+                  schedual.app/{fullscreenIndex === 0 ? 'dashboard' : fullscreenIndex === 3 ? 'schedule' : 'dashboard'}
+                </div>
+              </div>
+
+              {/* Dashboard Preview Content */}
+              <div className="bg-gradient-to-br from-slate-50 to-slate-100 p-8 overflow-y-auto max-h-[calc(90vh-60px)]">
+                <div className="space-y-6">
+                  {/* Stats Grid */}
+                  <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                    <div className="bg-white rounded-xl p-6 border border-slate-200 shadow-sm">
+                      <div className="flex items-center justify-between mb-4">
+                        <div className="w-12 h-12 rounded-xl bg-gradient-to-br from-blue-500 to-blue-600 flex items-center justify-center">
+                          <Users className="w-6 h-6 text-white" />
+                        </div>
+                        <span className="text-xs text-green-600 font-semibold">+12%</span>
+                      </div>
+                      <div className="text-3xl font-bold text-slate-900 mb-1">45</div>
+                      <div className="text-sm text-slate-600">Active Teachers</div>
+                    </div>
+                    <div className="bg-white rounded-xl p-6 border border-slate-200 shadow-sm">
+                      <div className="flex items-center justify-between mb-4">
+                        <div className="w-12 h-12 rounded-xl bg-gradient-to-br from-purple-500 to-purple-600 flex items-center justify-center">
+                          <GraduationCap className="w-6 h-6 text-white" />
+                        </div>
+                        <span className="text-xs text-green-600 font-semibold">+8%</span>
+                      </div>
+                      <div className="text-3xl font-bold text-slate-900 mb-1">327</div>
+                      <div className="text-sm text-slate-600">Students Enrolled</div>
+                    </div>
+                    <div className="bg-white rounded-xl p-6 border border-slate-200 shadow-sm">
+                      <div className="flex items-center justify-between mb-4">
+                        <div className="w-12 h-12 rounded-xl bg-gradient-to-br from-emerald-500 to-emerald-600 flex items-center justify-center">
+                          <BookOpen className="w-6 h-6 text-white" />
+                        </div>
+                        <span className="text-xs text-slate-600 font-semibold">24 active</span>
+                      </div>
+                      <div className="text-3xl font-bold text-slate-900 mb-1">24</div>
+                      <div className="text-sm text-slate-600">Subject Offerings</div>
+                    </div>
+                  </div>
+
+                  {/* Schedule Status */}
+                  <div className="bg-white rounded-xl p-6 border border-slate-200 shadow-sm">
+                    <div className="flex items-center justify-between mb-4">
+                      <h3 className="text-lg font-semibold text-slate-900">Current Schedule</h3>
+                      <span className="px-3 py-1 rounded-full bg-green-100 text-green-700 text-xs font-semibold">Active</span>
+                    </div>
+                    <div className="space-y-3">
+                      <div className="flex items-center gap-3">
+                        <Calendar className="w-5 h-5 text-slate-400" />
+                        <div className="flex-1">
+                          <div className="text-sm font-medium text-slate-900">DP Schedule 2024-25</div>
+                          <div className="text-xs text-slate-500">Last updated 2 hours ago</div>
+                        </div>
+                        <div className="text-sm font-semibold text-green-600">98% optimized</div>
+                      </div>
+                      <div className="h-2 bg-slate-100 rounded-full overflow-hidden">
+                        <div className="h-full bg-gradient-to-r from-green-500 to-emerald-500 rounded-full" style={{ width: '98%' }}></div>
+                      </div>
+                    </div>
+                  </div>
+
+                  {/* Recent Activity */}
+                  <div className="bg-white rounded-xl p-6 border border-slate-200 shadow-sm">
+                    <h3 className="text-lg font-semibold text-slate-900 mb-4">Recent Activity</h3>
+                    <div className="space-y-3">
+                      {[
+                        { status: 'success', title: 'Schedule published', desc: 'DP Schedule 2024-25 went live', time: '2h ago', icon: Calendar },
+                        { status: 'pending', title: 'Group created', desc: 'Physics HL - Group B assigned', time: '5h ago', icon: Users },
+                        { status: 'success', title: 'Teacher updated', desc: 'Dr. Smith availability changed', time: 'Yesterday', icon: Users },
+                        { status: 'info', title: 'Room booked', desc: 'Lab 3 reserved for Chemistry', time: '2 days ago', icon: Building2 },
+                      ].map((item, i) => (
+                        <div key={i} className="flex items-start gap-3 p-3 rounded-lg bg-slate-50 hover:bg-slate-100 transition-colors">
+                          <div className={`w-10 h-10 rounded-lg flex items-center justify-center flex-shrink-0 ${
+                            item.status === 'success' ? 'bg-green-100 text-green-600' :
+                            item.status === 'pending' ? 'bg-amber-100 text-amber-600' :
+                            'bg-blue-100 text-blue-600'
+                          }`}>
+                            <item.icon className="w-5 h-5" />
+                          </div>
+                          <div className="flex-1 min-w-0">
+                            <div className="text-sm font-medium text-slate-900">{item.title}</div>
+                            <div className="text-xs text-slate-500">{item.desc}</div>
+                          </div>
+                          <div className="text-xs text-slate-400 flex-shrink-0">{item.time}</div>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+
+                  {/* Quick Actions */}
+                  <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
+                    {[
+                      { label: 'New Schedule', icon: Calendar, color: 'blue' },
+                      { label: 'Add Teacher', icon: Users, color: 'purple' },
+                      { label: 'Add Student', icon: GraduationCap, color: 'emerald' },
+                      { label: 'Configure Room', icon: Building2, color: 'orange' },
+                    ].map((action, i) => (
+                      <button key={i} className="bg-white rounded-lg p-4 border border-slate-200 hover:border-blue-300 hover:shadow-md transition-all">
+                        <div className={`w-10 h-10 rounded-lg bg-gradient-to-br from-${action.color}-500 to-${action.color}-600 flex items-center justify-center mb-2 mx-auto`}>
+                          <action.icon className="w-5 h-5 text-white" />
+                        </div>
+                        <div className="text-xs font-medium text-slate-700 text-center">{action.label}</div>
+                      </button>
+                    ))}
+                  </div>
+                </div>
+              </div>
+            </motion.div>
+          </motion.div>
+          )}
+          </AnimatePresence>
+          </section>
+          );
+          }
