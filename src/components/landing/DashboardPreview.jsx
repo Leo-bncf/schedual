@@ -80,8 +80,9 @@ export default function DashboardPreview() {
       const sectionBottom = sectionRect.bottom;
       const viewportHeight = window.innerHeight;
 
-      // Stop being sticky when section bottom - text height reaches middle of viewport
-      const shouldStick = sectionBottom - textHeight > viewportHeight / 2;
+      // Stop being sticky when there's not enough room at the bottom
+      // Text becomes relative when section bottom is close to bottom of viewport + text height
+      const shouldStick = sectionBottom > viewportHeight + textHeight / 2;
       setIsSticky(shouldStick);
     };
 
