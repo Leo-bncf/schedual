@@ -105,36 +105,38 @@ export default function DashboardPreview() {
         </div>
 
         {/* Feature Cards Grid */}
-        <div className="relative flex flex-col lg:flex-row gap-8 lg:min-h-[200vh]">
+        <div className="relative flex flex-col lg:flex-row gap-8">
             {/* Left Column - Text */}
-            <div 
-              ref={textRef}
-              className={`lg:w-[400px] lg:h-fit ${
-                isSticky 
-                  ? 'lg:sticky lg:top-[50vh] lg:-translate-y-1/2' 
-                  : 'lg:absolute lg:bottom-0'
-              }`}
-            >
-              <div className="text-sm font-semibold text-purple-600 mb-3">Benefits</div>
-              <h3 className="text-4xl font-bold text-slate-900 mb-6">
-                Everything you need in one place
-              </h3>
-              <p className="text-lg text-slate-600 leading-relaxed mb-4">
-                Schedual brings together all the tools you need to manage your IB school efficiently. From scheduling to communication, we've got you covered.
-              </p>
-              <p className="text-base text-slate-600 leading-relaxed mb-6">
-                No more juggling between spreadsheets, emails, and outdated scheduling tools. Our platform consolidates everything into one seamless experience—built specifically for the complexities of IB programmes across PYP, MYP, and DP levels.
-              </p>
-              <div className="bg-gradient-to-br from-blue-50 to-purple-50 rounded-2xl p-6 border border-blue-100">
-                <div className="text-sm font-semibold text-blue-900 mb-3">Built by IB Students, for IB Students</div>
-                <p className="text-slate-700 leading-relaxed">
-                  We understand the unique challenges of IB scheduling because we've lived them. Our solution was born from real IB student experiences, designed to solve the complex timetabling problems that traditional tools can't handle. We know the pain of conflicting HL classes, the challenge of balancing CAS commitments, and the complexity of managing subject groups across multiple grade levels.
+            <div className="lg:w-[400px]">
+              <div 
+                ref={textRef}
+                className={`${
+                  isSticky 
+                    ? 'lg:sticky lg:top-1/2 lg:-translate-y-1/2' 
+                    : ''
+                }`}
+              >
+                <div className="text-sm font-semibold text-purple-600 mb-3">Benefits</div>
+                <h3 className="text-4xl font-bold text-slate-900 mb-6">
+                  Everything you need in one place
+                </h3>
+                <p className="text-lg text-slate-600 leading-relaxed mb-4">
+                  Schedual brings together all the tools you need to manage your IB school efficiently. From scheduling to communication, we've got you covered.
                 </p>
+                <p className="text-base text-slate-600 leading-relaxed mb-6">
+                  No more juggling between spreadsheets, emails, and outdated scheduling tools. Our platform consolidates everything into one seamless experience—built specifically for the complexities of IB programmes across PYP, MYP, and DP levels.
+                </p>
+                <div className="bg-gradient-to-br from-blue-50 to-purple-50 rounded-2xl p-6 border border-blue-100">
+                  <div className="text-sm font-semibold text-blue-900 mb-3">Built by IB Students, for IB Students</div>
+                  <p className="text-slate-700 leading-relaxed">
+                    We understand the unique challenges of IB scheduling because we've lived them. Our solution was born from real IB student experiences, designed to solve the complex timetabling problems that traditional tools can't handle. We know the pain of conflicting HL classes, the challenge of balancing CAS commitments, and the complexity of managing subject groups across multiple grade levels.
+                  </p>
+                </div>
               </div>
             </div>
 
           {/* Right Column - Feature Cards */}
-          <div className="flex-1 space-y-8">
+          <div className="flex-1 space-y-8 lg:min-w-0">
             {features.map((feature, index) => (
               <div key={index}>
                 <motion.button
