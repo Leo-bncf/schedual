@@ -32,6 +32,7 @@ import {
 } from "@/components/ui/dropdown-menu";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import LoginVerification from './components/auth/LoginVerification';
+import { CSRFProvider } from './components/auth/CSRFProvider';
 
 const navigation = [
   // School Admin Pages
@@ -186,9 +187,10 @@ export default function Layout({ children, currentPageName }) {
           <div className="w-16 h-16 border-4 border-blue-900 border-t-transparent rounded-full animate-spin mx-auto mb-4"></div>
           <p className="text-slate-600">Loading...</p>
         </div>
-      </div>
-    );
-  }
+        </div>
+        </CSRFProvider>
+        );
+        }
 
   if (needsVerification) {
     return (
@@ -226,8 +228,9 @@ export default function Layout({ children, currentPageName }) {
   };
 
   return (
-    <div className="min-h-screen bg-slate-50">
-      <style>{`
+    <CSRFProvider>
+      <div className="min-h-screen bg-slate-50">
+        <style>{`
         @import url('https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;600;700&display=swap');
 
         :root {

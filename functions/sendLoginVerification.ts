@@ -103,13 +103,15 @@ Deno.serve(async (req) => {
                       'unknown';
     const userAgent = req.headers.get('user-agent') || 'unknown';
 
-    // Create unverified session
+    // Create unverified session with CSRF token
     const sessionToken = randomBytes(32).toString('hex');
+    const csrfToken = randomBytes(32).toString('hex');
     const sessionExpiresAt = new Date(Date.now() + 24 * 60 * 60 * 1000);
     
     await base44.asServiceRole.entities.LoginSession.create({
       user_email: email,
       session_token: sessionToken,
+      csrf_token: csrfToken,
       verified: false,
       ip_address: ipAddress,
       user_agent: userAgent,

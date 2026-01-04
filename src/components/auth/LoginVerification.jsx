@@ -31,6 +31,15 @@ export default function LoginVerification({ open, onVerified, sessionToken }) {
       });
 
       if (response.data.success) {
+        // Fetch and store CSRF token after verification
+        try {
+          const csrfResponse = await base44.functions.invoke('getCSRFToken');
+          if (csrfResponse.data?.csrfToken) {
+            sessionStorage.setItem('csrf_token', csrfResponse.data.csrfToken);
+          }
+        } catch (err) {
+          console.error('Failed to fetch CSRF token:', err);
+        }
         onVerified();
       } else {
         setError(response.data.error || 'Verification failed');
