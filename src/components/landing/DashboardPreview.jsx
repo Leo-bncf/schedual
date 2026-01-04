@@ -210,92 +210,215 @@ export default function DashboardPreview() {
                             {/* Preview Content - Different for each feature */}
                             <div className="bg-white rounded-lg border border-slate-200 p-6 min-h-[550px]">
                               {index === 0 && (
-                                <div className="space-y-6">
-                                  <div className="grid grid-cols-3 gap-4">
+                                <div className="space-y-4">
+                                  {/* Top Stats Row */}
+                                  <div className="grid grid-cols-4 gap-3">
                                     {[
-                                      { icon: Users, value: '45', label: 'Active Teachers', color: 'from-blue-500 to-blue-600', trend: '+12%', subtitle: '38 full-time, 7 part-time' },
-                                      { icon: GraduationCap, value: '327', label: 'Students Enrolled', color: 'from-purple-500 to-purple-600', trend: '+8%', subtitle: 'DP1: 89, DP2: 92, MYP: 146' },
-                                      { icon: BookOpen, value: '24', label: 'Subject Offerings', color: 'from-emerald-500 to-emerald-600', trend: '6 new', subtitle: 'HL: 12, SL: 12' }
+                                      { icon: Users, value: '45', label: 'Teachers', color: 'from-blue-500 to-blue-600', change: '+3 this term', trend: 'up' },
+                                      { icon: GraduationCap, value: '327', label: 'Students', color: 'from-purple-500 to-purple-600', change: '+26 vs last year', trend: 'up' },
+                                      { icon: BookOpen, value: '24', label: 'Subjects', color: 'from-emerald-500 to-emerald-600', change: '6 new courses', trend: 'up' },
+                                      { icon: Building2, value: '18', label: 'Rooms', color: 'from-orange-500 to-orange-600', change: '94% utilized', trend: 'up' }
                                     ].map((stat, i) => (
                                       <motion.div 
                                         key={i} 
                                         initial={{ opacity: 0, y: 20 }}
                                         animate={{ opacity: 1, y: 0 }}
-                                        transition={{ delay: i * 0.1 + 0.2 }}
-                                        className="bg-gradient-to-br from-slate-50 to-white rounded-xl p-5 border border-slate-100 shadow-sm hover:shadow-lg transition-shadow"
+                                        transition={{ delay: i * 0.08 + 0.2 }}
+                                        className="bg-white rounded-xl p-4 border border-slate-200 shadow-sm hover:shadow-md hover:border-slate-300 transition-all cursor-pointer group"
                                       >
-                                        <div className={`w-14 h-14 rounded-xl bg-gradient-to-br ${stat.color} flex items-center justify-center mb-3 shadow-lg`}>
-                                          <stat.icon className="w-7 h-7 text-white" />
+                                        <div className="flex items-start justify-between mb-3">
+                                          <div className={`w-10 h-10 rounded-lg bg-gradient-to-br ${stat.color} flex items-center justify-center shadow-sm group-hover:shadow-md transition-shadow`}>
+                                            <stat.icon className="w-5 h-5 text-white" />
+                                          </div>
+                                          <div className={`text-[10px] font-semibold px-2 py-0.5 rounded-full ${stat.trend === 'up' ? 'bg-emerald-100 text-emerald-700' : 'bg-amber-100 text-amber-700'}`}>
+                                            {stat.trend === 'up' ? '↗' : '↘'}
+                                          </div>
                                         </div>
-                                        <div className="text-4xl font-bold text-slate-900 mb-1">{stat.value}</div>
-                                        <div className="text-xs text-slate-600 mb-2 font-medium">{stat.label}</div>
-                                        <div className="text-xs text-emerald-600 font-semibold mb-2">{stat.trend}</div>
-                                        <div className="text-[10px] text-slate-500 leading-tight">{stat.subtitle}</div>
+                                        <div className="text-2xl font-bold text-slate-900 mb-0.5">{stat.value}</div>
+                                        <div className="text-xs text-slate-600 font-medium mb-1">{stat.label}</div>
+                                        <div className="text-[10px] text-slate-500">{stat.change}</div>
                                       </motion.div>
                                     ))}
                                   </div>
+
+                                  {/* Active Schedule Card */}
                                   <motion.div 
                                     initial={{ opacity: 0, y: 20 }}
                                     animate={{ opacity: 1, y: 0 }}
                                     transition={{ delay: 0.5 }}
-                                    className="bg-gradient-to-br from-blue-50 to-white rounded-xl p-6 border border-blue-100"
+                                    className="bg-gradient-to-br from-blue-50 via-white to-purple-50 rounded-xl p-5 border border-blue-200 shadow-sm"
                                   >
-                                    <div className="flex items-center justify-between mb-4">
+                                    <div className="flex items-start justify-between mb-4">
                                       <div>
-                                        <div className="text-sm font-semibold text-slate-900 mb-1">DP Schedule 2024-25 • Term 1</div>
-                                        <div className="text-xs text-slate-600">Last optimized 2 hours ago by AI Engine</div>
+                                        <div className="flex items-center gap-2 mb-1">
+                                          <Calendar className="w-4 h-4 text-blue-600" />
+                                          <div className="text-sm font-bold text-slate-900">Active Schedule: DP 2024-25 Term 1</div>
+                                        </div>
+                                        <div className="text-xs text-slate-600">Generated 2 hours ago • Auto-optimized by AI</div>
                                       </div>
-                                      <div className="px-3 py-1 rounded-full bg-emerald-100 text-emerald-700 text-xs font-bold">98% Optimized</div>
+                                      <div className="flex flex-col items-end gap-1">
+                                        <div className="px-3 py-1 rounded-full bg-emerald-500 text-white text-xs font-bold shadow-sm">98% Quality</div>
+                                        <div className="text-[10px] text-emerald-700 font-semibold">Excellent</div>
+                                      </div>
                                     </div>
-                                    <div className="space-y-2 mb-4">
-                                      <div className="flex justify-between text-xs">
-                                        <span className="text-slate-600">Schedule Quality Score</span>
-                                        <span className="font-semibold text-slate-900">98/100</span>
+
+                                    <div className="grid grid-cols-5 gap-2 mb-4">
+                                      <div className="bg-white/70 backdrop-blur rounded-lg p-3 border border-slate-200">
+                                        <div className="text-[10px] text-slate-600 mb-1">Conflicts</div>
+                                        <div className="text-xl font-bold text-emerald-600">0</div>
+                                        <div className="text-[9px] text-slate-500">Zero issues</div>
                                       </div>
-                                      <div className="h-3 bg-slate-100 rounded-full overflow-hidden">
+                                      <div className="bg-white/70 backdrop-blur rounded-lg p-3 border border-slate-200">
+                                        <div className="text-[10px] text-slate-600 mb-1">Teachers</div>
+                                        <div className="text-xl font-bold text-blue-600">45/45</div>
+                                        <div className="text-[9px] text-slate-500">All assigned</div>
+                                      </div>
+                                      <div className="bg-white/70 backdrop-blur rounded-lg p-3 border border-slate-200">
+                                        <div className="text-[10px] text-slate-600 mb-1">Rooms</div>
+                                        <div className="text-xl font-bold text-purple-600">94%</div>
+                                        <div className="text-[9px] text-slate-500">Utilization</div>
+                                      </div>
+                                      <div className="bg-white/70 backdrop-blur rounded-lg p-3 border border-slate-200">
+                                        <div className="text-[10px] text-slate-600 mb-1">IB Req.</div>
+                                        <div className="text-xl font-bold text-emerald-600">✓</div>
+                                        <div className="text-[9px] text-slate-500">Compliant</div>
+                                      </div>
+                                      <div className="bg-white/70 backdrop-blur rounded-lg p-3 border border-slate-200">
+                                        <div className="text-[10px] text-slate-600 mb-1">Balance</div>
+                                        <div className="text-xl font-bold text-blue-600">A+</div>
+                                        <div className="text-[9px] text-slate-500">Workload</div>
+                                      </div>
+                                    </div>
+
+                                    <div className="space-y-1.5">
+                                      <div className="flex justify-between items-center text-xs">
+                                        <span className="text-slate-600 font-medium">Overall Quality Score</span>
+                                        <span className="font-bold text-slate-900">98/100</span>
+                                      </div>
+                                      <div className="h-2 bg-slate-200 rounded-full overflow-hidden">
                                         <motion.div 
                                           initial={{ width: 0 }}
                                           animate={{ width: '98%' }}
-                                          transition={{ delay: 0.7, duration: 1, ease: "easeOut" }}
-                                          className="h-full bg-gradient-to-r from-emerald-500 to-blue-500 rounded-full"
-                                        />
-                                      </div>
-                                    </div>
-                                    <div className="grid grid-cols-3 gap-3 text-xs">
-                                      <div className="bg-white rounded-lg p-3 border border-blue-100">
-                                        <div className="text-slate-600 mb-1">Conflicts</div>
-                                        <div className="text-lg font-bold text-slate-900">0</div>
-                                      </div>
-                                      <div className="bg-white rounded-lg p-3 border border-blue-100">
-                                        <div className="text-slate-600 mb-1">Room Usage</div>
-                                        <div className="text-lg font-bold text-slate-900">94%</div>
-                                      </div>
-                                      <div className="bg-white rounded-lg p-3 border border-blue-100">
-                                        <div className="text-slate-600 mb-1">Teacher Load</div>
-                                        <div className="text-lg font-bold text-slate-900">Balanced</div>
+                                          transition={{ delay: 0.7, duration: 1.2, ease: "easeOut" }}
+                                          className="h-full bg-gradient-to-r from-emerald-500 via-blue-500 to-purple-500 rounded-full relative overflow-hidden"
+                                        >
+                                          <motion.div
+                                            className="absolute inset-0 bg-gradient-to-r from-transparent via-white to-transparent opacity-30"
+                                            animate={{ x: ['-100%', '100%'] }}
+                                            transition={{ duration: 1.5, repeat: Infinity, ease: "linear" }}
+                                          />
+                                        </motion.div>
                                       </div>
                                     </div>
                                   </motion.div>
-                                  <motion.div 
-                                    initial={{ opacity: 0 }}
-                                    animate={{ opacity: 1 }}
-                                    transition={{ delay: 0.8 }}
-                                    className="grid grid-cols-2 gap-4"
+
+                                  {/* Quick Stats Grid */}
+                                  <div className="grid grid-cols-2 gap-3">
+                                    <motion.div
+                                      initial={{ opacity: 0, x: -20 }}
+                                      animate={{ opacity: 1, x: 0 }}
+                                      transition={{ delay: 0.8 }}
+                                      className="bg-white rounded-xl p-4 border border-slate-200 shadow-sm"
+                                    >
+                                      <div className="flex items-center gap-3 mb-3">
+                                        <div className="w-8 h-8 rounded-lg bg-gradient-to-br from-amber-400 to-orange-500 flex items-center justify-center">
+                                          <span className="text-white text-sm">⚠️</span>
+                                        </div>
+                                        <div className="text-sm font-bold text-slate-900">2 Warnings</div>
+                                      </div>
+                                      <div className="space-y-2 text-xs text-slate-600">
+                                        <div className="flex items-start gap-2">
+                                          <div className="w-1 h-1 rounded-full bg-amber-500 mt-1.5 flex-shrink-0"></div>
+                                          <span>Dr. Chen: 4 consecutive periods Wed (P3-P6)</span>
+                                        </div>
+                                        <div className="flex items-start gap-2">
+                                          <div className="w-1 h-1 rounded-full bg-amber-500 mt-1.5 flex-shrink-0"></div>
+                                          <span>Lab 3: 85% capacity for Chemistry HL Group B</span>
+                                        </div>
+                                      </div>
+                                    </motion.div>
+
+                                    <motion.div
+                                      initial={{ opacity: 0, x: 20 }}
+                                      animate={{ opacity: 1, x: 0 }}
+                                      transition={{ delay: 0.8 }}
+                                      className="bg-gradient-to-br from-emerald-50 to-white rounded-xl p-4 border border-emerald-200 shadow-sm"
+                                    >
+                                      <div className="flex items-center gap-3 mb-3">
+                                        <div className="w-8 h-8 rounded-lg bg-gradient-to-br from-emerald-400 to-emerald-600 flex items-center justify-center">
+                                          <span className="text-white text-sm">✓</span>
+                                        </div>
+                                        <div className="text-sm font-bold text-slate-900">IB Compliance</div>
+                                      </div>
+                                      <div className="space-y-2 text-xs text-slate-600">
+                                        <div className="flex justify-between">
+                                          <span>HL Subjects (6h/week)</span>
+                                          <span className="font-semibold text-emerald-600">✓ 12/12</span>
+                                        </div>
+                                        <div className="flex justify-between">
+                                          <span>SL Subjects (4h/week)</span>
+                                          <span className="font-semibold text-emerald-600">✓ 12/12</span>
+                                        </div>
+                                        <div className="flex justify-between">
+                                          <span>Core (TOK, CAS, EE)</span>
+                                          <span className="font-semibold text-emerald-600">✓ All</span>
+                                        </div>
+                                      </div>
+                                    </motion.div>
+                                  </div>
+
+                                  {/* Recent Activity */}
+                                  <motion.div
+                                    initial={{ opacity: 0, y: 20 }}
+                                    animate={{ opacity: 1, y: 0 }}
+                                    transition={{ delay: 1 }}
+                                    className="bg-white rounded-xl p-4 border border-slate-200 shadow-sm"
                                   >
-                                    <div className="bg-gradient-to-br from-amber-50 to-white rounded-lg p-4 border border-amber-100">
-                                      <div className="text-xs font-semibold text-amber-900 mb-2">⚠️ 2 Warnings</div>
-                                      <div className="text-xs text-slate-600 leading-relaxed">
-                                        • Mr. Chen has 4 consecutive periods on Wednesday<br/>
-                                        • Lab 3 at 85% capacity for Chemistry HL
-                                      </div>
+                                    <div className="text-sm font-bold text-slate-900 mb-3">Recent Activity</div>
+                                    <div className="space-y-2">
+                                      {[
+                                        { action: 'Schedule Published', detail: 'DP 2024-25 Term 1 went live', time: '2h ago', icon: Calendar, color: 'emerald' },
+                                        { action: 'Group Updated', detail: 'Physics HL Group B: +2 students', time: '4h ago', icon: Users, color: 'blue' },
+                                        { action: 'Room Changed', detail: 'Math AA moved to larger room R-204', time: '6h ago', icon: Building2, color: 'purple' }
+                                      ].map((activity, i) => (
+                                        <div key={i} className="flex items-center gap-3 p-2 rounded-lg hover:bg-slate-50 transition-colors">
+                                          <div className={`w-7 h-7 rounded-lg bg-gradient-to-br from-${activity.color}-400 to-${activity.color}-600 flex items-center justify-center flex-shrink-0`}>
+                                            <activity.icon className="w-3.5 h-3.5 text-white" />
+                                          </div>
+                                          <div className="flex-1 min-w-0">
+                                            <div className="text-xs font-semibold text-slate-900">{activity.action}</div>
+                                            <div className="text-[10px] text-slate-600">{activity.detail}</div>
+                                          </div>
+                                          <div className="text-[10px] text-slate-400 flex-shrink-0">{activity.time}</div>
+                                        </div>
+                                      ))}
                                     </div>
-                                    <div className="bg-gradient-to-br from-emerald-50 to-white rounded-lg p-4 border border-emerald-100">
-                                      <div className="text-xs font-semibold text-emerald-900 mb-2">✓ All IB Requirements Met</div>
-                                      <div className="text-xs text-slate-600 leading-relaxed">
-                                        • HL subjects: 6 hours/week<br/>
-                                        • SL subjects: 4 hours/week<br/>
-                                        • TOK, CAS, EE properly allocated
-                                      </div>
+                                  </motion.div>
+
+                                  {/* Subject Groups Breakdown */}
+                                  <motion.div
+                                    initial={{ opacity: 0, y: 20 }}
+                                    animate={{ opacity: 1, y: 0 }}
+                                    transition={{ delay: 1.1 }}
+                                    className="bg-gradient-to-br from-indigo-50 to-white rounded-xl p-4 border border-indigo-200 shadow-sm"
+                                  >
+                                    <div className="text-sm font-bold text-slate-900 mb-3">IB Subject Groups Distribution</div>
+                                    <div className="grid grid-cols-3 gap-2">
+                                      {[
+                                        { group: 'Group 1', name: 'Lang & Lit', students: 327, color: 'red' },
+                                        { group: 'Group 2', name: 'Lang Acq', students: 245, color: 'orange' },
+                                        { group: 'Group 3', name: 'Individuals', students: 198, color: 'amber' },
+                                        { group: 'Group 4', name: 'Sciences', students: 289, color: 'emerald' },
+                                        { group: 'Group 5', name: 'Math', students: 327, color: 'blue' },
+                                        { group: 'Group 6', name: 'Arts', students: 124, color: 'purple' }
+                                      ].map((grp, i) => (
+                                        <div key={i} className="bg-white rounded-lg p-3 border border-slate-200">
+                                          <div className={`text-[10px] font-bold text-${grp.color}-600 mb-1`}>{grp.group}</div>
+                                          <div className="text-xs text-slate-900 font-semibold mb-1">{grp.name}</div>
+                                          <div className="text-lg font-bold text-slate-900">{grp.students}</div>
+                                          <div className="text-[9px] text-slate-500">enrollments</div>
+                                        </div>
+                                      ))}
                                     </div>
                                   </motion.div>
                                 </div>
