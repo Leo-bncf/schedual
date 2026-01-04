@@ -78,7 +78,7 @@ export default function Dashboard() {
   const draftSchedules = scheduleVersions.filter(s => s.status === 'draft');
 
   return (
-    <div className="space-y-10 max-w-7xl">
+    <div className="space-y-10">
       <PageHeader 
         title="Dashboard"
         description="Overview of your scheduling system"
