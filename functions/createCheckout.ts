@@ -1,10 +1,14 @@
 import { createClientFromRequest } from 'npm:@base44/sdk@0.8.4';
 import Stripe from 'npm:stripe@17.5.0';
+import { validateCSRF } from './csrfHelper.js';
 
 Deno.serve(async (req) => {
   try {
     const stripe = new Stripe(Deno.env.get("STRIPE_SECRET_KEY"));
     const base44 = createClientFromRequest(req);
+    
+    // Validate CSRF for all operations
+    await validateCSRF(req, base44);
     
     let user;
     try {
@@ -19,7 +23,11 @@ Deno.serve(async (req) => {
     }
 
     // Block SuperAdmin accounts from subscribing
-    const SUPER_ADMIN_EMAILS = ['leo.bancroft34@icloud.com', 'erik.gerbst@gmail.com'];
+    const superAdminEmailsStr = Deno.env.get("SUPER_ADMIN_EMAILS") || '';
+    const SUPER_ADMIN_EMAILS = superAdminEmailsStr
+      .split(',')
+      .map(email => email.trim().toLowerCase())
+      .filter(email => email.length > 0);
     if (SUPER_ADMIN_EMAILS.includes(user.email?.toLowerCase())) {
       return Response.json({ error: 'SuperAdmin accounts cannot subscribe' }, { status: 403 });
     }

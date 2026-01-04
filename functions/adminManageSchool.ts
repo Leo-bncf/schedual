@@ -1,8 +1,12 @@
 import { createClientFromRequest } from 'npm:@base44/sdk@0.8.4';
+import { validateCSRF } from './csrfHelper.js';
 
 Deno.serve(async (req) => {
   try {
     const base44 = createClientFromRequest(req);
+    
+    // Validate CSRF
+    await validateCSRF(req, base44);
     
     // Verify authentication
     const user = await base44.auth.me();

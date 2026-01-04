@@ -1,13 +1,16 @@
 import { createClientFromRequest } from 'npm:@base44/sdk@0.8.6';
+import { validateCSRF } from './csrfHelper.js';
+import { getUserSchoolId } from './securityHelper.js';
 
 Deno.serve(async (req) => {
   try {
     const base44 = createClientFromRequest(req);
+    
+    // Validate CSRF
+    await validateCSRF(req, base44);
+    
+    const schoolId = await getUserSchoolId(base44);
     const user = await base44.auth.me();
-
-    if (!user || !user.school_id) {
-      return Response.json({ error: 'Unauthorized or no school assigned' }, { status: 401 });
-    }
 
     const { email } = await req.json();
 
@@ -16,7 +19,7 @@ Deno.serve(async (req) => {
     }
 
     // Get current school and check seats
-    const schools = await base44.entities.School.filter({ id: user.school_id });
+    const schools = await base44.entities.School.filter({ id: schoolId });
     const school = schools[0];
 
     if (!school) {
@@ -25,7 +28,7 @@ Deno.serve(async (req) => {
 
     // Get current admins directly
     const currentAdmins = await base44.asServiceRole.entities.User.filter({ 
-      school_id: user.school_id 
+      school_id: schoolId 
     });
     const maxSeats = (school.max_additional_users || 0) + 1;
 
@@ -48,7 +51,7 @@ Deno.serve(async (req) => {
     const existingUser = existingUsers[0];
     
     // If already assigned to this school
-    if (existingUser.school_id === user.school_id) {
+    if (existingUser.school_id === schoolId) {
       return Response.json({ 
         error: 'This user is already an administrator of your school' 
       }, { status: 400 });
@@ -63,7 +66,7 @@ Deno.serve(async (req) => {
     
     // User exists but not assigned - assign them
     await base44.asServiceRole.entities.User.update(existingUser.id, {
-      school_id: user.school_id
+      school_id: schoolId
     });
     
     // Send notification email
