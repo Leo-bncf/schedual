@@ -60,7 +60,7 @@ export default function DemoBooking() {
                 {
                   icon: Calendar,
                   title: '30-Minute Demo',
-                  description: 'Personalized walkthrough of Schedual's features tailored to your school's needs.',
+                  description: "Personalized walkthrough of Schedual's features tailored to your school's needs.",
                   color: 'from-blue-500 to-blue-600'
                 },
                 {
@@ -115,7 +115,7 @@ export default function DemoBooking() {
                     <CheckCircle className="w-8 h-8 text-white" />
                   </div>
                   <h3 className="text-2xl font-bold text-slate-900 mb-2">Request Submitted!</h3>
-                  <p className="text-slate-600">We'll contact you within 24 hours to schedule your demo.</p>
+                  <p className="text-slate-600">We will contact you within 24 hours to schedule your demo.</p>
                 </motion.div>
               ) : (
                 <form onSubmit={handleSubmit} className="space-y-6">
