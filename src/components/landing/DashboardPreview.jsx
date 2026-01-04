@@ -77,14 +77,19 @@ export default function DashboardPreview() {
 
       const sectionRect = sectionRef.current.getBoundingClientRect();
       const viewportHeight = window.innerHeight;
+      const centerViewport = viewportHeight / 2;
       
-      // Start sticky after scrolling past "beautifully streamlined" (first card at ~600px from section top)
-      const stickyStartOffset = 600;
-      const shouldStartSticky = sectionRect.top < (viewportHeight / 2 - stickyStartOffset);
+      // Calculate actual positions of first and last relevant cards
+      // First card "beautifully streamlined" is at index 0
+      // Last card before "student-centric" is at index 8
+      const firstCardOffset = 300; // Approximate distance to first card
+      const lastCardOffset = 2000; // Approximate distance to second-to-last card
       
-      // End sticky before last cards (stop ~1200px before section end)
-      const stickyEndOffset = 1200;
-      const shouldEndSticky = sectionRect.bottom < (viewportHeight / 2 + stickyEndOffset);
+      // Sticky starts when first card reaches center
+      const shouldStartSticky = sectionRect.top < (centerViewport - firstCardOffset);
+      
+      // Sticky ends when reaching second-to-last card
+      const shouldEndSticky = sectionRect.top < (centerViewport - lastCardOffset);
       
       if (shouldEndSticky) {
         setTextPosition('bottom');
