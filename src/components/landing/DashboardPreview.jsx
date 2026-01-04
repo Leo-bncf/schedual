@@ -560,7 +560,7 @@ export default function DashboardPreview() {
   };
 
   return (
-    <section className="relative py-24 px-4 sm:px-6 lg:px-8 bg-white">
+    <section className="relative py-24 px-4 sm:px-6 lg:px-8 bg-transparent">
       <div className="max-w-7xl mx-auto">
         {/* Header */}
         <div className="text-center mb-16">
