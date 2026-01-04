@@ -67,32 +67,9 @@ const features = [
 
 export default function DashboardPreview() {
   const [expandedIndex, setExpandedIndex] = useState(null);
-  const [isSticky, setIsSticky] = useState(true);
-  const sectionRef = useRef(null);
-  const textRef = useRef(null);
-
-  useEffect(() => {
-    const handleScroll = () => {
-      if (!sectionRef.current || !textRef.current) return;
-
-      const sectionRect = sectionRef.current.getBoundingClientRect();
-      const textHeight = textRef.current.offsetHeight;
-      
-      // Check if we're near the bottom - switch from sticky to absolute
-      const distanceFromBottom = sectionRect.bottom - window.innerHeight;
-      const shouldStick = distanceFromBottom > textHeight / 2;
-      
-      setIsSticky(shouldStick);
-    };
-
-    window.addEventListener('scroll', handleScroll);
-    handleScroll();
-
-    return () => window.removeEventListener('scroll', handleScroll);
-  }, []);
 
   return (
-    <section ref={sectionRef} className="relative py-24 px-4 sm:px-6 lg:px-8 bg-transparent overflow-hidden">
+    <section className="relative py-24 px-4 sm:px-6 lg:px-8 bg-transparent overflow-hidden">
       <div className="max-w-7xl mx-auto relative z-10">
         {/* Section Header */}
         <div className="text-center mb-16">
@@ -107,15 +84,8 @@ export default function DashboardPreview() {
         {/* Feature Cards Grid */}
         <div className="relative flex flex-col lg:flex-row gap-8">
             {/* Left Column - Text */}
-            <div className="lg:w-[400px]">
-              <div 
-                ref={textRef}
-                className={`${
-                  isSticky 
-                    ? 'lg:sticky lg:top-1/2 lg:-translate-y-1/2' 
-                    : ''
-                }`}
-              >
+            <div className="lg:w-[400px] lg:shrink-0">
+              <div className="lg:sticky lg:top-1/2 lg:-translate-y-1/2">
                 <div className="text-sm font-semibold text-purple-600 mb-3">Benefits</div>
                 <h3 className="text-4xl font-bold text-slate-900 mb-6">
                   Everything you need in one place
