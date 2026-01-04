@@ -5,6 +5,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { toast } from "sonner";
+import { base44 } from "@/api/base44Client";
 
 export default function DemoBooking() {
   const [formData, setFormData] = useState({
@@ -20,18 +21,21 @@ export default function DemoBooking() {
     e.preventDefault();
     setIsSubmitting(true);
 
-    // Simulate form submission
-    setTimeout(() => {
-      setIsSubmitting(false);
+    try {
+      await base44.functions.invoke('submitDemoRequest', formData);
       setIsSubmitted(true);
-      toast.success('Demo request submitted! We\'ll be in touch within 24 hours.');
+      toast.success('Demo request submitted! We will be in touch within 24 hours.');
       
-      // Reset after showing success
       setTimeout(() => {
         setIsSubmitted(false);
         setFormData({ name: '', email: '', school: '', message: '' });
       }, 3000);
-    }, 1000);
+    } catch (error) {
+      toast.error('Failed to submit request. Please try again.');
+      console.error(error);
+    } finally {
+      setIsSubmitting(false);
+    }
   };
 
   return (
