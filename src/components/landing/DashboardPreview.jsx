@@ -83,12 +83,12 @@ export default function DashboardPreview() {
       // First card "beautifully streamlined" is at index 0
       // Release before "Comprehensive teacher workload" (index 8)
       const firstCardOffset = 400; // Distance to first card
-      const lastCardOffset = 1600; // Release before last two cards
+      const lastCardOffset = 1200; // Release before last two cards
       
       // Sticky starts when first card reaches center
       const shouldStartSticky = sectionRect.top < (centerViewport - firstCardOffset);
       
-      // Sticky ends before reaching last two cards
+      // Sticky ends well before reaching last two cards
       const shouldEndSticky = sectionRect.top < (centerViewport - lastCardOffset);
       
       if (shouldEndSticky) {
