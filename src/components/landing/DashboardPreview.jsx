@@ -124,7 +124,7 @@ export default function DashboardPreview() {
                   : textPosition === 'bottom'
                   ? 'lg:absolute lg:bottom-0'
                   : ''
-              }`}
+              }`}>
                 <div className="text-sm font-semibold text-purple-600 mb-3">Benefits</div>
                 <h3 className="text-4xl font-bold text-slate-900 mb-6">
                   Everything you need in one place
