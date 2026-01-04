@@ -67,9 +67,42 @@ const features = [
 
 export default function DashboardPreview() {
   const [expandedIndex, setExpandedIndex] = useState(null);
+  const [textPosition, setTextPosition] = useState('normal'); // 'normal', 'sticky', 'bottom'
+  const sectionRef = useRef(null);
+  const textContainerRef = useRef(null);
+
+  useEffect(() => {
+    const handleScroll = () => {
+      if (!sectionRef.current || !textContainerRef.current) return;
+
+      const sectionRect = sectionRef.current.getBoundingClientRect();
+      const sectionTop = sectionRect.top;
+      const sectionBottom = sectionRect.bottom;
+      const viewportHeight = window.innerHeight;
+      
+      // Text should become sticky when it reaches center of viewport
+      const shouldBeSticky = sectionTop < viewportHeight / 2 && sectionBottom > viewportHeight / 2;
+      
+      // Text should go to bottom when section is leaving viewport
+      const shouldBeAtBottom = sectionBottom < viewportHeight;
+      
+      if (shouldBeAtBottom) {
+        setTextPosition('bottom');
+      } else if (shouldBeSticky) {
+        setTextPosition('sticky');
+      } else {
+        setTextPosition('normal');
+      }
+    };
+
+    window.addEventListener('scroll', handleScroll);
+    handleScroll();
+
+    return () => window.removeEventListener('scroll', handleScroll);
+  }, []);
 
   return (
-    <section className="relative py-24 px-4 sm:px-6 lg:px-8 bg-transparent overflow-hidden">
+    <section ref={sectionRef} className="relative py-24 px-4 sm:px-6 lg:px-8 bg-transparent overflow-hidden">
       <div className="max-w-7xl mx-auto relative z-10">
         {/* Section Header */}
         <div className="text-center mb-16">
@@ -84,8 +117,14 @@ export default function DashboardPreview() {
         {/* Feature Cards Grid */}
         <div className="relative flex flex-col lg:flex-row gap-8">
             {/* Left Column - Text */}
-            <div className="lg:w-[400px] lg:shrink-0">
-              <div className="lg:sticky lg:top-1/2 lg:-translate-y-1/2">
+            <div ref={textContainerRef} className="lg:w-[400px] lg:shrink-0">
+              <div className={`transition-all duration-300 ${
+                textPosition === 'sticky' 
+                  ? 'lg:fixed lg:top-1/2 lg:-translate-y-1/2 lg:w-[400px]' 
+                  : textPosition === 'bottom'
+                  ? 'lg:absolute lg:bottom-0'
+                  : ''
+              }`}
                 <div className="text-sm font-semibold text-purple-600 mb-3">Benefits</div>
                 <h3 className="text-4xl font-bold text-slate-900 mb-6">
                   Everything you need in one place
