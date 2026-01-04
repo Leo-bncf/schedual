@@ -187,10 +187,9 @@ export default function Layout({ children, currentPageName }) {
           <div className="w-16 h-16 border-4 border-blue-900 border-t-transparent rounded-full animate-spin mx-auto mb-4"></div>
           <p className="text-slate-600">Loading...</p>
         </div>
-        </div>
-        </CSRFProvider>
-        );
-        }
+      </div>
+    );
+  }
 
   if (needsVerification) {
     return (
@@ -398,5 +397,6 @@ export default function Layout({ children, currentPageName }) {
         </main>
       </div>
     </div>
+    </CSRFProvider>
   );
 }
