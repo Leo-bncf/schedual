@@ -76,19 +76,19 @@ export default function DashboardPreview() {
       if (!sectionRef.current || !textContainerRef.current) return;
 
       const sectionRect = sectionRef.current.getBoundingClientRect();
-      const sectionTop = sectionRect.top;
-      const sectionBottom = sectionRect.bottom;
       const viewportHeight = window.innerHeight;
       
-      // Text should become sticky when it reaches center of viewport
-      const shouldBeSticky = sectionTop < viewportHeight / 2 && sectionBottom > viewportHeight / 2;
+      // Start sticky after scrolling past "beautifully streamlined" (first card at ~600px from section top)
+      const stickyStartOffset = 600;
+      const shouldStartSticky = sectionRect.top < (viewportHeight / 2 - stickyStartOffset);
       
-      // Text should go to bottom when section is leaving viewport
-      const shouldBeAtBottom = sectionBottom < viewportHeight;
+      // End sticky before last cards (stop ~1200px before section end)
+      const stickyEndOffset = 1200;
+      const shouldEndSticky = sectionRect.bottom < (viewportHeight / 2 + stickyEndOffset);
       
-      if (shouldBeAtBottom) {
+      if (shouldEndSticky) {
         setTextPosition('bottom');
-      } else if (shouldBeSticky) {
+      } else if (shouldStartSticky) {
         setTextPosition('sticky');
       } else {
         setTextPosition('normal');
