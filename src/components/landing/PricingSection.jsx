@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 import { base44 } from '@/api/base44Client';
 import { Button } from "@/components/ui/button";
-import { CheckCircle, Loader2 } from 'lucide-react';
+import { CheckCircle, Loader2, Shield, X, Undo2 } from 'lucide-react';
 import { createPageUrl } from '../../utils';
 import { motion } from 'framer-motion';
 
@@ -193,23 +193,47 @@ export default function PricingSection() {
         </div>
 
         {/* Trust Badges */}
-        <div className="mt-20 text-center">
-          <p className="text-slate-600 text-lg mb-6 font-medium">Trusted by IB schools worldwide 🌍</p>
-          <div className="flex flex-wrap justify-center items-center gap-6 md:gap-12">
-            <div className="flex items-center gap-2 text-slate-700 bg-gradient-to-r from-blue-50 to-blue-100 backdrop-blur-sm px-6 py-3 rounded-full">
-              <CheckCircle className="w-5 h-5 text-emerald-600" />
-              <span className="font-medium">Secure Stripe Payments</span>
-            </div>
-            <div className="flex items-center gap-2 text-slate-700 bg-gradient-to-r from-blue-50 to-blue-100 backdrop-blur-sm px-6 py-3 rounded-full">
-              <CheckCircle className="w-5 h-5 text-emerald-600" />
-              <span className="font-medium">Cancel Anytime</span>
-            </div>
-            <div className="flex items-center gap-2 text-slate-700 bg-gradient-to-r from-blue-50 to-blue-100 backdrop-blur-sm px-6 py-3 rounded-full">
-              <CheckCircle className="w-5 h-5 text-emerald-600" />
-              <span className="font-medium">30-Day Money Back</span>
-            </div>
+        <motion.div 
+          className="mt-20"
+          initial={{ opacity: 0, y: 20 }}
+          whileInView={{ opacity: 1, y: 0 }}
+          viewport={{ once: true }}
+          transition={{ duration: 0.5 }}
+        >
+          <div className="text-center mb-8">
+            <p className="text-slate-700 text-xl font-semibold mb-2">Trusted by IB schools worldwide 🌍</p>
+            <p className="text-slate-500 text-sm">Join schools from over 40 countries using Schedual</p>
           </div>
-        </div>
+          <div className="flex flex-wrap justify-center items-center gap-4 md:gap-6">
+            <motion.div 
+              className="flex items-center gap-3 text-slate-800 bg-white border-2 border-emerald-200 px-6 py-4 rounded-2xl shadow-lg hover:shadow-xl transition-all"
+              whileHover={{ scale: 1.05, y: -4 }}
+            >
+              <div className="w-10 h-10 rounded-full bg-gradient-to-br from-emerald-500 to-emerald-600 flex items-center justify-center flex-shrink-0">
+                <Shield className="w-5 h-5 text-white" />
+              </div>
+              <span className="font-semibold">Secure Stripe Payments</span>
+            </motion.div>
+            <motion.div 
+              className="flex items-center gap-3 text-slate-800 bg-white border-2 border-blue-200 px-6 py-4 rounded-2xl shadow-lg hover:shadow-xl transition-all"
+              whileHover={{ scale: 1.05, y: -4 }}
+            >
+              <div className="w-10 h-10 rounded-full bg-gradient-to-br from-blue-500 to-blue-600 flex items-center justify-center flex-shrink-0">
+                <X className="w-5 h-5 text-white" />
+              </div>
+              <span className="font-semibold">Cancel Anytime</span>
+            </motion.div>
+            <motion.div 
+              className="flex items-center gap-3 text-slate-800 bg-white border-2 border-purple-200 px-6 py-4 rounded-2xl shadow-lg hover:shadow-xl transition-all"
+              whileHover={{ scale: 1.05, y: -4 }}
+            >
+              <div className="w-10 h-10 rounded-full bg-gradient-to-br from-purple-500 to-purple-600 flex items-center justify-center flex-shrink-0">
+                <Undo2 className="w-5 h-5 text-white" />
+              </div>
+              <span className="font-semibold">30-Day Money Back</span>
+            </motion.div>
+          </div>
+        </motion.div>
       </div>
     </section>
   );
