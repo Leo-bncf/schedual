@@ -67,7 +67,7 @@ const features = [
 
 export default function DashboardPreview() {
   const [expandedIndex, setExpandedIndex] = useState(null);
-  const [textPosition, setTextPosition] = useState('normal'); // 'normal', 'sticky', 'bottom'
+  const [isSticky, setIsSticky] = useState(false);
   const sectionRef = useRef(null);
   const textContainerRef = useRef(null);
 
@@ -79,24 +79,19 @@ export default function DashboardPreview() {
       const viewportHeight = window.innerHeight;
       const centerViewport = viewportHeight / 2;
       
-      // Calculate actual positions of first and last relevant cards
-      // First card "beautifully streamlined" is at index 0
-      // Release before "Comprehensive teacher workload" (index 8)
-      const firstCardOffset = 400; // Distance to first card
-      const lastCardOffset = 1200; // Release before last two cards
-      
       // Sticky starts when first card reaches center
-      const shouldStartSticky = sectionRect.top < (centerViewport - firstCardOffset);
+      const firstCardOffset = 400;
+      // Sticky ends before last few cards
+      const lastCardOffset = 1200;
       
-      // Sticky ends well before reaching last two cards
+      const shouldStartSticky = sectionRect.top < (centerViewport - firstCardOffset);
       const shouldEndSticky = sectionRect.top < (centerViewport - lastCardOffset);
       
-      if (shouldEndSticky) {
-        setTextPosition('bottom');
-      } else if (shouldStartSticky) {
-        setTextPosition('sticky');
+      // Only sticky between start and end points
+      if (shouldStartSticky && !shouldEndSticky) {
+        setIsSticky(true);
       } else {
-        setTextPosition('normal');
+        setIsSticky(false);
       }
     };
 
@@ -124,10 +119,8 @@ export default function DashboardPreview() {
             {/* Left Column - Text */}
             <div ref={textContainerRef} className="lg:w-[400px] lg:shrink-0">
               <div className={`transition-all duration-300 ${
-                textPosition === 'sticky' 
+                isSticky 
                   ? 'lg:fixed lg:top-1/2 lg:-translate-y-1/2 lg:w-[400px] lg:left-[max(2rem,calc(50%-44rem))]' 
-                  : textPosition === 'bottom'
-                  ? 'lg:absolute lg:bottom-0 lg:w-[400px]'
                   : ''
               }`}>
                 <div className="text-sm font-semibold text-purple-600 mb-3">Benefits</div>
