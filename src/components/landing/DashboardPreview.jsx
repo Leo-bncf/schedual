@@ -211,214 +211,249 @@ export default function DashboardPreview() {
                             <div className="bg-white rounded-lg border border-slate-200 p-6 min-h-[550px]">
                               {index === 0 && (
                                 <div className="space-y-4">
-                                  {/* Top Stats Row */}
-                                  <div className="grid grid-cols-4 gap-3">
-                                    {[
-                                      { icon: Users, value: '45', label: 'Teachers', color: 'from-blue-500 to-blue-600', change: '+3 this term', trend: 'up' },
-                                      { icon: GraduationCap, value: '327', label: 'Students', color: 'from-purple-500 to-purple-600', change: '+26 vs last year', trend: 'up' },
-                                      { icon: BookOpen, value: '24', label: 'Subjects', color: 'from-emerald-500 to-emerald-600', change: '6 new courses', trend: 'up' },
-                                      { icon: Building2, value: '18', label: 'Rooms', color: 'from-orange-500 to-orange-600', change: '94% utilized', trend: 'up' }
-                                    ].map((stat, i) => (
-                                      <motion.div 
-                                        key={i} 
-                                        initial={{ opacity: 0, y: 20 }}
-                                        animate={{ opacity: 1, y: 0 }}
-                                        transition={{ delay: i * 0.08 + 0.2 }}
-                                        className="bg-white rounded-xl p-4 border border-slate-200 shadow-sm hover:shadow-md hover:border-slate-300 transition-all cursor-pointer group"
-                                      >
-                                        <div className="flex items-start justify-between mb-3">
-                                          <div className={`w-10 h-10 rounded-lg bg-gradient-to-br ${stat.color} flex items-center justify-center shadow-sm group-hover:shadow-md transition-shadow`}>
-                                            <stat.icon className="w-5 h-5 text-white" />
-                                          </div>
-                                          <div className={`text-[10px] font-semibold px-2 py-0.5 rounded-full ${stat.trend === 'up' ? 'bg-emerald-100 text-emerald-700' : 'bg-amber-100 text-amber-700'}`}>
-                                            {stat.trend === 'up' ? '↗' : '↘'}
-                                          </div>
+                                  {/* Hero Stats */}
+                                  <div className="grid grid-cols-2 gap-3">
+                                    <motion.div 
+                                      initial={{ opacity: 0, scale: 0.9 }}
+                                      animate={{ opacity: 1, scale: 1 }}
+                                      transition={{ delay: 0.2 }}
+                                      className="bg-gradient-to-br from-blue-500 to-blue-700 rounded-xl p-5 text-white shadow-lg hover:shadow-xl transition-all cursor-pointer relative overflow-hidden"
+                                    >
+                                      <div className="absolute top-0 right-0 w-32 h-32 bg-white/10 rounded-full -mr-16 -mt-16"></div>
+                                      <div className="relative">
+                                        <div className="flex items-center justify-between mb-3">
+                                          <Users className="w-8 h-8 opacity-80" />
+                                          <span className="text-xs bg-white/20 px-2 py-1 rounded-full">Live</span>
                                         </div>
-                                        <div className="text-2xl font-bold text-slate-900 mb-0.5">{stat.value}</div>
-                                        <div className="text-xs text-slate-600 font-medium mb-1">{stat.label}</div>
-                                        <div className="text-[10px] text-slate-500">{stat.change}</div>
-                                      </motion.div>
-                                    ))}
+                                        <div className="text-4xl font-black mb-1">45</div>
+                                        <div className="text-sm opacity-90 mb-2">Active Teachers</div>
+                                        <div className="text-xs opacity-75">38 full-time • 7 part-time • Avg 22h/week</div>
+                                      </div>
+                                    </motion.div>
+
+                                    <motion.div 
+                                      initial={{ opacity: 0, scale: 0.9 }}
+                                      animate={{ opacity: 1, scale: 1 }}
+                                      transition={{ delay: 0.3 }}
+                                      className="bg-gradient-to-br from-purple-500 to-purple-700 rounded-xl p-5 text-white shadow-lg hover:shadow-xl transition-all cursor-pointer relative overflow-hidden"
+                                    >
+                                      <div className="absolute top-0 right-0 w-32 h-32 bg-white/10 rounded-full -mr-16 -mt-16"></div>
+                                      <div className="relative">
+                                        <div className="flex items-center justify-between mb-3">
+                                          <GraduationCap className="w-8 h-8 opacity-80" />
+                                          <span className="text-xs bg-white/20 px-2 py-1 rounded-full">↗ +8%</span>
+                                        </div>
+                                        <div className="text-4xl font-black mb-1">327</div>
+                                        <div className="text-sm opacity-90 mb-2">Total Students</div>
+                                        <div className="text-xs opacity-75">DP1: 89 • DP2: 92 • MYP: 146</div>
+                                      </div>
+                                    </motion.div>
                                   </div>
 
-                                  {/* Active Schedule Card */}
+                                  {/* Main Schedule Card */}
                                   <motion.div 
                                     initial={{ opacity: 0, y: 20 }}
                                     animate={{ opacity: 1, y: 0 }}
-                                    transition={{ delay: 0.5 }}
-                                    className="bg-gradient-to-br from-blue-50 via-white to-purple-50 rounded-xl p-5 border border-blue-200 shadow-sm"
+                                    transition={{ delay: 0.4 }}
+                                    className="bg-white rounded-xl border-2 border-emerald-200 shadow-lg overflow-hidden"
                                   >
-                                    <div className="flex items-start justify-between mb-4">
-                                      <div>
-                                        <div className="flex items-center gap-2 mb-1">
-                                          <Calendar className="w-4 h-4 text-blue-600" />
-                                          <div className="text-sm font-bold text-slate-900">Active Schedule: DP 2024-25 Term 1</div>
+                                    <div className="bg-gradient-to-r from-emerald-500 to-blue-600 p-4 text-white">
+                                      <div className="flex items-center justify-between">
+                                        <div>
+                                          <div className="flex items-center gap-2 mb-1">
+                                            <Calendar className="w-5 h-5" />
+                                            <span className="font-bold text-lg">Active Schedule</span>
+                                          </div>
+                                          <div className="text-sm opacity-90">DP Programme 2024-25 • Term 1</div>
                                         </div>
-                                        <div className="text-xs text-slate-600">Generated 2 hours ago • Auto-optimized by AI</div>
-                                      </div>
-                                      <div className="flex flex-col items-end gap-1">
-                                        <div className="px-3 py-1 rounded-full bg-emerald-500 text-white text-xs font-bold shadow-sm">98% Quality</div>
-                                        <div className="text-[10px] text-emerald-700 font-semibold">Excellent</div>
-                                      </div>
-                                    </div>
-
-                                    <div className="grid grid-cols-5 gap-2 mb-4">
-                                      <div className="bg-white/70 backdrop-blur rounded-lg p-3 border border-slate-200">
-                                        <div className="text-[10px] text-slate-600 mb-1">Conflicts</div>
-                                        <div className="text-xl font-bold text-emerald-600">0</div>
-                                        <div className="text-[9px] text-slate-500">Zero issues</div>
-                                      </div>
-                                      <div className="bg-white/70 backdrop-blur rounded-lg p-3 border border-slate-200">
-                                        <div className="text-[10px] text-slate-600 mb-1">Teachers</div>
-                                        <div className="text-xl font-bold text-blue-600">45/45</div>
-                                        <div className="text-[9px] text-slate-500">All assigned</div>
-                                      </div>
-                                      <div className="bg-white/70 backdrop-blur rounded-lg p-3 border border-slate-200">
-                                        <div className="text-[10px] text-slate-600 mb-1">Rooms</div>
-                                        <div className="text-xl font-bold text-purple-600">94%</div>
-                                        <div className="text-[9px] text-slate-500">Utilization</div>
-                                      </div>
-                                      <div className="bg-white/70 backdrop-blur rounded-lg p-3 border border-slate-200">
-                                        <div className="text-[10px] text-slate-600 mb-1">IB Req.</div>
-                                        <div className="text-xl font-bold text-emerald-600">✓</div>
-                                        <div className="text-[9px] text-slate-500">Compliant</div>
-                                      </div>
-                                      <div className="bg-white/70 backdrop-blur rounded-lg p-3 border border-slate-200">
-                                        <div className="text-[10px] text-slate-600 mb-1">Balance</div>
-                                        <div className="text-xl font-bold text-blue-600">A+</div>
-                                        <div className="text-[9px] text-slate-500">Workload</div>
+                                        <div className="text-right">
+                                          <div className="text-3xl font-black">98</div>
+                                          <div className="text-xs opacity-90">Quality Score</div>
+                                        </div>
                                       </div>
                                     </div>
 
-                                    <div className="space-y-1.5">
-                                      <div className="flex justify-between items-center text-xs">
-                                        <span className="text-slate-600 font-medium">Overall Quality Score</span>
-                                        <span className="font-bold text-slate-900">98/100</span>
+                                    <div className="p-4">
+                                      <div className="grid grid-cols-5 gap-2 mb-4">
+                                        {[
+                                          { label: 'Conflicts', value: '0', subtext: 'Zero issues', color: 'emerald', icon: '✓' },
+                                          { label: 'Coverage', value: '100%', subtext: 'All classes', color: 'blue', icon: '📚' },
+                                          { label: 'Room Use', value: '94%', subtext: 'Optimized', color: 'purple', icon: '🏢' },
+                                          { label: 'Balance', value: 'A+', subtext: 'Excellent', color: 'indigo', icon: '⚖️' },
+                                          { label: 'IB Compliance', value: '✓', subtext: 'All met', color: 'emerald', icon: '🎓' }
+                                        ].map((metric, i) => (
+                                          <motion.div 
+                                            key={i}
+                                            initial={{ opacity: 0, y: 10 }}
+                                            animate={{ opacity: 1, y: 0 }}
+                                            transition={{ delay: 0.5 + i * 0.05 }}
+                                            className={`bg-gradient-to-br from-${metric.color}-50 to-white rounded-lg p-3 border border-${metric.color}-200`}
+                                          >
+                                            <div className="text-lg mb-1">{metric.icon}</div>
+                                            <div className="text-xl font-bold text-slate-900">{metric.value}</div>
+                                            <div className="text-[9px] text-slate-600 font-semibold mb-0.5">{metric.label}</div>
+                                            <div className="text-[8px] text-slate-500">{metric.subtext}</div>
+                                          </motion.div>
+                                        ))}
                                       </div>
-                                      <div className="h-2 bg-slate-200 rounded-full overflow-hidden">
-                                        <motion.div 
-                                          initial={{ width: 0 }}
-                                          animate={{ width: '98%' }}
-                                          transition={{ delay: 0.7, duration: 1.2, ease: "easeOut" }}
-                                          className="h-full bg-gradient-to-r from-emerald-500 via-blue-500 to-purple-500 rounded-full relative overflow-hidden"
-                                        >
-                                          <motion.div
-                                            className="absolute inset-0 bg-gradient-to-r from-transparent via-white to-transparent opacity-30"
-                                            animate={{ x: ['-100%', '100%'] }}
-                                            transition={{ duration: 1.5, repeat: Infinity, ease: "linear" }}
-                                          />
-                                        </motion.div>
+
+                                      <div className="bg-gradient-to-r from-slate-50 to-slate-100 rounded-lg p-3 mb-3">
+                                        <div className="flex justify-between text-xs mb-2">
+                                          <span className="text-slate-700 font-semibold">AI Optimization Progress</span>
+                                          <span className="text-slate-900 font-bold">98/100</span>
+                                        </div>
+                                        <div className="h-2.5 bg-white rounded-full overflow-hidden shadow-inner">
+                                          <motion.div 
+                                            initial={{ width: 0 }}
+                                            animate={{ width: '98%' }}
+                                            transition={{ delay: 0.8, duration: 1.5, ease: "easeOut" }}
+                                            className="h-full bg-gradient-to-r from-emerald-400 via-blue-500 to-purple-500 rounded-full relative"
+                                          >
+                                            <motion.div
+                                              className="absolute inset-0 bg-gradient-to-r from-transparent via-white to-transparent opacity-40"
+                                              animate={{ x: ['-200%', '200%'] }}
+                                              transition={{ duration: 2, repeat: Infinity, ease: "linear" }}
+                                            />
+                                          </motion.div>
+                                        </div>
+                                        <div className="flex justify-between mt-2 text-[9px] text-slate-600">
+                                          <span>Generated in 47 seconds</span>
+                                          <span>Last updated: 2 hours ago</span>
+                                        </div>
                                       </div>
                                     </div>
                                   </motion.div>
 
-                                  {/* Quick Stats Grid */}
+                                  {/* Teacher Workload & Insights */}
                                   <div className="grid grid-cols-2 gap-3">
                                     <motion.div
                                       initial={{ opacity: 0, x: -20 }}
                                       animate={{ opacity: 1, x: 0 }}
-                                      transition={{ delay: 0.8 }}
+                                      transition={{ delay: 0.9 }}
                                       className="bg-white rounded-xl p-4 border border-slate-200 shadow-sm"
                                     >
-                                      <div className="flex items-center gap-3 mb-3">
-                                        <div className="w-8 h-8 rounded-lg bg-gradient-to-br from-amber-400 to-orange-500 flex items-center justify-center">
-                                          <span className="text-white text-sm">⚠️</span>
+                                      <div className="flex items-center gap-2 mb-3">
+                                        <div className="w-8 h-8 rounded-lg bg-gradient-to-br from-blue-500 to-blue-600 flex items-center justify-center">
+                                          <Users className="w-4 h-4 text-white" />
                                         </div>
-                                        <div className="text-sm font-bold text-slate-900">2 Warnings</div>
+                                        <div className="text-sm font-bold text-slate-900">Teacher Workload</div>
                                       </div>
-                                      <div className="space-y-2 text-xs text-slate-600">
-                                        <div className="flex items-start gap-2">
-                                          <div className="w-1 h-1 rounded-full bg-amber-500 mt-1.5 flex-shrink-0"></div>
-                                          <span>Dr. Chen: 4 consecutive periods Wed (P3-P6)</span>
-                                        </div>
-                                        <div className="flex items-start gap-2">
-                                          <div className="w-1 h-1 rounded-full bg-amber-500 mt-1.5 flex-shrink-0"></div>
-                                          <span>Lab 3: 85% capacity for Chemistry HL Group B</span>
-                                        </div>
+                                      <div className="space-y-2">
+                                        {[
+                                          { name: 'Dr. Peterson', subject: 'Physics HL', hours: '24/25', load: 96, color: 'emerald' },
+                                          { name: 'Ms. Thompson', subject: 'English A', hours: '22/25', load: 88, color: 'blue' },
+                                          { name: 'Mr. Kumar', subject: 'Math AA', hours: '23/25', load: 92, color: 'purple' }
+                                        ].map((teacher, i) => (
+                                          <div key={i} className="bg-slate-50 rounded-lg p-2">
+                                            <div className="flex justify-between items-start mb-1.5">
+                                              <div>
+                                                <div className="text-xs font-semibold text-slate-900">{teacher.name}</div>
+                                                <div className="text-[10px] text-slate-600">{teacher.subject}</div>
+                                              </div>
+                                              <div className="text-[10px] font-bold text-slate-700">{teacher.hours}</div>
+                                            </div>
+                                            <div className="h-1.5 bg-slate-200 rounded-full overflow-hidden">
+                                              <div className={`h-full bg-gradient-to-r from-${teacher.color}-400 to-${teacher.color}-600 rounded-full`} style={{ width: `${teacher.load}%` }}></div>
+                                            </div>
+                                          </div>
+                                        ))}
                                       </div>
                                     </motion.div>
 
                                     <motion.div
                                       initial={{ opacity: 0, x: 20 }}
                                       animate={{ opacity: 1, x: 0 }}
-                                      transition={{ delay: 0.8 }}
-                                      className="bg-gradient-to-br from-emerald-50 to-white rounded-xl p-4 border border-emerald-200 shadow-sm"
+                                      transition={{ delay: 0.9 }}
+                                      className="bg-gradient-to-br from-amber-50 to-orange-50 rounded-xl p-4 border border-amber-200 shadow-sm"
                                     >
-                                      <div className="flex items-center gap-3 mb-3">
-                                        <div className="w-8 h-8 rounded-lg bg-gradient-to-br from-emerald-400 to-emerald-600 flex items-center justify-center">
-                                          <span className="text-white text-sm">✓</span>
+                                      <div className="flex items-center gap-2 mb-3">
+                                        <div className="w-8 h-8 rounded-lg bg-gradient-to-br from-amber-500 to-orange-600 flex items-center justify-center">
+                                          <span className="text-white text-sm">🔔</span>
                                         </div>
-                                        <div className="text-sm font-bold text-slate-900">IB Compliance</div>
+                                        <div className="text-sm font-bold text-slate-900">AI Insights</div>
                                       </div>
-                                      <div className="space-y-2 text-xs text-slate-600">
-                                        <div className="flex justify-between">
-                                          <span>HL Subjects (6h/week)</span>
-                                          <span className="font-semibold text-emerald-600">✓ 12/12</span>
+                                      <div className="space-y-2 text-xs">
+                                        <div className="bg-white/70 rounded-lg p-2 border border-amber-100">
+                                          <div className="font-semibold text-amber-900 mb-1">⚠️ Minor Optimization</div>
+                                          <div className="text-slate-700 text-[10px]">Dr. Chen has 4 consecutive periods Wed. Consider splitting to maintain teaching quality.</div>
                                         </div>
-                                        <div className="flex justify-between">
-                                          <span>SL Subjects (4h/week)</span>
-                                          <span className="font-semibold text-emerald-600">✓ 12/12</span>
-                                        </div>
-                                        <div className="flex justify-between">
-                                          <span>Core (TOK, CAS, EE)</span>
-                                          <span className="font-semibold text-emerald-600">✓ All</span>
+                                        <div className="bg-white/70 rounded-lg p-2 border border-emerald-100">
+                                          <div className="font-semibold text-emerald-900 mb-1">✓ Well Balanced</div>
+                                          <div className="text-slate-700 text-[10px]">All teachers within 90-100% of target hours. Excellent distribution!</div>
                                         </div>
                                       </div>
                                     </motion.div>
                                   </div>
 
-                                  {/* Recent Activity */}
+                                  {/* Mini Timetable Preview */}
                                   <motion.div
                                     initial={{ opacity: 0, y: 20 }}
                                     animate={{ opacity: 1, y: 0 }}
                                     transition={{ delay: 1 }}
                                     className="bg-white rounded-xl p-4 border border-slate-200 shadow-sm"
                                   >
-                                    <div className="text-sm font-bold text-slate-900 mb-3">Recent Activity</div>
-                                    <div className="space-y-2">
+                                    <div className="flex items-center justify-between mb-3">
+                                      <div className="text-sm font-bold text-slate-900">Today's Schedule Preview</div>
+                                      <div className="text-xs text-slate-600">Monday, Jan 4 • 6 periods</div>
+                                    </div>
+                                    <div className="space-y-1.5">
                                       {[
-                                        { action: 'Schedule Published', detail: 'DP 2024-25 Term 1 went live', time: '2h ago', icon: Calendar, color: 'emerald' },
-                                        { action: 'Group Updated', detail: 'Physics HL Group B: +2 students', time: '4h ago', icon: Users, color: 'blue' },
-                                        { action: 'Room Changed', detail: 'Math AA moved to larger room R-204', time: '6h ago', icon: Building2, color: 'purple' }
-                                      ].map((activity, i) => (
-                                        <div key={i} className="flex items-center gap-3 p-2 rounded-lg hover:bg-slate-50 transition-colors">
-                                          <div className={`w-7 h-7 rounded-lg bg-gradient-to-br from-${activity.color}-400 to-${activity.color}-600 flex items-center justify-center flex-shrink-0`}>
-                                            <activity.icon className="w-3.5 h-3.5 text-white" />
+                                        { time: '08:00', period: 'P1', classes: [
+                                          { subject: 'Physics HL', teacher: 'Dr. P', room: 'Lab 2', students: 18, color: 'blue' },
+                                          { subject: 'English A', teacher: 'Ms. T', room: 'R-201', students: 22, color: 'emerald' },
+                                          { subject: 'Math AA', teacher: 'Mr. K', room: 'R-104', students: 20, color: 'purple' }
+                                        ]},
+                                        { time: '09:00', period: 'P2', classes: [
+                                          { subject: 'Chemistry HL', teacher: 'Dr. C', room: 'Lab 1', students: 16, color: 'orange' },
+                                          { subject: 'History', teacher: 'Mr. W', room: 'R-305', students: 24, color: 'indigo' },
+                                          { subject: 'French B', teacher: 'Mme. L', room: 'R-108', students: 19, color: 'pink' }
+                                        ]}
+                                      ].map((slot, i) => (
+                                        <div key={i} className="bg-slate-50 rounded-lg p-2">
+                                          <div className="flex items-center gap-3">
+                                            <div className="flex-shrink-0 text-center">
+                                              <div className="text-[10px] font-bold text-slate-900">{slot.period}</div>
+                                              <div className="text-[9px] text-slate-600">{slot.time}</div>
+                                            </div>
+                                            <div className="flex gap-1.5 flex-1 overflow-x-auto">
+                                              {slot.classes.map((cls, j) => (
+                                                <div key={j} className={`bg-gradient-to-br from-${cls.color}-500 to-${cls.color}-600 rounded px-2 py-1.5 min-w-[100px] text-white`}>
+                                                  <div className="text-[10px] font-bold leading-tight">{cls.subject}</div>
+                                                  <div className="text-[8px] opacity-90 mt-0.5">{cls.room} • {cls.teacher}</div>
+                                                  <div className="text-[8px] opacity-75">{cls.students} students</div>
+                                                </div>
+                                              ))}
+                                            </div>
                                           </div>
-                                          <div className="flex-1 min-w-0">
-                                            <div className="text-xs font-semibold text-slate-900">{activity.action}</div>
-                                            <div className="text-[10px] text-slate-600">{activity.detail}</div>
-                                          </div>
-                                          <div className="text-[10px] text-slate-400 flex-shrink-0">{activity.time}</div>
                                         </div>
                                       ))}
                                     </div>
                                   </motion.div>
 
-                                  {/* Subject Groups Breakdown */}
+                                  {/* Bottom Stats */}
                                   <motion.div
                                     initial={{ opacity: 0, y: 20 }}
                                     animate={{ opacity: 1, y: 0 }}
                                     transition={{ delay: 1.1 }}
-                                    className="bg-gradient-to-br from-indigo-50 to-white rounded-xl p-4 border border-indigo-200 shadow-sm"
+                                    className="grid grid-cols-3 gap-3"
                                   >
-                                    <div className="text-sm font-bold text-slate-900 mb-3">IB Subject Groups Distribution</div>
-                                    <div className="grid grid-cols-3 gap-2">
-                                      {[
-                                        { group: 'Group 1', name: 'Lang & Lit', students: 327, color: 'red' },
-                                        { group: 'Group 2', name: 'Lang Acq', students: 245, color: 'orange' },
-                                        { group: 'Group 3', name: 'Individuals', students: 198, color: 'amber' },
-                                        { group: 'Group 4', name: 'Sciences', students: 289, color: 'emerald' },
-                                        { group: 'Group 5', name: 'Math', students: 327, color: 'blue' },
-                                        { group: 'Group 6', name: 'Arts', students: 124, color: 'purple' }
-                                      ].map((grp, i) => (
-                                        <div key={i} className="bg-white rounded-lg p-3 border border-slate-200">
-                                          <div className={`text-[10px] font-bold text-${grp.color}-600 mb-1`}>{grp.group}</div>
-                                          <div className="text-xs text-slate-900 font-semibold mb-1">{grp.name}</div>
-                                          <div className="text-lg font-bold text-slate-900">{grp.students}</div>
-                                          <div className="text-[9px] text-slate-500">enrollments</div>
-                                        </div>
-                                      ))}
+                                    <div className="bg-gradient-to-br from-blue-50 to-white rounded-xl p-3 border border-blue-200">
+                                      <div className="text-2xl mb-1">📊</div>
+                                      <div className="text-lg font-bold text-slate-900">24</div>
+                                      <div className="text-[10px] text-slate-600 font-semibold">Subject Offerings</div>
+                                      <div className="text-[9px] text-slate-500">HL: 12 • SL: 12</div>
+                                    </div>
+                                    <div className="bg-gradient-to-br from-purple-50 to-white rounded-xl p-3 border border-purple-200">
+                                      <div className="text-2xl mb-1">🎓</div>
+                                      <div className="text-lg font-bold text-slate-900">18</div>
+                                      <div className="text-[10px] text-slate-600 font-semibold">Teaching Groups</div>
+                                      <div className="text-[9px] text-slate-500">Avg: 18.2 students</div>
+                                    </div>
+                                    <div className="bg-gradient-to-br from-emerald-50 to-white rounded-xl p-3 border border-emerald-200">
+                                      <div className="text-2xl mb-1">🏢</div>
+                                      <div className="text-lg font-bold text-slate-900">18</div>
+                                      <div className="text-[10px] text-slate-600 font-semibold">Active Rooms</div>
+                                      <div className="text-[9px] text-slate-500">94% utilization</div>
                                     </div>
                                   </motion.div>
                                 </div>
