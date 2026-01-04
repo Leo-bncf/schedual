@@ -2,6 +2,9 @@ import React from 'react';
 import LandingHeader from '../components/landing/LandingHeader';
 import HeroSection from '../components/landing/HeroSection';
 import DashboardPreview from '../components/landing/DashboardPreview';
+import TrustSection from '../components/landing/TrustSection';
+import VideoDemo from '../components/landing/VideoDemo';
+import DemoBooking from '../components/landing/DemoBooking';
 import MissionSection from '../components/landing/MissionSection';
 import ComparisonSection from '../components/landing/ComparisonSection';
 import PricingSection from '../components/landing/PricingSection';
@@ -15,6 +18,9 @@ export default function Landing() {
       <LandingHeader />
       <HeroSection />
       <DashboardPreview />
+      <TrustSection />
+      <VideoDemo />
+      <DemoBooking />
       <MissionSection />
       <ComparisonSection />
       <PricingSection />
