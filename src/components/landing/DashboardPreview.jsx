@@ -125,9 +125,9 @@ export default function DashboardPreview() {
             <div ref={textContainerRef} className="lg:w-[400px] lg:shrink-0">
               <div className={`transition-all duration-300 ${
                 textPosition === 'sticky' 
-                  ? 'lg:fixed lg:top-1/2 lg:-translate-y-1/2 lg:w-[400px]' 
+                  ? 'lg:fixed lg:top-1/2 lg:-translate-y-1/2 lg:w-[400px] lg:left-[max(2rem,calc(50%-44rem))]' 
                   : textPosition === 'bottom'
-                  ? 'lg:absolute lg:bottom-0'
+                  ? 'lg:absolute lg:bottom-0 lg:w-[400px]'
                   : ''
               }`}>
                 <div className="text-sm font-semibold text-purple-600 mb-3">Benefits</div>
