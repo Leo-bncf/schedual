@@ -27,7 +27,8 @@ export default function AccountManager() {
     newEmail: '',
     currentPassword: '',
     newPassword: '',
-    confirmPassword: ''
+    confirmPassword: '',
+    deleteConfirmPassword: ''
   });
 
   const { data: user, isLoading } = useQuery({
@@ -89,8 +90,8 @@ export default function AccountManager() {
   });
 
   const deleteAccountMutation = useMutation({
-    mutationFn: async () => {
-      await base44.functions.invoke('deleteUserAccount');
+    mutationFn: async (confirmPassword) => {
+      await base44.functions.invoke('deleteUserAccount', { confirmPassword });
     },
     onSuccess: () => {
       toast.success('Account deleted successfully');
@@ -530,14 +531,31 @@ export default function AccountManager() {
                       <AlertDialogTitle>Are you absolutely sure?</AlertDialogTitle>
                       <AlertDialogDescription>
                         This action cannot be undone. This will permanently delete your account
-                        and remove all your data from our servers.
+                        and remove all your data from our servers. Please enter your password to confirm.
                       </AlertDialogDescription>
                     </AlertDialogHeader>
+                    <div className="py-4">
+                      <Label htmlFor="delete_password">Confirm Password</Label>
+                      <Input
+                        id="delete_password"
+                        type="password"
+                        placeholder="Enter your password"
+                        value={formData.deleteConfirmPassword}
+                        onChange={(e) => setFormData({ ...formData, deleteConfirmPassword: e.target.value })}
+                        className="mt-2"
+                      />
+                    </div>
                     <AlertDialogFooter>
-                      <AlertDialogCancel>Cancel</AlertDialogCancel>
+                      <AlertDialogCancel onClick={() => setFormData({ ...formData, deleteConfirmPassword: '' })}>
+                        Cancel
+                      </AlertDialogCancel>
                       <AlertDialogAction
                         className="bg-red-600 hover:bg-red-700"
-                        onClick={() => deleteAccountMutation.mutate()}
+                        disabled={!formData.deleteConfirmPassword || deleteAccountMutation.isPending}
+                        onClick={() => {
+                          deleteAccountMutation.mutate(formData.deleteConfirmPassword);
+                          setFormData({ ...formData, deleteConfirmPassword: '' });
+                        }}
                       >
                         Yes, delete my account
                       </AlertDialogAction>
