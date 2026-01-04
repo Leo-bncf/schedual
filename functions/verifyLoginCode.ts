@@ -43,10 +43,16 @@ Deno.serve(async (req) => {
       return Response.json({ error: 'Code expired. Please request a new one.' }, { status: 400 });
     }
 
-    // Check attempts
+    // Check attempts - lock for 5 minutes after 5 failed attempts
     if (record.attempts >= 5) {
-      await base44.asServiceRole.entities.EmailVerificationCode.delete(record.id);
-      return Response.json({ error: 'Too many attempts. Please request a new code.' }, { status: 400 });
+      const lockUntil = new Date(Date.now() + 5 * 60 * 1000);
+      await base44.asServiceRole.entities.EmailVerificationCode.update(record.id, {
+        locked_until: lockUntil.toISOString()
+      });
+      return Response.json({ 
+        error: 'Account locked for 5 minutes due to too many failed attempts.',
+        lockedUntil: lockUntil.toISOString()
+      }, { status: 429 });
     }
 
     // Verify code

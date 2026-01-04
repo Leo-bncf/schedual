@@ -21,6 +21,22 @@ Deno.serve(async (req) => {
 
     const email = user.email;
 
+    // Check if account is locked
+    const existingRecords = await base44.asServiceRole.entities.EmailVerificationCode.filter({
+      user_email: email
+    }, '-created_date', 1);
+
+    if (existingRecords.length > 0 && existingRecords[0].locked_until) {
+      const lockExpiry = new Date(existingRecords[0].locked_until);
+      if (lockExpiry > new Date()) {
+        const remainingSeconds = Math.ceil((lockExpiry - new Date()) / 1000);
+        return Response.json({ 
+          error: `Account locked due to too many failed attempts. Try again in ${Math.ceil(remainingSeconds / 60)} minutes.`,
+          retryAfter: remainingSeconds
+        }, { status: 429 });
+      }
+    }
+
     // Check for recent codes (rate limiting)
     const recentCodes = await base44.asServiceRole.entities.EmailVerificationCode.filter({
       user_email: email,
@@ -81,6 +97,12 @@ Deno.serve(async (req) => {
       `
     });
 
+    // Get IP address and user agent
+    const ipAddress = req.headers.get('x-forwarded-for')?.split(',')[0] || 
+                      req.headers.get('x-real-ip') || 
+                      'unknown';
+    const userAgent = req.headers.get('user-agent') || 'unknown';
+
     // Create unverified session
     const sessionToken = randomBytes(32).toString('hex');
     const sessionExpiresAt = new Date(Date.now() + 24 * 60 * 60 * 1000);
@@ -89,6 +111,8 @@ Deno.serve(async (req) => {
       user_email: email,
       session_token: sessionToken,
       verified: false,
+      ip_address: ipAddress,
+      user_agent: userAgent,
       expires_at: sessionExpiresAt.toISOString()
     });
 
