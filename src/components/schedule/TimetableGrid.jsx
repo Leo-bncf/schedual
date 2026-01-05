@@ -21,13 +21,13 @@ const periodTimes = {
   12: '16:45',
 };
 
-const subjectColors = {
-  1: 'bg-blue-100 border-blue-300',
-  2: 'bg-emerald-100 border-emerald-300',
-  3: 'bg-amber-100 border-amber-300',
-  4: 'bg-rose-100 border-rose-300',
-  5: 'bg-violet-100 border-violet-300',
-  6: 'bg-cyan-100 border-cyan-300',
+const subjectGroupColors = {
+  '1': { bg: 'bg-purple-50', border: 'border-l-purple-400', text: 'text-purple-900', name: 'Language & Literature' },
+  '2': { bg: 'bg-blue-50', border: 'border-l-blue-400', text: 'text-blue-900', name: 'Language Acquisition' },
+  '3': { bg: 'bg-green-50', border: 'border-l-green-400', text: 'text-green-900', name: 'Individuals & Societies' },
+  '4': { bg: 'bg-amber-50', border: 'border-l-amber-400', text: 'text-amber-900', name: 'Sciences' },
+  '5': { bg: 'bg-orange-50', border: 'border-l-orange-400', text: 'text-orange-900', name: 'Mathematics' },
+  '6': { bg: 'bg-pink-50', border: 'border-l-pink-400', text: 'text-pink-900', name: 'The Arts' },
 };
 
 export default function TimetableGrid({ slots = [], groups = [], rooms = [], subjects = [], teachers = [], classGroups = [], onSlotClick, periodsPerDay = 12, exportId = "timetable-grid" }) {
@@ -153,7 +153,23 @@ export default function TimetableGrid({ slots = [], groups = [], rooms = [], sub
                     return (
                       <div 
                         key={`${day}-${period}`} 
-                        className="border-r border-slate-300 last:border-r-0 min-h-[120px]"
+                        className="border-r border-slate-300 last:border-r-0 min-h-[120px] bg-slate-50/50"
+                        onDragOver={(e) => e.preventDefault()}
+                        onDrop={(e) => {
+                          e.preventDefault();
+                          const sourceSlotId = e.dataTransfer.getData('slotId');
+                          const sourceDay = e.dataTransfer.getData('sourceDay');
+                          const sourcePeriod = parseInt(e.dataTransfer.getData('sourcePeriod'));
+                          
+                          onSlotClick?.(day, period, { 
+                            action: 'move', 
+                            sourceSlotId, 
+                            sourceDay,
+                            sourcePeriod,
+                            targetDay: day,
+                            targetPeriod: period
+                          });
+                        }}
                       />
                     );
                   }
@@ -170,6 +186,27 @@ export default function TimetableGrid({ slots = [], groups = [], rooms = [], sub
                     <div 
                       key={`${day}-${period}`} 
                       className="border-r border-slate-300 last:border-r-0 p-2 space-y-2"
+                      onDragOver={(e) => e.preventDefault()}
+                      onDrop={(e) => {
+                        e.preventDefault();
+                        const sourceSlotId = e.dataTransfer.getData('slotId');
+                        const sourceDay = e.dataTransfer.getData('sourceDay');
+                        const sourcePeriod = parseInt(e.dataTransfer.getData('sourcePeriod'));
+                        
+                        // Check if dropping on a slot or empty space
+                        const targetSlot = visibleSlots[0];
+                        if (sourceSlotId !== targetSlot?.id) {
+                          onSlotClick?.(day, period, { 
+                            action: targetSlot ? 'swap' : 'move', 
+                            sourceSlotId, 
+                            targetSlotId: targetSlot?.id,
+                            sourceDay,
+                            sourcePeriod,
+                            targetDay: day,
+                            targetPeriod: period
+                          });
+                        }
+                      }}
                     >
                       {visibleSlots.map(slot => {
                         const span = getSlotSpan(day, period, slot.id);
@@ -203,16 +240,27 @@ export default function TimetableGrid({ slots = [], groups = [], rooms = [], sub
                           teacher = getTeacherInfo(slot.teacher_id);
                         }
                         
-                        const colorClass = subject ? subjectColors[subject.ib_group || 1] : '';
+                        const colorScheme = subject && subjectGroupColors[subject.ib_group] 
+                          ? subjectGroupColors[subject.ib_group] 
+                          : { bg: 'bg-slate-50', border: 'border-l-slate-400', text: 'text-slate-900' };
 
                         return (
                           <div 
                             key={slot.id}
-                            className="cursor-pointer hover:shadow-md transition-all rounded-lg overflow-hidden"
+                            draggable
+                            onDragStart={(e) => {
+                              e.dataTransfer.setData('slotId', slot.id);
+                              e.dataTransfer.setData('sourceDay', day);
+                              e.dataTransfer.setData('sourcePeriod', String(period));
+                            }}
+                            className="cursor-move hover:shadow-lg hover:scale-105 transition-all rounded-lg overflow-hidden group"
                             onClick={() => handleSlotClick(slot)}
                           >
+                            <div className="absolute top-1 right-1 opacity-0 group-hover:opacity-100 transition-opacity z-10">
+                              <div className="px-1.5 py-0.5 bg-white/90 rounded shadow text-[10px] font-bold text-slate-600">⋮⋮</div>
+                            </div>
                             {subject ? (
-                              <div className={`p-3 border-l-4 ${colorClass} border border-slate-200`}>
+                              <div className={`p-3 border-l-4 ${colorScheme.bg} ${colorScheme.border} border border-slate-200 relative`}>
                                 <div className="font-bold text-sm text-slate-900 leading-tight mb-1.5">
                                   {subject.name}
                                 </div>
