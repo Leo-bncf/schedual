@@ -788,6 +788,9 @@ Now process the user's input and return ONLY the JSON object.`,
               for (const period of randomPeriods) {
                 if (slotFound) break;
 
+                // Skip break and lunch periods
+                if (blockedPeriods.has(period)) continue;
+
                 // Check all hard constraints before scheduling
                 let violatesHardConstraint = false;
                 for (const constraint of hardConstraints) {
