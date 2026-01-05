@@ -3,9 +3,6 @@ import { Card } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 
 const DAYS = ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday'];
-const PERIODS = [1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12];
-const LUNCH_PERIOD = 6; // After period 6 (11:45), before period 7 (13:00)
-const BREAK_PERIODS = [2, 6]; // Default break periods
 
 const periodTimes = {
   1: '08:00',
