@@ -587,7 +587,7 @@ Now process the user's input and return ONLY the JSON object.`,
         return null;
       };
 
-      // Separate groups by IB level
+      // Separate groups by IB level and sort by teacher workload for balance
       const groupsByLevel = {
         DP: [],
         MYP: [],
@@ -597,11 +597,20 @@ Now process the user's input and return ONLY the JSON object.`,
       teachingGroups.forEach(g => {
         if (g.is_active === false) return;
         if (!g.hours_per_week || g.hours_per_week <= 0) return;
-        
+
         const level = getIBLevel(g.year_group);
         if (level) {
           groupsByLevel[level].push(g);
         }
+      });
+
+      // Sort each level's groups to balance teacher workload
+      Object.keys(groupsByLevel).forEach(level => {
+        groupsByLevel[level].sort((a, b) => {
+          const aHours = teacherSchedules[a.teacher_id]?.length || 0;
+          const bHours = teacherSchedules[b.teacher_id]?.length || 0;
+          return aHours - bHours; // Schedule for teachers with fewer hours first
+        });
       });
 
       console.log('Groups by IB Level:', {
