@@ -894,6 +894,7 @@ Now process the user's input and return ONLY the JSON object.`,
                 }
 
                 if (studentsFree && teacherFree && teacherAvailable) {
+                  // Prefer teachers with fewer hours for workload balance
                   let assignedRoom = null;
                   for (const room of preferredRooms) {
                     const roomFree = !roomSchedules[room.id]?.some(s => s.day === day && s.period === period);
