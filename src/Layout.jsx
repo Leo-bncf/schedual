@@ -40,7 +40,6 @@ const navigation = [
   { name: 'Setup Guide', page: 'Onboarding', icon: Sparkles, schoolOnly: true },
   { name: 'Schedule', page: 'Schedule', icon: Calendar, schoolOnly: true },
   { name: 'Class Groups', page: 'ClassGroups', icon: Users, schoolOnly: true },
-  { name: 'Teaching Groups', page: 'TeachingGroups', icon: Users, schoolOnly: true },
   { name: 'Teachers', page: 'Teachers', icon: Users, schoolOnly: true },
   { name: 'Students', page: 'Students', icon: GraduationCap, schoolOnly: true },
   { name: 'Subjects', page: 'Subjects', icon: BookOpen, schoolOnly: true },

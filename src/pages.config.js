@@ -21,7 +21,6 @@ import SubscriptionsOverview from './pages/SubscriptionsOverview';
 import Support from './pages/Support';
 import SupportTickets from './pages/SupportTickets';
 import Teachers from './pages/Teachers';
-import TeachingGroups from './pages/TeachingGroups';
 import TermsOfUse from './pages/TermsOfUse';
 import TestData from './pages/TestData';
 import UserManagement from './pages/UserManagement';
@@ -52,7 +51,6 @@ export const PAGES = {
     "Support": Support,
     "SupportTickets": SupportTickets,
     "Teachers": Teachers,
-    "TeachingGroups": TeachingGroups,
     "TermsOfUse": TermsOfUse,
     "TestData": TestData,
     "UserManagement": UserManagement,
