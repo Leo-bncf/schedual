@@ -543,7 +543,7 @@ Now process the user's input and return ONLY the JSON object.`,
             const startPeriod = 1;
 
             for (let p = startPeriod; p < startPeriod + testDurationPeriods; p++) {
-              if (p <= periods.length && !blockedPeriods.has(p)) {
+              if (p <= periodsPerDay && !blockedPeriods.has(p)) {
                 reservedTestSlots[level].push({ day, period: p });
 
                 // CRITICAL: Actually create test slots in the schedule
