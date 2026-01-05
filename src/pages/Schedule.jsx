@@ -778,8 +778,10 @@ Now process the user's input and return ONLY the JSON object.`,
               for (const period of randomPeriods) {
                 if (slotFound) break;
 
+                // Check all hard constraints before scheduling
                 let violatesHardConstraint = false;
                 for (const constraint of hardConstraints) {
+                  // Subject-level constraints
                   if (constraint.category === 'subject' && constraint.rule?.subject_id === group.subject_id) {
                     if (constraint.rule?.prohibited_days?.includes(day) || 
                         constraint.rule?.prohibited_slots?.some(slot => slot.day === day && (!slot.period || slot.period === period))) {
@@ -787,9 +789,42 @@ Now process the user's input and return ONLY the JSON object.`,
                       break;
                     }
                   }
+                  
+                  // Time-based constraints
                   if (constraint.category === 'time' && constraint.rule?.prohibited_slots?.some(slot => slot.day === day && slot.period === period)) {
                     violatesHardConstraint = true;
                     break;
+                  }
+                  
+                  // Teacher-level constraints
+                  if (constraint.category === 'teacher' && teacherId) {
+                    // Check if constraint applies to this teacher
+                    if (!constraint.rule?.teacher_id || constraint.rule?.teacher_id === teacherId) {
+                      // Max hours per week
+                      if (constraint.rule?.max_hours_per_week) {
+                        const currentHours = teacherSchedules[teacherId]?.length || 0;
+                        if (currentHours >= constraint.rule.max_hours_per_week) {
+                          violatesHardConstraint = true;
+                          break;
+                        }
+                      }
+                      
+                      // Prohibited days
+                      if (constraint.rule?.prohibited_days?.includes(day)) {
+                        violatesHardConstraint = true;
+                        break;
+                      }
+                    }
+                  }
+                  
+                  // Room-level constraints
+                  if (constraint.category === 'room' && constraint.rule?.room_id) {
+                    if (constraint.rule?.prohibited_slots?.some(slot => 
+                      slot.day === day && (!slot.period || slot.period === period)
+                    )) {
+                      violatesHardConstraint = true;
+                      break;
+                    }
                   }
                 }
                 if (violatesHardConstraint) continue;
