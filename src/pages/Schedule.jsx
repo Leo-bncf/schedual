@@ -500,7 +500,8 @@ Now process the user's input and return ONLY the JSON object.`,
 
       // Comprehensive scheduling algorithm for all students, teachers, and rooms
       const days = ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday'];
-      const periods = Array.from({ length: 12 }, (_, i) => i + 1);
+      const periodsPerDay = school?.periods_per_day || 8;
+      const periods = Array.from({ length: periodsPerDay }, (_, i) => i + 1);
       const newSlots = [];
 
       // Track availability for students, teachers, and rooms
