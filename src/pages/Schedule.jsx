@@ -1424,40 +1424,51 @@ Now process the user's input and return ONLY the JSON object.`,
         </CardContent>
       </Card>
 
-      <div className="space-y-4">
-        {selectedVersion ? (
-          <>
-            {/* Conflicts/Warnings */}
-              {selectedVersion && ((selectedVersion.conflicts_count || 0) > 0 || (selectedVersion.warnings_count || 0) > 0) && (
-                <div className="space-y-3">
-                  {(selectedVersion.conflicts_count || 0) > 0 && (
-                    <ConflictAlert 
-                      severity="error"
-                      title={`${selectedVersion.conflicts_count || 0} Scheduling Conflicts`}
-                      description="There are unresolved conflicts that need attention before publishing."
-                    />
-                  )}
-                  {(selectedVersion.warnings_count || 0) > 0 && (
-                    <ConflictAlert 
-                      severity="warning"
-                      title={`${selectedVersion.warnings_count || 0} Warnings`}
-                      description="Review these soft constraint violations for optimal scheduling."
-                    />
-                  )}
-                  {selectedVersion?.id && <ConflictViewer scheduleVersionId={selectedVersion.id} />}
-                </div>
-              )}
+      {/* Configuration & Constraints - Always Visible */}
+      <div className="flex gap-2 mb-6">
+        <Tabs defaultValue={selectedVersion ? "schedule" : "config"} className="w-full">
+          <TabsList className="bg-slate-100">
+            <TabsTrigger value="schedule" disabled={!selectedVersion}>
+              <Calendar className="w-4 h-4 mr-2" />
+              Schedule
+            </TabsTrigger>
+            <TabsTrigger value="config">Configuration</TabsTrigger>
+            <TabsTrigger value="constraints">Constraints</TabsTrigger>
+          </TabsList>
 
-              {/* Timetable */}
-              <Tabs defaultValue="grid">
+          {/* Schedule Tab Content */}
+          <TabsContent value="schedule">
+            {selectedVersion ? (
+              <div className="space-y-4">
+                {/* Conflicts/Warnings */}
+                {((selectedVersion.conflicts_count || 0) > 0 || (selectedVersion.warnings_count || 0) > 0) && (
+                  <div className="space-y-3">
+                    {(selectedVersion.conflicts_count || 0) > 0 && (
+                      <ConflictAlert 
+                        severity="error"
+                        title={`${selectedVersion.conflicts_count || 0} Scheduling Conflicts`}
+                        description="There are unresolved conflicts that need attention before publishing."
+                      />
+                    )}
+                    {(selectedVersion.warnings_count || 0) > 0 && (
+                      <ConflictAlert 
+                        severity="warning"
+                        title={`${selectedVersion.warnings_count || 0} Warnings`}
+                        description="Review these soft constraint violations for optimal scheduling."
+                      />
+                    )}
+                    {selectedVersion?.id && <ConflictViewer scheduleVersionId={selectedVersion.id} />}
+                  </div>
+                )}
+
+                {/* Schedule Views */}
+                <Tabs defaultValue="grid">
                 <div className="flex items-center justify-between mb-4">
                   <TabsList className="bg-slate-100">
                     <TabsTrigger value="grid">Master Schedule</TabsTrigger>
                     <TabsTrigger value="student">Student View</TabsTrigger>
                     <TabsTrigger value="teacher">Teacher View</TabsTrigger>
                     <TabsTrigger value="list">List View</TabsTrigger>
-                    <TabsTrigger value="config">Configuration</TabsTrigger>
-                    <TabsTrigger value="constraints">Constraints</TabsTrigger>
                   </TabsList>
                 </div>
                 
@@ -1632,6 +1643,24 @@ Now process the user's input and return ONLY the JSON object.`,
                   </Card>
                 </TabsContent>
 
+                </Tabs>
+                </div>
+                ) : (
+                <Card className="border-0 shadow-sm">
+                <CardContent className="py-16 text-center">
+                  <Calendar className="w-16 h-16 text-slate-300 mx-auto mb-4" />
+                  <h3 className="text-lg font-semibold text-slate-900 mb-2">No Schedule Version Selected</h3>
+                  <p className="text-slate-500 mb-6">Create a schedule version to start generating timetables</p>
+                  <Button onClick={() => setIsDialogOpen(true)} className="bg-indigo-600 hover:bg-indigo-700">
+                    <Plus className="w-4 h-4 mr-2" />
+                    Create Schedule Version
+                  </Button>
+                </CardContent>
+                </Card>
+                )}
+                </TabsContent>
+
+                {/* Configuration Tab Content */}
                 <TabsContent value="config">
                   <div className="space-y-6">
                     {/* Daily Schedule */}
@@ -1952,6 +1981,7 @@ Now process the user's input and return ONLY the JSON object.`,
                   </div>
                 </TabsContent>
 
+                {/* Constraints Tab Content */}
                 <TabsContent value="constraints">
                   <div className="space-y-4">
                     <Card className="border-0 shadow-sm">
@@ -2021,21 +2051,7 @@ Now process the user's input and return ONLY the JSON object.`,
                   </div>
                 </TabsContent>
                 </Tabs>
-                </>
-                ) : (
-          <Card className="border-0 shadow-sm">
-            <CardContent className="py-16">
-              <EmptyState 
-                icon={Calendar}
-                title="No Schedule Version Selected"
-                description="Create your first schedule version to organize classes for all IB programmes (PYP, MYP, DP). The system will automatically assign teachers, students, and rooms across the week."
-                action={() => setIsDialogOpen(true)}
-                actionLabel="Create First Schedule"
-              />
-            </CardContent>
-          </Card>
-        )}
-      </div>
+                </div>
 
       {/* Create Version Dialog */}
       <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
