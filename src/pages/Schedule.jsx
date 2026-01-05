@@ -838,15 +838,19 @@ Now process the user's input and return ONLY the JSON object.`,
                   const schedule = studentSchedules[studentId] || [];
                   if (schedule.some(s => s.day === day && s.period === period)) return false;
 
-                  // Check if this slot is reserved for tests for this student's year
+                  // CRITICAL: Check if this slot is reserved for tests for this student's year
                   const student = students.find(st => st.id === studentId);
                   const studentYear = student?.year_group; // e.g., "DP1", "DP2"
                   if (studentYear && reservedTestSlots[studentYear]) {
                     const isTestSlot = reservedTestSlots[studentYear].some(ts => ts.day === day && ts.period === period);
-                    if (isTestSlot) return false;
+                    if (isTestSlot) {
+                      console.log(`Slot ${day} P${period} reserved for ${studentYear} test - skipping`);
+                      return false;
+                    }
                   }
 
-                  if (period > 1) {
+                  // Prevent 3 consecutive periods of same subject
+                  if (period > 2) {
                     const prev1 = schedule.find(s => s.day === day && s.period === period - 1);
                     const prev2 = schedule.find(s => s.day === day && s.period === period - 2);
                     if (prev1 && prev2 && prev1.subjectId === group.subject_id && prev2.subjectId === group.subject_id) {
