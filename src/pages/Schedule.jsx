@@ -445,13 +445,20 @@ Now process the user's input and return ONLY the JSON object.`,
           action: 'create', 
           max_group_size: 20 
         });
-        console.log('DP groups auto-generated:', dpGroupResult?.created || 0);
+        console.log('DP group generation result:', dpGroupResult);
+        console.log('DP groups created:', dpGroupResult?.created || 0);
+        console.log('DP group names:', dpGroupResult?.groups?.map(g => g.name) || []);
 
         if (dpGroupResult?.duplicate_subjects?.length > 0) {
           console.warn('⚠️ Students with duplicate subjects:', dpGroupResult.duplicate_subjects);
         }
+
+        if (!dpGroupResult?.success) {
+          console.error('❌ DP group generation failed:', dpGroupResult?.message || dpGroupResult?.error);
+        }
       } catch (dpError) {
-        console.warn('DP group generation skipped:', dpError.message);
+        console.error('❌ DP group generation error:', dpError);
+        console.error('Error details:', dpError.message, dpError.response?.data);
       }
       
       // Refresh teaching groups after auto-generation
