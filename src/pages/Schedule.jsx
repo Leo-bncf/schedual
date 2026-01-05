@@ -1482,15 +1482,16 @@ Now process the user's input and return ONLY the JSON object.`,
                     <div className="space-y-4">
                       <div className="flex items-center justify-between">
                         <div className="flex items-center gap-3">
-                          <Label className="text-sm font-medium text-slate-700">View ClassGroup:</Label>
+                          <Label className="text-sm font-medium text-slate-700">Filter by ClassGroup:</Label>
                           <Select 
-                            value={selectedClassGroupId || ''} 
-                            onValueChange={setSelectedClassGroupId}
+                            value={selectedClassGroupId || 'all'} 
+                            onValueChange={(value) => setSelectedClassGroupId(value === 'all' ? null : value)}
                           >
                             <SelectTrigger className="w-[320px]">
-                              <SelectValue placeholder="Select a ClassGroup to view" />
+                              <SelectValue />
                             </SelectTrigger>
                             <SelectContent>
+                              <SelectItem value="all">All ClassGroups (Master View)</SelectItem>
                               {classGroups.map(cg => (
                                 <SelectItem key={cg.id} value={cg.id}>
                                   {cg.name} ({cg.ib_programme} - {cg.year_group})
@@ -1499,23 +1500,20 @@ Now process the user's input and return ONLY the JSON object.`,
                             </SelectContent>
                           </Select>
                         </div>
-                        {selectedClassGroupId && (
-                          <ScheduleExporter 
-                            elementId="master-schedule-grid"
-                            filename={`master-schedule-${classGroups.find(cg => cg.id === selectedClassGroupId)?.name || 'schedule'}`}
-                            label="Export Schedule"
-                            headerData={{
-                              schoolName: school?.name || '',
-                              studentName: classGroups.find(cg => cg.id === selectedClassGroupId)?.name || '',
-                              lastUpdated: selectedVersion?.generated_at ? new Date(selectedVersion.generated_at).toLocaleDateString() : ''
-                            }}
-                          />
-                        )}
+                        <ScheduleExporter 
+                          elementId="master-schedule-grid"
+                          filename={`master-schedule-${selectedClassGroupId ? classGroups.find(cg => cg.id === selectedClassGroupId)?.name : 'all'}`}
+                          label="Export Schedule"
+                          headerData={{
+                            schoolName: school?.name || '',
+                            studentName: selectedClassGroupId ? classGroups.find(cg => cg.id === selectedClassGroupId)?.name : 'Master Schedule',
+                            lastUpdated: selectedVersion?.generated_at ? new Date(selectedVersion.generated_at).toLocaleDateString() : ''
+                          }}
+                        />
                       </div>
-                    {selectedClassGroupId ? (
                      <div id="master-schedule-grid">
                        <TimetableGrid 
-                         slots={scheduleSlots.filter(slot => {
+                         slots={selectedClassGroupId ? scheduleSlots.filter(slot => {
                            // PYP/MYP slots use classgroup_id directly
                            if (slot.classgroup_id) {
                              return slot.classgroup_id === selectedClassGroupId;
@@ -1528,7 +1526,7 @@ Now process the user's input and return ONLY the JSON object.`,
                              .filter(s => s.classgroup_id === selectedClassGroupId)
                              .map(s => s.id);
                            return groupStudents.some(sid => classGroupStudents.includes(sid));
-                         })}
+                         }) : scheduleSlots}
                          groups={teachingGroups}
                          rooms={rooms}
                          subjects={subjects}
@@ -1540,15 +1538,6 @@ Now process the user's input and return ONLY the JSON object.`,
                          exportId="master-timetable"
                        />
                      </div>
-                    ) : (
-                      <Card className="border-0 shadow-sm">
-                        <CardContent className="py-16 text-center">
-                          <Calendar className="w-12 h-12 text-slate-300 mx-auto mb-3" />
-                          <h4 className="font-medium text-slate-900 mb-1">Select a ClassGroup</h4>
-                          <p className="text-sm text-slate-500">Choose a ClassGroup above to view their weekly schedule</p>
-                        </CardContent>
-                      </Card>
-                    )}
                     </div>
                     )}
                     </TabsContent>
