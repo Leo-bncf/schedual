@@ -15,7 +15,8 @@ import {
   CheckCircle,
   Clock,
   ArrowRight,
-  Sparkles
+  Sparkles,
+  Shield
 } from 'lucide-react';
 import { Link } from 'react-router-dom';
 import { createPageUrl } from '../utils';
@@ -59,12 +60,9 @@ export default function Dashboard() {
     enabled: !!user?.school_id,
   });
 
-  const { data: aiLogs = [], isLoading: loadingLogs } = useQuery({
-    queryKey: ['aiLogs', user?.school_id],
-    queryFn: async () => {
-      const logs = await base44.entities.AIAdvisorLog.list('-created_date', 50);
-      return logs.filter(log => log.status === 'pending').slice(0, 5);
-    },
+  const { data: constraints = [], isLoading: loadingConstraints } = useQuery({
+    queryKey: ['constraints', user?.school_id],
+    queryFn: () => base44.entities.Constraint.filter({ school_id: user?.school_id, is_active: true }),
     enabled: !!user?.school_id,
   });
 
@@ -293,7 +291,7 @@ export default function Dashboard() {
         </Card>
         </motion.div>
 
-        {/* AI Advisor Suggestions */}
+        {/* Active Constraints */}
         <motion.div
           initial={{ opacity: 0, y: 30 }}
           animate={{ opacity: 1, y: 0 }}
@@ -303,25 +301,25 @@ export default function Dashboard() {
           <CardHeader className="pb-6 border-b border-slate-100">
             <div className="flex items-center justify-between">
               <CardTitle className="text-xl font-semibold text-slate-900 flex items-center gap-3">
-                <div className="w-10 h-10 rounded-xl bg-purple-100 flex items-center justify-center">
-                  <Sparkles className="w-5 h-5 text-purple-600" />
+                <div className="w-10 h-10 rounded-xl bg-indigo-100 flex items-center justify-center">
+                  <Shield className="w-5 h-5 text-indigo-600" />
                 </div>
-                AI Insights
+                Scheduling Rules
               </CardTitle>
-              <Link to={createPageUrl('AIAdvisor')}>
+              <Link to={createPageUrl('Schedule')}>
                 <Button variant="ghost" size="sm" className="text-slate-600 hover:text-slate-900 hover:bg-slate-100 rounded-xl">
-                  View All
+                  Manage
                 </Button>
               </Link>
             </div>
           </CardHeader>
           <CardContent>
-            {aiLogs.length > 0 ? (
+            {constraints.length > 0 ? (
               <div className="space-y-3">
-                {aiLogs.slice(0, 4).map((log, index) => (
+                {constraints.slice(0, 4).map((constraint, index) => (
                   <motion.div 
-                    key={log.id} 
-                    className="p-4 rounded-2xl bg-slate-50 border border-slate-200 hover:shadow-md hover:border-slate-300 transition-all cursor-pointer"
+                    key={constraint.id} 
+                    className="p-4 rounded-2xl bg-slate-50 border border-slate-200 hover:shadow-md hover:border-slate-300 transition-all"
                     initial={{ opacity: 0, x: -20 }}
                     animate={{ opacity: 1, x: 0 }}
                     transition={{ duration: 0.3, delay: 0.6 + index * 0.1 }}
@@ -329,24 +327,30 @@ export default function Dashboard() {
                   >
                     <div className="flex items-center gap-2 mb-2">
                       <Badge className={
-                        log.severity === 'warning' ? 'bg-amber-100 text-amber-600 text-xs border-0' :
-                        log.severity === 'error' ? 'bg-rose-100 text-rose-600 text-xs border-0' :
-                        'bg-purple-100 text-purple-600 text-xs border-0'
+                        constraint.type === 'hard' 
+                          ? 'bg-rose-100 text-rose-600 text-xs border-0' 
+                          : 'bg-blue-100 text-blue-600 text-xs border-0'
                       }>
-                        {log.severity}
+                        {constraint.type}
                       </Badge>
-                      <span className="text-xs text-slate-400 capitalize">{log.agent_type?.replace(/_/g, ' ')}</span>
+                      <span className="text-xs text-slate-400 capitalize">{constraint.category?.replace(/_/g, ' ')}</span>
                     </div>
-                    <p className="text-sm text-slate-600 line-clamp-2">
-                      {log.output?.message || 'New insight available'}
+                    <p className="text-sm font-medium text-slate-900 mb-1">{constraint.name}</p>
+                    <p className="text-xs text-slate-600 line-clamp-2">
+                      {constraint.description}
                     </p>
                   </motion.div>
                 ))}
               </div>
             ) : (
               <div className="text-center py-8">
-                <Sparkles className="w-12 h-12 text-purple-300 mx-auto mb-3" />
-                <p className="text-slate-500">No pending suggestions</p>
+                <Shield className="w-12 h-12 text-indigo-300 mx-auto mb-3" />
+                <p className="text-slate-500 text-sm mb-2">No constraints defined</p>
+                <Link to={createPageUrl('Schedule')}>
+                  <Button size="sm" variant="outline" className="text-xs">
+                    Add Constraints
+                  </Button>
+                </Link>
               </div>
             )}
           </CardContent>
