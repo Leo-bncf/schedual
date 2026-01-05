@@ -327,7 +327,7 @@ export default function TimetableGrid({ slots = [], groups = [], rooms = [], sub
                 )}
 
                 {/* Lunch Break Row */}
-                {period === LUNCH_PERIOD && (
+                {period === lunchPeriod && (
                   <div className="grid grid-cols-[100px_repeat(5,1fr)] border-b-2 border-amber-300 bg-gradient-to-r from-amber-50 to-orange-50">
                     <div className="p-4 bg-amber-100 border-r border-amber-300 flex flex-col justify-center">
                       <div className="text-sm font-bold text-amber-900">🍽️ Lunch</div>
