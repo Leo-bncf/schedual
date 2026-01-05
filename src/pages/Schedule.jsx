@@ -522,12 +522,12 @@ Now process the user's input and return ONLY the JSON object.`,
       const lunchPeriod = schoolConfig.lunch_period || 4;
       const blockedPeriods = new Set([...breakPeriods, lunchPeriod]);
 
-      // Reserve test slots for DP1 and DP2 students
-      const reservedTestSlots = { DP1: [], DP2: [] };
+      // Reserve AND CREATE test slots for all levels
+      const reservedTestSlots = { PYP: [], MYP: [], DP1: [], DP2: [] };
       const testConfig = school?.settings?.test_config || {};
 
-      ['DP1', 'DP2'].forEach(dpLevel => {
-        const config = testConfig[dpLevel] || { tests_per_week: 0, test_duration_minutes: 0 };
+      ['PYP', 'MYP', 'DP1', 'DP2'].forEach(level => {
+        const config = testConfig[level] || { tests_per_week: 0, test_duration_minutes: 0 };
         const testsPerWeek = config.tests_per_week || 0;
         const testDurationPeriods = Math.ceil(config.test_duration_minutes / (school?.period_duration_minutes || 45));
 
@@ -541,13 +541,26 @@ Now process the user's input and return ONLY the JSON object.`,
             const startPeriod = 1;
 
             for (let p = startPeriod; p < startPeriod + testDurationPeriods; p++) {
-              if (p <= periods.length) {
-                reservedTestSlots[dpLevel].push({ day, period: p });
+              if (p <= periods.length && !blockedPeriods.has(p)) {
+                reservedTestSlots[level].push({ day, period: p });
+
+                // CRITICAL: Actually create test slots in the schedule
+                newSlots.push({
+                  school_id: schoolId,
+                  schedule_version: selectedVersion.id,
+                  subject_id: null,
+                  teacher_id: null,
+                  room_id: null,
+                  day,
+                  period: p,
+                  status: 'scheduled',
+                  notes: `${level} Test/Assessment Slot`
+                });
               }
             }
           }
 
-          console.log(`Reserved ${reservedTestSlots[dpLevel].length} test slot periods for ${dpLevel}`);
+          console.log(`Created ${reservedTestSlots[level].length} test slots for ${level}`);
         }
       });
 
