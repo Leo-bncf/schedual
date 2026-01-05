@@ -517,6 +517,35 @@ Now process the user's input and return ONLY the JSON object.`,
       teachers.forEach(t => { teacherSchedules[t.id] = []; });
       rooms.forEach(r => { roomSchedules[r.id] = []; });
 
+      // Reserve test slots for DP1 and DP2 students
+      const reservedTestSlots = { DP1: [], DP2: [] };
+      const testConfig = school?.settings?.test_config || {};
+
+      ['DP1', 'DP2'].forEach(dpLevel => {
+        const config = testConfig[dpLevel] || { tests_per_week: 0, test_duration_minutes: 0 };
+        const testsPerWeek = config.tests_per_week || 0;
+        const testDurationPeriods = Math.ceil(config.test_duration_minutes / (school?.period_duration_minutes || 45));
+
+        if (testsPerWeek > 0) {
+          const daysForTests = Math.min(testsPerWeek, days.length);
+          const dayInterval = Math.floor(days.length / daysForTests);
+
+          for (let i = 0; i < testsPerWeek; i++) {
+            const dayIndex = (i * dayInterval) % days.length;
+            const day = days[dayIndex];
+            const startPeriod = 1;
+
+            for (let p = startPeriod; p < startPeriod + testDurationPeriods; p++) {
+              if (p <= periods.length) {
+                reservedTestSlots[dpLevel].push({ day, period: p });
+              }
+            }
+          }
+
+          console.log(`Reserved ${reservedTestSlots[dpLevel].length} test slot periods for ${dpLevel}`);
+        }
+      });
+
       // Debug: Check why groups are being filtered out
       console.log('All teaching groups:', teachingGroups.length);
       teachingGroups.forEach((g, i) => {
@@ -768,6 +797,14 @@ Now process the user's input and return ONLY the JSON object.`,
                 const studentsFree = studentIds.length === 0 || studentIds.every(studentId => {
                   const schedule = studentSchedules[studentId] || [];
                   if (schedule.some(s => s.day === day && s.period === period)) return false;
+
+                  // Check if this slot is reserved for tests for this student's year
+                  const student = students.find(st => st.id === studentId);
+                  const studentYear = student?.year_group; // e.g., "DP1", "DP2"
+                  if (studentYear && reservedTestSlots[studentYear]) {
+                    const isTestSlot = reservedTestSlots[studentYear].some(ts => ts.day === day && ts.period === period);
+                    if (isTestSlot) return false;
+                  }
 
                   if (period > 1) {
                     const prev1 = schedule.find(s => s.day === day && s.period === period - 1);
