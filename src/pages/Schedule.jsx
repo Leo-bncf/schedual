@@ -989,46 +989,46 @@ Now process the user's input and return ONLY the JSON object.`,
       console.log('Sample slot:', newSlots[0]);
 
       if (newSlots.length > 0) {
-        const batchSize = 5; // Reduced from 10 to avoid rate limits
+        const batchSize = 30; // Optimized batch size
         let totalCreated = 0;
 
         for (let i = 0; i < newSlots.length; i += batchSize) {
           const batch = newSlots.slice(i, i + batchSize);
           const batchNum = Math.floor(i/batchSize) + 1;
           const totalBatches = Math.ceil(newSlots.length/batchSize);
-          
+
           setGenerationProgress(prev => ({
             ...prev,
             percent: 75 + Math.floor((batchNum / totalBatches) * 15),
             message: `Creating batch ${batchNum}/${totalBatches} (${totalCreated}/${newSlots.length} slots completed)`
           }));
-          
+
           console.log(`Creating batch ${batchNum}/${totalBatches} (${batch.length} slots)...`);
-          
+
           try {
             const created = await base44.entities.ScheduleSlot.bulkCreate(batch);
             totalCreated += created.length;
             console.log(`✓ Batch created: ${created.length} slots`);
           } catch (batchError) {
             console.error(`✗ Batch failed:`, batchError.message);
-            // Wait longer before retry
-            await new Promise(resolve => setTimeout(resolve, 5000));
-            
-            // Retry individually with longer delays
+            // Shorter retry delay
+            await new Promise(resolve => setTimeout(resolve, 2000));
+
+            // Retry individually
             for (const slot of batch) {
               try {
                 await base44.entities.ScheduleSlot.create(slot);
                 totalCreated++;
-                await new Promise(resolve => setTimeout(resolve, 1000)); // Increased from 500ms
+                await new Promise(resolve => setTimeout(resolve, 300));
               } catch (slotError) {
                 console.error(`Failed to create slot:`, slotError.message);
               }
             }
           }
 
-          // Much longer delay between batches to avoid rate limits
+          // Shorter delay between batches
           if (i + batchSize < newSlots.length) {
-            await new Promise(resolve => setTimeout(resolve, 3000)); // Increased from 2000ms
+            await new Promise(resolve => setTimeout(resolve, 800));
           }
         }
 
