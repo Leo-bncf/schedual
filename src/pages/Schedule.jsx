@@ -737,12 +737,11 @@ Now process the user's input and return ONLY the JSON object.`,
           };
         }
 
-        // CSP SOLVER WITH BACKTRACKING
+        // INTELLIGENT CSP SOLVER WITH BACKTRACKING & FORWARD CHECKING
         let totalPeriodsToSchedule = Object.values(groupPeriodNeeds).reduce((sum, g) => sum + g.periodsNeeded, 0);
         let totalScheduled = 0;
-        const maxIterations = totalPeriodsToSchedule * 5; // Increased for backtracking
+        const maxIterations = totalPeriodsToSchedule * 10; // More iterations for intelligent search
         let iterations = 0;
-        let backtrackStack = []; // Track decisions for backtracking
         
         // Helper function to shuffle array
         const shuffleArray = (array) => {
@@ -754,9 +753,44 @@ Now process the user's input and return ONLY the JSON object.`,
           return shuffled;
         };
         
+        // Count available slots for a group (FORWARD CHECKING)
+        const countAvailableSlots = (groupInfo) => {
+          const { studentIds, teacherId, subject, group } = groupInfo;
+          let availableCount = 0;
+          
+          for (const day of days) {
+            for (const period of periods) {
+              if (blockedPeriods.has(period)) continue;
+              
+              // Check if all students are free
+              const studentsFree = studentIds.length === 0 || studentIds.every(sid => {
+                const schedule = studentSchedules[sid] || [];
+                if (schedule.some(s => s.day === day && s.period === period)) return false;
+                // Check 3-consecutive rule
+                if (period > 2) {
+                  const prev1 = schedule.find(s => s.day === day && s.period === period - 1);
+                  const prev2 = schedule.find(s => s.day === day && s.period === period - 2);
+                  if (prev1 && prev2 && prev1.subjectId === group.subject_id && prev2.subjectId === group.subject_id) {
+                    return false;
+                  }
+                }
+                return true;
+              });
+              
+              const teacherFree = !teacherId || !teacherSchedules[teacherId]?.some(s => s.day === day && s.period === period);
+              const roomAvailable = rooms.filter(r => r.is_active && !roomSchedules[r.id]?.some(s => s.day === day && s.period === period)).length > 0;
+              
+              if (studentsFree && teacherFree && roomAvailable) {
+                availableCount++;
+              }
+            }
+          }
+          return availableCount;
+        };
+        
         // Backtracking function: undo last N slots
-        const backtrack = (count = 3) => {
-          console.log(`⚠️ Backtracking ${count} slots to find better solution...`);
+        const backtrack = (count = 5) => {
+          console.log(`🔄 Backtracking ${count} slots to escape local minimum...`);
           for (let i = 0; i < count && newSlots.length > 0; i++) {
             const undoSlot = newSlots.pop();
             if (undoSlot.teaching_group_id) {
@@ -783,16 +817,30 @@ Now process the user's input and return ONLY the JSON object.`,
           }
         };
         
-        let stuckCount = 0; // Track how many times we've been stuck
+        let stuckCount = 0;
         
         while (totalScheduled < totalPeriodsToSchedule && iterations < maxIterations) {
           iterations++;
           let scheduledThisRound = false;
           
-          for (const groupId of Object.keys(groupPeriodNeeds)) {
-            const groupInfo = groupPeriodNeeds[groupId];
-            if (groupInfo.periodsScheduled >= groupInfo.periodsNeeded) continue;
-            
+          // MOST-CONSTRAINED-FIRST: Sort groups by available slots (schedule hardest first)
+          const groupsNeedingScheduling = Object.entries(groupPeriodNeeds)
+            .filter(([_, info]) => info.periodsScheduled < info.periodsNeeded)
+            .map(([id, info]) => ({ id, info, availableSlots: countAvailableSlots(info) }))
+            .sort((a, b) => a.availableSlots - b.availableSlots); // Hardest first
+          
+          if (groupsNeedingScheduling.length > 0 && groupsNeedingScheduling[0].availableSlots === 0) {
+            console.log(`⚠️ Group "${groupsNeedingScheduling[0].info.group.name}" has NO available slots - backtracking`);
+            if (newSlots.length > 10) {
+              backtrack(7);
+              stuckCount++;
+              continue;
+            } else {
+              break;
+            }
+          }
+          
+          for (const { id: groupId, info: groupInfo } of groupsNeedingScheduling) {
             const { group, studentIds, teacherId, subject } = groupInfo;
             
             let preferredRooms = rooms.filter(r => r.is_active);
@@ -808,19 +856,30 @@ Now process the user's input and return ONLY the JSON object.`,
             let daysToTry = [...days];
             let periodsToTry = [...periods];
             
-            // Apply preferred time if set
             if (subject?.preferred_time === 'morning') {
               periodsToTry = [...periods.filter(p => p <= 4), ...periods.filter(p => p > 4)];
             } else if (subject?.preferred_time === 'afternoon') {
               periodsToTry = [...periods.filter(p => p > 4), ...periods.filter(p => p <= 4)];
             }
             
-            // Randomize to create variety while respecting preferences
-            const randomDays = shuffleArray(daysToTry);
+            // Smart slot selection: prefer spreading classes across days
+            const groupDays = new Set(
+              studentIds.flatMap(sid => 
+                (studentSchedules[sid] || [])
+                  .filter(s => s.subjectId === group.subject_id)
+                  .map(s => s.day)
+              )
+            );
+            daysToTry.sort((a, b) => {
+              const aHasSubject = groupDays.has(a) ? 1 : 0;
+              const bHasSubject = groupDays.has(b) ? 1 : 0;
+              return aHasSubject - bHasSubject; // Prefer days without this subject yet
+            });
+            
             const randomPeriods = shuffleArray(periodsToTry);
 
             let slotFound = false;
-            for (const day of randomDays) {
+            for (const day of daysToTry) {
               if (slotFound) break;
               
               for (const period of randomPeriods) {
@@ -832,7 +891,6 @@ Now process the user's input and return ONLY the JSON object.`,
                 // Check all hard constraints before scheduling
                 let violatesHardConstraint = false;
                 for (const constraint of hardConstraints) {
-                  // Subject-level constraints
                   if (constraint.category === 'subject' && constraint.rule?.subject_id === group.subject_id) {
                     if (constraint.rule?.prohibited_days?.includes(day) || 
                         constraint.rule?.prohibited_slots?.some(slot => slot.day === day && (!slot.period || slot.period === period))) {
@@ -841,17 +899,13 @@ Now process the user's input and return ONLY the JSON object.`,
                     }
                   }
                   
-                  // Time-based constraints
                   if (constraint.category === 'time' && constraint.rule?.prohibited_slots?.some(slot => slot.day === day && slot.period === period)) {
                     violatesHardConstraint = true;
                     break;
                   }
                   
-                  // Teacher-level constraints
                   if (constraint.category === 'teacher' && teacherId) {
-                    // Check if constraint applies to this teacher
                     if (!constraint.rule?.teacher_id || constraint.rule?.teacher_id === teacherId) {
-                      // Max hours per week
                       if (constraint.rule?.max_hours_per_week) {
                         const currentHours = teacherSchedules[teacherId]?.length || 0;
                         if (currentHours >= constraint.rule.max_hours_per_week) {
@@ -860,7 +914,6 @@ Now process the user's input and return ONLY the JSON object.`,
                         }
                       }
                       
-                      // Prohibited days
                       if (constraint.rule?.prohibited_days?.includes(day)) {
                         violatesHardConstraint = true;
                         break;
@@ -868,7 +921,6 @@ Now process the user's input and return ONLY the JSON object.`,
                     }
                   }
                   
-                  // Room-level constraints
                   if (constraint.category === 'room' && constraint.rule?.room_id) {
                     if (constraint.rule?.prohibited_slots?.some(slot => 
                       slot.day === day && (!slot.period || slot.period === period)
@@ -883,8 +935,6 @@ Now process the user's input and return ONLY the JSON object.`,
                 const studentsFree = studentIds.length === 0 || studentIds.every(studentId => {
                   const schedule = studentSchedules[studentId] || [];
                   if (schedule.some(s => s.day === day && s.period === period)) return false;
-
-                  // Test slots no longer block class scheduling
 
                   // Prevent 3 consecutive periods of same subject
                   if (period > 2) {
@@ -923,7 +973,6 @@ Now process the user's input and return ONLY the JSON object.`,
                 }
 
                 if (studentsFree && teacherFree && teacherAvailable) {
-                  // Prefer teachers with fewer hours for workload balance
                   let assignedRoom = null;
                   for (const room of preferredRooms) {
                     const roomFree = !roomSchedules[room.id]?.some(s => s.day === day && s.period === period);
@@ -967,13 +1016,14 @@ Now process the user's input and return ONLY the JSON object.`,
           
           if (!scheduledThisRound) {
             stuckCount++;
-            if (stuckCount < 5 && newSlots.length > 10) {
-              // Try backtracking before giving up
-              backtrack(Math.min(5, Math.floor(newSlots.length * 0.1))); // Undo 10% or 5 slots
-              console.log(`Backtrack attempt ${stuckCount}/5 - undid some slots, retrying...`);
+            if (stuckCount < 8 && newSlots.length > 15) {
+              // Aggressive backtracking with larger undos
+              const undoCount = Math.min(10, Math.floor(newSlots.length * 0.15)); // Undo 15% or 10 slots
+              backtrack(undoCount);
+              console.log(`🔄 Backtrack attempt ${stuckCount}/8 - undid ${undoCount} slots, retrying...`);
               continue;
             } else {
-              console.log('⚠️ No more periods can be scheduled after backtracking - stopping');
+              console.log('⚠️ CSP solver exhausted - stopping (backtracked 8 times)');
               break;
             }
           } else {
