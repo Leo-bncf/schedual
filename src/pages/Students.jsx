@@ -194,6 +194,28 @@ export default function Students() {
       console.log(`Auto-assigned ${programmeSubjects.length} ${formData.ib_programme} subjects`);
     }
     
+    // VALIDATION: Remove duplicate subjects before saving
+    if (finalFormData.subject_choices && finalFormData.subject_choices.length > 0) {
+      const seenSubjects = new Set();
+      const uniqueChoices = [];
+      
+      for (const choice of finalFormData.subject_choices) {
+        if (!seenSubjects.has(choice.subject_id)) {
+          seenSubjects.add(choice.subject_id);
+          uniqueChoices.push(choice);
+        } else {
+          console.warn(`⚠️ Removed duplicate subject: ${choice.subject_id}`);
+        }
+      }
+      
+      const duplicatesRemoved = finalFormData.subject_choices.length - uniqueChoices.length;
+      if (duplicatesRemoved > 0) {
+        alert(`Removed ${duplicatesRemoved} duplicate subject(s). Each subject can only be taken once.`);
+      }
+      
+      finalFormData.subject_choices = uniqueChoices;
+    }
+    
     // Save student
     if (editingStudent) {
       updateMutation.mutate({ id: editingStudent.id, data: finalFormData });
