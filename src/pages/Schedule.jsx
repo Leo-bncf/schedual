@@ -544,7 +544,7 @@ Now process the user's input and return ONLY the JSON object.`,
       const lunchPeriod = school?.settings?.lunch_period || 4;
       const blockedPeriods = new Set([...breakPeriods, lunchPeriod]);
 
-      // Reserve AND CREATE test slots for all levels
+      // Reserve AND CREATE test slots for all levels - OPTIMIZED TO USE LATE PERIODS
       const reservedTestSlots = { PYP: [], MYP: [], DP1: [], DP2: [] };
       const testConfig = school?.settings?.test_config || {};
 
@@ -558,12 +558,14 @@ Now process the user's input and return ONLY the JSON object.`,
           const daysForTests = Math.min(testsPerWeek, days.length);
           const dayInterval = Math.floor(days.length / daysForTests);
 
+          // Use LATE afternoon periods (P6-P8) for tests to preserve morning/midday for teaching
+          const testStartPeriod = Math.max(periodsPerDay - testDurationPeriods, 6);
+
           for (let i = 0; i < testsPerWeek; i++) {
             const dayIndex = (i * dayInterval) % days.length;
             const day = days[dayIndex];
-            const startPeriod = 1;
 
-            for (let p = startPeriod; p < startPeriod + testDurationPeriods; p++) {
+            for (let p = testStartPeriod; p < testStartPeriod + testDurationPeriods; p++) {
               if (p <= periodsPerDay && !blockedPeriods.has(p)) {
                 reservedTestSlots[level].push({ day, period: p });
 
@@ -583,7 +585,7 @@ Now process the user's input and return ONLY the JSON object.`,
             }
           }
 
-          console.log(`Created ${reservedTestSlots[level].length} test slots for ${level}`);
+          console.log(`Created ${reservedTestSlots[level].length} test slots for ${level} (periods ${testStartPeriod}-${testStartPeriod + testDurationPeriods - 1})`);
         }
       });
 
