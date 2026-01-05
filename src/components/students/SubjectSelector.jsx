@@ -38,6 +38,13 @@ export default function SubjectSelector({
     const subject = subjects.find(s => s.id === selectedSubjectId);
     if (!subject) return;
 
+    // CRITICAL: Prevent duplicate subjects (same subject_id already exists)
+    const alreadySelected = selectedSubjects.some(sc => sc.subject_id === selectedSubjectId);
+    if (alreadySelected) {
+      alert(`This subject is already selected. You cannot take the same subject at multiple levels.`);
+      return;
+    }
+
     const newSubject = {
       subject_id: selectedSubjectId,
       level: programme === 'DP' ? selectedLevel : undefined,

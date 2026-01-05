@@ -27,12 +27,24 @@ Deno.serve(async (req) => {
     // Group DP students by subject_id + level + year_group
     const groupMap = new Map();
     const warnings = [];
+    const duplicateSubjects = [];
 
     (students || [])
       .filter((s) => s?.ib_programme === 'DP' && s?.is_active !== false)
       .forEach((student) => {
         const choices = Array.isArray(student.subject_choices) ? student.subject_choices : [];
         if (choices.length === 0) return;
+
+        // Check for duplicate subjects (same subject_id with different levels)
+        const subjectIds = choices.map(c => c.subject_id);
+        const uniqueSubjectIds = new Set(subjectIds);
+        if (subjectIds.length !== uniqueSubjectIds.size) {
+          duplicateSubjects.push({
+            student: student.full_name,
+            student_id: student.id,
+            duplicate_count: subjectIds.length - uniqueSubjectIds.size
+          });
+        }
 
         choices.forEach((choice) => {
           if (!choice?.subject_id) return;
@@ -96,6 +108,7 @@ Deno.serve(async (req) => {
       ready: proposed.filter((g) => g.status === 'ready').length,
       warnings: warnings.length,
       warnings_list: warnings,
+      duplicate_subjects: duplicateSubjects,
       groups: proposed.map((g) => ({
         subject_id: g.subject_id,
         subject_name: g.subject_name,

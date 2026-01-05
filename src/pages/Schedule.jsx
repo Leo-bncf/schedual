@@ -431,11 +431,21 @@ Now process the user's input and return ONLY the JSON object.`,
       console.log('Auto-generating DP teaching groups...');
       
       try {
+        // First, clean up any duplicate subject assignments
+        const { data: cleanupResult } = await base44.functions.invoke('cleanupDuplicateSubjects');
+        if (cleanupResult?.students_fixed > 0) {
+          console.log(`Fixed ${cleanupResult.students_fixed} students with duplicate subjects`);
+        }
+
         const { data: dpGroupResult } = await base44.functions.invoke('generateDpTeachingGroups', { 
           action: 'create', 
           max_group_size: 20 
         });
         console.log('DP groups auto-generated:', dpGroupResult?.created || 0);
+
+        if (dpGroupResult?.duplicate_subjects?.length > 0) {
+          console.warn('⚠️ Students with duplicate subjects:', dpGroupResult.duplicate_subjects);
+        }
       } catch (dpError) {
         console.warn('DP group generation skipped:', dpError.message);
       }
