@@ -544,55 +544,9 @@ Now process the user's input and return ONLY the JSON object.`,
       const lunchPeriod = school?.settings?.lunch_period || 4;
       const blockedPeriods = new Set([...breakPeriods, lunchPeriod]);
 
-      // Reserve AND CREATE test slots for all levels - RANDOMIZED
+      // Don't reserve test slots during class scheduling - they will be added at the end
       const reservedTestSlots = { PYP: [], MYP: [], DP1: [], DP2: [] };
-      const testConfig = school?.settings?.test_config || {};
-
-      ['PYP', 'MYP', 'DP1', 'DP2'].forEach(level => {
-        const config = testConfig[level] || { tests_per_week: 0, test_duration_minutes: 0 };
-        const testsPerWeek = config.tests_per_week || 0;
-        const periodDuration = school?.period_duration_minutes || 45;
-        const testDurationPeriods = Math.ceil(config.test_duration_minutes / periodDuration);
-
-        if (testsPerWeek > 0) {
-          const availableSlots = [];
-          days.forEach(day => {
-            periods.forEach(period => {
-              if (!blockedPeriods.has(period)) {
-                availableSlots.push({ day, period });
-              }
-            });
-          });
-
-          // Shuffle available slots randomly
-          for (let i = availableSlots.length - 1; i > 0; i--) {
-            const j = Math.floor(Math.random() * (i + 1));
-            [availableSlots[i], availableSlots[j]] = [availableSlots[j], availableSlots[i]];
-          }
-
-          // Take first N random slots for tests
-          let slotsCreated = 0;
-          for (let i = 0; i < availableSlots.length && slotsCreated < testsPerWeek * testDurationPeriods; i++) {
-            const { day, period } = availableSlots[i];
-            reservedTestSlots[level].push({ day, period });
-
-            newSlots.push({
-              school_id: schoolId,
-              schedule_version: selectedVersion.id,
-              subject_id: null,
-              teacher_id: null,
-              room_id: null,
-              day,
-              period,
-              status: 'scheduled',
-              notes: `${level} Test/Assessment Slot`
-            });
-            slotsCreated++;
-          }
-
-          console.log(`Created ${reservedTestSlots[level].length} randomized test slots for ${level}`);
-        }
-      });
+      console.log('Test slots will be scheduled after classes to avoid blocking teaching periods');
 
       // Debug: Check why groups are being filtered out
       console.log('All teaching groups:', teachingGroups.length);
