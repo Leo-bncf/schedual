@@ -1425,16 +1425,15 @@ Now process the user's input and return ONLY the JSON object.`,
       </Card>
 
       {/* Configuration & Constraints - Always Visible */}
-      <div className="flex gap-2 mb-6">
-        <Tabs defaultValue={selectedVersion ? "schedule" : "config"} className="w-full">
-          <TabsList className="bg-slate-100">
-            <TabsTrigger value="schedule" disabled={!selectedVersion}>
-              <Calendar className="w-4 h-4 mr-2" />
-              Schedule
-            </TabsTrigger>
-            <TabsTrigger value="config">Configuration</TabsTrigger>
-            <TabsTrigger value="constraints">Constraints</TabsTrigger>
-          </TabsList>
+      <Tabs defaultValue={selectedVersion ? "schedule" : "config"} className="w-full">
+        <TabsList className="bg-slate-100">
+          <TabsTrigger value="schedule" disabled={!selectedVersion}>
+            <Calendar className="w-4 h-4 mr-2" />
+            Schedule
+          </TabsTrigger>
+          <TabsTrigger value="config">Configuration</TabsTrigger>
+          <TabsTrigger value="constraints">Constraints</TabsTrigger>
+        </TabsList>
 
           {/* Schedule Tab Content */}
           <TabsContent value="schedule">
@@ -1979,10 +1978,10 @@ Now process the user's input and return ONLY the JSON object.`,
                       </CardContent>
                     </Card>
                   </div>
-                </TabsContent>
+              </TabsContent>
 
-                {/* Constraints Tab Content */}
-                <TabsContent value="constraints">
+              {/* Constraints Tab Content */}
+              <TabsContent value="constraints">
                   <div className="space-y-4">
                     <Card className="border-0 shadow-sm">
                       <CardHeader>
@@ -2051,7 +2050,6 @@ Now process the user's input and return ONLY the JSON object.`,
                   </div>
                 </TabsContent>
                 </Tabs>
-                </div>
 
       {/* Create Version Dialog */}
       <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
