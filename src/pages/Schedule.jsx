@@ -663,17 +663,22 @@ Now process the user's input and return ONLY the JSON object.`,
         for (const group of levelGroupsFromUpdated) {
           // Determine hours based on subject's HL/SL hours and group's level
           const subject = subjects.find(s => s.id === group.subject_id);
-          let hoursPerWeek = group.hours_per_week;
+          let hoursPerWeek = group.hours_per_week || 4; // Default fallback
 
+          // CRITICAL: Use subject-specific HL/SL hours if available
           if (subject && group.level) {
-            if (group.level === 'HL' && subject.hl_hours_per_week) {
-              hoursPerWeek = subject.hl_hours_per_week;
-            } else if (group.level === 'SL' && subject.sl_hours_per_week) {
-              hoursPerWeek = subject.sl_hours_per_week;
+            if (group.level === 'HL') {
+              hoursPerWeek = subject.hl_hours_per_week || schoolConfig.hl_hours || 6;
+              console.log(`${group.name}: HL subject - ${hoursPerWeek} hours/week`);
+            } else if (group.level === 'SL') {
+              hoursPerWeek = subject.sl_hours_per_week || schoolConfig.sl_hours || 4;
+              console.log(`${group.name}: SL subject - ${hoursPerWeek} hours/week`);
             }
+          } else if (!group.level) {
+            console.warn(`${group.name}: No level specified, using default ${hoursPerWeek} hours`);
           }
 
-          const periodsNeeded = Math.ceil(hoursPerWeek || group.hours_per_week || 4);
+          const periodsNeeded = Math.ceil(hoursPerWeek);
           
           let studentIds = group.student_ids || [];
           const teacherId = group.teacher_id;
