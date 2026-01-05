@@ -312,7 +312,7 @@ export default function TimetableGrid({ slots = [], groups = [], rooms = [], sub
                 </div>
                 
                 {/* Break Row */}
-                {BREAK_PERIODS.includes(period) && (
+                {breakPeriods.includes(period) && (
                   <div className="grid grid-cols-[100px_repeat(5,1fr)] border-b-2 border-blue-300 bg-gradient-to-r from-blue-50 to-cyan-50">
                     <div className="p-3 bg-blue-100 border-r border-blue-300 flex flex-col justify-center">
                       <div className="text-sm font-bold text-blue-900">☕ Break</div>
