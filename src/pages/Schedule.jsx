@@ -94,7 +94,9 @@ export default function Schedule() {
     lunch_duration_minutes: 30,
     lunch_period: 4,
     break_duration_minutes: 15,
-    break_periods: [2, 6]
+    break_periods: [2, 6],
+    tests_per_week: 2,
+    test_duration_minutes: 90
   });
   const [isSavingConfig, setIsSavingConfig] = useState(false);
 
@@ -127,7 +129,9 @@ export default function Schedule() {
         lunch_duration_minutes: school.settings?.lunch_duration_minutes || 30,
         lunch_period: school.settings?.lunch_period || 4,
         break_duration_minutes: school.settings?.break_duration_minutes || 15,
-        break_periods: school.settings?.break_periods || [2, 6]
+        break_periods: school.settings?.break_periods || [2, 6],
+        tests_per_week: school.settings?.tests_per_week || 2,
+        test_duration_minutes: school.settings?.test_duration_minutes || 90
       });
     }
   }, [school]);
@@ -336,7 +340,9 @@ Now process the user's input and return ONLY the JSON object.`,
             lunch_duration_minutes: schoolConfig.lunch_duration_minutes,
             lunch_period: schoolConfig.lunch_period,
             break_duration_minutes: schoolConfig.break_duration_minutes,
-            break_periods: schoolConfig.break_periods
+            break_periods: schoolConfig.break_periods,
+            tests_per_week: schoolConfig.tests_per_week,
+            test_duration_minutes: schoolConfig.test_duration_minutes
           }
         }
       });
@@ -1803,7 +1809,87 @@ Now process the user's input and return ONLY the JSON object.`,
                         </div>
                       </CardContent>
                     </Card>
-                  </div>
+
+                    {/* Test Slot Configuration */}
+                    <Card className="border-0 shadow-md">
+                      <CardHeader className="bg-gradient-to-r from-red-50 to-rose-50">
+                        <div className="flex items-center gap-3">
+                          <div className="p-2 rounded-lg bg-red-100">
+                            <Clock className="w-5 h-5 text-red-700" />
+                          </div>
+                          <div>
+                            <CardTitle className="text-lg">Test & Assessment Slots</CardTitle>
+                            <CardDescription>Configure weekly test allocation and duration</CardDescription>
+                          </div>
+                        </div>
+                      </CardHeader>
+                      <CardContent className="pt-6">
+                        <div className="grid sm:grid-cols-2 gap-6">
+                          <div className="p-6 rounded-xl bg-gradient-to-br from-red-50 to-red-100 border-2 border-red-200">
+                            <div className="flex items-center justify-between mb-4">
+                              <div>
+                                <p className="font-bold text-red-900 text-lg">Tests Per Week</p>
+                                <p className="text-sm text-red-700">Maximum test slots</p>
+                              </div>
+                              <div className="w-16 h-16 rounded-full bg-red-200 flex items-center justify-center">
+                                <span className="text-2xl font-bold text-red-900">{schoolConfig.tests_per_week}</span>
+                              </div>
+                            </div>
+                            <div className="flex items-center gap-3">
+                              <Input 
+                                type="number"
+                                min="0"
+                                max="10"
+                                className="h-11 text-center font-semibold border-red-300"
+                                value={schoolConfig.tests_per_week}
+                                onChange={(e) => setSchoolConfig({...schoolConfig, tests_per_week: parseInt(e.target.value)})}
+                              />
+                              <span className="text-sm text-red-700 font-medium">tests</span>
+                            </div>
+                            <p className="text-xs text-red-600 mt-3">Number of assessment slots per week</p>
+                          </div>
+
+                          <div className="p-6 rounded-xl bg-gradient-to-br from-rose-50 to-rose-100 border-2 border-rose-200">
+                            <div className="flex items-center justify-between mb-4">
+                              <div>
+                                <p className="font-bold text-rose-900 text-lg">Test Duration</p>
+                                <p className="text-sm text-rose-700">Length per test</p>
+                              </div>
+                              <div className="w-16 h-16 rounded-full bg-rose-200 flex items-center justify-center">
+                                <span className="text-2xl font-bold text-rose-900">{Math.floor(schoolConfig.test_duration_minutes / 60)}:{(schoolConfig.test_duration_minutes % 60).toString().padStart(2, '0')}</span>
+                              </div>
+                            </div>
+                            <div className="space-y-2">
+                              <Label className="text-xs text-rose-800">Duration (minutes)</Label>
+                              <div className="flex items-center gap-3">
+                                <Input 
+                                  type="number"
+                                  min="30"
+                                  max="180"
+                                  step="15"
+                                  className="h-11 text-center font-semibold border-rose-300"
+                                  value={schoolConfig.test_duration_minutes}
+                                  onChange={(e) => setSchoolConfig({...schoolConfig, test_duration_minutes: parseInt(e.target.value)})}
+                                />
+                                <span className="text-sm text-rose-700 font-medium">min</span>
+                              </div>
+                            </div>
+                            <p className="text-xs text-rose-600 mt-3">Common: 60min, 90min (1:30h), 120min (2h)</p>
+                          </div>
+                        </div>
+
+                        <div className="mt-6 p-4 rounded-lg bg-red-50 border border-red-200">
+                          <div className="flex gap-2">
+                            <Info className="w-4 h-4 text-red-600 mt-0.5 flex-shrink-0" />
+                            <div className="text-xs text-red-800">
+                              <p className="font-semibold mb-1">Assessment Schedule:</p>
+                              <p>Allow up to <strong>{schoolConfig.tests_per_week}</strong> test slots per week, each lasting <strong>{Math.floor(schoolConfig.test_duration_minutes / 60)}h {schoolConfig.test_duration_minutes % 60 > 0 ? `${schoolConfig.test_duration_minutes % 60}min` : ''}</strong>. These slots will be reserved in the schedule for assessments.</p>
+                            </div>
+                          </div>
+                        </div>
+                      </CardContent>
+                    </Card>
+                    </div>
               </TabsContent>
 
               {/* Constraints Tab Content */}
