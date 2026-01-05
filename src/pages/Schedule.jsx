@@ -518,9 +518,9 @@ Now process the user's input and return ONLY the JSON object.`,
       teachers.forEach(t => { teacherSchedules[t.id] = []; });
       rooms.forEach(r => { roomSchedules[r.id] = []; });
 
-      // CRITICAL: Block break and lunch periods from scheduling
-      const breakPeriods = schoolConfig.break_periods || [];
-      const lunchPeriod = schoolConfig.lunch_period || 4;
+      // CRITICAL: Block break and lunch periods from scheduling (use school settings)
+      const breakPeriods = school?.settings?.break_periods || [];
+      const lunchPeriod = school?.settings?.lunch_period || 4;
       const blockedPeriods = new Set([...breakPeriods, lunchPeriod]);
 
       // Reserve AND CREATE test slots for all levels
