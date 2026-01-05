@@ -54,6 +54,7 @@ import ConflictViewer from '../components/schedule/ConflictViewer';
 import EmptyState from '../components/ui-custom/EmptyState';
 import GenerationProgress from '../components/schedule/GenerationProgress';
 import ScheduleUpdateBanner from '../components/schedule/ScheduleUpdateBanner';
+import UtilizationStats from '../components/schedule/UtilizationStats';
 
 export default function Schedule() {
   const [isDialogOpen, setIsDialogOpen] = useState(false);
@@ -713,9 +714,20 @@ Now process the user's input and return ONLY the JSON object.`,
               if (preferred) preferredRooms = [preferred, ...preferredRooms.filter(r => r.id !== preferred.id)];
             }
 
-            // Randomize days and periods to create variety
-            const randomDays = shuffleArray(days);
-            const randomPeriods = shuffleArray(periods);
+            // Prioritize time slots based on subject preference
+            let daysToTry = [...days];
+            let periodsToTry = [...periods];
+            
+            // Apply preferred time if set
+            if (subject?.preferred_time === 'morning') {
+              periodsToTry = [...periods.filter(p => p <= 4), ...periods.filter(p => p > 4)];
+            } else if (subject?.preferred_time === 'afternoon') {
+              periodsToTry = [...periods.filter(p => p > 4), ...periods.filter(p => p <= 4)];
+            }
+            
+            // Randomize to create variety while respecting preferences
+            const randomDays = shuffleArray(daysToTry);
+            const randomPeriods = shuffleArray(periodsToTry);
 
             let slotFound = false;
             for (const day of randomDays) {
@@ -902,15 +914,25 @@ Now process the user's input and return ONLY the JSON object.`,
       const scheduledStudents = new Set();
       const scheduledTeachers = new Set();
       const scheduledGroups = new Set();
+      const teacherHours = {};
 
       newSlots.forEach(slot => {
         const group = teachingGroups.find(g => g.id === slot.teaching_group_id);
         if (group) {
           scheduledGroups.add(group.id);
           group.student_ids?.forEach(sid => scheduledStudents.add(sid));
-          if (group.teacher_id) scheduledTeachers.add(group.teacher_id);
+          if (group.teacher_id) {
+            scheduledTeachers.add(group.teacher_id);
+            teacherHours[group.teacher_id] = (teacherHours[group.teacher_id] || 0) + 1;
+          }
         }
       });
+
+      // Calculate workload balance
+      const hourValues = Object.values(teacherHours);
+      const avgHours = hourValues.length > 0 ? hourValues.reduce((a, b) => a + b, 0) / hourValues.length : 0;
+      const maxDeviation = Math.max(...hourValues.map(h => Math.abs(h - avgHours)));
+      const balanceScore = Math.max(0, 100 - (maxDeviation / avgHours) * 100);
 
       // Count all unique teachers from all groups
       const allTeachersInGroups = new Set();
@@ -949,7 +971,7 @@ Now process the user's input and return ONLY the JSON object.`,
           score: Math.floor((newSlots.length / (totalGroups * 6)) * 100),
           conflicts_count: 0,
           warnings_count: totalGroups - scheduledGroups.size + constraintViolations,
-          notes: `DP: ${groupsByLevel.DP.length} groups, MYP: ${groupsByLevel.MYP.length} groups, PYP: ${groupsByLevel.PYP.length} groups | Scheduled ${scheduledStudents.size}/${students.length} students, ${scheduledGroups.size}/${totalGroups} groups (${allTeachersInGroups.size} teachers) across ${newSlots.length} periods. Applied ${activeConstraints.length} constraints.`
+          notes: `DP: ${groupsByLevel.DP.length} groups, MYP: ${groupsByLevel.MYP.length} groups, PYP: ${groupsByLevel.PYP.length} groups | Scheduled ${scheduledStudents.size}/${students.length} students, ${scheduledGroups.size}/${totalGroups} groups (${allTeachersInGroups.size} teachers) across ${newSlots.length} periods. Workload balance: ${Math.round(balanceScore)}%. Applied ${activeConstraints.length} constraints.`
         }
       });
 
@@ -1266,7 +1288,16 @@ Now process the user's input and return ONLY the JSON object.`,
                   </TabsList>
                 </div>
                 
-                <TabsContent value="grid">
+                <TabsContent value="grid" className="space-y-6">
+                  {scheduleSlots.length > 0 && (
+                    <UtilizationStats 
+                      slots={scheduleSlots}
+                      teachers={teachers}
+                      rooms={rooms}
+                      schoolConfig={schoolConfig}
+                    />
+                  )}
+
                   {scheduleSlots.length === 0 ? (
                     <Card className="border-0 shadow-sm">
                       <CardContent className="py-16 text-center">
