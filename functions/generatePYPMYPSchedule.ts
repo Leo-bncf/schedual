@@ -42,6 +42,14 @@ Deno.serve(async (req) => {
       school_id: schoolId,
       is_active: true 
     });
+    
+    // Fetch constraints
+    const constraints = await base44.entities.Constraint.filter({ 
+      school_id: schoolId,
+      is_active: true 
+    });
+    const hardConstraints = constraints.filter(c => c.type === 'hard');
+    console.log(`Loaded ${hardConstraints.length} hard constraints for ${level}`);
 
     console.log(`Found ${classGroups.length} ClassGroups, ${students.length} students, ${subjects.length} subjects`);
 
