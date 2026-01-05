@@ -40,8 +40,8 @@ export default function UtilizationStats({ slots, teachers, rooms, schoolConfig 
     };
   }).sort((a, b) => b.utilization - a.utilization);
 
-  const avgTeacherUtil = Math.round(teacherStats.reduce((sum, t) => sum + t.utilization, 0) / teacherStats.length);
-  const avgRoomUtil = Math.round(roomStats.reduce((sum, r) => sum + r.utilization, 0) / roomStats.length);
+  const avgTeacherUtil = teacherStats.length > 0 ? Math.round(teacherStats.reduce((sum, t) => sum + t.utilization, 0) / teacherStats.length) : 0;
+  const avgRoomUtil = roomStats.length > 0 ? Math.round(roomStats.reduce((sum, r) => sum + r.utilization, 0) / roomStats.length) : 0;
 
   return (
     <div className="grid lg:grid-cols-2 gap-6">
