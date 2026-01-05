@@ -14,6 +14,11 @@ Deno.serve(async (req) => {
 
     console.log(`Generating ${level} schedule for version ${schedule_version_id}`);
 
+    // Fetch school settings for test configuration
+    const schools = await base44.asServiceRole.entities.School.filter({ id: schoolId });
+    const school = schools[0];
+    const testConfig = school?.settings?.test_config || {};
+    
     // Fetch data
     const classGroups = await base44.entities.ClassGroup.filter({ 
       school_id: schoolId,
@@ -49,6 +54,32 @@ Deno.serve(async (req) => {
     const roomSchedules = {};
     teachers.forEach(t => { teacherSchedules[t.id] = []; });
     rooms.forEach(r => { roomSchedules[r.id] = []; });
+    
+    // Reserve test slots based on level configuration
+    const levelTestConfig = testConfig[level] || { tests_per_week: 0, test_duration_minutes: 0 };
+    const testsPerWeek = levelTestConfig.tests_per_week || 0;
+    const testDurationPeriods = Math.ceil(levelTestConfig.test_duration_minutes / (school?.period_duration_minutes || 45));
+    
+    const reservedTestSlots = [];
+    
+    if (testsPerWeek > 0) {
+      const daysForTests = Math.min(testsPerWeek, days.length);
+      const dayInterval = Math.floor(days.length / daysForTests);
+      
+      for (let i = 0; i < testsPerWeek; i++) {
+        const dayIndex = (i * dayInterval) % days.length;
+        const day = days[dayIndex];
+        const startPeriod = 1;
+        
+        for (let p = startPeriod; p < startPeriod + testDurationPeriods; p++) {
+          if (p <= periods.length) {
+            reservedTestSlots.push({ day, period: p });
+          }
+        }
+      }
+      
+      console.log(`Reserved ${reservedTestSlots.length} test slot periods for ${level}`);
+    }
 
     // For each ClassGroup, schedule all their subjects
     for (const classGroup of classGroups) {
@@ -127,6 +158,10 @@ Deno.serve(async (req) => {
             if (periodsScheduled >= periodsNeeded) break;
             if (dayPeriodCount[day] >= targetForDay && targetForDay > 0) break;
 
+            // Check if this is a reserved test slot
+            const isTestSlot = reservedTestSlots.some(ts => ts.day === day && ts.period === period);
+            if (isTestSlot) continue;
+            
             // Check ClassGroup availability
             const classGroupBusy = classGroupSchedule.some(s => s.day === day && s.period === period);
             if (classGroupBusy) continue;
@@ -181,6 +216,9 @@ Deno.serve(async (req) => {
             for (const period of periods) {
               if (periodsScheduled >= periodsNeeded) break;
 
+              const isTestSlot = reservedTestSlots.some(ts => ts.day === day && ts.period === period);
+              if (isTestSlot) continue;
+              
               const classGroupBusy = classGroupSchedule.some(s => s.day === day && s.period === period);
               if (classGroupBusy) continue;
 
