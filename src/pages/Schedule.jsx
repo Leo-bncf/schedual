@@ -530,7 +530,8 @@ Now process the user's input and return ONLY the JSON object.`,
       ['PYP', 'MYP', 'DP1', 'DP2'].forEach(level => {
         const config = testConfig[level] || { tests_per_week: 0, test_duration_minutes: 0 };
         const testsPerWeek = config.tests_per_week || 0;
-        const testDurationPeriods = Math.ceil(config.test_duration_minutes / (school?.period_duration_minutes || 45));
+        const periodDuration = school?.period_duration_minutes || 45;
+        const testDurationPeriods = Math.ceil(config.test_duration_minutes / periodDuration);
 
         if (testsPerWeek > 0) {
           const daysForTests = Math.min(testsPerWeek, days.length);
