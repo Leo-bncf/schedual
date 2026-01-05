@@ -28,7 +28,7 @@ const subjectGroupColors = {
   '6': { bg: 'bg-pink-50', border: 'border-l-pink-400', text: 'text-pink-900', name: 'The Arts' },
 };
 
-export default function TimetableGrid({ slots = [], groups = [], rooms = [], subjects = [], teachers = [], classGroups = [], onSlotClick, periodsPerDay = 12, exportId = "timetable-grid" }) {
+export default function TimetableGrid({ slots = [], groups = [], rooms = [], subjects = [], teachers = [], classGroups = [], periodsPerDay = 8, breakPeriods = [], lunchPeriod = 4, onSlotClick, exportId = "timetable-grid" }) {
   const [selectedSlot, setSelectedSlot] = React.useState(null);
 
   const getSlotData = (day, period) => {
