@@ -946,6 +946,40 @@ Now process the user's input and return ONLY the JSON object.`,
         });
       }
 
+      // Add test slots at the end (after classes are scheduled)
+      const testConfig = school?.settings?.test_config || {};
+      ['PYP', 'MYP', 'DP1', 'DP2'].forEach(level => {
+        const config = testConfig[level] || { tests_per_week: 0, test_duration_minutes: 0 };
+        const testsPerWeek = config.tests_per_week || 0;
+        const periodDuration = school?.period_duration_minutes || 45;
+        const testDurationPeriods = Math.ceil(config.test_duration_minutes / periodDuration);
+
+        if (testsPerWeek > 0) {
+          // Use late afternoon periods for tests to minimize disruption
+          const testPeriods = periods.slice(-testDurationPeriods);
+          const testDays = days.slice(0, testsPerWeek);
+
+          testDays.forEach(day => {
+            testPeriods.forEach(period => {
+              if (!blockedPeriods.has(period)) {
+                newSlots.push({
+                  school_id: schoolId,
+                  schedule_version: selectedVersion.id,
+                  subject_id: null,
+                  teacher_id: null,
+                  room_id: null,
+                  day,
+                  period,
+                  status: 'scheduled',
+                  notes: `${level} Test/Assessment Slot`
+                });
+              }
+            });
+          });
+          console.log(`Added test slots for ${level} (late afternoon periods on ${testsPerWeek} days)`);
+        }
+      });
+
       // Create all slots in batches to avoid rate limits
       if (cancelGeneration) throw new Error('Cancelled by user');
       
