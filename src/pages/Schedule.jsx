@@ -95,8 +95,12 @@ export default function Schedule() {
     lunch_period: 4,
     break_duration_minutes: 15,
     break_periods: [2, 6],
-    tests_per_week: 2,
-    test_duration_minutes: 90
+    test_config: {
+      PYP: { tests_per_week: 1, test_duration_minutes: 60 },
+      MYP: { tests_per_week: 1, test_duration_minutes: 60 },
+      DP1: { tests_per_week: 2, test_duration_minutes: 90 },
+      DP2: { tests_per_week: 2, test_duration_minutes: 90 }
+    }
   });
   const [isSavingConfig, setIsSavingConfig] = useState(false);
 
@@ -130,8 +134,12 @@ export default function Schedule() {
         lunch_period: school.settings?.lunch_period || 4,
         break_duration_minutes: school.settings?.break_duration_minutes || 15,
         break_periods: school.settings?.break_periods || [2, 6],
-        tests_per_week: school.settings?.tests_per_week || 2,
-        test_duration_minutes: school.settings?.test_duration_minutes || 90
+        test_config: school.settings?.test_config || {
+          PYP: { tests_per_week: 1, test_duration_minutes: 60 },
+          MYP: { tests_per_week: 1, test_duration_minutes: 60 },
+          DP1: { tests_per_week: 2, test_duration_minutes: 90 },
+          DP2: { tests_per_week: 2, test_duration_minutes: 90 }
+        }
       });
     }
   }, [school]);
@@ -341,8 +349,7 @@ Now process the user's input and return ONLY the JSON object.`,
             lunch_period: schoolConfig.lunch_period,
             break_duration_minutes: schoolConfig.break_duration_minutes,
             break_periods: schoolConfig.break_periods,
-            tests_per_week: schoolConfig.tests_per_week,
-            test_duration_minutes: schoolConfig.test_duration_minutes
+            test_config: schoolConfig.test_config
           }
         }
       });
@@ -1818,63 +1825,223 @@ Now process the user's input and return ONLY the JSON object.`,
                             <Clock className="w-5 h-5 text-red-700" />
                           </div>
                           <div>
-                            <CardTitle className="text-lg">Test & Assessment Slots</CardTitle>
-                            <CardDescription>Configure weekly test allocation and duration</CardDescription>
+                            <CardTitle className="text-lg">Test & Assessment Slots by Level</CardTitle>
+                            <CardDescription>Configure weekly test allocation per IB programme level</CardDescription>
                           </div>
                         </div>
                       </CardHeader>
                       <CardContent className="pt-6">
                         <div className="grid sm:grid-cols-2 gap-6">
-                          <div className="p-6 rounded-xl bg-gradient-to-br from-red-50 to-red-100 border-2 border-red-200">
-                            <div className="flex items-center justify-between mb-4">
+                          {/* PYP */}
+                          <div className="p-5 rounded-xl bg-gradient-to-br from-yellow-50 to-yellow-100 border-2 border-yellow-200">
+                            <div className="flex items-center gap-2 mb-4">
+                              <div className="w-10 h-10 rounded-full bg-yellow-200 flex items-center justify-center">
+                                <span className="font-bold text-yellow-900">PYP</span>
+                              </div>
                               <div>
-                                <p className="font-bold text-red-900 text-lg">Tests Per Week</p>
-                                <p className="text-sm text-red-700">Maximum test slots</p>
-                              </div>
-                              <div className="w-16 h-16 rounded-full bg-red-200 flex items-center justify-center">
-                                <span className="text-2xl font-bold text-red-900">{schoolConfig.tests_per_week}</span>
+                                <p className="font-bold text-yellow-900 text-base">Primary Years</p>
+                                <p className="text-xs text-yellow-700">Weekly assessments</p>
                               </div>
                             </div>
-                            <div className="flex items-center gap-3">
-                              <Input 
-                                type="number"
-                                min="0"
-                                max="10"
-                                className="h-11 text-center font-semibold border-red-300"
-                                value={schoolConfig.tests_per_week}
-                                onChange={(e) => setSchoolConfig({...schoolConfig, tests_per_week: parseInt(e.target.value)})}
-                              />
-                              <span className="text-sm text-red-700 font-medium">tests</span>
+                            <div className="space-y-3">
+                              <div>
+                                <Label className="text-xs text-yellow-800 mb-1.5 block">Tests per week</Label>
+                                <Input 
+                                  type="number"
+                                  min="0"
+                                  max="5"
+                                  className="h-9 text-center font-semibold border-yellow-300"
+                                  value={schoolConfig.test_config.PYP.tests_per_week}
+                                  onChange={(e) => setSchoolConfig({
+                                    ...schoolConfig, 
+                                    test_config: {
+                                      ...schoolConfig.test_config,
+                                      PYP: { ...schoolConfig.test_config.PYP, tests_per_week: parseInt(e.target.value) }
+                                    }
+                                  })}
+                                />
+                              </div>
+                              <div>
+                                <Label className="text-xs text-yellow-800 mb-1.5 block">Duration (minutes)</Label>
+                                <Input 
+                                  type="number"
+                                  min="30"
+                                  max="120"
+                                  step="15"
+                                  className="h-9 text-center font-semibold border-yellow-300"
+                                  value={schoolConfig.test_config.PYP.test_duration_minutes}
+                                  onChange={(e) => setSchoolConfig({
+                                    ...schoolConfig, 
+                                    test_config: {
+                                      ...schoolConfig.test_config,
+                                      PYP: { ...schoolConfig.test_config.PYP, test_duration_minutes: parseInt(e.target.value) }
+                                    }
+                                  })}
+                                />
+                              </div>
                             </div>
-                            <p className="text-xs text-red-600 mt-3">Number of assessment slots per week</p>
+                            <p className="text-xs text-yellow-600 mt-3">
+                              <strong>{schoolConfig.test_config.PYP.tests_per_week}</strong> tests × <strong>{schoolConfig.test_config.PYP.test_duration_minutes}min</strong> per week
+                            </p>
                           </div>
 
-                          <div className="p-6 rounded-xl bg-gradient-to-br from-rose-50 to-rose-100 border-2 border-rose-200">
-                            <div className="flex items-center justify-between mb-4">
-                              <div>
-                                <p className="font-bold text-rose-900 text-lg">Test Duration</p>
-                                <p className="text-sm text-rose-700">Length per test</p>
+                          {/* MYP */}
+                          <div className="p-5 rounded-xl bg-gradient-to-br from-green-50 to-green-100 border-2 border-green-200">
+                            <div className="flex items-center gap-2 mb-4">
+                              <div className="w-10 h-10 rounded-full bg-green-200 flex items-center justify-center">
+                                <span className="font-bold text-green-900">MYP</span>
                               </div>
-                              <div className="w-16 h-16 rounded-full bg-rose-200 flex items-center justify-center">
-                                <span className="text-2xl font-bold text-rose-900">{Math.floor(schoolConfig.test_duration_minutes / 60)}:{(schoolConfig.test_duration_minutes % 60).toString().padStart(2, '0')}</span>
+                              <div>
+                                <p className="font-bold text-green-900 text-base">Middle Years</p>
+                                <p className="text-xs text-green-700">Weekly assessments</p>
                               </div>
                             </div>
-                            <div className="space-y-2">
-                              <Label className="text-xs text-rose-800">Duration (minutes)</Label>
-                              <div className="flex items-center gap-3">
+                            <div className="space-y-3">
+                              <div>
+                                <Label className="text-xs text-green-800 mb-1.5 block">Tests per week</Label>
+                                <Input 
+                                  type="number"
+                                  min="0"
+                                  max="5"
+                                  className="h-9 text-center font-semibold border-green-300"
+                                  value={schoolConfig.test_config.MYP.tests_per_week}
+                                  onChange={(e) => setSchoolConfig({
+                                    ...schoolConfig, 
+                                    test_config: {
+                                      ...schoolConfig.test_config,
+                                      MYP: { ...schoolConfig.test_config.MYP, tests_per_week: parseInt(e.target.value) }
+                                    }
+                                  })}
+                                />
+                              </div>
+                              <div>
+                                <Label className="text-xs text-green-800 mb-1.5 block">Duration (minutes)</Label>
+                                <Input 
+                                  type="number"
+                                  min="30"
+                                  max="120"
+                                  step="15"
+                                  className="h-9 text-center font-semibold border-green-300"
+                                  value={schoolConfig.test_config.MYP.test_duration_minutes}
+                                  onChange={(e) => setSchoolConfig({
+                                    ...schoolConfig, 
+                                    test_config: {
+                                      ...schoolConfig.test_config,
+                                      MYP: { ...schoolConfig.test_config.MYP, test_duration_minutes: parseInt(e.target.value) }
+                                    }
+                                  })}
+                                />
+                              </div>
+                            </div>
+                            <p className="text-xs text-green-600 mt-3">
+                              <strong>{schoolConfig.test_config.MYP.tests_per_week}</strong> tests × <strong>{schoolConfig.test_config.MYP.test_duration_minutes}min</strong> per week
+                            </p>
+                          </div>
+
+                          {/* DP1 */}
+                          <div className="p-5 rounded-xl bg-gradient-to-br from-blue-50 to-blue-100 border-2 border-blue-200">
+                            <div className="flex items-center gap-2 mb-4">
+                              <div className="w-10 h-10 rounded-full bg-blue-200 flex items-center justify-center">
+                                <span className="font-bold text-blue-900">DP1</span>
+                              </div>
+                              <div>
+                                <p className="font-bold text-blue-900 text-base">Diploma Year 1</p>
+                                <p className="text-xs text-blue-700">Weekly assessments</p>
+                              </div>
+                            </div>
+                            <div className="space-y-3">
+                              <div>
+                                <Label className="text-xs text-blue-800 mb-1.5 block">Tests per week</Label>
+                                <Input 
+                                  type="number"
+                                  min="0"
+                                  max="5"
+                                  className="h-9 text-center font-semibold border-blue-300"
+                                  value={schoolConfig.test_config.DP1.tests_per_week}
+                                  onChange={(e) => setSchoolConfig({
+                                    ...schoolConfig, 
+                                    test_config: {
+                                      ...schoolConfig.test_config,
+                                      DP1: { ...schoolConfig.test_config.DP1, tests_per_week: parseInt(e.target.value) }
+                                    }
+                                  })}
+                                />
+                              </div>
+                              <div>
+                                <Label className="text-xs text-blue-800 mb-1.5 block">Duration (minutes)</Label>
                                 <Input 
                                   type="number"
                                   min="30"
                                   max="180"
                                   step="15"
-                                  className="h-11 text-center font-semibold border-rose-300"
-                                  value={schoolConfig.test_duration_minutes}
-                                  onChange={(e) => setSchoolConfig({...schoolConfig, test_duration_minutes: parseInt(e.target.value)})}
+                                  className="h-9 text-center font-semibold border-blue-300"
+                                  value={schoolConfig.test_config.DP1.test_duration_minutes}
+                                  onChange={(e) => setSchoolConfig({
+                                    ...schoolConfig, 
+                                    test_config: {
+                                      ...schoolConfig.test_config,
+                                      DP1: { ...schoolConfig.test_config.DP1, test_duration_minutes: parseInt(e.target.value) }
+                                    }
+                                  })}
                                 />
-                                <span className="text-sm text-rose-700 font-medium">min</span>
                               </div>
                             </div>
-                            <p className="text-xs text-rose-600 mt-3">Common: 60min, 90min (1:30h), 120min (2h)</p>
+                            <p className="text-xs text-blue-600 mt-3">
+                              <strong>{schoolConfig.test_config.DP1.tests_per_week}</strong> tests × <strong>{schoolConfig.test_config.DP1.test_duration_minutes}min</strong> per week
+                            </p>
+                          </div>
+
+                          {/* DP2 */}
+                          <div className="p-5 rounded-xl bg-gradient-to-br from-indigo-50 to-indigo-100 border-2 border-indigo-200">
+                            <div className="flex items-center gap-2 mb-4">
+                              <div className="w-10 h-10 rounded-full bg-indigo-200 flex items-center justify-center">
+                                <span className="font-bold text-indigo-900">DP2</span>
+                              </div>
+                              <div>
+                                <p className="font-bold text-indigo-900 text-base">Diploma Year 2</p>
+                                <p className="text-xs text-indigo-700">Weekly assessments</p>
+                              </div>
+                            </div>
+                            <div className="space-y-3">
+                              <div>
+                                <Label className="text-xs text-indigo-800 mb-1.5 block">Tests per week</Label>
+                                <Input 
+                                  type="number"
+                                  min="0"
+                                  max="5"
+                                  className="h-9 text-center font-semibold border-indigo-300"
+                                  value={schoolConfig.test_config.DP2.tests_per_week}
+                                  onChange={(e) => setSchoolConfig({
+                                    ...schoolConfig, 
+                                    test_config: {
+                                      ...schoolConfig.test_config,
+                                      DP2: { ...schoolConfig.test_config.DP2, tests_per_week: parseInt(e.target.value) }
+                                    }
+                                  })}
+                                />
+                              </div>
+                              <div>
+                                <Label className="text-xs text-indigo-800 mb-1.5 block">Duration (minutes)</Label>
+                                <Input 
+                                  type="number"
+                                  min="30"
+                                  max="180"
+                                  step="15"
+                                  className="h-9 text-center font-semibold border-indigo-300"
+                                  value={schoolConfig.test_config.DP2.test_duration_minutes}
+                                  onChange={(e) => setSchoolConfig({
+                                    ...schoolConfig, 
+                                    test_config: {
+                                      ...schoolConfig.test_config,
+                                      DP2: { ...schoolConfig.test_config.DP2, test_duration_minutes: parseInt(e.target.value) }
+                                    }
+                                  })}
+                                />
+                              </div>
+                            </div>
+                            <p className="text-xs text-indigo-600 mt-3">
+                              <strong>{schoolConfig.test_config.DP2.tests_per_week}</strong> tests × <strong>{schoolConfig.test_config.DP2.test_duration_minutes}min</strong> per week
+                            </p>
                           </div>
                         </div>
 
@@ -1882,8 +2049,13 @@ Now process the user's input and return ONLY the JSON object.`,
                           <div className="flex gap-2">
                             <Info className="w-4 h-4 text-red-600 mt-0.5 flex-shrink-0" />
                             <div className="text-xs text-red-800">
-                              <p className="font-semibold mb-1">Assessment Schedule:</p>
-                              <p>Allow up to <strong>{schoolConfig.tests_per_week}</strong> test slots per week, each lasting <strong>{Math.floor(schoolConfig.test_duration_minutes / 60)}h {schoolConfig.test_duration_minutes % 60 > 0 ? `${schoolConfig.test_duration_minutes % 60}min` : ''}</strong>. These slots will be reserved in the schedule for assessments.</p>
+                              <p className="font-semibold mb-1">Assessment Schedule Summary:</p>
+                              <p>
+                                <strong>PYP:</strong> {schoolConfig.test_config.PYP.tests_per_week} tests of {Math.floor(schoolConfig.test_config.PYP.test_duration_minutes / 60)}h{schoolConfig.test_config.PYP.test_duration_minutes % 60 > 0 ? ` ${schoolConfig.test_config.PYP.test_duration_minutes % 60}min` : ''} • 
+                                <strong> MYP:</strong> {schoolConfig.test_config.MYP.tests_per_week} tests of {Math.floor(schoolConfig.test_config.MYP.test_duration_minutes / 60)}h{schoolConfig.test_config.MYP.test_duration_minutes % 60 > 0 ? ` ${schoolConfig.test_config.MYP.test_duration_minutes % 60}min` : ''} • 
+                                <strong> DP1:</strong> {schoolConfig.test_config.DP1.tests_per_week} tests of {Math.floor(schoolConfig.test_config.DP1.test_duration_minutes / 60)}h{schoolConfig.test_config.DP1.test_duration_minutes % 60 > 0 ? ` ${schoolConfig.test_config.DP1.test_duration_minutes % 60}min` : ''} • 
+                                <strong> DP2:</strong> {schoolConfig.test_config.DP2.tests_per_week} tests of {Math.floor(schoolConfig.test_config.DP2.test_duration_minutes / 60)}h{schoolConfig.test_config.DP2.test_duration_minutes % 60 > 0 ? ` ${schoolConfig.test_config.DP2.test_duration_minutes % 60}min` : ''}
+                              </p>
                             </div>
                           </div>
                         </div>
