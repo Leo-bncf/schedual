@@ -405,6 +405,31 @@ Now process the user's input and return ONLY the JSON object.`,
       console.log('Hard Constraints:', hardConstraints.length);
       console.log('Soft Constraints:', softConstraints.length);
       
+      // Step 0: Auto-generate DP teaching groups
+      if (cancelGeneration) throw new Error('Cancelled by user');
+      
+      setGenerationProgress(prev => ({
+        ...prev,
+        stage: 'Generating DP Groups',
+        percent: 5,
+        message: 'Automatically creating DP teaching groups from student choices...'
+      }));
+      console.log('Auto-generating DP teaching groups...');
+      
+      try {
+        const { data: dpGroupResult } = await base44.functions.invoke('generateDpTeachingGroups', { 
+          action: 'create', 
+          max_group_size: 20 
+        });
+        console.log('DP groups auto-generated:', dpGroupResult?.created || 0);
+      } catch (dpError) {
+        console.warn('DP group generation skipped:', dpError.message);
+      }
+      
+      // Refresh teaching groups after auto-generation
+      await queryClient.invalidateQueries({ queryKey: ['teachingGroups'] });
+      await new Promise(resolve => setTimeout(resolve, 1000));
+      
       // Step 1: Assign teachers to teaching groups
       if (cancelGeneration) throw new Error('Cancelled by user');
       
