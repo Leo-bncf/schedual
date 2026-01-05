@@ -678,11 +678,21 @@ Now process the user's input and return ONLY the JSON object.`,
           };
         }
 
-        // STUDENT-CENTRIC SCHEDULING
+        // STUDENT-CENTRIC SCHEDULING WITH RANDOMIZATION
         let totalPeriodsToSchedule = Object.values(groupPeriodNeeds).reduce((sum, g) => sum + g.periodsNeeded, 0);
         let totalScheduled = 0;
         const maxIterations = totalPeriodsToSchedule * 3;
         let iterations = 0;
+        
+        // Helper function to shuffle array
+        const shuffleArray = (array) => {
+          const shuffled = [...array];
+          for (let i = shuffled.length - 1; i > 0; i--) {
+            const j = Math.floor(Math.random() * (i + 1));
+            [shuffled[i], shuffled[j]] = [shuffled[j], shuffled[i]];
+          }
+          return shuffled;
+        };
         
         while (totalScheduled < totalPeriodsToSchedule && iterations < maxIterations) {
           iterations++;
@@ -703,11 +713,15 @@ Now process the user's input and return ONLY the JSON object.`,
               if (preferred) preferredRooms = [preferred, ...preferredRooms.filter(r => r.id !== preferred.id)];
             }
 
+            // Randomize days and periods to create variety
+            const randomDays = shuffleArray(days);
+            const randomPeriods = shuffleArray(periods);
+
             let slotFound = false;
-            for (const day of days) {
+            for (const day of randomDays) {
               if (slotFound) break;
               
-              for (const period of periods) {
+              for (const period of randomPeriods) {
                 if (slotFound) break;
 
                 let violatesHardConstraint = false;
