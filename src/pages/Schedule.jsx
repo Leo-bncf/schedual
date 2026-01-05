@@ -517,6 +517,11 @@ Now process the user's input and return ONLY the JSON object.`,
       teachers.forEach(t => { teacherSchedules[t.id] = []; });
       rooms.forEach(r => { roomSchedules[r.id] = []; });
 
+      // CRITICAL: Block break and lunch periods from scheduling
+      const breakPeriods = schoolConfig.break_periods || [];
+      const lunchPeriod = schoolConfig.lunch_period || 4;
+      const blockedPeriods = new Set([...breakPeriods, lunchPeriod]);
+
       // Reserve test slots for DP1 and DP2 students
       const reservedTestSlots = { DP1: [], DP2: [] };
       const testConfig = school?.settings?.test_config || {};
