@@ -1495,6 +1495,9 @@ Now process the user's input and return ONLY the JSON object.`,
                          subjects={subjects}
                          teachers={teachers}
                          classGroups={classGroups}
+                         periodsPerDay={school?.periods_per_day || 8}
+                         breakPeriods={school?.settings?.break_periods || []}
+                         lunchPeriod={school?.settings?.lunch_period || 4}
                          onSlotClick={(day, period, slot) => {
                            console.log('Clicked:', day, period, slot);
                          }}
