@@ -51,7 +51,7 @@ export default function TimetableGrid({ slots = [], groups = [], rooms = [], sub
     return teachers.find(t => t.id === teacherId);
   };
 
-  const activePeriods = PERIODS.slice(0, periodsPerDay);
+  const activePeriods = Array.from({ length: periodsPerDay }, (_, i) => i + 1);
 
   const getSlotSpan = (day, period, slotId) => {
     const currentSlots = getSlotData(day, period);
