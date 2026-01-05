@@ -179,6 +179,42 @@ Deno.serve(async (req) => {
               const teacherBusy = teacherSchedules[assignedTeacher.id]?.some(s => s.day === day && s.period === period);
               if (teacherBusy) continue;
             }
+            
+            // Check hard constraints
+            let violatesConstraint = false;
+            for (const constraint of hardConstraints) {
+              // Teacher constraints
+              if (constraint.category === 'teacher' && assignedTeacher) {
+                if (!constraint.rule?.teacher_id || constraint.rule?.teacher_id === assignedTeacher.id) {
+                  if (constraint.rule?.max_hours_per_week && (teacherSchedules[assignedTeacher.id]?.length || 0) >= constraint.rule.max_hours_per_week) {
+                    violatesConstraint = true;
+                    break;
+                  }
+                  if (constraint.rule?.prohibited_days?.includes(day)) {
+                    violatesConstraint = true;
+                    break;
+                  }
+                  if (constraint.rule?.unavailable_slots?.some(u => u.day === day && u.period === period)) {
+                    violatesConstraint = true;
+                    break;
+                  }
+                }
+              }
+              // Subject constraints
+              if (constraint.category === 'subject' && constraint.rule?.subject_id === subject.id) {
+                if (constraint.rule?.prohibited_days?.includes(day) || 
+                    constraint.rule?.prohibited_slots?.some(slot => slot.day === day && (!slot.period || slot.period === period))) {
+                  violatesConstraint = true;
+                  break;
+                }
+              }
+              // Time constraints
+              if (constraint.category === 'time' && constraint.rule?.prohibited_slots?.some(slot => slot.day === day && slot.period === period)) {
+                violatesConstraint = true;
+                break;
+              }
+            }
+            if (violatesConstraint) continue;
 
             // Find available room
             let assignedRoom = null;
