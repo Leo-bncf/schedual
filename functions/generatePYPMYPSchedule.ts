@@ -36,7 +36,12 @@ Deno.serve(async (req) => {
     let subjects = await base44.asServiceRole.entities.Subject.filter({ 
       school_id: schoolId
     });
+    console.log(`\nRAW SUBJECTS FETCHED: ${subjects.length}`);
+    console.log('All subjects:', subjects.map(s => ({ name: s.name, ib_level: s.ib_level, is_active: s.is_active })));
+    
     subjects = subjects.filter(s => s.ib_level === level && s.is_active !== false);
+    console.log(`\nAFTER FILTERING for ${level}: ${subjects.length} subjects`);
+    console.log('Filtered subjects:', subjects.map(s => ({ name: s.name, ib_level: s.ib_level, is_active: s.is_active })));
     
     const teachers = await base44.asServiceRole.entities.Teacher.filter({ 
       school_id: schoolId 
