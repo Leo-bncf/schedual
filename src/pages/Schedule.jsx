@@ -737,12 +737,11 @@ Now process the user's input and return ONLY the JSON object.`,
           };
         }
 
-        // CSP SOLVER WITH BACKTRACKING
+        // STUDENT-CENTRIC SCHEDULING WITH RANDOMIZATION
         let totalPeriodsToSchedule = Object.values(groupPeriodNeeds).reduce((sum, g) => sum + g.periodsNeeded, 0);
         let totalScheduled = 0;
-        const maxIterations = totalPeriodsToSchedule * 5; // Increased for backtracking
+        const maxIterations = totalPeriodsToSchedule * 3;
         let iterations = 0;
-        let backtrackStack = []; // Track decisions for backtracking
         
         // Helper function to shuffle array
         const shuffleArray = (array) => {
@@ -753,37 +752,6 @@ Now process the user's input and return ONLY the JSON object.`,
           }
           return shuffled;
         };
-        
-        // Backtracking function: undo last N slots
-        const backtrack = (count = 3) => {
-          console.log(`⚠️ Backtracking ${count} slots to find better solution...`);
-          for (let i = 0; i < count && newSlots.length > 0; i++) {
-            const undoSlot = newSlots.pop();
-            if (undoSlot.teaching_group_id) {
-              const groupInfo = groupPeriodNeeds[undoSlot.teaching_group_id];
-              if (groupInfo) {
-                groupInfo.periodsScheduled--;
-                totalScheduled--;
-                
-                // Undo tracking
-                groupInfo.studentIds.forEach(sid => {
-                  const idx = studentSchedules[sid]?.findIndex(s => s.day === undoSlot.day && s.period === undoSlot.period);
-                  if (idx >= 0) studentSchedules[sid].splice(idx, 1);
-                });
-                if (groupInfo.teacherId && teacherSchedules[groupInfo.teacherId]) {
-                  const idx = teacherSchedules[groupInfo.teacherId].findIndex(s => s.day === undoSlot.day && s.period === undoSlot.period);
-                  if (idx >= 0) teacherSchedules[groupInfo.teacherId].splice(idx, 1);
-                }
-                if (undoSlot.room_id && roomSchedules[undoSlot.room_id]) {
-                  const idx = roomSchedules[undoSlot.room_id].findIndex(s => s.day === undoSlot.day && s.period === undoSlot.period);
-                  if (idx >= 0) roomSchedules[undoSlot.room_id].splice(idx, 1);
-                }
-              }
-            }
-          }
-        };
-        
-        let stuckCount = 0; // Track how many times we've been stuck
         
         while (totalScheduled < totalPeriodsToSchedule && iterations < maxIterations) {
           iterations++;
@@ -966,18 +934,8 @@ Now process the user's input and return ONLY the JSON object.`,
           }
           
           if (!scheduledThisRound) {
-            stuckCount++;
-            if (stuckCount < 5 && newSlots.length > 10) {
-              // Try backtracking before giving up
-              backtrack(Math.min(5, Math.floor(newSlots.length * 0.1))); // Undo 10% or 5 slots
-              console.log(`Backtrack attempt ${stuckCount}/5 - undid some slots, retrying...`);
-              continue;
-            } else {
-              console.log('⚠️ No more periods can be scheduled after backtracking - stopping');
-              break;
-            }
-          } else {
-            stuckCount = 0; // Reset stuck counter on progress
+            console.log('⚠️ No more periods can be scheduled - stopping');
+            break;
           }
         }
 
@@ -988,17 +946,17 @@ Now process the user's input and return ONLY the JSON object.`,
         });
       }
 
-      // Add test slots at the end (after classes are scheduled) - REDUCED ALLOCATION
+      // Add test slots at the end (after classes are scheduled)
       const testConfig = school?.settings?.test_config || {};
       ['PYP', 'MYP', 'DP1', 'DP2'].forEach(level => {
         const config = testConfig[level] || { tests_per_week: 0, test_duration_minutes: 0 };
-        const testsPerWeek = Math.min(config.tests_per_week || 0, 1); // REDUCED: Max 1 test per week
+        const testsPerWeek = config.tests_per_week || 0;
         const periodDuration = school?.period_duration_minutes || 45;
-        const testDurationPeriods = Math.min(Math.ceil(config.test_duration_minutes / periodDuration), 2); // REDUCED: Max 2 periods
+        const testDurationPeriods = Math.ceil(config.test_duration_minutes / periodDuration);
 
         if (testsPerWeek > 0) {
-          // Use only P8 (last period) for tests to minimize disruption
-          const testPeriods = [periodsPerDay]; // Only last period
+          // Use late afternoon periods for tests to minimize disruption
+          const testPeriods = periods.slice(-testDurationPeriods);
           const testDays = days.slice(0, testsPerWeek);
 
           testDays.forEach(day => {
@@ -1018,7 +976,7 @@ Now process the user's input and return ONLY the JSON object.`,
               }
             });
           });
-          console.log(`Added ${testDays.length} test slots for ${level} (P${periodsPerDay} only)`);
+          console.log(`Added test slots for ${level} (late afternoon periods on ${testsPerWeek} days)`);
         }
       });
 
