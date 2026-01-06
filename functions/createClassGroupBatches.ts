@@ -107,40 +107,35 @@ Deno.serve(async (req) => {
       }
     }
 
-    // Update all students with their classgroup_id sequentially with retry logic
+    // Update students in small batches to avoid timeouts
     console.log(`Updating ${Object.keys(studentAssignments).length} students...`);
     
     const entries = Object.entries(studentAssignments);
     let updated = 0;
     let failed = 0;
+    const batchUpdateSize = 10;
     
-    for (const [studentId, groupId] of entries) {
-      let attempts = 0;
-      let success = false;
+    for (let i = 0; i < entries.length; i += batchUpdateSize) {
+      const batch = entries.slice(i, i + batchUpdateSize);
       
-      while (attempts < 3 && !success) {
+      await Promise.all(batch.map(async ([studentId, groupId]) => {
         try {
           await base44.asServiceRole.entities.Student.update(studentId, {
             classgroup_id: groupId
           });
           updated++;
-          success = true;
-          if (updated % 10 === 0) {
-            console.log(`Updated ${updated}/${entries.length} students...`);
-          }
         } catch (err) {
-          attempts++;
-          console.error(`Attempt ${attempts} failed for student ${studentId}:`, err.message);
-          if (attempts < 3) {
-            await new Promise(resolve => setTimeout(resolve, 200));
-          } else {
-            failed++;
-          }
+          console.error(`Failed to update student ${studentId}:`, err.message);
+          failed++;
         }
+      }));
+      
+      if ((i + batchUpdateSize) % 50 === 0) {
+        console.log(`Updated ${updated}/${entries.length} students...`);
       }
       
-      // Delay between each student to avoid rate limits
-      await new Promise(resolve => setTimeout(resolve, 100));
+      // Small delay between batches
+      await new Promise(resolve => setTimeout(resolve, 300));
     }
     
     console.log(`Finished: ${updated} updated, ${failed} failed`);
