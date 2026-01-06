@@ -104,6 +104,8 @@ Deno.serve(async (req) => {
       console.log(`\n=== Scheduling ClassGroup: ${classGroup.name} ===`);
       console.log(`ClassGroup student_ids array:`, classGroup.student_ids);
       console.log(`ClassGroup student_ids length:`, classGroup.student_ids?.length || 0);
+      console.log(`Subjects available for scheduling:`, subjects.length);
+      console.log(`Subject names:`, subjects.map(s => s.name));
 
       // Get students in this ClassGroup - use student_ids array from classGroup
       const classGroupStudentIds = classGroup.student_ids || [];
@@ -125,6 +127,9 @@ Deno.serve(async (req) => {
 
       // For each subject, schedule periods
       for (const subject of subjects) {
+        console.log(`\n  Scheduling subject: ${subject.name} (${subject.pyp_myp_hours_per_week || 4} hours/week)`);
+        console.log(`  Subject ID: ${subject.id}, IB Level: ${subject.ib_level}`);
+        console.log(`  Active teachers: ${teachers.length}, Available rooms: ${rooms.length}`);
 
         // Find a qualified teacher (but continue even if none found)
         let assignedTeacher = null;
@@ -135,8 +140,12 @@ Deno.serve(async (req) => {
           );
           if (isQualified) {
             assignedTeacher = teacher;
+            console.log(`  ✓ Found qualified teacher: ${teacher.full_name}`);
             break;
           }
+        }
+        if (!assignedTeacher) {
+          console.log(`  ⚠️ No qualified teacher found for ${subject.name}`);
         }
 
         // Track this ClassGroup's schedule to avoid conflicts
@@ -351,8 +360,10 @@ Deno.serve(async (req) => {
           }
         }
 
+        console.log(`  ✓ Scheduled ${periodsScheduled}/${periodsNeeded} periods for ${subject.name}`);
+        
         if (periodsScheduled < periodsNeeded) {
-          console.warn(`${subject.name} for ${classGroup.name}: only scheduled ${periodsScheduled}/${periodsNeeded} periods`);
+          console.warn(`  ⚠️ ${subject.name} for ${classGroup.name}: only scheduled ${periodsScheduled}/${periodsNeeded} periods`);
         }
       }
     }
