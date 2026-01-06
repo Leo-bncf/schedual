@@ -626,19 +626,18 @@ Now process the user's input and return ONLY the JSON object.`,
           console.log(`Calling generatePYPMYPSchedule for ${level}...`);
 
           try {
-            const { data: result } = await base44.functions.invoke('generatePYPMYPSchedule', {
+            const response = await base44.functions.invoke('generatePYPMYPSchedule', {
               schedule_version_id: selectedVersion.id,
               level
             });
 
-            console.log(`${level} scheduling result:`, result);
+            console.log(`${level} raw response:`, response);
+            const result = response.data;
 
             if (result?.error) {
-              console.error(`❌ ${level} scheduling failed:`, result.error);
-              throw new Error(`${level} scheduling failed: ${result.error}`);
-            }
-
-            if (result?.slots && result.slots.length > 0) {
+              console.error(`❌ ${level} scheduling error:`, result.error);
+              console.warn(`⚠️ Skipping ${level} - no slots generated`);
+            } else if (result?.slots && result.slots.length > 0) {
               console.log(`✅ Generated ${result.slots.length} slots for ${level}`);
               newSlots.push(...result.slots);
 
@@ -650,19 +649,22 @@ Now process the user's input and return ONLY the JSON object.`,
 
               // Update availability tracking
               result.slots.forEach(slot => {
-                if (slot.teacher_id && teacherSchedules[slot.teacher_id]) {
+                if (slot.teacher_id) {
+                  if (!teacherSchedules[slot.teacher_id]) teacherSchedules[slot.teacher_id] = [];
                   teacherSchedules[slot.teacher_id].push({ day: slot.day, period: slot.period });
                 }
-                if (slot.room_id && roomSchedules[slot.room_id]) {
+                if (slot.room_id) {
+                  if (!roomSchedules[slot.room_id]) roomSchedules[slot.room_id] = [];
                   roomSchedules[slot.room_id].push({ day: slot.day, period: slot.period });
                 }
               });
             } else {
-              console.warn(`⚠️ No slots generated for ${level} - check if ClassGroups, Subjects, and Teachers exist`);
+              console.warn(`⚠️ No slots generated for ${level} - result:`, result);
+              console.log(`Check: ClassGroups (${classGroups.filter(c => c.ib_programme === level).length}), Subjects (${subjects.filter(s => s.ib_level === level).length}), Teachers (${teachers.length})`);
             }
           } catch (error) {
-            console.error(`❌ Error scheduling ${level}:`, error);
-            throw error;
+            console.error(`❌ Error calling ${level} scheduling function:`, error);
+            console.warn(`⚠️ Continuing without ${level} slots`);
           }
           continue;
         }
