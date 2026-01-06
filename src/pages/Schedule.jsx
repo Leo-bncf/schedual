@@ -740,8 +740,10 @@ Now process the user's input and return ONLY the JSON object.`,
         // INTELLIGENT CSP SOLVER WITH BACKTRACKING & FORWARD CHECKING
         let totalPeriodsToSchedule = Object.values(groupPeriodNeeds).reduce((sum, g) => sum + g.periodsNeeded, 0);
         let totalScheduled = 0;
-        const maxIterations = totalPeriodsToSchedule * 10; // More iterations for intelligent search
+        const maxIterations = totalPeriodsToSchedule * 20; // More iterations for complex schedules
         let iterations = 0;
+
+        console.log(`\n📊 Total periods to schedule: ${totalPeriodsToSchedule} across ${Object.keys(groupPeriodNeeds).length} groups`);
         
         // Helper function to shuffle array
         const shuffleArray = (array) => {
@@ -820,10 +822,15 @@ Now process the user's input and return ONLY the JSON object.`,
         };
         
         let stuckCount = 0;
-        
+        let lastProgress = 0;
+
         while (totalScheduled < totalPeriodsToSchedule && iterations < maxIterations) {
           iterations++;
           let scheduledThisRound = false;
+
+          if (iterations % 100 === 0) {
+            console.log(`Iteration ${iterations}: ${totalScheduled}/${totalPeriodsToSchedule} periods scheduled (${Math.round(totalScheduled/totalPeriodsToSchedule*100)}%)`);
+          }
           
           // MOST-CONSTRAINED-FIRST: Sort groups by available slots (schedule hardest first)
           const groupsNeedingScheduling = Object.entries(groupPeriodNeeds)
@@ -833,11 +840,12 @@ Now process the user's input and return ONLY the JSON object.`,
           
           if (groupsNeedingScheduling.length > 0 && groupsNeedingScheduling[0].availableSlots === 0) {
             console.log(`⚠️ Group "${groupsNeedingScheduling[0].info.group.name}" has NO available slots - backtracking`);
-            if (newSlots.length > 10) {
-              backtrack(7);
+            if (newSlots.length > 15) {
+              backtrack(10);
               stuckCount++;
               continue;
             } else {
+              console.warn('Cannot backtrack further - stopping early');
               break;
             }
           }
@@ -1027,26 +1035,46 @@ Now process the user's input and return ONLY the JSON object.`,
           
           if (!scheduledThisRound) {
             stuckCount++;
-            if (stuckCount < 8 && newSlots.length > 15) {
-              // Aggressive backtracking with larger undos
-              const undoCount = Math.min(10, Math.floor(newSlots.length * 0.15)); // Undo 15% or 10 slots
+
+            // Track if we're making progress overall
+            if (totalScheduled > lastProgress) {
+              lastProgress = totalScheduled;
+              stuckCount = Math.max(0, stuckCount - 1); // Give credit for progress
+            }
+
+            if (stuckCount < 15 && newSlots.length > 20) {
+              // More aggressive and frequent backtracking
+              const undoCount = Math.min(15, Math.floor(newSlots.length * 0.2)); // Undo 20% or 15 slots
               backtrack(undoCount);
-              console.log(`🔄 Backtrack attempt ${stuckCount}/8 - undid ${undoCount} slots, retrying...`);
+              console.log(`🔄 Backtrack attempt ${stuckCount}/15 - undid ${undoCount} slots (${totalScheduled}/${totalPeriodsToSchedule})`);
               continue;
             } else {
-              console.log('⚠️ CSP solver exhausted - stopping (backtracked 8 times)');
+              console.log(`⚠️ CSP solver stopping after ${iterations} iterations (${stuckCount} stuck attempts)`);
               break;
             }
           } else {
             stuckCount = 0; // Reset stuck counter on progress
+            lastProgress = totalScheduled;
           }
         }
 
+        console.log(`\n📋 Final Scheduling Results:`);
+        const incomplete = [];
         Object.entries(groupPeriodNeeds).forEach(([groupId, info]) => {
           if (info.periodsScheduled < info.periodsNeeded) {
-            console.log(`⚠️ Group "${info.group.name}" only scheduled ${info.periodsScheduled}/${info.periodsNeeded} periods`);
+            const missing = info.periodsNeeded - info.periodsScheduled;
+            console.log(`❌ "${info.group.name}" → ${info.periodsScheduled}/${info.periodsNeeded} periods (missing ${missing})`);
+            incomplete.push({ name: info.group.name, scheduled: info.periodsScheduled, needed: info.periodsNeeded });
+          } else {
+            console.log(`✅ "${info.group.name}" → ${info.periodsScheduled}/${info.periodsNeeded} periods`);
           }
         });
+
+        if (incomplete.length > 0) {
+          console.warn(`\n⚠️ ${incomplete.length} groups did not receive all required periods`);
+        } else {
+          console.log(`\n✅ All ${Object.keys(groupPeriodNeeds).length} groups fully scheduled!`);
+        }
       }
 
       // Add test slots at the end (after classes are scheduled) - REDUCED ALLOCATION
