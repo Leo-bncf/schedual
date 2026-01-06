@@ -184,20 +184,32 @@ Deno.serve(async (req) => {
             if (dayPeriodCount[day] >= targetForDay && targetForDay > 0) break;
 
             // Skip break and lunch periods
-            if (blockedPeriods.has(period)) continue;
+            if (blockedPeriods.has(period)) {
+              console.log(`  ${day} P${period}: BLOCKED (break/lunch)`);
+              continue;
+            }
 
             // Check if this is a reserved test slot
             const isTestSlot = reservedTestSlots.some(ts => ts.day === day && ts.period === period);
-            if (isTestSlot) continue;
+            if (isTestSlot) {
+              console.log(`  ${day} P${period}: BLOCKED (test slot)`);
+              continue;
+            }
             
             // Check ClassGroup availability
             const classGroupBusy = classGroupSchedule.some(s => s.day === day && s.period === period);
-            if (classGroupBusy) continue;
+            if (classGroupBusy) {
+              console.log(`  ${day} P${period}: BLOCKED (classgroup busy)`);
+              continue;
+            }
 
             // Check teacher availability (only if teacher assigned)
             if (assignedTeacher) {
               const teacherBusy = teacherSchedules[assignedTeacher.id]?.some(s => s.day === day && s.period === period);
-              if (teacherBusy) continue;
+              if (teacherBusy) {
+                console.log(`  ${day} P${period}: BLOCKED (teacher ${assignedTeacher.full_name} busy)`);
+                continue;
+              }
             }
             
             // Check hard constraints
@@ -207,14 +219,17 @@ Deno.serve(async (req) => {
               if (constraint.category === 'teacher' && assignedTeacher) {
                 if (!constraint.rule?.teacher_id || constraint.rule?.teacher_id === assignedTeacher.id) {
                   if (constraint.rule?.max_hours_per_week && (teacherSchedules[assignedTeacher.id]?.length || 0) >= constraint.rule.max_hours_per_week) {
+                    console.log(`  ${day} P${period}: BLOCKED (teacher max hours constraint)`);
                     violatesConstraint = true;
                     break;
                   }
                   if (constraint.rule?.prohibited_days?.includes(day)) {
+                    console.log(`  ${day} P${period}: BLOCKED (teacher prohibited day)`);
                     violatesConstraint = true;
                     break;
                   }
                   if (constraint.rule?.unavailable_slots?.some(u => u.day === day && u.period === period)) {
+                    console.log(`  ${day} P${period}: BLOCKED (teacher unavailable slot)`);
                     violatesConstraint = true;
                     break;
                   }
@@ -224,12 +239,14 @@ Deno.serve(async (req) => {
               if (constraint.category === 'subject' && constraint.rule?.subject_id === subject.id) {
                 if (constraint.rule?.prohibited_days?.includes(day) || 
                     constraint.rule?.prohibited_slots?.some(slot => slot.day === day && (!slot.period || slot.period === period))) {
+                  console.log(`  ${day} P${period}: BLOCKED (subject constraint)`);
                   violatesConstraint = true;
                   break;
                 }
               }
               // Time constraints
               if (constraint.category === 'time' && constraint.rule?.prohibited_slots?.some(slot => slot.day === day && slot.period === period)) {
+                console.log(`  ${day} P${period}: BLOCKED (time constraint)`);
                 violatesConstraint = true;
                 break;
               }
@@ -246,7 +263,12 @@ Deno.serve(async (req) => {
               }
             }
 
-            if (!assignedRoom) continue;
+            if (!assignedRoom) {
+              console.log(`  ${day} P${period}: BLOCKED (no available room)`);
+              continue;
+            }
+            
+            console.log(`  ${day} P${period}: ✓ SCHEDULING with room ${assignedRoom.name}`);
 
             // Create slot
             const slot = {
