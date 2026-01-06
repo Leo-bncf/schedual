@@ -34,7 +34,9 @@ Deno.serve(async (req) => {
     });
     
     const subjects = await base44.asServiceRole.entities.Subject.filter({ 
-      school_id: schoolId 
+      school_id: schoolId,
+      ib_level: level,
+      is_active: true
     });
     
     const teachers = await base44.asServiceRole.entities.Teacher.filter({ 
@@ -109,22 +111,16 @@ Deno.serve(async (req) => {
       }
 
       // For PYP/MYP: All students take ALL subjects for their level
-      // Get all subjects for this IB level
-      const levelSubjects = subjects.filter(s => s.ib_level === level && s.is_active !== false);
-      console.log(`Found ${levelSubjects.length} active subjects for ${level}`);
-      console.log(`Subject names:`, levelSubjects.map(s => s.name));
-      console.log(`All subjects (unfiltered):`, subjects.map(s => ({ name: s.name, ib_level: s.ib_level, is_active: s.is_active })));
-
-      if (levelSubjects.length === 0) {
+      // subjects are already filtered by level and is_active in the query above
+      if (subjects.length === 0) {
         console.warn(`⚠️ No subjects found for ${level} - SKIPPING ClassGroup ${classGroup.name}`);
         continue;
       }
 
-      console.log(`ClassGroup ${classGroup.name} will be scheduled for ${levelSubjects.length} subjects`);
+      console.log(`ClassGroup ${classGroup.name} will be scheduled for ${subjects.length} subjects`);
 
       // For each subject, schedule periods
-      for (const subject of levelSubjects) {
-        console.log(`\n--- Scheduling ${subject.name} for ${classGroup.name} ---`);
+      for (const subject of subjects) {
 
         // Find a qualified teacher (but continue even if none found)
         let assignedTeacher = null;
@@ -135,13 +131,8 @@ Deno.serve(async (req) => {
           );
           if (isQualified) {
             assignedTeacher = teacher;
-            console.log(`Found teacher ${teacher.full_name} for ${subject.name}`);
             break;
           }
-        }
-
-        if (!assignedTeacher) {
-          console.warn(`No qualified teacher found for ${subject.name} (${level}) - scheduling anyway`);
         }
 
         // Track this ClassGroup's schedule to avoid conflicts
@@ -184,32 +175,20 @@ Deno.serve(async (req) => {
             if (dayPeriodCount[day] >= targetForDay && targetForDay > 0) break;
 
             // Skip break and lunch periods
-            if (blockedPeriods.has(period)) {
-              console.log(`  ${day} P${period}: BLOCKED (break/lunch)`);
-              continue;
-            }
+            if (blockedPeriods.has(period)) continue;
 
             // Check if this is a reserved test slot
             const isTestSlot = reservedTestSlots.some(ts => ts.day === day && ts.period === period);
-            if (isTestSlot) {
-              console.log(`  ${day} P${period}: BLOCKED (test slot)`);
-              continue;
-            }
+            if (isTestSlot) continue;
             
             // Check ClassGroup availability
             const classGroupBusy = classGroupSchedule.some(s => s.day === day && s.period === period);
-            if (classGroupBusy) {
-              console.log(`  ${day} P${period}: BLOCKED (classgroup busy)`);
-              continue;
-            }
+            if (classGroupBusy) continue;
 
             // Check teacher availability (only if teacher assigned)
             if (assignedTeacher) {
               const teacherBusy = teacherSchedules[assignedTeacher.id]?.some(s => s.day === day && s.period === period);
-              if (teacherBusy) {
-                console.log(`  ${day} P${period}: BLOCKED (teacher ${assignedTeacher.full_name} busy)`);
-                continue;
-              }
+              if (teacherBusy) continue;
             }
             
             // Check hard constraints
@@ -219,17 +198,14 @@ Deno.serve(async (req) => {
               if (constraint.category === 'teacher' && assignedTeacher) {
                 if (!constraint.rule?.teacher_id || constraint.rule?.teacher_id === assignedTeacher.id) {
                   if (constraint.rule?.max_hours_per_week && (teacherSchedules[assignedTeacher.id]?.length || 0) >= constraint.rule.max_hours_per_week) {
-                    console.log(`  ${day} P${period}: BLOCKED (teacher max hours constraint)`);
                     violatesConstraint = true;
                     break;
                   }
                   if (constraint.rule?.prohibited_days?.includes(day)) {
-                    console.log(`  ${day} P${period}: BLOCKED (teacher prohibited day)`);
                     violatesConstraint = true;
                     break;
                   }
                   if (constraint.rule?.unavailable_slots?.some(u => u.day === day && u.period === period)) {
-                    console.log(`  ${day} P${period}: BLOCKED (teacher unavailable slot)`);
                     violatesConstraint = true;
                     break;
                   }
@@ -239,14 +215,12 @@ Deno.serve(async (req) => {
               if (constraint.category === 'subject' && constraint.rule?.subject_id === subject.id) {
                 if (constraint.rule?.prohibited_days?.includes(day) || 
                     constraint.rule?.prohibited_slots?.some(slot => slot.day === day && (!slot.period || slot.period === period))) {
-                  console.log(`  ${day} P${period}: BLOCKED (subject constraint)`);
                   violatesConstraint = true;
                   break;
                 }
               }
               // Time constraints
               if (constraint.category === 'time' && constraint.rule?.prohibited_slots?.some(slot => slot.day === day && slot.period === period)) {
-                console.log(`  ${day} P${period}: BLOCKED (time constraint)`);
                 violatesConstraint = true;
                 break;
               }
@@ -263,12 +237,7 @@ Deno.serve(async (req) => {
               }
             }
 
-            if (!assignedRoom) {
-              console.log(`  ${day} P${period}: BLOCKED (no available room)`);
-              continue;
-            }
-            
-            console.log(`  ${day} P${period}: ✓ SCHEDULING with room ${assignedRoom.name}`);
+            if (!assignedRoom) continue;
 
             // Create slot
             const slot = {
