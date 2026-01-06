@@ -91,21 +91,40 @@ export default function ClassGroups() {
 
   const handleAutoGenerate = async () => {
     setIsGenerating(true);
-    setGenerationProgress(0);
-    setGenerationStatus('Analyzing students...');
+    setGenerationProgress({
+      stage: 'Analyzing students',
+      percent: 0,
+      message: 'Analyzing students by year and programme...',
+      currentStep: 'analyze',
+      completedSteps: [],
+      completed: false
+    });
     
     try {
-      setGenerationProgress(20);
-      setGenerationStatus('Creating class groups...');
+      setGenerationProgress(prev => ({
+        ...prev,
+        percent: 20,
+        stage: 'Creating batches',
+        message: 'Creating student batches...'
+      }));
       
       const response = await base44.functions.invoke('createClassGroupBatches');
       
-      setGenerationProgress(60);
-      setGenerationStatus('Assigning students to groups...');
+      setGenerationProgress(prev => ({
+        ...prev,
+        percent: 60,
+        stage: 'Assigning students',
+        message: 'Assigning students to class groups...',
+        completedSteps: ['analyze', 'batches']
+      }));
       
       if (response.data.success) {
-        setGenerationProgress(80);
-        setGenerationStatus('Finalizing changes...');
+        setGenerationProgress(prev => ({
+          ...prev,
+          percent: 80,
+          stage: 'Finalizing',
+          message: 'Finalizing class group assignments...'
+        }));
         
         // Wait for backend updates to complete
         await new Promise(resolve => setTimeout(resolve, 1500));
@@ -120,10 +139,16 @@ export default function ClassGroups() {
           queryClient.refetchQueries({ queryKey: ['students'] })
         ]);
 
-        setGenerationProgress(100);
-        setGenerationStatus('Complete! Created class groups.');
+        setGenerationProgress({
+          stage: 'Complete',
+          percent: 100,
+          message: `Successfully created ${response.data.created || 0} class groups!`,
+          currentStep: '',
+          completedSteps: ['analyze', 'batches', 'assign', 'finalize'],
+          completed: true
+        });
         
-        await new Promise(resolve => setTimeout(resolve, 1500));
+        await new Promise(resolve => setTimeout(resolve, 2000));
 
         let message = response.data.message;
         if (response.data.ineligibleStudents > 0) {
@@ -139,8 +164,14 @@ export default function ClassGroups() {
       alert('Failed to generate ClassGroups. Check console for details.');
     } finally {
       setIsGenerating(false);
-      setGenerationProgress(0);
-      setGenerationStatus('');
+      setGenerationProgress({
+        stage: '',
+        percent: 0,
+        message: '',
+        currentStep: '',
+        completedSteps: [],
+        completed: false
+      });
     }
   };
 
