@@ -407,9 +407,23 @@ export default function ClassGroups() {
             {students
               .filter(s => selectedGroup?.student_ids?.includes(s.id))
               .map(student => {
-                // Get student's classes (for DP students)
+                // Get student's classes (for DP students) - deduplicate by subject_id and level
                 const studentClasses = student.ib_programme === 'DP' 
-                  ? teachingGroups.filter(tg => tg.student_ids?.includes(student.id))
+                  ? (() => {
+                      const allGroups = teachingGroups.filter(tg => tg.student_ids?.includes(student.id));
+                      const uniqueClasses = [];
+                      const seenKeys = new Set();
+                      
+                      for (const tg of allGroups) {
+                        const key = `${tg.subject_id}-${tg.level}`;
+                        if (!seenKeys.has(key)) {
+                          seenKeys.add(key);
+                          uniqueClasses.push(tg);
+                        }
+                      }
+                      
+                      return uniqueClasses;
+                    })()
                   : [];
 
                 return (
