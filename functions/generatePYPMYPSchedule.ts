@@ -18,33 +18,36 @@ Deno.serve(async (req) => {
     const schools = await base44.asServiceRole.entities.School.filter({ id: schoolId });
     const school = schools[0];
     const testConfig = school?.settings?.test_config || {};
+    const periodsPerDay = school?.periods_per_day || 8;
+    const breakPeriods = school?.settings?.break_periods || [];
+    const lunchPeriod = school?.settings?.lunch_period || 4;
     
-    // Fetch data
-    const classGroups = await base44.entities.ClassGroup.filter({ 
+    // Fetch data using asServiceRole to ensure we get all records
+    const classGroups = await base44.asServiceRole.entities.ClassGroup.filter({ 
       school_id: schoolId,
       ib_programme: level 
     });
     
-    const students = await base44.entities.Student.filter({ 
+    const students = await base44.asServiceRole.entities.Student.filter({ 
       school_id: schoolId,
       ib_programme: level
     });
     
-    const subjects = await base44.entities.Subject.filter({ 
+    const subjects = await base44.asServiceRole.entities.Subject.filter({ 
       school_id: schoolId 
     });
     
-    const teachers = await base44.entities.Teacher.filter({ 
+    const teachers = await base44.asServiceRole.entities.Teacher.filter({ 
       school_id: schoolId 
     });
     
-    const rooms = await base44.entities.Room.filter({ 
+    const rooms = await base44.asServiceRole.entities.Room.filter({ 
       school_id: schoolId,
       is_active: true 
     });
     
     // Fetch constraints
-    const constraints = await base44.entities.Constraint.filter({ 
+    const constraints = await base44.asServiceRole.entities.Constraint.filter({ 
       school_id: schoolId,
       is_active: true 
     });
@@ -54,7 +57,8 @@ Deno.serve(async (req) => {
     console.log(`Found ${classGroups.length} ClassGroups, ${students.length} students, ${subjects.length} subjects`);
 
     const days = ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday'];
-    const periods = Array.from({ length: 12 }, (_, i) => i + 1);
+    const periods = Array.from({ length: periodsPerDay }, (_, i) => i + 1);
+    const blockedPeriods = new Set([...breakPeriods, lunchPeriod]);
     const slots = [];
 
     // Track teacher and room availability globally
@@ -166,6 +170,9 @@ Deno.serve(async (req) => {
             if (periodsScheduled >= periodsNeeded) break;
             if (dayPeriodCount[day] >= targetForDay && targetForDay > 0) break;
 
+            // Skip break and lunch periods
+            if (blockedPeriods.has(period)) continue;
+
             // Check if this is a reserved test slot
             const isTestSlot = reservedTestSlots.some(ts => ts.day === day && ts.period === period);
             if (isTestSlot) continue;
@@ -259,6 +266,9 @@ Deno.serve(async (req) => {
 
             for (const period of periods) {
               if (periodsScheduled >= periodsNeeded) break;
+
+              // Skip break and lunch periods
+              if (blockedPeriods.has(period)) continue;
 
               const isTestSlot = reservedTestSlots.some(ts => ts.day === day && ts.period === period);
               if (isTestSlot) continue;
