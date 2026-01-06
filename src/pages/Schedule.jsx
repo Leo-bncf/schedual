@@ -915,12 +915,15 @@ Now process the user's input and return ONLY the JSON object.`,
 
                     if (studentIds.length > 0) {
                       studentIds.forEach(studentId => {
+                        if (!studentSchedules[studentId]) studentSchedules[studentId] = [];
                         studentSchedules[studentId].push({ day, period, subjectId: group.subject_id });
                       });
                     }
-                    if (teacherId && teacherSchedules[teacherId]) {
+                    if (teacherId) {
+                      if (!teacherSchedules[teacherId]) teacherSchedules[teacherId] = [];
                       teacherSchedules[teacherId].push({ day, period });
                     }
+                    if (!roomSchedules[assignedRoom.id]) roomSchedules[assignedRoom.id] = [];
                     roomSchedules[assignedRoom.id].push({ day, period });
 
                     groupInfo.periodsScheduled++;
