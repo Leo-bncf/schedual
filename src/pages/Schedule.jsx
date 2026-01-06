@@ -640,10 +640,12 @@ Now process the user's input and return ONLY the JSON object.`,
             
             // Update availability tracking
             result.slots.forEach(slot => {
-              if (slot.teacher_id && teacherSchedules[slot.teacher_id]) {
+              if (slot.teacher_id) {
+                if (!teacherSchedules[slot.teacher_id]) teacherSchedules[slot.teacher_id] = [];
                 teacherSchedules[slot.teacher_id].push({ day: slot.day, period: slot.period });
               }
-              if (slot.room_id && roomSchedules[slot.room_id]) {
+              if (slot.room_id) {
+                if (!roomSchedules[slot.room_id]) roomSchedules[slot.room_id] = [];
                 roomSchedules[slot.room_id].push({ day: slot.day, period: slot.period });
               }
             });
