@@ -379,7 +379,17 @@ export default function ClassGroups() {
       <GenerationProgress
         open={isGenerating}
         progress={generationProgress}
-        status={generationStatus}
+        onClose={() => {
+          setIsGenerating(false);
+          setGenerationProgress({
+            stage: '',
+            percent: 0,
+            message: '',
+            currentStep: '',
+            completedSteps: [],
+            completed: false
+          });
+        }}
       />
 
       {/* ClassGroup Detail Dialog */}
