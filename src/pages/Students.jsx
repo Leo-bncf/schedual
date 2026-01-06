@@ -426,18 +426,26 @@ CRITICAL INSTRUCTIONS - YEAR GROUPS ARE MANDATORY:
    
    NEVER output generic "DP", "MYP", or "PYP" - ALWAYS include the specific year/class level.
 
-3. DP STUDENTS: MUST have EXACTLY 6 subjects with HL/SL levels
+3. DP STUDENTS: MUST have EXACTLY 6 UNIQUE subjects with HL/SL levels
+   - CRITICAL: NO DUPLICATE SUBJECTS - Each subject name should appear ONLY ONCE per student
+   - If you see the same subject multiple times, include it ONLY ONCE with the appropriate level
+   - Example: If document shows "Math AI HL, Math AI HL, Math AI SL" - output ONLY "Math AI HL" (one occurrence)
 
-4. CRITICAL - MATH FOR PYP/MYP STUDENTS:
+4. CRITICAL - MATHEMATICS MUTUAL EXCLUSIVITY:
+   - Math AI and Math AA are MUTUALLY EXCLUSIVE - a student can take ONLY ONE
+   - If document shows both "Math AI" and "Math AA" for the same student, choose the FIRST one mentioned and IGNORE the other
+   - NEVER output both Math AI and Math AA for the same student
+
+5. CRITICAL - MATH FOR PYP/MYP STUDENTS:
    - For PYP and MYP students, there is NO "Math AI" or "Math AA" distinction
    - ALL math for PYP students should be reported as "Mathematics" (no AI/AA suffix)
    - ALL math for MYP students should be reported as "Mathematics" (no AI/AA suffix)
    - ONLY DP students can have "Math AI" or "Math AA"
    - If you see "Math AI" or "Math AA" for a PYP/MYP student, output just "Mathematics"
 
-5. Subject matching: Use learned corrections above for common variations
+6. Subject matching: Use learned corrections above for common variations
 
-6. Preserve all accents in names (é, ñ, ü, ö, etc.)
+7. Preserve all accents in names (é, ñ, ü, ö, etc.)
 
 Return ONLY students array, no other text.`,
         file_urls: [file_url],
@@ -472,13 +480,54 @@ Return ONLY students array, no other text.`,
         }
       });
 
-      const extractedStudents = llmResponse?.students || [];
+      let extractedStudents = llmResponse?.students || [];
       
       if (extractedStudents.length === 0) {
         throw new Error('No students found in document');
       }
 
-      console.log(`✅ Extracted ${extractedStudents.length} students with training-enhanced AI`);
+      // Clean duplicates from each student's subject list
+      extractedStudents = extractedStudents.map(student => {
+        if (!student.subjects || !Array.isArray(student.subjects)) return student;
+
+        const uniqueSubjects = [];
+        const seenSubjectNames = new Set();
+        let hasMathAI = false;
+        let hasMathAA = false;
+
+        for (const subject of student.subjects) {
+          const normalizedName = subject.name?.toLowerCase().trim();
+          
+          // Check for Math AI/AA mutual exclusivity
+          const isMathAI = normalizedName?.includes('mathematics') && normalizedName?.includes('interpretation');
+          const isMathAA = normalizedName?.includes('mathematics') && normalizedName?.includes('approaches');
+
+          if (isMathAI && hasMathAA) {
+            console.log(`Skipping Math AI for ${student.full_name} - already has Math AA`);
+            continue;
+          }
+          if (isMathAA && hasMathAI) {
+            console.log(`Skipping Math AA for ${student.full_name} - already has Math AI`);
+            continue;
+          }
+
+          // Prevent duplicate subjects
+          if (seenSubjectNames.has(normalizedName)) {
+            console.log(`Removed duplicate subject: ${subject.name} for ${student.full_name}`);
+            continue;
+          }
+
+          seenSubjectNames.add(normalizedName);
+          uniqueSubjects.push(subject);
+
+          if (isMathAI) hasMathAI = true;
+          if (isMathAA) hasMathAA = true;
+        }
+
+        return { ...student, subjects: uniqueSubjects };
+      });
+
+      console.log(`✅ Extracted ${extractedStudents.length} students with training-enhanced AI (duplicates removed)`);
 
       // Validate LLM output structure
       const invalidStudents = extractedStudents.filter(s => 
