@@ -33,10 +33,10 @@ Deno.serve(async (req) => {
       ib_programme: level
     });
     
-    const subjects = await base44.asServiceRole.entities.Subject.filter({ 
-      school_id: schoolId,
-      ib_level: level
-    }).then(results => results.filter(s => s.is_active !== false));
+    let subjects = await base44.asServiceRole.entities.Subject.filter({ 
+      school_id: schoolId
+    });
+    subjects = subjects.filter(s => s.ib_level === level && s.is_active !== false);
     
     const teachers = await base44.asServiceRole.entities.Teacher.filter({ 
       school_id: schoolId 
@@ -55,7 +55,12 @@ Deno.serve(async (req) => {
     const hardConstraints = constraints.filter(c => c.type === 'hard');
     console.log(`Loaded ${hardConstraints.length} hard constraints for ${level}`);
 
-    console.log(`Found ${classGroups.length} ClassGroups, ${students.length} students, ${subjects.length} subjects`);
+    console.log(`Found ${classGroups.length} ClassGroups, ${students.length} students, ${subjects.length} ${level} subjects`);
+    
+    if (subjects.length === 0) {
+      console.error(`NO ${level} SUBJECTS FOUND - Cannot generate schedule`);
+      return Response.json({ success: true, slots_generated: 0, slots: [], error: `No subjects found for ${level}` });
+    }
 
     const days = ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday'];
     const periods = Array.from({ length: periodsPerDay }, (_, i) => i + 1);
