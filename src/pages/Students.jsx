@@ -629,6 +629,38 @@ OUTPUT: Return only the JSON with students array.`,
             let matchedSubject = null;
             let matchMethod = '';
 
+            // SPECIAL CASE: Mathematics AI/AA must match to specific variants, NOT generic "Mathematics"
+            const isMathAI = /math.*ai|applications.*interpretation/i.test(subj.name);
+            const isMathAA = /math.*aa|analysis.*approaches/i.test(subj.name);
+            
+            if (isMathAI || isMathAA) {
+              matchedSubject = subjectsList.find(s => {
+                const hasAI = /ai|applications.*interpretation/i.test(s.name);
+                const hasAA = /aa|analysis.*approaches/i.test(s.name);
+                const isMath = /math/i.test(s.name);
+                
+                if (isMathAI && isMath && hasAI) {
+                  matchMethod = 'math-ai';
+                  return true;
+                }
+                if (isMathAA && isMath && hasAA) {
+                  matchMethod = 'math-aa';
+                  return true;
+                }
+                return false;
+              });
+              
+              if (matchedSubject) {
+                console.log(`✅ [${matchMethod}] Matched "${subj.name}" → "${matchedSubject.name}" (${subj.level})`);
+                matchingResults.push({
+                  subject_id: matchedSubject.id,
+                  level: subj.level || 'SL',
+                  ib_group: matchedSubject.ib_group
+                });
+                continue;
+              }
+            }
+
             // Strategy 1: Direct exact match
             matchedSubject = subjectsList.find(s => {
               const normalized = s.name?.toLowerCase().trim().replace(/[&\/\\#,+()$~%.'":*?<>{}]/g, ' ').replace(/\s+/g, ' ').trim();
