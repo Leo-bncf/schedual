@@ -99,11 +99,11 @@ Deno.serve(async (req) => {
       console.log(`ClassGroup student_ids array:`, classGroup.student_ids);
       console.log(`ClassGroup student_ids length:`, classGroup.student_ids?.length || 0);
 
-      // Get students in this ClassGroup
-      const classGroupStudents = students.filter(s => s.classgroup_id === classGroup.id);
-      console.log(`Found ${classGroupStudents.length} students with classgroup_id matching ${classGroup.id}`);
+      // Get students in this ClassGroup - use student_ids array from classGroup
+      const classGroupStudentIds = classGroup.student_ids || [];
+      console.log(`ClassGroup has ${classGroupStudentIds.length} student IDs`);
       
-      if (classGroupStudents.length === 0) {
+      if (classGroupStudentIds.length === 0) {
         console.warn(`⚠️ No students in ClassGroup ${classGroup.name} - SKIPPING`);
         continue;
       }
