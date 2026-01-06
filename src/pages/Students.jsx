@@ -436,32 +436,32 @@ export default function Students() {
 
       // Extract using LLM with training context
       const llmResponse = await base44.integrations.Core.InvokeLLM({
-        prompt: `Extract ALL students from this document.${learningContext}
+        prompt: `You are extracting student data from an IB school document. Be accurate and careful.
 
-CRITICAL INSTRUCTIONS - YEAR GROUPS ARE MANDATORY:
-1. PROGRAMME DETECTION: Look for HL/SL (DP), year numbers (MYP), or class letters (PYP)
+${learningContext ? `LEARNED CORRECTIONS (apply these):\n${learningContext}\n` : ''}
 
-2. YEAR GROUP ASSIGNMENT - STRICT FORMAT REQUIRED:
-   - DP Programme: MUST be "DP1" or "DP2" exactly (check which year based on document structure/headings)
-   - MYP Programme: MUST be "MYP1", "MYP2", "MYP3", "MYP4", or "MYP5" exactly
-   - PYP Programme: MUST be "PYP-A", "PYP-B", "PYP-C", "PYP-D", "PYP-E", or "PYP-F" exactly (match the class letter)
-   
-   NEVER output generic "DP", "MYP", or "PYP" - ALWAYS include the specific year/class level.
+STEP 1 - IDENTIFY PROGRAMME:
+- DP students have HL/SL subjects (6 subjects total)
+- MYP students have year numbers (MYP1-5) 
+- PYP students have class letters (A-F)
 
-3. DP STUDENTS: MUST have EXACTLY 6 subjects with HL/SL levels
+STEP 2 - FORMAT YEAR GROUP (EXACT FORMAT):
+✓ DP1 or DP2 (never just "DP")
+✓ MYP1, MYP2, MYP3, MYP4, or MYP5 (never just "MYP")  
+✓ PYP-A, PYP-B, PYP-C, PYP-D, PYP-E, or PYP-F (never just "PYP")
 
-4. CRITICAL - MATH FOR PYP/MYP STUDENTS:
-   - For PYP and MYP students, there is NO "Math AI" or "Math AA" distinction
-   - ALL math for PYP students should be reported as "Mathematics" (no AI/AA suffix)
-   - ALL math for MYP students should be reported as "Mathematics" (no AI/AA suffix)
-   - ONLY DP students can have "Math AI" or "Math AA"
-   - If you see "Math AI" or "Math AA" for a PYP/MYP student, output just "Mathematics"
+STEP 3 - EXTRACT SUBJECTS:
+- DP: Extract all 6 subjects with their HL/SL level
+- MYP/PYP: Extract subject names without levels
+- Mathematics naming:
+  * DP students → "Math AI" or "Math AA" (keep as written)
+  * MYP/PYP students → "Mathematics" (never AI/AA)
 
-5. Subject matching: Use learned corrections above for common variations
+STEP 4 - CLEAN NAMES:
+- Keep all accents (José, François, etc.)
+- Use full legal names as written
 
-6. Preserve all accents in names (é, ñ, ü, ö, etc.)
-
-Return ONLY students array, no other text.`,
+OUTPUT: Return only the JSON with students array.`,
         file_urls: [file_url],
         response_json_schema: {
           type: "object",
