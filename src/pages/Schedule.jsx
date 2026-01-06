@@ -622,14 +622,22 @@ Now process the user's input and return ONLY the JSON object.`,
             currentStep: level.toLowerCase()
           }));
           
+          const levelClassGroups = classGroups.filter(cg => cg.ib_programme === level);
           console.log(`Using ClassGroup-based scheduling for ${level}`);
+          console.log(`Found ${levelClassGroups.length} ${level} ClassGroups`);
+          
+          if (levelClassGroups.length === 0) {
+            console.warn(`⚠️ No ${level} ClassGroups found - skipping ${level} scheduling`);
+            continue;
+          }
+          
           const { data: result } = await base44.functions.invoke('generatePYPMYPSchedule', {
             schedule_version_id: selectedVersion.id,
             level
           });
           
           if (result.slots) {
-            console.log(`Generated ${result.slots.length} slots for ${level}`);
+            console.log(`✓ Generated ${result.slots.length} slots for ${level}`);
             newSlots.push(...result.slots);
             
             setGenerationProgress(prev => ({
