@@ -1,73 +1,69 @@
 import { createClientFromRequest } from 'npm:@base44/sdk@0.8.6';
+import { getUserSchoolId } from './securityHelper.js';
 
 Deno.serve(async (req) => {
   try {
     const base44 = createClientFromRequest(req);
-    
-    // Verify authentication
     const user = await base44.auth.me();
-    if (!user || !user.school_id) {
-      return Response.json({ error: 'Unauthorized' }, { status: 401 });
-    }
+    if (!user) return Response.json({ error: 'Unauthorized' }, { status: 401 });
 
-    console.log('Starting duplicate subject cleanup...');
-    
-    // Fetch all students
-    const students = await base44.asServiceRole.entities.Student.filter({ 
-      school_id: user.school_id 
-    });
+    const schoolId = await getUserSchoolId(base44);
+    const students = await base44.entities.Student.filter({ school_id: schoolId, ib_programme: 'DP' });
 
-    let studentsFixed = 0;
-    const fixDetails = [];
+    let fixed = 0;
+    const issues = [];
 
     for (const student of students) {
-      if (!student.subject_choices || student.subject_choices.length === 0) continue;
+      if (!student.subject_choices || !Array.isArray(student.subject_choices)) continue;
 
-      // Remove duplicates: keep only first occurrence of each subject_id
-      const seenSubjects = new Set();
-      const uniqueChoices = [];
+      // Find duplicates (same subject_id, different or same level)
+      const seen = new Map();
+      const cleaned = [];
       let hasDuplicates = false;
 
       for (const choice of student.subject_choices) {
-        if (!seenSubjects.has(choice.subject_id)) {
-          seenSubjects.add(choice.subject_id);
-          uniqueChoices.push(choice);
+        const subjectId = choice.subject_id;
+        
+        if (!seen.has(subjectId)) {
+          // First occurrence - keep it
+          seen.set(subjectId, choice);
+          cleaned.push(choice);
         } else {
+          // Duplicate found!
           hasDuplicates = true;
-          console.log(`Found duplicate: ${student.full_name} - subject ${choice.subject_id}`);
+          const existing = seen.get(subjectId);
+          
+          issues.push({
+            student: student.full_name,
+            subject_id: subjectId,
+            duplicate_levels: [existing.level, choice.level].filter(Boolean)
+          });
+
+          // Keep the HL version if there's a conflict between HL and SL
+          if (choice.level === 'HL' && existing.level === 'SL') {
+            // Replace with HL version
+            const index = cleaned.findIndex(c => c.subject_id === subjectId);
+            cleaned[index] = choice;
+            seen.set(subjectId, choice);
+          }
+          // Otherwise keep the first occurrence (already in cleaned array)
         }
       }
 
       if (hasDuplicates) {
-        // Update student with cleaned subject_choices
-        await base44.asServiceRole.entities.Student.update(student.id, {
-          subject_choices: uniqueChoices
+        await base44.entities.Student.update(student.id, {
+          subject_choices: cleaned
         });
-
-        studentsFixed++;
-        fixDetails.push({
-          name: student.full_name,
-          before: student.subject_choices.length,
-          after: uniqueChoices.length,
-          removed: student.subject_choices.length - uniqueChoices.length
-        });
-
-        console.log(`✅ Fixed ${student.full_name}: ${student.subject_choices.length} → ${uniqueChoices.length} subjects`);
+        fixed++;
       }
     }
 
     return Response.json({
       success: true,
-      students_checked: students.length,
-      students_fixed: studentsFixed,
-      details: fixDetails
+      students_fixed: fixed,
+      issues_found: issues
     });
-
   } catch (error) {
-    console.error('Cleanup error:', error);
-    return Response.json({ 
-      success: false, 
-      error: error.message 
-    }, { status: 500 });
+    return Response.json({ error: error.message }, { status: 500 });
   }
 });

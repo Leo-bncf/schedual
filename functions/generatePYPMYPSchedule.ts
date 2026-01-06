@@ -54,14 +54,8 @@ Deno.serve(async (req) => {
     console.log(`Found ${classGroups.length} ClassGroups, ${students.length} students, ${subjects.length} subjects`);
 
     const days = ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday'];
-    const periodsPerDay = school?.periods_per_day || 8;
-    const periods = Array.from({ length: periodsPerDay }, (_, i) => i + 1);
-    const breakPeriods = new Set(school?.settings?.break_periods || []);
-    const lunchPeriod = school?.settings?.lunch_period || 4;
-    const blockedPeriods = new Set([...breakPeriods, lunchPeriod]);
+    const periods = Array.from({ length: 12 }, (_, i) => i + 1);
     const slots = [];
-    
-    console.log(`Using ${periodsPerDay} periods per day, blocked periods: ${Array.from(blockedPeriods).join(', ')}`);
 
     // Track teacher and room availability globally
     const teacherSchedules = {};
@@ -152,7 +146,7 @@ Deno.serve(async (req) => {
         days.forEach((day, dayIndex) => {
           const offset = dayIndex * 2;
           const dayPeriods = [...periods]
-            .map(p => ((p - 1 + offset) % periodsPerDay) + 1)
+            .map(p => ((p - 1 + offset) % 12) + 1)
             .sort(() => Math.random() - 0.5);
           periodsByDay[day] = dayPeriods;
         });
@@ -172,8 +166,7 @@ Deno.serve(async (req) => {
             if (periodsScheduled >= periodsNeeded) break;
             if (dayPeriodCount[day] >= targetForDay && targetForDay > 0) break;
 
-            // Check if this is a blocked period (break/lunch) or test slot
-            if (blockedPeriods.has(period)) continue;
+            // Check if this is a reserved test slot
             const isTestSlot = reservedTestSlots.some(ts => ts.day === day && ts.period === period);
             if (isTestSlot) continue;
             
@@ -267,8 +260,6 @@ Deno.serve(async (req) => {
             for (const period of periods) {
               if (periodsScheduled >= periodsNeeded) break;
 
-              // Check if this is a blocked period (break/lunch) or test slot
-              if (blockedPeriods.has(period)) continue;
               const isTestSlot = reservedTestSlots.some(ts => ts.day === day && ts.period === period);
               if (isTestSlot) continue;
               

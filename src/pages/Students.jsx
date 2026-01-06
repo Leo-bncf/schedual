@@ -194,28 +194,6 @@ export default function Students() {
       console.log(`Auto-assigned ${programmeSubjects.length} ${formData.ib_programme} subjects`);
     }
     
-    // VALIDATION: Remove duplicate subjects before saving
-    if (finalFormData.subject_choices && finalFormData.subject_choices.length > 0) {
-      const seenSubjects = new Set();
-      const uniqueChoices = [];
-      
-      for (const choice of finalFormData.subject_choices) {
-        if (!seenSubjects.has(choice.subject_id)) {
-          seenSubjects.add(choice.subject_id);
-          uniqueChoices.push(choice);
-        } else {
-          console.warn(`⚠️ Removed duplicate subject: ${choice.subject_id}`);
-        }
-      }
-      
-      const duplicatesRemoved = finalFormData.subject_choices.length - uniqueChoices.length;
-      if (duplicatesRemoved > 0) {
-        alert(`Removed ${duplicatesRemoved} duplicate subject(s). Each subject can only be taken once.`);
-      }
-      
-      finalFormData.subject_choices = uniqueChoices;
-    }
-    
     // Save student
     if (editingStudent) {
       updateMutation.mutate({ id: editingStudent.id, data: finalFormData });
@@ -436,32 +414,32 @@ export default function Students() {
 
       // Extract using LLM with training context
       const llmResponse = await base44.integrations.Core.InvokeLLM({
-        prompt: `You are extracting student data from an IB school document. Be accurate and careful.
+        prompt: `Extract ALL students from this document.${learningContext}
 
-${learningContext ? `LEARNED CORRECTIONS (apply these):\n${learningContext}\n` : ''}
+CRITICAL INSTRUCTIONS - YEAR GROUPS ARE MANDATORY:
+1. PROGRAMME DETECTION: Look for HL/SL (DP), year numbers (MYP), or class letters (PYP)
 
-STEP 1 - IDENTIFY PROGRAMME:
-- DP students have HL/SL subjects (6 subjects total)
-- MYP students have year numbers (MYP1-5) 
-- PYP students have class letters (A-F)
+2. YEAR GROUP ASSIGNMENT - STRICT FORMAT REQUIRED:
+   - DP Programme: MUST be "DP1" or "DP2" exactly (check which year based on document structure/headings)
+   - MYP Programme: MUST be "MYP1", "MYP2", "MYP3", "MYP4", or "MYP5" exactly
+   - PYP Programme: MUST be "PYP-A", "PYP-B", "PYP-C", "PYP-D", "PYP-E", or "PYP-F" exactly (match the class letter)
+   
+   NEVER output generic "DP", "MYP", or "PYP" - ALWAYS include the specific year/class level.
 
-STEP 2 - FORMAT YEAR GROUP (EXACT FORMAT):
-✓ DP1 or DP2 (never just "DP")
-✓ MYP1, MYP2, MYP3, MYP4, or MYP5 (never just "MYP")  
-✓ PYP-A, PYP-B, PYP-C, PYP-D, PYP-E, or PYP-F (never just "PYP")
+3. DP STUDENTS: MUST have EXACTLY 6 subjects with HL/SL levels
 
-STEP 3 - EXTRACT SUBJECTS:
-- DP: Extract all 6 subjects with their HL/SL level
-- MYP/PYP: Extract subject names without levels
-- Mathematics naming:
-  * DP students → "Math AI" or "Math AA" (keep as written)
-  * MYP/PYP students → "Mathematics" (never AI/AA)
+4. CRITICAL - MATH FOR PYP/MYP STUDENTS:
+   - For PYP and MYP students, there is NO "Math AI" or "Math AA" distinction
+   - ALL math for PYP students should be reported as "Mathematics" (no AI/AA suffix)
+   - ALL math for MYP students should be reported as "Mathematics" (no AI/AA suffix)
+   - ONLY DP students can have "Math AI" or "Math AA"
+   - If you see "Math AI" or "Math AA" for a PYP/MYP student, output just "Mathematics"
 
-STEP 4 - CLEAN NAMES:
-- Keep all accents (José, François, etc.)
-- Use full legal names as written
+5. Subject matching: Use learned corrections above for common variations
 
-OUTPUT: Return only the JSON with students array.`,
+6. Preserve all accents in names (é, ñ, ü, ö, etc.)
+
+Return ONLY students array, no other text.`,
         file_urls: [file_url],
         response_json_schema: {
           type: "object",
@@ -617,117 +595,108 @@ OUTPUT: Return only the JSON with students array.`,
           console.log(`Auto-assigned ${mypSubjects.length} MYP subjects to ${student.full_name}`);
         } else if (student.subjects && Array.isArray(student.subjects)) {
           // For DP: Process extracted subjects with enhanced matching
-          const matchingResults = [];
-          
-          for (const subj of student.subjects) {
+          subjectChoices = student.subjects.map(subj => {
             const normalizedExtracted = subj.name?.toLowerCase().trim()
               .replace(/[&\/\\#,+()$~%.'":*?<>{}]/g, ' ')
               .replace(/\s+/g, ' ')
               .trim();
 
-            // ULTRA-FUZZY MATCHING: Try every possible way to match
-            let matchedSubject = null;
-            let matchMethod = '';
+            // Try multiple matching strategies
+            const matchedSubject = subjectsList.find(s => {
+              const normalizedDB = s.name?.toLowerCase().trim()
+                .replace(/[&\/\\#,+()$~%.'":*?<>{}]/g, ' ')
+                .replace(/\s+/g, ' ')
+                .trim();
+              const codeDB = s.code?.toLowerCase().trim();
 
-            // SPECIAL CASE: Mathematics AI/AA must match to specific variants, NOT generic "Mathematics"
-            const isMathAI = /math.*ai|applications.*interpretation/i.test(subj.name);
-            const isMathAA = /math.*aa|analysis.*approaches/i.test(subj.name);
-            
-            if (isMathAI || isMathAA) {
-              matchedSubject = subjectsList.find(s => {
-                const hasAI = /ai|applications.*interpretation/i.test(s.name);
-                const hasAA = /aa|analysis.*approaches/i.test(s.name);
-                const isMath = /math/i.test(s.name);
-                
-                if (isMathAI && isMath && hasAI) {
-                  matchMethod = 'math-ai';
-                  return true;
-                }
-                if (isMathAA && isMath && hasAA) {
-                  matchMethod = 'math-aa';
-                  return true;
-                }
-                return false;
-              });
-              
-              if (matchedSubject) {
-                console.log(`✅ [${matchMethod}] Matched "${subj.name}" → "${matchedSubject.name}" (${subj.level})`);
-                matchingResults.push({
-                  subject_id: matchedSubject.id,
-                  level: subj.level || 'SL',
-                  ib_group: matchedSubject.ib_group
-                });
-                continue;
-              }
-            }
-
-            // Strategy 1: Direct exact match
-            matchedSubject = subjectsList.find(s => {
-              const normalized = s.name?.toLowerCase().trim().replace(/[&\/\\#,+()$~%.'":*?<>{}]/g, ' ').replace(/\s+/g, ' ').trim();
-              if (normalized === normalizedExtracted) {
-                matchMethod = 'exact';
+              // 1. Exact match
+              if (normalizedDB === normalizedExtracted || codeDB === normalizedExtracted) {
                 return true;
               }
+
+              // 2. Enhanced variations map with more flexible matching
+              const variations = {
+                'english': ['english a', 'english language and literature', 'english lang lit', 'language and literature', 'english literature', 'eng lit', 'english lang', 'lang lit'],
+                'spanish': ['spanish a', 'spanish b', 'spanish language', 'spanish ab initio', 'spanish ab', 'spanish lang'],
+                'french': ['french a', 'french b', 'french language', 'french ab initio', 'french ab', 'french lang'],
+                'german': ['german a', 'german b', 'german language', 'german ab initio', 'german ab', 'german lang'],
+                'chinese': ['chinese a', 'chinese b', 'chinese language', 'chinese ab initio', 'chinese ab', 'chinese lang', 'mandarin'],
+                'math': ['mathematics', 'maths', 'math aa', 'math ai', 'mathematics aa', 'mathematics ai', 'math analysis', 'math applications', 'mathematics analysis', 'mathematics applications', 'analysis and approaches', 'applications and interpretation'],
+                'physics': ['physics', 'phys'],
+                'chemistry': ['chemistry', 'chem'],
+                'biology': ['biology', 'bio'],
+                'history': ['history', 'hist'],
+                'geography': ['geography', 'geo', 'geog'],
+                'economics': ['economics', 'econ', 'eco'],
+                'business': ['business management', 'business studies', 'business', 'business man', 'bm'],
+                'psychology': ['psychology', 'psych'],
+                'environmental': ['environmental systems and societies', 'ess', 'environmental systems', 'environmental', 'env systems'],
+                'visual arts': ['visual arts', 'art', 'arts', 'va'],
+                'music': ['music'],
+                'theatre': ['theatre', 'theater', 'drama', 'theatre arts'],
+                'film': ['film', 'film studies'],
+                'dance': ['dance'],
+                'computer science': ['computer science', 'comp sci', 'cs', 'computing', 'computer'],
+                'design technology': ['design technology', 'design tech', 'dt', 'design', 'technology'],
+                'tok': ['theory of knowledge', 'tok'],
+                'ee': ['extended essay', 'ee'],
+                'cas': ['creativity activity service', 'cas']
+              };
+
+              // Check variations with flexible matching
+              for (const [key, varList] of Object.entries(variations)) {
+                const extractedMatchesKey = varList.some(v => {
+                  const normalized = v.replace(/\s+/g, ' ').trim();
+                  return normalizedExtracted.includes(normalized) || 
+                         normalized.includes(normalizedExtracted) ||
+                         normalizedExtracted.replace(/\s/g, '').includes(normalized.replace(/\s/g, ''));
+                });
+                const dbMatchesKey = varList.some(v => {
+                  const normalized = v.replace(/\s+/g, ' ').trim();
+                  return normalizedDB.includes(normalized) || 
+                         normalized.includes(normalizedDB) ||
+                         normalizedDB.replace(/\s/g, '').includes(normalized.replace(/\s/g, ''));
+                });
+
+                if (extractedMatchesKey && dbMatchesKey) {
+                  return true;
+                }
+              }
+
+              // 3. Enhanced partial match - check core words
+              const extractedWords = normalizedExtracted.split(' ').filter(w => w.length > 2);
+              const dbWords = normalizedDB.split(' ').filter(w => w.length > 2);
+              
+              const commonWords = extractedWords.filter(w => dbWords.includes(w));
+              if (commonWords.length >= Math.min(extractedWords.length, dbWords.length, 2)) {
+                return true;
+              }
+
+              // 4. Substring match (more flexible)
+              if (normalizedDB.includes(normalizedExtracted) || normalizedExtracted.includes(normalizedDB)) {
+                return true;
+              }
+
+              // 5. Code match with flexibility
+              if (codeDB && (normalizedExtracted.includes(codeDB) || codeDB.includes(normalizedExtracted) || normalizedExtracted.replace(/\s/g, '') === codeDB.replace(/\s/g, ''))) {
+                return true;
+              }
+
               return false;
             });
 
-            // Strategy 2: Contains match (database name contains extracted OR vice versa)
-            if (!matchedSubject) {
-              matchedSubject = subjectsList.find(s => {
-                const normalized = s.name?.toLowerCase().trim().replace(/[&\/\\#,+()$~%.'":*?<>{}]/g, ' ').replace(/\s+/g, ' ').trim();
-                if (normalized.includes(normalizedExtracted) || normalizedExtracted.includes(normalized)) {
-                  matchMethod = 'substring';
-                  return true;
-                }
-                return false;
-              });
-            }
-
-            // Strategy 3: Word overlap (at least 50% words match)
-            if (!matchedSubject) {
-              matchedSubject = subjectsList.find(s => {
-                const normalized = s.name?.toLowerCase().trim().replace(/[&\/\\#,+()$~%.'":*?<>{}]/g, ' ').replace(/\s+/g, ' ').trim();
-                const extractedWords = normalizedExtracted.split(' ').filter(w => w.length > 2);
-                const dbWords = normalized.split(' ').filter(w => w.length > 2);
-                const commonWords = extractedWords.filter(w => dbWords.some(dw => dw.includes(w) || w.includes(dw)));
-                
-                if (extractedWords.length > 0 && commonWords.length >= Math.ceil(extractedWords.length * 0.5)) {
-                  matchMethod = 'word-overlap';
-                  return true;
-                }
-                return false;
-              });
-            }
-
-            // Strategy 4: First significant word match (for "Math AI" → "Mathematics: Analysis")
-            if (!matchedSubject) {
-              const firstWord = normalizedExtracted.split(' ')[0];
-              if (firstWord && firstWord.length > 3) {
-                matchedSubject = subjectsList.find(s => {
-                  const normalized = s.name?.toLowerCase().trim();
-                  if (normalized.startsWith(firstWord) || normalized.includes(firstWord)) {
-                    matchMethod = 'first-word';
-                    return true;
-                  }
-                  return false;
-                });
-              }
-            }
-
             if (matchedSubject) {
-              console.log(`✅ [${matchMethod}] Matched "${subj.name}" → "${matchedSubject.name}" (${subj.level})`);
-              matchingResults.push({
+              console.log(`✅ Matched "${subj.name}" → "${matchedSubject.name}" (${subj.level})`);
+              return {
                 subject_id: matchedSubject.id,
                 level: subj.level || 'SL',
                 ib_group: matchedSubject.ib_group
-              });
+              };
             } else {
-              console.error(`❌ NO MATCH: "${subj.name}" (${subj.level}) - Tried all strategies!`);
-              console.error(`Available subjects:`, subjectsList.filter(s => s.ib_level === 'DP').map(s => s.name).join(', '));
+              console.warn(`❌ No match for: "${subj.name}" (${subj.level})`);
             }
-          }
-          
-          subjectChoices = matchingResults;
+            return null;
+          }).filter(Boolean);
         }
         
         return {
