@@ -801,8 +801,10 @@ Now process the user's input and return ONLY the JSON object.`,
                 
                 // Undo tracking
                 groupInfo.studentIds.forEach(sid => {
-                  const idx = studentSchedules[sid]?.findIndex(s => s.day === undoSlot.day && s.period === undoSlot.period);
-                  if (idx >= 0) studentSchedules[sid].splice(idx, 1);
+                  if (studentSchedules[sid]) {
+                    const idx = studentSchedules[sid].findIndex(s => s.day === undoSlot.day && s.period === undoSlot.period);
+                    if (idx >= 0) studentSchedules[sid].splice(idx, 1);
+                  }
                 });
                 if (groupInfo.teacherId && teacherSchedules[groupInfo.teacherId]) {
                   const idx = teacherSchedules[groupInfo.teacherId].findIndex(s => s.day === undoSlot.day && s.period === undoSlot.period);
@@ -996,11 +998,20 @@ Now process the user's input and return ONLY the JSON object.`,
 
                     if (studentIds.length > 0) {
                       studentIds.forEach(studentId => {
+                        if (!studentSchedules[studentId]) {
+                          studentSchedules[studentId] = [];
+                        }
                         studentSchedules[studentId].push({ day, period, subjectId: group.subject_id });
                       });
                     }
-                    if (teacherId && teacherSchedules[teacherId]) {
+                    if (teacherId) {
+                      if (!teacherSchedules[teacherId]) {
+                        teacherSchedules[teacherId] = [];
+                      }
                       teacherSchedules[teacherId].push({ day, period });
+                    }
+                    if (!roomSchedules[assignedRoom.id]) {
+                      roomSchedules[assignedRoom.id] = [];
                     }
                     roomSchedules[assignedRoom.id].push({ day, period });
 
