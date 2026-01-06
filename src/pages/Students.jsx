@@ -663,14 +663,16 @@ Return ONLY students array, no other text.`,
                 return true;
               }
 
-              // 2. Enhanced variations map with more flexible matching
+              // 2. Enhanced variations map - CRITICAL: Math AI and Math AA must be matched separately
               const variations = {
                 'english': ['english a', 'english language and literature', 'english lang lit', 'language and literature', 'english literature', 'eng lit', 'english lang', 'lang lit'],
                 'spanish': ['spanish a', 'spanish b', 'spanish language', 'spanish ab initio', 'spanish ab', 'spanish lang'],
                 'french': ['french a', 'french b', 'french language', 'french ab initio', 'french ab', 'french lang'],
                 'german': ['german a', 'german b', 'german language', 'german ab initio', 'german ab', 'german lang'],
                 'chinese': ['chinese a', 'chinese b', 'chinese language', 'chinese ab initio', 'chinese ab', 'chinese lang', 'mandarin'],
-                'math': ['mathematics', 'maths', 'math aa', 'math ai', 'mathematics aa', 'mathematics ai', 'math analysis', 'math applications', 'mathematics analysis', 'mathematics applications', 'analysis and approaches', 'applications and interpretation'],
+                'math_ai': ['math ai', 'mathematics ai', 'math applications', 'mathematics applications', 'applications and interpretation', 'applications & interpretation'],
+                'math_aa': ['math aa', 'mathematics aa', 'math analysis', 'mathematics analysis', 'analysis and approaches', 'analysis & approaches'],
+                'mathematics': ['mathematics', 'maths'],
                 'physics': ['physics', 'phys'],
                 'chemistry': ['chemistry', 'chem'],
                 'biology': ['biology', 'bio'],
