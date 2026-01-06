@@ -113,6 +113,7 @@ Deno.serve(async (req) => {
       const levelSubjects = subjects.filter(s => s.ib_level === level && s.is_active !== false);
       console.log(`Found ${levelSubjects.length} active subjects for ${level}`);
       console.log(`Subject names:`, levelSubjects.map(s => s.name));
+      console.log(`All subjects (unfiltered):`, subjects.map(s => ({ name: s.name, ib_level: s.ib_level, is_active: s.is_active })));
 
       if (levelSubjects.length === 0) {
         console.warn(`⚠️ No subjects found for ${level} - SKIPPING ClassGroup ${classGroup.name}`);
@@ -123,6 +124,7 @@ Deno.serve(async (req) => {
 
       // For each subject, schedule periods
       for (const subject of levelSubjects) {
+        console.log(`\n--- Scheduling ${subject.name} for ${classGroup.name} ---`);
 
         // Find a qualified teacher (but continue even if none found)
         let assignedTeacher = null;
@@ -133,6 +135,7 @@ Deno.serve(async (req) => {
           );
           if (isQualified) {
             assignedTeacher = teacher;
+            console.log(`Found teacher ${teacher.full_name} for ${subject.name}`);
             break;
           }
         }
