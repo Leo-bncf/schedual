@@ -617,108 +617,85 @@ OUTPUT: Return only the JSON with students array.`,
           console.log(`Auto-assigned ${mypSubjects.length} MYP subjects to ${student.full_name}`);
         } else if (student.subjects && Array.isArray(student.subjects)) {
           // For DP: Process extracted subjects with enhanced matching
-          subjectChoices = student.subjects.map(subj => {
+          const matchingResults = [];
+          
+          for (const subj of student.subjects) {
             const normalizedExtracted = subj.name?.toLowerCase().trim()
               .replace(/[&\/\\#,+()$~%.'":*?<>{}]/g, ' ')
               .replace(/\s+/g, ' ')
               .trim();
 
-            // Try multiple matching strategies
-            const matchedSubject = subjectsList.find(s => {
-              const normalizedDB = s.name?.toLowerCase().trim()
-                .replace(/[&\/\\#,+()$~%.'":*?<>{}]/g, ' ')
-                .replace(/\s+/g, ' ')
-                .trim();
-              const codeDB = s.code?.toLowerCase().trim();
+            // ULTRA-FUZZY MATCHING: Try every possible way to match
+            let matchedSubject = null;
+            let matchMethod = '';
 
-              // 1. Exact match
-              if (normalizedDB === normalizedExtracted || codeDB === normalizedExtracted) {
+            // Strategy 1: Direct exact match
+            matchedSubject = subjectsList.find(s => {
+              const normalized = s.name?.toLowerCase().trim().replace(/[&\/\\#,+()$~%.'":*?<>{}]/g, ' ').replace(/\s+/g, ' ').trim();
+              if (normalized === normalizedExtracted) {
+                matchMethod = 'exact';
                 return true;
               }
-
-              // 2. Enhanced variations map with more flexible matching
-              const variations = {
-                'english': ['english a', 'english language and literature', 'english lang lit', 'language and literature', 'english literature', 'eng lit', 'english lang', 'lang lit'],
-                'spanish': ['spanish a', 'spanish b', 'spanish language', 'spanish ab initio', 'spanish ab', 'spanish lang'],
-                'french': ['french a', 'french b', 'french language', 'french ab initio', 'french ab', 'french lang'],
-                'german': ['german a', 'german b', 'german language', 'german ab initio', 'german ab', 'german lang'],
-                'chinese': ['chinese a', 'chinese b', 'chinese language', 'chinese ab initio', 'chinese ab', 'chinese lang', 'mandarin'],
-                'math': ['mathematics', 'maths', 'math aa', 'math ai', 'mathematics aa', 'mathematics ai', 'math analysis', 'math applications', 'mathematics analysis', 'mathematics applications', 'analysis and approaches', 'applications and interpretation'],
-                'physics': ['physics', 'phys'],
-                'chemistry': ['chemistry', 'chem'],
-                'biology': ['biology', 'bio'],
-                'history': ['history', 'hist'],
-                'geography': ['geography', 'geo', 'geog'],
-                'economics': ['economics', 'econ', 'eco'],
-                'business': ['business management', 'business studies', 'business', 'business man', 'bm'],
-                'psychology': ['psychology', 'psych'],
-                'environmental': ['environmental systems and societies', 'ess', 'environmental systems', 'environmental', 'env systems'],
-                'visual arts': ['visual arts', 'art', 'arts', 'va'],
-                'music': ['music'],
-                'theatre': ['theatre', 'theater', 'drama', 'theatre arts'],
-                'film': ['film', 'film studies'],
-                'dance': ['dance'],
-                'computer science': ['computer science', 'comp sci', 'cs', 'computing', 'computer'],
-                'design technology': ['design technology', 'design tech', 'dt', 'design', 'technology'],
-                'tok': ['theory of knowledge', 'tok'],
-                'ee': ['extended essay', 'ee'],
-                'cas': ['creativity activity service', 'cas']
-              };
-
-              // Check variations with flexible matching
-              for (const [key, varList] of Object.entries(variations)) {
-                const extractedMatchesKey = varList.some(v => {
-                  const normalized = v.replace(/\s+/g, ' ').trim();
-                  return normalizedExtracted.includes(normalized) || 
-                         normalized.includes(normalizedExtracted) ||
-                         normalizedExtracted.replace(/\s/g, '').includes(normalized.replace(/\s/g, ''));
-                });
-                const dbMatchesKey = varList.some(v => {
-                  const normalized = v.replace(/\s+/g, ' ').trim();
-                  return normalizedDB.includes(normalized) || 
-                         normalized.includes(normalizedDB) ||
-                         normalizedDB.replace(/\s/g, '').includes(normalized.replace(/\s/g, ''));
-                });
-
-                if (extractedMatchesKey && dbMatchesKey) {
-                  return true;
-                }
-              }
-
-              // 3. Enhanced partial match - check core words
-              const extractedWords = normalizedExtracted.split(' ').filter(w => w.length > 2);
-              const dbWords = normalizedDB.split(' ').filter(w => w.length > 2);
-              
-              const commonWords = extractedWords.filter(w => dbWords.includes(w));
-              if (commonWords.length >= Math.min(extractedWords.length, dbWords.length, 2)) {
-                return true;
-              }
-
-              // 4. Substring match (more flexible)
-              if (normalizedDB.includes(normalizedExtracted) || normalizedExtracted.includes(normalizedDB)) {
-                return true;
-              }
-
-              // 5. Code match with flexibility
-              if (codeDB && (normalizedExtracted.includes(codeDB) || codeDB.includes(normalizedExtracted) || normalizedExtracted.replace(/\s/g, '') === codeDB.replace(/\s/g, ''))) {
-                return true;
-              }
-
               return false;
             });
 
+            // Strategy 2: Contains match (database name contains extracted OR vice versa)
+            if (!matchedSubject) {
+              matchedSubject = subjectsList.find(s => {
+                const normalized = s.name?.toLowerCase().trim().replace(/[&\/\\#,+()$~%.'":*?<>{}]/g, ' ').replace(/\s+/g, ' ').trim();
+                if (normalized.includes(normalizedExtracted) || normalizedExtracted.includes(normalized)) {
+                  matchMethod = 'substring';
+                  return true;
+                }
+                return false;
+              });
+            }
+
+            // Strategy 3: Word overlap (at least 50% words match)
+            if (!matchedSubject) {
+              matchedSubject = subjectsList.find(s => {
+                const normalized = s.name?.toLowerCase().trim().replace(/[&\/\\#,+()$~%.'":*?<>{}]/g, ' ').replace(/\s+/g, ' ').trim();
+                const extractedWords = normalizedExtracted.split(' ').filter(w => w.length > 2);
+                const dbWords = normalized.split(' ').filter(w => w.length > 2);
+                const commonWords = extractedWords.filter(w => dbWords.some(dw => dw.includes(w) || w.includes(dw)));
+                
+                if (extractedWords.length > 0 && commonWords.length >= Math.ceil(extractedWords.length * 0.5)) {
+                  matchMethod = 'word-overlap';
+                  return true;
+                }
+                return false;
+              });
+            }
+
+            // Strategy 4: First significant word match (for "Math AI" → "Mathematics: Analysis")
+            if (!matchedSubject) {
+              const firstWord = normalizedExtracted.split(' ')[0];
+              if (firstWord && firstWord.length > 3) {
+                matchedSubject = subjectsList.find(s => {
+                  const normalized = s.name?.toLowerCase().trim();
+                  if (normalized.startsWith(firstWord) || normalized.includes(firstWord)) {
+                    matchMethod = 'first-word';
+                    return true;
+                  }
+                  return false;
+                });
+              }
+            }
+
             if (matchedSubject) {
-              console.log(`✅ Matched "${subj.name}" → "${matchedSubject.name}" (${subj.level})`);
-              return {
+              console.log(`✅ [${matchMethod}] Matched "${subj.name}" → "${matchedSubject.name}" (${subj.level})`);
+              matchingResults.push({
                 subject_id: matchedSubject.id,
                 level: subj.level || 'SL',
                 ib_group: matchedSubject.ib_group
-              };
+              });
             } else {
-              console.warn(`❌ No match for: "${subj.name}" (${subj.level})`);
+              console.error(`❌ NO MATCH: "${subj.name}" (${subj.level}) - Tried all strategies!`);
+              console.error(`Available subjects:`, subjectsList.filter(s => s.ib_level === 'DP').map(s => s.name).join(', '));
             }
-            return null;
-          }).filter(Boolean);
+          }
+          
+          subjectChoices = matchingResults;
         }
         
         return {
