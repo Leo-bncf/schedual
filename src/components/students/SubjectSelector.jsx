@@ -29,6 +29,27 @@ export default function SubjectSelector({
   const [selectedSubjectId, setSelectedSubjectId] = useState('');
   const [selectedLevel, setSelectedLevel] = useState('HL');
 
+  // Clean duplicates on mount and when selectedSubjects changes
+  React.useEffect(() => {
+    if (!selectedSubjects || selectedSubjects.length === 0) return;
+
+    const uniqueSubjects = [];
+    const seen = new Set();
+
+    for (const choice of selectedSubjects) {
+      const key = `${choice.subject_id}_${choice.level || 'NONE'}`;
+      if (!seen.has(key)) {
+        seen.add(key);
+        uniqueSubjects.push(choice);
+      }
+    }
+
+    if (uniqueSubjects.length !== selectedSubjects.length) {
+      console.log(`🧹 Auto-cleaned duplicates: ${selectedSubjects.length} → ${uniqueSubjects.length}`);
+      onChange(uniqueSubjects);
+    }
+  }, [selectedSubjects]);
+
   // Filter subjects by programme
   const availableSubjects = subjects.filter(s => s.ib_level === programme && !s.is_core);
 

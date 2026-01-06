@@ -501,42 +501,51 @@ Return ONLY students array, no other text.`,
         throw new Error('No students found in document');
       }
 
-      // Clean duplicates from each student's subject list
+      // Clean duplicates from each student's subject list - AGGRESSIVE deduplication
       extractedStudents = extractedStudents.map(student => {
         if (!student.subjects || !Array.isArray(student.subjects)) return student;
 
         const uniqueSubjects = [];
-        const seenSubjectNames = new Set();
+        const seenSubjectKeys = new Set();
         let hasMathAI = false;
         let hasMathAA = false;
 
         for (const subject of student.subjects) {
-          const normalizedName = subject.name?.toLowerCase().trim();
+          const normalizedName = subject.name?.toLowerCase().trim().replace(/[^a-z0-9]/g, '');
+          const level = subject.level?.toUpperCase();
+          
+          // Create unique key: subject name + level (for DP students)
+          const subjectKey = `${normalizedName}_${level || 'NONE'}`;
           
           // Check for Math AI/AA mutual exclusivity
-          const isMathAI = normalizedName?.includes('mathematics') && normalizedName?.includes('interpretation');
-          const isMathAA = normalizedName?.includes('mathematics') && normalizedName?.includes('approaches');
+          const isMathAI = normalizedName?.includes('interpretation') || normalizedName?.includes('ai');
+          const isMathAA = normalizedName?.includes('approaches') || normalizedName?.includes('aa');
+          const isMath = normalizedName?.includes('math');
 
-          if (isMathAI && hasMathAA) {
-            console.log(`Skipping Math AI for ${student.full_name} - already has Math AA`);
+          if (isMath && isMathAI && hasMathAA) {
+            console.log(`❌ Skipping Math AI for ${student.full_name} - already has Math AA`);
             continue;
           }
-          if (isMathAA && hasMathAI) {
-            console.log(`Skipping Math AA for ${student.full_name} - already has Math AI`);
-            continue;
-          }
-
-          // Prevent duplicate subjects
-          if (seenSubjectNames.has(normalizedName)) {
-            console.log(`Removed duplicate subject: ${subject.name} for ${student.full_name}`);
+          if (isMath && isMathAA && hasMathAI) {
+            console.log(`❌ Skipping Math AA for ${student.full_name} - already has Math AI`);
             continue;
           }
 
-          seenSubjectNames.add(normalizedName);
+          // Prevent duplicate subjects (same name + same level)
+          if (seenSubjectKeys.has(subjectKey)) {
+            console.log(`❌ Removed duplicate subject: ${subject.name} (${level}) for ${student.full_name}`);
+            continue;
+          }
+
+          seenSubjectKeys.add(subjectKey);
           uniqueSubjects.push(subject);
 
-          if (isMathAI) hasMathAI = true;
-          if (isMathAA) hasMathAA = true;
+          if (isMath && isMathAI) hasMathAI = true;
+          if (isMath && isMathAA) hasMathAA = true;
+        }
+
+        if (uniqueSubjects.length !== student.subjects.length) {
+          console.log(`✅ Cleaned ${student.full_name}: ${student.subjects.length} → ${uniqueSubjects.length} subjects`);
         }
 
         return { ...student, subjects: uniqueSubjects };
