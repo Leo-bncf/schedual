@@ -6,7 +6,7 @@ import { CheckCircle, Loader2, Play } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 
 export default function GenerationProgress({ open, progress, onClose, onCancel }) {
-  const { stage, percent, message, completed } = progress;
+  const { stage, percent, message, completed } = progress || {};
 
   return (
     <Dialog open={open} onOpenChange={completed ? onClose : undefined}>
