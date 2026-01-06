@@ -24,8 +24,14 @@ export default function ClassGroups() {
   const [isGenerating, setIsGenerating] = useState(false);
   const [selectedGroup, setSelectedGroup] = useState(null);
   const [showGenerateDialog, setShowGenerateDialog] = useState(false);
-  const [generationProgress, setGenerationProgress] = useState(0);
-  const [generationStatus, setGenerationStatus] = useState('');
+  const [generationProgress, setGenerationProgress] = useState({
+    stage: '',
+    percent: 0,
+    message: '',
+    currentStep: '',
+    completedSteps: [],
+    completed: false
+  });
   const queryClient = useQueryClient();
 
   const { data: user } = useQuery({
