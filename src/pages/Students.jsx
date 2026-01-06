@@ -443,9 +443,24 @@ CRITICAL INSTRUCTIONS - YEAR GROUPS ARE MANDATORY:
    - ONLY DP students can have "Math AI" or "Math AA"
    - If you see "Math AI" or "Math AA" for a PYP/MYP student, output just "Mathematics"
 
-6. Subject matching: Use learned corrections above for common variations
+6. CRITICAL - SUBJECT NAME FORMATTING:
+   Output subject names EXACTLY as they appear in the document with these guidelines:
+   - Keep full official names: "Mathematics: Applications & Interpretation", "English A: Language & Literature", etc.
+   - DO NOT abbreviate or shorten subject names
+   - DO NOT add extra words or descriptions
+   - Match capitalization and punctuation from the document
+   - If document uses abbreviations like "Math AI", "Math AA", "Eng A", "Span B" - keep them as-is
+   - Common formats to preserve:
+     * "Mathematics: Applications & Interpretation (AI)"
+     * "Mathematics: Analysis & Approaches (AA)"
+     * "English A: Language & Literature"
+     * "Spanish B"
+     * "Business Management"
+     * "Environmental Systems & Societies"
 
-7. Preserve all accents in names (é, ñ, ü, ö, etc.)
+7. Subject matching: Use learned corrections above for common variations
+
+8. Preserve all accents in names (é, ñ, ü, ö, etc.)
 
 Return ONLY students array, no other text.`,
         file_urls: [file_url],
@@ -645,6 +660,8 @@ Return ONLY students array, no other text.`,
         } else if (student.subjects && Array.isArray(student.subjects)) {
           // For DP: Process extracted subjects with enhanced matching
           subjectChoices = student.subjects.map(subj => {
+            console.log(`🔍 Matching subject: "${subj.name}" (${subj.level || 'no level'})`);
+            
             const normalizedExtracted = subj.name?.toLowerCase().trim()
               .replace(/[&\/\\#,+()$~%.'":*?<>{}]/g, ' ')
               .replace(/\s+/g, ' ')
@@ -658,8 +675,17 @@ Return ONLY students array, no other text.`,
                 .trim();
               const codeDB = s.code?.toLowerCase().trim();
 
-              // 1. Exact match
+              // 1. Exact match (most reliable)
               if (normalizedDB === normalizedExtracted || codeDB === normalizedExtracted) {
+                console.log(`  ✅ EXACT match: "${s.name}"`);
+                return true;
+              }
+              
+              // 1b. Near-exact match (ignore special chars)
+              const extractedNoSpecial = normalizedExtracted.replace(/[^a-z0-9]/g, '');
+              const dbNoSpecial = normalizedDB.replace(/[^a-z0-9]/g, '');
+              if (extractedNoSpecial === dbNoSpecial) {
+                console.log(`  ✅ NEAR-EXACT match: "${s.name}"`);
                 return true;
               }
 
@@ -710,6 +736,7 @@ Return ONLY students array, no other text.`,
                 });
 
                 if (extractedMatchesKey && dbMatchesKey) {
+                  console.log(`  ✅ VARIATION match via "${key}": "${s.name}"`);
                   return true;
                 }
               }
@@ -720,16 +747,19 @@ Return ONLY students array, no other text.`,
               
               const commonWords = extractedWords.filter(w => dbWords.includes(w));
               if (commonWords.length >= Math.min(extractedWords.length, dbWords.length, 2)) {
+                console.log(`  ✅ WORD match (${commonWords.length} common words): "${s.name}"`);
                 return true;
               }
 
               // 4. Substring match (more flexible)
               if (normalizedDB.includes(normalizedExtracted) || normalizedExtracted.includes(normalizedDB)) {
+                console.log(`  ✅ SUBSTRING match: "${s.name}"`);
                 return true;
               }
 
               // 5. Code match with flexibility
               if (codeDB && (normalizedExtracted.includes(codeDB) || codeDB.includes(normalizedExtracted) || normalizedExtracted.replace(/\s/g, '') === codeDB.replace(/\s/g, ''))) {
+                console.log(`  ✅ CODE match: "${s.name}"`);
                 return true;
               }
 
@@ -737,14 +767,15 @@ Return ONLY students array, no other text.`,
             });
 
             if (matchedSubject) {
-              console.log(`✅ Matched "${subj.name}" → "${matchedSubject.name}" (${subj.level})`);
+              console.log(`✅ FINAL MATCH: "${subj.name}" → "${matchedSubject.name}" (${subj.level})`);
               return {
                 subject_id: matchedSubject.id,
                 level: subj.level || 'SL',
                 ib_group: matchedSubject.ib_group
               };
             } else {
-              console.warn(`❌ No match for: "${subj.name}" (${subj.level})`);
+              console.warn(`❌ NO MATCH FOUND for: "${subj.name}" (${subj.level})`);
+              console.warn(`   Available subjects in DB:`, subjectsList.map(s => s.name).join(', '));
             }
             return null;
           }).filter(Boolean);
