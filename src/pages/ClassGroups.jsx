@@ -379,6 +379,7 @@ export default function ClassGroups() {
       <GenerationProgress
         open={isGenerating}
         progress={generationProgress}
+        title="Creating Student Classes"
         onClose={() => {
           setIsGenerating(false);
           setGenerationProgress({

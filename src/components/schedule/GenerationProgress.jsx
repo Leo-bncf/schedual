@@ -5,7 +5,7 @@ import { Button } from "@/components/ui/button";
 import { CheckCircle, Loader2, Play } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 
-export default function GenerationProgress({ open, progress, onClose, onCancel }) {
+export default function GenerationProgress({ open, progress, onClose, onCancel, title = 'Generating Schedule' }) {
   const { stage, percent, message, completed } = progress || {};
 
   return (
@@ -21,7 +21,7 @@ export default function GenerationProgress({ open, progress, onClose, onCancel }
             ) : (
               <>
                 <Loader2 className="w-5 h-5 animate-spin text-indigo-600" />
-                Generating Schedule
+                {stage || title}
               </>
             )}
           </DialogTitle>
@@ -52,6 +52,7 @@ export default function GenerationProgress({ open, progress, onClose, onCancel }
           </AnimatePresence>
 
           {/* Steps Indicator */}
+          {progress.completedSteps && progress.completedSteps.length > 0 && (
           <div className="space-y-3">
             {[
               { label: 'Assigning teachers', key: 'teachers' },
@@ -94,6 +95,7 @@ export default function GenerationProgress({ open, progress, onClose, onCancel }
               );
             })}
           </div>
+          )}
         </div>
 
         <DialogFooter>
