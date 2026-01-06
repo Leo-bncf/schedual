@@ -35,9 +35,8 @@ Deno.serve(async (req) => {
     
     const subjects = await base44.asServiceRole.entities.Subject.filter({ 
       school_id: schoolId,
-      ib_level: level,
-      is_active: true
-    });
+      ib_level: level
+    }).then(results => results.filter(s => s.is_active !== false));
     
     const teachers = await base44.asServiceRole.entities.Teacher.filter({ 
       school_id: schoolId 
