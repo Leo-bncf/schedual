@@ -621,32 +621,48 @@ Now process the user's input and return ONLY the JSON object.`,
             message: `Creating ${level} class schedules across the week...`,
             currentStep: level.toLowerCase()
           }));
-          
-          console.log(`Using ClassGroup-based scheduling for ${level}`);
-          const { data: result } = await base44.functions.invoke('generatePYPMYPSchedule', {
-            schedule_version_id: selectedVersion.id,
-            level
-          });
-          
-          if (result.slots) {
-            console.log(`Generated ${result.slots.length} slots for ${level}`);
-            newSlots.push(...result.slots);
-            
-            setGenerationProgress(prev => ({
-              ...prev,
-              message: `Created ${result.slots.length} ${level} schedule slots`,
-              completedSteps: [...prev.completedSteps, level.toLowerCase()]
-            }));
-            
-            // Update availability tracking
-            result.slots.forEach(slot => {
-              if (slot.teacher_id && teacherSchedules[slot.teacher_id]) {
-                teacherSchedules[slot.teacher_id].push({ day: slot.day, period: slot.period });
-              }
-              if (slot.room_id && roomSchedules[slot.room_id]) {
-                roomSchedules[slot.room_id].push({ day: slot.day, period: slot.period });
-              }
+
+          console.log(`\n=== Scheduling ${level} ===`);
+          console.log(`Calling generatePYPMYPSchedule for ${level}...`);
+
+          try {
+            const { data: result } = await base44.functions.invoke('generatePYPMYPSchedule', {
+              schedule_version_id: selectedVersion.id,
+              level
             });
+
+            console.log(`${level} scheduling result:`, result);
+
+            if (result?.error) {
+              console.error(`❌ ${level} scheduling failed:`, result.error);
+              throw new Error(`${level} scheduling failed: ${result.error}`);
+            }
+
+            if (result?.slots && result.slots.length > 0) {
+              console.log(`✅ Generated ${result.slots.length} slots for ${level}`);
+              newSlots.push(...result.slots);
+
+              setGenerationProgress(prev => ({
+                ...prev,
+                message: `Created ${result.slots.length} ${level} schedule slots`,
+                completedSteps: [...prev.completedSteps, level.toLowerCase()]
+              }));
+
+              // Update availability tracking
+              result.slots.forEach(slot => {
+                if (slot.teacher_id && teacherSchedules[slot.teacher_id]) {
+                  teacherSchedules[slot.teacher_id].push({ day: slot.day, period: slot.period });
+                }
+                if (slot.room_id && roomSchedules[slot.room_id]) {
+                  roomSchedules[slot.room_id].push({ day: slot.day, period: slot.period });
+                }
+              });
+            } else {
+              console.warn(`⚠️ No slots generated for ${level} - check if ClassGroups, Subjects, and Teachers exist`);
+            }
+          } catch (error) {
+            console.error(`❌ Error scheduling ${level}:`, error);
+            throw error;
           }
           continue;
         }
