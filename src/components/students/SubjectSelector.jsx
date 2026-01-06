@@ -45,6 +45,27 @@ export default function SubjectSelector({
       return;
     }
 
+    // CRITICAL: Math AI and Math AA are mutually exclusive
+    const subjectName = subject.name.toLowerCase();
+    const isMathAI = subjectName.includes('mathematics') && subjectName.includes('interpretation');
+    const isMathAA = subjectName.includes('mathematics') && subjectName.includes('approaches');
+
+    if (isMathAI || isMathAA) {
+      const hasOtherMath = selectedSubjects.some(sc => {
+        const existingSubject = subjects.find(s => s.id === sc.subject_id);
+        if (!existingSubject) return false;
+        const existingName = existingSubject.name.toLowerCase();
+        const isExistingAI = existingName.includes('mathematics') && existingName.includes('interpretation');
+        const isExistingAA = existingName.includes('mathematics') && existingName.includes('approaches');
+        return (isMathAI && isExistingAA) || (isMathAA && isExistingAI);
+      });
+
+      if (hasOtherMath) {
+        alert('You cannot take both Mathematics AI and Mathematics AA. Please choose only one mathematics course.');
+        return;
+      }
+    }
+
     const newSubject = {
       subject_id: selectedSubjectId,
       level: programme === 'DP' ? selectedLevel : undefined,
