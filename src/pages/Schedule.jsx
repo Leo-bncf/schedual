@@ -672,20 +672,24 @@ Now process the user's input and return ONLY the JSON object.`,
         // Build a map of how many periods each group needs
         const groupPeriodNeeds = {};
         for (const group of levelGroupsFromUpdated) {
-          // Determine hours based on subject's HL/SL hours and group's level
+          // CRITICAL: Use SCHOOL CONFIG as PRIMARY source for HL/SL hours
           const subject = subjects.find(s => s.id === group.subject_id);
-          let hoursPerWeek = group.hours_per_week || 4; // Default fallback
+          let hoursPerWeek = 4; // Default fallback
 
-          // CRITICAL: Use subject-specific HL/SL hours if available
-          if (subject && group.level) {
+          if (group.level) {
             if (group.level === 'HL') {
-              hoursPerWeek = subject.hl_hours_per_week || schoolConfig.hl_hours || 6;
-              console.log(`${group.name}: HL subject - ${hoursPerWeek} hours/week`);
+              // Priority: School config → Subject override → Default
+              hoursPerWeek = schoolConfig.hl_hours || subject?.hl_hours_per_week || 6;
+              console.log(`${group.name}: HL subject - ${hoursPerWeek} hours/week (school config: ${schoolConfig.hl_hours})`);
             } else if (group.level === 'SL') {
-              hoursPerWeek = subject.sl_hours_per_week || schoolConfig.sl_hours || 4;
-              console.log(`${group.name}: SL subject - ${hoursPerWeek} hours/week`);
+              // Priority: School config → Subject override → Default
+              hoursPerWeek = schoolConfig.sl_hours || subject?.sl_hours_per_week || 4;
+              console.log(`${group.name}: SL subject - ${hoursPerWeek} hours/week (school config: ${schoolConfig.sl_hours})`);
             }
-          } else if (!group.level) {
+          } else if (group.hours_per_week) {
+            hoursPerWeek = group.hours_per_week;
+            console.log(`${group.name}: Using group hours - ${hoursPerWeek} hours/week`);
+          } else {
             console.warn(`${group.name}: No level specified, using default ${hoursPerWeek} hours`);
           }
 
