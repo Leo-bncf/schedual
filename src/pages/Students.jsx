@@ -415,9 +415,25 @@ export default function Students() {
       // Extract using LLM with training context (low temperature for consistency)
       const llmResponse = await base44.integrations.Core.InvokeLLM({
         temperature: 0.2,
-        prompt: `Extract ALL students from this document.${learningContext}
+        prompt: `You are extracting student data from an IB school document.
 
-CRITICAL INSTRUCTIONS - MANDATORY VALIDATION BEFORE RETURNING:
+      CRITICAL - READ THIS FIRST:
+      The document may show:
+      1. "Available subjects" (subjects offered by the school) - IGNORE THESE
+      2. "Selected subjects" or "Current subjects" (subjects the student is taking) - EXTRACT THESE ONLY
+
+      Look for visual indicators of SELECTED subjects:
+      - Checkmarks, highlights, or bold text
+      - Sections labeled "Current Subjects", "Selected", "Student's Choices"
+      - Lists under a student's name showing their enrolled subjects
+
+      DO NOT extract from sections showing:
+      - "Available subjects", "Subject options", "Choose from"
+      - Grid/tables showing all possible subject-level combinations
+
+      ${learningContext}
+
+      CRITICAL INSTRUCTIONS - MANDATORY VALIDATION BEFORE RETURNING:
 1. PROGRAMME DETECTION: Look for HL/SL (DP), year numbers (MYP), or class letters (PYP)
 
 2. YEAR GROUP ASSIGNMENT - STRICT FORMAT REQUIRED:
@@ -430,10 +446,21 @@ CRITICAL INSTRUCTIONS - MANDATORY VALIDATION BEFORE RETURNING:
 3. DP STUDENTS: MUST have EXACTLY 6 UNIQUE subjects with HL/SL levels
    - CRITICAL: NO DUPLICATE SUBJECTS - Each subject name should appear ONLY ONCE per student
    - A subject CANNOT be taken at both HL and SL - choose ONE level only
-   - Example: If document shows "Math AI HL" and "Math AI SL" - output ONLY "Math AI HL" (first occurrence)
-   - Example: If document shows "Biology HL, Biology SL" - output ONLY "Biology HL" (first occurrence)
+   - If you see the same subject at multiple levels (e.g., "Math AI HL" in one place, "Math AI SL" in another):
+     * This means the document is showing AVAILABLE OPTIONS, not selected subjects
+     * Look for visual indicators (checkmark, bold, highlight) to identify which ONE the student selected
+     * If no indicator, take the FIRST occurrence and ignore others
    - BEFORE RETURNING: Count each student's UNIQUE subject names - if not exactly 6, go back and extract missing ones
    - If a student has fewer than 6 subjects in the document, DO NOT INVENT subjects - return what's there
+   
+   EXAMPLE - CORRECT EXTRACTION:
+   Document shows: "Current Subjects: English A HL, Math AI HL, History HL, Biology SL, Spanish B SL"
+   Extract: These 5 subjects exactly as shown (student needs 1 more)
+   
+   EXAMPLE - WRONG EXTRACTION (DON'T DO THIS):
+   Document shows grid: "Math AI" available at "HL" and "SL"
+   Wrong: Extract both "Math AI HL" and "Math AI SL"
+   Correct: This is an options grid - look elsewhere for what the student actually selected
 
 4. SELF-VALIDATION REQUIRED:
    For each DP student BEFORE adding to output:
