@@ -416,7 +416,7 @@ export default function Students() {
       const llmResponse = await base44.integrations.Core.InvokeLLM({
         prompt: `Extract ALL students from this document.${learningContext}
 
-CRITICAL INSTRUCTIONS - YEAR GROUPS ARE MANDATORY:
+CRITICAL INSTRUCTIONS - MANDATORY VALIDATION BEFORE RETURNING:
 1. PROGRAMME DETECTION: Look for HL/SL (DP), year numbers (MYP), or class letters (PYP)
 
 2. YEAR GROUP ASSIGNMENT - STRICT FORMAT REQUIRED:
@@ -429,21 +429,33 @@ CRITICAL INSTRUCTIONS - YEAR GROUPS ARE MANDATORY:
 3. DP STUDENTS: MUST have EXACTLY 6 UNIQUE subjects with HL/SL levels
    - CRITICAL: NO DUPLICATE SUBJECTS - Each subject name should appear ONLY ONCE per student
    - If you see the same subject multiple times, include it ONLY ONCE with the appropriate level
+   - BEFORE RETURNING: Count each student's subjects - if not exactly 6, go back and extract missing ones
+   - If a student has fewer than 6 subjects in the document, DO NOT INVENT subjects - return what's there
    - Example: If document shows "Math AI HL, Math AI HL, Math AI SL" - output ONLY "Math AI HL" (one occurrence)
 
-4. CRITICAL - MATHEMATICS MUTUAL EXCLUSIVITY:
+4. SELF-VALIDATION REQUIRED:
+   For each DP student BEFORE adding to output:
+   a) Count unique subject names - MUST equal 6 (no duplicates)
+   b) Verify NO student has both Math AI AND Math AA
+   c) Verify HL count is 3 or 4 (never less than 3, never more than 4)
+   d) Verify SL count is 2 or 3 (total with HL must equal 6)
+   e) If validation fails, RE-EXTRACT that student from the document
+   
+   If after re-extraction you still can't get 6 unique subjects with correct HL/SL split, output what you have but flag it.
+
+5. CRITICAL - MATHEMATICS MUTUAL EXCLUSIVITY:
    - Math AI and Math AA are MUTUALLY EXCLUSIVE - a student can take ONLY ONE
    - If document shows both "Math AI" and "Math AA" for the same student, choose the FIRST one mentioned and IGNORE the other
    - NEVER output both Math AI and Math AA for the same student
 
-5. CRITICAL - MATH FOR PYP/MYP STUDENTS:
+6. CRITICAL - MATH FOR PYP/MYP STUDENTS:
    - For PYP and MYP students, there is NO "Math AI" or "Math AA" distinction
    - ALL math for PYP students should be reported as "Mathematics" (no AI/AA suffix)
    - ALL math for MYP students should be reported as "Mathematics" (no AI/AA suffix)
    - ONLY DP students can have "Math AI" or "Math AA"
    - If you see "Math AI" or "Math AA" for a PYP/MYP student, output just "Mathematics"
 
-6. CRITICAL - SUBJECT NAME FORMATTING:
+7. CRITICAL - SUBJECT NAME FORMATTING:
    Output subject names EXACTLY as they appear in the document with these guidelines:
    - Keep full official names: "Mathematics: Applications & Interpretation", "English A: Language & Literature", etc.
    - DO NOT abbreviate or shorten subject names
@@ -458,9 +470,15 @@ CRITICAL INSTRUCTIONS - YEAR GROUPS ARE MANDATORY:
      * "Business Management"
      * "Environmental Systems & Societies"
 
-7. Subject matching: Use learned corrections above for common variations
+8. Subject matching: Use learned corrections above for common variations
 
-8. Preserve all accents in names (é, ñ, ü, ö, etc.)
+9. Preserve all accents in names (é, ñ, ü, ö, etc.)
+
+FINAL CHECK BEFORE RETURNING:
+- Did you validate EVERY DP student has exactly 6 unique subjects?
+- Did you validate NO student has duplicate subjects?
+- Did you validate NO student has both Math AI and Math AA?
+- Did you validate HL/SL counts are correct (3-4 HL, 2-3 SL)?
 
 Return ONLY students array, no other text.`,
         file_urls: [file_url],
@@ -499,6 +517,27 @@ Return ONLY students array, no other text.`,
       
       if (extractedStudents.length === 0) {
         throw new Error('No students found in document');
+      }
+
+      // Validate DP students have 6 subjects before processing
+      const validationWarnings = [];
+      for (const student of extractedStudents) {
+        if (student.ib_programme === 'DP' && student.subjects) {
+          const uniqueCount = new Set(student.subjects.map(s => s.name?.toLowerCase())).size;
+          if (uniqueCount !== 6) {
+            validationWarnings.push(`⚠️ ${student.full_name}: Expected 6 subjects, found ${uniqueCount}`);
+          }
+          const hlCount = student.subjects.filter(s => s.level === 'HL').length;
+          const slCount = student.subjects.filter(s => s.level === 'SL').length;
+          if (hlCount < 3 || hlCount > 4) {
+            validationWarnings.push(`⚠️ ${student.full_name}: Invalid HL count (${hlCount}) - should be 3 or 4`);
+          }
+        }
+      }
+      
+      if (validationWarnings.length > 0) {
+        console.warn('❌ VALIDATION WARNINGS:\n' + validationWarnings.join('\n'));
+        toast.error(`LLM extraction issues detected - check console for details`);
       }
 
       // Clean duplicates from each student's subject list - AGGRESSIVE deduplication
