@@ -1,5 +1,7 @@
 import React, { useState } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
+import { Navigate } from 'react-router-dom';
+import { createPageUrl } from '../utils';
 import { base44 } from '@/api/base44Client';
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -179,6 +181,11 @@ export default function AccountManager() {
         <div className="w-16 h-16 border-4 border-blue-900 border-t-transparent rounded-full animate-spin"></div>
       </div>
     );
+  }
+
+  // Redirect to subscription page if school subscription is inactive or expired
+  if (school && school.subscription_status !== 'active' && school.subscription_status !== 'trial') {
+    return <Navigate to={createPageUrl('Subscription')} replace />;
   }
 
   return (
