@@ -172,17 +172,31 @@ export default function Panel() {
   });
 
   const updateSchoolMutation = useMutation({
-    mutationFn: ({ id, data }) => base44.functions.invoke('adminManageSchool', { action: 'update', schoolId: id, data }),
+    mutationFn: async ({ id, data }) => {
+      const response = await base44.functions.invoke('adminManageSchool', { action: 'update', schoolId: id, data });
+      return response.data;
+    },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['allSchools'] });
       setIsSchoolDialogOpen(false);
       resetSchoolForm();
     },
+    onError: (error) => {
+      console.error('Update school error:', error);
+      alert('Failed to update school: ' + (error.message || 'Unknown error'));
+    }
   });
 
   const deleteSchoolMutation = useMutation({
-    mutationFn: (id) => base44.functions.invoke('adminManageSchool', { action: 'delete', schoolId: id }),
+    mutationFn: async (id) => {
+      const response = await base44.functions.invoke('adminManageSchool', { action: 'delete', schoolId: id });
+      return response.data;
+    },
     onSuccess: () => queryClient.invalidateQueries({ queryKey: ['allSchools'] }),
+    onError: (error) => {
+      console.error('Delete school error:', error);
+      alert('Failed to delete school: ' + (error.message || 'Unknown error'));
+    }
   });
 
   const updateUserMutation = useMutation({
