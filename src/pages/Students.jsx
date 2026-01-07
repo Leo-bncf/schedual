@@ -412,8 +412,9 @@ export default function Students() {
 
       setUploadState(prev => ({ ...prev, progress: 'AI analyzing document with learned patterns...' }));
 
-      // Extract using LLM with training context
+      // Extract using LLM with training context (low temperature for consistency)
       const llmResponse = await base44.integrations.Core.InvokeLLM({
+        temperature: 0.2,
         prompt: `Extract ALL students from this document.${learningContext}
 
 CRITICAL INSTRUCTIONS - MANDATORY VALIDATION BEFORE RETURNING:
@@ -519,25 +520,43 @@ Return ONLY students array, no other text.`,
         throw new Error('No students found in document');
       }
 
-      // Validate DP students have 6 subjects before processing
+      // STRICT validation: Reject extraction if DP students are incomplete
+      const validationErrors = [];
       const validationWarnings = [];
+      
       for (const student of extractedStudents) {
         if (student.ib_programme === 'DP' && student.subjects) {
-          const uniqueCount = new Set(student.subjects.map(s => s.name?.toLowerCase())).size;
+          const uniqueSubjects = new Set(student.subjects.map(s => s.name?.toLowerCase()));
+          const uniqueCount = uniqueSubjects.size;
+          
+          // CRITICAL: DP students MUST have exactly 6 unique subjects
           if (uniqueCount !== 6) {
-            validationWarnings.push(`⚠️ ${student.full_name}: Expected 6 subjects, found ${uniqueCount}`);
+            validationErrors.push(`${student.full_name}: Has ${uniqueCount} subjects instead of 6`);
           }
+          
           const hlCount = student.subjects.filter(s => s.level === 'HL').length;
           const slCount = student.subjects.filter(s => s.level === 'SL').length;
+          
+          // Validate HL/SL distribution
           if (hlCount < 3 || hlCount > 4) {
-            validationWarnings.push(`⚠️ ${student.full_name}: Invalid HL count (${hlCount}) - should be 3 or 4`);
+            validationErrors.push(`${student.full_name}: Invalid HL count (${hlCount}) - must be 3 or 4`);
+          }
+          if (slCount < 2 || slCount > 3) {
+            validationErrors.push(`${student.full_name}: Invalid SL count (${slCount}) - must be 2 or 3`);
           }
         }
       }
       
+      // REJECT extraction if critical errors found
+      if (validationErrors.length > 0) {
+        console.error('❌ EXTRACTION REJECTED - CRITICAL VALIDATION ERRORS:\n' + validationErrors.join('\n'));
+        toast.error(`Extraction rejected: ${validationErrors.length} students have incomplete data. Please check the document format and try again.`);
+        setUploadProgress({ stage: 'idle', progress: 0 });
+        return;
+      }
+      
       if (validationWarnings.length > 0) {
-        console.warn('❌ VALIDATION WARNINGS:\n' + validationWarnings.join('\n'));
-        toast.error(`LLM extraction issues detected - check console for details`);
+        console.warn('⚠️ VALIDATION WARNINGS:\n' + validationWarnings.join('\n'));
       }
 
       // Clean duplicates from each student's subject list - AGGRESSIVE deduplication
