@@ -429,18 +429,20 @@ CRITICAL INSTRUCTIONS - MANDATORY VALIDATION BEFORE RETURNING:
 
 3. DP STUDENTS: MUST have EXACTLY 6 UNIQUE subjects with HL/SL levels
    - CRITICAL: NO DUPLICATE SUBJECTS - Each subject name should appear ONLY ONCE per student
-   - If you see the same subject multiple times, include it ONLY ONCE with the appropriate level
-   - BEFORE RETURNING: Count each student's subjects - if not exactly 6, go back and extract missing ones
+   - A subject CANNOT be taken at both HL and SL - choose ONE level only
+   - Example: If document shows "Math AI HL" and "Math AI SL" - output ONLY "Math AI HL" (first occurrence)
+   - Example: If document shows "Biology HL, Biology SL" - output ONLY "Biology HL" (first occurrence)
+   - BEFORE RETURNING: Count each student's UNIQUE subject names - if not exactly 6, go back and extract missing ones
    - If a student has fewer than 6 subjects in the document, DO NOT INVENT subjects - return what's there
-   - Example: If document shows "Math AI HL, Math AI HL, Math AI SL" - output ONLY "Math AI HL" (one occurrence)
 
 4. SELF-VALIDATION REQUIRED:
    For each DP student BEFORE adding to output:
-   a) Count unique subject names - MUST equal 6 (no duplicates)
-   b) Verify NO student has both Math AI AND Math AA
-   c) Verify HL count is 3 or 4 (never less than 3, never more than 4)
-   d) Verify SL count is 2 or 3 (total with HL must equal 6)
-   e) If validation fails, RE-EXTRACT that student from the document
+   a) Count unique subject NAMES (ignore levels) - MUST equal 6
+   b) Verify NO subject appears twice at different levels (e.g., "Math AI HL" AND "Math AI SL")
+   c) Verify NO student has both Math AI AND Math AA
+   d) Verify HL count is 3 or 4 (never less than 3, never more than 4)
+   e) Verify SL count is 2 or 3 (total with HL must equal 6)
+   f) If validation fails, RE-EXTRACT that student from the document
    
    If after re-extraction you still can't get 6 unique subjects with correct HL/SL split, output what you have but flag it.
 
@@ -476,7 +478,8 @@ CRITICAL INSTRUCTIONS - MANDATORY VALIDATION BEFORE RETURNING:
 9. Preserve all accents in names (é, ñ, ü, ö, etc.)
 
 FINAL CHECK BEFORE RETURNING:
-- Did you validate EVERY DP student has exactly 6 unique subjects?
+- Did you validate EVERY DP student has exactly 6 unique SUBJECT NAMES?
+- Did you validate NO subject appears at multiple levels (e.g., same subject as both HL and SL)?
 - Did you validate NO student has duplicate subjects?
 - Did you validate NO student has both Math AI and Math AA?
 - Did you validate HL/SL counts are correct (3-4 HL, 2-3 SL)?
@@ -520,18 +523,25 @@ Return ONLY students array, no other text.`,
         throw new Error('No students found in document');
       }
 
-      // STRICT validation: Reject extraction if DP students are incomplete
+      // STRICT validation: Reject extraction if DP students are incomplete or have duplicate subjects at different levels
       const validationErrors = [];
       const validationWarnings = [];
       
       for (const student of extractedStudents) {
         if (student.ib_programme === 'DP' && student.subjects) {
-          const uniqueSubjects = new Set(student.subjects.map(s => s.name?.toLowerCase()));
+          // Check for duplicate subject names (same subject at different levels)
+          const subjectNames = student.subjects.map(s => s.name?.toLowerCase().trim());
+          const uniqueSubjects = new Set(subjectNames);
           const uniqueCount = uniqueSubjects.size;
+          
+          // CRITICAL: Subject count must match unique count (no duplicates at different levels)
+          if (subjectNames.length !== uniqueCount) {
+            validationErrors.push(`${student.full_name}: Same subject appears at multiple levels (${subjectNames.length} entries, ${uniqueCount} unique)`);
+          }
           
           // CRITICAL: DP students MUST have exactly 6 unique subjects
           if (uniqueCount !== 6) {
-            validationErrors.push(`${student.full_name}: Has ${uniqueCount} subjects instead of 6`);
+            validationErrors.push(`${student.full_name}: Has ${uniqueCount} unique subjects instead of 6`);
           }
           
           const hlCount = student.subjects.filter(s => s.level === 'HL').length;
@@ -559,21 +569,18 @@ Return ONLY students array, no other text.`,
         console.warn('⚠️ VALIDATION WARNINGS:\n' + validationWarnings.join('\n'));
       }
 
-      // Clean duplicates from each student's subject list - AGGRESSIVE deduplication
+      // Clean duplicates - SAME SUBJECT NAME CANNOT APPEAR AT DIFFERENT LEVELS
       extractedStudents = extractedStudents.map(student => {
         if (!student.subjects || !Array.isArray(student.subjects)) return student;
 
         const uniqueSubjects = [];
-        const seenSubjectKeys = new Set();
+        const seenSubjectNames = new Set(); // Track by NAME only, not name+level
         let hasMathAI = false;
         let hasMathAA = false;
 
         for (const subject of student.subjects) {
           const normalizedName = subject.name?.toLowerCase().trim().replace(/[^a-z0-9]/g, '');
           const level = subject.level?.toUpperCase();
-          
-          // Create unique key: subject name + level (for DP students)
-          const subjectKey = `${normalizedName}_${level || 'NONE'}`;
           
           // Check for Math AI/AA mutual exclusivity
           const isMathAI = normalizedName?.includes('interpretation') || normalizedName?.includes('ai');
@@ -589,13 +596,13 @@ Return ONLY students array, no other text.`,
             continue;
           }
 
-          // Prevent duplicate subjects (same name + same level)
-          if (seenSubjectKeys.has(subjectKey)) {
-            console.log(`❌ Removed duplicate subject: ${subject.name} (${level}) for ${student.full_name}`);
+          // CRITICAL: Prevent same subject at multiple levels (e.g., Math AI HL + Math AI SL)
+          if (seenSubjectNames.has(normalizedName)) {
+            console.log(`❌ Removed duplicate subject at different level: ${subject.name} (${level}) for ${student.full_name}`);
             continue;
           }
 
-          seenSubjectKeys.add(subjectKey);
+          seenSubjectNames.add(normalizedName);
           uniqueSubjects.push(subject);
 
           if (isMath && isMathAI) hasMathAI = true;
