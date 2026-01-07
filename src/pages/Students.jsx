@@ -412,9 +412,9 @@ export default function Students() {
 
       setUploadState(prev => ({ ...prev, progress: 'AI analyzing document with learned patterns...' }));
 
-      // Extract using LLM with training context (low temperature for consistency)
+      // Extract using LLM with training context (deterministic extraction)
       const llmResponse = await base44.integrations.Core.InvokeLLM({
-        temperature: 0.2,
+        temperature: 0.0,
         prompt: `You are extracting student data from an IB school document.
 
       CRITICAL - READ THIS FIRST:
@@ -450,8 +450,11 @@ export default function Students() {
      * This means the document is showing AVAILABLE OPTIONS, not selected subjects
      * Look for visual indicators (checkmark, bold, highlight) to identify which ONE the student selected
      * If no indicator, take the FIRST occurrence and ignore others
-   - BEFORE RETURNING: Count each student's UNIQUE subject names - if not exactly 6, go back and extract missing ones
-   - If a student has fewer than 6 subjects in the document, DO NOT INVENT subjects - return what's there
+   - BEFORE RETURNING: Count each student's UNIQUE subject names - if not exactly 6, OUTPUT EXACTLY WHAT YOU SEE
+   - CRITICAL: If a student has fewer than 6 subjects visible, return ONLY those visible subjects
+   - DO NOT INVENT, GUESS, OR ADD subjects to reach 6
+   - DO NOT randomly choose from available options lists
+   - ONLY extract subjects that are EXPLICITLY marked as selected/current for that student
    
    EXAMPLE - CORRECT EXTRACTION:
    Document shows: "Current Subjects: English A HL, Math AI HL, History HL, Biology SL, Spanish B SL"
@@ -463,15 +466,15 @@ export default function Students() {
    Correct: This is an options grid - look elsewhere for what the student actually selected
 
 4. SELF-VALIDATION REQUIRED:
-   For each DP student BEFORE adding to output:
-   a) Count unique subject NAMES (ignore levels) - MUST equal 6
-   b) Verify NO subject appears twice at different levels (e.g., "Math AI HL" AND "Math AI SL")
-   c) Verify NO student has both Math AI AND Math AA
-   d) Verify HL count is 3 or 4 (never less than 3, never more than 4)
-   e) Verify SL count is 2 or 3 (total with HL must equal 6)
-   f) If validation fails, RE-EXTRACT that student from the document
-   
-   If after re-extraction you still can't get 6 unique subjects with correct HL/SL split, output what you have but flag it.
+         For each DP student BEFORE adding to output:
+         a) Count unique subject NAMES (ignore levels)
+         b) Verify NO subject appears twice at different levels (e.g., "Math AI HL" AND "Math AI SL")
+         c) Verify NO student has both Math AI AND Math AA
+         d) If the document shows fewer than 6 subjects for a student, OUTPUT ONLY THOSE SUBJECTS
+         e) DO NOT add random subjects to meet the 6-subject requirement
+         f) DO NOT select from "available options" lists to fill gaps
+
+         EXTRACT ONLY WHAT IS EXPLICITLY MARKED AS THE STUDENT'S SELECTED SUBJECTS.
 
 5. CRITICAL - MATHEMATICS MUTUAL EXCLUSIVITY:
    - Math AI and Math AA are MUTUALLY EXCLUSIVE - a student can take ONLY ONE
