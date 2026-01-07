@@ -62,6 +62,7 @@ export default function Layout({ children, currentPageName }) {
 
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const [user, setUser] = useState(null);
+  const [school, setSchool] = useState(null);
   const [isSuperAdmin, setIsSuperAdmin] = useState(false);
   const [isLoading, setIsLoading] = useState(true);
   const [needsVerification, setNeedsVerification] = useState(false);
@@ -70,6 +71,7 @@ export default function Layout({ children, currentPageName }) {
   // Role definitions - school_id alone determines school admin access
   const isSchoolAdmin = (userData) => !!userData?.school_id && !isSuperAdmin;
   const isNewClient = (userData) => userData && !userData.school_id && !isSuperAdmin;
+  const hasActiveSubscription = () => school && (school.subscription_status === 'active' || school.subscription_status === 'trial');
 
   useEffect(() => {
     const loadAuth = async () => {
@@ -128,6 +130,17 @@ export default function Layout({ children, currentPageName }) {
           } catch (inviteError) {
             console.error('Pending invitation check error:', inviteError);
             setUser(userData);
+          }
+          
+          // Fetch school data if user has a school
+          if (userData?.school_id) {
+            try {
+              const schools = await base44.entities.School.list();
+              const userSchool = schools.find(s => s.id === userData.school_id);
+              setSchool(userSchool);
+            } catch (schoolError) {
+              console.error('Error fetching school:', schoolError);
+            }
           }
           
           const { data } = await base44.functions.invoke('getSuperAdminEmails');
@@ -209,7 +222,7 @@ export default function Layout({ children, currentPageName }) {
   }
 
   // Role-based access control with React Router navigation
-  const schoolOnlyPages = ['Dashboard', 'Onboarding', 'Schedule', 'TeachingGroups', 'Teachers', 'Students', 'Subjects', 'Rooms', 'Constraints', 'AIAdvisor', 'Settings', 'Support', 'Subscription'];
+  const schoolOnlyPages = ['Dashboard', 'Onboarding', 'Schedule', 'TeachingGroups', 'Teachers', 'Students', 'Subjects', 'Rooms', 'Constraints', 'AIAdvisor', 'Settings', 'Support'];
   const superAdminPages = ['Panel', 'UserManagement', 'SubscriptionsOverview', 'SupportTickets'];
 
   if (isSuperAdmin && schoolOnlyPages.includes(currentPageName)) {
@@ -217,6 +230,9 @@ export default function Layout({ children, currentPageName }) {
   } else if (isSchoolAdmin(user) && superAdminPages.includes(currentPageName)) {
     return <Navigate to={createPageUrl('Dashboard')} replace />;
   } else if (isNewClient(user) && currentPageName !== 'Subscription' && currentPageName !== 'AccountManager' && currentPageName !== 'Support') {
+    return <Navigate to={createPageUrl('Subscription')} replace />;
+  } else if (isSchoolAdmin(user) && !hasActiveSubscription() && currentPageName !== 'Subscription' && currentPageName !== 'AccountManager' && currentPageName !== 'Support') {
+    // Block access to school features if subscription is inactive/expired
     return <Navigate to={createPageUrl('Subscription')} replace />;
   }
 
