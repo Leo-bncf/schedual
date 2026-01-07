@@ -97,6 +97,10 @@ export default function Subjects() {
       queryClient.invalidateQueries({ queryKey: ['subjects'] });
       resetForm();
     },
+    onError: (error) => {
+      console.error('Create subject error:', error);
+      alert('Failed to create subject: ' + (error.message || 'Unknown error'));
+    }
   });
 
   const updateMutation = useMutation({
@@ -105,11 +109,19 @@ export default function Subjects() {
       queryClient.invalidateQueries({ queryKey: ['subjects'] });
       resetForm();
     },
+    onError: (error) => {
+      console.error('Update subject error:', error);
+      alert('Failed to update subject: ' + (error.message || 'Unknown error'));
+    }
   });
 
   const deleteMutation = useMutation({
     mutationFn: (id) => base44.entities.Subject.delete(id),
     onSuccess: () => queryClient.invalidateQueries({ queryKey: ['subjects'] }),
+    onError: (error) => {
+      console.error('Delete subject error:', error);
+      alert('Failed to delete subject: ' + (error.message || 'Unknown error'));
+    }
   });
 
   const resetForm = () => {
