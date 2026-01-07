@@ -410,34 +410,12 @@ export default function Students() {
         console.warn('Training data unavailable');
       }
 
-      setUploadState(prev => ({ ...prev, progress: 'Step 1: OCR text extraction...' }));
+      setUploadState(prev => ({ ...prev, progress: 'AI analyzing document with learned patterns...' }));
 
-      // STEP 1: OCR - Extract raw text from document (no interpretation)
-      const ocrResponse = await base44.integrations.Core.InvokeLLM({
-        temperature: 0.0,
-        prompt: `Extract ALL text from this document exactly as it appears. 
-      Include section headers, labels, and all text content.
-      Do NOT interpret or structure the data - just extract the raw text.
-      Preserve the reading order and hierarchy.
-
-      Return the extracted text in a clear, readable format.`,
-        file_urls: [file_url]
-      });
-
-      const extractedText = typeof ocrResponse === 'string' ? ocrResponse : JSON.stringify(ocrResponse);
-      console.log('📄 OCR Extracted Text:', extractedText.slice(0, 500) + '...');
-
-      setUploadState(prev => ({ ...prev, progress: 'Step 2: Parsing student data from text...' }));
-
-      // STEP 2: Parse structured data from clean text
+      // Extract using LLM with training context (low temperature for consistency)
       const llmResponse = await base44.integrations.Core.InvokeLLM({
         temperature: 0.2,
-        prompt: `You are parsing student data from OCR-extracted text of an IB school document.
-
-      HERE IS THE EXTRACTED TEXT:
-      ${extractedText}
-
-      You are extracting student data from an IB school document.
+        prompt: `You are extracting student data from an IB school document.
 
       CRITICAL - READ THIS FIRST:
       The document may show:
@@ -534,7 +512,8 @@ FINAL CHECK BEFORE RETURNING:
 - Did you validate HL/SL counts are correct (3-4 HL, 2-3 SL)?
 
 Return ONLY students array, no other text.`,
-              response_json_schema: {
+        file_urls: [file_url],
+        response_json_schema: {
           type: "object",
           properties: {
             students: {
