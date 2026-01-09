@@ -167,7 +167,11 @@ export default function Subjects() {
   const handleSubmit = (e) => {
     e.preventDefault();
     const group = IB_GROUPS.find(g => g.id === formData.ib_group);
-    const data = { ...formData, ib_group_name: group?.name || '' };
+    const data = { 
+      ...formData, 
+      ib_group: String(formData.ib_group),
+      ib_group_name: group?.name || '' 
+    };
     
     if (editingSubject) {
       updateMutation.mutate({ id: editingSubject.id, data });
