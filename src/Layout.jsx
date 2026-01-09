@@ -121,9 +121,10 @@ export default function Layout({ children, currentPageName }) {
           try {
             const { data: inviteData } = await base44.functions.invoke('checkPendingInvitations');
             if (inviteData?.schoolAssigned) {
-              // Refresh user data after school assignment
-              const updatedUser = await base44.auth.me();
-              setUser(updatedUser);
+              // School was just assigned - force logout to refresh JWT token with new school_id
+              alert('Welcome! Your school has been set up. Please log in again to access your dashboard.');
+              base44.auth.logout(window.location.pathname);
+              return;
             } else {
               setUser(userData);
             }
