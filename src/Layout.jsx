@@ -116,9 +116,8 @@ export default function Layout({ children, currentPageName }) {
           
           const { data } = await base44.functions.invoke('getSuperAdminEmails');
           setIsSuperAdmin(data?.isSuperAdmin || false);
-          
-          // Temporarily disable login verification
-        setIsLoading(false);
+
+          setIsLoading(false);
         }
       } catch (error) {
         console.error('Auth error:', error);
