@@ -77,7 +77,13 @@ export default function Subjects() {
 
   const { data: user } = useQuery({
     queryKey: ['currentUser'],
-    queryFn: () => base44.auth.me(),
+    queryFn: async () => {
+      const userData = await base44.auth.me();
+      console.log('🔍 Full user object:', userData);
+      console.log('🔍 User school_id:', userData?.school_id);
+      console.log('🔍 User school_id type:', typeof userData?.school_id);
+      return userData;
+    },
   });
 
   const schoolId = user?.school_id;
