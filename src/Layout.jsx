@@ -129,18 +129,17 @@ export default function Layout({ children, currentPageName }) {
     const checkLoginVerification = async (userData) => {
       try {
         // Check for verified session in last 24 hours
-        const sessions = await base44.entities.LoginSession.filter({
-          user_email: userData.email,
-          verified: true
-        }).catch(() => []);
+        const sessions = await base44.entities.LoginSession.list().catch(() => []);
+        const validSession = sessions.find(s => 
+          s.user_email === userData.email && 
+          s.verified === true &&
+          new Date(s.expires_at) > new Date()
+        );
 
-        if (sessions.length > 0) {
-          const session = sessions[0];
-          if (new Date(session.expires_at) > new Date()) {
-            // Valid session exists
-            setIsLoading(false);
-            return;
-          }
+        if (validSession) {
+          // Valid session exists
+          setIsLoading(false);
+          return;
         }
 
         // No valid session - need verification
