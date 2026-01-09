@@ -80,40 +80,10 @@ export default function Layout({ children, currentPageName }) {
         const subscriptionSuccess = urlParams.get('subscription') === 'success';
         
         if (subscriptionSuccess) {
-          let attempts = 0;
-          const maxAttempts = 10;
-          
-          const checkUserUpdate = async () => {
-            attempts++;
-            try {
-              const userData = await base44.auth.me();
-              if (userData.school_id) {
-                setUser(userData);
-                const { data } = await base44.functions.invoke('getSuperAdminEmails');
-                setIsSuperAdmin(data?.isSuperAdmin || false);
-                await checkLoginVerification(userData);
-                window.history.replaceState({}, '', window.location.pathname);
-              } else if (attempts < maxAttempts) {
-                setTimeout(checkUserUpdate, 2000);
-              } else {
-                setUser(userData);
-                const { data } = await base44.functions.invoke('getSuperAdminEmails');
-                setIsSuperAdmin(data?.isSuperAdmin || false);
-                await checkLoginVerification(userData);
-                window.history.replaceState({}, '', window.location.pathname);
-              }
-            } catch (error) {
-              console.error('Error fetching user:', error);
-              if (attempts < maxAttempts) {
-                setTimeout(checkUserUpdate, 2000);
-              } else {
-                setIsLoading(false);
-                base44.auth.redirectToLogin(window.location.pathname);
-              }
-            }
-          };
-          
-          setTimeout(checkUserUpdate, 2000);
+          // Subscription completed - force logout to refresh JWT token with school_id
+          alert('Payment successful! Please log in again to access your school dashboard.');
+          base44.auth.logout('/');
+          return;
         } else {
           const userData = await base44.auth.me();
           
