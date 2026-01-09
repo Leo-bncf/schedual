@@ -91,12 +91,10 @@ export default function Subjects() {
   const createMutation = useMutation({
     mutationFn: (data) => {
       if (!schoolId) throw new Error('No school assigned');
-      console.log('Creating subject with data:', { ...data, school_id: schoolId });
       return base44.entities.Subject.create({ ...data, school_id: schoolId });
     },
-    onSuccess: (result) => {
-      console.log('Subject created successfully:', result);
-      queryClient.invalidateQueries({ queryKey: ['subjects'] });
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['subjects', schoolId] });
       resetForm();
     },
     onError: (error) => {
@@ -108,7 +106,7 @@ export default function Subjects() {
   const updateMutation = useMutation({
     mutationFn: ({ id, data }) => base44.entities.Subject.update(id, data),
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['subjects'] });
+      queryClient.invalidateQueries({ queryKey: ['subjects', schoolId] });
       resetForm();
     },
     onError: (error) => {
@@ -119,7 +117,7 @@ export default function Subjects() {
 
   const deleteMutation = useMutation({
     mutationFn: (id) => base44.entities.Subject.delete(id),
-    onSuccess: () => queryClient.invalidateQueries({ queryKey: ['subjects'] }),
+    onSuccess: () => queryClient.invalidateQueries({ queryKey: ['subjects', schoolId] }),
     onError: (error) => {
       console.error('Delete subject error:', error);
       alert('Failed to delete subject: ' + (error.message || 'Unknown error'));
