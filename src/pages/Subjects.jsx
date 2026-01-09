@@ -82,11 +82,20 @@ export default function Subjects() {
 
   const schoolId = user?.school_id;
 
-  const { data: subjects = [], isLoading } = useQuery({
+  const { data: subjects = [], isLoading, error } = useQuery({
     queryKey: ['subjects', schoolId],
-    queryFn: () => base44.entities.Subject.list(),
+    queryFn: async () => {
+      console.log('Fetching subjects for school:', schoolId);
+      const result = await base44.entities.Subject.list();
+      console.log('Subjects fetched:', result);
+      return result;
+    },
     enabled: !!schoolId,
   });
+
+  console.log('User school_id:', schoolId);
+  console.log('Subjects data:', subjects);
+  console.log('Query error:', error);
 
   const createMutation = useMutation({
     mutationFn: (data) => {
