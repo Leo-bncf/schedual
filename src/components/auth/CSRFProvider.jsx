@@ -19,7 +19,7 @@ export function CSRFProvider({ children }) {
           sessionStorage.setItem('csrf_token', data.csrfToken);
         }
       } catch (error) {
-        console.error('Failed to fetch CSRF token:', error);
+        // CSRF is optional - silently fail
       }
     };
 

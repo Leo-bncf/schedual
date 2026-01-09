@@ -91,9 +91,11 @@ export default function Subjects() {
   const createMutation = useMutation({
     mutationFn: (data) => {
       if (!schoolId) throw new Error('No school assigned');
+      console.log('Creating subject with data:', { ...data, school_id: schoolId });
       return base44.entities.Subject.create({ ...data, school_id: schoolId });
     },
-    onSuccess: () => {
+    onSuccess: (result) => {
+      console.log('Subject created successfully:', result);
       queryClient.invalidateQueries({ queryKey: ['subjects'] });
       resetForm();
     },
