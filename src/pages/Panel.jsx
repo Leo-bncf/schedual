@@ -145,16 +145,18 @@ export default function Panel() {
       // Then assign user to school
       const user = allUsers.find(u => u.email === data.user_email);
       if (user && result.school) {
-        await base44.functions.invoke('adminManageUser', {
+        const updateResponse = await base44.functions.invoke('adminManageUser', {
           action: 'update',
           userId: user.id,
           data: { school_id: result.school.id }
         });
+        
+        return { school: result.school, requiresReauth: updateResponse.data?.requiresReauth, userEmail: data.user_email };
       }
       
-      return result.school;
+      return { school: result.school };
     },
-    onSuccess: () => {
+    onSuccess: (data) => {
       queryClient.invalidateQueries({ queryKey: ['allSchools'] });
       queryClient.invalidateQueries({ queryKey: ['allUsers'] });
       setIsCreateSchoolForUserOpen(false);
@@ -168,6 +170,10 @@ export default function Panel() {
         user_email: '',
         user_role: 'admin'
       });
+      
+      if (data.requiresReauth) {
+        alert(`✅ School created! IMPORTANT: ${data.userEmail} must log out and log back in to access their school dashboard and create subjects.`);
+      }
     },
   });
 
