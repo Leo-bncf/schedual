@@ -78,47 +78,55 @@ export default function Layout({ children, currentPageName }) {
       try {
         const urlParams = new URLSearchParams(window.location.search);
         const subscriptionSuccess = urlParams.get('subscription') === 'success';
-        
+
         if (subscriptionSuccess) {
           // Subscription completed - force logout to refresh JWT token with school_id
           alert('Payment successful! Please log in again to access your school dashboard.');
           base44.auth.logout('/');
           return;
-        } else {
-          const userData = await base44.auth.me();
-          
-          // Check for pending invitations
-          try {
-            const { data: inviteData } = await base44.functions.invoke('checkPendingInvitations');
-            if (inviteData?.schoolAssigned) {
-              // School was just assigned - force logout to refresh JWT token with new school_id
-              alert('Welcome! Your school has been set up. Please log in again to access your dashboard.');
-              base44.auth.logout(window.location.pathname);
-              return;
-            } else {
-              setUser(userData);
-            }
-          } catch (inviteError) {
-            console.error('Pending invitation check error:', inviteError);
-            setUser(userData);
-          }
-          
-          // Fetch school data if user has a school
-          if (userData?.school_id) {
-            try {
-              const schools = await base44.entities.School.list();
-              const userSchool = schools.find(s => s.id === userData.school_id);
-              setSchool(userSchool);
-            } catch (schoolError) {
-              console.error('Error fetching school:', schoolError);
-            }
-          }
-          
-          const { data } = await base44.functions.invoke('getSuperAdminEmails');
-          setIsSuperAdmin(data?.isSuperAdmin || false);
-
-          setIsLoading(false);
         }
+
+        const userData = await base44.auth.me();
+
+        // Check for pending invitations
+        try {
+          const { data: inviteData } = await base44.functions.invoke('checkPendingInvitations');
+          if (inviteData?.schoolAssigned) {
+            // School was just assigned - force logout to refresh JWT token with new school_id
+            alert('Welcome! Your school has been set up. Please log in again to access your dashboard.');
+            base44.auth.logout(window.location.pathname);
+            return;
+          }
+        } catch (inviteError) {
+          console.error('Pending invitation check error:', inviteError);
+        }
+
+        setUser(userData);
+
+        // Check if superadmin FIRST
+        const { data } = await base44.functions.invoke('getSuperAdminEmails');
+        const isSuperAdminUser = data?.isSuperAdmin || false;
+        setIsSuperAdmin(isSuperAdminUser);
+
+        // Superadmins skip verification and school fetching
+        if (isSuperAdminUser) {
+          setIsLoading(false);
+          return;
+        }
+
+        // Fetch school data if user has a school
+        if (userData?.school_id) {
+          try {
+            const schools = await base44.entities.School.list();
+            const userSchool = schools.find(s => s.id === userData.school_id);
+            setSchool(userSchool);
+          } catch (schoolError) {
+            console.error('Error fetching school:', schoolError);
+          }
+        }
+
+        // Check login verification for non-superadmins
+        await checkLoginVerification(userData);
       } catch (error) {
         console.error('Auth error:', error);
         setIsLoading(false);
@@ -128,13 +136,6 @@ export default function Layout({ children, currentPageName }) {
 
     const checkLoginVerification = async (userData) => {
       try {
-        // Check if user is SuperAdmin - skip verification for them
-        const { data: superAdminCheck } = await base44.functions.invoke('getSuperAdminEmails');
-        if (superAdminCheck?.isSuperAdmin) {
-          setIsLoading(false);
-          return;
-        }
-
         // Check for verified session in last 24 hours
         const sessions = await base44.entities.LoginSession.list().catch(() => []);
         const validSession = sessions.find(s => 
