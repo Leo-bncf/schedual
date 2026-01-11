@@ -88,6 +88,21 @@ export default function Layout({ children, currentPageName }) {
 
         const userData = await base44.auth.me();
 
+        // Check if school_id exists in database but not in JWT token (was assigned after login)
+        if (userData?.school_id) {
+          try {
+            const users = await base44.asServiceRole.entities.User.filter({ email: userData.email });
+            if (users.length > 0 && users[0].school_id && users[0].school_id !== userData.school_id) {
+              // Database has a different school_id than JWT - force logout to refresh token
+              alert('Your account has been updated. Please log in again to access your dashboard.');
+              base44.auth.logout(window.location.pathname);
+              return;
+            }
+          } catch (error) {
+            console.error('School sync check error:', error);
+          }
+        }
+
         // Check for pending invitations
         try {
           const { data: inviteData } = await base44.functions.invoke('checkPendingInvitations');
