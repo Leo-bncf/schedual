@@ -28,7 +28,18 @@ Deno.serve(async (req) => {
 
     switch (action) {
       case 'update':
+        const previousUser = await base44.asServiceRole.entities.User.filter({ id: userId });
         await base44.asServiceRole.entities.User.update(userId, data);
+        
+        // If school_id was just assigned or changed, user needs to logout/login to refresh JWT
+        if (previousUser.length > 0 && previousUser[0].school_id !== data.school_id && data.school_id) {
+          return Response.json({ 
+            success: true, 
+            requiresReauth: true,
+            message: 'School assigned. User must log out and log back in to access school features.'
+          });
+        }
+        
         return Response.json({ success: true });
 
       case 'delete':
