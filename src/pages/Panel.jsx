@@ -207,9 +207,15 @@ export default function Panel() {
 
   const updateUserMutation = useMutation({
     mutationFn: ({ id, data }) => base44.functions.invoke('adminManageUser', { action: 'update', userId: id, data }),
-    onSuccess: () => {
+    onSuccess: (response) => {
       queryClient.invalidateQueries({ queryKey: ['allUsers'] });
       setIsUserDialogOpen(false);
+      
+      if (response.data?.requiresReauth) {
+        const user = allUsers.find(u => u.id === response.config?.userId);
+        alert(`✅ User updated! IMPORTANT: ${user?.email || 'The user'} must log out and log back in to access their school dashboard.`);
+      }
+      
       setUserFormData({ email: '', school_id: '', role: 'user' });
     },
   });
