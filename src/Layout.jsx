@@ -128,6 +128,13 @@ export default function Layout({ children, currentPageName }) {
 
     const checkLoginVerification = async (userData) => {
       try {
+        // Check if user is SuperAdmin - skip verification for them
+        const { data: superAdminCheck } = await base44.functions.invoke('getSuperAdminEmails');
+        if (superAdminCheck?.isSuperAdmin) {
+          setIsLoading(false);
+          return;
+        }
+
         // Check for verified session in last 24 hours
         const sessions = await base44.entities.LoginSession.list().catch(() => []);
         const validSession = sessions.find(s => 
