@@ -363,6 +363,38 @@ ${trainingFeedback ? `LESSONS FROM ADMIN FEEDBACK:\n${trainingFeedback}\n\n` : '
         🔍 Debug RLS
       </Button>
 
+      <Button 
+        variant="outline"
+        onClick={async () => {
+          try {
+            const user = await base44.auth.me();
+            console.log('Creating subject with school_id:', user.school_id);
+            
+            const result = await base44.entities.Subject.create({
+              school_id: user.school_id,
+              name: "Test Subject",
+              code: "TEST",
+              ib_level: "DP",
+              ib_group: "1",
+              ib_group_name: "Language & Literature",
+              available_levels: ["HL", "SL"],
+              hl_hours_per_week: 6,
+              sl_hours_per_week: 4,
+              is_active: true
+            });
+            
+            console.log('✅ Created:', result);
+            alert('✅ Subject created successfully! ID: ' + result.id);
+            queryClient.invalidateQueries({ queryKey: ['subjects'] });
+          } catch (err) {
+            console.error('❌ Create failed:', err);
+            alert('❌ CREATE FAILED:\n' + err.message + '\n\nCheck console for details');
+          }
+        }}
+      >
+        🧪 Test Create
+      </Button>
+
       <PageHeader 
         title="Subjects"
         description="Manage IB Diploma Programme subjects across all groups"
