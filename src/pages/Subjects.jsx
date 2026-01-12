@@ -351,20 +351,16 @@ ${trainingFeedback ? `LESSONS FROM ADMIN FEEDBACK:\n${trainingFeedback}\n\n` : '
         variant="outline"
         onClick={async () => {
           try {
-            const userData = await base44.auth.me();
-            console.log('🔍 User data:', userData);
-            
-            const subjects = await base44.entities.Subject.list();
-            console.log('🔍 Subjects returned:', subjects);
-            
-            alert(`User school_id: ${userData.school_id}\n\nSubjects found: ${subjects.length}\n\nSubjects: ${JSON.stringify(subjects, null, 2)}`);
+            const { data } = await base44.functions.invoke('debugSubjects');
+            console.log('🔍 Debug data:', data);
+            alert(JSON.stringify(data, null, 2));
           } catch (err) {
             console.error('❌ Error:', err);
             alert('❌ FAILED: ' + err.message);
           }
         }}
       >
-        🔍 Debug Read
+        🔍 Debug RLS
       </Button>
 
       <PageHeader 
