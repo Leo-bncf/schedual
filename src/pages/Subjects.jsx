@@ -353,7 +353,7 @@ ${trainingFeedback ? `LESSONS FROM ADMIN FEEDBACK:\n${trainingFeedback}\n\n` : '
           try {
             const { data } = await base44.functions.invoke('debugSubjects');
             console.log('🔍 Full debug data:', data);
-            alert(`USER school_id: ${data.user.school_id}\n\nTOTAL SUBJECTS IN DB: ${data.allSubjectsInDB}\nUser can see: ${data.userCanSee}\nFiltered by school_id: ${data.filteredBySchoolId}\n\nCREATE TEST: ${JSON.stringify(data.createTest)}\n\nALL SUBJECTS:\n${data.allSubjects.map(s => `${s.name} (${s.school_id}) - matches: ${s.matches}`).join('\n')}`);
+            alert(`DIAGNOSIS: ${data.diagnosis}\n\nSTEP 1: Deleted ${data.step1_deleted} old subjects\n\nSTEP 2: Created subject:\n${data.step2_created.name} (ID: ${data.step2_created.id})\nSchool ID: ${data.step2_created.school_id}\n\nSTEP 3: After creation:\n- Service role sees: ${data.step3_afterCreate.serviceRole_sees} subjects\n- User sees: ${data.step3_afterCreate.user_sees} subjects\n\nSTEP 4: Read by ID result:\n${JSON.stringify(data.step4_readById, null, 2)}`);
           } catch (err) {
             console.error('❌ Error:', err);
             alert('Error: ' + err.message);
