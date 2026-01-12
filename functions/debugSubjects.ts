@@ -15,6 +15,11 @@ Deno.serve(async (req) => {
     
     // Try to read with normal user permissions
     const userSubjects = await base44.entities.Subject.list();
+    
+    // Try filtering by school_id explicitly
+    const filteredSubjects = await base44.entities.Subject.filter({
+      school_id: user.school_id
+    });
 
     return Response.json({
       user: {
@@ -22,18 +27,20 @@ Deno.serve(async (req) => {
         school_id: user.school_id,
         school_id_type: typeof user.school_id
       },
+      allSubjectsCount: allSubjects.length,
       allSubjects: allSubjects.map(s => ({
         id: s.id,
         name: s.name,
         school_id: s.school_id,
-        school_id_type: typeof s.school_id
+        matches: s.school_id === user.school_id
       })),
-      userSubjects: userSubjects.map(s => ({
+      userSubjectsCount: userSubjects.length,
+      filteredSubjectsCount: filteredSubjects.length,
+      filteredSubjects: filteredSubjects.map(s => ({
         id: s.id,
         name: s.name,
         school_id: s.school_id
-      })),
-      rlsWorking: allSubjects.length > 0 && userSubjects.length === 0
+      }))
     });
   } catch (error) {
     return Response.json({ error: error.message }, { status: 500 });
