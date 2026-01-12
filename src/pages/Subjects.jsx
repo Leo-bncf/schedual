@@ -353,14 +353,14 @@ ${trainingFeedback ? `LESSONS FROM ADMIN FEEDBACK:\n${trainingFeedback}\n\n` : '
           try {
             const { data } = await base44.functions.invoke('debugSubjects');
             console.log('🔍 Full debug data:', data);
-            alert(`USER school_id: ${data.user.school_id}\n\nSUBJECTS IN DB: ${data.allSubjects.count}\nUser can see: ${data.userSubjects.count}\n\nAll subject school_ids: ${JSON.stringify(data.allSubjects.schoolIds)}\n\nRLS RULE: ${JSON.stringify(data.rlsRules.read)}`);
+            alert(`USER school_id: ${data.user.school_id}\n\nTOTAL SUBJECTS IN DB: ${data.allSubjectsInDB}\nUser can see: ${data.userCanSee}\nFiltered by school_id: ${data.filteredBySchoolId}\n\nCREATE TEST: ${JSON.stringify(data.createTest)}\n\nALL SUBJECTS:\n${data.allSubjects.map(s => `${s.name} (${s.school_id}) - matches: ${s.matches}`).join('\n')}`);
           } catch (err) {
             console.error('❌ Error:', err);
             alert('Error: ' + err.message);
           }
         }}
       >
-        🔍 Debug School ID Match
+        🔍 Debug & Test Create
       </Button>
 
       <PageHeader 
