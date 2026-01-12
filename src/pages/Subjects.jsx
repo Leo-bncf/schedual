@@ -353,10 +353,10 @@ ${trainingFeedback ? `LESSONS FROM ADMIN FEEDBACK:\n${trainingFeedback}\n\n` : '
           try {
             const { data } = await base44.functions.invoke('debugSubjects');
             console.log('🔍 Full debug data:', data);
-            alert(`DIAGNOSIS: ${data.diagnosis}\n\nSTEP 1: Deleted ${data.step1_deleted} old subjects\n\nSTEP 2: Created subject:\n${data.step2_created.name} (ID: ${data.step2_created.id})\nSchool ID: ${data.step2_created.school_id}\n\nSTEP 3: After creation:\n- Service role sees: ${data.step3_afterCreate.serviceRole_sees} subjects\n- User sees: ${data.step3_afterCreate.user_sees} subjects\n\nSTEP 4: Read by ID result:\n${JSON.stringify(data.step4_readById, null, 2)}`);
+            alert(`${data.diagnosis}\n\nBEFORE: ${data.step1_before} subjects\nDELETED: ${data.step2_deleted} subjects\nAFTER DELETE: ${data.step3_afterDelete} subjects\n\nCREATED:\nID: ${data.step4_created?.id}\nName: ${data.step4_created?.name}\nSchool ID: ${data.step4_created?.school_id}\n\nAFTER CREATE:\n- Service role sees: ${data.step5_afterCreate_serviceRoleSees} subjects\n- User sees: ${data.step5_afterCreate_userSees} subjects`);
           } catch (err) {
             console.error('❌ Error:', err);
-            alert('Error: ' + err.message);
+            alert('Error: ' + (err.message || JSON.stringify(err)));
           }
         }}
       >
