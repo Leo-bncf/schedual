@@ -441,6 +441,28 @@ export default function AccountManager() {
 
         {/* School Tab */}
         <TabsContent value="school" className="space-y-6 mt-6">
+          <Card className="bg-blue-50 border-blue-200">
+            <CardHeader>
+              <CardTitle>🔍 JWT Token Debug</CardTitle>
+              <CardDescription>Check if your login token has the correct school_id</CardDescription>
+            </CardHeader>
+            <CardContent>
+              <Button 
+                onClick={async () => {
+                  try {
+                    const result = await base44.functions.invoke('debugUserJWT');
+                    alert(JSON.stringify(result.data, null, 2));
+                  } catch (error) {
+                    alert('Error: ' + error.message);
+                  }
+                }}
+                className="bg-blue-900 hover:bg-blue-800"
+              >
+                Debug JWT Token
+              </Button>
+            </CardContent>
+          </Card>
+
           {school ? (
             <Card>
               <CardHeader>
