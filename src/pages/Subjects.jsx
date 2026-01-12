@@ -347,6 +347,22 @@ ${trainingFeedback ? `LESSONS FROM ADMIN FEEDBACK:\n${trainingFeedback}\n\n` : '
 
   return (
     <div className="space-y-6">
+      <Button 
+        variant="outline"
+        onClick={async () => {
+          try {
+            const { data } = await base44.functions.invoke('debugSubjects');
+            console.log('🔍 Full debug data:', data);
+            alert(`USER school_id: ${data.user.school_id}\n\nSUBJECTS IN DB: ${data.allSubjects.count}\nUser can see: ${data.userSubjects.count}\n\nAll subject school_ids: ${JSON.stringify(data.allSubjects.schoolIds)}\n\nRLS RULE: ${JSON.stringify(data.rlsRules.read)}`);
+          } catch (err) {
+            console.error('❌ Error:', err);
+            alert('Error: ' + err.message);
+          }
+        }}
+      >
+        🔍 Debug School ID Match
+      </Button>
+
       <PageHeader 
         title="Subjects"
         description="Manage IB Diploma Programme subjects across all groups"
