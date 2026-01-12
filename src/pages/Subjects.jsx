@@ -347,6 +347,26 @@ ${trainingFeedback ? `LESSONS FROM ADMIN FEEDBACK:\n${trainingFeedback}\n\n` : '
 
   return (
     <div className="space-y-6">
+      <Button 
+        variant="outline"
+        onClick={async () => {
+          try {
+            const userData = await base44.auth.me();
+            console.log('🔍 User data:', userData);
+            
+            const subjects = await base44.entities.Subject.list();
+            console.log('🔍 Subjects returned:', subjects);
+            
+            alert(`User school_id: ${userData.school_id}\n\nSubjects found: ${subjects.length}\n\nSubjects: ${JSON.stringify(subjects, null, 2)}`);
+          } catch (err) {
+            console.error('❌ Error:', err);
+            alert('❌ FAILED: ' + err.message);
+          }
+        }}
+      >
+        🔍 Debug Read
+      </Button>
+
       <PageHeader 
         title="Subjects"
         description="Manage IB Diploma Programme subjects across all groups"
