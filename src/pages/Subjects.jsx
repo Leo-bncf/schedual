@@ -347,31 +347,6 @@ ${trainingFeedback ? `LESSONS FROM ADMIN FEEDBACK:\n${trainingFeedback}\n\n` : '
 
   return (
     <div className="space-y-6">
-      <Button 
-        variant="outline"
-        onClick={async () => {
-          const userData = await base44.auth.me();
-          const testData = {
-            name: "DEBUG TEST",
-            code: "TEST",
-            ib_level: "DP",
-            ib_group: "1",
-            school_id: userData.school_id
-          };
-          console.log('🔍 Creating with:', testData);
-          console.log('🔍 User school_id:', userData.school_id);
-          try {
-            await base44.entities.Subject.create(testData);
-            alert('✅ SUCCESS! Subject created');
-          } catch (err) {
-            console.error('❌ Error:', err);
-            alert('❌ FAILED: ' + err.message);
-          }
-        }}
-      >
-        🐛 Debug Create
-      </Button>
-
       <PageHeader 
         title="Subjects"
         description="Manage IB Diploma Programme subjects across all groups"
