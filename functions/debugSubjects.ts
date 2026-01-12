@@ -9,17 +9,28 @@ Deno.serve(async (req) => {
       return Response.json({ error: 'Unauthorized' }, { status: 401 });
     }
 
-    // Step 1: Delete ALL subjects to start fresh
-    const existingSubjects = await base44.asServiceRole.entities.Subject.list();
-    for (const subject of existingSubjects) {
+    console.log('🔍 Starting debug - user school_id:', user.school_id);
+
+    // Step 1: Check current state
+    const before_allSubjects = await base44.asServiceRole.entities.Subject.list();
+    console.log('📊 BEFORE: Total subjects in DB:', before_allSubjects.length);
+
+    // Step 2: Delete ALL subjects
+    for (const subject of before_allSubjects) {
       await base44.asServiceRole.entities.Subject.delete(subject.id);
+      console.log('🗑️ Deleted subject:', subject.id);
     }
 
-    // Step 2: Create a fresh subject
-    const newSubject = await base44.asServiceRole.entities.Subject.create({
+    // Step 3: Verify deletion
+    const afterDelete = await base44.asServiceRole.entities.Subject.list();
+    console.log('📊 AFTER DELETE: Total subjects:', afterDelete.length);
+
+    // Step 4: Create a new subject with USER context (not service role)
+    console.log('➕ Creating subject with school_id:', user.school_id);
+    const newSubject = await base44.entities.Subject.create({
       school_id: user.school_id,
-      name: "FRESH TEST SUBJECT",
-      code: "FRESH",
+      name: "USER CONTEXT TEST",
+      code: "UCT",
       ib_level: "DP",
       ib_group: "1",
       ib_group_name: "Language & Literature",
@@ -28,40 +39,40 @@ Deno.serve(async (req) => {
       sl_hours_per_week: 4,
       is_active: true
     });
+    console.log('✅ Subject created, returned ID:', newSubject.id);
+    console.log('✅ Returned full object:', JSON.stringify(newSubject));
 
-    // Step 3: Immediately query it back
-    const afterCreate_allSubjects = await base44.asServiceRole.entities.Subject.list();
-    const afterCreate_userSubjects = await base44.entities.Subject.list();
-    
-    // Step 4: Try to read the specific subject by ID
-    let readById = null;
-    try {
-      readById = await base44.asServiceRole.entities.Subject.filter({ id: newSubject.id });
-    } catch (e) {
-      readById = { error: e.message };
-    }
+    // Step 5: Wait a moment (maybe async issue?)
+    await new Promise(resolve => setTimeout(resolve, 100));
+
+    // Step 6: Query immediately after
+    const afterCreate_service = await base44.asServiceRole.entities.Subject.list();
+    const afterCreate_user = await base44.entities.Subject.list();
+    console.log('📊 AFTER CREATE (service role):', afterCreate_service.length);
+    console.log('📊 AFTER CREATE (user):', afterCreate_user.length);
 
     return Response.json({
-      step1_deleted: existingSubjects.length,
-      step2_created: {
-        id: newSubject.id,
-        name: newSubject.name,
-        school_id: newSubject.school_id
-      },
-      step3_afterCreate: {
-        serviceRole_sees: afterCreate_allSubjects.length,
-        user_sees: afterCreate_userSubjects.length,
-        serviceRole_list: afterCreate_allSubjects,
-        user_list: afterCreate_userSubjects
-      },
-      step4_readById: readById,
-      diagnosis: afterCreate_allSubjects.length === 0 ? 
-        "PROBLEM: Subject created but disappeared from DB!" : 
-        afterCreate_userSubjects.length === 0 ? 
-          "PROBLEM: RLS blocking read access" : 
-          "SUCCESS: Everything works"
+      user_school_id: user.school_id,
+      step1_before: before_allSubjects.length,
+      step2_deleted: before_allSubjects.length,
+      step3_afterDelete: afterDelete.length,
+      step4_created: newSubject,
+      step5_afterCreate_serviceRoleSees: afterCreate_service.length,
+      step5_afterCreate_userSees: afterCreate_user.length,
+      step6_serviceRoleList: afterCreate_service,
+      step6_userList: afterCreate_user,
+      diagnosis: afterCreate_service.length === 0 ? 
+        "❌ CRITICAL: Subject returned from create() but NOT in database!" :
+        afterCreate_user.length === 0 ?
+          "⚠️ RLS ISSUE: Subject exists but user can't read it" :
+          "✅ SUCCESS: Everything working!"
     });
   } catch (error) {
-    return Response.json({ error: error.message, stack: error.stack }, { status: 500 });
+    console.error('❌ Debug function error:', error);
+    return Response.json({ 
+      error: error.message, 
+      stack: error.stack,
+      name: error.name 
+    }, { status: 500 });
   }
 });
