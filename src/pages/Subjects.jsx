@@ -328,7 +328,7 @@ ${trainingFeedback ? `LESSONS FROM ADMIN FEEDBACK:\n${trainingFeedback}\n\n` : '
           totalSubjects: 0,
           error: null
         });
-        queryClient.invalidateQueries({ queryKey: ['subjects'] });
+        queryClient.invalidateQueries({ queryKey: ['subjects', schoolId] });
       }, 2000);
 
     } catch (error) {
