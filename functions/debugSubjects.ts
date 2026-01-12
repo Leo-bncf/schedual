@@ -20,17 +20,30 @@ Deno.serve(async (req) => {
     const userSubjects = await base44.entities.Subject.list('-created_date', 100);
 
     return Response.json({
+      environment: {
+        app_id: Deno.env.get('BASE44_APP_ID'),
+        has_schema: !!schema
+      },
       user: {
-        school_id: user.school_id
+        email: user.email,
+        school_id: user.school_id,
+        school_id_type: typeof user.school_id
       },
-      rlsRules: schema?.rls || {},
-      allSubjects: {
-        count: allSubjects.length,
-        schoolIds: [...new Set(allSubjects.map(s => s.school_id))]
-      },
-      userSubjects: {
-        count: userSubjects.length
-      }
+      rls_rules: schema?.rls || 'no RLS',
+      allSubjectsCount: allSubjects.length,
+      allSubjects: allSubjects.slice(0, 5).map(s => ({
+        id: s.id,
+        name: s.name,
+        school_id: s.school_id,
+        created_date: s.created_date,
+        matches: s.school_id === user.school_id
+      })),
+      userSubjectsCount: userSubjects.length,
+      userSubjects: userSubjects.slice(0, 5).map(s => ({
+        id: s.id,
+        name: s.name,
+        school_id: s.school_id
+      }))
     });
   } catch (error) {
     return Response.json({ error: error.message, stack: error.stack }, { status: 500 });
