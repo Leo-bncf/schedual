@@ -207,9 +207,9 @@ export default function Layout({ children, currentPageName }) {
     return <Navigate to={createPageUrl('Panel')} replace />;
   } else if (isSchoolAdmin(user) && superAdminPages.includes(currentPageName)) {
     return <Navigate to={createPageUrl('Dashboard')} replace />;
-  } else if (isNewClient(user) && !superAdminPages.includes(currentPageName) && currentPageName !== 'Subscription' && currentPageName !== 'AccountManager' && currentPageName !== 'Support') {
+  } else if (isNewClient(user) && !superAdminPages.includes(currentPageName) && currentPageName !== 'Subscription' && currentPageName !== 'SubscriptionTiered' && currentPageName !== 'AccountManager' && currentPageName !== 'Support') {
     return <Navigate to={createPageUrl('Subscription')} replace />;
-  } else if (isSchoolAdmin(user) && !hasActiveSubscription() && currentPageName !== 'Subscription' && currentPageName !== 'AccountManager' && currentPageName !== 'Support') {
+  } else if (isSchoolAdmin(user) && !hasActiveSubscription() && currentPageName !== 'Subscription' && currentPageName !== 'SubscriptionTiered' && currentPageName !== 'AccountManager' && currentPageName !== 'Support') {
     // Block access to school features if subscription is inactive/expired
     return <Navigate to={createPageUrl('Subscription')} replace />;
   }
