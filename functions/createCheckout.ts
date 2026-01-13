@@ -39,8 +39,19 @@ Deno.serve(async (req) => {
       const school = schools[0];
       
       let customerId = school?.stripe_customer_id || null;
+
+      // Fallback 1: derive from saved subscription id
+      if (!customerId && school?.stripe_subscription_id) {
+        try {
+          const sub = await stripe.subscriptions.retrieve(school.stripe_subscription_id);
+          customerId = sub?.customer || null;
+        } catch (e) {
+          console.error('Failed to retrieve subscription for customer id fallback:', e?.message || e);
+        }
+      }
+
+      // Fallback 2: search by user email and persist
       if (!customerId) {
-        // Fallback: find Stripe customer by user email and persist it on the school
         const customers = await stripe.customers.list({ email: user.email, limit: 1 });
         if (customers.data && customers.data.length > 0) {
           customerId = customers.data[0].id;
@@ -51,6 +62,7 @@ Deno.serve(async (req) => {
           }
         }
       }
+
       if (customerId) {
         const portalSession = await stripe.billingPortal.sessions.create({
           customer: customerId,
