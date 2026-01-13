@@ -354,9 +354,12 @@ ${trainingFeedback ? `LESSONS FROM ADMIN FEEDBACK:\n${trainingFeedback}\n\n` : '
             const { data } = await base44.functions.invoke('debugSubjects');
             console.log('🔍 Full debug data:', data);
             
-            const stepResults = data.steps.map(s => 
-              `Step ${s.step} (${s.action}): ${s.success ? '✅' : '❌'} ${s.count !== undefined ? `${s.count} subjects` : s.error || ''}`
-            ).join('\n');
+            const stepResults = data.steps.map(s => {
+              if (s.action === 'create') {
+                return `Step ${s.step} (${s.action}): ${s.success ? '✅' : '❌'} ID: ${s.id || 'null'} Returned: ${JSON.stringify(s.returned || {})}`;
+              }
+              return `Step ${s.step} (${s.action}): ${s.success ? '✅' : '❌'} ${s.count !== undefined ? `${s.count} subjects` : s.found !== undefined ? `Found ${s.found}` : s.error || ''}`;
+            }).join('\n');
             
             alert(`${data.diagnosis}\n\n${stepResults}`);
           } catch (err) {
