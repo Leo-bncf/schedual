@@ -26,6 +26,7 @@ import {
   Globe,
 } from 'lucide-react';
 import PageHeader from '../components/ui-custom/PageHeader';
+import { loadStripe } from '@stripe/stripe-js';
 import { toast } from 'sonner';
 
 const TIERS = {
@@ -163,6 +164,12 @@ export default function SubscriptionTiered() {
   };
 
   const handleSubscribe = async () => {
+    // Block in-builder iframe to avoid Stripe refusing to load inside iframes
+    if (window.self !== window.top) {
+      alert('Checkout can only be started from the published app (not the preview). Please open the app in a new tab and try again.');
+      return;
+    }
+
     setIsProcessing(true);
     try {
       const { data } = await base44.functions.invoke('tieredCheckout', {
@@ -170,12 +177,29 @@ export default function SubscriptionTiered() {
         add_ons: selectedAddOns,
       });
 
-      if (data.url) {
-        window.location.href = data.url;
+      if (data?.url) {
+        window.location.assign(data.url);
+        return;
       }
+
+      if (data?.sessionId) {
+        const pk = import.meta.env.VITE_STRIPE_PUBLIC_KEY;
+        if (!pk) {
+          toast.error('Stripe public key is missing. Please set VITE_STRIPE_PUBLIC_KEY.');
+          return;
+        }
+        const stripe = await loadStripe(pk);
+        const result = await stripe.redirectToCheckout({ sessionId: data.sessionId });
+        if (result?.error) {
+          toast.error(result.error.message || 'Stripe redirection failed');
+        }
+        return;
+      }
+
+      toast.error('Could not start checkout. Please try again.');
     } catch (error) {
-      console.error('Checkout error:', error);
-      toast.error('Failed to start checkout process');
+      const message = error?.response?.data?.error || error.message || 'Failed to start checkout process';
+      toast.error(message);
     } finally {
       setIsProcessing(false);
     }
