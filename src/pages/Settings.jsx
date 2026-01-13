@@ -54,7 +54,10 @@ import {
   MoreHorizontal,
   Trash2,
   Plus,
-  GraduationCap
+  GraduationCap,
+  Zap,
+  ArrowRight,
+  CheckCircle2
 } from 'lucide-react';
 import PageHeader from '../components/ui-custom/PageHeader';
 import YearAdvancement from '../components/settings/YearAdvancement';
@@ -64,6 +67,45 @@ const TIMEZONES = [
   'UTC', 'America/New_York', 'America/Chicago', 'America/Denver', 'America/Los_Angeles',
   'Europe/London', 'Europe/Paris', 'Europe/Berlin', 'Asia/Tokyo', 'Asia/Singapore',
   'Asia/Dubai', 'Australia/Sydney'
+];
+
+const TIERS = {
+  tier1: {
+    name: 'Tier 1',
+    subtitle: 'Small IB Schools',
+    price: 1100,
+    description: 'PYP/MYP only, ≤300 students',
+    icon: '🌱',
+  },
+  tier2: {
+    name: 'Tier 2',
+    subtitle: 'Standard IB Continuum',
+    price: 2200,
+    description: 'PYP + MYP + DP, 300-800 students',
+    icon: '⭐',
+  },
+  tier3: {
+    name: 'Tier 3',
+    subtitle: 'Large/Multi-Campus',
+    price: 4950,
+    description: '800+ students, multiple campuses',
+    icon: '🚀',
+  },
+};
+
+const ADD_ONS = [
+  { id: 'extra_admin_user', name: 'Extra Admin User', price: 275, category: 'Users' },
+  { id: 'unlimited_admin_users', name: 'Unlimited Admin Users', price: 825, category: 'Users' },
+  { id: 'additional_campus', name: 'Additional Campus', price: 660, category: 'School Structure' },
+  { id: 'unlimited_campuses', name: 'Unlimited Campuses', price: 1650, category: 'School Structure' },
+  { id: 'multiple_timetable_scenarios', name: 'Multiple Timetable Scenarios', price: 880, category: 'School Structure' },
+  { id: 'managebac_integration', name: 'ManageBac Integration', price: 1100, category: 'Integrations' },
+  { id: 'custom_sis_integration_yearly', name: 'Custom SIS Integration', price: 550, category: 'Integrations' },
+  { id: 'advanced_constraint_engine', name: 'Advanced Constraint Engine', price: 660, category: 'Features' },
+  { id: 'dp_advanced_logic', name: 'DP Advanced Logic', price: 770, category: 'Features' },
+  { id: 'priority_support', name: 'Priority Support', price: 550, category: 'Support' },
+  { id: 'dedicated_account_manager', name: 'Dedicated Account Manager', price: 1100, category: 'Support' },
+  { id: 'onboarding_setup', name: 'Onboarding & Setup', price: 1320, category: 'Support' },
 ];
 
 export default function Settings() {
@@ -76,6 +118,8 @@ export default function Settings() {
   const [isProcessing, setIsProcessing] = useState(false);
   const [inviteLink, setInviteLink] = useState('');
   const [showInviteLink, setShowInviteLink] = useState(false);
+  const [showTierOptions, setShowTierOptions] = useState(false);
+  const [showAddOns, setShowAddOns] = useState(false);
   const queryClient = useQueryClient();
 
   const { data: user } = useQuery({
@@ -606,145 +650,210 @@ export default function Settings() {
         </TabsContent>
 
         <TabsContent value="subscription">
-          <Card className="border-0 shadow-sm">
-            <CardHeader>
-              <div className="flex items-center justify-between">
-                <div>
-                  <CardTitle className="flex items-center gap-2">
-                    <Shield className="w-5 h-5" />
-                    Subscription & Billing
-                  </CardTitle>
-                  <CardDescription className="mt-1">
-                    Manage your subscription, users, and payment details
-                  </CardDescription>
-                </div>
-                {isActive && (
-                  <Badge className="bg-emerald-100 text-emerald-700 border-0">
-                    <CheckCircle className="w-4 h-4 mr-1.5" />
-                    Active
-                  </Badge>
-                )}
-                {isPastDue && (
-                  <Badge className="bg-amber-100 text-amber-700 border-0">
-                    <AlertCircle className="w-4 h-4 mr-1.5" />
-                    Payment Required
-                  </Badge>
-                )}
-              </div>
-            </CardHeader>
-            <CardContent>
-              {isActive ? (
-                <div className="space-y-4">
-                  <div className="grid sm:grid-cols-3 gap-4">
-                    <div className="p-4 rounded-lg bg-gradient-to-br from-blue-50 to-blue-100 border border-blue-200">
-                      <p className="text-xs font-medium text-blue-700 uppercase tracking-wide mb-1">Plan</p>
-                      <p className="text-xl font-bold text-blue-900">Yearly</p>
-                      <p className="text-xs text-blue-600 mt-1">€187/month</p>
+          <div className="space-y-6">
+            {/* Current Subscription Status */}
+            <Card className="border-0 shadow-md">
+              <CardHeader className="bg-gradient-to-r from-blue-50 to-indigo-50">
+                <div className="flex items-center justify-between">
+                  <div className="flex items-center gap-3">
+                    <div className="p-2 rounded-lg bg-blue-100">
+                      <CreditCard className="w-5 h-5 text-blue-700" />
                     </div>
-                    <div className="p-4 rounded-lg bg-gradient-to-br from-emerald-50 to-emerald-100 border border-emerald-200">
-                      <p className="text-xs font-medium text-emerald-700 uppercase tracking-wide mb-1">Next Billing</p>
-                      <p className="text-xl font-bold text-emerald-900">
-                        {school.subscription_end_date 
-                          ? new Date(school.subscription_end_date).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })
-                          : 'N/A'
-                        }
-                      </p>
-                    </div>
-                    <div className="p-4 rounded-lg bg-gradient-to-br from-violet-50 to-violet-100 border border-violet-200">
-                      <p className="text-xs font-medium text-violet-700 uppercase tracking-wide mb-1">Extra Users</p>
-                      <p className="text-xl font-bold text-violet-900">
-                        {school.max_additional_users || 0}
-                      </p>
-                      <p className="text-xs text-violet-600 mt-1">additional seats</p>
+                    <div>
+                      <CardTitle className="text-lg">Subscription Status</CardTitle>
+                      <CardDescription>Your current plan and billing information</CardDescription>
                     </div>
                   </div>
-
-                  <div className="grid sm:grid-cols-2 gap-3">
-                    <Button 
-                      variant="outline" 
-                      className="w-full h-12 font-medium border-2"
-                      onClick={handleManageSubscription}
-                      disabled={isProcessing}
-                    >
-                      <CreditCard className="w-4 h-4 mr-2" />
-                      Manage Subscription
-                    </Button>
-                    
-                    <Button 
-                      variant="outline"
-                      className="w-full h-12 font-medium border-2 border-blue-300 text-blue-700 hover:bg-blue-50"
-                      onClick={() => setBuyUsersDialogOpen(true)}
-                      disabled={isProcessing}
-                    >
-                      <UserPlus className="w-4 h-4 mr-2" />
-                      Buy Additional Users
-                    </Button>
-
-                    <Button 
-                      variant="outline"
-                      className="w-full h-12 font-medium border-2 border-emerald-300 text-emerald-700 hover:bg-emerald-50 sm:col-span-2"
-                      onClick={() => setInviteDialogOpen(true)}
-                      disabled={isProcessing || !school?.max_additional_users || schoolAdmins.length >= (school.max_additional_users + 1)}
-                    >
-                      <Mail className="w-4 h-4 mr-2" />
-                      Invite School Admin ({schoolAdmins.length}/{(school?.max_additional_users || 0) + 1})
-                    </Button>
-                  </div>
-
-                  <div className="p-3 rounded-lg bg-blue-50 border border-blue-200">
-                    <p className="text-xs text-blue-800">
-                      <strong>Note:</strong> "Manage Subscription" opens Stripe's portal for payment methods, invoices, and cancellation.
-                    </p>
-                  </div>
-
-                  {/* Current Admins List */}
-                  {schoolAdmins.length > 0 && (
-                    <div className="mt-6 p-4 rounded-lg border-2 border-slate-200 bg-slate-50">
-                      <div className="flex items-center justify-between mb-4">
-                        <h4 className="font-semibold text-slate-900 flex items-center gap-2">
-                          <Users className="w-4 h-4" />
-                          School Administrators ({schoolAdmins.length}/{(school?.max_additional_users || 0) + 1})
-                        </h4>
-                      </div>
-                      <div className="space-y-2">
-                        {schoolAdmins.map((admin, i) => (
-                          <div key={i} className="flex items-center justify-between p-3 bg-white rounded-lg border border-slate-200">
-                            <div className="flex items-center gap-3">
-                              <div className="w-10 h-10 rounded-full bg-gradient-to-br from-blue-500 to-indigo-600 flex items-center justify-center">
-                                <span className="text-white font-semibold text-sm">
-                                  {admin.full_name?.charAt(0) || admin.email?.charAt(0) || 'A'}
-                                </span>
-                              </div>
-                              <div>
-                                <p className="font-medium text-slate-900">{admin.full_name || 'Admin User'}</p>
-                                <p className="text-sm text-slate-500">{admin.email}</p>
-                              </div>
-                            </div>
-                            <Badge variant="outline" className="text-blue-700 border-blue-300">
-                              Admin
-                            </Badge>
-                          </div>
-                        ))}
-                      </div>
-                    </div>
+                  {isActive && (
+                    <Badge className="bg-emerald-100 text-emerald-700 border-0 text-sm px-3 py-1">
+                      <CheckCircle className="w-4 h-4 mr-1.5" />
+                      Active
+                    </Badge>
                   )}
                 </div>
-              ) : (
-                <div className="text-center py-8">
-                  <div className="w-16 h-16 rounded-full bg-amber-100 flex items-center justify-center mx-auto mb-4">
-                    <AlertCircle className="w-8 h-8 text-amber-600" />
+              </CardHeader>
+              <CardContent className="pt-6">
+                {isActive ? (
+                  <div className="space-y-6">
+                    <div className="grid sm:grid-cols-3 gap-4">
+                      <div className="p-4 rounded-lg bg-gradient-to-br from-blue-50 to-blue-100 border border-blue-200">
+                        <p className="text-xs font-medium text-blue-700 uppercase tracking-wide mb-2">Current Tier</p>
+                        <p className="text-2xl font-bold text-blue-900">{TIERS[school?.subscription_tier]?.subtitle || 'N/A'}</p>
+                        <p className="text-sm text-blue-600 mt-2">${TIERS[school?.subscription_tier]?.price || 0}/year</p>
+                      </div>
+                      <div className="p-4 rounded-lg bg-gradient-to-br from-emerald-50 to-emerald-100 border border-emerald-200">
+                        <p className="text-xs font-medium text-emerald-700 uppercase tracking-wide mb-2">Next Billing</p>
+                        <p className="text-2xl font-bold text-emerald-900">
+                          {school?.subscription_current_period_end 
+                            ? new Date(school.subscription_current_period_end).toLocaleDateString('en-US', { month: 'short', day: 'numeric' })
+                            : 'N/A'
+                          }
+                        </p>
+                      </div>
+                      <div className="p-4 rounded-lg bg-gradient-to-br from-violet-50 to-violet-100 border border-violet-200">
+                        <p className="text-xs font-medium text-violet-700 uppercase tracking-wide mb-2">Admin Seats</p>
+                        <p className="text-2xl font-bold text-violet-900">
+                          {schoolAdmins.length} / {school?.max_admin_seats || 3}
+                        </p>
+                      </div>
+                    </div>
+
+                    {/* Active Add-ons */}
+                    {school?.active_add_ons && school.active_add_ons.length > 0 && (
+                      <div className="p-4 rounded-lg bg-violet-50 border border-violet-200">
+                        <h4 className="font-semibold text-violet-900 mb-3 text-sm">Active Add-ons</h4>
+                        <div className="flex flex-wrap gap-2">
+                          {school.active_add_ons.map((addonId) => {
+                            const addon = ADD_ONS.find(a => a.id === addonId);
+                            return addon ? (
+                              <Badge key={addonId} className="bg-violet-600 text-white">
+                                {addon.name}
+                              </Badge>
+                            ) : null;
+                          })}
+                        </div>
+                      </div>
+                    )}
+
+                    <div className="grid sm:grid-cols-2 gap-3">
+                      <Button 
+                        variant="outline" 
+                        className="w-full h-12 font-medium border-2 border-blue-300 text-blue-700 hover:bg-blue-50"
+                        onClick={handleManageSubscription}
+                        disabled={isProcessing}
+                      >
+                        <CreditCard className="w-4 h-4 mr-2" />
+                        Manage in Stripe
+                      </Button>
+                      
+                      <Button 
+                        variant="outline"
+                        className="w-full h-12 font-medium border-2 border-indigo-300 text-indigo-700 hover:bg-indigo-50"
+                        onClick={() => setShowTierOptions(!showTierOptions)}
+                      >
+                        <ArrowRight className="w-4 h-4 mr-2" />
+                        {showTierOptions ? 'Hide' : 'View'} Plans
+                      </Button>
+                    </div>
                   </div>
-                  <h3 className="text-lg font-bold text-slate-900 mb-2">No Active Subscription</h3>
-                  <p className="text-slate-600 mb-4 max-w-md mx-auto">
-                    Subscribe now to unlock all features
-                  </p>
-                  <p className="text-sm text-slate-600">
-                    Contact support at <a href="mailto:support@schedual-pro.com" className="text-blue-700 font-medium hover:underline">support@schedual-pro.com</a>
-                  </p>
+                ) : (
+                  <div className="text-center py-8">
+                    <AlertCircle className="w-12 h-12 text-amber-600 mx-auto mb-3" />
+                    <p className="text-slate-600 text-sm">No active subscription</p>
+                  </div>
+                )}
+              </CardContent>
+            </Card>
+
+            {/* Tier Selection */}
+            {showTierOptions && (
+              <Card className="border-0 shadow-md bg-gradient-to-br from-slate-50 to-white">
+                <CardHeader>
+                  <CardTitle className="flex items-center gap-2">
+                    <Zap className="w-5 h-5" />
+                    Available Plans
+                  </CardTitle>
+                  <CardDescription>Upgrade or downgrade your subscription</CardDescription>
+                </CardHeader>
+                <CardContent>
+                  <div className="grid sm:grid-cols-3 gap-4 mb-4">
+                    {Object.entries(TIERS).map(([tierId, tier]) => (
+                      <div
+                        key={tierId}
+                        className={`
+                          p-4 rounded-lg border-2 transition-all cursor-pointer
+                          ${school?.subscription_tier === tierId 
+                            ? 'border-blue-900 bg-blue-50' 
+                            : 'border-slate-200 hover:border-slate-300'
+                          }
+                        `}
+                      >
+                        <div className="text-3xl mb-2">{tier.icon}</div>
+                        <h4 className="font-bold text-slate-900 text-sm">{tier.subtitle}</h4>
+                        <div className="text-2xl font-bold text-blue-900 mt-2">${tier.price}</div>
+                        <p className="text-xs text-slate-500 mt-1">{tier.description}</p>
+                        {school?.subscription_tier === tierId && (
+                          <Badge className="mt-3 bg-green-600 w-full justify-center">Current Plan</Badge>
+                        )}
+                      </div>
+                    ))}
+                  </div>
+                  <p className="text-xs text-slate-500">To change your tier, contact support at support@schedual-pro.com</p>
+                </CardContent>
+              </Card>
+            )}
+
+            {/* Add-ons Management */}
+            <Card className="border-0 shadow-md">
+              <CardHeader>
+                <div className="flex items-center justify-between">
+                  <div className="flex items-center gap-3">
+                    <div className="p-2 rounded-lg bg-violet-100">
+                      <Zap className="w-5 h-5 text-violet-700" />
+                    </div>
+                    <div>
+                      <CardTitle className="text-lg">Add-ons & Features</CardTitle>
+                      <CardDescription>Enhance your subscription</CardDescription>
+                    </div>
+                  </div>
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={() => setShowAddOns(!showAddOns)}
+                  >
+                    {showAddOns ? 'Hide' : 'Show'} Add-ons
+                  </Button>
                 </div>
+              </CardHeader>
+              {showAddOns && (
+                <CardContent>
+                  <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-3">
+                    {ADD_ONS.map((addon) => (
+                      <div key={addon.id} className="p-3 rounded-lg border border-slate-200 hover:border-slate-300 transition-colors">
+                        <h5 className="font-semibold text-slate-900 text-sm">{addon.name}</h5>
+                        <p className="text-xs text-slate-500 mt-1">{addon.category}</p>
+                        <p className="text-lg font-bold text-blue-900 mt-2">${addon.price}</p>
+                      </div>
+                    ))}
+                  </div>
+                  <div className="mt-4 p-3 bg-blue-50 border border-blue-200 rounded-lg">
+                    <p className="text-xs text-blue-900">
+                      💡 To add or modify add-ons, open <strong>Manage in Stripe</strong> above or contact support.
+                    </p>
+                  </div>
+                </CardContent>
               )}
-            </CardContent>
-          </Card>
+            </Card>
+
+            {/* School Admins */}
+            {schoolAdmins.length > 0 && (
+              <Card className="border-0 shadow-md">
+                <CardHeader>
+                  <CardTitle className="flex items-center gap-2">
+                    <Users className="w-5 h-5" />
+                    Administrators
+                  </CardTitle>
+                </CardHeader>
+                <CardContent>
+                  <div className="space-y-2">
+                    {schoolAdmins.map((admin, i) => (
+                      <div key={i} className="flex items-center gap-3 p-3 bg-slate-50 rounded-lg">
+                        <div className="w-10 h-10 rounded-full bg-gradient-to-br from-blue-500 to-indigo-600 flex items-center justify-center flex-shrink-0">
+                          <span className="text-white font-semibold text-sm">
+                            {admin.full_name?.charAt(0) || admin.email?.charAt(0) || 'A'}
+                          </span>
+                        </div>
+                        <div className="flex-1">
+                          <p className="font-medium text-slate-900 text-sm">{admin.full_name || 'Admin'}</p>
+                          <p className="text-xs text-slate-500">{admin.email}</p>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                </CardContent>
+              </Card>
+            )}
+          </div>
         </TabsContent>
 
         <TabsContent value="notifications">
