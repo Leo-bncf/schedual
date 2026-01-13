@@ -32,7 +32,7 @@ Deno.serve(async (req) => {
     const origin = req.headers.get('origin') || ('https://' + req.headers.get('host'));
 
     const body = await req.json().catch(() => ({}));
-    const { tier, add_ons = [] } = body || {};
+    const { tier, add_ons = [], customer_email: customerEmail } = body || {};
 
     // Validate tier
     if (!tier || !['tier1', 'tier2', 'tier3'].includes(tier)) {
@@ -55,10 +55,13 @@ Deno.serve(async (req) => {
       mode: 'subscription',
       payment_method_types: ['card'],
       line_items: lineItems,
+      // Bind checkout to the email used in the app when available
+      customer_email: customerEmail || undefined,
       metadata: {
         base44_app_id: Deno.env.get("BASE44_APP_ID"),
         subscription_tier: tier,
         add_ons: JSON.stringify(add_ons),
+        user_email: customerEmail || '',
       },
       allow_promotion_codes: true,
       billing_address_collection: 'required',

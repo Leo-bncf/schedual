@@ -175,6 +175,7 @@ export default function SubscriptionTiered() {
       const { data } = await base44.functions.invoke('tieredCheckout', {
         tier: selectedTier,
         add_ons: selectedAddOns,
+        customer_email: user?.email || undefined,
       });
 
       if (data?.url) {
