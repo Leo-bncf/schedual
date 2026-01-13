@@ -26,55 +26,73 @@ Deno.serve(async (req) => {
     switch (event.type) {
       case 'checkout.session.completed': {
         const session = event.data.object;
-        const userId = session.metadata.user_id;
-        const userEmail = session.metadata.user_email;
-        const userName = session.metadata.user_name;
-        const subscriptionTier = session.metadata.subscription_tier;
-        const addOns = JSON.parse(session.metadata.add_ons || '[]');
+        const subscriptionTier = session.metadata?.subscription_tier;
+        const addOns = JSON.parse(session.metadata?.add_ons || '[]');
 
-        console.log(`🔔 Processing checkout: ${userEmail}, Tier: ${subscriptionTier}, Add-ons: ${addOns.length}`);
+        // Prefer customer_details email/name from the checkout
+        const userEmail = session.customer_details?.email || session.customer_email || null;
+        const userName = session.customer_details?.name || session.metadata?.user_name || (userEmail ? userEmail.split('@')[0] : 'New');
 
-        const subscription = await stripe.subscriptions.retrieve(session.subscription);
+        console.log(`🔔 Processing checkout: email=${userEmail || 'unknown'}, Tier=${subscriptionTier}, Add-ons=${addOns.length}`);
 
-        // Check if user already has a school
-        const users = await base44.asServiceRole.entities.User.filter({ id: userId });
-        const user = users[0];
+        // Retrieve subscription details for period dates/status
+        const subscriptionId = session.subscription;
+        const subscription = subscriptionId ? await stripe.subscriptions.retrieve(subscriptionId) : null;
+
+        // Try to find an existing user by email (public app may not be logged in at checkout)
+        let user = null;
+        if (userEmail) {
+          const usersByEmail = await base44.asServiceRole.entities.User.filter({ email: userEmail });
+          user = usersByEmail[0] || null;
+        }
 
         let school;
         if (user?.school_id) {
-          // Update existing school
+          // Update existing school for this user
           console.log(`✅ User already has school ${user.school_id}, updating subscription`);
           school = await base44.asServiceRole.entities.School.update(user.school_id, {
-            subscription_status: subscription.status,
+            subscription_status: subscription?.status || 'active',
             subscription_tier: subscriptionTier,
             active_add_ons: addOns,
             stripe_customer_id: session.customer,
-            stripe_subscription_id: session.subscription,
-            subscription_start_date: new Date(subscription.current_period_start * 1000).toISOString(),
-            subscription_current_period_end: new Date(subscription.current_period_end * 1000).toISOString(),
+            stripe_subscription_id: subscriptionId,
+            subscription_start_date: subscription ? new Date(subscription.current_period_start * 1000).toISOString() : new Date().toISOString(),
+            subscription_current_period_end: subscription ? new Date(subscription.current_period_end * 1000).toISOString() : null,
           });
         } else {
-          // Create new school
+          // Create a new school record
           school = await base44.asServiceRole.entities.School.create({
             name: `${userName}'s School`,
             code: `SCH-${Date.now()}`,
-            subscription_status: subscription.status,
+            subscription_status: subscription?.status || 'active',
             subscription_tier: subscriptionTier,
             active_add_ons: addOns,
             stripe_customer_id: session.customer,
-            stripe_subscription_id: session.subscription,
-            subscription_start_date: new Date(subscription.current_period_start * 1000).toISOString(),
-            subscription_current_period_end: new Date(subscription.current_period_end * 1000).toISOString(),
+            stripe_subscription_id: subscriptionId,
+            subscription_start_date: subscription ? new Date(subscription.current_period_start * 1000).toISOString() : new Date().toISOString(),
+            subscription_current_period_end: subscription ? new Date(subscription.current_period_end * 1000).toISOString() : null,
             max_admin_seats: addOns.includes('unlimited_admin_users') ? 999 : 3,
             campus_count: addOns.includes('unlimited_campuses') ? 999 : 1,
           });
           console.log(`✅ School ${school.id} created with tier: ${subscriptionTier}`);
 
-          // Assign school to user
-          await base44.asServiceRole.entities.User.update(userId, {
-            school_id: school.id,
-          });
-          console.log(`✅ User ${userEmail} assigned to school ${school.id}`);
+          if (user) {
+            // Assign existing user to school
+            await base44.asServiceRole.entities.User.update(user.id, { school_id: school.id });
+            console.log(`✅ User ${user.email} assigned to school ${school.id}`);
+          } else if (userEmail) {
+            // No user yet — create a PendingInvitation so that when they sign up, they'll be assigned automatically
+            const expiresAt = new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toISOString();
+            await base44.asServiceRole.entities.PendingInvitation.create({
+              email: userEmail,
+              school_id: school.id,
+              invited_by: 'stripe_checkout',
+              expires_at: expiresAt,
+            });
+            console.log(`📨 PendingInvitation created for ${userEmail} -> school ${school.id}`);
+          } else {
+            console.warn('⚠️ No email found on checkout.session; cannot pre-link user.');
+          }
         }
 
         console.log(`✅ Subscription activated for school ${school.id}`);
