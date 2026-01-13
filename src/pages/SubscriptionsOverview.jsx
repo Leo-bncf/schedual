@@ -1,11 +1,13 @@
 import React, { useState } from 'react';
-import { useQuery } from '@tanstack/react-query';
+import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { base44 } from '@/api/base44Client';
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
 import { 
   CreditCard, 
   TrendingUp, 
@@ -17,7 +19,8 @@ import {
   Copy,
   DollarSign,
   Building2,
-  Calendar
+  Calendar,
+  Loader2
 } from 'lucide-react';
 import PageHeader from '../components/ui-custom/PageHeader';
 import DataTable from '../components/ui-custom/DataTable';
@@ -25,6 +28,11 @@ import { format } from 'date-fns';
 
 export default function SubscriptionsOverview() {
   const [copied, setCopied] = useState(false);
+  const [tierDialogOpen, setTierDialogOpen] = useState(false);
+  const [selectedSchool, setSelectedSchool] = useState(null);
+  const [selectedTier, setSelectedTier] = useState('tier2');
+  const [isUpdating, setIsUpdating] = useState(false);
+  const queryClient = useQueryClient();
 
   const { data: schools = [], isLoading } = useQuery({
     queryKey: ['allSchools'],
@@ -37,6 +45,33 @@ export default function SubscriptionsOverview() {
     navigator.clipboard.writeText(webhookUrl);
     setCopied(true);
     setTimeout(() => setCopied(false), 2000);
+  };
+
+  const TIERS = {
+    tier1: { label: 'Tier 1 — Small IB Schools', price: 1100 },
+    tier2: { label: 'Tier 2 — Standard IB Continuum', price: 2200 },
+    tier3: { label: 'Tier 3 — Large/Multi-Campus', price: 4950 },
+  };
+
+  const handleUpdateTier = async () => {
+    if (!selectedSchool || !selectedTier) return;
+    setIsUpdating(true);
+    try {
+      const { data } = await base44.functions.invoke('updateSchoolTier', {
+        school_id: selectedSchool.id,
+        tier: selectedTier,
+      });
+      if (data?.success) {
+        setTierDialogOpen(false);
+        queryClient.invalidateQueries({ queryKey: ['allSchools'] });
+      } else {
+        alert(data?.error || 'Failed to update tier');
+      }
+    } catch (e) {
+      alert(e.message || 'Failed to update tier');
+    } finally {
+      setIsUpdating(false);
+    }
   };
 
   // Calculate stats
@@ -83,12 +118,12 @@ export default function SubscriptionsOverview() {
       cell: (row) => getStatusBadge(row.subscription_status)
     },
     {
-      header: 'Plan',
-      accessor: 'subscription_plan',
+      header: 'Tier',
+      accessor: 'subscription_tier',
       cell: (row) => (
         <div className="text-sm">
-          <p className="font-medium text-slate-900">{row.subscription_plan === 'yearly' ? 'Yearly' : 'N/A'}</p>
-          <p className="text-xs text-slate-500">{row.max_additional_users || 0} extra users</p>
+          <p className="font-medium text-slate-900">{TIERS[row.subscription_tier]?.label || '—'}</p>
+          <p className="text-xs text-slate-500">${TIERS[row.subscription_tier]?.price || 0}/year</p>
         </div>
       )
     },
@@ -130,6 +165,23 @@ export default function SubscriptionsOverview() {
           </a>
         );
       }
+    },
+    {
+      header: 'Actions',
+      accessor: 'actions',
+      cell: (row) => (
+        <Button
+          variant="outline"
+          size="sm"
+          onClick={() => {
+            setSelectedSchool(row);
+            setSelectedTier(row.subscription_tier || 'tier2');
+            setTierDialogOpen(true);
+          }}
+        >
+          Change Tier
+        </Button>
+      )
     }
   ];
 
@@ -255,6 +307,49 @@ export default function SubscriptionsOverview() {
           />
         </CardContent>
       </Card>
+
+      {/* Change Tier Dialog */}
+      <Dialog open={tierDialogOpen} onOpenChange={setTierDialogOpen}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Change Subscription Tier</DialogTitle>
+            <DialogDescription>
+              Select a new tier for {selectedSchool?.name}
+            </DialogDescription>
+          </DialogHeader>
+          <div className="space-y-4 py-2">
+            <Label>Tier</Label>
+            <Select value={selectedTier} onValueChange={setSelectedTier}>
+              <SelectTrigger className="w-full">
+                <SelectValue placeholder="Select tier" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="tier1">Tier 1 — Small IB Schools ($1100/yr)</SelectItem>
+                <SelectItem value="tier2">Tier 2 — Standard IB Continuum ($2200/yr)</SelectItem>
+                <SelectItem value="tier3">Tier 3 — Large/Multi-Campus ($4950/yr)</SelectItem>
+              </SelectContent>
+            </Select>
+            <div className="bg-amber-50 border border-amber-200 rounded-md p-3 text-xs text-amber-800">
+              Updating the tier will adjust future invoices in Stripe. Prorations may apply.
+            </div>
+          </div>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setTierDialogOpen(false)}>
+              Cancel
+            </Button>
+            <Button className="bg-blue-900 hover:bg-blue-800" onClick={handleUpdateTier} disabled={isUpdating}>
+              {isUpdating ? (
+                <>
+                  <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+                  Updating...
+                </>
+              ) : (
+                'Update Tier'
+              )}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }
