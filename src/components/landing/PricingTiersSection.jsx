@@ -126,37 +126,53 @@ export default function PricingTiersSection() {
                 </div>
               )}
               <div className={`
-                h-full rounded-2xl border-2 transition-all duration-300
+                h-full rounded-2xl border-2 transition-all duration-300 overflow-hidden
                 ${tier.featured 
                   ? 'border-blue-900 bg-gradient-to-br from-blue-900/5 to-blue-900/10 shadow-xl' 
                   : 'border-slate-200 bg-white hover:border-slate-300 hover:shadow-lg'
                 }
               `}>
-                <div className="p-8 sm:p-10">
-                  {/* Icon */}
-                  <div className="text-5xl mb-6">{tier.icon}</div>
+                <div className="p-8 sm:p-10 flex flex-col h-full">
+                  {/* Top meta pill */}
+                  <div className="mb-4">
+                    <span className="inline-flex items-center gap-2 text-xs px-3 py-1 rounded-full bg-slate-100 text-slate-700 border border-slate-200">
+                      <span className="w-1.5 h-1.5 rounded-full bg-blue-900" /> Best for {tier.students} students
+                    </span>
+                  </div>
 
-                  {/* Title */}
-                  <h3 className="text-2xl font-bold text-slate-900 mb-2">{tier.subtitle}</h3>
-                  <p className="text-sm text-slate-600 mb-6">{tier.description}</p>
+                  {/* Icon & Title */}
+                  <div className="flex items-start justify-between gap-4 mb-4">
+                    <div className="text-5xl">{tier.icon}</div>
+                    {tier.featured && (
+                      <Badge className="bg-yellow-400 text-slate-900">Recommended</Badge>
+                    )}
+                  </div>
+                  <h3 className="text-2xl font-bold text-slate-900">{tier.subtitle}</h3>
+                  <p className="text-sm text-slate-600 mt-2">{tier.description}</p>
 
                   {/* Price */}
-                  <div className="mb-8">
-                    <div className="flex items-baseline gap-1 mb-2">
+                  <div className="mt-6">
+                    <div className="flex items-baseline gap-2">
                       <span className="text-5xl font-bold text-slate-900">${tier.price}</span>
                       <span className="text-slate-600">/year</span>
                     </div>
-                    <p className="text-sm text-slate-500">For {tier.students} students</p>
                   </div>
 
                   {/* Features */}
-                  <div className="space-y-3 pt-8 border-t border-slate-200">
+                  <div className="mt-8 pt-6 border-t border-slate-200 grid grid-cols-1 sm:grid-cols-2 gap-3">
                     {tier.features.map((feature, idx) => (
-                      <div key={idx} className="flex items-start gap-3">
+                      <div key={idx} className="flex items-start gap-2">
                         <CheckCircle2 className="w-5 h-5 text-emerald-600 flex-shrink-0 mt-0.5" />
                         <span className="text-sm text-slate-700">{feature}</span>
                       </div>
                     ))}
+                  </div>
+
+                  {/* Card footer */}
+                  <div className="mt-auto pt-6">
+                    <a href="#addons" className="text-sm font-medium text-blue-900 hover:underline">
+                      See optional add-ons →
+                    </a>
                   </div>
                 </div>
               </div>
