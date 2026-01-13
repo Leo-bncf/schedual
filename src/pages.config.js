@@ -24,6 +24,7 @@ import Teachers from './pages/Teachers';
 import TermsOfUse from './pages/TermsOfUse';
 import TestData from './pages/TestData';
 import UserManagement from './pages/UserManagement';
+import SubscriptionTiered from './pages/SubscriptionTiered';
 import __Layout from './Layout.jsx';
 
 
@@ -54,6 +55,7 @@ export const PAGES = {
     "TermsOfUse": TermsOfUse,
     "TestData": TestData,
     "UserManagement": UserManagement,
+    "SubscriptionTiered": SubscriptionTiered,
 }
 
 export const pagesConfig = {
