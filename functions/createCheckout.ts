@@ -4,8 +4,8 @@ import { validateCSRF } from './csrfHelper.js';
 
 // Stripe Price IDs
 const PRICE_IDS = {
-  monthly: 'price_1Sp7KLBg94UIyRz584NBxkUE',
-  yearly: 'price_1Sp7KLBg94UIyRz5TywxTYk0',
+  yearly_base: 'price_1Sp7KLBg94UIyRz5TywxTYk0',
+  additional_seat: 'price_1Sp7cXBg94UIyRz5V9oOMhRd',
 };
 
 Deno.serve(async (req) => {
@@ -31,7 +31,7 @@ Deno.serve(async (req) => {
       return Response.json({ error: 'SuperAdmin accounts cannot subscribe' }, { status: 403 });
     }
 
-    const { plan, manage_subscription = false } = await req.json();
+    const { manage_subscription = false, additional_seats } = await req.json();
 
     // Handle billing portal for existing subscriptions
     if (manage_subscription && user.school_id) {
@@ -47,9 +47,49 @@ Deno.serve(async (req) => {
       }
     }
 
-    // Validate plan
-    if (!plan || !['monthly', 'yearly'].includes(plan)) {
-      return Response.json({ error: 'Invalid plan selected' }, { status: 400 });
+    // Handle additional seats purchase
+    if (additional_seats) {
+      if (!user.school_id) {
+        return Response.json({ error: 'Must have active subscription first' }, { status: 400 });
+      }
+
+      const schools = await base44.asServiceRole.entities.School.filter({ id: user.school_id });
+      const school = schools[0];
+      
+      if (!school || (school.subscription_status !== 'active' && school.subscription_status !== 'trialing')) {
+        return Response.json({ error: 'Must have active subscription first' }, { status: 400 });
+      }
+
+      const quantity = parseInt(additional_seats);
+      if (!quantity || quantity < 1) {
+        return Response.json({ error: 'Invalid quantity' }, { status: 400 });
+      }
+
+      // Create checkout for additional seats
+      const session = await stripe.checkout.sessions.create({
+        mode: 'subscription',
+        payment_method_types: ['card'],
+        line_items: [
+          {
+            price: PRICE_IDS.additional_seat,
+            quantity: quantity,
+          },
+        ],
+        metadata: {
+          base44_app_id: Deno.env.get("BASE44_APP_ID"),
+          user_id: user.id,
+          user_email: user.email,
+          school_id: user.school_id,
+          purchase_type: 'additional_seats',
+          seats_quantity: quantity.toString(),
+        },
+        customer: school.stripe_customer_id,
+        allow_promotion_codes: true,
+        success_url: `${req.headers.get('origin') || 'https://' + req.headers.get('host')}/Subscription?seats=success`,
+        cancel_url: `${req.headers.get('origin') || 'https://' + req.headers.get('host')}/Subscription?seats=cancelled`,
+      });
+
+      return Response.json({ sessionId: session.id, url: session.url });
     }
 
     // Check if user already has active subscription
@@ -61,13 +101,13 @@ Deno.serve(async (req) => {
       }
     }
 
-    // Create Stripe checkout session
+    // Create Stripe checkout session for base subscription
     const session = await stripe.checkout.sessions.create({
       mode: 'subscription',
       payment_method_types: ['card'],
       line_items: [
         {
-          price: PRICE_IDS[plan],
+          price: PRICE_IDS.yearly_base,
           quantity: 1,
         },
       ],
@@ -76,7 +116,7 @@ Deno.serve(async (req) => {
         user_id: user.id,
         user_email: user.email,
         user_name: user.full_name,
-        plan: plan,
+        purchase_type: 'base_subscription',
       },
       customer_email: user.email,
       allow_promotion_codes: true,

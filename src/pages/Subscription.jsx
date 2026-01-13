@@ -32,7 +32,8 @@ export default function Subscription() {
   const [isProcessing, setIsProcessing] = useState(false);
   const [inviteDialogOpen, setInviteDialogOpen] = useState(false);
   const [inviteEmail, setInviteEmail] = useState('');
-  const [selectedPlan, setSelectedPlan] = useState('yearly');
+  const [buySeatsDialogOpen, setBuySeatsDialogOpen] = useState(false);
+  const [seatsQuantity, setSeatsQuantity] = useState(1);
 
   const queryClient = useQueryClient();
 
@@ -81,10 +82,28 @@ export default function Subscription() {
     }
   });
 
-  const handleSubscribe = async (plan) => {
+  const handleSubscribe = async () => {
     setIsProcessing(true);
     try {
-      const { data } = await base44.functions.invoke('createCheckout', { plan });
+      const { data } = await base44.functions.invoke('createCheckout', {});
+      
+      if (data.url) {
+        window.location.href = data.url;
+      }
+    } catch (error) {
+      console.error('Checkout error:', error);
+      toast.error('Failed to start checkout process');
+    } finally {
+      setIsProcessing(false);
+    }
+  };
+
+  const handleBuySeats = async () => {
+    setIsProcessing(true);
+    try {
+      const { data } = await base44.functions.invoke('createCheckout', {
+        additional_seats: seatsQuantity
+      });
       
       if (data.url) {
         window.location.href = data.url;
@@ -188,6 +207,17 @@ export default function Subscription() {
                   <CreditCard className="w-4 h-4 mr-2" />
                   Manage Subscription
                 </Button>
+
+                <Button 
+                  size="lg" 
+                  variant="outline"
+                  className="w-full font-semibold border-2 border-violet-300 text-violet-700 hover:bg-violet-50"
+                  onClick={() => setBuySeatsDialogOpen(true)}
+                  disabled={isProcessing}
+                >
+                  <UserPlus className="w-5 h-5 mr-2" />
+                  Buy Additional Admin Seats
+                </Button>
                 
                 <Button 
                   size="lg" 
@@ -209,145 +239,87 @@ export default function Subscription() {
             </div>
           ) : (
             <div className="space-y-6">
-              <div className="grid md:grid-cols-2 gap-6">
-                {/* Monthly Plan */}
-                <div 
-                  className={`p-6 rounded-xl border-2 transition-all cursor-pointer ${
-                    selectedPlan === 'monthly' 
-                      ? 'border-blue-900 bg-blue-50' 
-                      : 'border-slate-200 hover:border-slate-300'
-                  }`}
-                  onClick={() => setSelectedPlan('monthly')}
-                >
-                  <div className="flex items-start justify-between mb-4">
-                    <div>
-                      <h3 className="text-lg font-semibold text-slate-900">Monthly</h3>
-                      <p className="text-sm text-slate-600">Pay as you go</p>
-                    </div>
-                    {selectedPlan === 'monthly' && (
-                      <CheckCircle2 className="w-6 h-6 text-blue-900" />
-                    )}
-                  </div>
-                  <div className="mb-4">
-                    <div className="text-3xl font-bold text-blue-900">
-                      $199 <span className="text-lg font-normal text-slate-600">/ month</span>
-                    </div>
-                  </div>
-                  <ul className="space-y-2 text-sm">
-                    <li className="flex items-center gap-2 text-slate-700">
-                      <CheckCircle2 className="w-4 h-4 text-green-600 flex-shrink-0" />
-                      <span>All features included</span>
-                    </li>
-                    <li className="flex items-center gap-2 text-slate-700">
-                      <CheckCircle2 className="w-4 h-4 text-green-600 flex-shrink-0" />
-                      <span>3 admin seats</span>
-                    </li>
-                    <li className="flex items-center gap-2 text-slate-700">
-                      <CheckCircle2 className="w-4 h-4 text-green-600 flex-shrink-0" />
-                      <span>Cancel anytime</span>
-                    </li>
-                  </ul>
+              <div className="text-center py-8">
+                <div className="w-16 h-16 rounded-full bg-blue-100 flex items-center justify-center mx-auto mb-4">
+                  <Shield className="w-8 h-8 text-blue-900" />
                 </div>
-
-                {/* Yearly Plan */}
-                <div 
-                  className={`p-6 rounded-xl border-2 transition-all cursor-pointer relative ${
-                    selectedPlan === 'yearly' 
-                      ? 'border-blue-900 bg-blue-50' 
-                      : 'border-slate-200 hover:border-slate-300'
-                  }`}
-                  onClick={() => setSelectedPlan('yearly')}
-                >
-                  <div className="absolute -top-3 right-4">
-                    <span className="px-3 py-1 bg-green-500 text-white text-xs font-semibold rounded-full">
-                      Save 17%
-                    </span>
-                  </div>
-                  <div className="flex items-start justify-between mb-4">
-                    <div>
-                      <h3 className="text-lg font-semibold text-slate-900">Yearly</h3>
-                      <p className="text-sm text-slate-600">Best value</p>
-                    </div>
-                    {selectedPlan === 'yearly' && (
-                      <CheckCircle2 className="w-6 h-6 text-blue-900" />
-                    )}
-                  </div>
-                  <div className="mb-4">
-                    <div className="text-3xl font-bold text-blue-900">
-                      $1,999 <span className="text-lg font-normal text-slate-600">/ year</span>
-                    </div>
-                    <p className="text-sm text-slate-600 mt-1">$166/month billed annually</p>
-                  </div>
-                  <ul className="space-y-2 text-sm">
-                    <li className="flex items-center gap-2 text-slate-700">
-                      <CheckCircle2 className="w-4 h-4 text-green-600 flex-shrink-0" />
-                      <span>All features included</span>
-                    </li>
-                    <li className="flex items-center gap-2 text-slate-700">
-                      <CheckCircle2 className="w-4 h-4 text-green-600 flex-shrink-0" />
-                      <span>3 admin seats</span>
-                    </li>
-                    <li className="flex items-center gap-2 text-slate-700">
-                      <CheckCircle2 className="w-4 h-4 text-green-600 flex-shrink-0" />
-                      <span>Priority support</span>
-                    </li>
-                    <li className="flex items-center gap-2 text-green-700 font-medium">
-                      <CheckCircle2 className="w-4 h-4 text-green-600 flex-shrink-0" />
-                      <span>Save $389/year</span>
-                    </li>
-                  </ul>
-                </div>
+                <h3 className="text-2xl font-bold text-slate-900 mb-2">Start Your Subscription</h3>
+                <p className="text-slate-600 max-w-md mx-auto">
+                  Get full access to IB scheduling platform with AI-powered features
+                </p>
               </div>
 
-              <div className="p-4 bg-slate-50 rounded-lg">
-                <h4 className="font-semibold text-slate-900 mb-3">What's included:</h4>
-                <div className="grid sm:grid-cols-2 gap-2 text-sm text-slate-700">
-                  <div className="flex items-center gap-2">
-                    <CheckCircle2 className="w-4 h-4 text-green-600 flex-shrink-0" />
-                    <span>Unlimited schedules</span>
+              <div className="max-w-md mx-auto">
+                <div className="p-8 rounded-2xl border-2 border-blue-900 bg-gradient-to-br from-blue-50 to-white">
+                  <div className="text-center mb-6">
+                    <div className="text-5xl font-bold text-blue-900 mb-2">
+                      $1,999
+                    </div>
+                    <p className="text-slate-600">per year</p>
+                    <p className="text-sm text-slate-500 mt-1">Only $166/month billed annually</p>
                   </div>
-                  <div className="flex items-center gap-2">
-                    <CheckCircle2 className="w-4 h-4 text-green-600 flex-shrink-0" />
-                    <span>AI optimization</span>
+
+                  <div className="space-y-3 mb-6">
+                    <div className="flex items-center gap-3">
+                      <CheckCircle2 className="w-5 h-5 text-green-600 flex-shrink-0" />
+                      <span className="text-slate-700">Full dashboard access</span>
+                    </div>
+                    <div className="flex items-center gap-3">
+                      <CheckCircle2 className="w-5 h-5 text-green-600 flex-shrink-0" />
+                      <span className="text-slate-700">3 admin seats included</span>
+                    </div>
+                    <div className="flex items-center gap-3">
+                      <CheckCircle2 className="w-5 h-5 text-green-600 flex-shrink-0" />
+                      <span className="text-slate-700">AI-powered scheduling</span>
+                    </div>
+                    <div className="flex items-center gap-3">
+                      <CheckCircle2 className="w-5 h-5 text-green-600 flex-shrink-0" />
+                      <span className="text-slate-700">Unlimited schedules</span>
+                    </div>
+                    <div className="flex items-center gap-3">
+                      <CheckCircle2 className="w-5 h-5 text-green-600 flex-shrink-0" />
+                      <span className="text-slate-700">Conflict detection & resolution</span>
+                    </div>
+                    <div className="flex items-center gap-3">
+                      <CheckCircle2 className="w-5 h-5 text-green-600 flex-shrink-0" />
+                      <span className="text-slate-700">Export to PDF/Excel</span>
+                    </div>
+                    <div className="flex items-center gap-3">
+                      <CheckCircle2 className="w-5 h-5 text-green-600 flex-shrink-0" />
+                      <span className="text-slate-700">Priority support</span>
+                    </div>
                   </div>
-                  <div className="flex items-center gap-2">
-                    <CheckCircle2 className="w-4 h-4 text-green-600 flex-shrink-0" />
-                    <span>Conflict detection</span>
+
+                  <div className="p-3 bg-blue-100 rounded-lg mb-6">
+                    <p className="text-xs text-blue-900 text-center">
+                      <strong>Need more admins?</strong> Purchase additional seats at $199/year each after subscribing
+                    </p>
                   </div>
-                  <div className="flex items-center gap-2">
-                    <CheckCircle2 className="w-4 h-4 text-green-600 flex-shrink-0" />
-                    <span>Export to PDF/Excel</span>
-                  </div>
-                  <div className="flex items-center gap-2">
-                    <CheckCircle2 className="w-4 h-4 text-green-600 flex-shrink-0" />
-                    <span>Secure cloud storage</span>
-                  </div>
-                  <div className="flex items-center gap-2">
-                    <CheckCircle2 className="w-4 h-4 text-green-600 flex-shrink-0" />
-                    <span>Email support</span>
-                  </div>
+
+                  <Button 
+                    onClick={handleSubscribe}
+                    disabled={isProcessing}
+                    size="lg"
+                    className="w-full bg-blue-900 hover:bg-blue-800 text-lg py-6"
+                  >
+                    {isProcessing ? (
+                      <>
+                        <Loader2 className="w-5 h-5 mr-2 animate-spin" />
+                        Processing...
+                      </>
+                    ) : (
+                      <>
+                        <CreditCard className="w-5 h-5 mr-2" />
+                        Subscribe Now - $1,999/year
+                      </>
+                    )}
+                  </Button>
+
+                  <p className="text-center text-xs text-slate-500 mt-4">
+                    Secure payment powered by Stripe
+                  </p>
                 </div>
               </div>
-
-              <Button 
-                onClick={() => handleSubscribe(selectedPlan)}
-                disabled={isProcessing}
-                size="lg"
-                className="w-full bg-blue-900 hover:bg-blue-800"
-              >
-                {isProcessing ? (
-                  <>
-                    <Loader2 className="w-5 h-5 mr-2 animate-spin" />
-                    Processing...
-                  </>
-                ) : (
-                  `Subscribe ${selectedPlan === 'yearly' ? 'Yearly' : 'Monthly'}`
-                )}
-              </Button>
-
-              <p className="text-center text-sm text-slate-600">
-                Secure payment powered by Stripe • Cancel anytime
-              </p>
             </div>
           )}
         </CardContent>
@@ -372,6 +344,82 @@ export default function Subscription() {
           </div>
         </CardContent>
       </Card>
+
+      {/* Buy Additional Seats Dialog */}
+      <Dialog open={buySeatsDialogOpen} onOpenChange={setBuySeatsDialogOpen}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Buy Additional Admin Seats</DialogTitle>
+            <DialogDescription>
+              Expand your team with more administrator accounts - $199/year per seat
+            </DialogDescription>
+          </DialogHeader>
+          <div className="space-y-4 py-4">
+            <div className="bg-violet-50 border border-violet-200 rounded-lg p-4">
+              <div className="flex items-start gap-3">
+                <Users className="w-5 h-5 text-violet-600 mt-0.5" />
+                <div>
+                  <p className="text-sm font-medium text-violet-900">
+                    Current Seats: {school?.max_admin_seats || 3}
+                  </p>
+                  <p className="text-xs text-violet-700 mt-1">
+                    {schoolAdmins.length} seat(s) in use
+                  </p>
+                </div>
+              </div>
+            </div>
+            
+            <div className="space-y-2">
+              <Label htmlFor="seats-quantity">Number of Additional Seats</Label>
+              <Input 
+                id="seats-quantity"
+                type="number"
+                min="1"
+                max="50"
+                value={seatsQuantity}
+                onChange={(e) => setSeatsQuantity(Math.max(1, parseInt(e.target.value) || 1))}
+              />
+            </div>
+
+            <div className="bg-slate-50 rounded-lg p-4">
+              <div className="flex justify-between items-center mb-2">
+                <span className="text-slate-600">Seats to add</span>
+                <span className="font-semibold">{seatsQuantity}</span>
+              </div>
+              <div className="flex justify-between items-center mb-2">
+                <span className="text-slate-600">Price per seat</span>
+                <span className="font-semibold">$199/year</span>
+              </div>
+              <div className="border-t border-slate-200 mt-3 pt-3 flex justify-between items-center">
+                <span className="font-bold text-lg">Total</span>
+                <span className="font-bold text-2xl text-blue-900">${seatsQuantity * 199}/year</span>
+              </div>
+            </div>
+          </div>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setBuySeatsDialogOpen(false)}>
+              Cancel
+            </Button>
+            <Button 
+              className="bg-violet-600 hover:bg-violet-700"
+              onClick={handleBuySeats}
+              disabled={isProcessing}
+            >
+              {isProcessing ? (
+                <>
+                  <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+                  Processing...
+                </>
+              ) : (
+                <>
+                  <CreditCard className="w-4 h-4 mr-2" />
+                  Purchase Seats
+                </>
+              )}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
 
       {/* Invite Admin Dialog */}
       <Dialog open={inviteDialogOpen} onOpenChange={setInviteDialogOpen}>

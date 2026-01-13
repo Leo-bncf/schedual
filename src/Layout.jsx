@@ -71,7 +71,7 @@ export default function Layout({ children, currentPageName }) {
   // Role definitions - school_id alone determines school admin access
   const isSchoolAdmin = (userData) => !!userData?.school_id && !isSuperAdmin;
   const isNewClient = (userData) => userData && !userData.school_id && !isSuperAdmin;
-  const hasActiveSubscription = () => school && (school.subscription_status === 'active' || school.subscription_status === 'trial');
+  const hasActiveSubscription = () => school && (school.subscription_status === 'active' || school.subscription_status === 'trialing');
 
   useEffect(() => {
     const loadAuth = async () => {

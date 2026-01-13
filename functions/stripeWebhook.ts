@@ -26,54 +26,77 @@ Deno.serve(async (req) => {
     switch (event.type) {
       case 'checkout.session.completed': {
         const session = event.data.object;
-        const userId = session.metadata.user_id;
-        const userEmail = session.metadata.user_email;
-        const userName = session.metadata.user_name;
-        const plan = session.metadata.plan;
+        const purchaseType = session.metadata.purchase_type;
 
-        console.log(`🔔 Processing checkout completion for user ${userEmail}`);
+        if (purchaseType === 'additional_seats') {
+          // Handle additional seats purchase
+          const schoolId = session.metadata.school_id;
+          const seatsQuantity = parseInt(session.metadata.seats_quantity);
 
-        const subscription = await stripe.subscriptions.retrieve(session.subscription);
+          console.log(`🔔 Processing additional seats purchase for school ${schoolId}: ${seatsQuantity} seats`);
 
-        // Check if user already has a school
-        const users = await base44.asServiceRole.entities.User.filter({ id: userId });
-        const user = users[0];
-        
-        let school;
-        if (user?.school_id) {
-          // Update existing school
-          console.log(`✅ User already has school ${user.school_id}, updating subscription`);
-          school = await base44.asServiceRole.entities.School.update(user.school_id, {
-            subscription_status: subscription.status,
-            subscription_plan: plan,
-            stripe_customer_id: session.customer,
-            stripe_subscription_id: session.subscription,
-            subscription_start_date: new Date(subscription.current_period_start * 1000).toISOString(),
-            subscription_current_period_end: new Date(subscription.current_period_end * 1000).toISOString(),
-          });
+          const schools = await base44.asServiceRole.entities.School.filter({ id: schoolId });
+          if (schools.length > 0) {
+            const school = schools[0];
+            const currentSeats = school.max_admin_seats || 3;
+            const newSeats = currentSeats + seatsQuantity;
+
+            await base44.asServiceRole.entities.School.update(schoolId, {
+              max_admin_seats: newSeats,
+            });
+
+            console.log(`✅ School ${schoolId} seats increased from ${currentSeats} to ${newSeats}`);
+          }
         } else {
-          // Create new school
-          school = await base44.asServiceRole.entities.School.create({
-            name: `${userName}'s School`,
-            code: `SCH-${Date.now()}`,
-            subscription_status: subscription.status,
-            subscription_plan: plan,
-            stripe_customer_id: session.customer,
-            stripe_subscription_id: session.subscription,
-            subscription_start_date: new Date(subscription.current_period_start * 1000).toISOString(),
-            subscription_current_period_end: new Date(subscription.current_period_end * 1000).toISOString(),
-            max_admin_seats: 3,
-          });
-          console.log(`✅ School ${school.id} created`);
+          // Handle base subscription
+          const userId = session.metadata.user_id;
+          const userEmail = session.metadata.user_email;
+          const userName = session.metadata.user_name;
 
-          // Assign school to user
-          await base44.asServiceRole.entities.User.update(userId, {
-            school_id: school.id
-          });
-          console.log(`✅ User ${userEmail} assigned to school ${school.id}`);
+          console.log(`🔔 Processing base subscription for user ${userEmail}`);
+
+          const subscription = await stripe.subscriptions.retrieve(session.subscription);
+
+          // Check if user already has a school
+          const users = await base44.asServiceRole.entities.User.filter({ id: userId });
+          const user = users[0];
+          
+          let school;
+          if (user?.school_id) {
+            // Update existing school
+            console.log(`✅ User already has school ${user.school_id}, updating subscription`);
+            school = await base44.asServiceRole.entities.School.update(user.school_id, {
+              subscription_status: subscription.status,
+              subscription_plan: 'yearly',
+              stripe_customer_id: session.customer,
+              stripe_subscription_id: session.subscription,
+              subscription_start_date: new Date(subscription.current_period_start * 1000).toISOString(),
+              subscription_current_period_end: new Date(subscription.current_period_end * 1000).toISOString(),
+            });
+          } else {
+            // Create new school
+            school = await base44.asServiceRole.entities.School.create({
+              name: `${userName}'s School`,
+              code: `SCH-${Date.now()}`,
+              subscription_status: subscription.status,
+              subscription_plan: 'yearly',
+              stripe_customer_id: session.customer,
+              stripe_subscription_id: session.subscription,
+              subscription_start_date: new Date(subscription.current_period_start * 1000).toISOString(),
+              subscription_current_period_end: new Date(subscription.current_period_end * 1000).toISOString(),
+              max_admin_seats: 3,
+            });
+            console.log(`✅ School ${school.id} created`);
+
+            // Assign school to user
+            await base44.asServiceRole.entities.User.update(userId, {
+              school_id: school.id
+            });
+            console.log(`✅ User ${userEmail} assigned to school ${school.id}`);
+          }
+
+          console.log(`✅ Subscription activated for school ${school.id}`);
         }
-
-        console.log(`✅ Subscription activated for school ${school.id}`);
         break;
       }
 
