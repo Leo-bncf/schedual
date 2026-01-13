@@ -38,13 +38,27 @@ Deno.serve(async (req) => {
       const schools = await base44.asServiceRole.entities.School.filter({ id: user.school_id });
       const school = schools[0];
       
-      if (school?.stripe_customer_id) {
+      let customerId = school?.stripe_customer_id || null;
+      if (!customerId) {
+        // Fallback: find Stripe customer by user email and persist it on the school
+        const customers = await stripe.customers.list({ email: user.email, limit: 1 });
+        if (customers.data && customers.data.length > 0) {
+          customerId = customers.data[0].id;
+          try {
+            await base44.asServiceRole.entities.School.update(school.id, { stripe_customer_id: customerId });
+          } catch (e) {
+            console.error('Failed to persist stripe_customer_id on school:', e?.message || e);
+          }
+        }
+      }
+      if (customerId) {
         const portalSession = await stripe.billingPortal.sessions.create({
-          customer: school.stripe_customer_id,
-          return_url: `${req.headers.get('origin') || 'https://' + req.headers.get('host')}/Subscription`,
+          customer: customerId,
+          return_url: `${req.headers.get('origin') || 'https://' + req.headers.get('host')}/Settings?portal=returned`,
         });
         return Response.json({ url: portalSession.url });
       }
+      return Response.json({ error: 'Stripe customer not found for this account' }, { status: 404 });
     }
 
     // Handle additional seats purchase
