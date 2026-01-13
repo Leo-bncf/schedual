@@ -183,9 +183,10 @@ export default function SubscriptionTiered() {
       }
 
       if (data?.sessionId) {
-        const pk = import.meta.env.VITE_STRIPE_PUBLIC_KEY;
+        // Prefer STRIPE_PUBLISHABLE_KEY if present, fallback to VITE_STRIPE_PUBLIC_KEY
+        const pk = import.meta.env.STRIPE_PUBLISHABLE_KEY || import.meta.env.VITE_STRIPE_PUBLIC_KEY;
         if (!pk) {
-          toast.error('Stripe public key is missing. Please set VITE_STRIPE_PUBLIC_KEY.');
+          toast.error('Stripe public key is missing. Please set STRIPE_PUBLISHABLE_KEY.');
           return;
         }
         const stripe = await loadStripe(pk);
