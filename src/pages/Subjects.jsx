@@ -92,9 +92,9 @@ export default function Subjects() {
     queryKey: ['subjects', schoolId],
     queryFn: async () => {
       console.log('Fetching subjects for school:', schoolId);
-      const result = await base44.entities.Subject.list();
-      console.log('Subjects fetched:', result);
-      return result;
+      const { data } = await base44.functions.invoke('subjectOperations', { action: 'list' });
+      console.log('Subjects fetched:', data);
+      return data;
     },
     enabled: !!schoolId,
   });
@@ -104,9 +104,14 @@ export default function Subjects() {
   console.log('Query error:', error);
 
   const createMutation = useMutation({
-    mutationFn: (data) => {
+    mutationFn: async (data) => {
       if (!schoolId) throw new Error('No school assigned');
-      return base44.entities.Subject.create({ ...data, school_id: schoolId });
+      const result = await base44.functions.invoke('subjectOperations', { 
+        action: 'create', 
+        data 
+      });
+      if (!result.data.success) throw new Error(result.data.error);
+      return result.data.data;
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['subjects', schoolId] });
@@ -119,7 +124,15 @@ export default function Subjects() {
   });
 
   const updateMutation = useMutation({
-    mutationFn: ({ id, data }) => base44.entities.Subject.update(id, data),
+    mutationFn: async ({ id, data }) => {
+      const result = await base44.functions.invoke('subjectOperations', { 
+        action: 'update', 
+        id, 
+        data 
+      });
+      if (!result.data.success) throw new Error(result.data.error);
+      return result.data.data;
+    },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['subjects', schoolId] });
       resetForm();
@@ -131,7 +144,14 @@ export default function Subjects() {
   });
 
   const deleteMutation = useMutation({
-    mutationFn: (id) => base44.entities.Subject.delete(id),
+    mutationFn: async (id) => {
+      const result = await base44.functions.invoke('subjectOperations', { 
+        action: 'delete', 
+        id 
+      });
+      if (!result.data.success) throw new Error(result.data.error);
+      return result.data.data;
+    },
     onSuccess: () => queryClient.invalidateQueries({ queryKey: ['subjects', schoolId] }),
     onError: (error) => {
       console.error('Delete subject error:', error);
