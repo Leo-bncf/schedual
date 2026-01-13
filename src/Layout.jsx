@@ -124,6 +124,20 @@ export default function Layout({ children, currentPageName }) {
           return;
         }
 
+        // If user has no school yet, attempt server-side reconciliation with Stripe (in case webhook didn't link)
+        if (!userData?.school_id) {
+          try {
+            const { data: rec } = await base44.functions.invoke('reconcileSubscription');
+            if (rec?.assigned && rec.schoolId) {
+              alert('Subscription detected and your school has been linked. Please log in again.');
+              base44.auth.logout(window.location.pathname);
+              return;
+            }
+          } catch (e) {
+            console.error('Reconcile subscription error:', e);
+          }
+        }
+
         // Fetch school data if user has a school
         if (userData?.school_id) {
           try {
