@@ -27,6 +27,7 @@ Deno.serve(async (req) => {
     }
 
     // Step 2: Create a test subject
+    let createdId = null;
     try {
       const newSubject = await base44.asServiceRole.entities.Subject.create({
         school_id: user.school_id,
@@ -40,11 +41,24 @@ Deno.serve(async (req) => {
         sl_hours_per_week: 4,
         is_active: true
       });
-      results.steps.push({ step: 2, action: 'create', success: true, id: newSubject.id, data: newSubject });
-      console.log('✅ Step 2: Created subject', newSubject.id);
+      createdId = newSubject?.id;
+      results.steps.push({ step: 2, action: 'create', success: true, id: createdId, returned: newSubject });
+      console.log('✅ Step 2: Created subject', createdId, 'Full object:', JSON.stringify(newSubject));
     } catch (error) {
-      results.steps.push({ step: 2, action: 'create', success: false, error: error.message });
+      results.steps.push({ step: 2, action: 'create', success: false, error: error.message, stack: error.stack });
       console.error('❌ Step 2 failed:', error.message);
+    }
+
+    // Step 3: Try to fetch by ID immediately
+    if (createdId) {
+      try {
+        const fetchedById = await base44.asServiceRole.entities.Subject.filter({ id: createdId });
+        results.steps.push({ step: 3, action: 'fetch_by_id', success: true, found: fetchedById.length, data: fetchedById });
+        console.log('✅ Step 3: Fetch by ID found', fetchedById.length, 'subjects');
+      } catch (error) {
+        results.steps.push({ step: 3, action: 'fetch_by_id', success: false, error: error.message });
+        console.error('❌ Step 3 failed:', error.message);
+      }
     }
 
     // Step 3: Wait a moment
