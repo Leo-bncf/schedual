@@ -6,7 +6,7 @@ import TrustSection from '../components/landing/TrustSection';
 import DemoBooking from '../components/landing/DemoBooking';
 import MissionSection from '../components/landing/MissionSection';
 import ComparisonSection from '../components/landing/ComparisonSection';
-import PricingSection from '../components/landing/PricingSection';
+import PricingTiersSection from '../components/landing/PricingTiersSection';
 import LandingFooter from '../components/landing/LandingFooter';
 import TermsAcceptanceDialog from '../components/landing/TermsAcceptanceDialog';
 
@@ -21,7 +21,7 @@ export default function Landing() {
       <DemoBooking />
       <MissionSection />
       <ComparisonSection />
-      <PricingSection />
+      <PricingTiersSection />
       <LandingFooter />
     </div>
   );
