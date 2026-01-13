@@ -1,28 +1,27 @@
-import { createClientFromRequest } from 'npm:@base44/sdk@0.8.4';
+import { createClientFromRequest } from 'npm:@base44/sdk@0.8.6';
 import Stripe from 'npm:stripe@17.5.0';
 import { validateCSRF } from './csrfHelper.js';
+
+// Stripe Price IDs - Replace these with your actual Stripe Price IDs from the dashboard
+const PRICE_IDS = {
+  monthly: 'price_MONTHLY_ID', // Replace with your monthly price ID
+  yearly: 'price_YEARLY_ID',   // Replace with your yearly price ID
+};
 
 Deno.serve(async (req) => {
   try {
     const stripe = new Stripe(Deno.env.get("STRIPE_SECRET_KEY"));
     const base44 = createClientFromRequest(req);
     
-    // Validate CSRF for all operations
+    // Validate CSRF
     await validateCSRF(req, base44);
     
-    let user;
-    try {
-      user = await base44.auth.me();
-    } catch (authError) {
-      console.error('Auth error:', authError);
-      return Response.json({ error: 'Authentication failed' }, { status: 401 });
-    }
-
+    const user = await base44.auth.me();
     if (!user) {
       return Response.json({ error: 'Unauthorized' }, { status: 401 });
     }
 
-    // Block SuperAdmin accounts from subscribing
+    // Block SuperAdmin accounts
     const superAdminEmailsStr = Deno.env.get("SUPER_ADMIN_EMAILS") || '';
     const SUPER_ADMIN_EMAILS = superAdminEmailsStr
       .split(',')
@@ -32,7 +31,7 @@ Deno.serve(async (req) => {
       return Response.json({ error: 'SuperAdmin accounts cannot subscribe' }, { status: 403 });
     }
 
-    const { additionalUsers = 0, additional_users_only = false, quantity = 0, manage_subscription = false } = await req.json();
+    const { plan, manage_subscription = false } = await req.json();
 
     // Handle billing portal for existing subscriptions
     if (manage_subscription && user.school_id) {
@@ -48,121 +47,48 @@ Deno.serve(async (req) => {
       }
     }
 
-    // Handle purchase of additional users only
-    if (additional_users_only && user.school_id) {
-      const schools = await base44.asServiceRole.entities.School.filter({ id: user.school_id });
-      const school = schools[0];
-      
-      if (!school || school.subscription_status !== 'active') {
-        return Response.json({ error: 'Active subscription required' }, { status: 400 });
-      }
-
-      const ADDITIONAL_USER_PRICE = 200;
-      const session = await stripe.checkout.sessions.create({
-        payment_method_types: ['card'],
-        mode: 'payment',
-        customer: school.stripe_customer_id || undefined,
-        customer_email: school.stripe_customer_id ? undefined : user.email,
-        line_items: [
-          {
-            price_data: {
-              currency: 'usd',
-              product_data: {
-                name: 'Additional Admin User Seats',
-                description: `${quantity} additional admin user(s) for your school`,
-              },
-              unit_amount: ADDITIONAL_USER_PRICE * 100,
-            },
-            quantity,
-          },
-        ],
-        metadata: {
-          type: 'additional_users',
-          school_id: school.id,
-          quantity: String(quantity),
-        },
-        success_url: `${req.headers.get('origin') || 'https://' + req.headers.get('host')}/Subscription?purchase=success`,
-        cancel_url: `${req.headers.get('origin') || 'https://' + req.headers.get('host')}/Subscription?purchase=cancelled`,
-      });
-      
-      return Response.json({ sessionId: session.id, url: session.url });
+    // Validate plan
+    if (!plan || !['monthly', 'yearly'].includes(plan)) {
+      return Response.json({ error: 'Invalid plan selected' }, { status: 400 });
     }
 
     // Check if user already has active subscription
     if (user.school_id) {
       const schools = await base44.asServiceRole.entities.School.filter({ id: user.school_id });
-      if (schools[0]?.subscription_status === 'active') {
+      const school = schools[0];
+      if (school?.subscription_status === 'active' || school?.subscription_status === 'trialing') {
         return Response.json({ error: 'Already subscribed' }, { status: 400 });
       }
     }
 
-    // Calculate pricing
-    const BASE_PRICE = 1999;
-    const STORAGE_PRICE = 240;
-    const ADDITIONAL_USER_PRICE = 200;
-    const totalAmount = BASE_PRICE + STORAGE_PRICE + (additionalUsers * ADDITIONAL_USER_PRICE);
-
     // Create Stripe checkout session
-    let session;
-    try {
-      session = await stripe.checkout.sessions.create({
-        payment_method_types: ['card'],
-        mode: 'payment',
-        line_items: [
-          {
-            price_data: {
-              currency: 'eur',
-              product_data: {
-                name: 'Schedual Yearly Subscription',
-                description: `Base platform (€${BASE_PRICE}) + Secure storage (€${STORAGE_PRICE})${additionalUsers > 0 ? ` + ${additionalUsers} additional users (€${additionalUsers * ADDITIONAL_USER_PRICE})` : ''}`,
-              },
-              unit_amount: totalAmount * 100,
-            },
-            quantity: 1,
-          },
-        ],
-        metadata: {
-          user_id: user.id,
-          user_email: user.email,
-          user_name: user.full_name,
-          additional_users: String(additionalUsers),
+    const session = await stripe.checkout.sessions.create({
+      mode: 'subscription',
+      payment_method_types: ['card'],
+      line_items: [
+        {
+          price: PRICE_IDS[plan],
+          quantity: 1,
         },
-        customer_email: user.email,
-        success_url: `${req.headers.get('origin') || 'https://' + req.headers.get('host')}/Dashboard?subscription=success`,
-        cancel_url: `${req.headers.get('origin') || 'https://' + req.headers.get('host')}/Subscription?subscription=cancelled`,
-      });
-    } catch (stripeError) {
-      console.error('Stripe API Error:', {
-        message: stripeError.message,
-        type: stripeError.type,
-        code: stripeError.code,
-        param: stripeError.param,
-        statusCode: stripeError.statusCode,
-        raw: stripeError.raw
-      });
-      
-      return Response.json({ 
-        error: `Stripe API Error: ${stripeError.message}`,
-        code: stripeError.code,
-        type: stripeError.type,
-        param: stripeError.param,
-        statusCode: stripeError.statusCode
-      }, { status: stripeError.statusCode || 500 });
-    }
+      ],
+      metadata: {
+        user_id: user.id,
+        user_email: user.email,
+        user_name: user.full_name,
+        plan: plan,
+      },
+      customer_email: user.email,
+      allow_promotion_codes: true,
+      billing_address_collection: 'required',
+      success_url: `${req.headers.get('origin') || 'https://' + req.headers.get('host')}/Dashboard?subscription=success`,
+      cancel_url: `${req.headers.get('origin') || 'https://' + req.headers.get('host')}/Subscription?subscription=cancelled`,
+    });
 
     return Response.json({ sessionId: session.id, url: session.url });
   } catch (error) {
-    console.error('Unexpected Error:', {
-      name: error.name,
-      message: error.message,
-      stack: error.stack,
-      cause: error.cause
-    });
-    
+    console.error('Checkout Error:', error);
     return Response.json({ 
-      error: `Unexpected error: ${error.message}`,
-      name: error.name,
-      stack: error.stack
+      error: `Error: ${error.message}`,
     }, { status: 500 });
   }
 });
