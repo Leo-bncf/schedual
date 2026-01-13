@@ -80,20 +80,25 @@ export default function Layout({ children, currentPageName }) {
         const subscriptionSuccess = urlParams.get('subscription') === 'success';
 
         if (subscriptionSuccess) {
+          let assigned = false;
           try {
             // After successful checkout, try to detect and attach via PendingInvitation
             const { data: inviteData } = await base44.functions.invoke('checkPendingInvitations');
             if (inviteData?.schoolAssigned) {
+              assigned = true;
               alert(`Payment successful! You've been linked to ${inviteData.schoolName}. Please log in again.`);
             } else {
-              alert('Payment successful! Please log in again to access your school dashboard.');
+              alert('Payment successful! If you already had an account, just continue. If not, please sign up or log in to access your dashboard.');
             }
           } catch (e) {
             console.error('Post-checkout linking error:', e);
-            alert('Payment successful! Please log in again to access your school dashboard.');
+            alert('Payment successful! Please sign in to complete linking.');
           }
-          base44.auth.logout('/');
-          return;
+          if (assigned) {
+            base44.auth.logout('/');
+            return;
+          }
+          // If not assigned, continue normal flow (reconcile will try after login)
         }
 
         const userData = await base44.auth.me();
