@@ -11,62 +11,76 @@ Deno.serve(async (req) => {
 
     console.log('🔍 Starting debug - user school_id:', user.school_id);
 
-    // Step 1: Check current state
-    const before_allSubjects = await base44.asServiceRole.entities.Subject.list();
-    console.log('📊 BEFORE: Total subjects in DB:', before_allSubjects.length);
+    const results = {
+      user_school_id: user.school_id,
+      steps: []
+    };
 
-    // Step 2: Delete ALL subjects
-    for (const subject of before_allSubjects) {
-      await base44.asServiceRole.entities.Subject.delete(subject.id);
-      console.log('🗑️ Deleted subject:', subject.id);
+    // Step 1: Check current state with service role
+    try {
+      const before = await base44.asServiceRole.entities.Subject.list();
+      results.steps.push({ step: 1, action: 'list_before', success: true, count: before.length, data: before });
+      console.log('✅ Step 1: Found', before.length, 'subjects');
+    } catch (error) {
+      results.steps.push({ step: 1, action: 'list_before', success: false, error: error.message });
+      console.error('❌ Step 1 failed:', error.message);
     }
 
-    // Step 3: Verify deletion
-    const afterDelete = await base44.asServiceRole.entities.Subject.list();
-    console.log('📊 AFTER DELETE: Total subjects:', afterDelete.length);
+    // Step 2: Create a test subject
+    try {
+      const newSubject = await base44.asServiceRole.entities.Subject.create({
+        school_id: user.school_id,
+        name: "DEBUG TEST " + Date.now(),
+        code: "DBG" + Date.now(),
+        ib_level: "DP",
+        ib_group: "1",
+        ib_group_name: "Language & Literature",
+        available_levels: ["HL"],
+        hl_hours_per_week: 6,
+        sl_hours_per_week: 4,
+        is_active: true
+      });
+      results.steps.push({ step: 2, action: 'create', success: true, id: newSubject.id, data: newSubject });
+      console.log('✅ Step 2: Created subject', newSubject.id);
+    } catch (error) {
+      results.steps.push({ step: 2, action: 'create', success: false, error: error.message });
+      console.error('❌ Step 2 failed:', error.message);
+    }
 
-    // Step 4: Create a new subject with SERVICE ROLE (to bypass any RLS issues)
-    console.log('➕ Creating subject with school_id:', user.school_id);
-    const newSubject = await base44.asServiceRole.entities.Subject.create({
-      school_id: user.school_id,
-      name: "SERVICE ROLE TEST",
-      code: "SRT",
-      ib_level: "DP",
-      ib_group: "1",
-      ib_group_name: "Language & Literature",
-      available_levels: ["HL"],
-      hl_hours_per_week: 6,
-      sl_hours_per_week: 4,
-      is_active: true
-    });
-    console.log('✅ Subject created, returned ID:', newSubject.id);
-    console.log('✅ Returned full object:', JSON.stringify(newSubject));
+    // Step 3: Wait a moment
+    await new Promise(resolve => setTimeout(resolve, 500));
 
-    // Step 5: Wait a moment (maybe async issue?)
-    await new Promise(resolve => setTimeout(resolve, 100));
+    // Step 4: List with service role
+    try {
+      const afterServiceRole = await base44.asServiceRole.entities.Subject.list();
+      results.steps.push({ step: 4, action: 'list_service_role', success: true, count: afterServiceRole.length, data: afterServiceRole });
+      console.log('✅ Step 4: Service role sees', afterServiceRole.length, 'subjects');
+    } catch (error) {
+      results.steps.push({ step: 4, action: 'list_service_role', success: false, error: error.message });
+      console.error('❌ Step 4 failed:', error.message);
+    }
 
-    // Step 6: Query immediately after
-    const afterCreate_service = await base44.asServiceRole.entities.Subject.list();
-    const afterCreate_user = await base44.entities.Subject.list();
-    console.log('📊 AFTER CREATE (service role):', afterCreate_service.length);
-    console.log('📊 AFTER CREATE (user):', afterCreate_user.length);
+    // Step 5: List with user context
+    try {
+      const afterUser = await base44.entities.Subject.list();
+      results.steps.push({ step: 5, action: 'list_user', success: true, count: afterUser.length, data: afterUser });
+      console.log('✅ Step 5: User sees', afterUser.length, 'subjects');
+    } catch (error) {
+      results.steps.push({ step: 5, action: 'list_user', success: false, error: error.message });
+      console.error('❌ Step 5 failed:', error.message);
+    }
 
-    return Response.json({
-      user_school_id: user.school_id,
-      step1_before: before_allSubjects.length,
-      step2_deleted: before_allSubjects.length,
-      step3_afterDelete: afterDelete.length,
-      step4_created: newSubject,
-      step5_afterCreate_serviceRoleSees: afterCreate_service.length,
-      step5_afterCreate_userSees: afterCreate_user.length,
-      step6_serviceRoleList: afterCreate_service,
-      step6_userList: afterCreate_user,
-      diagnosis: afterCreate_service.length === 0 ? 
-        "❌ CRITICAL: Subject returned from create() but NOT in database!" :
-        afterCreate_user.length === 0 ?
-          "⚠️ RLS ISSUE: Subject exists but user can't read it" :
-          "✅ SUCCESS: Everything working!"
-    });
+    // Diagnosis
+    const serviceRoleCount = results.steps.find(s => s.step === 4)?.count || 0;
+    const userCount = results.steps.find(s => s.step === 5)?.count || 0;
+    
+    results.diagnosis = serviceRoleCount === 0 ? 
+      "❌ CRITICAL: Subject creation failing - nothing in database!" :
+      userCount === 0 ?
+        "⚠️ RLS ISSUE: Subjects exist but user can't read them" :
+        "✅ SUCCESS: Everything working!";
+
+    return Response.json(results);
   } catch (error) {
     console.error('❌ Debug function error:', error);
     return Response.json({ 
