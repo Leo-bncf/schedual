@@ -80,8 +80,18 @@ export default function Layout({ children, currentPageName }) {
         const subscriptionSuccess = urlParams.get('subscription') === 'success';
 
         if (subscriptionSuccess) {
-          // Subscription completed - force logout to refresh JWT token with school_id
-          alert('Payment successful! Please log in again to access your school dashboard.');
+          try {
+            // After successful checkout, try to detect and attach via PendingInvitation
+            const { data: inviteData } = await base44.functions.invoke('checkPendingInvitations');
+            if (inviteData?.schoolAssigned) {
+              alert(`Payment successful! You've been linked to ${inviteData.schoolName}. Please log in again.`);
+            } else {
+              alert('Payment successful! Please log in again to access your school dashboard.');
+            }
+          } catch (e) {
+            console.error('Post-checkout linking error:', e);
+            alert('Payment successful! Please log in again to access your school dashboard.');
+          }
           base44.auth.logout('/');
           return;
         }
