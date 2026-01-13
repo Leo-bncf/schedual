@@ -2,10 +2,10 @@ import { createClientFromRequest } from 'npm:@base44/sdk@0.8.6';
 import Stripe from 'npm:stripe@17.5.0';
 import { validateCSRF } from './csrfHelper.js';
 
-// Stripe Price IDs - Replace these with your actual Stripe Price IDs from the dashboard
+// Stripe Price IDs
 const PRICE_IDS = {
-  monthly: 'price_MONTHLY_ID', // Replace with your monthly price ID
-  yearly: 'price_YEARLY_ID',   // Replace with your yearly price ID
+  monthly: 'price_1Sp7KLBg94UIyRz584NBxkUE',
+  yearly: 'price_1Sp7KLBg94UIyRz5TywxTYk0',
 };
 
 Deno.serve(async (req) => {
@@ -72,6 +72,7 @@ Deno.serve(async (req) => {
         },
       ],
       metadata: {
+        base44_app_id: Deno.env.get("BASE44_APP_ID"),
         user_id: user.id,
         user_email: user.email,
         user_name: user.full_name,
