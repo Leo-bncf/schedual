@@ -353,7 +353,12 @@ ${trainingFeedback ? `LESSONS FROM ADMIN FEEDBACK:\n${trainingFeedback}\n\n` : '
           try {
             const { data } = await base44.functions.invoke('debugSubjects');
             console.log('🔍 Full debug data:', data);
-            alert(`${data.diagnosis}\n\nBEFORE: ${data.step1_before} subjects\nDELETED: ${data.step2_deleted} subjects\nAFTER DELETE: ${data.step3_afterDelete} subjects\n\nCREATED:\nID: ${data.step4_created?.id}\nName: ${data.step4_created?.name}\nSchool ID: ${data.step4_created?.school_id}\n\nAFTER CREATE:\n- Service role sees: ${data.step5_afterCreate_serviceRoleSees} subjects\n- User sees: ${data.step5_afterCreate_userSees} subjects`);
+            
+            const stepResults = data.steps.map(s => 
+              `Step ${s.step} (${s.action}): ${s.success ? '✅' : '❌'} ${s.count !== undefined ? `${s.count} subjects` : s.error || ''}`
+            ).join('\n');
+            
+            alert(`${data.diagnosis}\n\n${stepResults}`);
           } catch (err) {
             console.error('❌ Error:', err);
             alert('Error: ' + (err.message || JSON.stringify(err)));
