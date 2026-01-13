@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
-import { CheckCircle2, Zap } from 'lucide-react';
+import { CheckCircle2, Zap, Users, Building2, Plug, SlidersHorizontal, LifeBuoy, Sparkles } from 'lucide-react';
 
 const TIERS = {
   tier1: {
@@ -100,6 +100,14 @@ const ADD_ONS = [
   },
 ];
 
+const CATEGORY_ICONS = {
+  'Users': Users,
+  'School Structure': Building2,
+  'Integrations': Plug,
+  'Scheduling Features': SlidersHorizontal,
+  'Support & Services': LifeBuoy,
+};
+
 export default function PricingTiersSection() {
   const [showAddOns, setShowAddOns] = useState(false);
 
@@ -181,45 +189,58 @@ export default function PricingTiersSection() {
         </div>
 
         {/* Add-ons Section */}
-        <div className="border-t border-slate-200 pt-20">
-          <div className="text-center mb-12">
-            <h3 className="text-3xl font-bold text-slate-900 mb-3">Customize Your Plan</h3>
-            <p className="text-slate-600 mb-8">Add optional features to enhance your tier</p>
-            <button
-              onClick={() => setShowAddOns(!showAddOns)}
-              className="inline-flex items-center gap-2 px-6 py-3 bg-slate-900 text-white rounded-lg hover:bg-slate-800 transition-colors font-semibold"
-            >
-              <Zap className="w-5 h-5" />
-              {showAddOns ? 'Hide Add-ons' : 'View Add-ons'}
-            </button>
+        <div id="addons" className="relative pt-24">
+          <div className="text-center mb-8">
+            <h3 className="text-3xl font-bold text-slate-900">Customize Your Plan</h3>
+            <p className="text-slate-600 mt-2">Add optional features to enhance your tier</p>
+            <div className="mt-6">
+              <button
+                onClick={() => setShowAddOns(!showAddOns)}
+                className="inline-flex items-center gap-2 px-6 py-3 rounded-xl bg-blue-900 text-white hover:bg-blue-800 transition-colors font-semibold shadow-sm"
+              >
+                <Sparkles className="w-5 h-5" />
+                {showAddOns ? 'Hide Add-ons' : 'View Add-ons'}
+              </button>
+            </div>
           </div>
 
           {showAddOns && (
-            <div className="space-y-12 animate-in fade-in duration-300">
-              {ADD_ONS.map((category) => (
-                <div key={category.category}>
-                  <h4 className="text-lg font-semibold text-slate-900 mb-6 flex items-center gap-2">
-                    <span className="w-2 h-2 rounded-full bg-blue-900"></span>
-                    {category.category}
-                  </h4>
-                  <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-4">
-                    {category.items.map((addon) => (
-                      <div
-                        key={addon.id}
-                        className="p-4 rounded-lg border border-slate-200 bg-white hover:border-blue-300 hover:shadow-md transition-all"
-                      >
-                        <div className="flex items-start justify-between mb-2">
-                          <h5 className="font-semibold text-slate-900 text-sm">{addon.name}</h5>
-                          <Badge variant="outline" className="text-xs ml-2">
-                            {addon.type === 'onetime' ? '1x' : 'Annual'}
-                          </Badge>
+            <div className="rounded-3xl border border-slate-200/80 bg-gradient-to-b from-white to-indigo-50/40 p-6 sm:p-10 shadow-sm">
+              <div className="grid gap-6">
+                {ADD_ONS.map((category) => {
+                  const Icon = CATEGORY_ICONS[category.category] || Zap;
+                  return (
+                    <div key={category.category} className="rounded-2xl bg-white/70 backdrop-blur-sm border border-slate-200 p-5 sm:p-6 hover:shadow-md transition-shadow">
+                      <div className="flex items-center justify-between mb-4">
+                        <div className="flex items-center gap-3">
+                          <div className="h-9 w-9 rounded-xl bg-blue-100 text-blue-900 flex items-center justify-center">
+                            <Icon className="w-5 h-5" />
+                          </div>
+                          <h4 className="text-lg font-semibold text-slate-900">{category.category}</h4>
                         </div>
-                        <div className="text-2xl font-bold text-blue-900">${addon.price}</div>
                       </div>
-                    ))}
-                  </div>
-                </div>
-              ))}
+                      <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
+                        {category.items.map((addon) => (
+                          <div key={addon.id} className="group rounded-xl border border-slate-200 bg-white hover:border-blue-300 hover:shadow transition-all p-4">
+                            <div className="flex items-start justify-between gap-3">
+                              <h5 className="font-medium text-slate-900 text-sm leading-5">{addon.name}</h5>
+                              <Badge className={`${addon.type === 'onetime' ? 'bg-amber-100 text-amber-800' : 'bg-indigo-100 text-indigo-800'} text-[10px]`}>
+                                {addon.type === 'onetime' ? 'One-time' : 'Annual'}
+                              </Badge>
+                            </div>
+                            <div className="mt-3 flex items-end justify-between">
+                              <div className="text-blue-900 font-bold text-xl">${addon.price}</div>
+                              <button className="text-sm font-semibold text-blue-900 opacity-0 group-hover:opacity-100 transition-opacity">
+                                Learn more →
+                              </button>
+                            </div>
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+                  );
+                })}
+              </div>
             </div>
           )}
         </div>
