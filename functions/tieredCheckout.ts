@@ -4,9 +4,9 @@ import { validateCSRF } from './csrfHelper.js';
 
 // Stripe Price IDs for Tiers
 const TIER_PRICES = {
-  tier1: 'price_1Sp7sSBg94UIyRz5aR82NG1w',
-  tier2: 'price_1Sp7sTBg94UIyRz5ZESEurY5',
-  tier3: 'price_1Sp7sTBg94UIyRz5cgiWKA3k',
+  tier1: 'price_1Sp8n9BSrrEzDDMYT2rMz4gt',
+  tier2: 'price_1Sp8n9BSrrEzDDMYhd3bxTWY',
+  tier3: 'price_1Sp8n9BSrrEzDDMY5KQsLjdU',
 };
 
 // Add-on Price IDs (all recurring yearly except noted)
