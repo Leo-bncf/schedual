@@ -146,81 +146,49 @@ export default function Schedule() {
 
   const { data: scheduleVersions = [], isLoading: loadingVersions } = useQuery({
     queryKey: ['scheduleVersions', schoolId],
-    queryFn: async () => {
-      const { data } = await base44.functions.invoke('scheduleOperations', { 
-        action: 'list', 
-        entity: 'ScheduleVersion' 
-      });
-      return data;
-    },
+    queryFn: () => base44.entities.ScheduleVersion.filter({ school_id: schoolId }, '-created_date'),
     enabled: !!schoolId,
   });
 
   const { data: scheduleSlots = [], isLoading: loadingSlots } = useQuery({
     queryKey: ['scheduleSlots', selectedVersion?.id],
-    queryFn: async () => {
-      if (!selectedVersion) return [];
-      const { data } = await base44.functions.invoke('scheduleOperations', { 
-        action: 'list', 
-        entity: 'ScheduleSlot',
-        query: { schedule_version: selectedVersion.id }
-      });
-      return data;
-    },
+    queryFn: () => selectedVersion ? base44.entities.ScheduleSlot.filter({ schedule_version: selectedVersion.id }) : [],
     enabled: !!selectedVersion,
   });
 
   const { data: teachingGroups = [] } = useQuery({
     queryKey: ['teachingGroups', schoolId],
-    queryFn: async () => {
-      const { data } = await base44.functions.invoke('teachingGroupOperations', { action: 'list' });
-      return data;
-    },
+    queryFn: () => base44.entities.TeachingGroup.filter({ school_id: schoolId }),
     enabled: !!schoolId,
   });
 
   const { data: rooms = [] } = useQuery({
     queryKey: ['rooms', schoolId],
-    queryFn: async () => {
-      const { data } = await base44.functions.invoke('roomOperations', { action: 'list' });
-      return data;
-    },
+    queryFn: () => base44.entities.Room.filter({ school_id: schoolId }),
     enabled: !!schoolId,
   });
 
   const { data: subjects = [] } = useQuery({
     queryKey: ['subjects', schoolId],
-    queryFn: async () => {
-      const { data } = await base44.functions.invoke('subjectOperations', { action: 'list' });
-      return data;
-    },
+    queryFn: () => base44.entities.Subject.filter({ school_id: schoolId }),
     enabled: !!schoolId,
   });
 
   const { data: teachers = [] } = useQuery({
     queryKey: ['teachers', schoolId],
-    queryFn: async () => {
-      const { data } = await base44.functions.invoke('teacherOperations', { action: 'list' });
-      return data;
-    },
+    queryFn: () => base44.entities.Teacher.filter({ school_id: schoolId }),
     enabled: !!schoolId,
   });
 
   const { data: students = [] } = useQuery({
     queryKey: ['students', schoolId],
-    queryFn: async () => {
-      const { data } = await base44.functions.invoke('studentOperations', { action: 'list' });
-      return data;
-    },
+    queryFn: () => base44.entities.Student.filter({ school_id: schoolId }),
     enabled: !!schoolId,
   });
 
   const { data: classGroups = [] } = useQuery({
     queryKey: ['classGroups', schoolId],
-    queryFn: async () => {
-      const { data } = await base44.functions.invoke('classGroupOperations', { action: 'list' });
-      return data;
-    },
+    queryFn: () => base44.entities.ClassGroup.filter({ school_id: schoolId }, '-year_group'),
     enabled: !!schoolId,
   });
 
@@ -228,12 +196,9 @@ export default function Schedule() {
     queryKey: ['constraints', schoolId],
     queryFn: async () => {
       console.log('Fetching constraints for school:', schoolId);
-      const { data } = await base44.functions.invoke('scheduleOperations', { 
-        action: 'list', 
-        entity: 'Constraint' 
-      });
-      console.log('Fetched constraints:', data);
-      return data;
+      const result = await base44.entities.Constraint.filter({ school_id: schoolId });
+      console.log('Fetched constraints:', result);
+      return result;
     },
     enabled: !!schoolId,
   });
@@ -253,15 +218,9 @@ export default function Schedule() {
   }, [selectedVersion, teachers, students, rooms, teachingGroups]);
 
   const createVersionMutation = useMutation({
-    mutationFn: async (data) => {
+    mutationFn: (data) => {
       if (!schoolId) throw new Error('No school assigned');
-      const result = await base44.functions.invoke('scheduleOperations', { 
-        action: 'create', 
-        entity: 'ScheduleVersion',
-        data 
-      });
-      if (!result.data.success) throw new Error(result.data.error);
-      return result.data.data;
+      return base44.entities.ScheduleVersion.create({ ...data, school_id: schoolId });
     },
     onSuccess: (newVersion) => {
       queryClient.invalidateQueries({ queryKey: ['scheduleVersions'] });
@@ -272,31 +231,14 @@ export default function Schedule() {
   });
 
   const updateVersionMutation = useMutation({
-    mutationFn: async ({ id, data }) => {
-      const result = await base44.functions.invoke('scheduleOperations', { 
-        action: 'update', 
-        entity: 'ScheduleVersion',
-        id,
-        data 
-      });
-      if (!result.data.success) throw new Error(result.data.error);
-      return result.data.data;
-    },
+    mutationFn: ({ id, data }) => base44.entities.ScheduleVersion.update(id, data),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['scheduleVersions'] });
     },
   });
 
   const deleteVersionMutation = useMutation({
-    mutationFn: async (id) => {
-      const result = await base44.functions.invoke('scheduleOperations', { 
-        action: 'delete', 
-        entity: 'ScheduleVersion',
-        id 
-      });
-      if (!result.data.success) throw new Error(result.data.error);
-      return result.data.data;
-    },
+    mutationFn: (id) => base44.entities.ScheduleVersion.delete(id),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['scheduleVersions'] });
       setSelectedVersion(null);
@@ -369,13 +311,8 @@ Now process the user's input and return ONLY the JSON object.`,
 
       console.log('Creating constraint with data:', constraintData);
 
-      const result = await base44.functions.invoke('scheduleOperations', { 
-        action: 'create', 
-        entity: 'Constraint',
-        data: constraintData 
-      });
-      if (!result.data.success) throw new Error(result.data.error);
-      console.log('Constraint created:', result.data.data);
+      const created = await base44.entities.Constraint.create(constraintData);
+      console.log('Constraint created:', created);
       
       await queryClient.invalidateQueries({ queryKey: ['constraints', schoolId] });
       await refetchConstraints();
@@ -553,7 +490,7 @@ Now process the user's input and return ONLY the JSON object.`,
       }));
       await queryClient.invalidateQueries({ queryKey: ['teachingGroups'] });
       await new Promise(resolve => setTimeout(resolve, 1000));
-      const { data: updatedGroups } = await base44.functions.invoke('teachingGroupOperations', { action: 'list' });
+      const updatedGroups = await base44.entities.TeachingGroup.filter({ school_id: schoolId });
       console.log('Updated groups with teachers:', updatedGroups.filter(g => g.teacher_id).length);
       
       // Delete existing slots for this version (batch to avoid rate limits)
@@ -564,30 +501,22 @@ Now process the user's input and return ONLY the JSON object.`,
         percent: 20,
         message: 'Clearing existing schedule slots...'
       }));
-      const { data: existingSlots } = await base44.functions.invoke('scheduleOperations', { 
-        action: 'list', 
-        entity: 'ScheduleSlot' 
-      });
+      const existingSlots = await base44.entities.ScheduleSlot.list();
       const slotsToDelete = existingSlots.filter(s => s.schedule_version === selectedVersion.id);
       
       console.log('Existing slots to delete:', slotsToDelete.length);
       
       if (slotsToDelete.length > 0) {
         // Delete in small batches with delays to avoid rate limits
-        const batchSize = 3;
+        const batchSize = 3; // Reduced from 5
         for (let i = 0; i < slotsToDelete.length; i += batchSize) {
           const batch = slotsToDelete.slice(i, i + batchSize);
-          await Promise.all(batch.map(slot => 
-            base44.functions.invoke('scheduleOperations', { 
-              action: 'delete', 
-              entity: 'ScheduleSlot',
-              id: slot.id 
-            })
-          ));
-          await new Promise(resolve => setTimeout(resolve, 2000));
+          await Promise.all(batch.map(slot => base44.entities.ScheduleSlot.delete(slot.id)));
+          // Longer delay between batches to avoid rate limit
+          await new Promise(resolve => setTimeout(resolve, 2000)); // Increased from 1000ms
         }
         console.log('All slots deleted, waiting before creating new ones...');
-        await new Promise(resolve => setTimeout(resolve, 3000));
+        await new Promise(resolve => setTimeout(resolve, 3000)); // Increased from 2000ms
       }
 
       // Comprehensive scheduling algorithm for all students, teachers, and rooms
@@ -804,11 +733,7 @@ Now process the user's input and return ONLY the JSON object.`,
             console.log(`Auto-assigned ${studentIds.length} DP students to "${group.name}"`);
             
             if (studentIds.length > 0) {
-              await base44.functions.invoke('teachingGroupOperations', { 
-                action: 'update', 
-                id: group.id, 
-                data: { student_ids: studentIds } 
-              });
+              await base44.entities.TeachingGroup.update(group.id, { student_ids: studentIds });
             }
           }
           
@@ -1101,20 +1026,24 @@ Now process the user's input and return ONLY the JSON object.`,
           console.log(`Creating batch ${batchNum}/${totalBatches} (${batch.length} slots)...`);
 
           try {
-            // Create slots one by one through backend
-            for (const slot of batch) {
-              const result = await base44.functions.invoke('scheduleOperations', { 
-                action: 'create', 
-                entity: 'ScheduleSlot',
-                data: slot 
-              });
-              if (result.data.success) {
-                totalCreated++;
-              }
-            }
-            console.log(`✓ Batch created: ${batch.length} slots`);
+            const created = await base44.entities.ScheduleSlot.bulkCreate(batch);
+            totalCreated += created.length;
+            console.log(`✓ Batch created: ${created.length} slots`);
           } catch (batchError) {
             console.error(`✗ Batch failed:`, batchError.message);
+            // Shorter retry delay
+            await new Promise(resolve => setTimeout(resolve, 2000));
+
+            // Retry individually
+            for (const slot of batch) {
+              try {
+                await base44.entities.ScheduleSlot.create(slot);
+                totalCreated++;
+                await new Promise(resolve => setTimeout(resolve, 300));
+              } catch (slotError) {
+                console.error(`Failed to create slot:`, slotError.message);
+              }
+            }
           }
 
           // Shorter delay between batches
@@ -2320,20 +2249,16 @@ Now process the user's input and return ONLY the JSON object.`,
                                       <p className="text-sm text-slate-600">{constraint.description}</p>
                                     </div>
                                     <Button
-                                     variant="ghost"
-                                     size="icon"
-                                     onClick={async () => {
-                                       if (confirm('Delete this constraint?')) {
-                                         await base44.functions.invoke('scheduleOperations', { 
-                                           action: 'delete', 
-                                           entity: 'Constraint',
-                                           id: constraint.id 
-                                         });
-                                         queryClient.invalidateQueries({ queryKey: ['constraints'] });
-                                       }
-                                     }}
+                                      variant="ghost"
+                                      size="icon"
+                                      onClick={async () => {
+                                        if (confirm('Delete this constraint?')) {
+                                          await base44.entities.Constraint.delete(constraint.id);
+                                          queryClient.invalidateQueries({ queryKey: ['constraints'] });
+                                        }
+                                      }}
                                     >
-                                     <Trash2 className="w-4 h-4 text-slate-400" />
+                                      <Trash2 className="w-4 h-4 text-slate-400" />
                                     </Button>
                                   </div>
                                 </CardContent>

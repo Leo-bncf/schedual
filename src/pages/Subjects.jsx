@@ -92,9 +92,9 @@ export default function Subjects() {
     queryKey: ['subjects', schoolId],
     queryFn: async () => {
       console.log('Fetching subjects for school:', schoolId);
-      const { data } = await base44.functions.invoke('subjectOperations', { action: 'list' });
-      console.log('Subjects fetched:', data);
-      return data;
+      const result = await base44.entities.Subject.list();
+      console.log('Subjects fetched:', result);
+      return result;
     },
     enabled: !!schoolId,
   });
@@ -104,14 +104,9 @@ export default function Subjects() {
   console.log('Query error:', error);
 
   const createMutation = useMutation({
-    mutationFn: async (data) => {
+    mutationFn: (data) => {
       if (!schoolId) throw new Error('No school assigned');
-      const result = await base44.functions.invoke('subjectOperations', { 
-        action: 'create', 
-        data 
-      });
-      if (!result.data.success) throw new Error(result.data.error);
-      return result.data.data;
+      return base44.entities.Subject.create({ ...data, school_id: schoolId });
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['subjects', schoolId] });
@@ -124,15 +119,7 @@ export default function Subjects() {
   });
 
   const updateMutation = useMutation({
-    mutationFn: async ({ id, data }) => {
-      const result = await base44.functions.invoke('subjectOperations', { 
-        action: 'update', 
-        id, 
-        data 
-      });
-      if (!result.data.success) throw new Error(result.data.error);
-      return result.data.data;
-    },
+    mutationFn: ({ id, data }) => base44.entities.Subject.update(id, data),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['subjects', schoolId] });
       resetForm();
@@ -144,14 +131,7 @@ export default function Subjects() {
   });
 
   const deleteMutation = useMutation({
-    mutationFn: async (id) => {
-      const result = await base44.functions.invoke('subjectOperations', { 
-        action: 'delete', 
-        id 
-      });
-      if (!result.data.success) throw new Error(result.data.error);
-      return result.data.data;
-    },
+    mutationFn: (id) => base44.entities.Subject.delete(id),
     onSuccess: () => queryClient.invalidateQueries({ queryKey: ['subjects', schoolId] }),
     onError: (error) => {
       console.error('Delete subject error:', error);
@@ -700,7 +680,7 @@ ${trainingFeedback ? `LESSONS FROM ADMIN FEEDBACK:\n${trainingFeedback}\n\n` : '
         </div>
       )}
 
-      <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
+      <Dialog open={isDialogOpen} onOpenChange={(open) => { if (!open) resetForm(); }}>
         <DialogContent className="sm:max-w-lg">
           <DialogHeader>
             <DialogTitle>{editingSubject ? 'Edit Subject' : 'Add New Subject'}</DialogTitle>

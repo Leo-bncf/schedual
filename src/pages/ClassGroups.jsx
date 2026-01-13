@@ -43,46 +43,31 @@ export default function ClassGroups() {
 
   const { data: classGroups = [], isLoading } = useQuery({
     queryKey: ['classGroups', schoolId],
-    queryFn: async () => {
-      const { data } = await base44.functions.invoke('classGroupOperations', { action: 'list' });
-      return data;
-    },
+    queryFn: () => base44.entities.ClassGroup.filter({ school_id: schoolId }, '-year_group', 500),
     enabled: !!schoolId,
   });
 
   const { data: students = [] } = useQuery({
     queryKey: ['students', schoolId],
-    queryFn: async () => {
-      const { data } = await base44.functions.invoke('studentOperations', { action: 'list' });
-      return data;
-    },
+    queryFn: () => base44.entities.Student.filter({ school_id: schoolId }, '-created_date', 500),
     enabled: !!schoolId,
   });
 
   const { data: teachers = [] } = useQuery({
     queryKey: ['teachers', schoolId],
-    queryFn: async () => {
-      const { data } = await base44.functions.invoke('teacherOperations', { action: 'list' });
-      return data;
-    },
+    queryFn: () => base44.entities.Teacher.filter({ school_id: schoolId }),
     enabled: !!schoolId,
   });
 
   const { data: subjects = [] } = useQuery({
     queryKey: ['subjects', schoolId],
-    queryFn: async () => {
-      const { data } = await base44.functions.invoke('subjectOperations', { action: 'list' });
-      return data;
-    },
+    queryFn: () => base44.entities.Subject.filter({ school_id: schoolId }),
     enabled: !!schoolId,
   });
 
   const { data: teachingGroups = [] } = useQuery({
     queryKey: ['teachingGroups', schoolId],
-    queryFn: async () => {
-      const { data } = await base44.functions.invoke('teachingGroupOperations', { action: 'list' });
-      return data;
-    },
+    queryFn: () => base44.entities.TeachingGroup.filter({ school_id: schoolId }),
     enabled: !!schoolId,
   });
 
@@ -92,17 +77,11 @@ export default function ClassGroups() {
       const studentsInGroup = students.filter(s => s.classgroup_id === groupId);
       await Promise.all(
         studentsInGroup.map(s => 
-          base44.functions.invoke('studentOperations', { 
-            action: 'update', 
-            id: s.id, 
-            data: { classgroup_id: null } 
-          })
+          base44.entities.Student.update(s.id, { classgroup_id: null })
         )
       );
       // Delete the class group
-      const result = await base44.functions.invoke('classGroupOperations', { action: 'delete', id: groupId });
-      if (!result.data.success) throw new Error(result.data.error);
-      return result.data.data;
+      return base44.entities.ClassGroup.delete(groupId);
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['classGroups'] });

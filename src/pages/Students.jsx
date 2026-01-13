@@ -74,10 +74,7 @@ export default function Students() {
 
   const { data: rawStudents = [], isLoading } = useQuery({
     queryKey: ['students', schoolId],
-    queryFn: async () => {
-      const { data } = await base44.functions.invoke('studentOperations', { action: 'list' });
-      return data;
-    },
+    queryFn: () => base44.entities.Student.filter({ school_id: schoolId }, '-created_date', 500),
     enabled: !!schoolId,
   });
 
@@ -106,10 +103,7 @@ export default function Students() {
 
   const { data: subjects = [] } = useQuery({
     queryKey: ['subjects', schoolId],
-    queryFn: async () => {
-      const { data } = await base44.functions.invoke('subjectOperations', { action: 'list' });
-      return data;
-    },
+    queryFn: () => base44.entities.Subject.list(),
     enabled: !!schoolId,
   });
 
@@ -125,11 +119,9 @@ export default function Students() {
   });
 
   const createMutation = useMutation({
-    mutationFn: async (data) => {
+    mutationFn: (data) => {
       if (!schoolId) throw new Error('No school assigned');
-      const result = await base44.functions.invoke('studentOperations', { action: 'create', data });
-      if (!result.data.success) throw new Error(result.data.error);
-      return result.data.data;
+      return base44.entities.Student.create({ ...data, school_id: schoolId });
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['students'] });
@@ -138,11 +130,7 @@ export default function Students() {
   });
 
   const updateMutation = useMutation({
-    mutationFn: async ({ id, data }) => {
-      const result = await base44.functions.invoke('studentOperations', { action: 'update', id, data });
-      if (!result.data.success) throw new Error(result.data.error);
-      return result.data.data;
-    },
+    mutationFn: ({ id, data }) => base44.entities.Student.update(id, data),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['students'] });
       resetForm();
@@ -150,11 +138,7 @@ export default function Students() {
   });
 
   const deleteMutation = useMutation({
-    mutationFn: async (id) => {
-      const result = await base44.functions.invoke('studentOperations', { action: 'delete', id });
-      if (!result.data.success) throw new Error(result.data.error);
-      return result.data.data;
-    },
+    mutationFn: (id) => base44.entities.Student.delete(id),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['students', schoolId] });
       queryClient.invalidateQueries({ queryKey: ['students'] });
