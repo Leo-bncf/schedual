@@ -104,113 +104,120 @@ export default function PricingTiersSection() {
   const [showAddOns, setShowAddOns] = useState(false);
 
   return (
-    <section className="py-16 bg-gradient-to-b from-slate-50 to-white">
-      <div className="max-w-7xl mx-auto px-6 sm:px-8">
+    <section className="py-20 bg-white">
+      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
         {/* Header */}
-        <div className="text-center mb-12">
-          <h2 className="text-4xl sm:text-5xl font-bold text-slate-900 mb-4">
-            Simple, Transparent Pricing
+        <div className="text-center mb-16">
+          <h2 className="text-4xl sm:text-5xl font-bold text-slate-900 mb-4 tracking-tight">
+            Pricing Built for IB Schools
           </h2>
-          <p className="text-xl text-slate-600 max-w-2xl mx-auto">
-            Choose the tier that fits your school's size and complexity. All tiers include core scheduling features.
+          <p className="text-lg text-slate-600 max-w-2xl mx-auto">
+            Choose the tier that fits your school. All plans include AI-powered scheduling and conflict resolution.
           </p>
         </div>
 
-        {/* Tiers */}
-        <div className="grid md:grid-cols-3 gap-6 mb-12">
+        {/* Tiers Grid */}
+        <div className="grid lg:grid-cols-3 gap-8 mb-16">
           {Object.entries(TIERS).map(([tierId, tier]) => (
-            <Card
-              key={tierId}
-              className={`h-full bg-gradient-to-br ${tier.color} border-2 ${tier.borderColor} relative`}
-            >
+            <div key={tierId} className="relative group">
               {tier.featured && (
-                <div className="absolute -top-4 left-1/2 transform -translate-x-1/2">
-                  <Badge className="bg-yellow-500 text-white px-4 py-1 text-sm">Most Popular</Badge>
+                <div className="absolute -top-5 left-1/2 -translate-x-1/2 z-10">
+                  <Badge className="bg-blue-900 text-white px-3 py-1 text-xs font-semibold">MOST POPULAR</Badge>
                 </div>
               )}
-              <CardHeader className={tier.featured ? 'pt-8' : ''}>
-                <div className="text-4xl mb-3">{tier.icon}</div>
-                <CardTitle className="text-2xl">{tier.subtitle}</CardTitle>
-                <CardDescription className="text-base">{tier.description}</CardDescription>
-              </CardHeader>
-              <CardContent className="space-y-4">
-                <div className="text-center bg-white/60 rounded-lg p-4">
-                  <div className="text-4xl font-bold text-slate-900">${tier.price}</div>
-                  <div className="text-sm text-slate-600">/year</div>
-                  <div className="text-xs text-slate-500 mt-2">For {tier.students} students</div>
-                </div>
+              <div className={`
+                h-full rounded-2xl border-2 transition-all duration-300
+                ${tier.featured 
+                  ? 'border-blue-900 bg-gradient-to-br from-blue-900/5 to-blue-900/10 shadow-xl' 
+                  : 'border-slate-200 bg-white hover:border-slate-300 hover:shadow-lg'
+                }
+              `}>
+                <div className="p-8 sm:p-10">
+                  {/* Icon */}
+                  <div className="text-5xl mb-6">{tier.icon}</div>
 
-                <div className="space-y-2">
-                  {tier.features.map((feature, idx) => (
-                    <div key={idx} className="flex items-start gap-2">
-                      <CheckCircle2 className="w-4 h-4 text-green-600 mt-0.5 flex-shrink-0" />
-                      <span className="text-sm text-slate-700">{feature}</span>
+                  {/* Title */}
+                  <h3 className="text-2xl font-bold text-slate-900 mb-2">{tier.subtitle}</h3>
+                  <p className="text-sm text-slate-600 mb-6">{tier.description}</p>
+
+                  {/* Price */}
+                  <div className="mb-8">
+                    <div className="flex items-baseline gap-1 mb-2">
+                      <span className="text-5xl font-bold text-slate-900">${tier.price}</span>
+                      <span className="text-slate-600">/year</span>
                     </div>
-                  ))}
+                    <p className="text-sm text-slate-500">For {tier.students} students</p>
+                  </div>
+
+                  {/* Features */}
+                  <div className="space-y-3 pt-8 border-t border-slate-200">
+                    {tier.features.map((feature, idx) => (
+                      <div key={idx} className="flex items-start gap-3">
+                        <CheckCircle2 className="w-5 h-5 text-emerald-600 flex-shrink-0 mt-0.5" />
+                        <span className="text-sm text-slate-700">{feature}</span>
+                      </div>
+                    ))}
+                  </div>
                 </div>
-              </CardContent>
-            </Card>
+              </div>
+            </div>
           ))}
         </div>
 
-        {/* Add-ons Toggle */}
-        <div className="text-center mb-8">
-          <button
-            onClick={() => setShowAddOns(!showAddOns)}
-            className="inline-flex items-center gap-2 px-6 py-3 bg-blue-900 text-white rounded-lg hover:bg-blue-800 transition-colors font-semibold"
-          >
-            <Zap className="w-5 h-5" />
-            {showAddOns ? 'Hide' : 'View'} Optional Add-ons
-          </button>
+        {/* Add-ons Section */}
+        <div className="border-t border-slate-200 pt-20">
+          <div className="text-center mb-12">
+            <h3 className="text-3xl font-bold text-slate-900 mb-3">Customize Your Plan</h3>
+            <p className="text-slate-600 mb-8">Add optional features to enhance your tier</p>
+            <button
+              onClick={() => setShowAddOns(!showAddOns)}
+              className="inline-flex items-center gap-2 px-6 py-3 bg-slate-900 text-white rounded-lg hover:bg-slate-800 transition-colors font-semibold"
+            >
+              <Zap className="w-5 h-5" />
+              {showAddOns ? 'Hide Add-ons' : 'View Add-ons'}
+            </button>
+          </div>
+
+          {showAddOns && (
+            <div className="space-y-12 animate-in fade-in duration-300">
+              {ADD_ONS.map((category) => (
+                <div key={category.category}>
+                  <h4 className="text-lg font-semibold text-slate-900 mb-6 flex items-center gap-2">
+                    <span className="w-2 h-2 rounded-full bg-blue-900"></span>
+                    {category.category}
+                  </h4>
+                  <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-4">
+                    {category.items.map((addon) => (
+                      <div
+                        key={addon.id}
+                        className="p-4 rounded-lg border border-slate-200 bg-white hover:border-blue-300 hover:shadow-md transition-all"
+                      >
+                        <div className="flex items-start justify-between mb-2">
+                          <h5 className="font-semibold text-slate-900 text-sm">{addon.name}</h5>
+                          <Badge variant="outline" className="text-xs ml-2">
+                            {addon.type === 'onetime' ? '1x' : 'Annual'}
+                          </Badge>
+                        </div>
+                        <div className="text-2xl font-bold text-blue-900">${addon.price}</div>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              ))}
+            </div>
+          )}
         </div>
 
-        {/* Add-ons Grid */}
-        {showAddOns && (
-          <div className="bg-slate-50 rounded-2xl p-8 border border-slate-200">
-            <h3 className="text-2xl font-bold text-slate-900 mb-8 text-center">
-              Enhance Your Plan with Add-ons
-            </h3>
-
-            <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-6">
-              {ADD_ONS.flatMap((category) =>
-                category.items.map((addon) => (
-                  <Card key={addon.id} className="border-slate-200 hover:border-blue-300 transition-colors">
-                    <CardContent className="p-6">
-                      <div className="flex items-start justify-between mb-3">
-                        <h4 className="font-semibold text-slate-900 text-sm flex-1">{addon.name}</h4>
-                        <Badge variant="outline" className="text-xs flex-shrink-0">
-                          {addon.type === 'onetime' ? 'One-time' : 'Yearly'}
-                        </Badge>
-                      </div>
-                      <div className="text-2xl font-bold text-blue-900">
-                        ${addon.price}
-                      </div>
-                      <p className="text-xs text-slate-500 mt-1">
-                        {addon.type === 'onetime' ? 'One-time fee' : 'Added to yearly cost'}
-                      </p>
-                    </CardContent>
-                  </Card>
-                ))
-              )}
-            </div>
-
-            <div className="mt-8 p-4 bg-blue-50 border border-blue-200 rounded-lg">
-              <p className="text-sm text-blue-900">
-                <strong>💡 Mix and match:</strong> Add-ons are available for any tier and can be combined to create a custom package.
-              </p>
-            </div>
-          </div>
-        )}
-
         {/* CTA */}
-        <div className="text-center mt-12">
-          <p className="text-slate-600 mb-4">Ready to simplify your scheduling?</p>
+        <div className="mt-20 text-center">
           <a
             href="/Subscription"
-            className="inline-block px-8 py-4 bg-blue-900 text-white rounded-lg hover:bg-blue-800 transition-colors font-semibold text-lg"
+            className="inline-flex items-center gap-2 px-8 py-4 bg-blue-900 text-white rounded-lg hover:bg-blue-800 transition-colors font-semibold text-lg shadow-lg hover:shadow-xl"
           >
-            Get Started
+            Get Started Today
+            <span className="text-xl">→</span>
           </a>
+          <p className="text-slate-500 mt-4 text-sm">No credit card required for trial</p>
         </div>
       </div>
     </section>
