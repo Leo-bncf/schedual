@@ -25,12 +25,12 @@ Deno.serve(async (req) => {
     const afterDelete = await base44.asServiceRole.entities.Subject.list();
     console.log('📊 AFTER DELETE: Total subjects:', afterDelete.length);
 
-    // Step 4: Create a new subject with USER context (not service role)
+    // Step 4: Create a new subject with SERVICE ROLE (to bypass any RLS issues)
     console.log('➕ Creating subject with school_id:', user.school_id);
-    const newSubject = await base44.entities.Subject.create({
+    const newSubject = await base44.asServiceRole.entities.Subject.create({
       school_id: user.school_id,
-      name: "USER CONTEXT TEST",
-      code: "UCT",
+      name: "SERVICE ROLE TEST",
+      code: "SRT",
       ib_level: "DP",
       ib_group: "1",
       ib_group_name: "Language & Literature",
