@@ -17,32 +17,22 @@ import {
 import { 
   CreditCard, 
   Users, 
-  Database, 
   CheckCircle, 
   AlertCircle,
-  Plus,
-  Minus,
   Loader2,
   Shield,
-  ExternalLink,
-  XCircle,
   Mail,
-  UserPlus
+  UserPlus,
+  CheckCircle2
 } from 'lucide-react';
 import PageHeader from '../components/ui-custom/PageHeader';
 import { toast } from 'sonner';
 
-const STRIPE_PUBLIC_KEY = import.meta.env.VITE_STRIPE_PUBLIC_KEY;
-const BASE_YEARLY_PRICE = 199900;
-const STORAGE_YEARLY_PRICE = 24000;
-const ADDITIONAL_USER_YEARLY_PRICE = 20000;
-
 export default function Subscription() {
   const [isProcessing, setIsProcessing] = useState(false);
-  const [buyUsersDialogOpen, setBuyUsersDialogOpen] = useState(false);
-  const [usersToBuy, setUsersToBuy] = useState(1);
   const [inviteDialogOpen, setInviteDialogOpen] = useState(false);
   const [inviteEmail, setInviteEmail] = useState('');
+  const [selectedPlan, setSelectedPlan] = useState('yearly');
 
   const queryClient = useQueryClient();
 
@@ -65,7 +55,7 @@ export default function Subscription() {
       const { data } = await base44.functions.invoke('getSchoolAdmins');
       return data?.admins || [];
     },
-    enabled: !!user?.school_id && school?.subscription_status === 'active',
+    enabled: !!user?.school_id && (school?.subscription_status === 'active' || school?.subscription_status === 'trialing'),
   });
 
   const inviteUserMutation = useMutation({
@@ -91,31 +81,10 @@ export default function Subscription() {
     }
   });
 
-  const handleBuyAdditionalUsers = async (quantity) => {
+  const handleSubscribe = async (plan) => {
     setIsProcessing(true);
     try {
-      const { data } = await base44.functions.invoke('createCheckout', {
-        additional_users_only: true,
-        quantity
-      });
-      
-      if (data.url) {
-        window.location.href = data.url;
-      }
-    } catch (error) {
-      console.error('Checkout error:', error);
-      alert('Failed to start checkout process');
-    } finally {
-      setIsProcessing(false);
-    }
-  };
-
-  const handleSubscribe = async () => {
-    setIsProcessing(true);
-    try {
-      const { data } = await base44.functions.invoke('createCheckout', {
-        new_subscription: true
-      });
+      const { data } = await base44.functions.invoke('createCheckout', { plan });
       
       if (data.url) {
         window.location.href = data.url;
@@ -140,14 +109,13 @@ export default function Subscription() {
       }
     } catch (error) {
       console.error('Portal error:', error);
-      alert('Failed to open billing portal');
+      toast.error('Failed to open billing portal');
     } finally {
       setIsProcessing(false);
     }
   };
 
-  const isActive = school?.subscription_status === 'active';
-  const isPastDue = school?.subscription_status === 'past_due';
+  const isActive = school?.subscription_status === 'active' || school?.subscription_status === 'trialing';
 
   return (
     <div className="space-y-6">
@@ -157,7 +125,7 @@ export default function Subscription() {
       />
 
       {/* Current Status */}
-      <Card className="border-0 shadow-sm">
+      <Card>
         <CardHeader>
           <div className="flex items-center justify-between">
             <div>
@@ -175,17 +143,6 @@ export default function Subscription() {
                 Active
               </Badge>
             )}
-            {isPastDue && (
-              <Badge className="bg-amber-100 text-amber-700 border-0 text-sm px-3 py-1">
-                <AlertCircle className="w-4 h-4 mr-1.5" />
-                Payment Required
-              </Badge>
-            )}
-            {!isActive && !isPastDue && (
-              <Badge variant="outline" className="text-slate-600 text-sm px-3 py-1">
-                Inactive
-              </Badge>
-            )}
           </div>
         </CardHeader>
         <CardContent>
@@ -194,34 +151,32 @@ export default function Subscription() {
               <div className="grid sm:grid-cols-3 gap-4">
                 <div className="p-4 rounded-lg bg-gradient-to-br from-blue-50 to-blue-100 border border-blue-200">
                   <p className="text-xs font-medium text-blue-700 uppercase tracking-wide mb-2">Plan Type</p>
-                  <p className="text-2xl font-bold text-blue-900">Yearly</p>
-                  <p className="text-xs text-blue-600 mt-1">€{(BASE_YEARLY_PRICE + STORAGE_YEARLY_PRICE) / 12}/month</p>
+                  <p className="text-2xl font-bold text-blue-900 capitalize">{school.subscription_plan}</p>
                 </div>
                 <div className="p-4 rounded-lg bg-gradient-to-br from-emerald-50 to-emerald-100 border border-emerald-200">
                   <p className="text-xs font-medium text-emerald-700 uppercase tracking-wide mb-2">Next Billing Date</p>
                   <p className="text-2xl font-bold text-emerald-900">
-                    {school.subscription_end_date 
-                      ? new Date(school.subscription_end_date).toLocaleDateString('en-US', { month: 'short', day: 'numeric' })
+                    {school.subscription_current_period_end 
+                      ? new Date(school.subscription_current_period_end).toLocaleDateString('en-US', { month: 'short', day: 'numeric' })
                       : 'N/A'
                     }
                   </p>
                   <p className="text-xs text-emerald-600 mt-1">
-                    {school.subscription_end_date 
-                      ? new Date(school.subscription_end_date).toLocaleDateString('en-US', { year: 'numeric' })
+                    {school.subscription_current_period_end 
+                      ? new Date(school.subscription_current_period_end).toLocaleDateString('en-US', { year: 'numeric' })
                       : ''
                     }
                   </p>
                 </div>
                 <div className="p-4 rounded-lg bg-gradient-to-br from-violet-50 to-violet-100 border border-violet-200">
-                  <p className="text-xs font-medium text-violet-700 uppercase tracking-wide mb-2">Extra Users</p>
+                  <p className="text-xs font-medium text-violet-700 uppercase tracking-wide mb-2">Admin Seats</p>
                   <p className="text-2xl font-bold text-violet-900">
-                    {school.max_additional_users || 0}
+                    {schoolAdmins.length} / {school.max_admin_seats || 3}
                   </p>
-                  <p className="text-xs text-violet-600 mt-1">additional seats</p>
+                  <p className="text-xs text-violet-600 mt-1">seats used</p>
                 </div>
               </div>
 
-              {/* Action Buttons */}
               <div className="space-y-3">
                 <Button 
                   size="lg"
@@ -237,20 +192,9 @@ export default function Subscription() {
                 <Button 
                   size="lg" 
                   variant="outline"
-                  className="w-full font-semibold border-2"
-                  onClick={() => setBuyUsersDialogOpen(true)}
-                  disabled={isProcessing}
-                >
-                  <UserPlus className="w-5 h-5 mr-2" />
-                  Buy Additional Users
-                </Button>
-
-                <Button 
-                  size="lg" 
-                  variant="outline"
                   className="w-full font-semibold border-2 border-emerald-300 text-emerald-700 hover:bg-emerald-50"
                   onClick={() => setInviteDialogOpen(true)}
-                  disabled={isProcessing || !school?.max_additional_users || schoolAdmins.length >= (school.max_additional_users + 1)}
+                  disabled={isProcessing || schoolAdmins.length >= (school?.max_admin_seats || 3)}
                 >
                   <Mail className="w-5 h-5 mr-2" />
                   Invite School Admin
@@ -259,61 +203,137 @@ export default function Subscription() {
 
               <div className="p-3 rounded-lg bg-blue-50 border border-blue-200">
                 <p className="text-xs text-blue-800">
-                  <strong>Note:</strong> "Manage Subscription" opens Stripe's portal for payment methods, invoices, and cancellation.
+                  <strong>Note:</strong> Manage your payment method, view invoices, and update subscription through Stripe's billing portal.
                 </p>
               </div>
             </div>
           ) : (
-            <div className="text-center py-8">
-              <div className="w-16 h-16 rounded-full bg-amber-100 flex items-center justify-center mx-auto mb-4">
-                <AlertCircle className="w-8 h-8 text-amber-600" />
-              </div>
-              <h3 className="text-xl font-bold text-slate-900 mb-2">No Active Subscription</h3>
-              <p className="text-slate-600 mb-6 max-w-md mx-auto">
-                Subscribe now to unlock AI-powered scheduling, conflict resolution, and IB compliance features for your school.
-              </p>
-              
-              {/* Pricing Breakdown */}
-              <div className="bg-slate-50 border border-slate-200 rounded-xl p-6 mb-6 max-w-md mx-auto">
-                <div className="space-y-3">
-                  <div className="flex justify-between items-center">
-                    <span className="text-slate-700">Base Platform</span>
-                    <span className="font-semibold text-slate-900">€{BASE_YEARLY_PRICE / 100}</span>
+            <div className="space-y-6">
+              <div className="grid md:grid-cols-2 gap-6">
+                {/* Monthly Plan */}
+                <div 
+                  className={`p-6 rounded-xl border-2 transition-all cursor-pointer ${
+                    selectedPlan === 'monthly' 
+                      ? 'border-blue-900 bg-blue-50' 
+                      : 'border-slate-200 hover:border-slate-300'
+                  }`}
+                  onClick={() => setSelectedPlan('monthly')}
+                >
+                  <div className="flex items-start justify-between mb-4">
+                    <div>
+                      <h3 className="text-lg font-semibold text-slate-900">Monthly</h3>
+                      <p className="text-sm text-slate-600">Pay as you go</p>
+                    </div>
+                    {selectedPlan === 'monthly' && (
+                      <CheckCircle2 className="w-6 h-6 text-blue-900" />
+                    )}
                   </div>
-                  <div className="flex justify-between items-center">
-                    <span className="text-slate-700">Cloud Storage</span>
-                    <span className="font-semibold text-slate-900">€{STORAGE_YEARLY_PRICE / 100}</span>
+                  <div className="mb-4">
+                    <div className="text-3xl font-bold text-blue-900">
+                      $199 <span className="text-lg font-normal text-slate-600">/ month</span>
+                    </div>
                   </div>
-                  <div className="border-t border-slate-300 pt-3 flex justify-between items-center">
-                    <span className="font-bold text-slate-900 text-lg">Total per year</span>
-                    <span className="font-bold text-2xl text-blue-900">€{(BASE_YEARLY_PRICE + STORAGE_YEARLY_PRICE) / 100}</span>
+                  <ul className="space-y-2 text-sm">
+                    <li className="flex items-center gap-2 text-slate-700">
+                      <CheckCircle2 className="w-4 h-4 text-green-600 flex-shrink-0" />
+                      <span>All features included</span>
+                    </li>
+                    <li className="flex items-center gap-2 text-slate-700">
+                      <CheckCircle2 className="w-4 h-4 text-green-600 flex-shrink-0" />
+                      <span>3 admin seats</span>
+                    </li>
+                    <li className="flex items-center gap-2 text-slate-700">
+                      <CheckCircle2 className="w-4 h-4 text-green-600 flex-shrink-0" />
+                      <span>Cancel anytime</span>
+                    </li>
+                  </ul>
+                </div>
+
+                {/* Yearly Plan */}
+                <div 
+                  className={`p-6 rounded-xl border-2 transition-all cursor-pointer relative ${
+                    selectedPlan === 'yearly' 
+                      ? 'border-blue-900 bg-blue-50' 
+                      : 'border-slate-200 hover:border-slate-300'
+                  }`}
+                  onClick={() => setSelectedPlan('yearly')}
+                >
+                  <div className="absolute -top-3 right-4">
+                    <span className="px-3 py-1 bg-green-500 text-white text-xs font-semibold rounded-full">
+                      Save 17%
+                    </span>
                   </div>
-                  <p className="text-xs text-slate-500 text-center">
-                    That's only €{((BASE_YEARLY_PRICE + STORAGE_YEARLY_PRICE) / 12 / 100).toFixed(2)}/month
-                  </p>
+                  <div className="flex items-start justify-between mb-4">
+                    <div>
+                      <h3 className="text-lg font-semibold text-slate-900">Yearly</h3>
+                      <p className="text-sm text-slate-600">Best value</p>
+                    </div>
+                    {selectedPlan === 'yearly' && (
+                      <CheckCircle2 className="w-6 h-6 text-blue-900" />
+                    )}
+                  </div>
+                  <div className="mb-4">
+                    <div className="text-3xl font-bold text-blue-900">
+                      $1,999 <span className="text-lg font-normal text-slate-600">/ year</span>
+                    </div>
+                    <p className="text-sm text-slate-600 mt-1">$166/month billed annually</p>
+                  </div>
+                  <ul className="space-y-2 text-sm">
+                    <li className="flex items-center gap-2 text-slate-700">
+                      <CheckCircle2 className="w-4 h-4 text-green-600 flex-shrink-0" />
+                      <span>All features included</span>
+                    </li>
+                    <li className="flex items-center gap-2 text-slate-700">
+                      <CheckCircle2 className="w-4 h-4 text-green-600 flex-shrink-0" />
+                      <span>3 admin seats</span>
+                    </li>
+                    <li className="flex items-center gap-2 text-slate-700">
+                      <CheckCircle2 className="w-4 h-4 text-green-600 flex-shrink-0" />
+                      <span>Priority support</span>
+                    </li>
+                    <li className="flex items-center gap-2 text-green-700 font-medium">
+                      <CheckCircle2 className="w-4 h-4 text-green-600 flex-shrink-0" />
+                      <span>Save $389/year</span>
+                    </li>
+                  </ul>
                 </div>
               </div>
 
-              {/* Info Box about Additional Users */}
-              <div className="bg-blue-50 border border-blue-200 rounded-lg p-4 mb-6 max-w-md mx-auto">
-                <div className="flex items-start gap-3">
-                  <Users className="w-5 h-5 text-blue-600 mt-0.5 flex-shrink-0" />
-                  <div>
-                    <p className="text-sm font-semibold text-blue-900 mb-1">
-                      Multiple Administrators
-                    </p>
-                    <p className="text-xs text-blue-700">
-                      Purchase additional admin seats (€200/year each) after subscribing. Manage your school team from your dashboard.
-                    </p>
+              <div className="p-4 bg-slate-50 rounded-lg">
+                <h4 className="font-semibold text-slate-900 mb-3">What's included:</h4>
+                <div className="grid sm:grid-cols-2 gap-2 text-sm text-slate-700">
+                  <div className="flex items-center gap-2">
+                    <CheckCircle2 className="w-4 h-4 text-green-600 flex-shrink-0" />
+                    <span>Unlimited schedules</span>
+                  </div>
+                  <div className="flex items-center gap-2">
+                    <CheckCircle2 className="w-4 h-4 text-green-600 flex-shrink-0" />
+                    <span>AI optimization</span>
+                  </div>
+                  <div className="flex items-center gap-2">
+                    <CheckCircle2 className="w-4 h-4 text-green-600 flex-shrink-0" />
+                    <span>Conflict detection</span>
+                  </div>
+                  <div className="flex items-center gap-2">
+                    <CheckCircle2 className="w-4 h-4 text-green-600 flex-shrink-0" />
+                    <span>Export to PDF/Excel</span>
+                  </div>
+                  <div className="flex items-center gap-2">
+                    <CheckCircle2 className="w-4 h-4 text-green-600 flex-shrink-0" />
+                    <span>Secure cloud storage</span>
+                  </div>
+                  <div className="flex items-center gap-2">
+                    <CheckCircle2 className="w-4 h-4 text-green-600 flex-shrink-0" />
+                    <span>Email support</span>
                   </div>
                 </div>
               </div>
 
               <Button 
-                size="lg"
-                className="bg-gradient-to-r from-blue-900 to-blue-800 hover:from-blue-800 hover:to-blue-700 text-white font-semibold px-8 py-6 text-base"
-                onClick={handleSubscribe}
+                onClick={() => handleSubscribe(selectedPlan)}
                 disabled={isProcessing}
+                size="lg"
+                className="w-full bg-blue-900 hover:bg-blue-800"
               >
                 {isProcessing ? (
                   <>
@@ -321,18 +341,17 @@ export default function Subscription() {
                     Processing...
                   </>
                 ) : (
-                  <>
-                    <CreditCard className="w-5 h-5 mr-2" />
-                    Subscribe Now - €{(BASE_YEARLY_PRICE + STORAGE_YEARLY_PRICE) / 100}/year
-                  </>
+                  `Subscribe ${selectedPlan === 'yearly' ? 'Yearly' : 'Monthly'}`
                 )}
               </Button>
+
+              <p className="text-center text-sm text-slate-600">
+                Secure payment powered by Stripe • Cancel anytime
+              </p>
             </div>
           )}
         </CardContent>
       </Card>
-
-
 
       {/* Help Card */}
       <Card className="border-blue-200 bg-gradient-to-br from-blue-50 to-indigo-50">
@@ -354,70 +373,6 @@ export default function Subscription() {
         </CardContent>
       </Card>
 
-      {/* Buy Additional Users Dialog */}
-      <Dialog open={buyUsersDialogOpen} onOpenChange={setBuyUsersDialogOpen}>
-        <DialogContent>
-          <DialogHeader>
-            <DialogTitle>Purchase Additional User Seats</DialogTitle>
-            <DialogDescription>
-              Add more admin accounts for your school. Each additional user costs €200/year.
-            </DialogDescription>
-          </DialogHeader>
-          <div className="space-y-4 py-4">
-            <div className="space-y-2">
-              <Label htmlFor="quantity">Number of Additional Users</Label>
-              <Input 
-                id="quantity"
-                type="number"
-                min="1"
-                max="50"
-                value={usersToBuy}
-                onChange={(e) => setUsersToBuy(Math.max(1, parseInt(e.target.value) || 1))}
-              />
-            </div>
-            <div className="bg-slate-50 rounded-lg p-4">
-              <div className="flex justify-between items-center mb-2">
-                <span className="text-slate-600">Additional Users</span>
-                <span className="font-semibold">{usersToBuy}</span>
-              </div>
-              <div className="flex justify-between items-center mb-2">
-                <span className="text-slate-600">Price per user</span>
-                <span className="font-semibold">€200/year</span>
-              </div>
-              <div className="border-t border-slate-200 mt-3 pt-3 flex justify-between items-center">
-                <span className="font-bold text-lg">Total</span>
-                <span className="font-bold text-2xl text-blue-900">€{usersToBuy * 200}</span>
-              </div>
-            </div>
-          </div>
-          <DialogFooter>
-            <Button variant="outline" onClick={() => setBuyUsersDialogOpen(false)}>
-              Cancel
-            </Button>
-            <Button 
-              className="bg-blue-900 hover:bg-blue-800"
-              onClick={() => {
-                handleBuyAdditionalUsers(usersToBuy);
-                setBuyUsersDialogOpen(false);
-              }}
-              disabled={isProcessing}
-            >
-              {isProcessing ? (
-                <>
-                  <Loader2 className="w-4 h-4 mr-2 animate-spin" />
-                  Processing...
-                </>
-              ) : (
-                <>
-                  <CreditCard className="w-4 h-4 mr-2" />
-                  Proceed to Payment
-                </>
-              )}
-            </Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
-
       {/* Invite Admin Dialog */}
       <Dialog open={inviteDialogOpen} onOpenChange={setInviteDialogOpen}>
         <DialogContent>
@@ -433,7 +388,7 @@ export default function Subscription() {
                 <Users className="w-5 h-5 text-blue-600 mt-0.5" />
                 <div>
                   <p className="text-sm font-medium text-blue-900">
-                    Available Seats: {(school?.max_additional_users || 0) + 1 - schoolAdmins.length} / {(school?.max_additional_users || 0) + 1}
+                    Available Seats: {(school?.max_admin_seats || 3) - schoolAdmins.length} / {school?.max_admin_seats || 3}
                   </p>
                   <p className="text-xs text-blue-700 mt-1">
                     {schoolAdmins.length} admin(s) currently invited
