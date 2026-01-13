@@ -31,6 +31,7 @@ import { createPageUrl } from '../utils';
 import { toast } from 'sonner';
 
 export default function Subscription() {
+  return <Navigate to={createPageUrl('SubscriptionTiered')} replace />;
   const [isProcessing, setIsProcessing] = useState(false);
   const [inviteDialogOpen, setInviteDialogOpen] = useState(false);
   const [inviteEmail, setInviteEmail] = useState('');
