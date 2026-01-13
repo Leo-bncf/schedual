@@ -81,14 +81,19 @@ export default function Rooms() {
 
   const { data: rooms = [], isLoading } = useQuery({
     queryKey: ['rooms', schoolId],
-    queryFn: () => base44.entities.Room.list(),
+    queryFn: async () => {
+      const { data } = await base44.functions.invoke('roomOperations', { action: 'list' });
+      return data;
+    },
     enabled: !!schoolId,
   });
 
   const createMutation = useMutation({
-    mutationFn: (data) => {
+    mutationFn: async (data) => {
       if (!schoolId) throw new Error('No school assigned');
-      return base44.entities.Room.create({ ...data, school_id: schoolId });
+      const result = await base44.functions.invoke('roomOperations', { action: 'create', data });
+      if (!result.data.success) throw new Error(result.data.error);
+      return result.data.data;
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['rooms'] });
@@ -97,7 +102,11 @@ export default function Rooms() {
   });
 
   const updateMutation = useMutation({
-    mutationFn: ({ id, data }) => base44.entities.Room.update(id, data),
+    mutationFn: async ({ id, data }) => {
+      const result = await base44.functions.invoke('roomOperations', { action: 'update', id, data });
+      if (!result.data.success) throw new Error(result.data.error);
+      return result.data.data;
+    },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['rooms'] });
       resetForm();
@@ -105,7 +114,11 @@ export default function Rooms() {
   });
 
   const deleteMutation = useMutation({
-    mutationFn: (id) => base44.entities.Room.delete(id),
+    mutationFn: async (id) => {
+      const result = await base44.functions.invoke('roomOperations', { action: 'delete', id });
+      if (!result.data.success) throw new Error(result.data.error);
+      return result.data.data;
+    },
     onSuccess: () => queryClient.invalidateQueries({ queryKey: ['rooms'] }),
   });
 

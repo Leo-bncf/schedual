@@ -74,20 +74,28 @@ export default function Teachers() {
 
   const { data: teachers = [], isLoading } = useQuery({
     queryKey: ['teachers', schoolId],
-    queryFn: () => base44.entities.Teacher.list(),
+    queryFn: async () => {
+      const { data } = await base44.functions.invoke('teacherOperations', { action: 'list' });
+      return data;
+    },
     enabled: !!schoolId,
   });
 
   const { data: subjects = [] } = useQuery({
     queryKey: ['subjects', schoolId],
-    queryFn: () => base44.entities.Subject.list(),
+    queryFn: async () => {
+      const { data } = await base44.functions.invoke('subjectOperations', { action: 'list' });
+      return data;
+    },
     enabled: !!schoolId,
   });
 
   const createMutation = useMutation({
-    mutationFn: (data) => {
+    mutationFn: async (data) => {
       if (!schoolId) throw new Error('No school assigned');
-      return base44.entities.Teacher.create({ ...data, school_id: schoolId });
+      const result = await base44.functions.invoke('teacherOperations', { action: 'create', data });
+      if (!result.data.success) throw new Error(result.data.error);
+      return result.data.data;
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['teachers'] });
@@ -96,7 +104,11 @@ export default function Teachers() {
   });
 
   const updateMutation = useMutation({
-    mutationFn: ({ id, data }) => base44.entities.Teacher.update(id, data),
+    mutationFn: async ({ id, data }) => {
+      const result = await base44.functions.invoke('teacherOperations', { action: 'update', id, data });
+      if (!result.data.success) throw new Error(result.data.error);
+      return result.data.data;
+    },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['teachers'] });
       resetForm();
@@ -104,7 +116,11 @@ export default function Teachers() {
   });
 
   const deleteMutation = useMutation({
-    mutationFn: (id) => base44.entities.Teacher.delete(id),
+    mutationFn: async (id) => {
+      const result = await base44.functions.invoke('teacherOperations', { action: 'delete', id });
+      if (!result.data.success) throw new Error(result.data.error);
+      return result.data.data;
+    },
     onSuccess: () => queryClient.invalidateQueries({ queryKey: ['teachers'] }),
   });
 
