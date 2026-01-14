@@ -42,8 +42,8 @@ export default function AccountManager() {
     queryKey: ['userSchool', user?.school_id],
     queryFn: async () => {
       if (!user?.school_id) return null;
-      const schools = await base44.entities.School.list();
-      return schools.find(s => s.id === user.school_id);
+      const schools = await base44.entities.School.filter({ id: user.school_id });
+      return schools[0] || null;
     },
     enabled: !!user?.school_id
   });
