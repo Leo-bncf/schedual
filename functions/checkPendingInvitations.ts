@@ -14,14 +14,47 @@ Deno.serve(async (req) => {
       email: user.email
     });
 
-    if (pendingInvites.length === 0) {
+    if (!pendingInvites || pendingInvites.length === 0) {
       return Response.json({ 
         hasPendingInvite: false,
         message: 'No pending invitations found'
       });
     }
 
-    const invite = pendingInvites[0];
+    // Prefer non-expired invites for schools with active/trialing subscriptions, otherwise most recent
+    const now = new Date();
+    const unexpired = pendingInvites.filter((inv) => !inv.expires_at || new Date(inv.expires_at) > now);
+
+    let bestInvite = null;
+    let candidates = unexpired.length > 0 ? unexpired : pendingInvites;
+
+    // Score invites by school subscription status and recency
+    const scored = [];
+    for (const inv of candidates) {
+      let score = 0;
+      // Fetch school to check subscription status
+      const schools = await base44.asServiceRole.entities.School.filter({ id: inv.school_id });
+      const school = schools[0] || null;
+      if (school && (school.subscription_status === 'active' || school.subscription_status === 'trialing')) {
+        score += 10; // prefer active/trialing schools
+      }
+      const exp = inv.expires_at ? new Date(inv.expires_at).getTime() : 0;
+      scored.push({ inv, score, exp });
+    }
+
+    scored.sort((a, b) => {
+      if (b.score !== a.score) return b.score - a.score;
+      return b.exp - a.exp; // most recent expiry last
+    });
+
+    bestInvite = scored[0]?.inv || null;
+
+    if (!bestInvite) {
+      return Response.json({ 
+        hasPendingInvite: false,
+        message: 'No valid invitations available'
+      });
+    }
 
     // Check if expired
     if (new Date(invite.expires_at) < new Date()) {
