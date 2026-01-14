@@ -146,8 +146,8 @@ export default function Layout({ children, currentPageName }) {
         // Fetch school data if user has a school
         if (userData?.school_id) {
           try {
-            const schools = await base44.entities.School.list();
-            const userSchool = schools.find(s => s.id === userData.school_id);
+            const schools = await base44.entities.School.filter({ id: userData.school_id });
+            const userSchool = schools[0] || null;
             setSchool(userSchool);
           } catch (schoolError) {
             console.error('Error fetching school:', schoolError);
