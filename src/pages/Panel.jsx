@@ -47,31 +47,7 @@ export default function Panel() {
     user_role: 'admin'
   });
 
-  // Quick provision helpers (for initial setup when there are no schools)
-  const [provisioning, setProvisioning] = useState(false);
-  const provision = async () => {
-    setProvisioning(true);
-    try {
-      const payload = {
-        schools: [
-          { name: 'EPBI', code: 'EPBI', email: 'leo.bancroft@outlook.fr' },
-          { name: 'Isn Nice', code: 'ISN', email: 'support@schedual-pro.com' },
-        ],
-        subscription_status: 'active',
-        subscription_tier: 'tier2',
-        make_admin: true,
-        invite_if_missing: true,
-      };
-      await base44.functions.invoke('provisionSchoolsAndAssign', payload);
-      queryClient.invalidateQueries({ queryKey: ['allSchools'] });
-      queryClient.invalidateQueries({ queryKey: ['allUsers'] });
-      alert('Provisioned EPBI and Isn Nice. If users were reassigned, they must log out/in.');
-    } catch (e) {
-      alert('Provision failed: ' + (e?.message || 'Unknown error'));
-    } finally {
-      setProvisioning(false);
-    }
-  };
+
 
   const queryClient = useQueryClient();
 
@@ -497,19 +473,7 @@ export default function Panel() {
         <StatCard title="Unassigned Users" value={allUsers.filter(u => !u.school_id).length} icon={Users} />
       </div>
 
-      {schools.length === 0 && (
-        <Card className="bg-amber-50 border-amber-200">
-          <CardContent className="p-4 flex items-center justify-between">
-            <div>
-              <p className="font-medium text-amber-900">No schools found</p>
-              <p className="text-sm text-amber-800">Click to auto-create EPBI and Isn Nice and assign their admins.</p>
-            </div>
-            <Button onClick={provision} disabled={provisioning} className="bg-amber-600 hover:bg-amber-700">
-              {provisioning ? 'Provisioning…' : 'Provision EPBI & Isn Nice'}
-            </Button>
-          </CardContent>
-        </Card>
-      )}
+
 
       <Tabs defaultValue="schools" className="space-y-4">
         <TabsList className="bg-slate-100">
