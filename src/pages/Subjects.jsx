@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { base44 } from '@/api/base44Client';
 import { Button } from "@/components/ui/button";
@@ -87,6 +87,21 @@ export default function Subjects() {
   });
 
   const schoolId = user?.school_id;
+
+  const { data: schoolRecords = [] } = useQuery({
+    queryKey: ['school', schoolId],
+    queryFn: () => base44.entities.School.filter({ id: schoolId }),
+    enabled: !!schoolId,
+  });
+  const school = schoolRecords[0];
+
+  const getAllowedProgrammes = (s) => {
+    const tier = s?.subscription_tier;
+    if (tier === 'tier1') return ['MYP'];
+    if (tier === 'tier2' || tier === 'tier3') return ['PYP','MYP','DP'];
+    return ['PYP','MYP','DP'];
+  };
+  const allowedProgrammes = getAllowedProgrammes(school);
 
   const { data: subjects = [], isLoading, error } = useQuery({
     queryKey: ['subjects', schoolId],
@@ -373,7 +388,7 @@ ${trainingFeedback ? `LESSONS FROM ADMIN FEEDBACK:\n${trainingFeedback}\n\n` : '
 
       <PageHeader 
         title="Subjects"
-        description="Manage IB Diploma Programme subjects across all groups"
+        description="Manage IB Programme subjects; features shown depend on your plan"
         actions={
           <div className="flex gap-2">
             <Button 
@@ -410,6 +425,14 @@ ${trainingFeedback ? `LESSONS FROM ADMIN FEEDBACK:\n${trainingFeedback}\n\n` : '
         </p>
       </div>
 
+      {school && (
+        <div className="rounded-lg border border-slate-200 bg-slate-50 p-4 mb-6">
+          <p className="text-sm text-slate-700">
+            Your plan: <strong>{(school.subscription_tier || 'unknown').toUpperCase()}</strong>. Enabled programmes: {allowedProgrammes.join(', ')}.
+          </p>
+        </div>
+      )}
+
       <div className="flex items-center gap-4 mb-6">
         <div className="relative flex-1 max-w-sm">
           <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400" />
@@ -432,8 +455,8 @@ ${trainingFeedback ? `LESSONS FROM ADMIN FEEDBACK:\n${trainingFeedback}\n\n` : '
         />
       ) : (
         <div className="space-y-8">
-          {/* PYP Subjects */}
-          {pypSubjects.length > 0 && (
+          {/* PYP Subjects (gated) */}
+          {allowedProgrammes.includes('PYP') && pypSubjects.length > 0 && (
             <div>
               <h3 className="text-lg font-bold text-slate-700 mb-4 flex items-center gap-2">
                 <div className="h-1 w-12 bg-gradient-to-r from-green-500 to-emerald-600 rounded-full" />
@@ -488,8 +511,8 @@ ${trainingFeedback ? `LESSONS FROM ADMIN FEEDBACK:\n${trainingFeedback}\n\n` : '
                           </div>
                           )}
 
-                        {/* MYP Subjects */}
-          {mypSubjects.length > 0 && (
+                        {/* MYP Subjects (always for tier1+) */}
+          {allowedProgrammes.includes('MYP') && mypSubjects.length > 0 && (
             <div>
               <h3 className="text-lg font-bold text-slate-700 mb-4 flex items-center gap-2">
                 <div className="h-1 w-12 bg-gradient-to-r from-orange-500 to-amber-600 rounded-full" />
@@ -544,8 +567,8 @@ ${trainingFeedback ? `LESSONS FROM ADMIN FEEDBACK:\n${trainingFeedback}\n\n` : '
                           </div>
                           )}
 
-                          {/* Core Components */}
-          {coreSubjects.length > 0 && (
+                          {/* Core Components (DP only) */}
+          {allowedProgrammes.includes('DP') && coreSubjects.length > 0 && (
             <div>
               <h3 className="text-lg font-bold text-slate-700 mb-4 flex items-center gap-2">
                 <div className="h-1 w-12 bg-gradient-to-r from-slate-700 to-slate-900 rounded-full" />
@@ -597,8 +620,8 @@ ${trainingFeedback ? `LESSONS FROM ADMIN FEEDBACK:\n${trainingFeedback}\n\n` : '
                           </div>
                           )}
 
-                          {/* DP Subject Groups */}
-          {groupedSubjects.map(group => {
+                          {/* DP Subject Groups (gated) */}
+          {allowedProgrammes.includes('DP') && groupedSubjects.map(group => {
             if (group.subjects.length === 0) return null;
             const Icon = group.icon;
             
