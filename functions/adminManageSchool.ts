@@ -58,6 +58,11 @@ Deno.serve(async (req) => {
     }
   } catch (error) {
     console.error('Error in adminManageSchool:', error);
-    return Response.json({ error: error.message }, { status: 500 });
+    // Normalize common RLS/permission error messaging
+    const msg = (error && typeof error === 'object' && ('message' in error)) ? error.message : String(error);
+    if (/permission denied|rls|not allowed/i.test(msg)) {
+      return Response.json({ error: 'Server role escalation failed while updating School (permissions). Please try again.' }, { status: 500 });
+    }
+    return Response.json({ error: msg }, { status: 500 });
   }
 });
