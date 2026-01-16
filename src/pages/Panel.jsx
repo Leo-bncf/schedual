@@ -471,6 +471,20 @@ export default function Panel() {
         <StatCard title="Unassigned Users" value={allUsers.filter(u => !u.school_id).length} icon={Users} />
       </div>
 
+      {schools.length === 0 && (
+        <Card className="bg-amber-50 border-amber-200">
+          <CardContent className="p-4 flex items-center justify-between">
+            <div>
+              <p className="font-medium text-amber-900">No schools found</p>
+              <p className="text-sm text-amber-800">Click to auto-create EPBI and Isn Nice and assign their admins.</p>
+            </div>
+            <Button onClick={provision} disabled={provisioning} className="bg-amber-600 hover:bg-amber-700">
+              {provisioning ? 'Provisioning…' : 'Provision EPBI & Isn Nice'}
+            </Button>
+          </CardContent>
+        </Card>
+      )}
+
       <Tabs defaultValue="schools" className="space-y-4">
         <TabsList className="bg-slate-100">
           <TabsTrigger value="schools">Schools</TabsTrigger>
