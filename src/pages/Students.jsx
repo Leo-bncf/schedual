@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { base44 } from '@/api/base44Client';
 import { Button } from "@/components/ui/button";
@@ -37,6 +37,8 @@ import SubjectSelector from '../components/students/SubjectSelector';
 import DPValidator from '../components/students/DPValidator';
 import UploadProgressDialog from '../components/upload/UploadProgressDialog';
 import DragDropUploadDialog from '../components/upload/DragDropUploadDialog';
+import { Link } from 'react-router-dom';
+import { createPageUrl } from '../utils';
 
 export default function Students() {
   const [isDialogOpen, setIsDialogOpen] = useState(false);
@@ -71,6 +73,33 @@ export default function Students() {
   });
 
   const schoolId = user?.school_id;
+
+  const { data: schoolRecords = [] } = useQuery({
+    queryKey: ['school', schoolId],
+    queryFn: () => base44.entities.School.filter({ id: schoolId }),
+    enabled: !!schoolId,
+  });
+  const school = schoolRecords[0];
+
+  const getAllowedProgrammes = (s) => {
+    const tier = s?.subscription_tier;
+    if (tier === 'tier1') return ['MYP'];
+    if (tier === 'tier2' || tier === 'tier3') return ['PYP','MYP','DP'];
+    return ['PYP','MYP','DP'];
+  };
+  const allowedProgrammes = getAllowedProgrammes(school);
+
+  useEffect(() => {
+    if (!school) return;
+    if (!allowedProgrammes.includes(formData.ib_programme)) {
+      const next = allowedProgrammes[0] || 'MYP';
+      setFormData(prev => ({
+        ...prev,
+        ib_programme: next,
+        year_group: next === 'MYP' ? 'MYP1' : next === 'PYP' ? 'PYP-A' : 'DP1'
+      }));
+    }
+  }, [school]);
 
   const { data: rawStudents = [], isLoading } = useQuery({
     queryKey: ['students', schoolId],
@@ -178,6 +207,11 @@ export default function Students() {
 
   const handleSubmit = async (e) => {
     e.preventDefault();
+
+    if (!allowedProgrammes.includes(formData.ib_programme)) {
+      alert(`Your plan does not allow creating ${formData.ib_programme} students.`);
+      return;
+    }
     
     // For PYP/MYP: Auto-assign ALL programme subjects
     let finalFormData = { ...formData };
@@ -990,7 +1024,18 @@ Return ONLY students array, no other text.`,
         }
       />
 
-      <div className="bg-amber-50 border border-amber-200 rounded-lg p-4 mb-6">
+      {school && (
+        <div className="rounded-lg border border-slate-200 bg-slate-50 p-4 mb-6">
+          <p className="text-sm text-slate-700">
+            Your plan: <strong>{(school.subscription_tier || 'unknown').toUpperCase()}</strong>. Enabled programmes: {allowedProgrammes.join(', ')}.
+            {(!allowedProgrammes.includes('DP') || !allowedProgrammes.includes('PYP')) && (
+              <> <Link to={createPageUrl('Subscription')} className="text-blue-700 underline">Upgrade</Link> for more.</>
+            )}
+          </p>
+        </div>
+      )}
+
+       <div className="bg-amber-50 border border-amber-200 rounded-lg p-4 mb-6">
         <p className="text-sm text-amber-800">
           ⚠️ <strong>AI Import Notice:</strong> The AI document reader is a tool to speed up data entry but isn't perfect. Always verify all imported information for accuracy before using it in scheduling.
         </p>
@@ -1244,9 +1289,15 @@ Return ONLY students array, no other text.`,
                         <SelectValue />
                       </SelectTrigger>
                       <SelectContent>
-                        <SelectItem value="PYP">PYP (Primary Years)</SelectItem>
-                        <SelectItem value="MYP">MYP (Middle Years)</SelectItem>
-                        <SelectItem value="DP">DP (Diploma Programme)</SelectItem>
+                        {allowedProgrammes.includes('PYP') && (
+                          <SelectItem value="PYP">PYP (Primary Years)</SelectItem>
+                        )}
+                        {allowedProgrammes.includes('MYP') && (
+                          <SelectItem value="MYP">MYP (Middle Years)</SelectItem>
+                        )}
+                        {allowedProgrammes.includes('DP') && (
+                          <SelectItem value="DP">DP (Diploma Programme)</SelectItem>
+                        )}
                       </SelectContent>
                     </Select>
                   </div>
