@@ -345,14 +345,14 @@ export default function Panel() {
             </DropdownMenuItem>
             <DropdownMenuItem 
               onClick={() => {
-                const newStatus = row.subscription_status === 'active' ? 'inactive' : 'active';
+                const newStatus = row.subscription_status === 'active' ? 'paused' : 'active';
                 updateSchoolMutation.mutate({ 
                   id: row.id, 
                   data: { subscription_status: newStatus }
                 });
               }}
             >
-              {row.subscription_status === 'active' ? '⏸️ Deactivate' : '✓ Activate Subscription'}
+              {row.subscription_status === 'active' ? '⏸️ Pause Subscription' : '✓ Activate Subscription'}
             </DropdownMenuItem>
             <DropdownMenuItem 
               className="text-rose-600"
