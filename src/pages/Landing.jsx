@@ -5,6 +5,8 @@ import DashboardPreview from '../components/landing/DashboardPreview';
 import TrustSection from '../components/landing/TrustSection';
 import DemoBooking from '../components/landing/DemoBooking';
 import MissionSection from '../components/landing/MissionSection';
+import InfoSection from '../components/landing/InfoSection';
+import HowItWorksSection from '../components/landing/HowItWorksSection';
 import ComparisonSection from '../components/landing/ComparisonSection';
 import PricingTiersSection from '../components/landing/PricingTiersSection';
 import LandingFooter from '../components/landing/LandingFooter';
