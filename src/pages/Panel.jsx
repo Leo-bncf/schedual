@@ -189,7 +189,8 @@ export default function Panel() {
     },
     onError: (error) => {
       console.error('Update school error:', error);
-      alert('Failed to update school: ' + (error.message || 'Unknown error'));
+      const apiMsg = error?.response?.data?.error || error?.data?.error;
+      alert('Failed to update school: ' + (apiMsg || error.message || 'Unknown error'));
     }
   });
 
