@@ -47,6 +47,32 @@ export default function Panel() {
     user_role: 'admin'
   });
 
+  // Quick provision helpers (for initial setup when there are no schools)
+  const [provisioning, setProvisioning] = useState(false);
+  const provision = async () => {
+    setProvisioning(true);
+    try {
+      const payload = {
+        schools: [
+          { name: 'EPBI', code: 'EPBI', email: 'leo.bancroft@outlook.fr' },
+          { name: 'Isn Nice', code: 'ISN', email: 'support@schedual-pro.com' },
+        ],
+        subscription_status: 'active',
+        subscription_tier: 'tier2',
+        make_admin: true,
+        invite_if_missing: true,
+      };
+      await base44.functions.invoke('provisionSchoolsAndAssign', payload);
+      queryClient.invalidateQueries({ queryKey: ['allSchools'] });
+      queryClient.invalidateQueries({ queryKey: ['allUsers'] });
+      alert('Provisioned EPBI and Isn Nice. If users were reassigned, they must log out/in.');
+    } catch (e) {
+      alert('Provision failed: ' + (e?.message || 'Unknown error'));
+    } finally {
+      setProvisioning(false);
+    }
+  };
+
   const queryClient = useQueryClient();
 
   const { data: schools = [], isLoading: loadingSchools } = useQuery({
