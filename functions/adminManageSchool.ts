@@ -11,10 +11,15 @@ Deno.serve(async (req) => {
       return Response.json({ error: 'Unauthorized' }, { status: 401 });
     }
 
-    // Validate CSRF (Panel requests include x-csrf-token)
-    const csrf = await validateCSRF(req, base44, user);
-    if (!csrf.valid) {
-      return Response.json({ error: csrf.error }, { status: csrf.status || 403 });
+    // Superadmins: skip CSRF (server-side privileged action)
+    const superAdminEmailsStr = Deno.env.get("SUPER_ADMIN_EMAILS") || '';
+    const superAdminEmails = superAdminEmailsStr.split(',').map(e => e.trim().toLowerCase()).filter(Boolean);
+    const isSuperAdmin = superAdminEmails.includes((user.email || '').toLowerCase());
+    if (!isSuperAdmin) {
+      const csrf = await validateCSRF(req, base44, user);
+      if (!csrf.valid) {
+        return Response.json({ error: csrf.error }, { status: csrf.status || 403 });
+      }
     }
 
     // Get SuperAdmin emails from environment
