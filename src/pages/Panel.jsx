@@ -179,6 +179,7 @@ export default function Panel() {
 
   const updateSchoolMutation = useMutation({
     mutationFn: async ({ id, data }) => {
+      // Pass CSRF from provider header automatically set in app
       const response = await base44.functions.invoke('adminManageSchool', { action: 'update', schoolId: id, data });
       return response.data;
     },
