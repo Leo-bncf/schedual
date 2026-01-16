@@ -154,6 +154,18 @@ export default function Layout({ children, currentPageName }) {
           }
         }
 
+        // If reassigned in DB, force refresh to update JWT claims
+        try {
+          const { data: assignmentCheck } = await base44.functions.invoke('checkUserAssignment');
+          if (assignmentCheck?.mismatch) {
+            alert('Your access changed. Please sign in again.');
+            base44.auth.logout(window.location.pathname);
+            return;
+          }
+        } catch (e) {
+          console.error('Assignment check failed:', e);
+        }
+
         // Check login verification for non-superadmins
         await checkLoginVerification(userData);
       } catch (error) {
