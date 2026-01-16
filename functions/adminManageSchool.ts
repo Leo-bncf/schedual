@@ -22,16 +22,7 @@ Deno.serve(async (req) => {
       }
     }
 
-    // Get SuperAdmin emails from environment
-    const superAdminEmailsStr = Deno.env.get("SUPER_ADMIN_EMAILS") || '';
-    const superAdminEmails = superAdminEmailsStr
-      .split(',')
-      .map(email => email.trim().toLowerCase())
-      .filter(email => email.length > 0);
-
-    // Check if current user is SuperAdmin
-    const isSuperAdmin = superAdminEmails.includes((user.email || '').toLowerCase());
-    
+    // Require SuperAdmin
     if (!isSuperAdmin) {
       return Response.json({ error: 'Forbidden: SuperAdmin access required' }, { status: 403 });
     }
