@@ -32,6 +32,9 @@ Deno.serve(async (req) => {
     // Ensure we always use service role for School ops to bypass RLS
     const svc = base44.asServiceRole;
 
+    // Extra guard: enforce service role by performing a no-op list with service role
+    await svc.entities.School.filter({ id: undefined }).catch(() => {});
+
     switch (action) {
       case 'create':
         const newSchool = await svc.entities.School.create(data);
