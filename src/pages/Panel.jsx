@@ -47,8 +47,6 @@ export default function Panel() {
     user_role: 'admin'
   });
 
-
-
   const queryClient = useQueryClient();
 
   const { data: schools = [], isLoading: loadingSchools } = useQuery({
@@ -472,8 +470,6 @@ export default function Panel() {
         <StatCard title="Total Users" value={totalUsers} icon={Users} />
         <StatCard title="Unassigned Users" value={allUsers.filter(u => !u.school_id).length} icon={Users} />
       </div>
-
-
 
       <Tabs defaultValue="schools" className="space-y-4">
         <TabsList className="bg-slate-100">
