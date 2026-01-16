@@ -43,7 +43,7 @@ Deno.serve(async (req) => {
 
     switch (action) {
       case 'create':
-        const newSchool = await base44.asServiceRole.entities.School.create(data);
+        const newSchool = await svc.entities.School.create(data);
         return Response.json({ success: true, school: newSchool });
 
       case 'update':
