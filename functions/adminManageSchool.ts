@@ -39,8 +39,9 @@ Deno.serve(async (req) => {
         return Response.json({ success: true, school: newSchool });
 
       case 'update':
-        await base44.asServiceRole.entities.School.update(schoolId, data);
-        return Response.json({ success: true });
+        // Use service role explicitly (bypasses RLS) — allowed for superadmins only
+        const updated = await base44.asServiceRole.entities.School.update(schoolId, data);
+        return Response.json({ success: true, school: updated });
 
       case 'delete':
         await base44.asServiceRole.entities.School.delete(schoolId);
