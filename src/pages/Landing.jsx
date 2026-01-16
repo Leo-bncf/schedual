@@ -19,6 +19,8 @@ export default function Landing() {
       <LandingHeader />
       <HeroSection />
       <DashboardPreview />
+      <InfoSection />
+      <HowItWorksSection />
       <TrustSection />
       <DemoBooking />
       <MissionSection />
