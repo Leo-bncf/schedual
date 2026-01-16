@@ -11,30 +11,15 @@ Deno.serve(async (req) => {
       return Response.json({ error: 'Unauthorized' }, { status: 401 });
     }
 
-    // Superadmins: skip CSRF (server-side privileged action)
+    // Superadmin check
     const superAdminEmailsStr = Deno.env.get("SUPER_ADMIN_EMAILS") || '';
     const superAdminEmails = superAdminEmailsStr.split(',').map(e => e.trim().toLowerCase()).filter(Boolean);
     const isSuperAdmin = superAdminEmails.includes((user.email || '').toLowerCase());
     if (!isSuperAdmin) {
-      const csrf = await validateCSRF(req, base44, user);
-      if (!csrf.valid) {
-        return Response.json({ error: csrf.error }, { status: csrf.status || 403 });
-      }
-    }
-
-    // Get SuperAdmin emails from environment
-    const superAdminEmailsStr = Deno.env.get("SUPER_ADMIN_EMAILS") || '';
-    const superAdminEmails = superAdminEmailsStr
-      .split(',')
-      .map(email => email.trim().toLowerCase())
-      .filter(email => email.length > 0);
-
-    // Check if current user is SuperAdmin
-    const isSuperAdmin = superAdminEmails.includes((user.email || '').toLowerCase());
-    
-    if (!isSuperAdmin) {
       return Response.json({ error: 'Forbidden: SuperAdmin access required' }, { status: 403 });
     }
+
+
 
     const { action, schoolId, data } = await req.json();
 
