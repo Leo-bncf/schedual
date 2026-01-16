@@ -1,17 +1,20 @@
-import { createClientFromRequest } from 'npm:@base44/sdk@0.8.4';
+import { createClientFromRequest } from 'npm:@base44/sdk@0.8.6';
 import { validateCSRF } from './csrfHelper.js';
 
 Deno.serve(async (req) => {
   try {
     const base44 = createClientFromRequest(req);
     
-    // Validate CSRF
-    await validateCSRF(req, base44);
-    
     // Verify authentication
     const user = await base44.auth.me();
     if (!user) {
       return Response.json({ error: 'Unauthorized' }, { status: 401 });
+    }
+
+    // Validate CSRF (Panel requests include x-csrf-token)
+    const csrf = await validateCSRF(req, base44, user);
+    if (!csrf.valid) {
+      return Response.json({ error: csrf.error }, { status: csrf.status || 403 });
     }
 
     // Get SuperAdmin emails from environment
