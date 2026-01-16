@@ -30,7 +30,7 @@ Deno.serve(async (req) => {
       .filter(email => email.length > 0);
 
     // Check if current user is SuperAdmin
-    const isSuperAdmin = superAdminEmails.includes(user.email.toLowerCase());
+    const isSuperAdmin = superAdminEmails.includes((user.email || '').toLowerCase());
     
     if (!isSuperAdmin) {
       return Response.json({ error: 'Forbidden: SuperAdmin access required' }, { status: 403 });
