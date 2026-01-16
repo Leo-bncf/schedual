@@ -38,6 +38,9 @@ Deno.serve(async (req) => {
 
     const { action, schoolId, data } = await req.json();
 
+    // Ensure we always use service role for School ops to bypass RLS
+    const svc = base44.asServiceRole;
+
     switch (action) {
       case 'create':
         const newSchool = await base44.asServiceRole.entities.School.create(data);
