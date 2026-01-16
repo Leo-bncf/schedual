@@ -292,15 +292,16 @@ ${trainingFeedback ? `LESSONS FROM ADMIN FEEDBACK:\n${trainingFeedback}\n\n` : '
       });
 
       const subjectsData = extractionResult?.subjects || [];
+      const filteredSubjectsData = subjectsData.filter(s => allowedProgrammes.includes(s.ib_level));
 
       if (subjectsData.length === 0) {
         throw new Error('No subjects found in the document');
       }
 
-      setUploadState(prev => ({ ...prev, stage: 'creating', totalSubjects: subjectsData.length, progress: `Creating ${subjectsData.length} subjects...` }));
+      setUploadState(prev => ({ ...prev, stage: 'creating', totalSubjects: filteredSubjectsData.length, progress: `Creating ${filteredSubjectsData.length} subjects...` }));
 
       let created = 0;
-      for (const subject of subjectsData) {
+      for (const subject of filteredSubjectsData) {
         const ibGroupStr = subject.ib_group || "1";
         const group = IB_GROUPS.find(g => g.id === parseInt(ibGroupStr));
         
@@ -324,7 +325,7 @@ ${trainingFeedback ? `LESSONS FROM ADMIN FEEDBACK:\n${trainingFeedback}\n\n` : '
         setUploadState(prev => ({ 
           ...prev, 
           subjectsCreated: created,
-          progress: `Created ${created} of ${subjectsData.length} subjects...`
+          progress: `Created ${created} of ${filteredSubjectsData.length} subjects...`
         }));
       }
 
@@ -745,9 +746,15 @@ ${trainingFeedback ? `LESSONS FROM ADMIN FEEDBACK:\n${trainingFeedback}\n\n` : '
                   <SelectValue />
                 </SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="PYP">PYP (Primary Years Programme)</SelectItem>
-                  <SelectItem value="MYP">MYP (Middle Years Programme)</SelectItem>
-                  <SelectItem value="DP">DP (Diploma Programme)</SelectItem>
+                  {allowedProgrammes.includes('PYP') && (
+                    <SelectItem value="PYP">PYP (Primary Years Programme)</SelectItem>
+                  )}
+                  {allowedProgrammes.includes('MYP') && (
+                    <SelectItem value="MYP">MYP (Middle Years Programme)</SelectItem>
+                  )}
+                  {allowedProgrammes.includes('DP') && (
+                    <SelectItem value="DP">DP (Diploma Programme)</SelectItem>
+                  )}
                 </SelectContent>
               </Select>
             </div>
