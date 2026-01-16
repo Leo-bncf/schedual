@@ -52,7 +52,7 @@ Deno.serve(async (req) => {
         return Response.json({ success: true, school: updated });
 
       case 'delete':
-        await base44.asServiceRole.entities.School.delete(schoolId);
+        await svc.entities.School.delete(schoolId);
         return Response.json({ success: true });
 
       case 'list':
