@@ -697,9 +697,30 @@ export default function Settings() {
                           {schoolAdmins.length} / {school?.max_admin_seats || 3}
                         </p>
                       </div>
-                    </div>
+                      </div>
 
-                    {/* Active Add-ons */}
+                      {/* Plan capabilities */}
+                      <div className="p-4 rounded-lg bg-slate-50 border border-slate-200">
+                      <h4 className="font-semibold text-slate-900 mb-2 text-sm">Plan Capabilities</h4>
+                      <ul className="text-sm text-slate-700 list-disc list-inside space-y-1">
+                        <li>Programmes enabled: {(() => {
+                          const tier = school?.subscription_tier;
+                          if (tier === 'tier1') return 'MYP only';
+                          if (tier === 'tier2') return 'PYP, MYP and DP';
+                          if (tier === 'tier3') return 'All (PYP, MYP, DP)';
+                          return 'PYP, MYP, DP';
+                        })()}</li>
+                        <li>Campuses allowed: {(
+                          school?.subscription_tier === 'tier3' || school?.active_add_ons?.includes('unlimited_campuses')
+                            ? 'Unlimited'
+                            : (school?.subscription_tier === 'tier2'
+                                ? (school?.active_add_ons?.includes('additional_campus') ? 'Multiple (via add-on)' : '1')
+                                : '1')
+                        )}</li>
+                      </ul>
+                      </div>
+
+                      {/* Active Add-ons */}
                     {school?.active_add_ons && school.active_add_ons.length > 0 && (
                       <div className="p-4 rounded-lg bg-violet-50 border border-violet-200">
                         <h4 className="font-semibold text-violet-900 mb-3 text-sm">Active Add-ons</h4>

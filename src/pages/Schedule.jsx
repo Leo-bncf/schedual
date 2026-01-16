@@ -429,15 +429,16 @@ Now process the user's input and return ONLY the JSON object.`,
       // Step 0: Auto-generate DP teaching groups
       if (cancelGeneration) throw new Error('Cancelled by user');
       
-      setGenerationProgress(prev => ({
-        ...prev,
-        stage: 'Generating DP Groups',
-        percent: 5,
-        message: 'Automatically creating DP teaching groups from student choices...'
-      }));
-      console.log('Auto-generating DP teaching groups...');
-      
-      try {
+      if (allowedProgrammes.includes('DP')) {
+        setGenerationProgress(prev => ({
+          ...prev,
+          stage: 'Generating DP Groups',
+          percent: 5,
+          message: 'Automatically creating DP teaching groups from student choices...'
+        }));
+        console.log('Auto-generating DP teaching groups...');
+        
+        try {
         // Try to clean up any duplicate subject assignments (optional)
         try {
           const { data: cleanupResult } = await base44.functions.invoke('cleanupDuplicateSubjects');
@@ -466,6 +467,9 @@ Now process the user's input and return ONLY the JSON object.`,
       } catch (dpError) {
         console.error('❌ DP group generation error:', dpError);
         console.error('Error details:', dpError.message, dpError.response?.data);
+      }
+      } else {
+        console.log('Skipping DP group generation due to plan restrictions');
       }
       
       // Refresh teaching groups after auto-generation
