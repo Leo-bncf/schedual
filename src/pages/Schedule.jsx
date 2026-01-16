@@ -120,6 +120,13 @@ export default function Schedule() {
     select: (data) => data[0]
   });
 
+  const allowedProgrammes = React.useMemo(() => {
+    if (!school) return ['PYP','MYP','DP'];
+    if (school.subscription_tier === 'tier1') return ['MYP'];
+    if (school.subscription_tier === 'tier2' || school.subscription_tier === 'tier3') return ['PYP','MYP','DP'];
+    return ['PYP','MYP','DP'];
+  }, [school]);
+
   // Initialize school config when school data loads
   React.useEffect(() => {
     if (school) {
@@ -604,7 +611,7 @@ Now process the user's input and return ONLY the JSON object.`,
       });
 
       // Schedule each IB level separately but track teachers globally
-      const scheduleLevels = ['DP', 'MYP', 'PYP'];
+      const scheduleLevels = ['DP', 'MYP', 'PYP'].filter(level => allowedProgrammes.includes(level));
       
       for (const level of scheduleLevels) {
         if (cancelGeneration) throw new Error('Cancelled by user');
@@ -1214,7 +1221,7 @@ Now process the user's input and return ONLY the JSON object.`,
     <div className="space-y-6">
       <PageHeader 
         title="Master Schedule"
-        description="Generate and manage timetables for all IB programmes (PYP, MYP, DP)"
+        description={`Generate and manage timetables for ${allowedProgrammes.join(', ')}`}
         actions={
           <Button onClick={() => setIsDialogOpen(true)} className="bg-slate-900 hover:bg-slate-800 rounded-xl">
             <Plus className="w-4 h-4 mr-2" />
@@ -1222,6 +1229,14 @@ Now process the user's input and return ONLY the JSON object.`,
           </Button>
         }
       />
+
+      {school && (
+        <div className="rounded-lg border border-slate-200 bg-slate-50 p-4">
+          <p className="text-sm text-slate-700">
+            Your plan: <strong>{(school.subscription_tier || 'unknown').toUpperCase()}</strong>. Enabled programmes: {allowedProgrammes.join(', ')}.
+          </p>
+        </div>
+      )}
 
       <ScheduleUpdateBanner 
         show={showUpdateBanner && selectedVersion && scheduleSlots.length > 0}
