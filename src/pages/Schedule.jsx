@@ -948,10 +948,12 @@ Now process the user's input and return ONLY the JSON object.`,
                   if (made >= hlExtra) break;
                   if (blockedPeriods.has(period)) continue;
 
-                  // Students free?
+                  // Students free? Also block DP test times by year group
                   const studentsFree = (hl.student_ids || []).every(sid => {
                     const sched = studentSchedules[sid] || [];
                     if (sched.some(s => s.day === day && s.period === period)) return false;
+                    const student = students.find(st => st.id === sid);
+                    if (student?.year_group && isReserved(student.year_group, day, period)) return false;
                     if (period > 2) {
                       const prev1 = sched.find(s => s.day === day && s.period === period - 1);
                       const prev2 = sched.find(s => s.day === day && s.period === period - 2);
