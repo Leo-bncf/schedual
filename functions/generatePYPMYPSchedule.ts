@@ -290,6 +290,10 @@ Deno.serve(async (req) => {
               const isTestSlot = reservedTestSlots.some(ts => ts.day === day && ts.period === period);
               if (isTestSlot) continue;
               
+              // Skip if reserved test slot
+              const isTestSlot2 = reservedTestSlots.some(ts => ts.day === day && ts.period === period);
+              if (isTestSlot2) continue;
+
               const classGroupBusy = classGroupSchedule.some(s => s.day === day && s.period === period);
               if (classGroupBusy) continue;
 
