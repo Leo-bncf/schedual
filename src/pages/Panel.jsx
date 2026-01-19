@@ -125,6 +125,11 @@ export default function Panel() {
       setIsSchoolDialogOpen(false);
       resetSchoolForm();
     },
+    onError: (error) => {
+      console.error('Create school error:', error);
+      const apiMsg = error?.response?.data?.error || error?.data?.error;
+      alert('Failed to create school: ' + (apiMsg || error.message || 'Unknown error'));
+    }
   });
 
   const createSchoolForUserMutation = useMutation({
