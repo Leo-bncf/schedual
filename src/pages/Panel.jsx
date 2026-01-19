@@ -352,10 +352,22 @@ export default function Panel() {
             </DropdownMenuItem>
             <DropdownMenuItem 
               onClick={() => {
-                const newStatus = row.subscription_status === 'active' ? 'paused' : 'active';
+                const activating = row.subscription_status !== 'active';
+                const newStatus = activating ? 'active' : 'paused';
+                const now = new Date();
+                const nextYear = new Date(now);
+                nextYear.setFullYear(now.getFullYear() + 1);
+
+                const updates = { subscription_status: newStatus };
+                if (activating) {
+                  updates.subscription_tier = row.subscription_tier || 'tier2';
+                  updates.subscription_start_date = row.subscription_start_date || now.toISOString();
+                  updates.subscription_current_period_end = nextYear.toISOString();
+                }
+
                 updateSchoolMutation.mutate({ 
                   id: row.id, 
-                  data: { subscription_status: newStatus }
+                  data: updates
                 });
               }}
             >
