@@ -135,18 +135,13 @@ export default function Layout({ children, currentPageName }) {
             const meRec = await base44.entities.User.filter({ id: userData.id });
             const derivedSchoolId = meRec?.[0]?.school_id;
             if (derivedSchoolId) {
-              // Update local user state and fetch school right away (no logout required)
-              setUser({ ...userData, school_id: derivedSchoolId });
-              try {
-                const schools = await base44.entities.School.filter({ id: derivedSchoolId });
-                setSchool(schools[0] || null);
-              } catch (schoolError) {
-                console.error('Error fetching school after hydration:', schoolError);
-              }
+              alert('Your account was linked to a school. We\u2019ll refresh your session now.');
+              base44.auth.logout(window.location.pathname);
+              return;
             } else {
               const { data: rec } = await base44.functions.invoke('reconcileSubscription');
               if (rec?.assigned && rec.schoolId) {
-                alert('Subscription detected and your school has been linked. Please log in again.');
+                alert('Subscription detected and your school has been linked. We\u2019ll refresh your session now.');
                 base44.auth.logout(window.location.pathname);
                 return;
               }
