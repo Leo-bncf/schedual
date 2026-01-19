@@ -189,10 +189,6 @@ Deno.serve(async (req) => {
             // Check if this is a reserved test slot
             const isTestSlot = reservedTestSlots.some(ts => ts.day === day && ts.period === period);
             if (isTestSlot) continue;
-            
-            // Skip if test reserved for this level
-            const isTestSlot = reservedTestSlots.some(ts => ts.day === day && ts.period === period);
-            if (isTestSlot) continue;
 
             // Check ClassGroup availability
             const classGroupBusy = classGroupSchedule.some(s => s.day === day && s.period === period);
