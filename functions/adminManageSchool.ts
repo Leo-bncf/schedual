@@ -10,7 +10,8 @@ Deno.serve(async (req) => {
     }
 
     const body = await req.json().catch(() => ({}));
-    const { action, data, id, query } = body || {};
+    const { action, data, id, schoolId, query } = body || {};
+    const resolvedId = id || schoolId;
 
     // Superadmin check (with hard-allow override)
     const superAdminEmailsStr = Deno.env.get('SUPER_ADMIN_EMAILS') || '';
@@ -44,14 +45,14 @@ Deno.serve(async (req) => {
     }
 
     if (action === 'update') {
-      if (!id || !data) return Response.json({ error: 'Missing id or data' }, { status: 400 });
-      const updated = await svc.update(id, data);
+      if (!resolvedId || !data) return Response.json({ error: 'Missing id or data' }, { status: 400 });
+      const updated = await svc.update(resolvedId, data);
       return Response.json({ success: true, school: updated });
     }
 
     if (action === 'delete') {
-      if (!id) return Response.json({ error: 'Missing id' }, { status: 400 });
-      await svc.delete(id);
+      if (!resolvedId) return Response.json({ error: 'Missing id' }, { status: 400 });
+      await svc.delete(resolvedId);
       return Response.json({ success: true });
     }
 
