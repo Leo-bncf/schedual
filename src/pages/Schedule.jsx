@@ -741,7 +741,28 @@ Now process the user's input and return ONLY the JSON object.`,
           if (subject?.preferred_time === 'morning') periodsRandom = [...periods.filter(p => p <= 4), ...periods.filter(p => p > 4)];
           if (subject?.preferred_time === 'afternoon') periodsRandom = [...periods.filter(p => p > 4), ...periods.filter(p => p <= 4)];
 
-          const teacherId = primaryGroup.teacher_id || mirrorGroups.find(m => m.teacher_id)?.teacher_id || null;
+          let teacherId = primaryGroup.teacher_id || mirrorGroups.find(m => m.teacher_id)?.teacher_id || null;
+          if (!teacherId) {
+            const candidates = teachers
+              .filter(t => t.is_active !== false)
+              .filter(t => {
+                const subs = Array.isArray(t.subjects) ? t.subjects : [];
+                const quals = Array.isArray(t.qualifications) ? t.qualifications : [];
+                const has = subs.includes(subject.id) || quals.some(q => q.subject_id === subject.id);
+                if (!has) return false;
+                const q = quals.find(q => q.subject_id === subject.id);
+                const levelOk = !q?.ib_levels || q.ib_levels.length === 0 || q.ib_levels.includes('DP');
+                if (!levelOk) return false;
+                const load = (teacherSchedules[t.id]?.length || 0);
+                const max = t.max_hours_per_week || 25;
+                return load < max;
+              })
+              .sort((a, b) => (teacherSchedules[a.id]?.length || 0) - (teacherSchedules[b.id]?.length || 0));
+            if (candidates.length) {
+              teacherId = candidates[0].id;
+              await base44.entities.TeachingGroup.update(primaryGroup.id, { teacher_id: teacherId });
+            }
+          }
           if (teacherId && !teacherSchedules[teacherId]) teacherSchedules[teacherId] = [];
 
           const allStudentIds = [
