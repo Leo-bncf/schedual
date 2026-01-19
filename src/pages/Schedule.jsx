@@ -1056,10 +1056,16 @@ Now process the user's input and return ONLY the JSON object.`,
 
           testDays.forEach(day => {
             testPeriods.forEach(period => {
-              if (!blockedPeriods.has(period)) {
+              if (blockedPeriods.has(period)) return;
+              // Create a test slot for every relevant ClassGroup so it appears in class views
+              const targetClassGroups = level === 'PYP' || level === 'MYP'
+                ? classGroups.filter(cg => cg.ib_programme === level)
+                : classGroups.filter(cg => cg.year_group === level);
+              targetClassGroups.forEach(cg => {
                 newSlots.push({
                   school_id: schoolId,
                   schedule_version: selectedVersion.id,
+                  classgroup_id: cg.id,
                   subject_id: null,
                   teacher_id: null,
                   room_id: null,
@@ -1068,7 +1074,7 @@ Now process the user's input and return ONLY the JSON object.`,
                   status: 'scheduled',
                   notes: `${level} Test/Assessment Slot`
                 });
-              }
+              });
             });
           });
           console.log(`Added test slots for ${level} (late afternoon periods on ${testsPerWeek} days)`);
