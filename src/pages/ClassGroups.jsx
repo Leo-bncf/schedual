@@ -117,7 +117,12 @@ export default function ClassGroups() {
         message: 'Assigning students to class groups...',
         completedSteps: ['analyze', 'batches']
       }));
-      
+
+      if (response.data.error) {
+        alert(response.data.message || response.data.error);
+        return;
+      }
+
       if (response.data.success) {
         setGenerationProgress(prev => ({
           ...prev,
