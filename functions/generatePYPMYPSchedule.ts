@@ -84,23 +84,14 @@ Deno.serve(async (req) => {
     const testDurationPeriods = Math.ceil(levelTestConfig.test_duration_minutes / (school?.period_duration_minutes || 45));
     
     const reservedTestSlots = [];
-    
+
     if (testsPerWeek > 0) {
-      const daysForTests = Math.min(testsPerWeek, days.length);
-      const dayInterval = Math.floor(days.length / daysForTests);
-      
-      for (let i = 0; i < testsPerWeek; i++) {
-        const dayIndex = (i * dayInterval) % days.length;
-        const day = days[dayIndex];
-        const startPeriod = 1;
-        
-        for (let p = startPeriod; p < startPeriod + testDurationPeriods; p++) {
-          if (p <= periods.length) {
-            reservedTestSlots.push({ day, period: p });
-          }
-        }
-      }
-      
+      // Prefer late afternoon periods for tests
+      const testPeriods = periods.slice(-testDurationPeriods);
+      const testDays = days.slice(0, Math.min(testsPerWeek, days.length));
+      testDays.forEach(day => {
+        testPeriods.forEach(period => reservedTestSlots.push({ day, period }));
+      });
       console.log(`Reserved ${reservedTestSlots.length} test slot periods for ${level}`);
     }
 
