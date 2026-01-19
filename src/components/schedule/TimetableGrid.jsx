@@ -279,7 +279,7 @@ export default function TimetableGrid({ slots = [], groups = [], rooms = [], sub
                                   </div>
                                 )}
                               </div>
-                            ) : slot.notes?.includes('Test') ? (
+                            ) : (slot.notes?.includes('Test') || slot.notes?.includes('Assessment')) ? (
                               <div className="p-3 border-l-4 border-red-400 bg-red-50 border border-red-200">
                                 <div className="font-bold text-sm text-red-900 leading-tight mb-1.5">
                                   📝 {slot.notes}
