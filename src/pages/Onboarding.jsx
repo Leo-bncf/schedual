@@ -45,11 +45,7 @@ export default function Onboarding() {
     enabled: !!user?.school_id,
   });
 
-  const { data: teachingGroups = [] } = useQuery({
-    queryKey: ['teachingGroups', user?.school_id],
-    queryFn: () => base44.entities.TeachingGroup.filter({ school_id: user?.school_id }),
-    enabled: !!user?.school_id,
-  });
+
 
   const { data: classGroups = [] } = useQuery({
     queryKey: ['classGroups', user?.school_id],
