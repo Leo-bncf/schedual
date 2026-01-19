@@ -136,21 +136,7 @@ export default function Onboarding() {
       count: rooms.length,
       required: 5
     },
-    {
-      id: 'teaching-groups',
-      title: 'Teaching Groups',
-      description: 'Create teaching groups for DP students (auto-generated for PYP/MYP)',
-      instructions: 'For DP: Group students by subject and level. PYP/MYP teaching groups are created automatically.',
-      quickTips: [
-        '🚀 Use AI-powered group builder for optimal groupings',
-        'DP: Create groups for each subject-level combination',
-        'PYP/MYP groups are auto-assigned to class groups'
-      ],
-      page: 'TeachingGroups',
-      icon: Users,
-      completed: teachingGroups.length > 0,
-      count: teachingGroups.length
-    },
+
     {
       id: 'class-groups',
       title: 'Class Groups',
