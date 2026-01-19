@@ -12,34 +12,22 @@ Deno.serve(async (req) => {
     const schoolId = user.school_id;
     console.log('Starting class group generation for school:', schoolId);
 
-    // Fetch ALL students for this school (no limit)
-    const allStudents = [];
-    let skip = 0;
-    const batchSize = 500;
+    // Fetch students for this school (up to 10k)
+    const students = await base44.asServiceRole.entities.Student.filter(
+      { school_id: schoolId },
+      '-created_date',
+      10000
+    );
 
-    while (true) {
-      const batch = await base44.asServiceRole.entities.Student.filter(
-        { school_id: schoolId },
-        '-created_date',
-        batchSize
-      );
-
-      if (batch.length === 0) break;
-      allStudents.push(...batch);
-
-      if (batch.length < batchSize) break;
-      skip += batchSize;
-    }
-
-    const students = allStudents;
-    
     console.log(`Found ${students.length} students`);
 
     if (students.length === 0) {
       return Response.json({ 
-        error: 'No students found for this school',
-        schoolId 
-      }, { status: 400 });
+        success: true,
+        message: 'No students found for this school. Please add/import students first.',
+        classGroupsCreated: 0,
+        totalStudents: 0
+      });
     }
 
     // Delete existing class groups
