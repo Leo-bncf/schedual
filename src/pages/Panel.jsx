@@ -47,6 +47,10 @@ export default function Panel() {
     user_role: 'admin'
   });
 
+  const [isSeatsDialogOpen, setIsSeatsDialogOpen] = useState(false);
+  const [seatsTargetSchool, setSeatsTargetSchool] = useState(null);
+  const [seatsToAdd, setSeatsToAdd] = useState(1);
+
   const queryClient = useQueryClient();
 
   const { data: schools = [], isLoading: loadingSchools } = useQuery({
@@ -354,6 +358,10 @@ export default function Panel() {
             <DropdownMenuItem onClick={() => handleEditSchool(row)}>
               <Pencil className="w-4 h-4 mr-2" />
               Edit Details
+            </DropdownMenuItem>
+            <DropdownMenuItem onClick={() => { setSeatsTargetSchool(row); setSeatsToAdd(1); setIsSeatsDialogOpen(true); }}>
+              <Users className="w-4 h-4 mr-2" />
+              Add Admin Slots
             </DropdownMenuItem>
             <DropdownMenuItem 
               onClick={() => {
@@ -967,6 +975,69 @@ export default function Panel() {
           </form>
         </DialogContent>
       </Dialog>
+
+      <Dialog open={isSeatsDialogOpen} onOpenChange={setIsSeatsDialogOpen}>
+        <DialogContent className="sm:max-w-md">
+          <DialogHeader>
+            <DialogTitle>Add Admin Slots</DialogTitle>
+            <DialogDescription>
+              Increase the admin seat limit for {seatsTargetSchool?.name || 'this school'}.
+            </DialogDescription>
+          </DialogHeader>
+          {seatsTargetSchool && (
+            <div className="space-y-4">
+              <div className="grid grid-cols-3 gap-4">
+                <div>
+                  <p className="text-xs text-slate-500">Current limit</p>
+                  <p className="text-lg font-semibold text-slate-900">{seatsTargetSchool.max_admin_seats ?? 0}</p>
+                </div>
+                <div>
+                  <p className="text-xs text-slate-500">Admins used</p>
+                  <p className="text-lg font-semibold text-slate-900">
+                    {allUsers.filter(u => u.school_id === seatsTargetSchool.id && u.role === 'admin').length}
+                  </p>
+                </div>
+                <div>
+                  <p className="text-xs text-slate-500">New total</p>
+                  <p className="text-lg font-semibold text-slate-900">
+                    {(seatsTargetSchool.max_admin_seats ?? 0) + (Number(seatsToAdd) || 0)}
+                  </p>
+                </div>
+              </div>
+              <div className="space-y-2">
+                <Label htmlFor="seatsAdd">Add slots</Label>
+                <Input
+                  id="seatsAdd"
+                  type="number"
+                  min={1}
+                  value={seatsToAdd}
+                  onChange={(e) => setSeatsToAdd(Number(e.target.value) || 1)}
+                />
+              </div>
+            </div>
+          )}
+          <DialogFooter>
+            <Button type="button" variant="outline" onClick={() => setIsSeatsDialogOpen(false)}>
+              Cancel
+            </Button>
+            <Button
+              onClick={() => {
+                const current = seatsTargetSchool?.max_admin_seats ?? 0;
+                const qty = Number(seatsToAdd) || 0;
+                updateSchoolMutation.mutate({ id: seatsTargetSchool.id, data: { max_admin_seats: current + qty } });
+                setIsSeatsDialogOpen(false);
+                setSeatsTargetSchool(null);
+                setSeatsToAdd(1);
+              }}
+              className="bg-indigo-600 hover:bg-indigo-700"
+              disabled={!seatsTargetSchool || (Number(seatsToAdd) || 0) < 1}
+            >
+              Update
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
     </div>
   );
 }
