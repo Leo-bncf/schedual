@@ -213,19 +213,24 @@ export default function Panel() {
   });
 
   const updateUserMutation = useMutation({
-    mutationFn: ({ id, data }) => base44.functions.invoke('adminManageUser', { action: 'update', userId: id, data }),
-    onSuccess: (response) => {
-      queryClient.invalidateQueries({ queryKey: ['allUsers'] });
-      setIsUserDialogOpen(false);
-      
-      if (response.data?.requiresReauth) {
-        const user = allUsers.find(u => u.id === response.config?.userId);
-        alert(`✅ User updated! IMPORTANT: ${user?.email || 'The user'} must log out and log back in to access their school dashboard.`);
-      }
-      
-      setUserFormData({ email: '', school_id: '', role: 'user' });
-    },
-  });
+     mutationFn: ({ id, data }) => base44.functions.invoke('adminManageUser', { action: 'update', userId: id, data }),
+     onSuccess: (response) => {
+       queryClient.invalidateQueries({ queryKey: ['allUsers'] });
+       setIsUserDialogOpen(false);
+
+       if (response.data?.requiresReauth) {
+         const user = allUsers.find(u => u.id === response.config?.userId);
+         alert(`✅ User updated! IMPORTANT: ${user?.email || 'The user'} must log out and log back in to access their school dashboard.`);
+       }
+
+       setUserFormData({ email: '', school_id: '', role: 'user' });
+     },
+     onError: (error) => {
+       console.error('Update user error:', error);
+       const apiMsg = error?.response?.data?.error || error?.data?.error;
+       alert('Failed to update user: ' + (apiMsg || error.message || 'Unknown error'));
+     }
+   });
 
   const deleteUserMutation = useMutation({
     mutationFn: (id) => base44.functions.invoke('adminManageUser', { action: 'delete', userId: id }),
