@@ -127,21 +127,30 @@ Deno.serve(async (req) => {
         console.log(`  Subject ID: ${subject.id}, IB Level: ${subject.ib_level}`);
         console.log(`  Active teachers: ${teachers.length}, Available rooms: ${rooms.length}`);
 
-        // Find a qualified teacher (but continue even if none found)
+        // Find a qualified teacher (prefer by subject list or qualification; respect level if provided)
         let assignedTeacher = null;
-        for (const teacher of teachers) {
-          const isQualified = teacher.qualifications?.some(q => 
-            q.subject_id === subject.id && 
-            q.ib_levels?.includes(level)
-          );
-          if (isQualified) {
-            assignedTeacher = teacher;
-            console.log(`  ✓ Found qualified teacher: ${teacher.full_name}`);
-            break;
-          }
-        }
-        if (!assignedTeacher) {
-          console.log(`  ⚠️ No qualified teacher found for ${subject.name}`);
+        const candidates = teachers.filter(t => {
+          if (t.is_active === false) return false;
+          const subjectsArray = Array.isArray(t.subjects) ? t.subjects : [];
+          const qualsArray = Array.isArray(t.qualifications) ? t.qualifications : [];
+          const hasSubject = subjectsArray.includes(subject.id) || qualsArray.some(q => q.subject_id === subject.id);
+          if (!hasSubject) return false;
+          const qual = qualsArray.find(q => q.subject_id === subject.id);
+          const levelOk = !qual?.ib_levels || qual.ib_levels.length === 0 || qual.ib_levels.includes(level);
+          if (!levelOk) return false;
+          // Check weekly load vs max_hours_per_week
+          const currentLoad = (teacherSchedules[t.id]?.length || 0);
+          const maxHours = t.max_hours_per_week || 25;
+          return currentLoad < maxHours;
+        })
+        // Least loaded first
+        .sort((a, b) => (teacherSchedules[a.id]?.length || 0) - (teacherSchedules[b.id]?.length || 0));
+
+        if (candidates.length > 0) {
+          assignedTeacher = candidates[0];
+          console.log(`  ✓ Assigned teacher: ${assignedTeacher.full_name}`);
+        } else {
+          console.log(`  ⚠️ No qualified/available teacher found for ${subject.name}`);
         }
 
         // Track this ClassGroup's schedule to avoid conflicts
