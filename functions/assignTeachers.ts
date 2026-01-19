@@ -53,15 +53,18 @@ Deno.serve(async (req) => {
 
       // Find qualified teachers
       const qualifiedTeachers = teachers.filter(t => {
-        // Must teach this subject
-        if (!t.subjects?.includes(group.subject_id)) return false;
+        const subjectsArray = Array.isArray(t.subjects) ? t.subjects : [];
+        const qualsArray = Array.isArray(t.qualifications) ? t.qualifications : [];
 
-        // Check IB level qualification
-        if (t.qualifications?.length > 0) {
-          const qualification = t.qualifications.find(q => q.subject_id === group.subject_id);
-          if (qualification && ibLevel && !qualification.ib_levels?.includes(ibLevel)) {
-            return false;
-          }
+        // Qualified if the subject appears either in subjects or in qualifications
+        const hasSubject = subjectsArray.includes(group.subject_id) ||
+          qualsArray.some(q => q.subject_id === group.subject_id);
+        if (!hasSubject) return false;
+
+        // If there is a qualification record for this subject and IB level is known, enforce level match
+        const qualification = qualsArray.find(q => q.subject_id === group.subject_id);
+        if (qualification && ibLevel && Array.isArray(qualification.ib_levels) && !qualification.ib_levels.includes(ibLevel)) {
+          return false;
         }
 
         // Check max hours capacity
