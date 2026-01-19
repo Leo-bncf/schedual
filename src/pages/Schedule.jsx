@@ -849,6 +849,25 @@ Now process the user's input and return ONLY the JSON object.`,
           return created;
         };
 
+        // Build DP reserved test slots by year group (DP1/DP2)
+        const dpTestConfig = school?.settings?.test_config || {};
+        const reservedDPTests = { DP1: new Set(), DP2: new Set() };
+        const makeKey = (d, p) => `${d}|${p}`;
+        ['DP1', 'DP2'].forEach(yg => {
+          const cfg = dpTestConfig[yg] || { tests_per_week: 0, test_duration_minutes: 0 };
+          const testsPerWeek = cfg.tests_per_week || 0;
+          const periodDuration = school?.period_duration_minutes || 45;
+          const testDurationPeriods = Math.max(1, Math.ceil((cfg.test_duration_minutes || 0) / periodDuration));
+          if (testsPerWeek > 0) {
+            const testPeriods = periods.slice(-testDurationPeriods); // late afternoon by default
+            const testDays = days.slice(0, Math.min(testsPerWeek, days.length));
+            testDays.forEach(day => {
+              testPeriods.forEach(period => reservedDPTests[yg].add(makeKey(day, period)));
+            });
+          }
+        });
+        const isReserved = (yearGroup, day, period) => reservedDPTests[yearGroup]?.has?.(makeKey(day, period));
+
         // Schedule per subject-year
         for (const [key, groups] of Object.entries(dpBySubjectYear)) {
           const [subjectId, yearGroup] = key.split('__');
