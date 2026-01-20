@@ -620,8 +620,12 @@ Now process the user's input and return ONLY the JSON object.`,
       
       for (const level of scheduleLevels) {
         if (cancelGeneration) throw new Error('Cancelled by user');
-        
+
         console.log(`\n=== Scheduling ${level} ===`);
+        if (!level) {
+          console.warn('⚠️ Invalid level detected, skipping');
+          continue;
+        }
 
         // PYP/MYP: Use ClassGroups-based scheduling
         if (level === 'PYP' || level === 'MYP') {
@@ -684,10 +688,10 @@ Now process the user's input and return ONLY the JSON object.`,
 
         // Consider only active DP groups
         const levelGroupsFromUpdated = updatedGroups.filter(g => {
-          if (g.is_active === false) return false;
+          if (!g || g.is_active === false) return false;
           if (!g.subject_id) return false;
           const ibLevel = getIBLevel(g.year_group);
-          return ibLevel === level;
+          return ibLevel === level && (level === 'DP' || ibLevel === level);
         });
         console.log(`Found ${levelGroupsFromUpdated.length} DP groups`);
 
