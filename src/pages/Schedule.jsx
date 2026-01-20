@@ -531,58 +531,25 @@ Now process the user's input and return ONLY the JSON object.`,
         await new Promise(resolve => setTimeout(resolve, 3000)); // Increased from 2000ms
       }
 
-      // Try CSP solver first, fall back to greedy if needed
-      setGenerationProgress(prev => ({
-        ...prev,
-        stage: 'Scheduling (CSP Solver)',
-        percent: 35,
-        message: 'Attempting constraint satisfaction problem solving...',
-        currentStep: 'csp'
-      }));
+      // Comprehensive scheduling algorithm for all students, teachers, and rooms
+      const days = ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday'];
+      const periodsPerDay = school?.periods_per_day || 8;
+      const periods = Array.from({ length: periodsPerDay }, (_, i) => i + 1);
+      const newSlots = [];
 
-      let newSlots = [];
-      let cspSuccess = false;
+      // Track availability for students, teachers, and rooms
+      const studentSchedules = {};
+      const teacherSchedules = {};
+      const roomSchedules = {};
+      const studentConsecutiveSubjects = {}; // Track consecutive subject periods
 
-      try {
-        const { data: cspResult } = await base44.functions.invoke('generateScheduleCSP', {
-          schedule_version_id: selectedVersion.id,
-          level: 'DP' // Start with DP
-        });
-
-        if (cspResult?.slots && cspResult.slots.length > 0) {
-          console.log('✓ CSP solver succeeded:', cspResult.slots.length, 'slots');
-          newSlots = cspResult.slots;
-          cspSuccess = true;
-        }
-      } catch (cspError) {
-        console.warn('CSP solver failed, falling back to greedy algorithm:', cspError.message);
-      }
-
-      // If CSP failed, use greedy fallback (existing logic)
-      if (!cspSuccess) {
-        setGenerationProgress(prev => ({
-          ...prev,
-          stage: 'Scheduling (Greedy Fallback)',
-          message: 'Using greedy algorithm as fallback...'
-        }));
-
-        const days = ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday'];
-        const periodsPerDay = school?.periods_per_day || 8;
-        const periods = Array.from({ length: periodsPerDay }, (_, i) => i + 1);
-
-        // Track availability for students, teachers, and rooms
-        const studentSchedules = {};
-        const teacherSchedules = {};
-        const roomSchedules = {};
-        const studentConsecutiveSubjects = {}; // Track consecutive subject periods
-
-        // Initialize availability tracking
-        students.forEach(s => { 
-          studentSchedules[s.id] = []; 
-          studentConsecutiveSubjects[s.id] = {}; // { day: [{ period, subjectId, count }] }
-        });
-        teachers.forEach(t => { teacherSchedules[t.id] = []; });
-        rooms.forEach(r => { roomSchedules[r.id] = []; });
+      // Initialize availability tracking
+      students.forEach(s => { 
+        studentSchedules[s.id] = []; 
+        studentConsecutiveSubjects[s.id] = {}; // { day: [{ period, subjectId, count }] }
+      });
+      teachers.forEach(t => { teacherSchedules[t.id] = []; });
+      rooms.forEach(r => { roomSchedules[r.id] = []; });
 
       // CRITICAL: Block break and lunch periods from scheduling (use school settings)
       const breakPeriods = school?.settings?.break_periods || [];
@@ -650,7 +617,7 @@ Now process the user's input and return ONLY the JSON object.`,
 
       // Schedule each IB level separately but track teachers globally
       const scheduleLevels = ['DP', 'MYP', 'PYP'].filter(level => allowedProgrammes.includes(level));
-
+      
       for (const level of scheduleLevels) {
         if (cancelGeneration) throw new Error('Cancelled by user');
         
@@ -1078,13 +1045,12 @@ Now process the user's input and return ONLY the JSON object.`,
                 }
               }
               if (made < hlExtra) console.warn(`HL-only ${subject.name} ${yearGroup}: scheduled ${made}/${hlExtra}`);
-              }
-              }
-              }
-              }
-              } // End of greedy fallback
+            }
+          }
+        }
+      }
 
-              // Add test slots at the end (after classes are scheduled)
+      // Add test slots at the end (after classes are scheduled)
       const testConfig = school?.settings?.test_config || {};
       ['PYP', 'MYP', 'DP1', 'DP2'].forEach(level => {
         const config = testConfig[level] || { tests_per_week: 0, test_duration_minutes: 0 };
