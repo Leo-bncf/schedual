@@ -998,53 +998,54 @@ Now process the user's input and return ONLY the JSON object.`,
 
               for (const day of daysRandom) {
                 if (made >= hlExtra) break;
-                for (const period of periodsRandom) {
-                  if (made >= hlExtra) break;
-                  if (blockedPeriods.has(period)) continue;
+                    for (const period of periodsRandom) {
+                      if (made >= hlExtra) break;
+                      if (blockedPeriods.has(period)) continue;
 
-                  // Students free? Also block DP test times by year group
-                  const studentsFree = (hl.student_ids || []).every(sid => {
-                    const sched = studentSchedules[sid] || [];
-                    if (sched.some(s => s.day === day && s.period === period)) return false;
-                    const student = students.find(st => st.id === sid);
-                    if (student?.year_group && isReserved(student.year_group, day, period)) return false;
-                    if (period > 2) {
-                      const prev1 = sched.find(s => s.day === day && s.period === period - 1);
-                      const prev2 = sched.find(s => s.day === day && s.period === period - 2);
-                      if (prev1 && prev2 && prev1.subjectId === subject.id && prev2.subjectId === subject.id) return false;
-                    }
-                    return true;
-                  });
-                  if (!studentsFree) continue;
+                      // Students free? Also block DP test times by year group
+                      const studentsFree = (hl.student_ids || []).every(sid => {
+                        const sched = studentSchedules[sid] || [];
+                        if (sched.some(s => s.day === day && s.period === period)) return false;
+                        const student = students.find(st => st.id === sid);
+                        if (student?.year_group && isReserved(student.year_group, day, period)) return false;
+                        if (period > 2) {
+                          const prev1 = sched.find(s => s.day === day && s.period === period - 1);
+                          const prev2 = sched.find(s => s.day === day && s.period === period - 2);
+                          if (prev1 && prev2 && prev1.subjectId === subject.id && prev2.subjectId === subject.id) return false;
+                        }
+                        return true;
+                      });
+                      if (!studentsFree) continue;
 
-                  // Teacher free/available?
-                  let teacherFree = true;
-                  let teacherAvailable = true;
-                  if (teacherId) {
-                    teacherFree = !teacherSchedules[teacherId]?.some(s => s.day === day && s.period === period);
-                    const teacher = teachers.find(t => t.id === teacherId);
-                    teacherAvailable = !teacher?.unavailable_slots?.some(u => u.day === day && u.period === period);
-                  }
-                  if (!teacherFree || !teacherAvailable) continue;
+                      // Teacher free/available?
+                      let teacherFree = true;
+                      let teacherAvailable = true;
+                      if (teacherId) {
+                        teacherFree = !teacherSchedules[teacherId]?.some(s => s.day === day && s.period === period);
+                        const teacher = teachers.find(t => t.id === teacherId);
+                        teacherAvailable = !teacher?.unavailable_slots?.some(u => u.day === day && u.period === period);
+                      }
+                      if (!teacherFree || !teacherAvailable) continue;
 
-                  // Hard constraints
-                  let violates = false;
-                  for (const c of hardConstraints) {
-                    if (c.category === 'subject' && c.rule?.subject_id === subject.id) {
-                      if (c.rule?.prohibited_days?.includes(day) || c.rule?.prohibited_slots?.some(s => s.day === day && (!s.period || s.period === period))) { violates = true; break; }
-                    }
-                    if (c.category === 'time' && c.rule?.prohibited_slots?.some(s => s.day === day && s.period === period)) { violates = true; break; }
-                  }
-                  if (violates) continue;
+                      // Hard constraints
+                      let violates = false;
+                      for (const c of hardConstraints) {
+                        if (c.category === 'subject' && c.rule?.subject_id === subject.id) {
+                          if (c.rule?.prohibited_days?.includes(day) || c.rule?.prohibited_slots?.some(s => s.day === day && (!s.period || s.period === period))) { violates = true; break; }
+                        }
+                        if (c.category === 'time' && c.rule?.prohibited_slots?.some(s => s.day === day && s.period === period)) { violates = true; break; }
+                      }
+                      if (violates) continue;
 
-                  // Find room
-                  let assignedRoom = null;
-                  for (const room of preferredRooms) {
-                    const roomFree = !roomSchedules[room.id]?.some(s => s.day === day && s.period === period);
-                    const hasCapacity = !room.capacity || ((hl.student_ids || []).length <= room.capacity);
-                    if (roomFree && hasCapacity) { assignedRoom = room; break; }
-                  }
-                  if (!assignedRoom) continue;
+                      // Find room
+                      let assignedRoom = null;
+                      for (const room of preferredRooms) {
+                        const roomFree = !roomSchedules[room.id]?.some(s => s.day === day && s.period === period);
+                        const hasCapacity = !room.capacity || ((hl.student_ids || []).length <= room.capacity);
+                        if (roomFree && hasCapacity) { assignedRoom = room; break; }
+                      }
+                      if (!assignedRoom) continue;
+                      }
 
                   newSlots.push({
                     school_id: schoolId,
