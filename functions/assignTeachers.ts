@@ -92,9 +92,13 @@ Deno.serve(async (req) => {
       teacherWorkload[assignedTeacher.id] = (teacherWorkload[assignedTeacher.id] || 0) + 1;
 
       // Update teaching group with teacher assignment
-      await base44.asServiceRole.entities.TeachingGroup.update(group.id, {
-        teacher_id: assignedTeacher.id
-      });
+      try {
+        await base44.asServiceRole.entities.TeachingGroup.update(group.id, {
+          teacher_id: assignedTeacher.id
+        });
+      } catch (updateError) {
+        console.error(`Failed to update group ${group.id}:`, updateError.message);
+      }
 
       assignments.push({
         group_id: group.id,

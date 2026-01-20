@@ -187,6 +187,7 @@ Deno.serve(async (req) => {
     };
 
     if (action === 'preview') {
+      console.log('DP Teaching Groups - Preview action');
       return Response.json(result);
     }
 
