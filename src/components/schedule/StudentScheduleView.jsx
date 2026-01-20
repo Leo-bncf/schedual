@@ -155,7 +155,7 @@ export default function StudentScheduleView({ students, slots, groups, subjects,
                       const room = slot ? rooms.find(r => r.id === slot.room_id) : null;
                       const isTestSlot = slot?.notes?.includes('Test');
                       const colorClass = isTestSlot 
-                        ? 'bg-red-100/80 border-red-400' 
+                        ? 'bg-red-200/90 border-red-500' 
                         : (subject ? subjectColors[subject.ib_group || 1] : '');
 
                       return (
