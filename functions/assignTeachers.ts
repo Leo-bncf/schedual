@@ -116,9 +116,11 @@ Deno.serve(async (req) => {
 
   } catch (error) {
     console.error('Teacher assignment error:', error);
+    console.error('Error stack:', error.stack);
     return Response.json({ 
       success: false,
-      error: error.message 
+      error: error.message,
+      details: error.toString()
     }, { status: 500 });
   }
 });
