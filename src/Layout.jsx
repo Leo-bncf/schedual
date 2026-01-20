@@ -118,19 +118,7 @@ export default function Layout({ children, currentPageName }) {
 
         setUser(userData);
 
-        // Ensure JWT reflects latest server-side school assignment
-        try {
-          const meRec = await base44.entities.User.filter({ id: userData.id });
-          const serverSchoolId = meRec?.[0]?.school_id || null;
-          const tokenSchoolId = userData?.school_id || null;
-          if (serverSchoolId !== tokenSchoolId) {
-            alert('Your school access was updated. We\u2019ll refresh your session now.');
-            base44.auth.logout(window.location.pathname);
-            return;
-          }
-        } catch (mismatchErr) {
-          console.error('JWT/school_id sync check failed:', mismatchErr);
-        }
+        // Skip JWT school_id sync check - rely on JWT token from auth.me()
 
         // Check if superadmin FIRST
         const { data } = await base44.functions.invoke('getSuperAdminEmails');
