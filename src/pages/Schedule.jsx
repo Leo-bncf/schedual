@@ -699,13 +699,13 @@ Now process the user's input and return ONLY the JSON object.`,
 
          console.log(`Found ${sharedGroups.length} shared DP groups and ${hlOnlyGroups.length} HL-only groups`);
 
-        // Ensure groups have students (auto-assign if empty)
-        for (const group of levelGroupsFromUpdated) {
+        // Ensure groups have students
+        for (const group of [...sharedGroups, ...hlOnlyGroups]) {
           if (!Array.isArray(group.student_ids) || group.student_ids.length === 0) {
             const matching = students.filter(s => {
               if (s.is_active === false) return false;
               if (s.year_group !== group.year_group) return false;
-              const has = (s.subject_choices || []).some(c => c.subject_id === group.subject_id && (!group.level || c.level === group.level));
+              const has = (s.subject_choices || []).some(c => c.subject_id === group.subject_id);
               return has;
             });
             const ids = matching.map(s => s.id);
@@ -717,14 +717,6 @@ Now process the user's input and return ONLY the JSON object.`,
           }
           if (group.teacher_id && !teacherSchedules[group.teacher_id]) teacherSchedules[group.teacher_id] = [];
         }
-
-        // Group by subject and year_group
-        const dpBySubjectYear = {};
-        levelGroupsFromUpdated.forEach(g => {
-          const key = `${g.subject_id}__${g.year_group}`;
-          if (!dpBySubjectYear[key]) dpBySubjectYear[key] = [];
-          dpBySubjectYear[key].push(g);
-        });
 
         // Helper to shuffle
         const shuffleArray = (array) => {
