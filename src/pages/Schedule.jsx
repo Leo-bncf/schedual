@@ -430,6 +430,15 @@ Now process the user's input and return ONLY the JSON object.`,
       // Step 0: Auto-generate DP teaching groups
       if (cancelGeneration) throw new Error('Cancelled by user');
       
+      // Helper to determine IB level from year_group (needed early)
+      const getIBLevel = (year_group) => {
+        if (!year_group) return null;
+        if (year_group.startsWith('DP')) return 'DP';
+        if (year_group.startsWith('MYP')) return 'MYP';
+        if (year_group.startsWith('PYP')) return 'PYP';
+        return null;
+      };
+
       // DP Step 1: Delete old DP teaching groups
       if (allowedProgrammes.includes('DP')) {
         setGenerationProgress(prev => ({
