@@ -204,12 +204,17 @@ function generateScheduleSlots(groups, schoolId, versionId, config, subjects, te
   teachers.forEach(t => { teacherSchedule[t.id] = []; });
   rooms.forEach(r => { roomSchedule[r.id] = []; });
 
+  // Filter active constraints
+  const hardConstraints = constraints.filter(c => c.is_active && c.type === 'hard') || [];
+
   // Schedule each group
   for (const group of groups) {
     const subject = subjects.find(s => s.id === group.subject_id);
     if (!subject) continue;
 
     const requiredSessions = group.hours_per_week || 0;
+    if (requiredSessions <= 0) continue;
+
     let scheduled = 0;
 
     // Find available teacher
@@ -226,37 +231,65 @@ function generateScheduleSlots(groups, schoolId, versionId, config, subjects, te
       assignedTeacher = candidateTeachers[0];
     }
 
-    // Schedule across the week
-    for (const day of days) {
+    // Try to schedule sessions
+    const dayOrder = [...days].sort(() => Math.random() - 0.5); // randomize for variety
+    for (const day of dayOrder) {
       if (scheduled >= requiredSessions) break;
       for (const period of periods) {
         if (scheduled >= requiredSessions) break;
         if (blockedPeriods.has(period)) continue;
 
-        // Check availability
-        const teacherFree = !assignedTeacher || !teacherSchedule[assignedTeacher.id]?.some(s => s.day === day && s.period === period);
-        const roomAvailable = rooms.length > 0 && rooms.some(r => !roomSchedule[r.id]?.some(s => s.day === day && s.period === period));
-
-        if (teacherFree && roomAvailable) {
-          const room = rooms.find(r => !roomSchedule[r.id]?.some(s => s.day === day && s.period === period));
+        // Check teacher availability
+        let teacherFree = true;
+        if (assignedTeacher) {
+          teacherFree = !teacherSchedule[assignedTeacher.id]?.some(s => s.day === day && s.period === period);
           
+          // Check hard constraints
+          for (const constraint of hardConstraints) {
+            if (constraint.category === 'teacher' && (!constraint.rule?.teacher_id || constraint.rule.teacher_id === assignedTeacher.id)) {
+              if (constraint.rule?.prohibited_days?.includes(day)) {
+                teacherFree = false;
+                break;
+              }
+              if (constraint.rule?.unavailable_slots?.some(u => u.day === day && u.period === period)) {
+                teacherFree = false;
+                break;
+              }
+            }
+          }
+        }
+
+        // Find available room
+        let availableRoom = null;
+        for (const room of rooms) {
+          const roomFree = !roomSchedule[room.id]?.some(s => s.day === day && s.period === period);
+          const hasCapacity = !room.capacity || (group.student_ids?.length || 0) <= room.capacity;
+          if (roomFree && hasCapacity) {
+            availableRoom = room;
+            break;
+          }
+        }
+
+        if (teacherFree && availableRoom) {
           slots.push({
             school_id: schoolId,
             schedule_version: versionId,
             teaching_group_id: group.id,
             teacher_id: assignedTeacher?.id || null,
-            room_id: room?.id || null,
+            room_id: availableRoom.id,
             day,
             period,
             status: assignedTeacher ? 'scheduled' : 'tentative'
           });
 
           if (assignedTeacher) teacherSchedule[assignedTeacher.id].push({ day, period });
-          if (room) roomSchedule[room.id].push({ day, period });
+          roomSchedule[availableRoom.id].push({ day, period });
           scheduled++;
         }
       }
     }
+
+    console.log(`Scheduled ${group.name}: ${scheduled}/${requiredSessions} sessions`);
   }
 
   return slots;
