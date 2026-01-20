@@ -17,47 +17,21 @@ export default function StudentScheduleView({ students, slots, groups, subjects,
 
   const getStudentSlots = (studentId) => {
     const student = students.find(s => s.id === studentId);
-    if (!student) return [];
-    
-    const matched = slots.filter(slot => {
+    return slots.filter(slot => {
       // PYP/MYP: match by classgroup_id
       if (slot.classgroup_id && student?.classgroup_id) {
         return slot.classgroup_id === student.classgroup_id;
       }
       // DP: match by teaching_group_id
-      if (slot.teaching_group_id) {
-        const group = groups.find(g => g.id === slot.teaching_group_id);
-        if (group?.student_ids?.includes(studentId)) return true;
-      }
-      return false;
+      const group = groups.find(g => g.id === slot.teaching_group_id);
+      return group?.student_ids?.includes(studentId);
     });
-    
-    console.log(`Student ${student.full_name}: found ${matched.length} slots out of ${slots.length} total`);
-    if (matched.length === 0 && slots.length > 0) {
-      console.log(`Debug - sample slots:`, slots.slice(0, 3).map(s => ({ 
-        teaching_group_id: s.teaching_group_id,
-        classgroup_id: s.classgroup_id,
-        subject_id: s.subject_id,
-        notes: s.notes
-      })));
-      console.log(`Debug - student:`, { id: student.id, classgroup_id: student.classgroup_id, year_group: student.year_group });
-    }
-    
-    return matched;
   };
 
   const studentSlots = selectedStudent ? getStudentSlots(selectedStudent.id) : [];
 
   const getSlotForPeriod = (day, period) => {
-    // Skip break/lunch rows (not real periods)
-    if (period === 'break' || period === 'lunch') return null;
-    
-    const slot = studentSlots.find(s => s.day === day && s.period === period);
-    if (!slot && period <= 3 && day === 'Monday') {
-      console.log(`No slot for ${day} period ${period}. Sample slots for this day:`, 
-        studentSlots.filter(s => s.day === 'Monday').slice(0, 3));
-    }
-    return slot;
+    return studentSlots.find(s => s.day === day && s.period === period);
   };
 
   const subjectColors = {
@@ -155,21 +129,14 @@ export default function StudentScheduleView({ students, slots, groups, subjects,
                       let level = null;
                       
                       if (slot) {
-                        // Check if this is a core component (TOK/CAS/EE) or test slot (no subject_id)
-                        if (!slot.subject_id) {
-                          if (slot.notes?.includes('Test')) {
-                            subject = { name: 'Test/Assessment', ib_group: null };
-                          } else if (slot.notes?.includes('TOK')) {
-                            subject = { name: 'TOK', ib_group: null };
-                          } else if (slot.notes?.includes('CAS')) {
-                            subject = { name: 'CAS', ib_group: null };
-                          } else if (slot.notes?.includes('EE')) {
-                            subject = { name: 'EE', ib_group: null };
-                          }
-                          teacher = teachers.find(t => t.id === slot.teacher_id);
+                        // Check if this is a test slot (no subject_id, has notes)
+                        if (!slot.subject_id && slot.notes?.includes('Test')) {
+                          // Display as a test period
+                          subject = { name: 'Test/Assessment', ib_group: null };
+                          teacher = null;
                           level = null;
                         }
-                        // Subject with subject_id (PYP/MYP or DP groups)
+                        // PYP/MYP: subject_id and teacher_id are directly on the slot
                         else if (slot.subject_id) {
                           subject = subjects.find(s => s.id === slot.subject_id);
                           teacher = teachers.find(t => t.id === slot.teacher_id);
@@ -187,21 +154,15 @@ export default function StudentScheduleView({ students, slots, groups, subjects,
                       
                       const room = slot ? rooms.find(r => r.id === slot.room_id) : null;
                       const isTestSlot = slot?.notes?.includes('Test');
-                      const isCoreComponent = slot?.notes?.includes('TOK') || slot?.notes?.includes('CAS') || slot?.notes?.includes('EE');
-                      let colorClass = '';
-                      if (isTestSlot) {
-                        colorClass = 'bg-red-200/90 border-red-500';
-                      } else if (isCoreComponent) {
-                        colorClass = 'bg-purple-200/90 border-purple-500';
-                      } else {
-                        colorClass = subject ? subjectColors[subject.ib_group || 1] : '';
-                      }
+                      const colorClass = isTestSlot 
+                        ? 'bg-red-200/90 border-red-500' 
+                        : (subject ? subjectColors[subject.ib_group || 1] : '');
 
                       return (
                         <div key={`${day}-${period}`} className="border-r border-slate-200 last:border-r-0 hover:bg-slate-50/50">
                           {slot && subject && (
                             <div className={`h-full p-2 border-l-4 ${colorClass}`}>
-                              <div className={`font-semibold text-xs leading-tight ${isTestSlot ? 'text-red-900' : isCoreComponent ? 'text-purple-900' : 'text-slate-900'}`}>
+                              <div className={`font-semibold text-xs leading-tight ${isTestSlot ? 'text-red-900' : 'text-slate-900'}`}>
                                 {subject.name}
                               </div>
                               {level && <div className="text-[10px] text-slate-700 leading-tight">{level}</div>}

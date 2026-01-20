@@ -357,17 +357,12 @@ Now process the user's input and return ONLY the JSON object.`,
             lunch_period: schoolConfig.lunch_period,
             break_duration_minutes: schoolConfig.break_duration_minutes,
             break_periods: schoolConfig.break_periods,
-            test_config: schoolConfig.test_config,
-            dp_core_components: school.settings?.dp_core_components || {}
+            test_config: schoolConfig.test_config
           }
         }
       });
-      // Refetch school data after successful save
-      await queryClient.invalidateQueries({ queryKey: ['school', schoolId] });
-      toast.success('Configuration saved successfully!');
     } catch (error) {
       console.error('Failed to save configuration:', error);
-      toast.error('Failed to save configuration');
     } finally {
       setIsSavingConfig(false);
     }
@@ -734,23 +729,20 @@ Now process the user's input and return ONLY the JSON object.`,
         };
 
         // Try to schedule N sessions for a "primary group" and mirror for others
-         const scheduleSharedSessions = async ({ primaryGroup, mirrorGroups, subject, sessions }) => {
-           let created = 0;
-           const preferredRoomsBase = rooms.filter(r => r.is_active);
-           const preferredRooms = subject?.requires_special_room
-             ? preferredRoomsBase.filter(r => r.room_type === subject.requires_special_room)
-             : preferredRoomsBase;
+        const scheduleSharedSessions = async ({ primaryGroup, mirrorGroups, subject, sessions }) => {
+          let created = 0;
+          const preferredRoomsBase = rooms.filter(r => r.is_active);
+          const preferredRooms = subject?.requires_special_room
+            ? preferredRoomsBase.filter(r => r.room_type === subject.requires_special_room)
+            : preferredRoomsBase;
 
-           const daysRandom = shuffleArray(days);
-           const periodsRandomBase = [...periods];
-           let periodsRandom = shuffleArray(periodsRandomBase);
-           if (subject?.preferred_time === 'morning') periodsRandom = [...periods.filter(p => p <= 4), ...periods.filter(p => p > 4)];
-           if (subject?.preferred_time === 'afternoon') periodsRandom = [...periods.filter(p => p > 4), ...periods.filter(p => p <= 4)];
+          const daysRandom = shuffleArray(days);
+          const periodsRandomBase = [...periods];
+          let periodsRandom = shuffleArray(periodsRandomBase);
+          if (subject?.preferred_time === 'morning') periodsRandom = [...periods.filter(p => p <= 4), ...periods.filter(p => p > 4)];
+          if (subject?.preferred_time === 'afternoon') periodsRandom = [...periods.filter(p => p > 4), ...periods.filter(p => p <= 4)];
 
-           // Distribute sessions evenly across days to avoid clustering
-           const maxSessionsPerDay = Math.ceil(sessions / days.length);
-
-           let teacherId = primaryGroup.teacher_id || mirrorGroups.find(m => m.teacher_id)?.teacher_id || null;
+          let teacherId = primaryGroup.teacher_id || mirrorGroups.find(m => m.teacher_id)?.teacher_id || null;
           if (!teacherId) {
             const candidates = teachers
               .filter(t => t.is_active !== false)
@@ -781,9 +773,8 @@ Now process the user's input and return ONLY the JSON object.`,
 
           for (const day of daysRandom) {
             if (created >= sessions) break;
-            let sessionsThisDay = 0;
             for (const period of periodsRandom) {
-              if (created >= sessions || sessionsThisDay >= maxSessionsPerDay) break;
+              if (created >= sessions) break;
               if (blockedPeriods.has(period)) continue;
 
               // Students free? Also block DP test times by year group
@@ -878,11 +869,10 @@ Now process the user's input and return ONLY the JSON object.`,
               });
 
               created++;
-              sessionsThisDay++;
-              }
-              }
-              return created;
-              };
+            }
+          }
+          return created;
+        };
 
         // Build DP reserved test slots by year group (DP1/DP2)
         const dpTestConfig = school?.settings?.test_config || {};
@@ -914,56 +904,72 @@ Now process the user's input and return ONLY the JSON object.`,
 
           const slHours = subject.sl_hours_per_week || schoolConfig.sl_hours || 4;
           const hlHours = subject.hl_hours_per_week || schoolConfig.hl_hours || 6;
-          const periodDuration = school?.period_duration_minutes || 45;
+          const sharedCount = Math.min(slHours, hlHours); // usually SL hours
+          const hlExtra = Math.max(0, hlHours - slHours);
 
-          // Convert hours to periods - use max of 1 to ensure at least 1 period is scheduled
-          const slPeriods = Math.max(1, Math.floor((slHours * 60) / periodDuration));
-          const hlPeriods = Math.max(1, Math.floor((hlHours * 60) / periodDuration));
-
-          const sharedPeriods = Math.min(slPeriods, hlPeriods); // shared sessions (HL join SL)
-          const hlExtra = Math.max(0, hlPeriods - slPeriods); // HL-only extra sessions
-
-          console.log(`${subject.name} ${yearGroup}: SL=${slHours}h/${periodDuration}min=${slPeriods} periods, HL=${hlHours}h/${periodDuration}min=${hlPeriods} periods, shared=${sharedPeriods}, hlExtra=${hlExtra}`);
-
-          if (slGroups.length > 0 && (hlGroups.length > 0 || sharedPeriods > 0)) {
+          if (slGroups.length > 0 && (hlGroups.length > 0 || sharedCount > 0)) {
             // Use first SL group as primary for shared sessions
             const primary = slGroups[0];
             const mirrors = [...hlGroups];
-            const made = await scheduleSharedSessions({ primaryGroup: primary, mirrorGroups: mirrors, subject, sessions: sharedPeriods });
-            if (made < sharedPeriods) {
-              console.warn(`Shared ${subject.name} in ${yearGroup}: scheduled ${made}/${sharedPeriods}`);
+            const made = await scheduleSharedSessions({ primaryGroup: primary, mirrorGroups: mirrors, subject, sessions: sharedCount });
+            if (made < sharedCount) {
+              console.warn(`Shared ${subject.name} in ${yearGroup}: scheduled ${made}/${sharedCount}`);
             }
 
-            // Extra SL groups should NOT get duplicated slots—they attend the same shared sessions
-            // Only schedule slots once for primary SL group; other SL/HL groups mirror silently
+            // If there are additional SL groups beyond the primary, try to align them too (mirror with primary)
+            for (let i = 1; i < slGroups.length; i++) {
+              const extraSL = slGroups[i];
+              // Mirror primary's shared sessions by creating "mirror" copies for this SL group
+              const primarySlots = newSlots.filter(s => s.teaching_group_id === primary.id && s.day && s.period);
+              let mirrored = 0;
+              for (const s of primarySlots) {
+                if (mirrored >= sharedCount) break;
+                // Avoid duplicates for extra SL group
+                const exists = newSlots.some(ns => ns.teaching_group_id === extraSL.id && ns.day === s.day && ns.period === s.period);
+                if (!exists) {
+                  newSlots.push({
+                    school_id: schoolId,
+                    schedule_version: selectedVersion.id,
+                    teaching_group_id: extraSL.id,
+                    room_id: null,
+                    day: s.day,
+                    period: s.period,
+                    status: 'scheduled',
+                    notes: `Shared with ${primary.name}`
+                  });
+                  // Block students too
+                  (extraSL.student_ids || []).forEach(sid => {
+                    if (!studentSchedules[sid]) studentSchedules[sid] = [];
+                    studentSchedules[sid].push({ day: s.day, period: s.period, subjectId: subject.id });
+                  });
+                  mirrored++;
+                }
+              }
+            }
           }
 
           // HL-only extra sessions
           if (hlExtra > 0 && hlGroups.length > 0) {
             for (const hl of hlGroups) {
-            let made = 0;
-            const preferredRoomsBase = rooms.filter(r => r.is_active);
-            const preferredRooms = subject?.requires_special_room
-              ? preferredRoomsBase.filter(r => r.room_type === subject.requires_special_room)
-              : preferredRoomsBase;
+              let made = 0;
+              const preferredRoomsBase = rooms.filter(r => r.is_active);
+              const preferredRooms = subject?.requires_special_room
+                ? preferredRoomsBase.filter(r => r.room_type === subject.requires_special_room)
+                : preferredRoomsBase;
 
-            const daysRandom = shuffleArray(days);
-            let periodsRandom = shuffleArray(periods);
-            if (subject?.preferred_time === 'morning') periodsRandom = [...periods.filter(p => p <= 4), ...periods.filter(p => p > 4)];
-            if (subject?.preferred_time === 'afternoon') periodsRandom = [...periods.filter(p => p > 4), ...periods.filter(p => p <= 4)];
+              const daysRandom = shuffleArray(days);
+              let periodsRandom = shuffleArray(periods);
+              if (subject?.preferred_time === 'morning') periodsRandom = [...periods.filter(p => p <= 4), ...periods.filter(p => p > 4)];
+              if (subject?.preferred_time === 'afternoon') periodsRandom = [...periods.filter(p => p > 4), ...periods.filter(p => p <= 4)];
 
-            // Distribute HL-only sessions evenly across days
-            const maxHLPerDay = Math.ceil(hlExtra / days.length);
+              const teacherId = hl.teacher_id || null;
+              if (teacherId && !teacherSchedules[teacherId]) teacherSchedules[teacherId] = [];
 
-            const teacherId = hl.teacher_id || null;
-            if (teacherId && !teacherSchedules[teacherId]) teacherSchedules[teacherId] = [];
-
-            for (const day of daysRandom) {
-              if (made >= hlExtra) break;
-              let hlThisDay = 0;
-              for (const period of periodsRandom) {
-                if (made >= hlExtra || hlThisDay >= maxHLPerDay) break;
-                if (blockedPeriods.has(period)) continue;
+              for (const day of daysRandom) {
+                if (made >= hlExtra) break;
+                for (const period of periodsRandom) {
+                  if (made >= hlExtra) break;
+                  if (blockedPeriods.has(period)) continue;
 
                   // Students free? Also block DP test times by year group
                   const studentsFree = (hl.student_ids || []).every(sid => {
@@ -1028,89 +1034,13 @@ Now process the user's input and return ONLY the JSON object.`,
                     studentSchedules[sid].push({ day, period, subjectId: subject.id });
                   });
                   made++;
-                  hlThisDay++;
-                  }
-                  }
-                  if (made < hlExtra) console.warn(`HL-only ${subject.name} ${yearGroup}: scheduled ${made}/${hlExtra}`);
-                  }
-                  }
-        }
-      }
-
-      // Add TOK/CAS/EE core components for DP (whole-class blocks)
-      const dpCoreComponents = school?.settings?.dp_core_components || {};
-      const coreComponentsToSchedule = ['tok', 'cas', 'ee'];
-      const dpClassGroups = classGroups.filter(cg => cg.ib_programme === 'DP');
-
-      for (const component of coreComponentsToSchedule) {
-        const config = dpCoreComponents[component];
-        if (!config || config.hours_per_week <= 0) continue;
-
-        const hoursPerWeek = config.hours_per_week || 0;
-        const coordinatorId = config.coordinator_id || null;
-        const sessionsPerWeek = Math.max(1, Math.ceil(hoursPerWeek / (school?.period_duration_minutes || 45)));
-
-        // Schedule for each DP class group
-        for (const dpGroup of dpClassGroups) {
-          let scheduled = 0;
-          const daysRandom = shuffleArray(days);
-          const periodsRandomBase = [...periods];
-          let periodsRandom = shuffleArray(periodsRandomBase);
-
-          for (const day of daysRandom) {
-            if (scheduled >= sessionsPerWeek) break;
-            for (const period of periodsRandom) {
-              if (scheduled >= sessionsPerWeek) break;
-              if (blockedPeriods.has(period)) continue;
-
-              // Check if all students in group are free
-              const studentsFree = (dpGroup.student_ids || []).every(sid => {
-                const sched = studentSchedules[sid] || [];
-                return !sched.some(s => s.day === day && s.period === period);
-              });
-              if (!studentsFree) continue;
-
-              // Check if coordinator is free (if assigned)
-              if (coordinatorId) {
-                const coordFree = !teacherSchedules[coordinatorId]?.some(s => s.day === day && s.period === period);
-                if (!coordFree) continue;
+                }
               }
-
-              // Create core component slot
-              newSlots.push({
-                school_id: schoolId,
-                schedule_version: selectedVersion.id,
-                classgroup_id: dpGroup.id,
-                subject_id: null,
-                teacher_id: coordinatorId || null,
-                room_id: null,
-                day,
-                period,
-                status: coordinatorId ? 'scheduled' : 'tentative',
-                notes: `${component.toUpperCase()} - ${dpGroup.name}`
-              });
-
-              // Block students
-              (dpGroup.student_ids || []).forEach(sid => {
-                if (!studentSchedules[sid]) studentSchedules[sid] = [];
-                studentSchedules[sid].push({ day, period, subjectId: `core_${component}` });
-              });
-
-              // Block coordinator
-              if (coordinatorId) {
-                if (!teacherSchedules[coordinatorId]) teacherSchedules[coordinatorId] = [];
-                teacherSchedules[coordinatorId].push({ day, period });
-              }
-
-              scheduled++;
+              if (made < hlExtra) console.warn(`HL-only ${subject.name} ${yearGroup}: scheduled ${made}/${hlExtra}`);
             }
           }
-          if (scheduled < sessionsPerWeek) {
-            console.warn(`Core component ${component.toUpperCase()} for ${dpGroup.name}: scheduled ${scheduled}/${sessionsPerWeek} sessions`);
-          }
         }
       }
-      console.log(`Added TOK/CAS/EE core component slots`);
 
       // Add test slots at the end (after classes are scheduled)
       const testConfig = school?.settings?.test_config || {};
@@ -1118,12 +1048,12 @@ Now process the user's input and return ONLY the JSON object.`,
         const config = testConfig[level] || { tests_per_week: 0, test_duration_minutes: 0 };
         const testsPerWeek = config.tests_per_week || 0;
         const periodDuration = school?.period_duration_minutes || 45;
-        const testDurationPeriods = Math.max(1, Math.ceil(config.test_duration_minutes / periodDuration));
+        const testDurationPeriods = Math.ceil(config.test_duration_minutes / periodDuration);
 
         if (testsPerWeek > 0) {
           // Use late afternoon periods for tests to minimize disruption
           const testPeriods = periods.slice(-testDurationPeriods);
-          const testDays = days.slice(0, Math.min(testsPerWeek, days.length));
+          const testDays = days.slice(0, testsPerWeek);
 
           testDays.forEach(day => {
             testPeriods.forEach(period => {
@@ -1145,16 +1075,10 @@ Now process the user's input and return ONLY the JSON object.`,
                   status: 'scheduled',
                   notes: `${level} Test/Assessment Slot`
                 });
-
-                // Block all students in this classgroup during test period
-                (cg.student_ids || []).forEach(sid => {
-                  if (!studentSchedules[sid]) studentSchedules[sid] = [];
-                  studentSchedules[sid].push({ day, period, subjectId: `test_${level}` });
-                });
               });
             });
           });
-          console.log(`Added test slots for ${level} (${testDurationPeriods} period blocks on ${testDays.length} days)`);
+          console.log(`Added test slots for ${level} (late afternoon periods on ${testsPerWeek} days)`);
         }
       });
 
@@ -1287,12 +1211,10 @@ Now process the user's input and return ONLY the JSON object.`,
         }
       });
 
-      // Refresh slots and version data - CRITICAL: must be sequential to ensure data loads
+      // Refresh slots and version data
       await queryClient.invalidateQueries({ queryKey: ['scheduleSlots'] });
-      await new Promise(resolve => setTimeout(resolve, 500));
-      await queryClient.invalidateQueries({ queryKey: ['teachingGroups'] });
-      await new Promise(resolve => setTimeout(resolve, 500));
       await queryClient.invalidateQueries({ queryKey: ['scheduleVersions'] });
+      await queryClient.invalidateQueries({ queryKey: ['teachingGroups'] });
       
       setGenerationProgress({
         stage: 'Complete',
@@ -1350,7 +1272,6 @@ Now process the user's input and return ONLY the JSON object.`,
 
     const scheduledStudents = new Set();
     const scheduledTeachers = new Set();
-    const allStudentIds = new Set(students.map(s => s.id));
 
     scheduleSlots.forEach(slot => {
       if (slot.teacher_id) scheduledTeachers.add(slot.teacher_id);
@@ -1358,25 +1279,20 @@ Now process the user's input and return ONLY the JSON object.`,
       // For classgroup-based slots (PYP/MYP)
       if (slot.classgroup_id) {
         const cg = classGroups.find(c => c.id === slot.classgroup_id);
-        cg?.student_ids?.forEach(sid => {
-          if (allStudentIds.has(sid)) scheduledStudents.add(sid);
-        });
+        cg?.student_ids?.forEach(sid => scheduledStudents.add(sid));
       }
       
       // For teaching group-based slots (DP)
       if (slot.teaching_group_id) {
         const tg = teachingGroups.find(g => g.id === slot.teaching_group_id);
-        tg?.student_ids?.forEach(sid => {
-          if (allStudentIds.has(sid)) scheduledStudents.add(sid);
-        });
+        tg?.student_ids?.forEach(sid => scheduledStudents.add(sid));
       }
     });
 
-    const uniqueScheduledStudents = Math.min(scheduledStudents.size, students.length);
-    const coverage = students.length > 0 ? Math.round((uniqueScheduledStudents / students.length) * 100) : 0;
+    const coverage = students.length > 0 ? Math.round((scheduledStudents.size / students.length) * 100) : 0;
 
     return {
-      studentsScheduled: uniqueScheduledStudents,
+      studentsScheduled: scheduledStudents.size,
       teachersAssigned: scheduledTeachers.size,
       totalSlots: scheduleSlots.length,
       coverage

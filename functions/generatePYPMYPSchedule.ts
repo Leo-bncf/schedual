@@ -164,11 +164,9 @@ Deno.serve(async (req) => {
           .filter(s => s.classgroup_id === classGroup.id)
           .map(s => ({ day: s.day, period: s.period }));
 
-        // Determine periods needed based on subject hours (convert hours to periods)
-         const hoursPerWeek = subject.pyp_myp_hours_per_week || 4;
-         const minutesPerPeriod = school?.period_duration_minutes || 45;
-         const minutesPerWeek = hoursPerWeek * 60;
-         const periodsNeeded = Math.ceil(minutesPerWeek / minutesPerPeriod);
+        // Determine periods needed based on subject hours
+        const hoursPerWeek = subject.pyp_myp_hours_per_week || 4;
+        const periodsNeeded = Math.ceil(hoursPerWeek);
         
         // Distribute across the week with variety
         const daysToUse = Math.min(periodsNeeded, 5);
