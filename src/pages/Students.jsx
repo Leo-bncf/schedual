@@ -268,9 +268,26 @@ export default function Students() {
       normalizeYearGroup(s.year_group) === normalizeYearGroup(yearFilter);
     
     return matchesSearch && matchesYear;
-  });
+    });
 
-  const getSubjectInfo = (choices) => {
+    const handleServiceVerify = async () => {
+    const { data } = await base44.functions.invoke('diagnoseStudents', {});
+    const totals = data?.totals || {};
+    alert(`Service-role verify → Students: ${totals.students_total || 0}, ClassGroups: ${totals.classgroups_total || 0}, Subjects: ${totals.subjects_total || 0}`);
+    };
+
+    const handleAttachVisible = async () => {
+    const ids = filteredStudents.map(s => s.id).filter(Boolean);
+    if (ids.length === 0) { alert('No students in current view.'); return; }
+    if (!confirm(`Re-tag ${ids.length} students to your school?`)) return;
+    const { data } = await base44.functions.invoke('retagStudentsToSchool', { studentIds: ids });
+    alert(`Re-tagged ${data?.updated || 0} students. Skipped: ${data?.skipped || 0}`);
+    queryClient.invalidateQueries({ queryKey: ['students', schoolId] });
+    queryClient.invalidateQueries({ queryKey: ['students'] });
+    queryClient.invalidateQueries({ queryKey: ['classGroups'] });
+    };
+
+    const getSubjectInfo = (choices) => {
     if (!choices || !Array.isArray(choices)) return { hl: 0, sl: 0 };
     const hl = choices.filter(c => c.level === 'HL').length;
     const sl = choices.filter(c => c.level === 'SL').length;
@@ -1014,6 +1031,14 @@ Return ONLY students array, no other text.`,
                 </>
               )}
             </Button>
+
+            <Button type="button" variant="outline" onClick={handleServiceVerify}>
+              Verify
+            </Button>
+            <Button type="button" variant="outline" onClick={handleAttachVisible}>
+              Attach Visible
+            </Button>
+
             <motion.div whileHover={{ scale: 1.05 }} whileTap={{ scale: 0.95 }}>
               <Button onClick={() => setIsDialogOpen(true)} className="bg-gradient-to-r from-indigo-600 to-violet-600 hover:from-indigo-700 hover:to-violet-700 shadow-lg">
                 <Plus className="w-4 h-4 mr-2" />
