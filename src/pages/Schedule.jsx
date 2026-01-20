@@ -872,14 +872,8 @@ Now process the user's input and return ONLY the JSON object.`,
         });
         const isReserved = (yearGroup, day, period) => reservedDPTests[yearGroup]?.has?.(makeKey(day, period));
 
-        // Schedule each DP teaching group independently for its required hours
-        const dpGroups = levelGroupsFromUpdated.filter(g => {
-          if (g.is_active === false) return false;
-          if (!g.subject_id) return false;
-          return getIBLevel(g.year_group) === 'DP';
-        });
-
-        for (const group of dpGroups) {
+        // DP Step 1: Schedule SHARED groups first (SL+HL together)
+        for (const group of sharedGroups) {
           const subject = subjects.find(s => s.id === group.subject_id);
           if (!subject) continue;
 
@@ -888,6 +882,19 @@ Now process the user's input and return ONLY the JSON object.`,
             console.warn(`${group.name}: scheduled ${scheduled}/${group.hours_per_week} hours`);
           }
         }
+        console.log(`✓ Scheduled ${sharedGroups.length} shared (SL+HL) groups`);
+
+        // DP Step 2: Schedule HL-ONLY groups (HL extension sessions)
+        for (const group of hlOnlyGroups) {
+          const subject = subjects.find(s => s.id === group.subject_id);
+          if (!subject) continue;
+
+          const scheduled = await scheduleGroupHours(group, subject);
+          if (scheduled < (group.hours_per_week || 0)) {
+            console.warn(`${group.name}: scheduled ${scheduled}/${group.hours_per_week} hours`);
+          }
+        }
+        console.log(`✓ Scheduled ${hlOnlyGroups.length} HL-only extension groups`);
       }
 
       // Add test slots at the end (after classes are scheduled) - one slot per level per day
