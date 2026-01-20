@@ -902,6 +902,14 @@ Now process the user's input and return ONLY the JSON object.`,
           const slGroups = groups.filter(g => g.level === 'SL');
           const hlGroups = groups.filter(g => g.level === 'HL');
 
+          // Deduplicate: Remove students from HL groups if they're already in SL groups
+          const slStudentIds = new Set(slGroups.flatMap(g => g.student_ids || []));
+          hlGroups.forEach(hlGroup => {
+            hlGroup.student_ids = (hlGroup.student_ids || []).filter(sid => !slStudentIds.has(sid));
+          });
+          // Remove empty HL groups
+          const nonEmptyHLGroups = hlGroups.filter(g => (g.student_ids || []).length > 0);
+
           const slHours = subject.sl_hours_per_week || schoolConfig.sl_hours || 4;
           const hlHours = subject.hl_hours_per_week || schoolConfig.hl_hours || 6;
           const sharedCount = Math.min(slHours, hlHours); // usually SL hours
