@@ -915,10 +915,10 @@ Now process the user's input and return ONLY the JSON object.`,
           const sharedCount = Math.min(slHours, hlHours); // usually SL hours
           const hlExtra = Math.max(0, hlHours - slHours);
 
-          if (slGroups.length > 0 && (hlGroups.length > 0 || sharedCount > 0)) {
+          if (slGroups.length > 0 && (nonEmptyHLGroups.length > 0 || sharedCount > 0)) {
             // Use first SL group as primary for shared sessions
             const primary = slGroups[0];
-            const mirrors = [...hlGroups];
+            const mirrors = [...nonEmptyHLGroups];
             const made = await scheduleSharedSessions({ primaryGroup: primary, mirrorGroups: mirrors, subject, sessions: sharedCount });
             if (made < sharedCount) {
               console.warn(`Shared ${subject.name} in ${yearGroup}: scheduled ${made}/${sharedCount}`);
