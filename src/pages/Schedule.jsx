@@ -810,18 +810,28 @@ Now process the user's input and return ONLY the JSON object.`,
               let teacherAvailable = true;
               if (teacherId) {
                 teacherFree = !teacherSchedules[teacherId]?.some(s => s.day === day && s.period === period);
+                if (!teacherFree) {
+                  failReasons.teacherBusy++;
+                }
                 const teacher = teachers.find(t => t.id === teacherId);
                 teacherAvailable = !teacher?.unavailable_slots?.some(u => u.day === day && u.period === period);
+                if (!teacherAvailable) {
+                  failReasons.teacherUnavail++;
+                }
                 const teacherConstraints = hardConstraints.filter(c => c.category === 'teacher' && (!c.rule?.teacher_id || c.rule?.teacher_id === teacherId));
                 for (const c of teacherConstraints) {
                   if (c.rule?.max_consecutive_periods) {
                     const consecutive = teacherSchedules[teacherId]
                       ?.filter(s => s.day === day && s.period < period && s.period >= period - c.rule.max_consecutive_periods)
                       .length || 0;
-                    if (consecutive >= c.rule.max_consecutive_periods) teacherFree = false;
+                    if (consecutive >= c.rule.max_consecutive_periods) {
+                      teacherFree = false;
+                      failReasons.teacherConstraint++;
+                    }
                   }
                   if (c.rule?.prohibited_days?.includes(day) || c.rule?.unavailable_slots?.some(u => u.day === day && u.period === period)) {
                     teacherAvailable = false;
+                    failReasons.teacherConstraint++;
                   }
                 }
               }
