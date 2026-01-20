@@ -1043,43 +1043,31 @@ Now process the user's input and return ONLY the JSON object.`,
         }
       }
 
-      // Add test slots at the end (after classes are scheduled)
+      // Add test slots at the end (after classes are scheduled) - one slot per level per day
       const testConfig = school?.settings?.test_config || {};
       ['PYP', 'MYP', 'DP1', 'DP2'].forEach(level => {
         const config = testConfig[level] || { tests_per_week: 0, test_duration_minutes: 0 };
         const testsPerWeek = config.tests_per_week || 0;
-        const periodDuration = school?.period_duration_minutes || 45;
-        const testDurationPeriods = Math.ceil(config.test_duration_minutes / periodDuration);
 
         if (testsPerWeek > 0) {
           // Use late afternoon periods for tests to minimize disruption
-          const testPeriods = periods.slice(-testDurationPeriods);
-          const testDays = days.slice(0, testsPerWeek);
+          const testDays = days.slice(0, Math.min(testsPerWeek, days.length));
 
-          testDays.forEach(day => {
-            testPeriods.forEach(period => {
-              if (blockedPeriods.has(period)) return;
-              // Create a test slot for every relevant ClassGroup so it appears in class views
-              const targetClassGroups = level === 'PYP' || level === 'MYP'
-                ? classGroups.filter(cg => cg.ib_programme === level)
-                : classGroups.filter(cg => cg.year_group === level);
-              targetClassGroups.forEach(cg => {
-                newSlots.push({
-                  school_id: schoolId,
-                  schedule_version: selectedVersion.id,
-                  classgroup_id: cg.id,
-                  subject_id: null,
-                  teacher_id: null,
-                  room_id: null,
-                  day,
-                  period,
-                  status: 'scheduled',
-                  notes: `${level} Test/Assessment Slot`
-                });
+          testDays.forEach((day, dayIndex) => {
+            const testPeriod = periods[periods.length - 1]; // Last period for tests
+            if (!blockedPeriods.has(testPeriod)) {
+              // Create ONE marker slot per level per day (not per classgroup)
+              newSlots.push({
+                school_id: schoolId,
+                schedule_version: selectedVersion.id,
+                day,
+                period: testPeriod,
+                status: 'scheduled',
+                notes: `${level} Test/Assessment Day (${dayIndex + 1}/${testsPerWeek})`
               });
-            });
+            }
           });
-          console.log(`Added test slots for ${level} (late afternoon periods on ${testsPerWeek} days)`);
+          console.log(`Added ${testsPerWeek} test slots for ${level} (${testDays.length} days)`);
         }
       });
 
