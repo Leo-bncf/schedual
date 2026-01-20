@@ -58,6 +58,10 @@ Deno.serve(async (req) => {
       .filter(s => s.ib_programme === 'DP' && programmes.includes('DP'))
       .forEach(student => {
         const choices = Array.isArray(student.subject_choices) ? student.subject_choices : [];
+        if (choices.length === 0) {
+          console.warn(`Student ${student.full_name} has no subject choices`);
+          return;
+        }
         choices.forEach(choice => {
           if (!choice.subject_id) return;
           const subject = subjects.find(s => s.id === choice.subject_id);
