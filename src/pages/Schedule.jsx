@@ -845,7 +845,10 @@ Now process the user's input and return ONLY the JSON object.`,
                 }
                 if (c.category === 'time' && c.rule?.prohibited_slots?.some(s => s.day === day && s.period === period)) { violates = true; break; }
               }
-              if (violates) continue;
+              if (violates) {
+                failReasons.hardConstraint++;
+                continue;
+              }
 
               // Find a room for primary (mirror slots will have no room to avoid double booking)
               let assignedRoom = null;
@@ -854,7 +857,10 @@ Now process the user's input and return ONLY the JSON object.`,
                 const hasCapacity = !room.capacity || ((primaryGroup.student_ids || []).length <= room.capacity);
                 if (roomFree && hasCapacity) { assignedRoom = room; break; }
               }
-              if (!assignedRoom) continue;
+              if (!assignedRoom) {
+                failReasons.noRoom++;
+                continue;
+              }
 
               // Create primary slot (with teacher and room)
               newSlots.push({
