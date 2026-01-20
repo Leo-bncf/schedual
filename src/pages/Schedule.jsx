@@ -1043,11 +1043,12 @@ Now process the user's input and return ONLY the JSON object.`,
                     studentSchedules[sid].push({ day, period, subjectId: subject.id });
                   });
                   made++;
-                }
-              }
-              if (made < hlExtra) console.warn(`HL-only ${subject.name} ${yearGroup}: scheduled ${made}/${hlExtra}`);
-            }
-          }
+                  hlThisDay++;
+                  }
+                  }
+                  if (made < hlExtra) console.warn(`HL-only ${subject.name} ${yearGroup}: scheduled ${made}/${hlExtra}`);
+                  }
+                  }
         }
       }
 
