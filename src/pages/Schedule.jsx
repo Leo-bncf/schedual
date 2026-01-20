@@ -956,25 +956,29 @@ Now process the user's input and return ONLY the JSON object.`,
           // HL-only extra sessions
           if (hlExtra > 0 && hlGroups.length > 0) {
             for (const hl of hlGroups) {
-              let made = 0;
-              const preferredRoomsBase = rooms.filter(r => r.is_active);
-              const preferredRooms = subject?.requires_special_room
-                ? preferredRoomsBase.filter(r => r.room_type === subject.requires_special_room)
-                : preferredRoomsBase;
+            let made = 0;
+            const preferredRoomsBase = rooms.filter(r => r.is_active);
+            const preferredRooms = subject?.requires_special_room
+              ? preferredRoomsBase.filter(r => r.room_type === subject.requires_special_room)
+              : preferredRoomsBase;
 
-              const daysRandom = shuffleArray(days);
-              let periodsRandom = shuffleArray(periods);
-              if (subject?.preferred_time === 'morning') periodsRandom = [...periods.filter(p => p <= 4), ...periods.filter(p => p > 4)];
-              if (subject?.preferred_time === 'afternoon') periodsRandom = [...periods.filter(p => p > 4), ...periods.filter(p => p <= 4)];
+            const daysRandom = shuffleArray(days);
+            let periodsRandom = shuffleArray(periods);
+            if (subject?.preferred_time === 'morning') periodsRandom = [...periods.filter(p => p <= 4), ...periods.filter(p => p > 4)];
+            if (subject?.preferred_time === 'afternoon') periodsRandom = [...periods.filter(p => p > 4), ...periods.filter(p => p <= 4)];
 
-              const teacherId = hl.teacher_id || null;
-              if (teacherId && !teacherSchedules[teacherId]) teacherSchedules[teacherId] = [];
+            // Distribute HL-only sessions evenly across days
+            const maxHLPerDay = Math.ceil(hlExtra / days.length);
 
-              for (const day of daysRandom) {
-                if (made >= hlExtra) break;
-                for (const period of periodsRandom) {
-                  if (made >= hlExtra) break;
-                  if (blockedPeriods.has(period)) continue;
+            const teacherId = hl.teacher_id || null;
+            if (teacherId && !teacherSchedules[teacherId]) teacherSchedules[teacherId] = [];
+
+            for (const day of daysRandom) {
+              if (made >= hlExtra) break;
+              let hlThisDay = 0;
+              for (const period of periodsRandom) {
+                if (made >= hlExtra || hlThisDay >= maxHLPerDay) break;
+                if (blockedPeriods.has(period)) continue;
 
                   // Students free? Also block DP test times by year group
                   const studentsFree = (hl.student_ids || []).every(sid => {
