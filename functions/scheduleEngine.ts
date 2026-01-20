@@ -165,8 +165,8 @@ Deno.serve(async (req) => {
       schedule_version_id,
       schoolConfig,
       subjects,
-      teachers,
-      rooms,
+      activeTeachers,
+      activeRooms,
       activeStudents,
       constraints
     );
