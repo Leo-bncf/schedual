@@ -147,13 +147,18 @@ export default function StudentScheduleView({ students, slots, groups, subjects,
                       }
                       
                       const room = slot ? rooms.find(r => r.id === slot.room_id) : null;
-                      const colorClass = subject ? subjectColors[subject.ib_group || 1] : '';
+                      const isTestSlot = slot?.notes?.includes('Test');
+                      const colorClass = isTestSlot 
+                        ? 'bg-red-100/80 border-red-400' 
+                        : (subject ? subjectColors[subject.ib_group || 1] : '');
 
                       return (
                         <div key={`${day}-${period}`} className="border-r border-slate-200 last:border-r-0 hover:bg-slate-50/50">
                           {slot && subject && (
                             <div className={`h-full p-2 border-l-4 ${colorClass}`}>
-                              <div className="font-semibold text-xs text-slate-900 leading-tight">{subject.name}</div>
+                              <div className={`font-semibold text-xs leading-tight ${isTestSlot ? 'text-red-900' : 'text-slate-900'}`}>
+                                {subject.name}
+                              </div>
                               {level && <div className="text-[10px] text-slate-700 leading-tight">{level}</div>}
                               {teacher && <div className="text-[10px] text-slate-600 mt-0.5">{teacher.full_name}</div>}
                               {room && <div className="text-[10px] text-slate-500">{room.name}</div>}
