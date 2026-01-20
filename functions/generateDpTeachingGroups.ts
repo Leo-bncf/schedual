@@ -14,8 +14,8 @@ Deno.serve(async (req) => {
     const schoolId = await getUserSchoolId(base44);
 
     const [students, subjects] = await Promise.all([
-      base44.entities.Student.filter({ school_id: schoolId }),
-      base44.entities.Subject.filter({ school_id: schoolId })
+      base44.asServiceRole.entities.Student.filter({ school_id: schoolId }),
+      base44.asServiceRole.entities.Subject.filter({ school_id: schoolId })
     ]);
 
     // Map subjects for quick lookup
