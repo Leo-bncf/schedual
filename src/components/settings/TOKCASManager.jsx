@@ -36,23 +36,17 @@ export default function TOKCASManager({ schoolId }) {
   });
 
   const [formData, setFormData] = useState({
-    tok_hours_per_week: 2,
-    tok_teacher_id: '',
-    cas_hours_per_week: 1,
-    cas_coordinator_id: '',
-    ee_hours_per_week: 1,
-    ee_coordinator_id: '',
+    dp_core_components: {
+      tok: { hours_per_week: 2, coordinator_id: '' },
+      cas: { hours_per_week: 1, coordinator_id: '' },
+      ee: { hours_per_week: 1, coordinator_id: '' },
+    }
   });
 
   React.useEffect(() => {
-    if (school?.settings) {
+    if (school?.settings?.dp_core_components) {
       setFormData({
-        tok_hours_per_week: school.settings.tok_hours_per_week || 2,
-        tok_teacher_id: school.settings.tok_teacher_id || '',
-        cas_hours_per_week: school.settings.cas_hours_per_week || 1,
-        cas_coordinator_id: school.settings.cas_coordinator_id || '',
-        ee_hours_per_week: school.settings.ee_hours_per_week || 1,
-        ee_coordinator_id: school.settings.ee_coordinator_id || '',
+        dp_core_components: school.settings.dp_core_components
       });
     }
   }, [school]);
