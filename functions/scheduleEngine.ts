@@ -113,6 +113,19 @@ Deno.serve(async (req) => {
       const studentIds = Array.from(groupData.student_ids);
       if (studentIds.length === 0) return;
 
+      // Find best teacher for this group
+      const subject = subjects.find(s => s.id === groupData.subject_id);
+      let bestTeacher = null;
+      if (subject) {
+        const candidates = activeTeachers
+          .filter(t => {
+            const quals = Array.isArray(t.qualifications) ? t.qualifications : [];
+            return quals.some(q => q.subject_id === subject.id);
+          })
+          .sort((a, b) => (a.subjects?.length || 0) - (b.subjects?.length || 0));
+        bestTeacher = candidates[0];
+      }
+
       groupsToCreate.push({
         school_id: schoolId,
         name: `${groupData.subject_name} (${groupData.group_type === 'shared' ? 'SL+HL' : 'HL'}) - ${groupData.year_group}`,
@@ -121,6 +134,7 @@ Deno.serve(async (req) => {
         year_group: groupData.year_group,
         group_type: groupData.group_type,
         student_ids: studentIds,
+        teacher_id: bestTeacher?.id || null,
         hours_per_week: groupData.hours_per_week,
         is_active: true,
         min_students: 1,
@@ -128,7 +142,7 @@ Deno.serve(async (req) => {
       });
     });
 
-    console.log(`Generated ${groupsToCreate.length} DP groups`);
+    console.log(`Generated ${groupsToCreate.length} DP groups with teacher assignments`);
 
     // Step 2: Create groups
     let createdGroups = [];
