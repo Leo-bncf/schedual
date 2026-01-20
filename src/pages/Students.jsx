@@ -148,22 +148,32 @@ export default function Students() {
   });
 
   const createMutation = useMutation({
-    mutationFn: (data) => {
+    mutationFn: async (data) => {
       if (!schoolId) throw new Error('No school assigned');
-      return base44.entities.Student.create({ ...data, school_id: schoolId });
+      const created = await base44.entities.Student.create({ ...data, school_id: schoolId });
+      return created;
     },
-    onSuccess: () => {
+    onSuccess: (created) => {
+      alert(`Saved student ${created?.full_name || ''} (#${created?.id}) in school ${schoolId}`);
+      queryClient.invalidateQueries({ queryKey: ['students', schoolId] });
       queryClient.invalidateQueries({ queryKey: ['students'] });
       resetForm();
     },
+    onError: (error) => {
+      alert(`Save failed: ${error?.message || 'Unknown error'}`);
+    }
   });
 
   const updateMutation = useMutation({
     mutationFn: ({ id, data }) => base44.entities.Student.update(id, data),
     onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['students', schoolId] });
       queryClient.invalidateQueries({ queryKey: ['students'] });
       resetForm();
     },
+    onError: (error) => {
+      alert(`Update failed: ${error?.message || 'Unknown error'}`);
+    }
   });
 
   const deleteMutation = useMutation({
