@@ -598,7 +598,7 @@ Now process the user's input and return ONLY the JSON object.`,
         if (!g.hours_per_week || g.hours_per_week <= 0) return;
 
         const level = getIBLevel(g.year_group);
-        if (level) {
+        if (level && level === 'DP') {
           groupsByLevel[level].push(g);
         }
       });
