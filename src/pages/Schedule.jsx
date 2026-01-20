@@ -1052,18 +1052,93 @@ Now process the user's input and return ONLY the JSON object.`,
         }
       }
 
+      // Add TOK/CAS/EE core components for DP (whole-class blocks)
+      const dpCoreComponents = school?.settings?.dp_core_components || {};
+      const coreComponentsToSchedule = ['tok', 'cas', 'ee'];
+      const dpClassGroups = classGroups.filter(cg => cg.ib_programme === 'DP');
+
+      for (const component of coreComponentsToSchedule) {
+        const config = dpCoreComponents[component];
+        if (!config || config.hours_per_week <= 0) continue;
+
+        const hoursPerWeek = config.hours_per_week || 0;
+        const coordinatorId = config.coordinator_id || null;
+        const sessionsPerWeek = Math.max(1, Math.ceil(hoursPerWeek / (school?.period_duration_minutes || 45)));
+
+        // Schedule for each DP class group
+        for (const dpGroup of dpClassGroups) {
+          let scheduled = 0;
+          const daysRandom = shuffleArray(days);
+          const periodsRandomBase = [...periods];
+          let periodsRandom = shuffleArray(periodsRandomBase);
+
+          for (const day of daysRandom) {
+            if (scheduled >= sessionsPerWeek) break;
+            for (const period of periodsRandom) {
+              if (scheduled >= sessionsPerWeek) break;
+              if (blockedPeriods.has(period)) continue;
+
+              // Check if all students in group are free
+              const studentsFree = (dpGroup.student_ids || []).every(sid => {
+                const sched = studentSchedules[sid] || [];
+                return !sched.some(s => s.day === day && s.period === period);
+              });
+              if (!studentsFree) continue;
+
+              // Check if coordinator is free (if assigned)
+              if (coordinatorId) {
+                const coordFree = !teacherSchedules[coordinatorId]?.some(s => s.day === day && s.period === period);
+                if (!coordFree) continue;
+              }
+
+              // Create core component slot
+              newSlots.push({
+                school_id: schoolId,
+                schedule_version: selectedVersion.id,
+                classgroup_id: dpGroup.id,
+                subject_id: null,
+                teacher_id: coordinatorId || null,
+                room_id: null,
+                day,
+                period,
+                status: coordinatorId ? 'scheduled' : 'tentative',
+                notes: `${component.toUpperCase()} - ${dpGroup.name}`
+              });
+
+              // Block students
+              (dpGroup.student_ids || []).forEach(sid => {
+                if (!studentSchedules[sid]) studentSchedules[sid] = [];
+                studentSchedules[sid].push({ day, period, subjectId: `core_${component}` });
+              });
+
+              // Block coordinator
+              if (coordinatorId) {
+                if (!teacherSchedules[coordinatorId]) teacherSchedules[coordinatorId] = [];
+                teacherSchedules[coordinatorId].push({ day, period });
+              }
+
+              scheduled++;
+            }
+          }
+          if (scheduled < sessionsPerWeek) {
+            console.warn(`Core component ${component.toUpperCase()} for ${dpGroup.name}: scheduled ${scheduled}/${sessionsPerWeek} sessions`);
+          }
+        }
+      }
+      console.log(`Added TOK/CAS/EE core component slots`);
+
       // Add test slots at the end (after classes are scheduled)
       const testConfig = school?.settings?.test_config || {};
       ['PYP', 'MYP', 'DP1', 'DP2'].forEach(level => {
         const config = testConfig[level] || { tests_per_week: 0, test_duration_minutes: 0 };
         const testsPerWeek = config.tests_per_week || 0;
         const periodDuration = school?.period_duration_minutes || 45;
-        const testDurationPeriods = Math.ceil(config.test_duration_minutes / periodDuration);
+        const testDurationPeriods = Math.max(1, Math.ceil(config.test_duration_minutes / periodDuration));
 
         if (testsPerWeek > 0) {
           // Use late afternoon periods for tests to minimize disruption
           const testPeriods = periods.slice(-testDurationPeriods);
-          const testDays = days.slice(0, testsPerWeek);
+          const testDays = days.slice(0, Math.min(testsPerWeek, days.length));
 
           testDays.forEach(day => {
             testPeriods.forEach(period => {
@@ -1088,7 +1163,7 @@ Now process the user's input and return ONLY the JSON object.`,
               });
             });
           });
-          console.log(`Added test slots for ${level} (late afternoon periods on ${testsPerWeek} days)`);
+          console.log(`Added test slots for ${level} (${testDurationPeriods} period blocks on ${testDays.length} days)`);
         }
       });
 
