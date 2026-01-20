@@ -238,18 +238,20 @@ function generateScheduleSlots(groups, schoolId, versionId, config, subjects, te
 
     let scheduled = 0;
 
-    // Find available teacher
-    let assignedTeacher = null;
-    const candidateTeachers = teachers
-      .filter(t => t.is_active !== false)
-      .filter(t => {
-        const quals = Array.isArray(t.qualifications) ? t.qualifications : [];
-        return quals.some(q => q.subject_id === group.subject_id);
-      })
-      .sort((a, b) => (teacherSchedule[a.id]?.length || 0) - (teacherSchedule[b.id]?.length || 0));
+    // Use teacher already assigned to group, or find one
+    let assignedTeacher = group.teacher_id ? teachers.find(t => t.id === group.teacher_id) : null;
+    if (!assignedTeacher) {
+      const candidateTeachers = teachers
+        .filter(t => t.is_active !== false)
+        .filter(t => {
+          const quals = Array.isArray(t.qualifications) ? t.qualifications : [];
+          return quals.some(q => q.subject_id === group.subject_id);
+        })
+        .sort((a, b) => (teacherSchedule[a.id]?.length || 0) - (teacherSchedule[b.id]?.length || 0));
 
-    if (candidateTeachers.length > 0) {
-      assignedTeacher = candidateTeachers[0];
+      if (candidateTeachers.length > 0) {
+        assignedTeacher = candidateTeachers[0];
+      }
     }
 
     // Try to schedule sessions
