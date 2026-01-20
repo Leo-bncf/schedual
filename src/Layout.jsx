@@ -118,19 +118,8 @@ export default function Layout({ children, currentPageName }) {
 
         setUser(userData);
 
-        // Ensure JWT reflects latest server-side school assignment
-        try {
-          const meRec = await base44.entities.User.filter({ id: userData.id });
-          const serverSchoolId = meRec?.[0]?.school_id || null;
-          const tokenSchoolId = userData?.school_id || null;
-          if (serverSchoolId !== tokenSchoolId) {
-            alert('Your school access was updated. We\u2019ll refresh your session now.');
-            base44.auth.logout(window.location.pathname);
-            return;
-          }
-        } catch (mismatchErr) {
-          console.error('JWT/school_id sync check failed:', mismatchErr);
-        }
+        // JWT already has school_id from token - no need to check User entity
+        // (User.filter would fail due to permissions)
 
         // Check if superadmin FIRST
         const { data } = await base44.functions.invoke('getSuperAdminEmails');
@@ -143,25 +132,17 @@ export default function Layout({ children, currentPageName }) {
           return;
         }
 
-        // If user has no school yet, first hydrate from User entity (immediate effect after admin assignment). If still none, attempt reconcile with Stripe.
+        // If user has no school yet, attempt reconcile with Stripe
         if (!userData?.school_id) {
           try {
-            const meRec = await base44.entities.User.filter({ id: userData.id });
-            const derivedSchoolId = meRec?.[0]?.school_id;
-            if (derivedSchoolId) {
-              alert('Your account was linked to a school. We\u2019ll refresh your session now.');
+            const { data: rec } = await base44.functions.invoke('reconcileSubscription');
+            if (rec?.assigned && rec.schoolId) {
+              alert('Subscription detected and your school has been linked. We\u2019ll refresh your session now.');
               base44.auth.logout(window.location.pathname);
               return;
-            } else {
-              const { data: rec } = await base44.functions.invoke('reconcileSubscription');
-              if (rec?.assigned && rec.schoolId) {
-                alert('Subscription detected and your school has been linked. We\u2019ll refresh your session now.');
-                base44.auth.logout(window.location.pathname);
-                return;
-              }
             }
           } catch (e) {
-            console.error('Hydration/reconcile step error:', e);
+            console.error('Reconciliation error:', e);
           }
         }
 
