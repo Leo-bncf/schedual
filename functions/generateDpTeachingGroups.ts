@@ -144,8 +144,8 @@ Deno.serve(async (req) => {
         return Response.json({ ...result, created: 0 });
       }
 
-      // Create as the user
-      await base44.entities.TeachingGroup.bulkCreate(toCreate);
+      // Create as service role
+      await base44.asServiceRole.entities.TeachingGroup.bulkCreate(toCreate);
       return Response.json({ ...result, created: toCreate.length });
     }
 
