@@ -81,13 +81,16 @@ export default function StudentScheduleView({ students, slots, groups, subjects,
                 // Break row
                 if (period === 'break') {
                   return (
-                    <div key="break" className="grid grid-cols-[80px_repeat(5,1fr)] border-b border-sky-200 bg-gradient-to-r from-sky-50 to-blue-50" style={{ minHeight: '40px' }}>
-                      <div className="p-2 bg-sky-100 border-r border-sky-200 flex items-center justify-center">
-                        <div className="text-xs font-semibold text-sky-800">☕ Break</div>
+                    <div key="break" className="grid grid-cols-[80px_repeat(5,1fr)] border-b-2 border-sky-300 bg-gradient-to-r from-sky-100 to-blue-100" style={{ minHeight: '50px' }}>
+                      <div className="p-3 bg-sky-200 border-r-2 border-sky-300 flex items-center justify-center">
+                        <div className="text-sm font-bold text-sky-900">☕ Break</div>
                       </div>
                       {DAYS.map(day => (
-                        <div key={`${day}-break`} className="border-r border-sky-200 last:border-r-0 flex items-center justify-center">
-                          <span className="text-xs text-sky-700 font-medium">12:15 - 12:30</span>
+                        <div key={`${day}-break`} className="border-r-2 border-sky-300 last:border-r-0 flex items-center justify-center bg-sky-50">
+                          <div className="text-center">
+                            <div className="text-xs font-bold text-sky-900">BREAK</div>
+                            <div className="text-[10px] text-sky-700 mt-0.5">12:15 - 12:30</div>
+                          </div>
                         </div>
                       ))}
                     </div>
@@ -97,13 +100,16 @@ export default function StudentScheduleView({ students, slots, groups, subjects,
                 // Lunch break row
                 if (period === 'lunch') {
                   return (
-                    <div key="lunch" className="grid grid-cols-[80px_repeat(5,1fr)] border-b-2 border-amber-200 bg-gradient-to-r from-amber-50 to-orange-50" style={{ minHeight: '45px' }}>
-                      <div className="p-2 bg-amber-100 border-r border-amber-200 flex items-center justify-center">
-                        <div className="text-xs font-semibold text-amber-800">🍽️ Lunch</div>
+                    <div key="lunch" className="grid grid-cols-[80px_repeat(5,1fr)] border-b-2 border-amber-300 bg-gradient-to-r from-amber-100 to-orange-100" style={{ minHeight: '55px' }}>
+                      <div className="p-3 bg-amber-200 border-r-2 border-amber-300 flex items-center justify-center">
+                        <div className="text-sm font-bold text-amber-900">🍽️ Lunch</div>
                       </div>
                       {DAYS.map(day => (
-                        <div key={`${day}-lunch`} className="border-r border-amber-200 last:border-r-0 flex items-center justify-center">
-                          <span className="text-xs text-amber-700 font-medium">12:30 - 13:00</span>
+                        <div key={`${day}-lunch`} className="border-r-2 border-amber-300 last:border-r-0 flex items-center justify-center bg-amber-50">
+                          <div className="text-center">
+                            <div className="text-xs font-bold text-amber-900">LUNCH BREAK</div>
+                            <div className="text-[10px] text-amber-700 mt-0.5">12:30 - 13:00</div>
+                          </div>
                         </div>
                       ))}
                     </div>
