@@ -357,12 +357,17 @@ Now process the user's input and return ONLY the JSON object.`,
             lunch_period: schoolConfig.lunch_period,
             break_duration_minutes: schoolConfig.break_duration_minutes,
             break_periods: schoolConfig.break_periods,
-            test_config: schoolConfig.test_config
+            test_config: schoolConfig.test_config,
+            dp_core_components: school.settings?.dp_core_components || {}
           }
         }
       });
+      // Refetch school data after successful save
+      await queryClient.invalidateQueries({ queryKey: ['school', schoolId] });
+      toast.success('Configuration saved successfully!');
     } catch (error) {
       console.error('Failed to save configuration:', error);
+      toast.error('Failed to save configuration');
     } finally {
       setIsSavingConfig(false);
     }
