@@ -957,8 +957,8 @@ Now process the user's input and return ONLY the JSON object.`,
           }
 
           // HL-only extra sessions
-          if (hlExtra > 0 && hlGroups.length > 0) {
-            for (const hl of hlGroups) {
+          if (hlExtra > 0 && nonEmptyHLGroups.length > 0) {
+            for (const hl of nonEmptyHLGroups) {
               let made = 0;
               const preferredRoomsBase = rooms.filter(r => r.is_active);
               const preferredRooms = subject?.requires_special_room
