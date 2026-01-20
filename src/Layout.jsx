@@ -157,8 +157,8 @@ export default function Layout({ children, currentPageName }) {
           }
         }
 
-        // Check login verification for non-superadmins
-        await checkLoginVerification(userData);
+        // Login verification skipped - removed legacy 2FA
+        setIsLoading(false);
       } catch (error) {
         console.error('Auth error:', error);
         setIsLoading(false);
@@ -166,34 +166,7 @@ export default function Layout({ children, currentPageName }) {
       }
     };
 
-    const checkLoginVerification = async (userData) => {
-      try {
-        // Check for verified session in last 24 hours
-        const sessions = await base44.entities.LoginSession.list().catch(() => []);
-        const validSession = sessions.find(s => 
-          s.user_email === userData.email && 
-          s.verified === true &&
-          new Date(s.expires_at) > new Date()
-        );
 
-        if (validSession) {
-          // Valid session exists
-          setIsLoading(false);
-          return;
-        }
-
-        // No valid session - need verification
-        const response = await base44.functions.invoke('sendLoginVerification');
-        if (response.data.success) {
-          setSessionToken(response.data.sessionToken);
-          setNeedsVerification(true);
-          setIsLoading(false);
-        }
-      } catch (error) {
-        console.error('Login verification check error:', error);
-        setIsLoading(false);
-      }
-    };
 
     loadAuth();
   }, []);
@@ -213,23 +186,7 @@ export default function Layout({ children, currentPageName }) {
     );
   }
 
-  if (needsVerification) {
-    return (
-      <>
-        <LoginVerification 
-          open={needsVerification}
-          onVerified={handleVerified}
-          sessionToken={sessionToken}
-        />
-        <div className="min-h-screen flex items-center justify-center bg-slate-50">
-          <div className="text-center">
-            <div className="w-16 h-16 border-4 border-blue-900 border-t-transparent rounded-full animate-spin mx-auto mb-4"></div>
-            <p className="text-slate-600">Verifying your login...</p>
-          </div>
-        </div>
-      </>
-    );
-  }
+
 
   // Role-based access control with React Router navigation
   const schoolOnlyPages = ['Dashboard', 'Onboarding', 'Schedule', 'TeachingGroups', 'Teachers', 'Students', 'Subjects', 'Rooms', 'Constraints', 'AIAdvisor', 'Settings', 'Support'];
