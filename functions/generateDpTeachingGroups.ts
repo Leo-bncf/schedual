@@ -127,18 +127,8 @@ Deno.serve(async (req) => {
     }
 
     if (action === 'create') {
-      // Fetch existing groups to avoid duplicates
-      const existing = await base44.entities.TeachingGroup.filter({ school_id: schoolId });
-      const existingKeys = new Set(
-        existing.map(g => `${g.subject_id}__${g.level}__${g.year_group}`)
-      );
-
       const toCreate = result.groups
         .filter((g) => g.status === 'ready')
-        .filter((g) => {
-          const key = `${g.subject_id}__${g.level}__${g.year_group}`;
-          return !existingKeys.has(key);
-        })
         .map((g) => ({
           school_id: schoolId,
           name: g.name,
@@ -153,11 +143,11 @@ Deno.serve(async (req) => {
         }));
 
       if (toCreate.length === 0) {
-        return Response.json({ ...result, created: 0, skipped_duplicates: result.groups.filter(g => g.status === 'ready').length });
+        return Response.json({ ...result, created: 0 });
       }
 
       await base44.entities.TeachingGroup.bulkCreate(toCreate);
-      return Response.json({ ...result, created: toCreate.length, skipped_duplicates: result.groups.filter(g => g.status === 'ready').length - toCreate.length });
+      return Response.json({ ...result, created: toCreate.length });
     }
 
     return Response.json({ error: 'Invalid action' }, { status: 400 });
