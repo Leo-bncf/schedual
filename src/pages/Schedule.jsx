@@ -728,152 +728,136 @@ Now process the user's input and return ONLY the JSON object.`,
           return a;
         };
 
-        // Try to schedule N sessions for a "primary group" and mirror for others
-        const scheduleSharedSessions = async ({ primaryGroup, mirrorGroups, subject, sessions }) => {
-          let created = 0;
-          const preferredRoomsBase = rooms.filter(r => r.is_active);
-          const preferredRooms = subject?.requires_special_room
-            ? preferredRoomsBase.filter(r => r.room_type === subject.requires_special_room)
-            : preferredRoomsBase;
+        // Schedule one session per subject+level+yearGroup combination (consolidates all groups)
+         const scheduleConsolidatedSession = async ({ allGroups, subject, sessions }) => {
+           let created = 0;
+           const preferredRoomsBase = rooms.filter(r => r.is_active);
+           const preferredRooms = subject?.requires_special_room
+             ? preferredRoomsBase.filter(r => r.room_type === subject.requires_special_room)
+             : preferredRoomsBase;
 
-          const daysRandom = shuffleArray(days);
-          const periodsRandomBase = [...periods];
-          let periodsRandom = shuffleArray(periodsRandomBase);
-          if (subject?.preferred_time === 'morning') periodsRandom = [...periods.filter(p => p <= 4), ...periods.filter(p => p > 4)];
-          if (subject?.preferred_time === 'afternoon') periodsRandom = [...periods.filter(p => p > 4), ...periods.filter(p => p <= 4)];
+           const daysRandom = shuffleArray(days);
+           const periodsRandomBase = [...periods];
+           let periodsRandom = shuffleArray(periodsRandomBase);
+           if (subject?.preferred_time === 'morning') periodsRandom = [...periods.filter(p => p <= 4), ...periods.filter(p => p > 4)];
+           if (subject?.preferred_time === 'afternoon') periodsRandom = [...periods.filter(p => p > 4), ...periods.filter(p => p <= 4)];
 
-          let teacherId = primaryGroup.teacher_id || mirrorGroups.find(m => m.teacher_id)?.teacher_id || null;
-          if (!teacherId) {
-            const candidates = teachers
-              .filter(t => t.is_active !== false)
-              .filter(t => {
-                const subs = Array.isArray(t.subjects) ? t.subjects : [];
-                const quals = Array.isArray(t.qualifications) ? t.qualifications : [];
-                const has = subs.includes(subject.id) || quals.some(q => q.subject_id === subject.id);
-                if (!has) return false;
-                const q = quals.find(q => q.subject_id === subject.id);
-                const levelOk = !q?.ib_levels || q.ib_levels.length === 0 || q.ib_levels.includes('DP');
-                if (!levelOk) return false;
-                const load = (teacherSchedules[t.id]?.length || 0);
-                const max = t.max_hours_per_week || 25;
-                return load < max;
-              })
-              .sort((a, b) => (teacherSchedules[a.id]?.length || 0) - (teacherSchedules[b.id]?.length || 0));
-            if (candidates.length) {
-              teacherId = candidates[0].id;
-              await base44.entities.TeachingGroup.update(primaryGroup.id, { teacher_id: teacherId });
-            }
-          }
-          if (teacherId && !teacherSchedules[teacherId]) teacherSchedules[teacherId] = [];
+           let teacherId = allGroups.find(g => g.teacher_id)?.teacher_id || null;
+           if (!teacherId) {
+             const candidates = teachers
+               .filter(t => t.is_active !== false)
+               .filter(t => {
+                 const subs = Array.isArray(t.subjects) ? t.subjects : [];
+                 const quals = Array.isArray(t.qualifications) ? t.qualifications : [];
+                 const has = subs.includes(subject.id) || quals.some(q => q.subject_id === subject.id);
+                 if (!has) return false;
+                 const q = quals.find(q => q.subject_id === subject.id);
+                 const levelOk = !q?.ib_levels || q.ib_levels.length === 0 || q.ib_levels.includes('DP');
+                 if (!levelOk) return false;
+                 const load = (teacherSchedules[t.id]?.length || 0);
+                 const max = t.max_hours_per_week || 25;
+                 return load < max;
+               })
+               .sort((a, b) => (teacherSchedules[a.id]?.length || 0) - (teacherSchedules[b.id]?.length || 0));
+             if (candidates.length) {
+               teacherId = candidates[0].id;
+               // Update all groups with this teacher
+               for (const g of allGroups) {
+                 await base44.entities.TeachingGroup.update(g.id, { teacher_id: teacherId });
+               }
+             }
+           }
+           if (teacherId && !teacherSchedules[teacherId]) teacherSchedules[teacherId] = [];
 
-          const allStudentIds = [
-            ...(primaryGroup.student_ids || []),
-            ...mirrorGroups.flatMap(m => m.student_ids || [])
-          ];
+           const allStudentIds = allGroups.flatMap(g => g.student_ids || []);
 
-          for (const day of daysRandom) {
-            if (created >= sessions) break;
-            for (const period of periodsRandom) {
-              if (created >= sessions) break;
-              if (blockedPeriods.has(period)) continue;
+           for (const day of daysRandom) {
+             if (created >= sessions) break;
+             for (const period of periodsRandom) {
+               if (created >= sessions) break;
+               if (blockedPeriods.has(period)) continue;
 
-              // Students free? Also block DP test times by year group
-              const studentsFree = allStudentIds.every(sid => {
-                const sched = studentSchedules[sid] || [];
-                if (sched.some(s => s.day === day && s.period === period)) return false;
-                const student = students.find(st => st.id === sid);
-                if (student?.year_group && isReserved(student.year_group, day, period)) return false;
-                if (period > 2) {
-                  const prev1 = sched.find(s => s.day === day && s.period === period - 1);
-                  const prev2 = sched.find(s => s.day === day && s.period === period - 2);
-                  if (prev1 && prev2 && prev1.subjectId === subject.id && prev2.subjectId === subject.id) return false;
-                }
-                return true;
-              });
-              if (!studentsFree) continue;
+               const studentsFree = allStudentIds.every(sid => {
+                 const sched = studentSchedules[sid] || [];
+                 if (sched.some(s => s.day === day && s.period === period)) return false;
+                 const student = students.find(st => st.id === sid);
+                 if (student?.year_group && isReserved(student.year_group, day, period)) return false;
+                 if (period > 2) {
+                   const prev1 = sched.find(s => s.day === day && s.period === period - 1);
+                   const prev2 = sched.find(s => s.day === day && s.period === period - 2);
+                   if (prev1 && prev2 && prev1.subjectId === subject.id && prev2.subjectId === subject.id) return false;
+                 }
+                 return true;
+               });
+               if (!studentsFree) continue;
 
-              // Teacher free/available?
-              let teacherFree = true;
-              let teacherAvailable = true;
-              if (teacherId) {
-                teacherFree = !teacherSchedules[teacherId]?.some(s => s.day === day && s.period === period);
-                const teacher = teachers.find(t => t.id === teacherId);
-                teacherAvailable = !teacher?.unavailable_slots?.some(u => u.day === day && u.period === period);
-                const teacherConstraints = hardConstraints.filter(c => c.category === 'teacher' && (!c.rule?.teacher_id || c.rule?.teacher_id === teacherId));
-                for (const c of teacherConstraints) {
-                  if (c.rule?.max_consecutive_periods) {
-                    const consecutive = teacherSchedules[teacherId]
-                      ?.filter(s => s.day === day && s.period < period && s.period >= period - c.rule.max_consecutive_periods)
-                      .length || 0;
-                    if (consecutive >= c.rule.max_consecutive_periods) teacherFree = false;
-                  }
-                  if (c.rule?.prohibited_days?.includes(day) || c.rule?.unavailable_slots?.some(u => u.day === day && u.period === period)) {
-                    teacherAvailable = false;
-                  }
-                }
-              }
-              if (!teacherFree || !teacherAvailable) continue;
+               let teacherFree = true;
+               let teacherAvailable = true;
+               if (teacherId) {
+                 teacherFree = !teacherSchedules[teacherId]?.some(s => s.day === day && s.period === period);
+                 const teacher = teachers.find(t => t.id === teacherId);
+                 teacherAvailable = !teacher?.unavailable_slots?.some(u => u.day === day && u.period === period);
+                 const teacherConstraints = hardConstraints.filter(c => c.category === 'teacher' && (!c.rule?.teacher_id || c.rule?.teacher_id === teacherId));
+                 for (const c of teacherConstraints) {
+                   if (c.rule?.max_consecutive_periods) {
+                     const consecutive = teacherSchedules[teacherId]
+                       ?.filter(s => s.day === day && s.period < period && s.period >= period - c.rule.max_consecutive_periods)
+                       .length || 0;
+                     if (consecutive >= c.rule.max_consecutive_periods) teacherFree = false;
+                   }
+                   if (c.rule?.prohibited_days?.includes(day) || c.rule?.unavailable_slots?.some(u => u.day === day && u.period === period)) {
+                     teacherAvailable = false;
+                   }
+                 }
+               }
+               if (!teacherFree || !teacherAvailable) continue;
 
-              // Hard constraints (subject/time)
-              let violates = false;
-              for (const c of hardConstraints) {
-                if (c.category === 'subject' && c.rule?.subject_id === subject.id) {
-                  if (c.rule?.prohibited_days?.includes(day) || c.rule?.prohibited_slots?.some(s => s.day === day && (!s.period || s.period === period))) { violates = true; break; }
-                }
-                if (c.category === 'time' && c.rule?.prohibited_slots?.some(s => s.day === day && s.period === period)) { violates = true; break; }
-              }
-              if (violates) continue;
+               let violates = false;
+               for (const c of hardConstraints) {
+                 if (c.category === 'subject' && c.rule?.subject_id === subject.id) {
+                   if (c.rule?.prohibited_days?.includes(day) || c.rule?.prohibited_slots?.some(s => s.day === day && (!s.period || s.period === period))) { violates = true; break; }
+                 }
+                 if (c.category === 'time' && c.rule?.prohibited_slots?.some(s => s.day === day && s.period === period)) { violates = true; break; }
+               }
+               if (violates) continue;
 
-              // Find a room for primary (mirror slots will have no room to avoid double booking)
-              let assignedRoom = null;
-              for (const room of preferredRooms) {
-                const roomFree = !roomSchedules[room.id]?.some(s => s.day === day && s.period === period);
-                const hasCapacity = !room.capacity || ((primaryGroup.student_ids || []).length <= room.capacity);
-                if (roomFree && hasCapacity) { assignedRoom = room; break; }
-              }
-              if (!assignedRoom) continue;
+               let assignedRoom = null;
+               for (const room of preferredRooms) {
+                 const roomFree = !roomSchedules[room.id]?.some(s => s.day === day && s.period === period);
+                 const hasCapacity = !room.capacity || (allStudentIds.length <= room.capacity);
+                 if (roomFree && hasCapacity) { assignedRoom = room; break; }
+               }
+               if (!assignedRoom) continue;
 
-              // Create primary slot (with teacher and room)
-              newSlots.push({
-                school_id: schoolId,
-                schedule_version: selectedVersion.id,
-                teaching_group_id: primaryGroup.id,
-                teacher_id: teacherId,
-                room_id: assignedRoom.id,
-                day,
-                period,
-                status: teacherId ? 'scheduled' : 'tentative'
-              });
-              if (!roomSchedules[assignedRoom.id]) roomSchedules[assignedRoom.id] = [];
-              roomSchedules[assignedRoom.id].push({ day, period });
-              if (teacherId) teacherSchedules[teacherId].push({ day, period });
+               // Create ONE slot per group attending this session
+               for (const group of allGroups) {
+                 newSlots.push({
+                   school_id: schoolId,
+                   schedule_version: selectedVersion.id,
+                   teaching_group_id: group.id,
+                   teacher_id: teacherId,
+                   room_id: assignedRoom.id,
+                   day,
+                   period,
+                   status: teacherId ? 'scheduled' : 'tentative',
+                   notes: `${subject.name} session (${allGroups.length} groups)`
+                 });
+               }
 
-              // Mirror slots for HL groups (track students and subject)
-              for (const mg of mirrorGroups) {
-                newSlots.push({
-                  school_id: schoolId,
-                  schedule_version: selectedVersion.id,
-                  teaching_group_id: mg.id,
-                  teacher_id: teacherId,
-                  room_id: assignedRoom.id,
-                  day,
-                  period,
-                  status: teacherId ? 'scheduled' : 'tentative',
-                  notes: `Shared with ${primaryGroup.name}`
-                });
-              }
+               if (!roomSchedules[assignedRoom.id]) roomSchedules[assignedRoom.id] = [];
+               roomSchedules[assignedRoom.id].push({ day, period });
+               if (teacherId) teacherSchedules[teacherId].push({ day, period });
 
-              // Block students for all involved groups
-              allStudentIds.forEach(sid => {
-                if (!studentSchedules[sid]) studentSchedules[sid] = [];
-                studentSchedules[sid].push({ day, period, subjectId: subject.id });
-              });
+               allStudentIds.forEach(sid => {
+                 if (!studentSchedules[sid]) studentSchedules[sid] = [];
+                 studentSchedules[sid].push({ day, period, subjectId: subject.id });
+               });
 
-              created++;
-            }
-          }
-          return created;
-        };
+               created++;
+             }
+           }
+           return created;
+         };
 
         // Build DP reserved test slots by year group (DP1/DP2)
         const dpTestConfig = school?.settings?.test_config || {};
