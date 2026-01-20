@@ -650,7 +650,7 @@ Now process the user's input and return ONLY the JSON object.`,
 
       // Schedule each IB level separately but track teachers globally
       const scheduleLevels = ['DP', 'MYP', 'PYP'].filter(level => allowedProgrammes.includes(level));
-      
+
       for (const level of scheduleLevels) {
         if (cancelGeneration) throw new Error('Cancelled by user');
         
