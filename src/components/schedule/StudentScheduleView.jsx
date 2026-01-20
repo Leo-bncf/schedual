@@ -17,15 +17,33 @@ export default function StudentScheduleView({ students, slots, groups, subjects,
 
   const getStudentSlots = (studentId) => {
     const student = students.find(s => s.id === studentId);
-    return slots.filter(slot => {
+    if (!student) return [];
+    
+    const matched = slots.filter(slot => {
       // PYP/MYP: match by classgroup_id
       if (slot.classgroup_id && student?.classgroup_id) {
         return slot.classgroup_id === student.classgroup_id;
       }
       // DP: match by teaching_group_id
-      const group = groups.find(g => g.id === slot.teaching_group_id);
-      return group?.student_ids?.includes(studentId);
+      if (slot.teaching_group_id) {
+        const group = groups.find(g => g.id === slot.teaching_group_id);
+        if (group?.student_ids?.includes(studentId)) return true;
+      }
+      return false;
     });
+    
+    console.log(`Student ${student.full_name}: found ${matched.length} slots out of ${slots.length} total`);
+    if (matched.length === 0 && slots.length > 0) {
+      console.log(`Debug - sample slots:`, slots.slice(0, 3).map(s => ({ 
+        teaching_group_id: s.teaching_group_id,
+        classgroup_id: s.classgroup_id,
+        subject_id: s.subject_id,
+        notes: s.notes
+      })));
+      console.log(`Debug - student:`, { id: student.id, classgroup_id: student.classgroup_id, year_group: student.year_group });
+    }
+    
+    return matched;
   };
 
   const studentSlots = selectedStudent ? getStudentSlots(selectedStudent.id) : [];
