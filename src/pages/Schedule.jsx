@@ -898,10 +898,12 @@ Now process the user's input and return ONLY the JSON object.`,
               });
 
               created++;
-            }
-          }
-          return created;
-        };
+              }
+              }
+              console.log(`📊 ${subject.name} (${primaryGroup.level}) - Wanted: ${sessions}, Created: ${created}, Attempts: ${attemptCount}`);
+              console.log(`   Failures: Student=${failReasons.studentConflict} | TeacherBusy=${failReasons.teacherBusy} | TeacherUnavail=${failReasons.teacherUnavail} | TeacherConstraint=${failReasons.teacherConstraint} | HardConstraint=${failReasons.hardConstraint} | NoRoom=${failReasons.noRoom} | Consecutive=${failReasons.consecutive} | TestReserved=${failReasons.testReserved}`);
+              return created;
+              };
 
         // Build DP reserved test slots by year group (DP1/DP2)
         const dpTestConfig = school?.settings?.test_config || {};
