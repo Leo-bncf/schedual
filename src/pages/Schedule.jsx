@@ -728,21 +728,23 @@ Now process the user's input and return ONLY the JSON object.`,
           return a;
         };
 
-        // Schedule one session per subject+level+yearGroup combination (consolidates all groups)
-         const scheduleConsolidatedSession = async ({ allGroups, subject, sessions }) => {
-           let created = 0;
+        // Schedule individual group for its required hours
+         const scheduleGroupHours = async (group, subject) => {
+           let scheduled = 0;
+           const requiredSessions = group.hours_per_week || 0;
+           if (requiredSessions <= 0) return 0;
+
            const preferredRoomsBase = rooms.filter(r => r.is_active);
            const preferredRooms = subject?.requires_special_room
              ? preferredRoomsBase.filter(r => r.room_type === subject.requires_special_room)
              : preferredRoomsBase;
 
            const daysRandom = shuffleArray(days);
-           const periodsRandomBase = [...periods];
-           let periodsRandom = shuffleArray(periodsRandomBase);
+           let periodsRandom = shuffleArray(periods);
            if (subject?.preferred_time === 'morning') periodsRandom = [...periods.filter(p => p <= 4), ...periods.filter(p => p > 4)];
            if (subject?.preferred_time === 'afternoon') periodsRandom = [...periods.filter(p => p > 4), ...periods.filter(p => p <= 4)];
 
-           let teacherId = allGroups.find(g => g.teacher_id)?.teacher_id || null;
+           let teacherId = group.teacher_id || null;
            if (!teacherId) {
              const candidates = teachers
                .filter(t => t.is_active !== false)
@@ -761,23 +763,20 @@ Now process the user's input and return ONLY the JSON object.`,
                .sort((a, b) => (teacherSchedules[a.id]?.length || 0) - (teacherSchedules[b.id]?.length || 0));
              if (candidates.length) {
                teacherId = candidates[0].id;
-               // Update all groups with this teacher
-               for (const g of allGroups) {
-                 await base44.entities.TeachingGroup.update(g.id, { teacher_id: teacherId });
-               }
+               await base44.entities.TeachingGroup.update(group.id, { teacher_id: teacherId });
              }
            }
            if (teacherId && !teacherSchedules[teacherId]) teacherSchedules[teacherId] = [];
 
-           const allStudentIds = allGroups.flatMap(g => g.student_ids || []);
+           const groupStudentIds = group.student_ids || [];
 
            for (const day of daysRandom) {
-             if (created >= sessions) break;
+             if (scheduled >= requiredSessions) break;
              for (const period of periodsRandom) {
-               if (created >= sessions) break;
+               if (scheduled >= requiredSessions) break;
                if (blockedPeriods.has(period)) continue;
 
-               const studentsFree = allStudentIds.every(sid => {
+               const studentsFree = groupStudentIds.every(sid => {
                  const sched = studentSchedules[sid] || [];
                  if (sched.some(s => s.day === day && s.period === period)) return false;
                  const student = students.find(st => st.id === sid);
@@ -824,39 +823,34 @@ Now process the user's input and return ONLY the JSON object.`,
                let assignedRoom = null;
                for (const room of preferredRooms) {
                  const roomFree = !roomSchedules[room.id]?.some(s => s.day === day && s.period === period);
-                 const hasCapacity = !room.capacity || (allStudentIds.length <= room.capacity);
+                 const hasCapacity = !room.capacity || (groupStudentIds.length <= room.capacity);
                  if (roomFree && hasCapacity) { assignedRoom = room; break; }
                }
                if (!assignedRoom) continue;
 
-               // Create ONE slot per group attending this session
-               for (const group of allGroups) {
-                 newSlots.push({
-                   school_id: schoolId,
-                   schedule_version: selectedVersion.id,
-                   teaching_group_id: group.id,
-                   teacher_id: teacherId,
-                   room_id: assignedRoom.id,
-                   day,
-                   period,
-                   status: teacherId ? 'scheduled' : 'tentative',
-                   notes: `${subject.name} session (${allGroups.length} groups)`
-                 });
-               }
+               newSlots.push({
+                 school_id: schoolId,
+                 schedule_version: selectedVersion.id,
+                 teaching_group_id: group.id,
+                 teacher_id: teacherId,
+                 room_id: assignedRoom.id,
+                 day,
+                 period,
+                 status: teacherId ? 'scheduled' : 'tentative'
+               });
 
                if (!roomSchedules[assignedRoom.id]) roomSchedules[assignedRoom.id] = [];
                roomSchedules[assignedRoom.id].push({ day, period });
                if (teacherId) teacherSchedules[teacherId].push({ day, period });
-
-               allStudentIds.forEach(sid => {
+               groupStudentIds.forEach(sid => {
                  if (!studentSchedules[sid]) studentSchedules[sid] = [];
                  studentSchedules[sid].push({ day, period, subjectId: subject.id });
                });
 
-               created++;
+               scheduled++;
              }
            }
-           return created;
+           return scheduled;
          };
 
         // Build DP reserved test slots by year group (DP1/DP2)
