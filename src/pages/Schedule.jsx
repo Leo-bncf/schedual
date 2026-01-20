@@ -872,33 +872,14 @@ Now process the user's input and return ONLY the JSON object.`,
         });
         const isReserved = (yearGroup, day, period) => reservedDPTests[yearGroup]?.has?.(makeKey(day, period));
 
-        // Schedule per subject-year: shared sessions then HL-only
-        for (const [key, groups] of Object.entries(dpBySubjectYear)) {
-          const [subjectId, yearGroup] = key.split('__');
-          const subject = subjects.find(s => s.id === subjectId);
+        // Schedule each teaching group independently for its required hours
+        for (const group of levelGroupsFromUpdated) {
+          const subject = subjects.find(s => s.id === group.subject_id);
           if (!subject) continue;
 
-          const slGroups = groups.filter(g => g.level === 'SL');
-          const hlGroups = groups.filter(g => g.level === 'HL');
-
-          const slHours = subject.sl_hours_per_week || schoolConfig.sl_hours || 4;
-          const hlHours = subject.hl_hours_per_week || schoolConfig.hl_hours || 6;
-          const sharedCount = slHours; // SL + HL attend shared sessions
-          const hlExtra = Math.max(0, hlHours - slHours); // HL-only extra sessions
-
-          // Schedule shared sessions: all SL + all HL groups attend together
-          if (sharedCount > 0) {
-            const allForShared = [...slGroups, ...hlGroups];
-            const made = await scheduleConsolidatedSession({ allGroups: allForShared, subject, sessions: sharedCount });
-            if (made < sharedCount) {
-              console.warn(`Shared ${subject.name} in ${yearGroup}: scheduled ${made}/${sharedCount}`);
-            }
-          }
-
-          // Schedule HL-only extra sessions
-          if (hlExtra > 0 && hlGroups.length > 0) {
-            const made = await scheduleConsolidatedSession({ allGroups: hlGroups, subject, sessions: hlExtra });
-            if (made < hlExtra) console.warn(`HL-only ${subject.name} ${yearGroup}: scheduled ${made}/${hlExtra}`);
+          const scheduled = await scheduleGroupHours(group, subject);
+          if (scheduled < (group.hours_per_week || 0)) {
+            console.warn(`${group.name}: scheduled ${scheduled}/${group.hours_per_week} hours`);
           }
         }
       }
