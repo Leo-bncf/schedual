@@ -1985,73 +1985,7 @@ Now process the user's input and return ONLY the JSON object.`,
                       </CardContent>
                     </Card>
 
-                    {/* IB Requirements */}
-                    <Card className="border-0 shadow-md">
-                      <CardHeader className="bg-gradient-to-r from-indigo-50 to-blue-50">
-                        <div className="flex items-center gap-3">
-                          <div className="p-2 rounded-lg bg-indigo-100">
-                            <Shield className="w-5 h-5 text-indigo-700" />
-                          </div>
-                          <div>
-                            <CardTitle className="text-lg">IB Diploma Programme Requirements</CardTitle>
-                            <CardDescription>Set teaching hours for HL and SL courses</CardDescription>
-                          </div>
-                        </div>
-                      </CardHeader>
-                      <CardContent className="pt-6">
-                        <div className="grid sm:grid-cols-2 gap-6">
-                          <div className="p-6 rounded-xl bg-gradient-to-br from-purple-50 to-purple-100 border-2 border-purple-200">
-                            <div className="flex items-center justify-between mb-4">
-                              <div>
-                                <p className="font-bold text-purple-900 text-lg">Higher Level (HL)</p>
-                                <p className="text-sm text-purple-700">Weekly teaching hours</p>
-                              </div>
-                              <div className="w-16 h-16 rounded-full bg-purple-200 flex items-center justify-center">
-                                <span className="text-2xl font-bold text-purple-900">{schoolConfig.hl_hours}</span>
-                              </div>
-                            </div>
-                            <div className="flex items-center gap-3">
-                              <Input 
-                                type="number"
-                                min="4"
-                                max="10"
-                                className="h-11 text-center font-semibold border-purple-300"
-                                value={schoolConfig.hl_hours}
-                                onChange={(e) => setSchoolConfig({...schoolConfig, hl_hours: parseInt(e.target.value)})}
-                              />
-                              <span className="text-sm text-purple-700 font-medium">hours/week</span>
-                            </div>
-                            <p className="text-xs text-purple-600 mt-3">IB recommends 240 hours over 2 years (6h/week)</p>
-                          </div>
-
-                          <div className="p-6 rounded-xl bg-gradient-to-br from-teal-50 to-teal-100 border-2 border-teal-200">
-                            <div className="flex items-center justify-between mb-4">
-                              <div>
-                                <p className="font-bold text-teal-900 text-lg">Standard Level (SL)</p>
-                                <p className="text-sm text-teal-700">Weekly teaching hours</p>
-                              </div>
-                              <div className="w-16 h-16 rounded-full bg-teal-200 flex items-center justify-center">
-                                <span className="text-2xl font-bold text-teal-900">{schoolConfig.sl_hours}</span>
-                              </div>
-                            </div>
-                            <div className="flex items-center gap-3">
-                              <Input 
-                                type="number"
-                                min="3"
-                                max="8"
-                                className="h-11 text-center font-semibold border-teal-300"
-                                value={schoolConfig.sl_hours}
-                                onChange={(e) => setSchoolConfig({...schoolConfig, sl_hours: parseInt(e.target.value)})}
-                              />
-                              <span className="text-sm text-teal-700 font-medium">hours/week</span>
-                            </div>
-                            <p className="text-xs text-teal-600 mt-3">IB recommends 150 hours over 2 years (4h/week)</p>
-                          </div>
-                        </div>
-                      </CardContent>
-                    </Card>
-
-                    {/* DP Core Components */}
+{/* DP Core Components */}
                     <Card className="border-0 shadow-md">
                       <CardHeader className="bg-gradient-to-r from-purple-50 to-pink-50">
                         <div className="flex items-center gap-3">
