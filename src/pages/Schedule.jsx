@@ -1068,7 +1068,7 @@ Now process the user's input and return ONLY the JSON object.`,
                   made++;
                 }
               }
-              if (made < hlExtra) console.warn(`HL-only ${subject.name} ${yearGroup}: scheduled ${made}/${hlExtra}`);
+              console.log(`⭐ ${subject.name} HL-only (${yearGroup}): Created ${made}/${hlExtra} extra periods`);
             }
           }
         }
