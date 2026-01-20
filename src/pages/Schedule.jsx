@@ -729,21 +729,24 @@ Now process the user's input and return ONLY the JSON object.`,
         };
 
         // Try to schedule N sessions for a "primary group" and mirror for others
-        const scheduleSharedSessions = async ({ primaryGroup, mirrorGroups, subject, sessions }) => {
-          let created = 0;
-          const preferredRoomsBase = rooms.filter(r => r.is_active);
-          const preferredRooms = subject?.requires_special_room
-            ? preferredRoomsBase.filter(r => r.room_type === subject.requires_special_room)
-            : preferredRoomsBase;
+         const scheduleSharedSessions = async ({ primaryGroup, mirrorGroups, subject, sessions }) => {
+           let created = 0;
+           let attemptCount = 0;
+           let failReasons = { studentConflict: 0, teacherBusy: 0, teacherUnavail: 0, teacherConstraint: 0, hardConstraint: 0, noRoom: 0, consecutive: 0, testReserved: 0 };
 
-          const daysRandom = shuffleArray(days);
-          const periodsRandomBase = [...periods];
-          let periodsRandom = shuffleArray(periodsRandomBase);
-          if (subject?.preferred_time === 'morning') periodsRandom = [...periods.filter(p => p <= 4), ...periods.filter(p => p > 4)];
-          if (subject?.preferred_time === 'afternoon') periodsRandom = [...periods.filter(p => p > 4), ...periods.filter(p => p <= 4)];
+           const preferredRoomsBase = rooms.filter(r => r.is_active);
+           const preferredRooms = subject?.requires_special_room
+             ? preferredRoomsBase.filter(r => r.room_type === subject.requires_special_room)
+             : preferredRoomsBase;
 
-          let teacherId = primaryGroup.teacher_id || mirrorGroups.find(m => m.teacher_id)?.teacher_id || null;
-          if (!teacherId) {
+           const daysRandom = shuffleArray(days);
+           const periodsRandomBase = [...periods];
+           let periodsRandom = shuffleArray(periodsRandomBase);
+           if (subject?.preferred_time === 'morning') periodsRandom = [...periods.filter(p => p <= 4), ...periods.filter(p => p > 4)];
+           if (subject?.preferred_time === 'afternoon') periodsRandom = [...periods.filter(p => p > 4), ...periods.filter(p => p <= 4)];
+
+           let teacherId = primaryGroup.teacher_id || mirrorGroups.find(m => m.teacher_id)?.teacher_id || null;
+           if (!teacherId) {
             const candidates = teachers
               .filter(t => t.is_active !== false)
               .filter(t => {
