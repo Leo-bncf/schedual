@@ -934,7 +934,7 @@ Now process the user's input and return ONLY the JSON object.`,
               const primarySlots = newSlots.filter(s => s.teaching_group_id === primary.id && s.day && s.period);
               let mirrored = 0;
               for (const s of primarySlots) {
-                if (mirrored >= sharedCount) break;
+                if (mirrored >= sharedPeriods) break;
                 // Avoid duplicates for extra SL group
                 const exists = newSlots.some(ns => ns.teaching_group_id === extraSL.id && ns.day === s.day && ns.period === s.period);
                 if (!exists) {
