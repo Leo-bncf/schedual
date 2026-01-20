@@ -13,9 +13,9 @@ Deno.serve(async (req) => {
 
     // Get all students, subjects, and teaching groups
     const [allStudents, allSubjects, existingGroups] = await Promise.all([
-      base44.entities.Student.filter({ school_id: schoolId }),
-      base44.entities.Subject.filter({ school_id: schoolId }),
-      base44.entities.TeachingGroup.filter({ school_id: schoolId })
+      base44.asServiceRole.entities.Student.filter({ school_id: schoolId }),
+      base44.asServiceRole.entities.Subject.filter({ school_id: schoolId }),
+      base44.asServiceRole.entities.TeachingGroup.filter({ school_id: schoolId })
     ]);
 
     const pypMypStudents = allStudents.filter(s => 
