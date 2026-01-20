@@ -1080,10 +1080,11 @@ Now process the user's input and return ONLY the JSON object.`,
               if (made < hlExtra) console.warn(`HL-only ${subject.name} ${yearGroup}: scheduled ${made}/${hlExtra}`);
             }
           }
-        }
-      }
+          }
+          }
+          } // End of greedy fallback
 
-      // Add test slots at the end (after classes are scheduled)
+          // Add test slots at the end (after classes are scheduled)
       const testConfig = school?.settings?.test_config || {};
       ['PYP', 'MYP', 'DP1', 'DP2'].forEach(level => {
         const config = testConfig[level] || { tests_per_week: 0, test_duration_minutes: 0 };
