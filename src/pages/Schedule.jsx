@@ -848,16 +848,17 @@ Now process the user's input and return ONLY the JSON object.`,
               roomSchedules[assignedRoom.id].push({ day, period });
               if (teacherId) teacherSchedules[teacherId].push({ day, period });
 
-              // Mirror slots for other groups (no teacher/room to avoid double conflicts)
+              // Mirror slots for HL groups (track students and subject)
               for (const mg of mirrorGroups) {
                 newSlots.push({
                   school_id: schoolId,
                   schedule_version: selectedVersion.id,
                   teaching_group_id: mg.id,
-                  room_id: null,
+                  teacher_id: teacherId,
+                  room_id: assignedRoom.id,
                   day,
                   period,
-                  status: 'scheduled',
+                  status: teacherId ? 'scheduled' : 'tentative',
                   notes: `Shared with ${primaryGroup.name}`
                 });
               }
