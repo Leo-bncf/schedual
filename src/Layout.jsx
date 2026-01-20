@@ -118,8 +118,19 @@ export default function Layout({ children, currentPageName }) {
 
         setUser(userData);
 
-        // JWT already has school_id from token - no need to check User entity
-        // (User.filter would fail due to permissions)
+        // Ensure JWT reflects latest server-side school assignment
+        try {
+          const meRec = await base44.entities.User.filter({ id: userData.id });
+          const serverSchoolId = meRec?.[0]?.school_id || null;
+          const tokenSchoolId = userData?.school_id || null;
+          if (serverSchoolId !== tokenSchoolId) {
+            alert('Your school access was updated. We\u2019ll refresh your session now.');
+            base44.auth.logout(window.location.pathname);
+            return;
+          }
+        } catch (mismatchErr) {
+          console.error('JWT/school_id sync check failed:', mismatchErr);
+        }
 
         // Check if superadmin FIRST
         const { data } = await base44.functions.invoke('getSuperAdminEmails');
@@ -132,17 +143,25 @@ export default function Layout({ children, currentPageName }) {
           return;
         }
 
-        // If user has no school yet, attempt reconcile with Stripe
+        // If user has no school yet, first hydrate from User entity (immediate effect after admin assignment). If still none, attempt reconcile with Stripe.
         if (!userData?.school_id) {
           try {
-            const { data: rec } = await base44.functions.invoke('reconcileSubscription');
-            if (rec?.assigned && rec.schoolId) {
-              alert('Subscription detected and your school has been linked. We\u2019ll refresh your session now.');
+            const meRec = await base44.entities.User.filter({ id: userData.id });
+            const derivedSchoolId = meRec?.[0]?.school_id;
+            if (derivedSchoolId) {
+              alert('Your account was linked to a school. We\u2019ll refresh your session now.');
               base44.auth.logout(window.location.pathname);
               return;
+            } else {
+              const { data: rec } = await base44.functions.invoke('reconcileSubscription');
+              if (rec?.assigned && rec.schoolId) {
+                alert('Subscription detected and your school has been linked. We\u2019ll refresh your session now.');
+                base44.auth.logout(window.location.pathname);
+                return;
+              }
             }
           } catch (e) {
-            console.error('Reconciliation error:', e);
+            console.error('Hydration/reconcile step error:', e);
           }
         }
 
@@ -157,8 +176,8 @@ export default function Layout({ children, currentPageName }) {
           }
         }
 
-        // Login verification skipped - removed legacy 2FA
-        setIsLoading(false);
+        // Check login verification for non-superadmins
+        await checkLoginVerification(userData);
       } catch (error) {
         console.error('Auth error:', error);
         setIsLoading(false);
@@ -166,7 +185,34 @@ export default function Layout({ children, currentPageName }) {
       }
     };
 
+    const checkLoginVerification = async (userData) => {
+      try {
+        // Check for verified session in last 24 hours
+        const sessions = await base44.entities.LoginSession.list().catch(() => []);
+        const validSession = sessions.find(s => 
+          s.user_email === userData.email && 
+          s.verified === true &&
+          new Date(s.expires_at) > new Date()
+        );
 
+        if (validSession) {
+          // Valid session exists
+          setIsLoading(false);
+          return;
+        }
+
+        // No valid session - need verification
+        const response = await base44.functions.invoke('sendLoginVerification');
+        if (response.data.success) {
+          setSessionToken(response.data.sessionToken);
+          setNeedsVerification(true);
+          setIsLoading(false);
+        }
+      } catch (error) {
+        console.error('Login verification check error:', error);
+        setIsLoading(false);
+      }
+    };
 
     loadAuth();
   }, []);
@@ -186,7 +232,23 @@ export default function Layout({ children, currentPageName }) {
     );
   }
 
-
+  if (needsVerification) {
+    return (
+      <>
+        <LoginVerification 
+          open={needsVerification}
+          onVerified={handleVerified}
+          sessionToken={sessionToken}
+        />
+        <div className="min-h-screen flex items-center justify-center bg-slate-50">
+          <div className="text-center">
+            <div className="w-16 h-16 border-4 border-blue-900 border-t-transparent rounded-full animate-spin mx-auto mb-4"></div>
+            <p className="text-slate-600">Verifying your login...</p>
+          </div>
+        </div>
+      </>
+    );
+  }
 
   // Role-based access control with React Router navigation
   const schoolOnlyPages = ['Dashboard', 'Onboarding', 'Schedule', 'TeachingGroups', 'Teachers', 'Students', 'Subjects', 'Rooms', 'Constraints', 'AIAdvisor', 'Settings', 'Support'];

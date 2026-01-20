@@ -24,9 +24,8 @@ Deno.serve(async (req) => {
       if (s?.id) subjectById.set(s.id, s);
     });
 
-    // Group DP students by subject_id + year_group (both HL and SL together for shared sessions)
-    const slStudentsBySubjectYear = new Map(); // subject_id__year -> [student_ids]
-    const hlStudentsBySubjectYear = new Map(); // subject_id__year -> [student_ids]
+    // Group DP students by subject_id + level + year_group
+    const groupMap = new Map();
     const warnings = [];
     const duplicateSubjects = [];
 
@@ -36,7 +35,7 @@ Deno.serve(async (req) => {
         const choices = Array.isArray(student.subject_choices) ? student.subject_choices : [];
         if (choices.length === 0) return;
 
-        // Check for duplicate subjects
+        // Check for duplicate subjects (same subject_id with different levels)
         const subjectIds = choices.map(c => c.subject_id);
         const uniqueSubjectIds = new Set(subjectIds);
         if (subjectIds.length !== uniqueSubjectIds.size) {
@@ -51,120 +50,58 @@ Deno.serve(async (req) => {
           if (!choice?.subject_id) return;
           
           const subject = subjectById.get(choice.subject_id);
-          if (!subject) return;
+          if (!subject) return; // Silently skip invalid subject_ids
 
-          const isHL = choice.level === 'HL';
+          const level = choice.level === 'HL' ? 'HL' : 'SL';
           const yearGroup = student.year_group || 'DP1';
-          const key = `${choice.subject_id}__${yearGroup}`;
+          const key = `${choice.subject_id}__${level}__${yearGroup}`;
 
-          if (isHL) {
-            if (!hlStudentsBySubjectYear.has(key)) hlStudentsBySubjectYear.set(key, []);
-            hlStudentsBySubjectYear.get(key).push(student.id);
-          } else {
-            if (!slStudentsBySubjectYear.has(key)) slStudentsBySubjectYear.set(key, []);
-            slStudentsBySubjectYear.get(key).push(student.id);
+          if (!groupMap.has(key)) {
+            groupMap.set(key, {
+              subject_id: choice.subject_id,
+              subject_name: subject.name,
+              level,
+              year_group: yearGroup,
+              student_ids: []
+            });
           }
+          groupMap.get(key).student_ids.push(student.id);
         });
       });
 
-    // Build proposed groups: 2 groups per subject/year_group (shared + HL-only)
+    // Build proposed groups and split those exceeding maxGroupSize
     const proposed = [];
+    for (const group of groupMap.values()) {
+      const count = group.student_ids.length;
+      if (count === 0) continue;
 
-    // Iterate through all subject+year combinations
-    const allSubjectYears = new Set([
-      ...slStudentsBySubjectYear.keys(),
-      ...hlStudentsBySubjectYear.keys()
-    ]);
-
-    for (const key of allSubjectYears) {
-      const [subjectId, yearGroup] = key.split('__');
-      const subject = subjectById.get(subjectId);
-      if (!subject) continue;
-
-      const slStudents = slStudentsBySubjectYear.get(key) || [];
-      const hlStudents = hlStudentsBySubjectYear.get(key) || [];
-
-      // Only create groups if there are students
-      if (slStudents.length === 0 && hlStudents.length === 0) continue;
-
-      const slHours = subject?.sl_hours_per_week ?? 4;
-      const hlHours = subject?.hl_hours_per_week ?? 6;
-      const hlOnlyHours = Math.max(0, hlHours - slHours);
-
-      // Group 1: Shared session (SL students + HL students) - duration = SL hours
-      if ((slStudents.length > 0 || hlStudents.length > 0) && slHours > 0) {
-        const sharedStudents = [...new Set([...slStudents, ...hlStudents])];
-        
-        if (sharedStudents.length <= maxGroupSize) {
+      if (count <= maxGroupSize) {
+        proposed.push({ ...group, status: 'ready' });
+      } else {
+        const numGroups = Math.ceil(count / maxGroupSize);
+        const per = Math.ceil(count / numGroups);
+        for (let i = 0; i < numGroups; i++) {
+          const start = i * per;
+          const end = start + per;
           proposed.push({
-            subject_id: subjectId,
-            subject_name: subject.name,
-            level: 'SL', // Shared group uses SL hours
-            year_group: yearGroup,
-            student_ids: sharedStudents,
-            hours_per_week: slHours,
-            group_type: 'shared',
-            name: `${subject.name} Shared (SL+HL) - ${yearGroup}`,
+            ...group,
+            student_ids: group.student_ids.slice(start, end),
+            group_suffix: String.fromCharCode(65 + i), // A, B, C...
             status: 'ready'
           });
-        } else {
-          const numGroups = Math.ceil(sharedStudents.length / maxGroupSize);
-          const per = Math.ceil(sharedStudents.length / numGroups);
-          for (let i = 0; i < numGroups; i++) {
-            const start = i * per;
-            const end = start + per;
-            proposed.push({
-              subject_id: subjectId,
-              subject_name: subject.name,
-              level: 'SL',
-              year_group: yearGroup,
-              student_ids: sharedStudents.slice(start, end),
-              hours_per_week: slHours,
-              group_type: 'shared',
-              group_suffix: String.fromCharCode(65 + i),
-              name: `${subject.name} Shared (SL+HL) - ${yearGroup} Group ${String.fromCharCode(65 + i)}`,
-              status: 'ready'
-            });
-          }
-        }
-      }
-
-      // Group 2: HL-only session (only HL students) - duration = HL hours - SL hours
-      if (hlStudents.length > 0 && hlOnlyHours > 0) {
-        if (hlStudents.length <= maxGroupSize) {
-          proposed.push({
-            subject_id: subjectId,
-            subject_name: subject.name,
-            level: 'HL',
-            year_group: yearGroup,
-            student_ids: hlStudents,
-            hours_per_week: hlOnlyHours,
-            group_type: 'hl_only',
-            name: `${subject.name} HL-Only - ${yearGroup}`,
-            status: 'ready'
-          });
-        } else {
-          const numGroups = Math.ceil(hlStudents.length / maxGroupSize);
-          const per = Math.ceil(hlStudents.length / numGroups);
-          for (let i = 0; i < numGroups; i++) {
-            const start = i * per;
-            const end = start + per;
-            proposed.push({
-              subject_id: subjectId,
-              subject_name: subject.name,
-              level: 'HL',
-              year_group: yearGroup,
-              student_ids: hlStudents.slice(start, end),
-              hours_per_week: hlOnlyHours,
-              group_type: 'hl_only',
-              group_suffix: String.fromCharCode(65 + i),
-              name: `${subject.name} HL-Only - ${yearGroup} Group ${String.fromCharCode(65 + i)}`,
-              status: 'ready'
-            });
-          }
         }
       }
     }
+
+    // Compute hours from subject
+    proposed.forEach((g) => {
+      const subject = subjectById.get(g.subject_id);
+      if (g.level === 'HL') g.hours_per_week = subject?.hl_hours_per_week ?? 6;
+      else if (g.level === 'SL') g.hours_per_week = subject?.sl_hours_per_week ?? 4;
+      else g.hours_per_week = subject?.pyp_myp_hours_per_week ?? 4;
+
+      g.name = `${g.subject_name} ${g.level} - ${g.year_group}${g.group_suffix ? ` Group ${g.group_suffix}` : ''}`;
+    });
 
     const result = {
       total: proposed.length,
@@ -180,38 +117,34 @@ Deno.serve(async (req) => {
         student_ids: g.student_ids,
         hours_per_week: g.hours_per_week,
         name: g.name,
-        group_type: g.group_type,
         group_suffix: g.group_suffix,
         status: g.status
       }))
     };
 
     if (action === 'preview') {
-      console.log('DP Teaching Groups - Preview action');
       return Response.json(result);
     }
 
     if (action === 'create') {
-      const toCreate = result.groups
-        .filter((g) => g.status === 'ready')
-        .map((g) => ({
-          school_id: schoolId,
-          name: g.name,
-          subject_id: g.subject_id,
-          level: g.level,
-          year_group: g.year_group,
-          student_ids: g.student_ids,
-          hours_per_week: g.hours_per_week,
-          group_type: g.group_type, // 'shared' or 'hl_only'
-          is_active: true,
-          max_students: maxGroupSize,
-          min_students: 1
-        }));
+      const toCreate = result.groups.filter((g) => g.status === 'ready').map((g) => ({
+        school_id: schoolId,
+        name: g.name,
+        subject_id: g.subject_id,
+        level: g.level,
+        year_group: g.year_group,
+        student_ids: g.student_ids,
+        hours_per_week: g.hours_per_week,
+        is_active: true,
+        max_students: maxGroupSize,
+        min_students: 1
+      }));
 
       if (toCreate.length === 0) {
         return Response.json({ ...result, created: 0 });
       }
 
+      // Create as the user
       await base44.entities.TeachingGroup.bulkCreate(toCreate);
       return Response.json({ ...result, created: toCreate.length });
     }
