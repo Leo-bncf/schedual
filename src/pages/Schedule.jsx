@@ -918,13 +918,13 @@ Now process the user's input and return ONLY the JSON object.`,
           const sharedPeriods = Math.min(slPeriods, hlPeriods); // shared sessions
           const hlExtra = Math.max(0, hlPeriods - slPeriods); // HL-only extra sessions
 
-          if (slGroups.length > 0 && (hlGroups.length > 0 || sharedCount > 0)) {
+          if (slGroups.length > 0 && (hlGroups.length > 0 || sharedPeriods > 0)) {
             // Use first SL group as primary for shared sessions
             const primary = slGroups[0];
             const mirrors = [...hlGroups];
-            const made = await scheduleSharedSessions({ primaryGroup: primary, mirrorGroups: mirrors, subject, sessions: sharedCount });
-            if (made < sharedCount) {
-              console.warn(`Shared ${subject.name} in ${yearGroup}: scheduled ${made}/${sharedCount}`);
+            const made = await scheduleSharedSessions({ primaryGroup: primary, mirrorGroups: mirrors, subject, sessions: sharedPeriods });
+            if (made < sharedPeriods) {
+              console.warn(`Shared ${subject.name} in ${yearGroup}: scheduled ${made}/${sharedPeriods}`);
             }
 
             // If there are additional SL groups beyond the primary, try to align them too (mirror with primary)
