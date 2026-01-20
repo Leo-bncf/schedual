@@ -778,6 +778,7 @@ Now process the user's input and return ONLY the JSON object.`,
             if (created >= sessions) break;
             for (const period of periodsRandom) {
               if (created >= sessions) break;
+              attemptCount++;
               if (blockedPeriods.has(period)) continue;
 
               // Students free? Also block DP test times by year group
@@ -785,15 +786,24 @@ Now process the user's input and return ONLY the JSON object.`,
                 const sched = studentSchedules[sid] || [];
                 if (sched.some(s => s.day === day && s.period === period)) return false;
                 const student = students.find(st => st.id === sid);
-                if (student?.year_group && isReserved(student.year_group, day, period)) return false;
+                if (student?.year_group && isReserved(student.year_group, day, period)) {
+                  failReasons.testReserved++;
+                  return false;
+                }
                 if (period > 2) {
                   const prev1 = sched.find(s => s.day === day && s.period === period - 1);
                   const prev2 = sched.find(s => s.day === day && s.period === period - 2);
-                  if (prev1 && prev2 && prev1.subjectId === subject.id && prev2.subjectId === subject.id) return false;
+                  if (prev1 && prev2 && prev1.subjectId === subject.id && prev2.subjectId === subject.id) {
+                    failReasons.consecutive++;
+                    return false;
+                  }
                 }
                 return true;
               });
-              if (!studentsFree) continue;
+              if (!studentsFree) {
+                failReasons.studentConflict++;
+                continue;
+              }
 
               // Teacher free/available?
               let teacherFree = true;
