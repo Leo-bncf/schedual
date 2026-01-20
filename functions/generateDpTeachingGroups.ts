@@ -180,6 +180,7 @@ Deno.serve(async (req) => {
         student_ids: g.student_ids,
         hours_per_week: g.hours_per_week,
         name: g.name,
+        group_type: g.group_type,
         group_suffix: g.group_suffix,
         status: g.status
       }))
