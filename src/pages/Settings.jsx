@@ -646,6 +646,24 @@ export default function Settings() {
 
         <TabsContent value="academic">
           <div className="space-y-6">
+            {/* TOK, CAS, EE Configuration */}
+            <Card className="border-0 shadow-md">
+              <CardHeader className="bg-gradient-to-r from-purple-50 to-pink-50">
+                <div className="flex items-center gap-3">
+                  <div className="p-2 rounded-lg bg-purple-100">
+                    <GraduationCap className="w-5 h-5 text-purple-700" />
+                  </div>
+                  <div>
+                    <CardTitle className="text-lg">DP Core Components</CardTitle>
+                    <CardDescription>Configure TOK, CAS, and EE teaching hours and assignments</CardDescription>
+                  </div>
+                </div>
+              </CardHeader>
+              <CardContent className="pt-6">
+                <TOKCASManager schoolId={school?.id} />
+              </CardContent>
+            </Card>
+
             <YearAdvancement />
           </div>
         </TabsContent>
