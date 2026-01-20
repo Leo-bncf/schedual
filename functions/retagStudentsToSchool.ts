@@ -43,7 +43,44 @@ Deno.serve(async (req) => {
       await new Promise((r) => setTimeout(r, 150));
     }
 
-    return Response.json({ success: true, targetSchoolId, total: studentIds.length, updated, skipped, errors: errors.slice(0, 10) });
+    // Post-update verification: fetch each student's school_id
+    const verifyResults = [];
+    const countsBySchool = {};
+    const verifyBatch = 20;
+    for (let i = 0; i < studentIds.length; i += verifyBatch) {
+      const batch = studentIds.slice(i, i + verifyBatch);
+      const fetched = await Promise.all(batch.map(async (id) => {
+        try {
+          const rows = await base44.asServiceRole.entities.Student.filter({ id });
+          const rec = rows?.[0] || null;
+          if (rec) {
+            countsBySchool[rec.school_id || 'null'] = (countsBySchool[rec.school_id || 'null'] || 0) + 1;
+            return { id: rec.id, school_id: rec.school_id };
+          }
+          countsBySchool['missing'] = (countsBySchool['missing'] || 0) + 1;
+          return { id, school_id: null };
+        } catch (e) {
+          countsBySchool['error'] = (countsBySchool['error'] || 0) + 1;
+          return { id, error: e?.message || 'fetch failed' };
+        }
+      }));
+      verifyResults.push(...fetched);
+      await new Promise((r) => setTimeout(r, 100));
+    }
+
+    const confirmedToTarget = countsBySchool[targetSchoolId] || 0;
+
+    return Response.json({ 
+      success: true, 
+      targetSchoolId, 
+      total: studentIds.length, 
+      updated, 
+      skipped, 
+      confirmedToTarget,
+      countsBySchool,
+      sample: verifyResults.slice(0, 10),
+      errors: errors.slice(0, 10) 
+    });
   } catch (error) {
     console.error('retagStudentsToSchool error:', error);
     return Response.json({ error: error.message }, { status: 500 });

@@ -271,9 +271,11 @@ export default function Students() {
     });
 
     const handleServiceVerify = async () => {
-    const { data } = await base44.functions.invoke('diagnoseStudents', {});
-    const totals = data?.totals || {};
-    alert(`Service-role verify → Students: ${totals.students_total || 0}, ClassGroups: ${totals.classgroups_total || 0}, Subjects: ${totals.subjects_total || 0}`);
+      const { data } = await base44.functions.invoke('diagnoseStudents', { school_id: schoolId });
+      const totals = data?.totals || {};
+      const cross = data?.crossSchool || {};
+      const bySchool = cross.studentsBySchool ? Object.entries(cross.studentsBySchool).slice(0,5).map(([k,v])=>`${k}: ${v}`).join(', ') : 'n/a';
+      alert(`School ${totals.schoolId || schoolId}\nStudents: ${totals.students_total || 0}\nClassGroups: ${totals.classgroups_total || 0}\nSubjects: ${totals.subjects_total || 0}\nAll schools (sample): ${bySchool}`);
     };
 
     const handleAttachVisible = async () => {
@@ -281,7 +283,7 @@ export default function Students() {
     if (ids.length === 0) { alert('No students in current view.'); return; }
     if (!confirm(`Re-tag ${ids.length} students to your school?`)) return;
     const { data } = await base44.functions.invoke('retagStudentsToSchool', { studentIds: ids });
-    alert(`Re-tagged ${data?.updated || 0} students. Skipped: ${data?.skipped || 0}`);
+    alert(`Re-tagged ${data?.updated || 0} students. Confirmed now in school ${data?.targetSchoolId}: ${data?.confirmedToTarget || 0}\nBy school: ${JSON.stringify(data?.countsBySchool || {})}`);
     queryClient.invalidateQueries({ queryKey: ['students', schoolId] });
     queryClient.invalidateQueries({ queryKey: ['students'] });
     queryClient.invalidateQueries({ queryKey: ['classGroups'] });
