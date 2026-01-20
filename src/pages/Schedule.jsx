@@ -586,15 +586,6 @@ Now process the user's input and return ONLY the JSON object.`,
         }
       });
 
-      // Helper to determine IB level from year_group
-      const getIBLevel = (year_group) => {
-        if (!year_group) return null;
-        if (year_group.startsWith('DP')) return 'DP';
-        if (year_group.startsWith('MYP')) return 'MYP';
-        if (year_group.startsWith('PYP')) return 'PYP';
-        return null;
-      };
-
       // Separate groups by IB level and sort by teacher workload for balance
       const groupsByLevel = {
         DP: [],
