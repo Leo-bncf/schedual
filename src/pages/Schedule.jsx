@@ -916,12 +916,14 @@ Now process the user's input and return ONLY the JSON object.`,
           const hlHours = subject.hl_hours_per_week || schoolConfig.hl_hours || 6;
           const periodDuration = school?.period_duration_minutes || 45;
 
-          // Convert hours to periods without artificial inflation (use floor, not ceil)
-          const slPeriods = Math.floor((slHours * 60) / periodDuration);
-          const hlPeriods = Math.floor((hlHours * 60) / periodDuration);
+          // Convert hours to periods - use max of 1 to ensure at least 1 period is scheduled
+          const slPeriods = Math.max(1, Math.floor((slHours * 60) / periodDuration));
+          const hlPeriods = Math.max(1, Math.floor((hlHours * 60) / periodDuration));
 
           const sharedPeriods = Math.min(slPeriods, hlPeriods); // shared sessions (HL join SL)
           const hlExtra = Math.max(0, hlPeriods - slPeriods); // HL-only extra sessions
+
+          console.log(`${subject.name} ${yearGroup}: SL=${slHours}h/${periodDuration}min=${slPeriods} periods, HL=${hlHours}h/${periodDuration}min=${hlPeriods} periods, shared=${sharedPeriods}, hlExtra=${hlExtra}`);
 
           if (slGroups.length > 0 && (hlGroups.length > 0 || sharedPeriods > 0)) {
             // Use first SL group as primary for shared sessions
