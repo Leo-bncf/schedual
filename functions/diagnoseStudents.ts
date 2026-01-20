@@ -28,6 +28,21 @@ Deno.serve(async (req) => {
       base44.asServiceRole.entities.ClassGroup.filter({ school_id: schoolId }, '-created_date', 5000).catch(() => [])
     ]);
 
+    // Cross-school scan to detect mismatched school_ids
+    const allStudents = await base44.asServiceRole.entities.Student.list().catch(() => []);
+    const allSubjects = await base44.asServiceRole.entities.Subject.list().catch(() => []);
+
+    const studentsBySchool = {};
+    const subjectsBySchool = {};
+    for (const s of allStudents) {
+      const sid = s.school_id || 'null';
+      studentsBySchool[sid] = (studentsBySchool[sid] || 0) + 1;
+    }
+    for (const sub of allSubjects) {
+      const sid = sub.school_id || 'null';
+      subjectsBySchool[sid] = (subjectsBySchool[sid] || 0) + 1;
+    }
+
     const totals = {
       schoolId,
       students_total: students.length,
@@ -86,6 +101,10 @@ Deno.serve(async (req) => {
       totals,
       programmeYear,
       dpSubjectStats,
+      crossSchool: {
+        studentsBySchool,
+        subjectsBySchool
+      },
       sampleStudents: students.slice(0, 5).map(s => ({ id: s.id, full_name: s.full_name, ib_programme: s.ib_programme, year_group: s.year_group })),
       sampleSubjects: subjects.slice(0, 5).map(sub => ({ id: sub.id, name: sub.name, ib_level: sub.ib_level }))
     });
