@@ -148,6 +148,9 @@ Deno.serve(async (req) => {
     let createdGroups = [];
     if (groupsToCreate.length > 0) {
       createdGroups = await base44.entities.TeachingGroup.bulkCreate(groupsToCreate);
+      console.log(`Created ${createdGroups.length} groups with teacher assignments`);
+    } else {
+      console.warn('No groups to create - check student data');
     }
 
     // Step 3: Generate schedule slots using created groups
