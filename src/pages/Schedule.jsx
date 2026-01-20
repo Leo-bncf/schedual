@@ -776,8 +776,9 @@ Now process the user's input and return ONLY the JSON object.`,
 
           for (const day of daysRandom) {
             if (created >= sessions) break;
+            let sessionsThisDay = 0;
             for (const period of periodsRandom) {
-              if (created >= sessions) break;
+              if (created >= sessions || sessionsThisDay >= maxSessionsPerDay) break;
               if (blockedPeriods.has(period)) continue;
 
               // Students free? Also block DP test times by year group
