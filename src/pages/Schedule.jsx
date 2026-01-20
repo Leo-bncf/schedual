@@ -909,8 +909,14 @@ Now process the user's input and return ONLY the JSON object.`,
 
           const slHours = subject.sl_hours_per_week || schoolConfig.sl_hours || 4;
           const hlHours = subject.hl_hours_per_week || schoolConfig.hl_hours || 6;
-          const sharedCount = Math.min(slHours, hlHours); // usually SL hours
-          const hlExtra = Math.max(0, hlHours - slHours);
+          const periodDuration = school?.period_duration_minutes || 45;
+
+          // Convert hours to periods using actual period duration
+          const slPeriods = Math.ceil((slHours * 60) / periodDuration);
+          const hlPeriods = Math.ceil((hlHours * 60) / periodDuration);
+
+          const sharedPeriods = Math.min(slPeriods, hlPeriods); // shared sessions
+          const hlExtra = Math.max(0, hlPeriods - slPeriods); // HL-only extra sessions
 
           if (slGroups.length > 0 && (hlGroups.length > 0 || sharedCount > 0)) {
             // Use first SL group as primary for shared sessions
