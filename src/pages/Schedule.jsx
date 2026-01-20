@@ -2051,6 +2051,24 @@ Now process the user's input and return ONLY the JSON object.`,
                       </CardContent>
                     </Card>
 
+                    {/* DP Core Components */}
+                    <Card className="border-0 shadow-md">
+                      <CardHeader className="bg-gradient-to-r from-purple-50 to-pink-50">
+                        <div className="flex items-center gap-3">
+                          <div className="p-2 rounded-lg bg-purple-100">
+                            <Clock className="w-5 h-5 text-purple-700" />
+                          </div>
+                          <div>
+                            <CardTitle className="text-lg">DP Core Components</CardTitle>
+                            <CardDescription>Configure TOK, CAS, and EE teaching hours and assignments</CardDescription>
+                          </div>
+                        </div>
+                      </CardHeader>
+                      <CardContent className="pt-6">
+                        <TOKCASManager schoolId={schoolId} />
+                      </CardContent>
+                    </Card>
+
                     {/* Test Slot Configuration */}
                     <Card className="border-0 shadow-md">
                       <CardHeader className="bg-gradient-to-r from-red-50 to-rose-50">
