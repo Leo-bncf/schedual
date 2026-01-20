@@ -9,7 +9,14 @@ Deno.serve(async (req) => {
       return Response.json({ error: 'Unauthorized' }, { status: 401 });
     }
 
-    const schoolId = user.school_id;
+    const body = await req.json().catch(() => ({}));
+    const explicitSchoolId = body?.school_id;
+    const schoolId = explicitSchoolId || user.school_id;
+
+    if (explicitSchoolId && user?.role !== 'admin' && explicitSchoolId !== user.school_id) {
+      return Response.json({ error: 'Forbidden: cannot run for another school' }, { status: 403 });
+    }
+
     console.log('Starting class group generation for school:', schoolId);
 
     // Fetch students for this school (up to 10k)
@@ -21,12 +28,27 @@ Deno.serve(async (req) => {
 
     console.log(`Found ${students.length} students`);
 
+    // Diagnostics summary
+    const programmeYearCounts = {};
+    for (const s of students) {
+      const prog = s.ib_programme || 'unknown';
+      const yr = s.year_group || 'unknown';
+      const key = `${prog}:${yr}`;
+      programmeYearCounts[key] = (programmeYearCounts[key] || 0) + 1;
+    }
+    const sampleStudentIds = students.slice(0, 5).map(s => s.id);
+
     if (students.length === 0) {
       return Response.json({ 
         success: true,
         message: 'No students found for this school. Please add/import students first.',
         classGroupsCreated: 0,
-        totalStudents: 0
+        totalStudents: 0,
+        diagnostics: {
+          schoolId,
+          programmeYearCounts,
+          sampleStudentIds
+        }
       });
     }
 
@@ -134,6 +156,11 @@ Deno.serve(async (req) => {
       totalStudents: students.length,
       assignedStudents: eligibleStudents.length,
       ineligibleStudents: ineligibleCount,
+      diagnostics: {
+        schoolId,
+        programmeYearCounts,
+        sampleStudentIds
+      },
       groups: createdGroups.map(g => ({
         name: g.name,
         year_group: g.year_group,
