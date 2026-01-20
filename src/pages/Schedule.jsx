@@ -1160,6 +1160,12 @@ Now process the user's input and return ONLY the JSON object.`,
                   status: 'scheduled',
                   notes: `${level} Test/Assessment Slot`
                 });
+
+                // Block all students in this classgroup during test period
+                (cg.student_ids || []).forEach(sid => {
+                  if (!studentSchedules[sid]) studentSchedules[sid] = [];
+                  studentSchedules[sid].push({ day, period, subjectId: `test_${level}` });
+                });
               });
             });
           });
