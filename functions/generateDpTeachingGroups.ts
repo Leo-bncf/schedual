@@ -24,8 +24,9 @@ Deno.serve(async (req) => {
       if (s?.id) subjectById.set(s.id, s);
     });
 
-    // Group DP students by subject_id + level + year_group
-    const groupMap = new Map();
+    // Group DP students by subject_id + year_group (both HL and SL together for shared sessions)
+    const slStudentsBySubjectYear = new Map(); // subject_id__year -> [student_ids]
+    const hlStudentsBySubjectYear = new Map(); // subject_id__year -> [student_ids]
     const warnings = [];
     const duplicateSubjects = [];
 
@@ -35,7 +36,7 @@ Deno.serve(async (req) => {
         const choices = Array.isArray(student.subject_choices) ? student.subject_choices : [];
         if (choices.length === 0) return;
 
-        // Check for duplicate subjects (same subject_id with different levels)
+        // Check for duplicate subjects
         const subjectIds = choices.map(c => c.subject_id);
         const uniqueSubjectIds = new Set(subjectIds);
         if (subjectIds.length !== uniqueSubjectIds.size) {
@@ -50,22 +51,19 @@ Deno.serve(async (req) => {
           if (!choice?.subject_id) return;
           
           const subject = subjectById.get(choice.subject_id);
-          if (!subject) return; // Silently skip invalid subject_ids
+          if (!subject) return;
 
-          const level = choice.level === 'HL' ? 'HL' : 'SL';
+          const isHL = choice.level === 'HL';
           const yearGroup = student.year_group || 'DP1';
-          const key = `${choice.subject_id}__${level}__${yearGroup}`;
+          const key = `${choice.subject_id}__${yearGroup}`;
 
-          if (!groupMap.has(key)) {
-            groupMap.set(key, {
-              subject_id: choice.subject_id,
-              subject_name: subject.name,
-              level,
-              year_group: yearGroup,
-              student_ids: []
-            });
+          if (isHL) {
+            if (!hlStudentsBySubjectYear.has(key)) hlStudentsBySubjectYear.set(key, []);
+            hlStudentsBySubjectYear.get(key).push(student.id);
+          } else {
+            if (!slStudentsBySubjectYear.has(key)) slStudentsBySubjectYear.set(key, []);
+            slStudentsBySubjectYear.get(key).push(student.id);
           }
-          groupMap.get(key).student_ids.push(student.id);
         });
       });
 
