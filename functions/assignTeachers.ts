@@ -4,6 +4,10 @@ import { getUserSchoolId } from './securityHelper.js';
 Deno.serve(async (req) => {
   try {
     const base44 = createClientFromRequest(req);
+    const user = await base44.auth.me();
+    if (!user) {
+      return Response.json({ error: 'Unauthorized' }, { status: 401 });
+    }
     const schoolId = await getUserSchoolId(base44);
 
     // Fetch all teaching groups, teachers, and subjects
@@ -105,14 +109,17 @@ Deno.serve(async (req) => {
       });
     }
 
-    return Response.json({
+    const result = {
       success: true,
       assigned: assignments.length,
       unassigned: unassignedGroups.length,
       assignments,
       unassignedGroups,
       teacherWorkload
-    });
+    };
+    
+    console.log('assignTeachers result:', JSON.stringify(result, null, 2));
+    return Response.json(result);
 
   } catch (error) {
     console.error('Teacher assignment error:', error);
