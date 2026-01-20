@@ -1146,9 +1146,11 @@ Now process the user's input and return ONLY the JSON object.`,
         if (group) {
           scheduledGroups.add(group.id);
           group.student_ids?.forEach(sid => scheduledStudents.add(sid));
-          if (group.teacher_id) {
+          if (group.teacher_id && slot.teacher_id) {
             scheduledTeachers.add(group.teacher_id);
-            teacherHours[group.teacher_id] = (teacherHours[group.teacher_id] || 0) + 1;
+            // Count by period duration: 1 slot = 1 period = periodDuration/60 hours
+            const periodHours = (school?.period_duration_minutes || 45) / 60;
+            teacherHours[group.teacher_id] = (teacherHours[group.teacher_id] || 0) + periodHours;
           }
         }
       });
