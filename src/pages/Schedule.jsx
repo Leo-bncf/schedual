@@ -878,7 +878,7 @@ Now process the user's input and return ONLY the JSON object.`,
         });
         const isReserved = (yearGroup, day, period) => reservedDPTests[yearGroup]?.has?.(makeKey(day, period));
 
-        // Schedule per subject-year
+        // Schedule per subject-year: shared sessions then HL-only
         for (const [key, groups] of Object.entries(dpBySubjectYear)) {
           const [subjectId, yearGroup] = key.split('__');
           const subject = subjects.find(s => s.id === subjectId);
@@ -888,141 +888,23 @@ Now process the user's input and return ONLY the JSON object.`,
           const hlGroups = groups.filter(g => g.level === 'HL');
 
           const slHours = subject.sl_hours_per_week || schoolConfig.sl_hours || 4;
-           const hlHours = subject.hl_hours_per_week || schoolConfig.hl_hours || 6;
-           const sharedCount = slHours; // SL students attend all shared sessions
-           const hlExtra = Math.max(0, hlHours - slHours); // HL-only sessions
+          const hlHours = subject.hl_hours_per_week || schoolConfig.hl_hours || 6;
+          const sharedCount = slHours; // SL + HL attend shared sessions
+          const hlExtra = Math.max(0, hlHours - slHours); // HL-only extra sessions
 
-          if (slGroups.length > 0 && (hlGroups.length > 0 || sharedCount > 0)) {
-            // Use first SL group as primary for shared sessions
-            const primary = slGroups[0];
-            const mirrors = [...hlGroups];
-            const made = await scheduleSharedSessions({ primaryGroup: primary, mirrorGroups: mirrors, subject, sessions: sharedCount });
+          // Schedule shared sessions: all SL + all HL groups attend together
+          if (sharedCount > 0) {
+            const allForShared = [...slGroups, ...hlGroups];
+            const made = await scheduleConsolidatedSession({ allGroups: allForShared, subject, sessions: sharedCount });
             if (made < sharedCount) {
               console.warn(`Shared ${subject.name} in ${yearGroup}: scheduled ${made}/${sharedCount}`);
             }
-
-            // If there are additional SL groups beyond the primary, try to align them too (mirror with primary)
-            for (let i = 1; i < slGroups.length; i++) {
-              const extraSL = slGroups[i];
-              // Mirror primary's shared sessions by creating "mirror" copies for this SL group
-              const primarySlots = newSlots.filter(s => s.teaching_group_id === primary.id && s.day && s.period);
-              let mirrored = 0;
-              for (const s of primarySlots) {
-                if (mirrored >= sharedCount) break;
-                // Avoid duplicates for extra SL group
-                const exists = newSlots.some(ns => ns.teaching_group_id === extraSL.id && ns.day === s.day && ns.period === s.period);
-                if (!exists) {
-                  newSlots.push({
-                    school_id: schoolId,
-                    schedule_version: selectedVersion.id,
-                    teaching_group_id: extraSL.id,
-                    room_id: null,
-                    day: s.day,
-                    period: s.period,
-                    status: 'scheduled',
-                    notes: `Shared with ${primary.name}`
-                  });
-                  // Block students too
-                  (extraSL.student_ids || []).forEach(sid => {
-                    if (!studentSchedules[sid]) studentSchedules[sid] = [];
-                    studentSchedules[sid].push({ day: s.day, period: s.period, subjectId: subject.id });
-                  });
-                  mirrored++;
-                }
-              }
-            }
           }
 
-          // HL-only extra sessions
+          // Schedule HL-only extra sessions
           if (hlExtra > 0 && hlGroups.length > 0) {
-            for (const hl of hlGroups) {
-              let made = 0;
-              const preferredRoomsBase = rooms.filter(r => r.is_active);
-              const preferredRooms = subject?.requires_special_room
-                ? preferredRoomsBase.filter(r => r.room_type === subject.requires_special_room)
-                : preferredRoomsBase;
-
-              const daysRandom = shuffleArray(days);
-              let periodsRandom = shuffleArray(periods);
-              if (subject?.preferred_time === 'morning') periodsRandom = [...periods.filter(p => p <= 4), ...periods.filter(p => p > 4)];
-              if (subject?.preferred_time === 'afternoon') periodsRandom = [...periods.filter(p => p > 4), ...periods.filter(p => p <= 4)];
-
-              const teacherId = hl.teacher_id || null;
-              if (teacherId && !teacherSchedules[teacherId]) teacherSchedules[teacherId] = [];
-
-              for (const day of daysRandom) {
-                if (made >= hlExtra) break;
-                for (const period of periodsRandom) {
-                  if (made >= hlExtra) break;
-                  if (blockedPeriods.has(period)) continue;
-
-                  // Students free? Also block DP test times by year group
-                  const studentsFree = (hl.student_ids || []).every(sid => {
-                    const sched = studentSchedules[sid] || [];
-                    if (sched.some(s => s.day === day && s.period === period)) return false;
-                    const student = students.find(st => st.id === sid);
-                    if (student?.year_group && isReserved(student.year_group, day, period)) return false;
-                    if (period > 2) {
-                      const prev1 = sched.find(s => s.day === day && s.period === period - 1);
-                      const prev2 = sched.find(s => s.day === day && s.period === period - 2);
-                      if (prev1 && prev2 && prev1.subjectId === subject.id && prev2.subjectId === subject.id) return false;
-                    }
-                    return true;
-                  });
-                  if (!studentsFree) continue;
-
-                  // Teacher free/available?
-                  let teacherFree = true;
-                  let teacherAvailable = true;
-                  if (teacherId) {
-                    teacherFree = !teacherSchedules[teacherId]?.some(s => s.day === day && s.period === period);
-                    const teacher = teachers.find(t => t.id === teacherId);
-                    teacherAvailable = !teacher?.unavailable_slots?.some(u => u.day === day && u.period === period);
-                  }
-                  if (!teacherFree || !teacherAvailable) continue;
-
-                  // Hard constraints
-                  let violates = false;
-                  for (const c of hardConstraints) {
-                    if (c.category === 'subject' && c.rule?.subject_id === subject.id) {
-                      if (c.rule?.prohibited_days?.includes(day) || c.rule?.prohibited_slots?.some(s => s.day === day && (!s.period || s.period === period))) { violates = true; break; }
-                    }
-                    if (c.category === 'time' && c.rule?.prohibited_slots?.some(s => s.day === day && s.period === period)) { violates = true; break; }
-                  }
-                  if (violates) continue;
-
-                  // Find room
-                  let assignedRoom = null;
-                  for (const room of preferredRooms) {
-                    const roomFree = !roomSchedules[room.id]?.some(s => s.day === day && s.period === period);
-                    const hasCapacity = !room.capacity || ((hl.student_ids || []).length <= room.capacity);
-                    if (roomFree && hasCapacity) { assignedRoom = room; break; }
-                  }
-                  if (!assignedRoom) continue;
-
-                  newSlots.push({
-                    school_id: schoolId,
-                    schedule_version: selectedVersion.id,
-                    teaching_group_id: hl.id,
-                    teacher_id: teacherId,
-                    room_id: assignedRoom.id,
-                    day,
-                    period,
-                    status: teacherId ? 'scheduled' : 'tentative',
-                    notes: 'HL-only session'
-                  });
-                  if (!roomSchedules[assignedRoom.id]) roomSchedules[assignedRoom.id] = [];
-                  roomSchedules[assignedRoom.id].push({ day, period });
-                  if (teacherId) teacherSchedules[teacherId].push({ day, period });
-                  (hl.student_ids || []).forEach(sid => {
-                    if (!studentSchedules[sid]) studentSchedules[sid] = [];
-                    studentSchedules[sid].push({ day, period, subjectId: subject.id });
-                  });
-                  made++;
-                }
-              }
-              if (made < hlExtra) console.warn(`HL-only ${subject.name} ${yearGroup}: scheduled ${made}/${hlExtra}`);
-            }
+            const made = await scheduleConsolidatedSession({ allGroups: hlGroups, subject, sessions: hlExtra });
+            if (made < hlExtra) console.warn(`HL-only ${subject.name} ${yearGroup}: scheduled ${made}/${hlExtra}`);
           }
         }
       }
