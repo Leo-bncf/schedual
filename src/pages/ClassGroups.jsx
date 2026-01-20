@@ -32,6 +32,9 @@ export default function ClassGroups() {
     completedSteps: [],
     completed: false
   });
+  const [diagOpen, setDiagOpen] = useState(false);
+  const [diagLoading, setDiagLoading] = useState(false);
+  const [diagData, setDiagData] = useState(null);
   const queryClient = useQueryClient();
 
   const { data: user } = useQuery({
@@ -201,14 +204,34 @@ export default function ClassGroups() {
         title="Class Groups"
         description="Batches of students organized by year level (max 20 students per batch)"
         actions={
-          <Button
-            onClick={() => setShowGenerateDialog(true)}
-            disabled={isGenerating}
-            className="bg-indigo-600 hover:bg-indigo-700"
-          >
-            <Sparkles className="w-4 h-4 mr-2" />
-            Create Batches
-          </Button>
+          <div className="flex gap-2">
+            <Button
+              onClick={() => setShowGenerateDialog(true)}
+              disabled={isGenerating}
+              className="bg-indigo-600 hover:bg-indigo-700"
+            >
+              <Sparkles className="w-4 h-4 mr-2" />
+              Create Batches
+            </Button>
+            <Button
+              variant="outline"
+              onClick={async () => {
+                try {
+                  setDiagLoading(true);
+                  const res = await base44.functions.invoke('diagnoseStudents');
+                  setDiagData(res.data);
+                  setDiagOpen(true);
+                } catch (e) {
+                  alert('Diagnostics failed');
+                } finally {
+                  setDiagLoading(false);
+                }
+              }}
+            >
+              <Search className="w-4 h-4 mr-2" />
+              {diagLoading ? 'Diagnosing…' : 'Diagnose Data'}
+            </Button>
+          </div>
         }
       />
 
@@ -397,6 +420,54 @@ export default function ClassGroups() {
           });
         }}
       />
+
+      {/* Diagnostics Dialog */}
+      <Dialog open={diagOpen} onOpenChange={setDiagOpen}>
+        <DialogContent className="max-w-2xl">
+          <DialogHeader>
+            <DialogTitle>Data Diagnostics</DialogTitle>
+            <DialogDescription>
+              Snapshot of students, subjects, and class groups seen by the backend.
+            </DialogDescription>
+          </DialogHeader>
+          {diagData ? (
+            <div className="space-y-3 text-sm">
+              <div className="grid grid-cols-2 gap-2">
+                <div className="p-3 bg-slate-50 rounded border">
+                  <div className="text-slate-500">Students</div>
+                  <div className="text-lg font-semibold">{diagData?.totals?.students_total || 0}</div>
+                </div>
+                <div className="p-3 bg-slate-50 rounded border">
+                  <div className="text-slate-500">Subjects</div>
+                  <div className="text-lg font-semibold">{diagData?.totals?.subjects_total || 0}</div>
+                </div>
+                <div className="p-3 bg-slate-50 rounded border">
+                  <div className="text-slate-500">ClassGroups</div>
+                  <div className="text-lg font-semibold">{diagData?.totals?.classgroups_total || 0}</div>
+                </div>
+              </div>
+
+              <div>
+                <p className="text-xs text-slate-500 mb-1">By Programme/Year</p>
+                {diagData && Object.keys(diagData.programmeYear || {}).length > 0 ? (
+                  <div className="max-h-48 overflow-auto border rounded">
+                    {Object.entries(diagData.programmeYear).map(([k, v]) => (
+                      <div key={k} className="flex justify-between px-3 py-2 border-b last:border-b-0">
+                        <span className="font-mono text-slate-600">{k}</span>
+                        <span className="font-medium">{v.count}</span>
+                      </div>
+                    ))}
+                  </div>
+                ) : (
+                  <p className="text-slate-600">No students found.</p>
+                )}
+              </div>
+            </div>
+          ) : (
+            <p className="text-sm text-slate-600">No diagnostics yet.</p>
+          )}
+        </DialogContent>
+      </Dialog>
 
       {/* ClassGroup Detail Dialog */}
       <Dialog open={!!selectedGroup} onOpenChange={() => setSelectedGroup(null)}>
