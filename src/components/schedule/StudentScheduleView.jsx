@@ -49,7 +49,15 @@ export default function StudentScheduleView({ students, slots, groups, subjects,
   const studentSlots = selectedStudent ? getStudentSlots(selectedStudent.id) : [];
 
   const getSlotForPeriod = (day, period) => {
-    return studentSlots.find(s => s.day === day && s.period === period);
+    // Skip break/lunch rows (not real periods)
+    if (period === 'break' || period === 'lunch') return null;
+    
+    const slot = studentSlots.find(s => s.day === day && s.period === period);
+    if (!slot && period <= 3 && day === 'Monday') {
+      console.log(`No slot for ${day} period ${period}. Sample slots for this day:`, 
+        studentSlots.filter(s => s.day === 'Monday').slice(0, 3));
+    }
+    return slot;
   };
 
   const subjectColors = {
