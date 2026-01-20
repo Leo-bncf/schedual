@@ -123,8 +123,15 @@ export default function StudentScheduleView({ students, slots, groups, subjects,
                       let level = null;
                       
                       if (slot) {
+                        // Check if this is a test slot (no subject_id, has notes)
+                        if (!slot.subject_id && slot.notes?.includes('Test')) {
+                          // Display as a test period
+                          subject = { name: 'Test/Assessment', ib_group: null };
+                          teacher = null;
+                          level = null;
+                        }
                         // PYP/MYP: subject_id and teacher_id are directly on the slot
-                        if (slot.subject_id) {
+                        else if (slot.subject_id) {
                           subject = subjects.find(s => s.id === slot.subject_id);
                           teacher = teachers.find(t => t.id === slot.teacher_id);
                           level = selectedStudent?.ib_programme || '';
