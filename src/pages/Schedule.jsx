@@ -686,7 +686,7 @@ Now process the user's input and return ONLY the JSON object.`,
          }));
 
          // Filter DP groups for this level
-         const levelGroupsFromUpdated = updatedGroups.filter(g => {
+         const allDPGroups = updatedGroups.filter(g => {
            if (g.is_active === false) return false;
            if (!g.subject_id) return false;
            const ibLevel = getIBLevel(g.year_group);
@@ -694,10 +694,13 @@ Now process the user's input and return ONLY the JSON object.`,
          });
 
          // Separate shared and HL-only groups
-         const sharedGroups = levelGroupsFromUpdated.filter(g => g.group_type === 'shared');
-         const hlOnlyGroups = levelGroupsFromUpdated.filter(g => g.group_type === 'hl_only');
+         const sharedGroups = allDPGroups.filter(g => g.group_type === 'shared');
+         const hlOnlyGroups = allDPGroups.filter(g => g.group_type === 'hl_only');
 
-         console.log(`Found ${sharedGroups.length} shared DP groups and ${hlOnlyGroups.length} HL-only groups`);
+         console.log(`All DP groups: ${allDPGroups.length}, Shared: ${sharedGroups.length}, HL-only: ${hlOnlyGroups.length}`);
+         if (allDPGroups.length > 0) {
+           console.log('Sample group:', allDPGroups[0]);
+         }
 
         // Ensure groups have students
         for (const group of [...sharedGroups, ...hlOnlyGroups]) {
