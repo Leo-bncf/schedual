@@ -676,23 +676,28 @@ Now process the user's input and return ONLY the JSON object.`,
           continue;
         }
 
-        // DP: HL/SL shared blocks + HL-only extras
-        setGenerationProgress(prev => ({
-          ...prev,
-          stage: 'Scheduling DP',
-          percent: 30,
-          message: 'Creating SL shared blocks and HL extras...',
-          currentStep: 'dp'
-        }));
+        // DP: Schedule shared blocks first, then HL-only
+         setGenerationProgress(prev => ({
+           ...prev,
+           stage: 'Scheduling DP',
+           percent: 30,
+           message: 'Scheduling shared SL+HL sessions first, then HL-only sessions...',
+           currentStep: 'dp'
+         }));
 
-        // Consider only active DP groups
-        const levelGroupsFromUpdated = updatedGroups.filter(g => {
-          if (g.is_active === false) return false;
-          if (!g.subject_id) return false;
-          const ibLevel = getIBLevel(g.year_group);
-          return ibLevel === level;
-        });
-        console.log(`Found ${levelGroupsFromUpdated.length} DP groups`);
+         // Filter DP groups for this level
+         const levelGroupsFromUpdated = updatedGroups.filter(g => {
+           if (g.is_active === false) return false;
+           if (!g.subject_id) return false;
+           const ibLevel = getIBLevel(g.year_group);
+           return ibLevel === level;
+         });
+
+         // Separate shared and HL-only groups
+         const sharedGroups = levelGroupsFromUpdated.filter(g => g.group_type === 'shared');
+         const hlOnlyGroups = levelGroupsFromUpdated.filter(g => g.group_type === 'hl_only');
+
+         console.log(`Found ${sharedGroups.length} shared DP groups and ${hlOnlyGroups.length} HL-only groups`);
 
         // Ensure groups have students (auto-assign if empty)
         for (const group of levelGroupsFromUpdated) {
