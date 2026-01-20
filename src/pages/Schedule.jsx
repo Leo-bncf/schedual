@@ -729,24 +729,21 @@ Now process the user's input and return ONLY the JSON object.`,
         };
 
         // Try to schedule N sessions for a "primary group" and mirror for others
-         const scheduleSharedSessions = async ({ primaryGroup, mirrorGroups, subject, sessions }) => {
-           let created = 0;
-           let attemptCount = 0;
-           let failReasons = { studentConflict: 0, teacherBusy: 0, teacherUnavail: 0, teacherConstraint: 0, hardConstraint: 0, noRoom: 0, consecutive: 0, testReserved: 0 };
+        const scheduleSharedSessions = async ({ primaryGroup, mirrorGroups, subject, sessions }) => {
+          let created = 0;
+          const preferredRoomsBase = rooms.filter(r => r.is_active);
+          const preferredRooms = subject?.requires_special_room
+            ? preferredRoomsBase.filter(r => r.room_type === subject.requires_special_room)
+            : preferredRoomsBase;
 
-           const preferredRoomsBase = rooms.filter(r => r.is_active);
-           const preferredRooms = subject?.requires_special_room
-             ? preferredRoomsBase.filter(r => r.room_type === subject.requires_special_room)
-             : preferredRoomsBase;
+          const daysRandom = shuffleArray(days);
+          const periodsRandomBase = [...periods];
+          let periodsRandom = shuffleArray(periodsRandomBase);
+          if (subject?.preferred_time === 'morning') periodsRandom = [...periods.filter(p => p <= 4), ...periods.filter(p => p > 4)];
+          if (subject?.preferred_time === 'afternoon') periodsRandom = [...periods.filter(p => p > 4), ...periods.filter(p => p <= 4)];
 
-           const daysRandom = shuffleArray(days);
-           const periodsRandomBase = [...periods];
-           let periodsRandom = shuffleArray(periodsRandomBase);
-           if (subject?.preferred_time === 'morning') periodsRandom = [...periods.filter(p => p <= 4), ...periods.filter(p => p > 4)];
-           if (subject?.preferred_time === 'afternoon') periodsRandom = [...periods.filter(p => p > 4), ...periods.filter(p => p <= 4)];
-
-           let teacherId = primaryGroup.teacher_id || mirrorGroups.find(m => m.teacher_id)?.teacher_id || null;
-           if (!teacherId) {
+          let teacherId = primaryGroup.teacher_id || mirrorGroups.find(m => m.teacher_id)?.teacher_id || null;
+          if (!teacherId) {
             const candidates = teachers
               .filter(t => t.is_active !== false)
               .filter(t => {
@@ -778,7 +775,6 @@ Now process the user's input and return ONLY the JSON object.`,
             if (created >= sessions) break;
             for (const period of periodsRandom) {
               if (created >= sessions) break;
-              attemptCount++;
               if (blockedPeriods.has(period)) continue;
 
               // Students free? Also block DP test times by year group
@@ -786,52 +782,33 @@ Now process the user's input and return ONLY the JSON object.`,
                 const sched = studentSchedules[sid] || [];
                 if (sched.some(s => s.day === day && s.period === period)) return false;
                 const student = students.find(st => st.id === sid);
-                if (student?.year_group && isReserved(student.year_group, day, period)) {
-                  failReasons.testReserved++;
-                  return false;
-                }
+                if (student?.year_group && isReserved(student.year_group, day, period)) return false;
                 if (period > 2) {
                   const prev1 = sched.find(s => s.day === day && s.period === period - 1);
                   const prev2 = sched.find(s => s.day === day && s.period === period - 2);
-                  if (prev1 && prev2 && prev1.subjectId === subject.id && prev2.subjectId === subject.id) {
-                    failReasons.consecutive++;
-                    return false;
-                  }
+                  if (prev1 && prev2 && prev1.subjectId === subject.id && prev2.subjectId === subject.id) return false;
                 }
                 return true;
               });
-              if (!studentsFree) {
-                failReasons.studentConflict++;
-                continue;
-              }
+              if (!studentsFree) continue;
 
               // Teacher free/available?
               let teacherFree = true;
               let teacherAvailable = true;
               if (teacherId) {
                 teacherFree = !teacherSchedules[teacherId]?.some(s => s.day === day && s.period === period);
-                if (!teacherFree) {
-                  failReasons.teacherBusy++;
-                }
                 const teacher = teachers.find(t => t.id === teacherId);
                 teacherAvailable = !teacher?.unavailable_slots?.some(u => u.day === day && u.period === period);
-                if (!teacherAvailable) {
-                  failReasons.teacherUnavail++;
-                }
                 const teacherConstraints = hardConstraints.filter(c => c.category === 'teacher' && (!c.rule?.teacher_id || c.rule?.teacher_id === teacherId));
                 for (const c of teacherConstraints) {
                   if (c.rule?.max_consecutive_periods) {
                     const consecutive = teacherSchedules[teacherId]
                       ?.filter(s => s.day === day && s.period < period && s.period >= period - c.rule.max_consecutive_periods)
                       .length || 0;
-                    if (consecutive >= c.rule.max_consecutive_periods) {
-                      teacherFree = false;
-                      failReasons.teacherConstraint++;
-                    }
+                    if (consecutive >= c.rule.max_consecutive_periods) teacherFree = false;
                   }
                   if (c.rule?.prohibited_days?.includes(day) || c.rule?.unavailable_slots?.some(u => u.day === day && u.period === period)) {
                     teacherAvailable = false;
-                    failReasons.teacherConstraint++;
                   }
                 }
               }
@@ -845,10 +822,7 @@ Now process the user's input and return ONLY the JSON object.`,
                 }
                 if (c.category === 'time' && c.rule?.prohibited_slots?.some(s => s.day === day && s.period === period)) { violates = true; break; }
               }
-              if (violates) {
-                failReasons.hardConstraint++;
-                continue;
-              }
+              if (violates) continue;
 
               // Find a room for primary (mirror slots will have no room to avoid double booking)
               let assignedRoom = null;
@@ -857,10 +831,7 @@ Now process the user's input and return ONLY the JSON object.`,
                 const hasCapacity = !room.capacity || ((primaryGroup.student_ids || []).length <= room.capacity);
                 if (roomFree && hasCapacity) { assignedRoom = room; break; }
               }
-              if (!assignedRoom) {
-                failReasons.noRoom++;
-                continue;
-              }
+              if (!assignedRoom) continue;
 
               // Create primary slot (with teacher and room)
               newSlots.push({
@@ -898,12 +869,10 @@ Now process the user's input and return ONLY the JSON object.`,
               });
 
               created++;
-              }
-              }
-              console.log(`📊 ${subject.name} (${primaryGroup.level}) - Wanted: ${sessions}, Created: ${created}, Attempts: ${attemptCount}`);
-              console.log(`   Failures: Student=${failReasons.studentConflict} | TeacherBusy=${failReasons.teacherBusy} | TeacherUnavail=${failReasons.teacherUnavail} | TeacherConstraint=${failReasons.teacherConstraint} | HardConstraint=${failReasons.hardConstraint} | NoRoom=${failReasons.noRoom} | Consecutive=${failReasons.consecutive} | TestReserved=${failReasons.testReserved}`);
-              return created;
-              };
+            }
+          }
+          return created;
+        };
 
         // Build DP reserved test slots by year group (DP1/DP2)
         const dpTestConfig = school?.settings?.test_config || {};
@@ -998,54 +967,53 @@ Now process the user's input and return ONLY the JSON object.`,
 
               for (const day of daysRandom) {
                 if (made >= hlExtra) break;
-                    for (const period of periodsRandom) {
-                      if (made >= hlExtra) break;
-                      if (blockedPeriods.has(period)) continue;
+                for (const period of periodsRandom) {
+                  if (made >= hlExtra) break;
+                  if (blockedPeriods.has(period)) continue;
 
-                      // Students free? Also block DP test times by year group
-                      const studentsFree = (hl.student_ids || []).every(sid => {
-                        const sched = studentSchedules[sid] || [];
-                        if (sched.some(s => s.day === day && s.period === period)) return false;
-                        const student = students.find(st => st.id === sid);
-                        if (student?.year_group && isReserved(student.year_group, day, period)) return false;
-                        if (period > 2) {
-                          const prev1 = sched.find(s => s.day === day && s.period === period - 1);
-                          const prev2 = sched.find(s => s.day === day && s.period === period - 2);
-                          if (prev1 && prev2 && prev1.subjectId === subject.id && prev2.subjectId === subject.id) return false;
-                        }
-                        return true;
-                      });
-                      if (!studentsFree) continue;
+                  // Students free? Also block DP test times by year group
+                  const studentsFree = (hl.student_ids || []).every(sid => {
+                    const sched = studentSchedules[sid] || [];
+                    if (sched.some(s => s.day === day && s.period === period)) return false;
+                    const student = students.find(st => st.id === sid);
+                    if (student?.year_group && isReserved(student.year_group, day, period)) return false;
+                    if (period > 2) {
+                      const prev1 = sched.find(s => s.day === day && s.period === period - 1);
+                      const prev2 = sched.find(s => s.day === day && s.period === period - 2);
+                      if (prev1 && prev2 && prev1.subjectId === subject.id && prev2.subjectId === subject.id) return false;
+                    }
+                    return true;
+                  });
+                  if (!studentsFree) continue;
 
-                      // Teacher free/available?
-                      let teacherFree = true;
-                      let teacherAvailable = true;
-                      if (teacherId) {
-                        teacherFree = !teacherSchedules[teacherId]?.some(s => s.day === day && s.period === period);
-                        const teacher = teachers.find(t => t.id === teacherId);
-                        teacherAvailable = !teacher?.unavailable_slots?.some(u => u.day === day && u.period === period);
-                      }
-                      if (!teacherFree || !teacherAvailable) continue;
+                  // Teacher free/available?
+                  let teacherFree = true;
+                  let teacherAvailable = true;
+                  if (teacherId) {
+                    teacherFree = !teacherSchedules[teacherId]?.some(s => s.day === day && s.period === period);
+                    const teacher = teachers.find(t => t.id === teacherId);
+                    teacherAvailable = !teacher?.unavailable_slots?.some(u => u.day === day && u.period === period);
+                  }
+                  if (!teacherFree || !teacherAvailable) continue;
 
-                      // Hard constraints
-                      let violates = false;
-                      for (const c of hardConstraints) {
-                        if (c.category === 'subject' && c.rule?.subject_id === subject.id) {
-                          if (c.rule?.prohibited_days?.includes(day) || c.rule?.prohibited_slots?.some(s => s.day === day && (!s.period || s.period === period))) { violates = true; break; }
-                        }
-                        if (c.category === 'time' && c.rule?.prohibited_slots?.some(s => s.day === day && s.period === period)) { violates = true; break; }
-                      }
-                      if (violates) continue;
+                  // Hard constraints
+                  let violates = false;
+                  for (const c of hardConstraints) {
+                    if (c.category === 'subject' && c.rule?.subject_id === subject.id) {
+                      if (c.rule?.prohibited_days?.includes(day) || c.rule?.prohibited_slots?.some(s => s.day === day && (!s.period || s.period === period))) { violates = true; break; }
+                    }
+                    if (c.category === 'time' && c.rule?.prohibited_slots?.some(s => s.day === day && s.period === period)) { violates = true; break; }
+                  }
+                  if (violates) continue;
 
-                      // Find room
-                      let assignedRoom = null;
-                      for (const room of preferredRooms) {
-                        const roomFree = !roomSchedules[room.id]?.some(s => s.day === day && s.period === period);
-                        const hasCapacity = !room.capacity || ((hl.student_ids || []).length <= room.capacity);
-                        if (roomFree && hasCapacity) { assignedRoom = room; break; }
-                      }
-                      if (!assignedRoom) continue;
-                      }
+                  // Find room
+                  let assignedRoom = null;
+                  for (const room of preferredRooms) {
+                    const roomFree = !roomSchedules[room.id]?.some(s => s.day === day && s.period === period);
+                    const hasCapacity = !room.capacity || ((hl.student_ids || []).length <= room.capacity);
+                    if (roomFree && hasCapacity) { assignedRoom = room; break; }
+                  }
+                  if (!assignedRoom) continue;
 
                   newSlots.push({
                     school_id: schoolId,
@@ -1068,7 +1036,7 @@ Now process the user's input and return ONLY the JSON object.`,
                   made++;
                 }
               }
-              console.log(`⭐ ${subject.name} HL-only (${yearGroup}): Created ${made}/${hlExtra} extra periods`);
+              if (made < hlExtra) console.warn(`HL-only ${subject.name} ${yearGroup}: scheduled ${made}/${hlExtra}`);
             }
           }
         }
