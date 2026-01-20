@@ -129,14 +129,21 @@ export default function StudentScheduleView({ students, slots, groups, subjects,
                       let level = null;
                       
                       if (slot) {
-                        // Check if this is a test slot (no subject_id, has notes)
-                        if (!slot.subject_id && slot.notes?.includes('Test')) {
-                          // Display as a test period
-                          subject = { name: 'Test/Assessment', ib_group: null };
-                          teacher = null;
+                        // Check if this is a core component (TOK/CAS/EE) or test slot (classgroup-based, no subject_id)
+                        if (!slot.subject_id && slot.classgroup_id) {
+                          if (slot.notes?.includes('Test')) {
+                            subject = { name: 'Test/Assessment', ib_group: null };
+                          } else if (slot.notes?.includes('TOK')) {
+                            subject = { name: 'TOK', ib_group: null };
+                          } else if (slot.notes?.includes('CAS')) {
+                            subject = { name: 'CAS', ib_group: null };
+                          } else if (slot.notes?.includes('EE')) {
+                            subject = { name: 'EE', ib_group: null };
+                          }
+                          teacher = teachers.find(t => t.id === slot.teacher_id);
                           level = null;
                         }
-                        // PYP/MYP: subject_id and teacher_id are directly on the slot
+                        // Subject with subject_id (PYP/MYP or DP groups)
                         else if (slot.subject_id) {
                           subject = subjects.find(s => s.id === slot.subject_id);
                           teacher = teachers.find(t => t.id === slot.teacher_id);
