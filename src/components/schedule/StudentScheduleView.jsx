@@ -129,8 +129,8 @@ export default function StudentScheduleView({ students, slots, groups, subjects,
                       let level = null;
                       
                       if (slot) {
-                        // Check if this is a core component (TOK/CAS/EE) or test slot (classgroup-based, no subject_id)
-                        if (!slot.subject_id && slot.classgroup_id) {
+                        // Check if this is a core component (TOK/CAS/EE) or test slot (no subject_id)
+                        if (!slot.subject_id) {
                           if (slot.notes?.includes('Test')) {
                             subject = { name: 'Test/Assessment', ib_group: null };
                           } else if (slot.notes?.includes('TOK')) {
