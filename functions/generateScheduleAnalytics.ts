@@ -34,9 +34,9 @@ Deno.serve(async (req) => {
       base44.entities.School.filter({ id: user.school_id })
     ]);
 
-    const schoolData = school[0];
+    const schoolData = school[0] || { period_duration_minutes: 45, periods_per_day: 8, days_per_week: 5 };
     const DAYS = ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday'];
-    const PERIODS = 8;
+    const PERIODS = schoolData.periods_per_day || 8;
 
     // =====================================================================
     // SUMMARY STATISTICS
