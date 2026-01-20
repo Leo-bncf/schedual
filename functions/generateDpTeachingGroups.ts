@@ -151,6 +151,11 @@ Deno.serve(async (req) => {
 
     return Response.json({ error: 'Invalid action' }, { status: 400 });
   } catch (error) {
-    return Response.json({ error: error.message }, { status: 500 });
+    console.error('generateDpTeachingGroups error:', error);
+    console.error('Error details:', error.message, error.stack);
+    return Response.json({ 
+      error: error.message,
+      details: error.stack 
+    }, { status: 500 });
   }
 });
