@@ -135,10 +135,16 @@ export default function TOKCASManager({ schoolId }) {
                         type="number"
                         min="0"
                         max="10"
-                        value={formData[component.hoursKey]}
+                        value={formData.dp_core_components[component.id]?.hours_per_week || 0}
                         onChange={(e) => setFormData({
                           ...formData,
-                          [component.hoursKey]: parseInt(e.target.value) || 0
+                          dp_core_components: {
+                            ...formData.dp_core_components,
+                            [component.id]: {
+                              ...formData.dp_core_components[component.id],
+                              hours_per_week: parseInt(e.target.value) || 0
+                            }
+                          }
                         })}
                         className="h-10"
                       />
@@ -149,10 +155,16 @@ export default function TOKCASManager({ schoolId }) {
                         Assigned Teacher / Coordinator
                       </Label>
                       <Select
-                        value={formData[component.teacherKey]}
+                        value={formData.dp_core_components[component.id]?.coordinator_id || ''}
                         onValueChange={(value) => setFormData({
                           ...formData,
-                          [component.teacherKey]: value
+                          dp_core_components: {
+                            ...formData.dp_core_components,
+                            [component.id]: {
+                              ...formData.dp_core_components[component.id],
+                              coordinator_id: value || ''
+                            }
+                          }
                         })}
                       >
                         <SelectTrigger id={`${component.id}-teacher`} className="h-10">
