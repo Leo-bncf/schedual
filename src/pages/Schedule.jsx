@@ -902,10 +902,10 @@ Now process the user's input and return ONLY the JSON object.`,
           const slGroups = groups.filter(g => g.level === 'SL');
           const hlGroups = groups.filter(g => g.level === 'HL');
 
-          const slHours = subject.sl_hours_per_week || schoolConfig.sl_hours || 4;
-          const hlHours = subject.hl_hours_per_week || schoolConfig.hl_hours || 6;
-          const sharedCount = Math.min(slHours, hlHours); // usually SL hours
-          const hlExtra = Math.max(0, hlHours - slHours);
+          const slHours = schoolConfig.sl_hours || 4;
+           const hlHours = schoolConfig.hl_hours || 6;
+           const sharedCount = slHours; // SL students attend all shared sessions
+           const hlExtra = Math.max(0, hlHours - slHours); // HL-only sessions
 
           if (slGroups.length > 0 && (hlGroups.length > 0 || sharedCount > 0)) {
             // Use first SL group as primary for shared sessions
