@@ -85,14 +85,14 @@ Deno.serve(async (req) => {
     
     const reservedTestSlots = [];
 
-    if (testsPerWeek > 0) {
+    if (testsPerWeek > 0 && testDurationPeriods > 0) {
       // Prefer late afternoon periods for tests
-      const testPeriods = periods.slice(-testDurationPeriods);
+      const testPeriods = periods.slice(Math.max(0, periods.length - testDurationPeriods));
       const testDays = days.slice(0, Math.min(testsPerWeek, days.length));
       testDays.forEach(day => {
         testPeriods.forEach(period => reservedTestSlots.push({ day, period }));
       });
-      console.log(`Reserved ${reservedTestSlots.length} test slot periods for ${level}`);
+      console.log(`Reserved ${testDays.length} test days × ${testPeriods.length} periods = ${reservedTestSlots.length} test slots for ${level}`);
     }
 
     // Track unique students being scheduled (not iterations)
@@ -380,13 +380,13 @@ Deno.serve(async (req) => {
     }
 
     // Create test slots at the end so they appear in the schedule
-    const levelTestConfig = testConfig[level] || { tests_per_week: 0, test_duration_minutes: 0 };
-    const testsPerWeek = levelTestConfig.tests_per_week || 0;
-    const testDurationPeriods = Math.ceil(levelTestConfig.test_duration_minutes / (school?.period_duration_minutes || 45));
+    const levelTestConfig2 = testConfig[level] || { tests_per_week: 0, test_duration_minutes: 0 };
+    const testsPerWeek2 = levelTestConfig2.tests_per_week || 0;
+    const testDurationPeriods2 = Math.max(1, Math.ceil(levelTestConfig2.test_duration_minutes / (school?.period_duration_minutes || 45)));
     
-    if (testsPerWeek > 0) {
-      const testPeriods = periods.slice(-testDurationPeriods);
-      const testDays = days.slice(0, Math.min(testsPerWeek, days.length));
+    if (testsPerWeek2 > 0 && testDurationPeriods2 > 0) {
+      const testPeriods = periods.slice(Math.max(0, periods.length - testDurationPeriods2));
+      const testDays = days.slice(0, Math.min(testsPerWeek2, days.length));
       
       testDays.forEach(day => {
         testPeriods.forEach(period => {
@@ -410,7 +410,7 @@ Deno.serve(async (req) => {
         });
       });
       
-      console.log(`Added ${testsPerWeek} test days with ${testDurationPeriods} periods each for ${level}`);
+      console.log(`Added ${testsPerWeek2} test days with ${testDurationPeriods2} periods each for ${level}`);
     }
     
     console.log(`Generated ${slots.length} total slots for ${level} (including tests)`);
