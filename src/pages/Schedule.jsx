@@ -55,6 +55,7 @@ import EmptyState from '../components/ui-custom/EmptyState';
 import GenerationProgress from '../components/schedule/GenerationProgress';
 import ScheduleUpdateBanner from '../components/schedule/ScheduleUpdateBanner';
 import UtilizationStats from '../components/schedule/UtilizationStats';
+import TOKCASManager from '../components/settings/TOKCASManager';
 
 export default function Schedule() {
   const [isDialogOpen, setIsDialogOpen] = useState(false);
