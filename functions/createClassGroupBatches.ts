@@ -39,6 +39,17 @@ Deno.serve(async (req) => {
     const sampleStudentIds = students.slice(0, 5).map(s => s.id);
 
     if (students.length === 0) {
+      // Extra diagnostics: show counts by school_id across all students and subject counts for this school
+      const allStudents = await base44.asServiceRole.entities.Student.list().catch(() => []);
+      const otherSchoolCounts = {};
+      const sampleStudentIdBySchool = {};
+      for (const s of allStudents) {
+        const sid = s.school_id || 'null';
+        otherSchoolCounts[sid] = (otherSchoolCounts[sid] || 0) + 1;
+        if (!sampleStudentIdBySchool[sid]) sampleStudentIdBySchool[sid] = s.id;
+      }
+      const subjectsForSchool = await base44.asServiceRole.entities.Subject.filter({ school_id: schoolId }).catch(() => []);
+
       return Response.json({ 
         success: true,
         message: 'No students found for this school. Please add/import students first.',
@@ -47,7 +58,11 @@ Deno.serve(async (req) => {
         diagnostics: {
           schoolId,
           programmeYearCounts,
-          sampleStudentIds
+          sampleStudentIds,
+          otherSchoolCounts,
+          sampleStudentIdBySchool,
+          subjectsForSchoolCount: subjectsForSchool.length,
+          sampleSubjectIds: subjectsForSchool.slice(0,5).map(s => s.id)
         }
       });
     }
