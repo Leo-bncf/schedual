@@ -175,7 +175,7 @@ export default function StudentScheduleView({ students, slots, groups, subjects,
                         <div key={`${day}-${period}`} className="border-r border-slate-200 last:border-r-0 hover:bg-slate-50/50">
                           {slot && subject && (
                             <div className={`h-full p-2 border-l-4 ${colorClass}`}>
-                              <div className={`font-semibold text-xs leading-tight ${isTestSlot ? 'text-red-900' : 'text-slate-900'}`}>
+                              <div className={`font-semibold text-xs leading-tight ${isTestSlot ? 'text-red-900' : isCoreComponent ? 'text-purple-900' : 'text-slate-900'}`}>
                                 {subject.name}
                               </div>
                               {level && <div className="text-[10px] text-slate-700 leading-tight">{level}</div>}
