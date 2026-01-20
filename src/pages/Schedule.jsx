@@ -430,12 +430,39 @@ Now process the user's input and return ONLY the JSON object.`,
       // Step 0: Auto-generate DP teaching groups
       if (cancelGeneration) throw new Error('Cancelled by user');
       
+      // DP Step 1: Delete old DP teaching groups
       if (allowedProgrammes.includes('DP')) {
         setGenerationProgress(prev => ({
           ...prev,
-          stage: 'Preparing DP Groups',
+          stage: 'Cleaning DP Groups',
+          percent: 3,
+          message: 'Removing old DP teaching groups...'
+        }));
+
+        try {
+          const dpGroups = await base44.entities.TeachingGroup.filter({ school_id: schoolId });
+          const dpGroupsToDelete = dpGroups.filter(g => {
+            const level = getIBLevel(g.year_group);
+            return level === 'DP';
+          });
+
+          for (const group of dpGroupsToDelete) {
+            await base44.entities.TeachingGroup.delete(group.id);
+            await new Promise(resolve => setTimeout(resolve, 100));
+          }
+          console.log(`✓ Deleted ${dpGroupsToDelete.length} old DP groups`);
+        } catch (error) {
+          console.error('Error deleting old DP groups:', error.message);
+        }
+      }
+
+      // DP Step 2: Create new DP teaching groups from student choices
+      if (allowedProgrammes.includes('DP')) {
+        setGenerationProgress(prev => ({
+          ...prev,
+          stage: 'Creating DP Groups',
           percent: 5,
-          message: 'Preparing DP teaching groups from student choices...'
+          message: 'Creating fresh DP teaching groups from student choices...'
         }));
 
         try {
@@ -443,13 +470,13 @@ Now process the user's input and return ONLY the JSON object.`,
             action: 'create', 
             max_group_size: 20 
           });
-          console.log(`✓ DP groups: ${dpGroupResult?.created || 0} created, ${dpGroupResult?.skipped_duplicates || 0} skipped`);
+          console.log(`✓ DP groups created: ${dpGroupResult?.created || 0}`);
         } catch (dpError) {
           console.error('❌ DP group generation error:', dpError.message);
         }
       }
-      
-      // Refresh teaching groups after auto-generation
+
+      // Refresh teaching groups after DP group creation
       await queryClient.invalidateQueries({ queryKey: ['teachingGroups'] });
       await new Promise(resolve => setTimeout(resolve, 1000));
       
