@@ -1363,6 +1363,7 @@ Now process the user's input and return ONLY the JSON object.`,
 
     const scheduledStudents = new Set();
     const scheduledTeachers = new Set();
+    const allStudentIds = new Set(students.map(s => s.id));
 
     scheduleSlots.forEach(slot => {
       if (slot.teacher_id) scheduledTeachers.add(slot.teacher_id);
@@ -1370,20 +1371,25 @@ Now process the user's input and return ONLY the JSON object.`,
       // For classgroup-based slots (PYP/MYP)
       if (slot.classgroup_id) {
         const cg = classGroups.find(c => c.id === slot.classgroup_id);
-        cg?.student_ids?.forEach(sid => scheduledStudents.add(sid));
+        cg?.student_ids?.forEach(sid => {
+          if (allStudentIds.has(sid)) scheduledStudents.add(sid);
+        });
       }
       
       // For teaching group-based slots (DP)
       if (slot.teaching_group_id) {
         const tg = teachingGroups.find(g => g.id === slot.teaching_group_id);
-        tg?.student_ids?.forEach(sid => scheduledStudents.add(sid));
+        tg?.student_ids?.forEach(sid => {
+          if (allStudentIds.has(sid)) scheduledStudents.add(sid);
+        });
       }
     });
 
-    const coverage = students.length > 0 ? Math.round((scheduledStudents.size / students.length) * 100) : 0;
+    const uniqueScheduledStudents = Math.min(scheduledStudents.size, students.length);
+    const coverage = students.length > 0 ? Math.round((uniqueScheduledStudents / students.length) * 100) : 0;
 
     return {
-      studentsScheduled: scheduledStudents.size,
+      studentsScheduled: uniqueScheduledStudents,
       teachersAssigned: scheduledTeachers.size,
       totalSlots: scheduleSlots.length,
       coverage
