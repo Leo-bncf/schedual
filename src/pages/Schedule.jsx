@@ -1287,10 +1287,12 @@ Now process the user's input and return ONLY the JSON object.`,
         }
       });
 
-      // Refresh slots and version data
+      // Refresh slots and version data - CRITICAL: must be sequential to ensure data loads
       await queryClient.invalidateQueries({ queryKey: ['scheduleSlots'] });
-      await queryClient.invalidateQueries({ queryKey: ['scheduleVersions'] });
+      await new Promise(resolve => setTimeout(resolve, 500));
       await queryClient.invalidateQueries({ queryKey: ['teachingGroups'] });
+      await new Promise(resolve => setTimeout(resolve, 500));
+      await queryClient.invalidateQueries({ queryKey: ['scheduleVersions'] });
       
       setGenerationProgress({
         stage: 'Complete',
