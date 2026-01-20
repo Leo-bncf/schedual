@@ -379,7 +379,41 @@ Deno.serve(async (req) => {
       }
     }
 
-    console.log(`Generated ${slots.length} slots for ${level}`);
+    // Create test slots at the end so they appear in the schedule
+    const levelTestConfig = testConfig[level] || { tests_per_week: 0, test_duration_minutes: 0 };
+    const testsPerWeek = levelTestConfig.tests_per_week || 0;
+    const testDurationPeriods = Math.ceil(levelTestConfig.test_duration_minutes / (school?.period_duration_minutes || 45));
+    
+    if (testsPerWeek > 0) {
+      const testPeriods = periods.slice(-testDurationPeriods);
+      const testDays = days.slice(0, Math.min(testsPerWeek, days.length));
+      
+      testDays.forEach(day => {
+        testPeriods.forEach(period => {
+          if (blockedPeriods.has(period)) return;
+          
+          // Create a test slot for every ClassGroup so it appears in class views
+          classGroups.forEach(cg => {
+            slots.push({
+              school_id: schoolId,
+              schedule_version: schedule_version_id,
+              classgroup_id: cg.id,
+              subject_id: null,
+              teacher_id: null,
+              room_id: null,
+              day,
+              period,
+              status: 'scheduled',
+              notes: `${level} Test/Assessment Slot`
+            });
+          });
+        });
+      });
+      
+      console.log(`Added ${testsPerWeek} test days with ${testDurationPeriods} periods each for ${level}`);
+    }
+    
+    console.log(`Generated ${slots.length} total slots for ${level} (including tests)`);
 
     return Response.json({ 
       success: true, 
