@@ -201,6 +201,7 @@ Deno.serve(async (req) => {
           year_group: g.year_group,
           student_ids: g.student_ids,
           hours_per_week: g.hours_per_week,
+          group_type: g.group_type, // 'shared' or 'hl_only'
           is_active: true,
           max_students: maxGroupSize,
           min_students: 1
