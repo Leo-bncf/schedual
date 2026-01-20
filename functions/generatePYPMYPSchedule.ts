@@ -95,6 +95,9 @@ Deno.serve(async (req) => {
       console.log(`Reserved ${reservedTestSlots.length} test slot periods for ${level}`);
     }
 
+    // Track unique students being scheduled (not iterations)
+    const uniqueStudentsScheduled = new Set();
+    
     // For each ClassGroup, schedule all their subjects
     for (const classGroup of classGroups) {
       console.log(`\n=== Scheduling ClassGroup: ${classGroup.name} ===`);
@@ -102,6 +105,9 @@ Deno.serve(async (req) => {
       console.log(`ClassGroup student_ids length:`, classGroup.student_ids?.length || 0);
       console.log(`Subjects available for scheduling:`, subjects.length);
       console.log(`Subject names:`, subjects.map(s => s.name));
+      
+      // Add this ClassGroup's students to the unique set
+      (classGroup.student_ids || []).forEach(sid => uniqueStudentsScheduled.add(sid));
 
       // Get students in this ClassGroup - use student_ids array from classGroup
       const classGroupStudentIds = classGroup.student_ids || [];
