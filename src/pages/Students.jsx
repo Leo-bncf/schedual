@@ -154,6 +154,16 @@ export default function Students() {
       return created;
     },
     onSuccess: (created) => {
+      (async () => {
+        try {
+          const verify = await base44.entities.Student.filter({ id: created?.id });
+          if (!Array.isArray(verify) || verify.length === 0) {
+            console.warn('Post-save verify: record not visible yet, forcing refetch');
+          }
+        } catch (e) {
+          console.error('Post-save verify failed', e);
+        }
+      })();
       alert(`Saved student ${created?.full_name || ''} (#${created?.id}) in school ${schoolId}`);
       queryClient.invalidateQueries({ queryKey: ['students', schoolId] });
       queryClient.invalidateQueries({ queryKey: ['students'] });
@@ -238,6 +248,9 @@ export default function Students() {
       console.log(`Auto-assigned ${programmeSubjects.length} ${formData.ib_programme} subjects`);
     }
     
+    // Ensure school_id is set explicitly
+    finalFormData.school_id = schoolId;
+
     // Save student
     if (editingStudent) {
       updateMutation.mutate({ id: editingStudent.id, data: finalFormData });
