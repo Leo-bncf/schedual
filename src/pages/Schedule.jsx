@@ -872,8 +872,14 @@ Now process the user's input and return ONLY the JSON object.`,
         });
         const isReserved = (yearGroup, day, period) => reservedDPTests[yearGroup]?.has?.(makeKey(day, period));
 
-        // Schedule each teaching group independently for its required hours
-        for (const group of levelGroupsFromUpdated) {
+        // Schedule each DP teaching group independently for its required hours
+        const dpGroups = levelGroupsFromUpdated.filter(g => {
+          if (g.is_active === false) return false;
+          if (!g.subject_id) return false;
+          return getIBLevel(g.year_group) === 'DP';
+        });
+
+        for (const group of dpGroups) {
           const subject = subjects.find(s => s.id === group.subject_id);
           if (!subject) continue;
 
