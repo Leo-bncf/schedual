@@ -873,10 +873,11 @@ Now process the user's input and return ONLY the JSON object.`,
               });
 
               created++;
-            }
-          }
-          return created;
-        };
+              sessionsThisDay++;
+              }
+              }
+              return created;
+              };
 
         // Build DP reserved test slots by year group (DP1/DP2)
         const dpTestConfig = school?.settings?.test_config || {};
