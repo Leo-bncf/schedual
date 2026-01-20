@@ -12,6 +12,7 @@ import OptimizationEngine from './pages/OptimizationEngine';
 import Panel from './pages/Panel';
 import PrivacyPolicy from './pages/PrivacyPolicy';
 import Rooms from './pages/Rooms';
+import Schedule from './pages/Schedule';
 import Settings from './pages/Settings';
 import Students from './pages/Students';
 import Subjects from './pages/Subjects';
@@ -24,7 +25,6 @@ import Teachers from './pages/Teachers';
 import TermsOfUse from './pages/TermsOfUse';
 import TestData from './pages/TestData';
 import UserManagement from './pages/UserManagement';
-import Schedule from './pages/Schedule';
 import __Layout from './Layout.jsx';
 
 
@@ -43,6 +43,7 @@ export const PAGES = {
     "Panel": Panel,
     "PrivacyPolicy": PrivacyPolicy,
     "Rooms": Rooms,
+    "Schedule": Schedule,
     "Settings": Settings,
     "Students": Students,
     "Subjects": Subjects,
@@ -55,7 +56,6 @@ export const PAGES = {
     "TermsOfUse": TermsOfUse,
     "TestData": TestData,
     "UserManagement": UserManagement,
-    "Schedule": Schedule,
 }
 
 export const pagesConfig = {

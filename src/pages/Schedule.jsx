@@ -902,23 +902,15 @@ Now process the user's input and return ONLY the JSON object.`,
           const slGroups = groups.filter(g => g.level === 'SL');
           const hlGroups = groups.filter(g => g.level === 'HL');
 
-          // Deduplicate: Remove students from HL groups if they're already in SL groups
-          const slStudentIds = new Set(slGroups.flatMap(g => g.student_ids || []));
-          hlGroups.forEach(hlGroup => {
-            hlGroup.student_ids = (hlGroup.student_ids || []).filter(sid => !slStudentIds.has(sid));
-          });
-          // Remove empty HL groups
-          const nonEmptyHLGroups = hlGroups.filter(g => (g.student_ids || []).length > 0);
-
           const slHours = subject.sl_hours_per_week || schoolConfig.sl_hours || 4;
           const hlHours = subject.hl_hours_per_week || schoolConfig.hl_hours || 6;
           const sharedCount = Math.min(slHours, hlHours); // usually SL hours
           const hlExtra = Math.max(0, hlHours - slHours);
 
-          if (slGroups.length > 0 && (nonEmptyHLGroups.length > 0 || sharedCount > 0)) {
+          if (slGroups.length > 0 && (hlGroups.length > 0 || sharedCount > 0)) {
             // Use first SL group as primary for shared sessions
             const primary = slGroups[0];
-            const mirrors = [...nonEmptyHLGroups];
+            const mirrors = [...hlGroups];
             const made = await scheduleSharedSessions({ primaryGroup: primary, mirrorGroups: mirrors, subject, sessions: sharedCount });
             if (made < sharedCount) {
               console.warn(`Shared ${subject.name} in ${yearGroup}: scheduled ${made}/${sharedCount}`);
@@ -957,8 +949,8 @@ Now process the user's input and return ONLY the JSON object.`,
           }
 
           // HL-only extra sessions
-          if (hlExtra > 0 && nonEmptyHLGroups.length > 0) {
-            for (const hl of nonEmptyHLGroups) {
+          if (hlExtra > 0 && hlGroups.length > 0) {
+            for (const hl of hlGroups) {
               let made = 0;
               const preferredRoomsBase = rooms.filter(r => r.is_active);
               const preferredRooms = subject?.requires_special_room
