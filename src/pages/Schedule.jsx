@@ -911,11 +911,11 @@ Now process the user's input and return ONLY the JSON object.`,
           const hlHours = subject.hl_hours_per_week || schoolConfig.hl_hours || 6;
           const periodDuration = school?.period_duration_minutes || 45;
 
-          // Convert hours to periods using actual period duration
-          const slPeriods = Math.ceil((slHours * 60) / periodDuration);
-          const hlPeriods = Math.ceil((hlHours * 60) / periodDuration);
+          // Convert hours to periods without artificial inflation (use floor, not ceil)
+          const slPeriods = Math.floor((slHours * 60) / periodDuration);
+          const hlPeriods = Math.floor((hlHours * 60) / periodDuration);
 
-          const sharedPeriods = Math.min(slPeriods, hlPeriods); // shared sessions
+          const sharedPeriods = Math.min(slPeriods, hlPeriods); // shared sessions (HL join SL)
           const hlExtra = Math.max(0, hlPeriods - slPeriods); // HL-only extra sessions
 
           if (slGroups.length > 0 && (hlGroups.length > 0 || sharedPeriods > 0)) {
