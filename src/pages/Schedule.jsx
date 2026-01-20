@@ -450,11 +450,15 @@ Now process the user's input and return ONLY the JSON object.`,
 
         try {
           const dpGroups = await base44.entities.TeachingGroup.filter({ school_id: schoolId });
+          console.log(`Found ${dpGroups.length} total teaching groups`);
+          
           const dpGroupsToDelete = dpGroups.filter(g => {
             const level = getIBLevel(g.year_group);
+            console.log(`Checking group "${g.name}" with year_group="${g.year_group}" -> level="${level}"`);
             return level === 'DP';
           });
 
+          console.log(`Identified ${dpGroupsToDelete.length} DP groups to delete`);
           for (const group of dpGroupsToDelete) {
             await base44.entities.TeachingGroup.delete(group.id);
             await new Promise(resolve => setTimeout(resolve, 100));
@@ -462,6 +466,7 @@ Now process the user's input and return ONLY the JSON object.`,
           console.log(`✓ Deleted ${dpGroupsToDelete.length} old DP groups`);
         } catch (error) {
           console.error('Error deleting old DP groups:', error.message);
+          console.error('Error details:', error);
         }
       }
 
