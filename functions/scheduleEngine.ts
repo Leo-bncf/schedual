@@ -1,5 +1,4 @@
 import { createClientFromRequest } from 'npm:@base44/sdk@0.8.6';
-import { getUserSchoolId } from './securityHelper.js';
 
 Deno.serve(async (req) => {
   try {
@@ -14,7 +13,11 @@ Deno.serve(async (req) => {
       return Response.json({ error: 'schedule_version_id required' }, { status: 400 });
     }
 
-    const schoolId = await getUserSchoolId(base44);
+    if (!user.school_id) {
+      return Response.json({ error: 'User not assigned to a school' }, { status: 403 });
+    }
+
+    const schoolId = user.school_id;
 
     // Load all data in parallel
     const [school, students, teachers, rooms, subjects, scheduleVersion, constraints] = await Promise.all([
