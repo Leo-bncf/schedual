@@ -927,36 +927,8 @@ Now process the user's input and return ONLY the JSON object.`,
               console.warn(`Shared ${subject.name} in ${yearGroup}: scheduled ${made}/${sharedPeriods}`);
             }
 
-            // If there are additional SL groups beyond the primary, try to align them too (mirror with primary)
-            for (let i = 1; i < slGroups.length; i++) {
-              const extraSL = slGroups[i];
-              // Mirror primary's shared sessions by creating "mirror" copies for this SL group
-              const primarySlots = newSlots.filter(s => s.teaching_group_id === primary.id && s.day && s.period);
-              let mirrored = 0;
-              for (const s of primarySlots) {
-                if (mirrored >= sharedPeriods) break;
-                // Avoid duplicates for extra SL group
-                const exists = newSlots.some(ns => ns.teaching_group_id === extraSL.id && ns.day === s.day && ns.period === s.period);
-                if (!exists) {
-                  newSlots.push({
-                    school_id: schoolId,
-                    schedule_version: selectedVersion.id,
-                    teaching_group_id: extraSL.id,
-                    room_id: null,
-                    day: s.day,
-                    period: s.period,
-                    status: 'scheduled',
-                    notes: `Shared with ${primary.name}`
-                  });
-                  // Block students too
-                  (extraSL.student_ids || []).forEach(sid => {
-                    if (!studentSchedules[sid]) studentSchedules[sid] = [];
-                    studentSchedules[sid].push({ day: s.day, period: s.period, subjectId: subject.id });
-                  });
-                  mirrored++;
-                }
-              }
-            }
+            // Extra SL groups should NOT get duplicated slots—they attend the same shared sessions
+            // Only schedule slots once for primary SL group; other SL/HL groups mirror silently
           }
 
           // HL-only extra sessions
