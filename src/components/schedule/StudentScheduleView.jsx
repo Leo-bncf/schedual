@@ -161,9 +161,15 @@ export default function StudentScheduleView({ students, slots, groups, subjects,
                       
                       const room = slot ? rooms.find(r => r.id === slot.room_id) : null;
                       const isTestSlot = slot?.notes?.includes('Test');
-                      const colorClass = isTestSlot 
-                        ? 'bg-red-200/90 border-red-500' 
-                        : (subject ? subjectColors[subject.ib_group || 1] : '');
+                      const isCoreComponent = slot?.notes?.includes('TOK') || slot?.notes?.includes('CAS') || slot?.notes?.includes('EE');
+                      let colorClass = '';
+                      if (isTestSlot) {
+                        colorClass = 'bg-red-200/90 border-red-500';
+                      } else if (isCoreComponent) {
+                        colorClass = 'bg-purple-200/90 border-purple-500';
+                      } else {
+                        colorClass = subject ? subjectColors[subject.ib_group || 1] : '';
+                      }
 
                       return (
                         <div key={`${day}-${period}`} className="border-r border-slate-200 last:border-r-0 hover:bg-slate-50/50">
