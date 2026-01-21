@@ -30,6 +30,7 @@ const CONFLICT_ICONS = {
   insufficient_hours: Clock,
   ib_requirement_violation: AlertCircle,
   consecutive_periods_exceeded: Clock,
+  unassigned_teaching_unit: XCircle,
 };
 
 const SEVERITY_CONFIG = {
@@ -99,6 +100,18 @@ export default function ConflictViewer({ scheduleVersionId }) {
     staleTime: 30000,
   });
 
+  const { data: teachingGroups = [] } = useQuery({
+    queryKey: ['teachingGroups'],
+    queryFn: () => base44.entities.TeachingGroup.list(),
+    staleTime: 60000,
+  });
+
+  const { data: subjects = [] } = useQuery({
+    queryKey: ['subjects'],
+    queryFn: () => base44.entities.Subject.list(),
+    staleTime: 60000,
+  });
+
   const getEntityName = (entityType, entityId) => {
     if (entityType === 'teacher') {
       return teachers.find(t => t.id === entityId)?.full_name || 'Unknown Teacher';
@@ -108,6 +121,13 @@ export default function ConflictViewer({ scheduleVersionId }) {
     }
     if (entityType === 'room') {
       return rooms.find(r => r.id === entityId)?.name || 'Unknown Room';
+    }
+    if (entityType === 'teaching_group') {
+      const group = teachingGroups.find(g => g.id === entityId);
+      return group?.name || 'Unknown Teaching Group';
+    }
+    if (entityType === 'subject') {
+      return subjects.find(s => s.id === entityId)?.name || 'Unknown Subject';
     }
     return 'Unknown';
   };

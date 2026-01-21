@@ -110,7 +110,40 @@ Deno.serve(async (req) => {
       await base44.asServiceRole.entities.ScheduleSlot.bulkCreate(slots);
     }
 
-    // Step 7: Update schedule version metadata
+    // Step 7: Create conflict reports for unassigned units
+    if (solution.unassigned_units && solution.unassigned_units.length > 0) {
+      const teachingGroups = await base44.asServiceRole.entities.TeachingGroup.filter({
+        school_id: user.school_id
+      });
+      const subjects = await base44.asServiceRole.entities.Subject.filter({
+        school_id: user.school_id
+      });
+
+      for (const unitId of solution.unassigned_units) {
+        const group = teachingGroups.find(g => g.id === unitId);
+        if (!group) continue;
+
+        const subject = subjects.find(s => s.id === group.subject_id);
+        const groupName = group.name || `${subject?.name} ${group.level}`;
+
+        await base44.asServiceRole.entities.ConflictReport.create({
+          school_id: user.school_id,
+          schedule_version_id,
+          conflict_type: 'unassigned_teaching_unit',
+          severity: 'critical',
+          description: `Teaching unit "${groupName}" could not be scheduled. No valid time slots found that satisfy all constraints.`,
+          affected_entities: {
+            teaching_group: unitId,
+            subject: group.subject_id,
+            teacher: group.teacher_id
+          },
+          suggested_resolution: 'Try relaxing soft constraints, adding more time slots, or reducing required sessions per week.',
+          status: 'unresolved'
+        });
+      }
+    }
+
+    // Step 8: Update schedule version metadata
     await base44.asServiceRole.entities.ScheduleVersion.update(schedule_version_id, {
       generated_at: new Date().toISOString(),
       score: solution.stats?.teacher_utilization || 0,
