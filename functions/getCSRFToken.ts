@@ -10,7 +10,7 @@ Deno.serve(async (req) => {
     }
 
     // Get active verified session
-    const sessions = await base44.asServiceRole.entities.LoginSession.filter({
+    const sessions = await base44.entities.LoginSession.filter({
       user_email: user.email,
       verified: true
     }, '-created_date', 1);
