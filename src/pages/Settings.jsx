@@ -61,6 +61,7 @@ import {
 } from 'lucide-react';
 import PageHeader from '../components/ui-custom/PageHeader';
 import YearAdvancement from '../components/settings/YearAdvancement';
+import CombinedSubjectsSelector from '../components/settings/CombinedSubjectsSelector';
 import { toast } from 'sonner';
 
 const TIMEZONES = [
@@ -646,6 +647,49 @@ export default function Settings() {
 
         <TabsContent value="academic">
           <div className="space-y-6">
+            {/* Combined DP1/DP2 Subjects */}
+            <Card className="border-0 shadow-md">
+              <CardHeader className="bg-gradient-to-r from-indigo-50 to-violet-50">
+                <div className="flex items-center gap-3">
+                  <div className="p-2 rounded-lg bg-indigo-100">
+                    <GraduationCap className="w-5 h-5 text-indigo-700" />
+                  </div>
+                  <div>
+                    <CardTitle className="text-lg">Combined DP1/DP2 Classes</CardTitle>
+                    <CardDescription>Select subjects where DP1 and DP2 students learn together</CardDescription>
+                  </div>
+                </div>
+              </CardHeader>
+              <CardContent className="pt-6 space-y-4">
+                <div className="p-4 rounded-lg bg-blue-50 border border-blue-200">
+                  <div className="flex items-start gap-3">
+                    <Info className="w-5 h-5 text-blue-600 flex-shrink-0 mt-0.5" />
+                    <div className="text-sm text-blue-900">
+                      <p className="font-semibold mb-1">How it works:</p>
+                      <ul className="list-disc list-inside space-y-1 text-xs">
+                        <li>Select subjects where DP1 and DP2 students should be in the same teaching groups</li>
+                        <li>When generating groups, students from both year groups will be combined</li>
+                        <li>Useful for subjects like Mathematics, Sciences, or Languages</li>
+                        <li>Reduces the total number of teaching groups and improves scheduling</li>
+                      </ul>
+                    </div>
+                  </div>
+                </div>
+
+                <CombinedSubjectsSelector 
+                  value={formData.settings?.subjects_combine_dp1_dp2 || []}
+                  onChange={(subjects) => setFormData({
+                    ...formData,
+                    settings: {
+                      ...formData.settings,
+                      subjects_combine_dp1_dp2: subjects
+                    }
+                  })}
+                  schoolId={user?.school_id}
+                />
+              </CardContent>
+            </Card>
+
             <YearAdvancement />
           </div>
         </TabsContent>
