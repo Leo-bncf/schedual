@@ -15,19 +15,23 @@ Deno.serve(async (req) => {
 
     const school_id = user.school_id;
 
-    // Fetch DP students and subjects
-    const [students, subjects] = await Promise.all([
-      base44.entities.Student.filter({ 
-        school_id, 
-        ib_programme: 'DP',
-        is_active: true 
-      }),
-      base44.entities.Subject.filter({ 
-        school_id, 
-        ib_level: 'DP',
-        is_active: true 
-      })
+    // Fetch all students and subjects (filter manually since RLS might not work)
+    const [allStudents, subjects] = await Promise.all([
+      base44.entities.Student.filter({ school_id }),
+      base44.entities.Subject.filter({ school_id })
     ]);
+
+    // Filter for DP students manually
+    const students = allStudents.filter(s => 
+      s.ib_programme === 'DP' && s.is_active !== false
+    );
+
+    // Filter DP subjects
+    const dpSubjects = subjects.filter(s => 
+      s.ib_level === 'DP' && s.is_active !== false
+    );
+
+    console.log(`Found ${students.length} DP students and ${dpSubjects.length} DP subjects`);
 
     if (students.length === 0) {
       return Response.json({ 
@@ -72,7 +76,7 @@ Deno.serve(async (req) => {
     // Create new groups
     const newGroups = [];
     for (const [key, groupData] of groupMap.entries()) {
-      const subject = subjects.find(s => s.id === groupData.subject_id);
+      const subject = dpSubjects.find(s => s.id === groupData.subject_id);
       if (!subject) continue;
 
       const hoursPerWeek = groupData.level === 'HL' 
