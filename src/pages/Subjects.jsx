@@ -6,6 +6,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Badge } from "@/components/ui/badge";
 import { Checkbox } from "@/components/ui/checkbox";
+import { Switch } from "@/components/ui/switch";
 import { Card, CardContent } from "@/components/ui/card";
 import {
   Dialog,
@@ -845,15 +846,20 @@ ${trainingFeedback ? `LESSONS FROM ADMIN FEEDBACK:\n${trainingFeedback}\n\n` : '
               </div>
               
               {formData.ib_level === 'DP' && !formData.is_core && (
-                <div className="flex items-center gap-2 p-3 bg-blue-50 rounded-lg border border-blue-200">
-                  <Checkbox 
+                <div className="flex items-center justify-between p-4 bg-gradient-to-r from-blue-50 to-indigo-50 rounded-lg border-2 border-blue-200">
+                  <div>
+                    <Label htmlFor="combine_dp1_dp2" className="font-semibold text-slate-900 text-sm">
+                      Combine DP1 & DP2 Teaching Groups
+                    </Label>
+                    <p className="text-xs text-slate-600 mt-1">
+                      Students from both year groups will be scheduled together
+                    </p>
+                  </div>
+                  <Switch 
                     id="combine_dp1_dp2"
                     checked={formData.combine_dp1_dp2}
                     onCheckedChange={(checked) => setFormData({ ...formData, combine_dp1_dp2: checked })}
                   />
-                  <Label htmlFor="combine_dp1_dp2" className="font-normal">
-                    Combine DP1 & DP2 students into single teaching groups
-                  </Label>
                 </div>
               )}
             </div>
