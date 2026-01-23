@@ -175,34 +175,33 @@ Deno.serve(async (req) => {
       });
     });
 
-    // Add test slots from test subjects
-    const testSubjects = subjects.filter(s => s.is_test_slot);
-    testSubjects.forEach(testSubject => {
-      const testsPerWeek = testSubject.tests_per_week || 0;
+    // Add test slots as blocked teaching units per level
+    const testSlots = [];
+    ['PYP', 'MYP', 'DP1', 'DP2'].forEach(level => {
+      const config = testConfig[level] || { tests_per_week: 0, test_duration_minutes: 0 };
+      const testsPerWeek = config.tests_per_week || 0;
       
-      if (testsPerWeek > 0 && testSubject.test_level) {
+      if (testsPerWeek > 0) {
         const periodDuration = school.period_duration_minutes || 45;
-        const periodsNeeded = Math.ceil((testSubject.test_duration_minutes || 0) / periodDuration);
+        const periodsNeeded = Math.ceil(config.test_duration_minutes / periodDuration);
         
         // Get students in this level
         const levelStudents = students.filter(s => {
-          if (testSubject.test_level === 'PYP' || testSubject.test_level === 'MYP') {
-            return s.ib_programme === testSubject.test_level;
-          }
-          return s.year_group === testSubject.test_level;
+          if (level === 'PYP' || level === 'MYP') return s.ib_programme === level;
+          return s.year_group === level;
         }).map(s => s.id);
 
         if (levelStudents.length > 0) {
           teaching_units.push({
-            id: `test_${testSubject.id}`,
+            id: `test_${level}`,
             type: 'test_slot',
             student_ids: levelStudents,
             required_sessions: testsPerWeek,
             required_capability: 'TEST_ASSESSMENT',
             allowed_room_types: ['classroom'],
-            teacher_id: testSubject.supervisor_teacher_id || null,
+            teacher_id: null,
             requires_double_periods: periodsNeeded > 1,
-            test_level: testSubject.test_level
+            test_level: level
           });
         }
       }
