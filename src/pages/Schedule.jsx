@@ -97,10 +97,10 @@ export default function Schedule() {
     break_duration_minutes: 15,
     break_periods: [2, 6],
     test_config: {
-      PYP: { tests_per_week: 1, test_duration_minutes: 60 },
-      MYP: { tests_per_week: 1, test_duration_minutes: 60 },
-      DP1: { tests_per_week: 2, test_duration_minutes: 90 },
-      DP2: { tests_per_week: 2, test_duration_minutes: 90 }
+      PYP: { tests_per_week: 1, test_duration_minutes: 60, supervisor_id: null },
+      MYP: { tests_per_week: 1, test_duration_minutes: 60, supervisor_id: null },
+      DP1: { tests_per_week: 2, test_duration_minutes: 90, supervisor_id: null },
+      DP2: { tests_per_week: 2, test_duration_minutes: 90, supervisor_id: null }
     }
   });
   const [isSavingConfig, setIsSavingConfig] = useState(false);
@@ -143,10 +143,10 @@ export default function Schedule() {
         break_duration_minutes: school.settings?.break_duration_minutes || 15,
         break_periods: school.settings?.break_periods || [2, 6],
         test_config: school.settings?.test_config || {
-          PYP: { tests_per_week: 1, test_duration_minutes: 60 },
-          MYP: { tests_per_week: 1, test_duration_minutes: 60 },
-          DP1: { tests_per_week: 2, test_duration_minutes: 90 },
-          DP2: { tests_per_week: 2, test_duration_minutes: 90 }
+          PYP: { tests_per_week: 1, test_duration_minutes: 60, supervisor_id: null },
+          MYP: { tests_per_week: 1, test_duration_minutes: 60, supervisor_id: null },
+          DP1: { tests_per_week: 2, test_duration_minutes: 90, supervisor_id: null },
+          DP2: { tests_per_week: 2, test_duration_minutes: 90, supervisor_id: null }
         }
       });
     }
@@ -361,8 +361,14 @@ Now process the user's input and return ONLY the JSON object.`,
           }
         }
       });
+
+      // Sync test subjects to Subject entity
+      await base44.functions.invoke('syncTestSubjects');
+      
+      toast.success('Configuration saved successfully');
     } catch (error) {
       console.error('Failed to save configuration:', error);
+      toast.error('Failed to save configuration');
     } finally {
       setIsSavingConfig(false);
     }
@@ -2000,7 +2006,7 @@ Now process the user's input and return ONLY the JSON object.`,
                           </div>
                           <div>
                             <CardTitle className="text-lg">Test & Assessment Slots by Level</CardTitle>
-                            <CardDescription>Configure weekly test allocation per IB programme level</CardDescription>
+                            <CardDescription>Configure weekly test allocation and supervision per IB programme level</CardDescription>
                           </div>
                         </div>
                       </CardHeader>
@@ -2036,28 +2042,51 @@ Now process the user's input and return ONLY the JSON object.`,
                                 />
                               </div>
                               <div>
-                                <Label className="text-xs text-yellow-800 mb-1.5 block">Duration (minutes)</Label>
-                                <Input 
-                                  type="number"
-                                  min="30"
-                                  max="120"
-                                  step="15"
-                                  className="h-9 text-center font-semibold border-yellow-300"
-                                  value={schoolConfig.test_config.PYP.test_duration_minutes}
-                                  onChange={(e) => setSchoolConfig({
-                                    ...schoolConfig, 
-                                    test_config: {
-                                      ...schoolConfig.test_config,
-                                      PYP: { ...schoolConfig.test_config.PYP, test_duration_minutes: parseInt(e.target.value) }
-                                    }
-                                  })}
-                                />
+                               <Label className="text-xs text-yellow-800 mb-1.5 block">Duration (minutes)</Label>
+                               <Input 
+                                 type="number"
+                                 min="30"
+                                 max="120"
+                                 step="15"
+                                 className="h-9 text-center font-semibold border-yellow-300"
+                                 value={schoolConfig.test_config.PYP.test_duration_minutes}
+                                 onChange={(e) => setSchoolConfig({
+                                   ...schoolConfig, 
+                                   test_config: {
+                                     ...schoolConfig.test_config,
+                                     PYP: { ...schoolConfig.test_config.PYP, test_duration_minutes: parseInt(e.target.value) }
+                                   }
+                                 })}
+                               />
                               </div>
-                            </div>
-                            <p className="text-xs text-yellow-600 mt-3">
+                              <div>
+                               <Label className="text-xs text-yellow-800 mb-1.5 block">Supervisor (optional)</Label>
+                               <Select 
+                                 value={schoolConfig.test_config.PYP.supervisor_id || 'none'}
+                                 onValueChange={(value) => setSchoolConfig({
+                                   ...schoolConfig,
+                                   test_config: {
+                                     ...schoolConfig.test_config,
+                                     PYP: { ...schoolConfig.test_config.PYP, supervisor_id: value === 'none' ? null : value }
+                                   }
+                                 })}
+                               >
+                                 <SelectTrigger className="h-9 border-yellow-300">
+                                   <SelectValue />
+                                 </SelectTrigger>
+                                 <SelectContent>
+                                   <SelectItem value="none">No supervisor</SelectItem>
+                                   {teachers.map(t => (
+                                     <SelectItem key={t.id} value={t.id}>{t.full_name}</SelectItem>
+                                   ))}
+                                 </SelectContent>
+                               </Select>
+                              </div>
+                              </div>
+                              <p className="text-xs text-yellow-600 mt-3">
                               <strong>{schoolConfig.test_config.PYP.tests_per_week}</strong> tests × <strong>{schoolConfig.test_config.PYP.test_duration_minutes}min</strong> per week
-                            </p>
-                          </div>
+                              </p>
+                              </div>
 
                           {/* MYP */}
                           <div className="p-5 rounded-xl bg-gradient-to-br from-green-50 to-green-100 border-2 border-green-200">
@@ -2089,28 +2118,51 @@ Now process the user's input and return ONLY the JSON object.`,
                                 />
                               </div>
                               <div>
-                                <Label className="text-xs text-green-800 mb-1.5 block">Duration (minutes)</Label>
-                                <Input 
-                                  type="number"
-                                  min="30"
-                                  max="120"
-                                  step="15"
-                                  className="h-9 text-center font-semibold border-green-300"
-                                  value={schoolConfig.test_config.MYP.test_duration_minutes}
-                                  onChange={(e) => setSchoolConfig({
-                                    ...schoolConfig, 
-                                    test_config: {
-                                      ...schoolConfig.test_config,
-                                      MYP: { ...schoolConfig.test_config.MYP, test_duration_minutes: parseInt(e.target.value) }
-                                    }
-                                  })}
-                                />
+                               <Label className="text-xs text-green-800 mb-1.5 block">Duration (minutes)</Label>
+                               <Input 
+                                 type="number"
+                                 min="30"
+                                 max="120"
+                                 step="15"
+                                 className="h-9 text-center font-semibold border-green-300"
+                                 value={schoolConfig.test_config.MYP.test_duration_minutes}
+                                 onChange={(e) => setSchoolConfig({
+                                   ...schoolConfig, 
+                                   test_config: {
+                                     ...schoolConfig.test_config,
+                                     MYP: { ...schoolConfig.test_config.MYP, test_duration_minutes: parseInt(e.target.value) }
+                                   }
+                                 })}
+                               />
                               </div>
-                            </div>
-                            <p className="text-xs text-green-600 mt-3">
+                              <div>
+                               <Label className="text-xs text-green-800 mb-1.5 block">Supervisor (optional)</Label>
+                               <Select 
+                                 value={schoolConfig.test_config.MYP.supervisor_id || 'none'}
+                                 onValueChange={(value) => setSchoolConfig({
+                                   ...schoolConfig,
+                                   test_config: {
+                                     ...schoolConfig.test_config,
+                                     MYP: { ...schoolConfig.test_config.MYP, supervisor_id: value === 'none' ? null : value }
+                                   }
+                                 })}
+                               >
+                                 <SelectTrigger className="h-9 border-green-300">
+                                   <SelectValue />
+                                 </SelectTrigger>
+                                 <SelectContent>
+                                   <SelectItem value="none">No supervisor</SelectItem>
+                                   {teachers.map(t => (
+                                     <SelectItem key={t.id} value={t.id}>{t.full_name}</SelectItem>
+                                   ))}
+                                 </SelectContent>
+                               </Select>
+                              </div>
+                              </div>
+                              <p className="text-xs text-green-600 mt-3">
                               <strong>{schoolConfig.test_config.MYP.tests_per_week}</strong> tests × <strong>{schoolConfig.test_config.MYP.test_duration_minutes}min</strong> per week
-                            </p>
-                          </div>
+                              </p>
+                              </div>
 
                           {/* DP1 */}
                           <div className="p-5 rounded-xl bg-gradient-to-br from-blue-50 to-blue-100 border-2 border-blue-200">
@@ -2142,28 +2194,51 @@ Now process the user's input and return ONLY the JSON object.`,
                                 />
                               </div>
                               <div>
-                                <Label className="text-xs text-blue-800 mb-1.5 block">Duration (minutes)</Label>
-                                <Input 
-                                  type="number"
-                                  min="30"
-                                  max="180"
-                                  step="15"
-                                  className="h-9 text-center font-semibold border-blue-300"
-                                  value={schoolConfig.test_config.DP1.test_duration_minutes}
-                                  onChange={(e) => setSchoolConfig({
-                                    ...schoolConfig, 
-                                    test_config: {
-                                      ...schoolConfig.test_config,
-                                      DP1: { ...schoolConfig.test_config.DP1, test_duration_minutes: parseInt(e.target.value) }
-                                    }
-                                  })}
-                                />
+                               <Label className="text-xs text-blue-800 mb-1.5 block">Duration (minutes)</Label>
+                               <Input 
+                                 type="number"
+                                 min="30"
+                                 max="180"
+                                 step="15"
+                                 className="h-9 text-center font-semibold border-blue-300"
+                                 value={schoolConfig.test_config.DP1.test_duration_minutes}
+                                 onChange={(e) => setSchoolConfig({
+                                   ...schoolConfig, 
+                                   test_config: {
+                                     ...schoolConfig.test_config,
+                                     DP1: { ...schoolConfig.test_config.DP1, test_duration_minutes: parseInt(e.target.value) }
+                                   }
+                                 })}
+                               />
                               </div>
-                            </div>
-                            <p className="text-xs text-blue-600 mt-3">
+                              <div>
+                               <Label className="text-xs text-blue-800 mb-1.5 block">Supervisor (optional)</Label>
+                               <Select 
+                                 value={schoolConfig.test_config.DP1.supervisor_id || 'none'}
+                                 onValueChange={(value) => setSchoolConfig({
+                                   ...schoolConfig,
+                                   test_config: {
+                                     ...schoolConfig.test_config,
+                                     DP1: { ...schoolConfig.test_config.DP1, supervisor_id: value === 'none' ? null : value }
+                                   }
+                                 })}
+                               >
+                                 <SelectTrigger className="h-9 border-blue-300">
+                                   <SelectValue />
+                                 </SelectTrigger>
+                                 <SelectContent>
+                                   <SelectItem value="none">No supervisor</SelectItem>
+                                   {teachers.map(t => (
+                                     <SelectItem key={t.id} value={t.id}>{t.full_name}</SelectItem>
+                                   ))}
+                                 </SelectContent>
+                               </Select>
+                              </div>
+                              </div>
+                              <p className="text-xs text-blue-600 mt-3">
                               <strong>{schoolConfig.test_config.DP1.tests_per_week}</strong> tests × <strong>{schoolConfig.test_config.DP1.test_duration_minutes}min</strong> per week
-                            </p>
-                          </div>
+                              </p>
+                              </div>
 
                           {/* DP2 */}
                           <div className="p-5 rounded-xl bg-gradient-to-br from-indigo-50 to-indigo-100 border-2 border-indigo-200">
@@ -2195,28 +2270,51 @@ Now process the user's input and return ONLY the JSON object.`,
                                 />
                               </div>
                               <div>
-                                <Label className="text-xs text-indigo-800 mb-1.5 block">Duration (minutes)</Label>
-                                <Input 
-                                  type="number"
-                                  min="30"
-                                  max="180"
-                                  step="15"
-                                  className="h-9 text-center font-semibold border-indigo-300"
-                                  value={schoolConfig.test_config.DP2.test_duration_minutes}
-                                  onChange={(e) => setSchoolConfig({
-                                    ...schoolConfig, 
-                                    test_config: {
-                                      ...schoolConfig.test_config,
-                                      DP2: { ...schoolConfig.test_config.DP2, test_duration_minutes: parseInt(e.target.value) }
-                                    }
-                                  })}
-                                />
+                               <Label className="text-xs text-indigo-800 mb-1.5 block">Duration (minutes)</Label>
+                               <Input 
+                                 type="number"
+                                 min="30"
+                                 max="180"
+                                 step="15"
+                                 className="h-9 text-center font-semibold border-indigo-300"
+                                 value={schoolConfig.test_config.DP2.test_duration_minutes}
+                                 onChange={(e) => setSchoolConfig({
+                                   ...schoolConfig, 
+                                   test_config: {
+                                     ...schoolConfig.test_config,
+                                     DP2: { ...schoolConfig.test_config.DP2, test_duration_minutes: parseInt(e.target.value) }
+                                   }
+                                 })}
+                               />
                               </div>
-                            </div>
-                            <p className="text-xs text-indigo-600 mt-3">
+                              <div>
+                               <Label className="text-xs text-indigo-800 mb-1.5 block">Supervisor (optional)</Label>
+                               <Select 
+                                 value={schoolConfig.test_config.DP2.supervisor_id || 'none'}
+                                 onValueChange={(value) => setSchoolConfig({
+                                   ...schoolConfig,
+                                   test_config: {
+                                     ...schoolConfig.test_config,
+                                     DP2: { ...schoolConfig.test_config.DP2, supervisor_id: value === 'none' ? null : value }
+                                   }
+                                 })}
+                               >
+                                 <SelectTrigger className="h-9 border-indigo-300">
+                                   <SelectValue />
+                                 </SelectTrigger>
+                                 <SelectContent>
+                                   <SelectItem value="none">No supervisor</SelectItem>
+                                   {teachers.map(t => (
+                                     <SelectItem key={t.id} value={t.id}>{t.full_name}</SelectItem>
+                                   ))}
+                                 </SelectContent>
+                               </Select>
+                              </div>
+                              </div>
+                              <p className="text-xs text-indigo-600 mt-3">
                               <strong>{schoolConfig.test_config.DP2.tests_per_week}</strong> tests × <strong>{schoolConfig.test_config.DP2.test_duration_minutes}min</strong> per week
-                            </p>
-                          </div>
+                              </p>
+                              </div>
                         </div>
 
                         <div className="mt-6 p-4 rounded-lg bg-red-50 border border-red-200">
