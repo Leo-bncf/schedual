@@ -369,30 +369,6 @@ ${trainingFeedback ? `LESSONS FROM ADMIN FEEDBACK:\n${trainingFeedback}\n\n` : '
 
   return (
     <div className="space-y-6">
-      <Button 
-        variant="outline"
-        onClick={async () => {
-          try {
-            const { data } = await base44.functions.invoke('debugSubjects');
-            console.log('🔍 Full debug data:', data);
-            
-            const stepResults = data.steps.map(s => {
-              if (s.action === 'create') {
-                return `Step ${s.step} (${s.action}): ${s.success ? '✅' : '❌'} ID: ${s.id || 'null'} Returned: ${JSON.stringify(s.returned || {})}`;
-              }
-              return `Step ${s.step} (${s.action}): ${s.success ? '✅' : '❌'} ${s.count !== undefined ? `${s.count} subjects` : s.found !== undefined ? `Found ${s.found}` : s.error || ''}`;
-            }).join('\n');
-            
-            alert(`${data.diagnosis}\n\n${stepResults}`);
-          } catch (err) {
-            console.error('❌ Error:', err);
-            alert('Error: ' + (err.message || JSON.stringify(err)));
-          }
-        }}
-      >
-        🔍 Debug & Test Create
-      </Button>
-
       <PageHeader 
         title="Subjects"
         description="Manage IB Programme subjects; features shown depend on your plan"
