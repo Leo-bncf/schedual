@@ -648,6 +648,95 @@ export default function Settings() {
         <TabsContent value="academic">
           <div className="space-y-6">
             <YearAdvancement />
+
+            <Card className="border-0 shadow-md">
+              <CardHeader className="bg-gradient-to-r from-slate-50 to-slate-100">
+                <div className="flex items-center gap-3">
+                  <div className="p-2 rounded-lg bg-slate-200">
+                    <Timer className="w-5 h-5 text-slate-700" />
+                  </div>
+                  <div>
+                    <CardTitle className="text-lg">Schedule Configuration</CardTitle>
+                    <CardDescription>Daily schedule structure and timing</CardDescription>
+                  </div>
+                </div>
+              </CardHeader>
+              <CardContent className="pt-6">
+                <div className="grid sm:grid-cols-2 lg:grid-cols-4 gap-6">
+                  <div className="space-y-2">
+                    <Label htmlFor="periods_per_day" className="flex items-center gap-2 text-sm font-semibold">
+                      <Hash className="w-4 h-4 text-indigo-600" />
+                      Periods per Day
+                    </Label>
+                    <Select 
+                      value={String(formData.periods_per_day)} 
+                      onValueChange={(value) => setFormData({ ...formData, periods_per_day: Number(value) })}
+                    >
+                      <SelectTrigger className="h-11">
+                        <SelectValue />
+                      </SelectTrigger>
+                      <SelectContent>
+                        {[6, 7, 8, 9, 10].map(n => (
+                          <SelectItem key={n} value={String(n)}>{n} periods</SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                  </div>
+                  <div className="space-y-2">
+                    <Label htmlFor="period_duration" className="flex items-center gap-2 text-sm font-semibold">
+                      <Clock className="w-4 h-4 text-indigo-600" />
+                      Period Duration
+                    </Label>
+                    <Select 
+                      value={String(formData.period_duration_minutes)} 
+                      onValueChange={(value) => setFormData({ ...formData, period_duration_minutes: Number(value) })}
+                    >
+                      <SelectTrigger className="h-11">
+                        <SelectValue />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="40">40 minutes</SelectItem>
+                        <SelectItem value="45">45 minutes</SelectItem>
+                        <SelectItem value="50">50 minutes</SelectItem>
+                        <SelectItem value="55">55 minutes</SelectItem>
+                        <SelectItem value="60">60 minutes</SelectItem>
+                      </SelectContent>
+                    </Select>
+                  </div>
+                  <div className="space-y-2">
+                    <Label htmlFor="days_per_week" className="flex items-center gap-2 text-sm font-semibold">
+                      <Calendar className="w-4 h-4 text-indigo-600" />
+                      Days per Week
+                    </Label>
+                    <Select 
+                      value={String(formData.days_per_week)} 
+                      onValueChange={(value) => setFormData({ ...formData, days_per_week: Number(value) })}
+                    >
+                      <SelectTrigger className="h-11">
+                        <SelectValue />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="5">5 days</SelectItem>
+                        <SelectItem value="6">6 days</SelectItem>
+                      </SelectContent>
+                    </Select>
+                  </div>
+                  <div className="space-y-2">
+                    <Label htmlFor="school_start_time" className="flex items-center gap-2 text-sm font-semibold">
+                      <Timer className="w-4 h-4 text-indigo-600" />
+                      School Start Time
+                    </Label>
+                    <Input 
+                      id="school_start_time"
+                      type="time"
+                      value={formData.school_start_time}
+                      onChange={(e) => setFormData({ ...formData, school_start_time: e.target.value })}
+                      className="h-11"
+                    />
+                  </div>
+                </div>
+              </CardContent>
+            </Card>
           </div>
         </TabsContent>
 
