@@ -899,6 +899,180 @@ ${trainingFeedback ? `LESSONS FROM ADMIN FEEDBACK:\n${trainingFeedback}\n\n` : '
         title="Import Subjects"
         description="Upload a document or paste to extract subject data"
       />
+
+      {/* DP Core Components Setup */}
+      {allowedProgrammes.includes('DP') && (
+        <Card className="border-2 border-slate-900 shadow-xl mt-8">
+          <CardHeader className="bg-gradient-to-r from-slate-800 to-slate-900 text-white">
+            <div className="flex items-center justify-between">
+              <div>
+                <CardTitle className="text-xl flex items-center gap-2">
+                  <BookOpen className="w-6 h-6" />
+                  DP Core Components
+                </CardTitle>
+                <CardDescription className="text-slate-300 mt-1">
+                  Configure TOK, CAS, and Extended Essay for scheduling
+                </CardDescription>
+              </div>
+            </div>
+          </CardHeader>
+          <CardContent className="pt-6">
+            <div className="space-y-4">
+              <div className="p-4 rounded-lg bg-blue-50 border border-blue-200">
+                <div className="flex items-start gap-3">
+                  <div className="text-2xl">ℹ️</div>
+                  <div className="text-sm text-blue-900">
+                    <p className="font-semibold mb-1">How it works:</p>
+                    <ul className="list-disc list-inside space-y-1 text-xs">
+                      <li>Add TOK, CAS, and EE as special core subjects</li>
+                      <li>These will be automatically scheduled for all DP students</li>
+                      <li>Set weekly hours for each component</li>
+                      <li>Core components block time for students but don't require teacher assignments</li>
+                    </ul>
+                  </div>
+                </div>
+              </div>
+
+              <div className="grid sm:grid-cols-3 gap-4">
+                {/* TOK */}
+                <Card className="border-2 border-slate-700">
+                  <CardHeader className="pb-3">
+                    <CardTitle className="text-sm font-semibold">Theory of Knowledge</CardTitle>
+                  </CardHeader>
+                  <CardContent className="space-y-3">
+                    {coreSubjects.find(s => s.code === 'TOK') ? (
+                      <Badge className="bg-green-600 text-white w-full justify-center">
+                        <CheckCircle className="w-3 h-3 mr-1" />
+                        Configured
+                      </Badge>
+                    ) : (
+                      <Button
+                        size="sm"
+                        className="w-full bg-slate-900 hover:bg-slate-800"
+                        onClick={() => {
+                          setFormData({
+                            name: 'Theory of Knowledge',
+                            code: 'TOK',
+                            ib_level: 'DP',
+                            ib_group: 1,
+                            ib_group_name: 'Language & Literature',
+                            available_levels: [],
+                            hl_hours_per_week: 6,
+                            sl_hours_per_week: 4,
+                            pyp_myp_hours_per_week: 3,
+                            requires_lab: false,
+                            requires_special_room: '',
+                            is_core: true,
+                            combine_dp1_dp2: false,
+                            is_active: true
+                          });
+                          setIsDialogOpen(true);
+                        }}
+                      >
+                        <Plus className="w-4 h-4 mr-1" />
+                        Add TOK
+                      </Button>
+                    )}
+                    <p className="text-xs text-slate-600">
+                      Recommended: 3 hours/week
+                    </p>
+                  </CardContent>
+                </Card>
+
+                {/* CAS */}
+                <Card className="border-2 border-slate-700">
+                  <CardHeader className="pb-3">
+                    <CardTitle className="text-sm font-semibold">Creativity, Activity, Service</CardTitle>
+                  </CardHeader>
+                  <CardContent className="space-y-3">
+                    {coreSubjects.find(s => s.code === 'CAS') ? (
+                      <Badge className="bg-green-600 text-white w-full justify-center">
+                        <CheckCircle className="w-3 h-3 mr-1" />
+                        Configured
+                      </Badge>
+                    ) : (
+                      <Button
+                        size="sm"
+                        className="w-full bg-slate-900 hover:bg-slate-800"
+                        onClick={() => {
+                          setFormData({
+                            name: 'Creativity, Activity, Service',
+                            code: 'CAS',
+                            ib_level: 'DP',
+                            ib_group: 1,
+                            ib_group_name: 'Language & Literature',
+                            available_levels: [],
+                            hl_hours_per_week: 6,
+                            sl_hours_per_week: 4,
+                            pyp_myp_hours_per_week: 1,
+                            requires_lab: false,
+                            requires_special_room: '',
+                            is_core: true,
+                            combine_dp1_dp2: false,
+                            is_active: true
+                          });
+                          setIsDialogOpen(true);
+                        }}
+                      >
+                        <Plus className="w-4 h-4 mr-1" />
+                        Add CAS
+                      </Button>
+                    )}
+                    <p className="text-xs text-slate-600">
+                      Recommended: 1-2 hours/week
+                    </p>
+                  </CardContent>
+                </Card>
+
+                {/* EE */}
+                <Card className="border-2 border-slate-700">
+                  <CardHeader className="pb-3">
+                    <CardTitle className="text-sm font-semibold">Extended Essay</CardTitle>
+                  </CardHeader>
+                  <CardContent className="space-y-3">
+                    {coreSubjects.find(s => s.code === 'EE') ? (
+                      <Badge className="bg-green-600 text-white w-full justify-center">
+                        <CheckCircle className="w-3 h-3 mr-1" />
+                        Configured
+                      </Badge>
+                    ) : (
+                      <Button
+                        size="sm"
+                        className="w-full bg-slate-900 hover:bg-slate-800"
+                        onClick={() => {
+                          setFormData({
+                            name: 'Extended Essay',
+                            code: 'EE',
+                            ib_level: 'DP',
+                            ib_group: 1,
+                            ib_group_name: 'Language & Literature',
+                            available_levels: [],
+                            hl_hours_per_week: 6,
+                            sl_hours_per_week: 4,
+                            pyp_myp_hours_per_week: 1,
+                            requires_lab: false,
+                            requires_special_room: '',
+                            is_core: true,
+                            combine_dp1_dp2: false,
+                            is_active: true
+                          });
+                          setIsDialogOpen(true);
+                        }}
+                      >
+                        <Plus className="w-4 h-4 mr-1" />
+                        Add EE
+                      </Button>
+                    )}
+                    <p className="text-xs text-slate-600">
+                      Recommended: 1 hour/week
+                    </p>
+                  </CardContent>
+                </Card>
+              </div>
+            </div>
+          </CardContent>
+        </Card>
+      )}
     </div>
   );
 }
