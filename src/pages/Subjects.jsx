@@ -109,7 +109,13 @@ export default function Subjects() {
     queryKey: ['subjects', schoolId],
     queryFn: async () => {
       console.log('Fetching subjects for school:', schoolId);
-      const result = await base44.entities.Subject.list();
+      const result = await base44.entities.Subject.filter({ 
+        school_id: schoolId,
+        $or: [
+          { is_test_slot: { $exists: false } },
+          { is_test_slot: false }
+        ]
+      });
       console.log('Subjects fetched:', result);
       return result;
     },
