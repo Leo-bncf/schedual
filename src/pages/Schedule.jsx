@@ -87,7 +87,7 @@ export default function Schedule() {
   });
   const [schoolConfig, setSchoolConfig] = useState({
     periods_per_day: 8,
-    period_duration_minutes: 45,
+    period_duration_minutes: 60,
     days_per_week: 5,
     school_start_time: '08:00',
     hl_hours: 6,
@@ -133,7 +133,7 @@ export default function Schedule() {
     if (school) {
       setSchoolConfig({
         periods_per_day: school.periods_per_day || 8,
-        period_duration_minutes: school.period_duration_minutes || 45,
+        period_duration_minutes: school.period_duration_minutes || 60,
         days_per_week: school.days_per_week || 5,
         school_start_time: school.school_start_time || '08:00',
         hl_hours: school.settings?.hl_hours || 6,
