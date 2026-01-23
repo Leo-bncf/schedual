@@ -70,6 +70,7 @@ export default function Subjects() {
     requires_lab: false,
     requires_special_room: '',
     is_core: false,
+    combine_dp1_dp2: false,
     is_active: true
   });
 
@@ -168,6 +169,7 @@ export default function Subjects() {
       requires_lab: false,
       requires_special_room: '',
       is_core: false,
+      combine_dp1_dp2: false,
       is_active: true
     });
     setEditingSubject(null);
@@ -189,6 +191,7 @@ export default function Subjects() {
       requires_lab: subject.requires_lab || false,
       requires_special_room: subject.requires_special_room || '',
       is_core: subject.is_core || false,
+      combine_dp1_dp2: subject.combine_dp1_dp2 || false,
       is_active: subject.is_active !== false
     });
     setIsDialogOpen(true);
@@ -821,23 +824,38 @@ ${trainingFeedback ? `LESSONS FROM ADMIN FEEDBACK:\n${trainingFeedback}\n\n` : '
               </div>
             )}
 
-            <div className="flex items-center gap-6">
-              <div className="flex items-center gap-2">
-                <Checkbox 
-                  id="requires_lab"
-                  checked={formData.requires_lab}
-                  onCheckedChange={(checked) => setFormData({ ...formData, requires_lab: checked })}
-                />
-                <Label htmlFor="requires_lab" className="font-normal">Requires Lab</Label>
+            <div className="space-y-3">
+              <div className="flex items-center gap-6">
+                <div className="flex items-center gap-2">
+                  <Checkbox 
+                    id="requires_lab"
+                    checked={formData.requires_lab}
+                    onCheckedChange={(checked) => setFormData({ ...formData, requires_lab: checked })}
+                  />
+                  <Label htmlFor="requires_lab" className="font-normal">Requires Lab</Label>
+                </div>
+                <div className="flex items-center gap-2">
+                  <Checkbox 
+                    id="is_core"
+                    checked={formData.is_core}
+                    onCheckedChange={(checked) => setFormData({ ...formData, is_core: checked })}
+                  />
+                  <Label htmlFor="is_core" className="font-normal">Core Component</Label>
+                </div>
               </div>
-              <div className="flex items-center gap-2">
-                <Checkbox 
-                  id="is_core"
-                  checked={formData.is_core}
-                  onCheckedChange={(checked) => setFormData({ ...formData, is_core: checked })}
-                />
-                <Label htmlFor="is_core" className="font-normal">Core Component</Label>
-              </div>
+              
+              {formData.ib_level === 'DP' && !formData.is_core && (
+                <div className="flex items-center gap-2 p-3 bg-blue-50 rounded-lg border border-blue-200">
+                  <Checkbox 
+                    id="combine_dp1_dp2"
+                    checked={formData.combine_dp1_dp2}
+                    onCheckedChange={(checked) => setFormData({ ...formData, combine_dp1_dp2: checked })}
+                  />
+                  <Label htmlFor="combine_dp1_dp2" className="font-normal">
+                    Combine DP1 & DP2 students into single teaching groups
+                  </Label>
+                </div>
+              )}
             </div>
 
             <DialogFooter>

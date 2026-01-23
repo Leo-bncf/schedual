@@ -15,15 +15,11 @@ Deno.serve(async (req) => {
 
     const school_id = user.school_id;
 
-    // Fetch all students, subjects, and school settings (filter manually since RLS might not work)
-    const [allStudents, subjects, schools] = await Promise.all([
+    // Fetch all students and subjects
+    const [allStudents, subjects] = await Promise.all([
       base44.entities.Student.filter({ school_id }),
-      base44.entities.Subject.filter({ school_id }),
-      base44.entities.School.filter({ id: school_id })
+      base44.entities.Subject.filter({ school_id })
     ]);
-
-    const school = schools[0];
-    const combinedSubjects = school?.settings?.subjects_combine_dp1_dp2 || [];
 
     // Filter for DP students manually
     const students = allStudents.filter(s => 
@@ -52,8 +48,9 @@ Deno.serve(async (req) => {
       const subjectChoices = student.subject_choices || [];
       
       for (const choice of subjectChoices) {
-        // Check if this subject should combine DP1/DP2
-        const shouldCombine = combinedSubjects.includes(choice.subject_id);
+        // Check if this subject should combine DP1/DP2 (from subject settings)
+        const subject = dpSubjects.find(s => s.id === choice.subject_id);
+        const shouldCombine = subject?.combine_dp1_dp2 === true;
         const yearGroup = shouldCombine ? 'DP1+DP2' : student.year_group;
         const key = `${choice.subject_id}_${choice.level}_${yearGroup}`;
         

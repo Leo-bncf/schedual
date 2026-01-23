@@ -61,7 +61,7 @@ import {
 } from 'lucide-react';
 import PageHeader from '../components/ui-custom/PageHeader';
 import YearAdvancement from '../components/settings/YearAdvancement';
-import CombinedSubjectsSelector from '../components/settings/CombinedSubjectsSelector';
+
 import { toast } from 'sonner';
 
 const TIMEZONES = [
