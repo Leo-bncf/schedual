@@ -56,6 +56,7 @@ Deno.serve(async (req) => {
         ib_group: '1',
         ib_group_name: 'Language & Literature',
         pyp_myp_hours_per_week: config.tests_per_week || 1,
+        supervisor_teacher_id: config.supervisor_id || null,
         is_core: false,
         is_active: true
       };

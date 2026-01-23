@@ -175,10 +175,10 @@ Deno.serve(async (req) => {
       });
     });
 
-    // Add test slots as blocked teaching units per level
+    // Add test slots as teaching units per level (with supervisor if specified)
     const testSlots = [];
     ['PYP', 'MYP', 'DP1', 'DP2'].forEach(level => {
-      const config = testConfig[level] || { tests_per_week: 0, test_duration_minutes: 0 };
+      const config = testConfig[level] || { tests_per_week: 0, test_duration_minutes: 0, supervisor_id: null };
       const testsPerWeek = config.tests_per_week || 0;
       
       if (testsPerWeek > 0) {
@@ -192,6 +192,10 @@ Deno.serve(async (req) => {
         }).map(s => s.id);
 
         if (levelStudents.length > 0) {
+          // Find test subject for this level to get supervisor
+          const testSubject = subjects.find(s => s.code === `TEST_${level}`);
+          const supervisorId = testSubject?.supervisor_teacher_id || config.supervisor_id || null;
+
           teaching_units.push({
             id: `test_${level}`,
             type: 'test_slot',
@@ -199,7 +203,7 @@ Deno.serve(async (req) => {
             required_sessions: testsPerWeek,
             required_capability: 'TEST_ASSESSMENT',
             allowed_room_types: ['classroom'],
-            teacher_id: null,
+            teacher_id: supervisorId,
             requires_double_periods: periodsNeeded > 1,
             test_level: level
           });
