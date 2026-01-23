@@ -1745,40 +1745,47 @@ Now process the user's input and return ONLY the JSON object.`,
                 {/* Configuration Tab Content */}
                 <TabsContent value="config">
                   <div className="space-y-6">
-                    {/* Daily Schedule */}
-                    <Card className="border-0 shadow-md">
-                      <CardHeader className="bg-gradient-to-r from-amber-50 to-orange-50">
-                        <div className="flex items-center justify-between">
-                          <div className="flex items-center gap-3">
-                            <div className="p-2 rounded-lg bg-amber-100">
-                              <Clock className="w-5 h-5 text-amber-700" />
-                            </div>
-                            <div>
-                              <CardTitle className="text-lg">Daily Schedule Configuration</CardTitle>
-                              <CardDescription>Configure your school's daily timetable structure</CardDescription>
-                            </div>
+                    {/* Top Action Bar */}
+                    <div className="flex justify-end">
+                      <Button 
+                        onClick={handleSaveConfig}
+                        disabled={isSavingConfig}
+                        size="lg"
+                        className="bg-indigo-600 hover:bg-indigo-700"
+                      >
+                        {isSavingConfig ? (
+                          <>
+                            <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+                            Saving...
+                          </>
+                        ) : (
+                          <>
+                            <CheckCircle className="w-4 h-4 mr-2" />
+                            Save All Changes
+                          </>
+                        )}
+                      </Button>
+                    </div>
+
+                    {/* Daily Schedule Configuration */}
+                    <Card className="border-0 shadow-lg">
+                      <CardHeader className="bg-gradient-to-r from-slate-900 to-slate-800 text-white">
+                        <div className="flex items-center gap-3">
+                          <div className="p-3 rounded-lg bg-white/10 backdrop-blur">
+                            <Clock className="w-6 h-6" />
                           </div>
-                          <Button 
-                            onClick={handleSaveConfig}
-                            disabled={isSavingConfig}
-                            className="bg-indigo-600 hover:bg-indigo-700"
-                          >
-                            {isSavingConfig ? (
-                              <>
-                                <Loader2 className="w-4 h-4 mr-2 animate-spin" />
-                                Saving...
-                              </>
-                            ) : (
-                              'Save Changes'
-                            )}
-                          </Button>
+                          <div>
+                            <CardTitle className="text-xl">Daily Schedule Configuration</CardTitle>
+                            <CardDescription className="text-slate-300">Define your school's daily timetable structure</CardDescription>
+                          </div>
                         </div>
                       </CardHeader>
-                      <CardContent className="pt-6">
-                        <div className="grid sm:grid-cols-2 gap-6">
-                          <div className="p-5 rounded-xl bg-gradient-to-br from-blue-50 to-blue-100 border-2 border-blue-200">
-                            <Label htmlFor="periods" className="flex items-center gap-2 text-sm font-semibold text-blue-900 mb-3">
-                              <Hash className="w-4 h-4" />
+                      <CardContent className="pt-8 pb-8">
+                        <div className="grid md:grid-cols-4 gap-6">
+                          {/* Periods Per Day */}
+                          <div className="space-y-3">
+                            <Label htmlFor="periods" className="flex items-center gap-2 text-sm font-bold text-slate-900">
+                              <Hash className="w-4 h-4 text-indigo-600" />
                               Periods Per Day
                             </Label>
                             <Input 
@@ -1788,54 +1795,58 @@ Now process the user's input and return ONLY the JSON object.`,
                               max="12"
                               value={schoolConfig.periods_per_day}
                               onChange={(e) => setSchoolConfig({...schoolConfig, periods_per_day: parseInt(e.target.value)})}
-                              className="h-12 text-lg font-semibold border-blue-300"
+                              className="h-14 text-2xl font-bold text-center border-2 border-slate-300 focus:border-indigo-500"
                             />
-                            <p className="text-xs text-blue-700 mt-2">Total teaching periods (4-12)</p>
+                            <p className="text-xs text-slate-500">Total teaching periods (4-12)</p>
                           </div>
 
-                          <div className="p-5 rounded-xl bg-gradient-to-br from-emerald-50 to-emerald-100 border-2 border-emerald-200">
-                            <Label htmlFor="duration" className="flex items-center gap-2 text-sm font-semibold text-emerald-900 mb-3">
-                              <Timer className="w-4 h-4" />
+                          {/* Period Duration */}
+                          <div className="space-y-3">
+                            <Label htmlFor="duration" className="flex items-center gap-2 text-sm font-bold text-slate-900">
+                              <Timer className="w-4 h-4 text-emerald-600" />
                               Period Length
                             </Label>
-                            <div className="flex items-center gap-2">
+                            <div className="relative">
                               <Input 
                                 id="duration"
                                 type="number"
                                 min="30"
                                 max="90"
+                                step="5"
                                 value={schoolConfig.period_duration_minutes}
                                 onChange={(e) => setSchoolConfig({...schoolConfig, period_duration_minutes: parseInt(e.target.value)})}
-                                className="h-12 text-lg font-semibold border-emerald-300"
+                                className="h-14 text-2xl font-bold text-center border-2 border-slate-300 focus:border-emerald-500 pr-16"
                               />
-                              <span className="text-lg font-semibold text-emerald-700">min</span>
+                              <span className="absolute right-4 top-1/2 -translate-y-1/2 text-lg font-bold text-slate-500">min</span>
                             </div>
-                            <p className="text-xs text-emerald-700 mt-2">Duration per period (30-90 min)</p>
+                            <p className="text-xs text-slate-500">Duration (30-90 minutes)</p>
                           </div>
 
-                          <div className="p-5 rounded-xl bg-gradient-to-br from-violet-50 to-violet-100 border-2 border-violet-200">
-                            <Label htmlFor="days" className="flex items-center gap-2 text-sm font-semibold text-violet-900 mb-3">
-                              <Calendar className="w-4 h-4" />
+                          {/* School Week */}
+                          <div className="space-y-3">
+                            <Label htmlFor="days" className="flex items-center gap-2 text-sm font-bold text-slate-900">
+                              <Calendar className="w-4 h-4 text-violet-600" />
                               School Week
                             </Label>
                             <Select 
                               value={String(schoolConfig.days_per_week)} 
                               onValueChange={(value) => setSchoolConfig({...schoolConfig, days_per_week: parseInt(value)})}
                             >
-                              <SelectTrigger className="h-12 text-lg font-semibold border-violet-300">
+                              <SelectTrigger className="h-14 text-lg font-bold border-2 border-slate-300 focus:border-violet-500">
                                 <SelectValue />
                               </SelectTrigger>
                               <SelectContent>
-                                <SelectItem value="5">5 Days (Mon-Fri)</SelectItem>
-                                <SelectItem value="6">6 Days (Mon-Sat)</SelectItem>
+                                <SelectItem value="5">5 Days</SelectItem>
+                                <SelectItem value="6">6 Days</SelectItem>
                               </SelectContent>
                             </Select>
-                            <p className="text-xs text-violet-700 mt-2">Teaching days per week</p>
+                            <p className="text-xs text-slate-500">Teaching days per week</p>
                           </div>
 
-                          <div className="p-5 rounded-xl bg-gradient-to-br from-rose-50 to-rose-100 border-2 border-rose-200">
-                            <Label htmlFor="startTime" className="flex items-center gap-2 text-sm font-semibold text-rose-900 mb-3">
-                              <Clock className="w-4 h-4" />
+                          {/* Start Time */}
+                          <div className="space-y-3">
+                            <Label htmlFor="startTime" className="flex items-center gap-2 text-sm font-bold text-slate-900">
+                              <Clock className="w-4 h-4 text-rose-600" />
                               Start Time
                             </Label>
                             <Input 
@@ -1843,18 +1854,23 @@ Now process the user's input and return ONLY the JSON object.`,
                               type="time"
                               value={schoolConfig.school_start_time}
                               onChange={(e) => setSchoolConfig({...schoolConfig, school_start_time: e.target.value})}
-                              className="h-12 text-lg font-semibold border-rose-300"
+                              className="h-14 text-xl font-bold text-center border-2 border-slate-300 focus:border-rose-500"
                             />
-                            <p className="text-xs text-rose-700 mt-2">First period begins at</p>
+                            <p className="text-xs text-slate-500">First period begins at</p>
                           </div>
                         </div>
 
-                        <div className="mt-6 p-4 rounded-lg bg-blue-50 border border-blue-200">
-                          <div className="flex gap-2">
-                            <Info className="w-4 h-4 text-blue-600 mt-0.5 flex-shrink-0" />
-                            <div className="text-xs text-blue-800">
-                              <p className="font-semibold mb-1">Schedule Preview:</p>
-                              <p>School day runs from <strong>{schoolConfig.school_start_time}</strong> with <strong>{schoolConfig.periods_per_day}</strong> periods of <strong>{schoolConfig.period_duration_minutes}</strong> minutes each, over <strong>{schoolConfig.days_per_week}</strong> days per week.</p>
+                        {/* Schedule Preview */}
+                        <div className="mt-8 p-5 rounded-xl bg-gradient-to-r from-indigo-50 to-blue-50 border-2 border-indigo-200">
+                          <div className="flex items-start gap-3">
+                            <div className="p-2 rounded-lg bg-indigo-100 mt-0.5">
+                              <Info className="w-5 h-5 text-indigo-700" />
+                            </div>
+                            <div className="flex-1">
+                              <p className="font-bold text-indigo-900 mb-2">Schedule Preview</p>
+                              <p className="text-sm text-indigo-800 leading-relaxed">
+                                School day starts at <span className="font-bold">{schoolConfig.school_start_time}</span> with <span className="font-bold">{schoolConfig.periods_per_day} periods</span> of <span className="font-bold">{schoolConfig.period_duration_minutes} minutes</span> each, running <span className="font-bold">{schoolConfig.days_per_week} days</span> per week.
+                              </p>
                             </div>
                           </div>
                         </div>
@@ -1997,337 +2013,326 @@ Now process the user's input and return ONLY the JSON object.`,
 
 
 
-                    {/* Test Slot Configuration */}
-                    <Card className="border-0 shadow-md">
-                      <CardHeader className="bg-gradient-to-r from-red-50 to-rose-50">
+                    {/* Test & Assessment Slots */}
+                    <Card className="border-0 shadow-lg">
+                      <CardHeader className="bg-gradient-to-r from-slate-900 to-slate-800 text-white">
                         <div className="flex items-center gap-3">
-                          <div className="p-2 rounded-lg bg-red-100">
-                            <Clock className="w-5 h-5 text-red-700" />
+                          <div className="p-3 rounded-lg bg-white/10 backdrop-blur">
+                            <AlertTriangle className="w-6 h-6" />
                           </div>
                           <div>
-                            <CardTitle className="text-lg">Test & Assessment Slots by Level</CardTitle>
-                            <CardDescription>Configure weekly test allocation and supervision per IB programme level</CardDescription>
+                            <CardTitle className="text-xl">Test & Assessment Slots by Level</CardTitle>
+                            <CardDescription className="text-slate-300">Configure weekly test allocation and supervision for each IB programme</CardDescription>
                           </div>
                         </div>
                       </CardHeader>
-                      <CardContent className="pt-6">
-                        <div className="grid sm:grid-cols-2 gap-6">
+                      <CardContent className="pt-8 pb-8">
+                        <div className="grid md:grid-cols-2 gap-6">
                           {/* PYP */}
-                          <div className="p-5 rounded-xl bg-gradient-to-br from-yellow-50 to-yellow-100 border-2 border-yellow-200">
-                            <div className="flex items-center gap-2 mb-4">
-                              <div className="w-10 h-10 rounded-full bg-yellow-200 flex items-center justify-center">
-                                <span className="font-bold text-yellow-900">PYP</span>
+                          <div className="p-6 rounded-2xl bg-gradient-to-br from-yellow-50 via-amber-50 to-yellow-50 border-2 border-yellow-300 hover:border-yellow-400 transition-all">
+                            <div className="flex items-center gap-3 mb-6">
+                              <div className="w-12 h-12 rounded-xl bg-gradient-to-br from-yellow-400 to-amber-500 flex items-center justify-center shadow-lg">
+                                <span className="font-black text-white text-lg">PYP</span>
                               </div>
                               <div>
-                                <p className="font-bold text-yellow-900 text-base">Primary Years</p>
-                                <p className="text-xs text-yellow-700">Weekly assessments</p>
+                                <p className="font-bold text-yellow-900 text-lg">Primary Years Programme</p>
+                                <p className="text-xs text-yellow-700 font-medium">Weekly test configuration</p>
                               </div>
                             </div>
-                            <div className="space-y-3">
+                            
+                            <div className="space-y-4">
+                              <div className="grid grid-cols-2 gap-4">
+                                <div>
+                                  <Label className="text-xs font-bold text-yellow-900 mb-2 block">Tests/Week</Label>
+                                  <Input 
+                                    type="number"
+                                    min="0"
+                                    max="5"
+                                    className="h-12 text-xl font-bold text-center border-2 border-yellow-300 focus:border-yellow-500"
+                                    value={schoolConfig.test_config.PYP.tests_per_week}
+                                    onChange={(e) => setSchoolConfig({
+                                      ...schoolConfig, 
+                                      test_config: {
+                                        ...schoolConfig.test_config,
+                                        PYP: { ...schoolConfig.test_config.PYP, tests_per_week: parseInt(e.target.value) }
+                                      }
+                                    })}
+                                  />
+                                </div>
+                                <div>
+                                  <Label className="text-xs font-bold text-yellow-900 mb-2 block">Duration (min)</Label>
+                                  <Input 
+                                    type="number"
+                                    min="30"
+                                    max="120"
+                                    step="15"
+                                    className="h-12 text-xl font-bold text-center border-2 border-yellow-300 focus:border-yellow-500"
+                                    value={schoolConfig.test_config.PYP.test_duration_minutes}
+                                    onChange={(e) => setSchoolConfig({
+                                      ...schoolConfig, 
+                                      test_config: {
+                                        ...schoolConfig.test_config,
+                                        PYP: { ...schoolConfig.test_config.PYP, test_duration_minutes: parseInt(e.target.value) }
+                                      }
+                                    })}
+                                  />
+                                </div>
+                              </div>
+                              
                               <div>
-                                <Label className="text-xs text-yellow-800 mb-1.5 block">Tests per week</Label>
-                                <Input 
-                                  type="number"
-                                  min="0"
-                                  max="5"
-                                  className="h-9 text-center font-semibold border-yellow-300"
-                                  value={schoolConfig.test_config.PYP.tests_per_week}
-                                  onChange={(e) => setSchoolConfig({
-                                    ...schoolConfig, 
+                                <Label className="text-xs font-bold text-yellow-900 mb-2 block">Supervisor Teacher</Label>
+                                <Select 
+                                  value={schoolConfig.test_config.PYP.supervisor_id || 'none'}
+                                  onValueChange={(value) => setSchoolConfig({
+                                    ...schoolConfig,
                                     test_config: {
                                       ...schoolConfig.test_config,
-                                      PYP: { ...schoolConfig.test_config.PYP, tests_per_week: parseInt(e.target.value) }
+                                      PYP: { ...schoolConfig.test_config.PYP, supervisor_id: value === 'none' ? null : value }
                                     }
                                   })}
-                                />
+                                >
+                                  <SelectTrigger className="h-11 border-2 border-yellow-300 focus:border-yellow-500">
+                                    <SelectValue />
+                                  </SelectTrigger>
+                                  <SelectContent>
+                                    <SelectItem value="none">No supervisor assigned</SelectItem>
+                                    {teachers.map(t => (
+                                      <SelectItem key={t.id} value={t.id}>{t.full_name}</SelectItem>
+                                    ))}
+                                  </SelectContent>
+                                </Select>
                               </div>
-                              <div>
-                               <Label className="text-xs text-yellow-800 mb-1.5 block">Duration (minutes)</Label>
-                               <Input 
-                                 type="number"
-                                 min="30"
-                                 max="120"
-                                 step="15"
-                                 className="h-9 text-center font-semibold border-yellow-300"
-                                 value={schoolConfig.test_config.PYP.test_duration_minutes}
-                                 onChange={(e) => setSchoolConfig({
-                                   ...schoolConfig, 
-                                   test_config: {
-                                     ...schoolConfig.test_config,
-                                     PYP: { ...schoolConfig.test_config.PYP, test_duration_minutes: parseInt(e.target.value) }
-                                   }
-                                 })}
-                               />
-                              </div>
-                              <div>
-                               <Label className="text-xs text-yellow-800 mb-1.5 block">Supervisor (optional)</Label>
-                               <Select 
-                                 value={schoolConfig.test_config.PYP.supervisor_id || 'none'}
-                                 onValueChange={(value) => setSchoolConfig({
-                                   ...schoolConfig,
-                                   test_config: {
-                                     ...schoolConfig.test_config,
-                                     PYP: { ...schoolConfig.test_config.PYP, supervisor_id: value === 'none' ? null : value }
-                                   }
-                                 })}
-                               >
-                                 <SelectTrigger className="h-9 border-yellow-300">
-                                   <SelectValue />
-                                 </SelectTrigger>
-                                 <SelectContent>
-                                   <SelectItem value="none">No supervisor</SelectItem>
-                                   {teachers.map(t => (
-                                     <SelectItem key={t.id} value={t.id}>{t.full_name}</SelectItem>
-                                   ))}
-                                 </SelectContent>
-                               </Select>
-                              </div>
-                              </div>
-                              <p className="text-xs text-yellow-600 mt-3">
-                              <strong>{schoolConfig.test_config.PYP.tests_per_week}</strong> tests × <strong>{schoolConfig.test_config.PYP.test_duration_minutes}min</strong> per week
-                              </p>
-                              </div>
+                            </div>
+                          </div>
 
                           {/* MYP */}
-                          <div className="p-5 rounded-xl bg-gradient-to-br from-green-50 to-green-100 border-2 border-green-200">
-                            <div className="flex items-center gap-2 mb-4">
-                              <div className="w-10 h-10 rounded-full bg-green-200 flex items-center justify-center">
-                                <span className="font-bold text-green-900">MYP</span>
+                          <div className="p-6 rounded-2xl bg-gradient-to-br from-emerald-50 via-green-50 to-emerald-50 border-2 border-emerald-300 hover:border-emerald-400 transition-all">
+                            <div className="flex items-center gap-3 mb-6">
+                              <div className="w-12 h-12 rounded-xl bg-gradient-to-br from-emerald-500 to-green-600 flex items-center justify-center shadow-lg">
+                                <span className="font-black text-white text-lg">MYP</span>
                               </div>
                               <div>
-                                <p className="font-bold text-green-900 text-base">Middle Years</p>
-                                <p className="text-xs text-green-700">Weekly assessments</p>
+                                <p className="font-bold text-emerald-900 text-lg">Middle Years Programme</p>
+                                <p className="text-xs text-emerald-700 font-medium">Weekly test configuration</p>
                               </div>
                             </div>
-                            <div className="space-y-3">
+                            
+                            <div className="space-y-4">
+                              <div className="grid grid-cols-2 gap-4">
+                                <div>
+                                  <Label className="text-xs font-bold text-emerald-900 mb-2 block">Tests/Week</Label>
+                                  <Input 
+                                    type="number"
+                                    min="0"
+                                    max="5"
+                                    className="h-12 text-xl font-bold text-center border-2 border-emerald-300 focus:border-emerald-500"
+                                    value={schoolConfig.test_config.MYP.tests_per_week}
+                                    onChange={(e) => setSchoolConfig({
+                                      ...schoolConfig, 
+                                      test_config: {
+                                        ...schoolConfig.test_config,
+                                        MYP: { ...schoolConfig.test_config.MYP, tests_per_week: parseInt(e.target.value) }
+                                      }
+                                    })}
+                                  />
+                                </div>
+                                <div>
+                                  <Label className="text-xs font-bold text-emerald-900 mb-2 block">Duration (min)</Label>
+                                  <Input 
+                                    type="number"
+                                    min="30"
+                                    max="120"
+                                    step="15"
+                                    className="h-12 text-xl font-bold text-center border-2 border-emerald-300 focus:border-emerald-500"
+                                    value={schoolConfig.test_config.MYP.test_duration_minutes}
+                                    onChange={(e) => setSchoolConfig({
+                                      ...schoolConfig, 
+                                      test_config: {
+                                        ...schoolConfig.test_config,
+                                        MYP: { ...schoolConfig.test_config.MYP, test_duration_minutes: parseInt(e.target.value) }
+                                      }
+                                    })}
+                                  />
+                                </div>
+                              </div>
+                              
                               <div>
-                                <Label className="text-xs text-green-800 mb-1.5 block">Tests per week</Label>
-                                <Input 
-                                  type="number"
-                                  min="0"
-                                  max="5"
-                                  className="h-9 text-center font-semibold border-green-300"
-                                  value={schoolConfig.test_config.MYP.tests_per_week}
-                                  onChange={(e) => setSchoolConfig({
-                                    ...schoolConfig, 
+                                <Label className="text-xs font-bold text-emerald-900 mb-2 block">Supervisor Teacher</Label>
+                                <Select 
+                                  value={schoolConfig.test_config.MYP.supervisor_id || 'none'}
+                                  onValueChange={(value) => setSchoolConfig({
+                                    ...schoolConfig,
                                     test_config: {
                                       ...schoolConfig.test_config,
-                                      MYP: { ...schoolConfig.test_config.MYP, tests_per_week: parseInt(e.target.value) }
+                                      MYP: { ...schoolConfig.test_config.MYP, supervisor_id: value === 'none' ? null : value }
                                     }
                                   })}
-                                />
+                                >
+                                  <SelectTrigger className="h-11 border-2 border-emerald-300 focus:border-emerald-500">
+                                    <SelectValue />
+                                  </SelectTrigger>
+                                  <SelectContent>
+                                    <SelectItem value="none">No supervisor assigned</SelectItem>
+                                    {teachers.map(t => (
+                                      <SelectItem key={t.id} value={t.id}>{t.full_name}</SelectItem>
+                                    ))}
+                                  </SelectContent>
+                                </Select>
                               </div>
-                              <div>
-                               <Label className="text-xs text-green-800 mb-1.5 block">Duration (minutes)</Label>
-                               <Input 
-                                 type="number"
-                                 min="30"
-                                 max="120"
-                                 step="15"
-                                 className="h-9 text-center font-semibold border-green-300"
-                                 value={schoolConfig.test_config.MYP.test_duration_minutes}
-                                 onChange={(e) => setSchoolConfig({
-                                   ...schoolConfig, 
-                                   test_config: {
-                                     ...schoolConfig.test_config,
-                                     MYP: { ...schoolConfig.test_config.MYP, test_duration_minutes: parseInt(e.target.value) }
-                                   }
-                                 })}
-                               />
-                              </div>
-                              <div>
-                               <Label className="text-xs text-green-800 mb-1.5 block">Supervisor (optional)</Label>
-                               <Select 
-                                 value={schoolConfig.test_config.MYP.supervisor_id || 'none'}
-                                 onValueChange={(value) => setSchoolConfig({
-                                   ...schoolConfig,
-                                   test_config: {
-                                     ...schoolConfig.test_config,
-                                     MYP: { ...schoolConfig.test_config.MYP, supervisor_id: value === 'none' ? null : value }
-                                   }
-                                 })}
-                               >
-                                 <SelectTrigger className="h-9 border-green-300">
-                                   <SelectValue />
-                                 </SelectTrigger>
-                                 <SelectContent>
-                                   <SelectItem value="none">No supervisor</SelectItem>
-                                   {teachers.map(t => (
-                                     <SelectItem key={t.id} value={t.id}>{t.full_name}</SelectItem>
-                                   ))}
-                                 </SelectContent>
-                               </Select>
-                              </div>
-                              </div>
-                              <p className="text-xs text-green-600 mt-3">
-                              <strong>{schoolConfig.test_config.MYP.tests_per_week}</strong> tests × <strong>{schoolConfig.test_config.MYP.test_duration_minutes}min</strong> per week
-                              </p>
-                              </div>
+                            </div>
+                          </div>
 
                           {/* DP1 */}
-                          <div className="p-5 rounded-xl bg-gradient-to-br from-blue-50 to-blue-100 border-2 border-blue-200">
-                            <div className="flex items-center gap-2 mb-4">
-                              <div className="w-10 h-10 rounded-full bg-blue-200 flex items-center justify-center">
-                                <span className="font-bold text-blue-900">DP1</span>
+                          <div className="p-6 rounded-2xl bg-gradient-to-br from-blue-50 via-sky-50 to-blue-50 border-2 border-blue-300 hover:border-blue-400 transition-all">
+                            <div className="flex items-center gap-3 mb-6">
+                              <div className="w-12 h-12 rounded-xl bg-gradient-to-br from-blue-500 to-sky-600 flex items-center justify-center shadow-lg">
+                                <span className="font-black text-white text-lg">DP1</span>
                               </div>
                               <div>
-                                <p className="font-bold text-blue-900 text-base">Diploma Year 1</p>
-                                <p className="text-xs text-blue-700">Weekly assessments</p>
+                                <p className="font-bold text-blue-900 text-lg">Diploma Programme Year 1</p>
+                                <p className="text-xs text-blue-700 font-medium">Weekly test configuration</p>
                               </div>
                             </div>
-                            <div className="space-y-3">
+                            
+                            <div className="space-y-4">
+                              <div className="grid grid-cols-2 gap-4">
+                                <div>
+                                  <Label className="text-xs font-bold text-blue-900 mb-2 block">Tests/Week</Label>
+                                  <Input 
+                                    type="number"
+                                    min="0"
+                                    max="5"
+                                    className="h-12 text-xl font-bold text-center border-2 border-blue-300 focus:border-blue-500"
+                                    value={schoolConfig.test_config.DP1.tests_per_week}
+                                    onChange={(e) => setSchoolConfig({
+                                      ...schoolConfig, 
+                                      test_config: {
+                                        ...schoolConfig.test_config,
+                                        DP1: { ...schoolConfig.test_config.DP1, tests_per_week: parseInt(e.target.value) }
+                                      }
+                                    })}
+                                  />
+                                </div>
+                                <div>
+                                  <Label className="text-xs font-bold text-blue-900 mb-2 block">Duration (min)</Label>
+                                  <Input 
+                                    type="number"
+                                    min="30"
+                                    max="180"
+                                    step="15"
+                                    className="h-12 text-xl font-bold text-center border-2 border-blue-300 focus:border-blue-500"
+                                    value={schoolConfig.test_config.DP1.test_duration_minutes}
+                                    onChange={(e) => setSchoolConfig({
+                                      ...schoolConfig, 
+                                      test_config: {
+                                        ...schoolConfig.test_config,
+                                        DP1: { ...schoolConfig.test_config.DP1, test_duration_minutes: parseInt(e.target.value) }
+                                      }
+                                    })}
+                                  />
+                                </div>
+                              </div>
+                              
                               <div>
-                                <Label className="text-xs text-blue-800 mb-1.5 block">Tests per week</Label>
-                                <Input 
-                                  type="number"
-                                  min="0"
-                                  max="5"
-                                  className="h-9 text-center font-semibold border-blue-300"
-                                  value={schoolConfig.test_config.DP1.tests_per_week}
-                                  onChange={(e) => setSchoolConfig({
-                                    ...schoolConfig, 
+                                <Label className="text-xs font-bold text-blue-900 mb-2 block">Supervisor Teacher</Label>
+                                <Select 
+                                  value={schoolConfig.test_config.DP1.supervisor_id || 'none'}
+                                  onValueChange={(value) => setSchoolConfig({
+                                    ...schoolConfig,
                                     test_config: {
                                       ...schoolConfig.test_config,
-                                      DP1: { ...schoolConfig.test_config.DP1, tests_per_week: parseInt(e.target.value) }
+                                      DP1: { ...schoolConfig.test_config.DP1, supervisor_id: value === 'none' ? null : value }
                                     }
                                   })}
-                                />
+                                >
+                                  <SelectTrigger className="h-11 border-2 border-blue-300 focus:border-blue-500">
+                                    <SelectValue />
+                                  </SelectTrigger>
+                                  <SelectContent>
+                                    <SelectItem value="none">No supervisor assigned</SelectItem>
+                                    {teachers.map(t => (
+                                      <SelectItem key={t.id} value={t.id}>{t.full_name}</SelectItem>
+                                    ))}
+                                  </SelectContent>
+                                </Select>
                               </div>
-                              <div>
-                               <Label className="text-xs text-blue-800 mb-1.5 block">Duration (minutes)</Label>
-                               <Input 
-                                 type="number"
-                                 min="30"
-                                 max="180"
-                                 step="15"
-                                 className="h-9 text-center font-semibold border-blue-300"
-                                 value={schoolConfig.test_config.DP1.test_duration_minutes}
-                                 onChange={(e) => setSchoolConfig({
-                                   ...schoolConfig, 
-                                   test_config: {
-                                     ...schoolConfig.test_config,
-                                     DP1: { ...schoolConfig.test_config.DP1, test_duration_minutes: parseInt(e.target.value) }
-                                   }
-                                 })}
-                               />
-                              </div>
-                              <div>
-                               <Label className="text-xs text-blue-800 mb-1.5 block">Supervisor (optional)</Label>
-                               <Select 
-                                 value={schoolConfig.test_config.DP1.supervisor_id || 'none'}
-                                 onValueChange={(value) => setSchoolConfig({
-                                   ...schoolConfig,
-                                   test_config: {
-                                     ...schoolConfig.test_config,
-                                     DP1: { ...schoolConfig.test_config.DP1, supervisor_id: value === 'none' ? null : value }
-                                   }
-                                 })}
-                               >
-                                 <SelectTrigger className="h-9 border-blue-300">
-                                   <SelectValue />
-                                 </SelectTrigger>
-                                 <SelectContent>
-                                   <SelectItem value="none">No supervisor</SelectItem>
-                                   {teachers.map(t => (
-                                     <SelectItem key={t.id} value={t.id}>{t.full_name}</SelectItem>
-                                   ))}
-                                 </SelectContent>
-                               </Select>
-                              </div>
-                              </div>
-                              <p className="text-xs text-blue-600 mt-3">
-                              <strong>{schoolConfig.test_config.DP1.tests_per_week}</strong> tests × <strong>{schoolConfig.test_config.DP1.test_duration_minutes}min</strong> per week
-                              </p>
-                              </div>
+                            </div>
+                          </div>
 
                           {/* DP2 */}
-                          <div className="p-5 rounded-xl bg-gradient-to-br from-indigo-50 to-indigo-100 border-2 border-indigo-200">
-                            <div className="flex items-center gap-2 mb-4">
-                              <div className="w-10 h-10 rounded-full bg-indigo-200 flex items-center justify-center">
-                                <span className="font-bold text-indigo-900">DP2</span>
+                          <div className="p-6 rounded-2xl bg-gradient-to-br from-indigo-50 via-violet-50 to-indigo-50 border-2 border-indigo-300 hover:border-indigo-400 transition-all">
+                            <div className="flex items-center gap-3 mb-6">
+                              <div className="w-12 h-12 rounded-xl bg-gradient-to-br from-indigo-600 to-violet-700 flex items-center justify-center shadow-lg">
+                                <span className="font-black text-white text-lg">DP2</span>
                               </div>
                               <div>
-                                <p className="font-bold text-indigo-900 text-base">Diploma Year 2</p>
-                                <p className="text-xs text-indigo-700">Weekly assessments</p>
+                                <p className="font-bold text-indigo-900 text-lg">Diploma Programme Year 2</p>
+                                <p className="text-xs text-indigo-700 font-medium">Weekly test configuration</p>
                               </div>
                             </div>
-                            <div className="space-y-3">
+                            
+                            <div className="space-y-4">
+                              <div className="grid grid-cols-2 gap-4">
+                                <div>
+                                  <Label className="text-xs font-bold text-indigo-900 mb-2 block">Tests/Week</Label>
+                                  <Input 
+                                    type="number"
+                                    min="0"
+                                    max="5"
+                                    className="h-12 text-xl font-bold text-center border-2 border-indigo-300 focus:border-indigo-500"
+                                    value={schoolConfig.test_config.DP2.tests_per_week}
+                                    onChange={(e) => setSchoolConfig({
+                                      ...schoolConfig, 
+                                      test_config: {
+                                        ...schoolConfig.test_config,
+                                        DP2: { ...schoolConfig.test_config.DP2, tests_per_week: parseInt(e.target.value) }
+                                      }
+                                    })}
+                                  />
+                                </div>
+                                <div>
+                                  <Label className="text-xs font-bold text-indigo-900 mb-2 block">Duration (min)</Label>
+                                  <Input 
+                                    type="number"
+                                    min="30"
+                                    max="180"
+                                    step="15"
+                                    className="h-12 text-xl font-bold text-center border-2 border-indigo-300 focus:border-indigo-500"
+                                    value={schoolConfig.test_config.DP2.test_duration_minutes}
+                                    onChange={(e) => setSchoolConfig({
+                                      ...schoolConfig, 
+                                      test_config: {
+                                        ...schoolConfig.test_config,
+                                        DP2: { ...schoolConfig.test_config.DP2, test_duration_minutes: parseInt(e.target.value) }
+                                      }
+                                    })}
+                                  />
+                                </div>
+                              </div>
+                              
                               <div>
-                                <Label className="text-xs text-indigo-800 mb-1.5 block">Tests per week</Label>
-                                <Input 
-                                  type="number"
-                                  min="0"
-                                  max="5"
-                                  className="h-9 text-center font-semibold border-indigo-300"
-                                  value={schoolConfig.test_config.DP2.tests_per_week}
-                                  onChange={(e) => setSchoolConfig({
-                                    ...schoolConfig, 
+                                <Label className="text-xs font-bold text-indigo-900 mb-2 block">Supervisor Teacher</Label>
+                                <Select 
+                                  value={schoolConfig.test_config.DP2.supervisor_id || 'none'}
+                                  onValueChange={(value) => setSchoolConfig({
+                                    ...schoolConfig,
                                     test_config: {
                                       ...schoolConfig.test_config,
-                                      DP2: { ...schoolConfig.test_config.DP2, tests_per_week: parseInt(e.target.value) }
+                                      DP2: { ...schoolConfig.test_config.DP2, supervisor_id: value === 'none' ? null : value }
                                     }
                                   })}
-                                />
+                                >
+                                  <SelectTrigger className="h-11 border-2 border-indigo-300 focus:border-indigo-500">
+                                    <SelectValue />
+                                  </SelectTrigger>
+                                  <SelectContent>
+                                    <SelectItem value="none">No supervisor assigned</SelectItem>
+                                    {teachers.map(t => (
+                                      <SelectItem key={t.id} value={t.id}>{t.full_name}</SelectItem>
+                                    ))}
+                                  </SelectContent>
+                                </Select>
                               </div>
-                              <div>
-                               <Label className="text-xs text-indigo-800 mb-1.5 block">Duration (minutes)</Label>
-                               <Input 
-                                 type="number"
-                                 min="30"
-                                 max="180"
-                                 step="15"
-                                 className="h-9 text-center font-semibold border-indigo-300"
-                                 value={schoolConfig.test_config.DP2.test_duration_minutes}
-                                 onChange={(e) => setSchoolConfig({
-                                   ...schoolConfig, 
-                                   test_config: {
-                                     ...schoolConfig.test_config,
-                                     DP2: { ...schoolConfig.test_config.DP2, test_duration_minutes: parseInt(e.target.value) }
-                                   }
-                                 })}
-                               />
-                              </div>
-                              <div>
-                               <Label className="text-xs text-indigo-800 mb-1.5 block">Supervisor (optional)</Label>
-                               <Select 
-                                 value={schoolConfig.test_config.DP2.supervisor_id || 'none'}
-                                 onValueChange={(value) => setSchoolConfig({
-                                   ...schoolConfig,
-                                   test_config: {
-                                     ...schoolConfig.test_config,
-                                     DP2: { ...schoolConfig.test_config.DP2, supervisor_id: value === 'none' ? null : value }
-                                   }
-                                 })}
-                               >
-                                 <SelectTrigger className="h-9 border-indigo-300">
-                                   <SelectValue />
-                                 </SelectTrigger>
-                                 <SelectContent>
-                                   <SelectItem value="none">No supervisor</SelectItem>
-                                   {teachers.map(t => (
-                                     <SelectItem key={t.id} value={t.id}>{t.full_name}</SelectItem>
-                                   ))}
-                                 </SelectContent>
-                               </Select>
-                              </div>
-                              </div>
-                              <p className="text-xs text-indigo-600 mt-3">
-                              <strong>{schoolConfig.test_config.DP2.tests_per_week}</strong> tests × <strong>{schoolConfig.test_config.DP2.test_duration_minutes}min</strong> per week
-                              </p>
-                              </div>
-                        </div>
-
-                        <div className="mt-6 p-4 rounded-lg bg-red-50 border border-red-200">
-                          <div className="flex gap-2">
-                            <Info className="w-4 h-4 text-red-600 mt-0.5 flex-shrink-0" />
-                            <div className="text-xs text-red-800">
-                              <p className="font-semibold mb-1">Assessment Schedule Summary:</p>
-                              <p>
-                                <strong>PYP:</strong> {schoolConfig.test_config.PYP.tests_per_week} tests of {Math.floor(schoolConfig.test_config.PYP.test_duration_minutes / 60)}h{schoolConfig.test_config.PYP.test_duration_minutes % 60 > 0 ? ` ${schoolConfig.test_config.PYP.test_duration_minutes % 60}min` : ''} • 
-                                <strong> MYP:</strong> {schoolConfig.test_config.MYP.tests_per_week} tests of {Math.floor(schoolConfig.test_config.MYP.test_duration_minutes / 60)}h{schoolConfig.test_config.MYP.test_duration_minutes % 60 > 0 ? ` ${schoolConfig.test_config.MYP.test_duration_minutes % 60}min` : ''} • 
-                                <strong> DP1:</strong> {schoolConfig.test_config.DP1.tests_per_week} tests of {Math.floor(schoolConfig.test_config.DP1.test_duration_minutes / 60)}h{schoolConfig.test_config.DP1.test_duration_minutes % 60 > 0 ? ` ${schoolConfig.test_config.DP1.test_duration_minutes % 60}min` : ''} • 
-                                <strong> DP2:</strong> {schoolConfig.test_config.DP2.tests_per_week} tests of {Math.floor(schoolConfig.test_config.DP2.test_duration_minutes / 60)}h{schoolConfig.test_config.DP2.test_duration_minutes % 60 > 0 ? ` ${schoolConfig.test_config.DP2.test_duration_minutes % 60}min` : ''}
-                              </p>
                             </div>
                           </div>
                         </div>

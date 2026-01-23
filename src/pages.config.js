@@ -14,6 +14,7 @@ import PrivacyPolicy from './pages/PrivacyPolicy';
 import Rooms from './pages/Rooms';
 import Schedule from './pages/Schedule';
 import Students from './pages/Students';
+import Subjects from './pages/Subjects';
 import Subscription from './pages/Subscription';
 import SubscriptionTiered from './pages/SubscriptionTiered';
 import SubscriptionsOverview from './pages/SubscriptionsOverview';
@@ -24,7 +25,6 @@ import TermsOfUse from './pages/TermsOfUse';
 import TestData from './pages/TestData';
 import UserManagement from './pages/UserManagement';
 import Settings from './pages/Settings';
-import Subjects from './pages/Subjects';
 import __Layout from './Layout.jsx';
 
 
@@ -45,6 +45,7 @@ export const PAGES = {
     "Rooms": Rooms,
     "Schedule": Schedule,
     "Students": Students,
+    "Subjects": Subjects,
     "Subscription": Subscription,
     "SubscriptionTiered": SubscriptionTiered,
     "SubscriptionsOverview": SubscriptionsOverview,
@@ -55,7 +56,6 @@ export const PAGES = {
     "TestData": TestData,
     "UserManagement": UserManagement,
     "Settings": Settings,
-    "Subjects": Subjects,
 }
 
 export const pagesConfig = {
