@@ -153,7 +153,6 @@ export default function Settings() {
     timezone: 'UTC',
     academic_year: '2024-2025',
     periods_per_day: 8,
-    period_duration_minutes: 45,
     days_per_week: 5,
     school_start_time: '08:00',
     settings: {}
@@ -169,7 +168,6 @@ export default function Settings() {
         timezone: school.timezone || 'UTC',
         academic_year: school.academic_year || '2024-2025',
         periods_per_day: school.periods_per_day || 8,
-        period_duration_minutes: school.period_duration_minutes || 45,
         days_per_week: school.days_per_week || 5,
         school_start_time: school.school_start_time || '08:00',
         settings: school.settings || {}
