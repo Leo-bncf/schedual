@@ -61,6 +61,7 @@ import {
 } from 'lucide-react';
 import PageHeader from '../components/ui-custom/PageHeader';
 import YearAdvancement from '../components/settings/YearAdvancement';
+import TestSlotsManager from '../components/settings/TestSlotsManager';
 
 import { toast } from 'sonner';
 
@@ -737,6 +738,8 @@ export default function Settings() {
                 </div>
               </CardContent>
             </Card>
+
+            <TestSlotsManager />
           </div>
         </TabsContent>
 
