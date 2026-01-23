@@ -845,6 +845,26 @@ ${trainingFeedback ? `LESSONS FROM ADMIN FEEDBACK:\n${trainingFeedback}\n\n` : '
                 </div>
               </div>
               
+              {formData.is_core && (
+                <div className="p-4 bg-purple-50 rounded-lg border border-purple-200">
+                  <Label htmlFor="core_hours" className="font-semibold text-purple-900">
+                    Teaching Hours per Week
+                  </Label>
+                  <Input
+                    id="core_hours"
+                    type="number"
+                    min="1"
+                    max="10"
+                    value={formData.pyp_myp_hours_per_week || 2}
+                    onChange={(e) => setFormData({ ...formData, pyp_myp_hours_per_week: parseInt(e.target.value) })}
+                    className="mt-2"
+                  />
+                  <p className="text-xs text-purple-600 mt-2">
+                    Recommended: TOK = 3 hours, CAS/EE = 1 hour
+                  </p>
+                </div>
+              )}
+
               {formData.ib_level === 'DP' && !formData.is_core && (
                 <div className="flex items-center justify-between p-4 bg-gradient-to-r from-blue-50 to-indigo-50 rounded-lg border-2 border-blue-200">
                   <div>
