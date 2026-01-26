@@ -20,12 +20,12 @@ const periodTimes = {
 };
 
 const subjectGroupColors = {
-  '1': { bg: 'bg-purple-50', border: 'border-l-purple-400', text: 'text-purple-900', name: 'Language & Literature' },
-  '2': { bg: 'bg-blue-50', border: 'border-l-blue-400', text: 'text-blue-900', name: 'Language Acquisition' },
-  '3': { bg: 'bg-green-50', border: 'border-l-green-400', text: 'text-green-900', name: 'Individuals & Societies' },
-  '4': { bg: 'bg-amber-50', border: 'border-l-amber-400', text: 'text-amber-900', name: 'Sciences' },
-  '5': { bg: 'bg-orange-50', border: 'border-l-orange-400', text: 'text-orange-900', name: 'Mathematics' },
-  '6': { bg: 'bg-pink-50', border: 'border-l-pink-400', text: 'text-pink-900', name: 'The Arts' },
+  '1': { bg: 'bg-purple-100', border: 'border-l-purple-600', text: 'text-purple-900', name: 'Language & Literature' },
+  '2': { bg: 'bg-sky-100', border: 'border-l-sky-600', text: 'text-sky-900', name: 'Language Acquisition' },
+  '3': { bg: 'bg-emerald-100', border: 'border-l-emerald-600', text: 'text-emerald-900', name: 'Individuals & Societies' },
+  '4': { bg: 'bg-amber-100', border: 'border-l-amber-600', text: 'text-amber-900', name: 'Sciences' },
+  '5': { bg: 'bg-orange-100', border: 'border-l-orange-600', text: 'text-orange-900', name: 'Mathematics' },
+  '6': { bg: 'bg-pink-100', border: 'border-l-pink-600', text: 'text-pink-900', name: 'The Arts' },
 };
 
 export default function TimetableGrid({ slots = [], groups = [], rooms = [], subjects = [], teachers = [], classGroups = [], periodsPerDay = 8, breakPeriods = [], lunchPeriod = 4, onSlotClick, exportId = "timetable-grid" }) {
