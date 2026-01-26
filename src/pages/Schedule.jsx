@@ -345,8 +345,6 @@ Now process the user's input and return ONLY the JSON object.`,
       await updateSchoolMutation.mutateAsync({
         id: school.id,
         data: {
-          periods_per_day: schoolConfig.periods_per_day,
-          period_duration_minutes: schoolConfig.period_duration_minutes,
           days_per_week: schoolConfig.days_per_week,
           school_start_time: schoolConfig.school_start_time,
           settings: {
@@ -1781,47 +1779,7 @@ Now process the user's input and return ONLY the JSON object.`,
                         </div>
                       </CardHeader>
                       <CardContent className="pt-8 pb-8">
-                        <div className="grid md:grid-cols-4 gap-6">
-                          {/* Periods Per Day */}
-                          <div className="space-y-3">
-                            <Label htmlFor="periods" className="flex items-center gap-2 text-sm font-bold text-slate-900">
-                              <Hash className="w-4 h-4 text-indigo-600" />
-                              Periods Per Day
-                            </Label>
-                            <Input 
-                              id="periods"
-                              type="number"
-                              min="4"
-                              max="12"
-                              value={schoolConfig.periods_per_day}
-                              onChange={(e) => setSchoolConfig({...schoolConfig, periods_per_day: parseInt(e.target.value)})}
-                              className="h-14 text-2xl font-bold text-center border-2 border-slate-300 focus:border-indigo-500"
-                            />
-                            <p className="text-xs text-slate-500">Total teaching periods (4-12)</p>
-                          </div>
-
-                          {/* Period Duration */}
-                          <div className="space-y-3">
-                            <Label htmlFor="duration" className="flex items-center gap-2 text-sm font-bold text-slate-900">
-                              <Timer className="w-4 h-4 text-emerald-600" />
-                              Period Length
-                            </Label>
-                            <div className="relative">
-                              <Input 
-                                id="duration"
-                                type="number"
-                                min="30"
-                                max="90"
-                                step="5"
-                                value={schoolConfig.period_duration_minutes}
-                                onChange={(e) => setSchoolConfig({...schoolConfig, period_duration_minutes: parseInt(e.target.value)})}
-                                className="h-14 text-2xl font-bold text-center border-2 border-slate-300 focus:border-emerald-500 pr-16"
-                              />
-                              <span className="absolute right-4 top-1/2 -translate-y-1/2 text-lg font-bold text-slate-500">min</span>
-                            </div>
-                            <p className="text-xs text-slate-500">Duration (30-90 minutes)</p>
-                          </div>
-
+                        <div className="grid md:grid-cols-2 gap-6">
                           {/* School Week */}
                           <div className="space-y-3">
                             <Label htmlFor="days" className="flex items-center gap-2 text-sm font-bold text-slate-900">
@@ -1869,7 +1827,7 @@ Now process the user's input and return ONLY the JSON object.`,
                             <div className="flex-1">
                               <p className="font-bold text-indigo-900 mb-2">Schedule Preview</p>
                               <p className="text-sm text-indigo-800 leading-relaxed">
-                                School day starts at <span className="font-bold">{schoolConfig.school_start_time}</span> with <span className="font-bold">{schoolConfig.periods_per_day} periods</span> of <span className="font-bold">{schoolConfig.period_duration_minutes} minutes</span> each, running <span className="font-bold">{schoolConfig.days_per_week} days</span> per week.
+                                School day starts at <span className="font-bold">{schoolConfig.school_start_time}</span>, running <span className="font-bold">{schoolConfig.days_per_week} days</span> per week. The system will optimize period allocation automatically.
                               </p>
                             </div>
                           </div>
