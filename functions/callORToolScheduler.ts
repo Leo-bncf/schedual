@@ -124,7 +124,8 @@ Deno.serve(async (req) => {
       const timeslot = problem.timeslots.find(ts => ts.id === lesson.timeslotId);
       if (!timeslot) continue;
 
-      const subjectId = capabilityToSubjectId[lesson.subject];
+      const normalizedSubject = lesson.subject.toUpperCase().replace(/\s+/g, '_').replace(/[^A-Z0-9_]/g, '');
+      const subjectId = capabilityToSubjectId[normalizedSubject];
       const teacherId = lesson.teacherId ? numericToTeacherId[lesson.teacherId] : null;
       const roomId = numericToRoomId[lesson.roomId];
       
