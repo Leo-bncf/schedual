@@ -76,26 +76,71 @@ Deno.serve(async (req) => {
       }, { status: 500 });
     }
 
-    // Step 4: Map assignments back to Base44 ScheduleSlot entities
+    // Step 4: Get Base44 entities to reverse-map IDs
+    const [subjects, teachingGroups, rooms, teachers] = await Promise.all([
+      base44.asServiceRole.entities.Subject.filter({ school_id: user.school_id }),
+      base44.asServiceRole.entities.TeachingGroup.filter({ school_id: user.school_id }),
+      base44.asServiceRole.entities.Room.filter({ school_id: user.school_id }),
+      base44.asServiceRole.entities.Teacher.filter({ school_id: user.school_id })
+    ]);
+
+    // Build reverse mappings: capability → subject_id, numeric → Base44 ID
+    const capabilityToSubjectId = {};
+    subjects.forEach(subject => {
+      const code = (subject.code || subject.name)
+        .toUpperCase()
+        .replace(/\s+/g, '_')
+        .replace(/[^A-Z0-9_]/g, '');
+      capabilityToSubjectId[code] = subject.id;
+    });
+
+    const numericToRoomId = {};
+    problem.rooms.forEach((room, index) => {
+      numericToRoomId[index + 1] = rooms[index]?.id;
+    });
+
+    const numericToTeacherId = {};
+    problem.teachers.forEach((teacher, index) => {
+      numericToTeacherId[index + 1] = teachers[index]?.id;
+    });
+
+    // Map timeslot ID → day/period
+    const days = ['MONDAY', 'TUESDAY', 'WEDNESDAY', 'THURSDAY', 'FRIDAY'];
+    const dayMapping = {
+      'MONDAY': 'Monday',
+      'TUESDAY': 'Tuesday',
+      'WEDNESDAY': 'Wednesday',
+      'THURSDAY': 'Thursday',
+      'FRIDAY': 'Friday'
+    };
+
+    // Step 5: Map OptaPlanner solution back to Base44 ScheduleSlot entities
     const slots = [];
-    for (const assignment of solution.assignments) {
-      const time_slot = problem.time_slots.find(ts => ts.id === assignment.time_slot_id);
-      if (!time_slot) continue;
+    for (const lesson of solution.lessons || []) {
+      if (!lesson.timeslotId || !lesson.roomId) continue; // Skip unassigned
+
+      const timeslot = problem.timeslots.find(ts => ts.id === lesson.timeslotId);
+      if (!timeslot) continue;
+
+      const subjectId = capabilityToSubjectId[lesson.subject];
+      const teacherId = lesson.teacherId ? numericToTeacherId[lesson.teacherId] : null;
+      const roomId = numericToRoomId[lesson.roomId];
 
       slots.push({
         school_id: user.school_id,
         schedule_version: schedule_version_id,
-        teaching_group_id: assignment.teaching_unit_id,
-        teacher_id: assignment.teacher_id,
-        room_id: assignment.room_id,
-        day: time_slot.day,
-        period: time_slot.period,
+        teaching_group_id: null,
+        subject_id: subjectId || null,
+        teacher_id: teacherId,
+        room_id: roomId,
+        day: dayMapping[timeslot.dayOfWeek] || timeslot.dayOfWeek,
+        period: timeslot.id % 10 || 10,
         is_double_period: false,
         status: 'scheduled'
       });
     }
 
-    // Step 5: Delete existing slots for this version
+    // Step 6: Delete existing slots for this version
     const existingSlots = await base44.asServiceRole.entities.ScheduleSlot.filter({
       school_id: user.school_id,
       schedule_version: schedule_version_id
@@ -105,49 +150,36 @@ Deno.serve(async (req) => {
       await base44.asServiceRole.entities.ScheduleSlot.delete(slot.id);
     }
 
-    // Step 6: Create new slots
+    // Step 7: Create new slots
     if (slots.length > 0) {
       await base44.asServiceRole.entities.ScheduleSlot.bulkCreate(slots);
     }
 
-    // Step 7: Create conflict reports for unassigned units
-    if (solution.unassigned_units && solution.unassigned_units.length > 0) {
-      const teachingGroups = await base44.asServiceRole.entities.TeachingGroup.filter({
-        school_id: user.school_id
-      });
-      const subjects = await base44.asServiceRole.entities.Subject.filter({
-        school_id: user.school_id
-      });
-
-      for (const unitId of solution.unassigned_units) {
-        const group = teachingGroups.find(g => g.id === unitId);
-        if (!group) continue;
-
-        const subject = subjects.find(s => s.id === group.subject_id);
-        const groupName = group.name || `${subject?.name} ${group.level}`;
-
+    // Step 8: Create conflict reports for unassigned lessons
+    const unassignedLessons = (solution.lessons || []).filter(l => !l.timeslotId || !l.roomId);
+    if (unassignedLessons.length > 0) {
+      for (const lesson of unassignedLessons) {
         await base44.asServiceRole.entities.ConflictReport.create({
           school_id: user.school_id,
           schedule_version_id,
           conflict_type: 'unassigned_teaching_unit',
           severity: 'critical',
-          description: `Teaching unit "${groupName}" could not be scheduled. No valid time slots found that satisfy all constraints.`,
+          description: `Lesson "${lesson.subject} - ${lesson.studentGroup}" could not be scheduled. No valid time slots found.`,
           affected_entities: {
-            teaching_group: unitId,
-            subject: group.subject_id,
-            teacher: group.teacher_id
+            subject_code: lesson.subject,
+            student_group: lesson.studentGroup
           },
-          suggested_resolution: 'Try relaxing soft constraints, adding more time slots, or reducing required sessions per week.',
+          suggested_resolution: 'Try adding more rooms, adjusting teacher availability, or reducing required sessions.',
           status: 'unresolved'
         });
       }
     }
 
-    // Step 8: Update schedule version metadata
+    // Step 9: Update schedule version metadata
     await base44.asServiceRole.entities.ScheduleVersion.update(schedule_version_id, {
       generated_at: new Date().toISOString(),
-      score: solution.stats?.teacher_utilization || 0,
-      conflicts_count: solution.unassigned_units?.length || 0
+      score: solution.score || 0,
+      conflicts_count: unassignedLessons.length
     });
 
     return Response.json({
@@ -155,9 +187,8 @@ Deno.serve(async (req) => {
       message: 'Schedule generated successfully',
       stats: {
         slots_created: slots.length,
-        unassigned_units: solution.unassigned_units?.length || 0,
-        teacher_utilization: solution.stats?.teacher_utilization || 0,
-        room_utilization: solution.stats?.room_utilization || 0
+        unassigned_lessons: unassignedLessons.length,
+        score: solution.score || 0
       }
     });
 
