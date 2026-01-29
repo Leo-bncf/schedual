@@ -38,8 +38,8 @@ Deno.serve(async (req) => {
       return Response.json({ error: 'School not found' }, { status: 404 });
     }
 
-    // Build timeslots with OptaPlanner format
-    const periods_per_day = school.periods_per_day || 10;
+    // Build timeslots with OptaPlanner format - FIXED to respect school.periods_per_day
+    const periods_per_day = school.periods_per_day || 10; // Should be 10 for 08:00-18:00 coverage
     const period_duration = school.period_duration_minutes || 60;
     const school_start = school.school_start_time || "08:00";
     const days = ['MONDAY', 'TUESDAY', 'WEDNESDAY', 'THURSDAY', 'FRIDAY'];
