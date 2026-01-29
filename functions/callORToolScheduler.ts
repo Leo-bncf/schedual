@@ -115,7 +115,9 @@ Deno.serve(async (req) => {
     };
 
     // Step 5: Map OptaPlanner solution back to Base44 ScheduleSlot entities
+    const periods_per_day = problem.timeslots.length / 5; // 50 slots / 5 days = 10 periods
     const slots = [];
+    
     for (const lesson of solution.lessons || []) {
       if (!lesson.timeslotId || !lesson.roomId) continue; // Skip unassigned
 
@@ -125,6 +127,9 @@ Deno.serve(async (req) => {
       const subjectId = capabilityToSubjectId[lesson.subject];
       const teacherId = lesson.teacherId ? numericToTeacherId[lesson.teacherId] : null;
       const roomId = numericToRoomId[lesson.roomId];
+      
+      // Calculate period from timeslot ID: ((id - 1) % periods_per_day) + 1
+      const period = ((timeslot.id - 1) % periods_per_day) + 1;
 
       slots.push({
         school_id: user.school_id,
@@ -134,7 +139,7 @@ Deno.serve(async (req) => {
         teacher_id: teacherId,
         room_id: roomId,
         day: dayMapping[timeslot.dayOfWeek] || timeslot.dayOfWeek,
-        period: timeslot.id % 10 || 10,
+        period: period,
         is_double_period: false,
         status: 'scheduled'
       });
