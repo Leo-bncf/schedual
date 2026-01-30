@@ -173,12 +173,30 @@ Deno.serve(async (req) => {
       });
     }
 
+    // After solve: compute max period used by day
+    const maxPeriodUsedByDay = { Monday: 0, Tuesday: 0, Wednesday: 0, Thursday: 0, Friday: 0 };
+    const periodsPerDayLocal = problem.timeslots.length / 5;
+    for (const l of solvedLessons) {
+      if (!l.timeslotId) continue;
+      const ts = problem.timeslots.find(t => t.id === l.timeslotId);
+      if (!ts) continue;
+      const day = dayMapping[ts.dayOfWeek] || ts.dayOfWeek;
+      const period = ((ts.id - 1) % periodsPerDayLocal) + 1;
+      if (maxPeriodUsedByDay[day] === undefined || period > maxPeriodUsedByDay[day]) {
+        maxPeriodUsedByDay[day] = period;
+      }
+    }
+    console.log('[callORToolScheduler] maxPeriodUsedByDay =', maxPeriodUsedByDay);
+
     // Step 5: Map OptaPlanner solution back to Base44 ScheduleSlot entities
     const periods_per_day = problem.timeslots.length / 5; // 50 slots / 5 days = 10 periods
+    let lessonsWithoutTimeslot = 0;
+    let missingRoomCount = 0;
+    let missingTeacherCount = 0;
     const slots = [];
     
     for (const lesson of solvedLessons) {
-      if (!lesson.timeslotId) continue; // Skip if no timeslot assigned
+      if (!lesson.timeslotId) { lessonsWithoutTimeslot++; continue; } // Skip if no timeslot assigned
 
       const timeslot = problem.timeslots.find(ts => ts.id === lesson.timeslotId);
       if (!timeslot) continue;
@@ -197,7 +215,8 @@ Deno.serve(async (req) => {
         const byFlag = subjId && subjects.some(s => s.id === subjId && s.is_core === true);
         return byFlag || allowNullRoomSubjects.has(normalizedSubject);
       })();
-      if (!roomId && !isCore) continue;
+      if (!roomId) { missingRoomCount++; }
+      if (!teacherId) { missingTeacherCount++; }
       
       // Calculate period from timeslot ID: ((id - 1) % periods_per_day) + 1
       const period = ((timeslot.id - 1) % periods_per_day) + 1;
@@ -275,15 +294,22 @@ Deno.serve(async (req) => {
       }
       // Build sampleSlotsInserted (5 max, ensure one core if exists)
       if (Array.isArray(inserted)) {
-        const toCode = (s) => s.subject_id ? (codeBySubjectId[s.subject_id] || 'UNKNOWN') : (s.notes?.includes('Study') ? 'STUDY' : 'UNKNOWN');
-        const coreList = inserted.filter(s => ['TOK','CAS','EE'].includes(toCode(s)));
-        const nonCore = inserted.filter(s => !['TOK','CAS','EE'].includes(toCode(s)));
-        sampleSlotsInserted = [...coreList.slice(0,1), ...nonCore.slice(0,4)];
-        coreSlotsInsertedCount = {
-          TOK: inserted.filter(s => toCode(s) === 'TOK').length,
-          CAS: inserted.filter(s => toCode(s) === 'CAS').length,
-          EE: inserted.filter(s => toCode(s) === 'EE').length,
+        const getCoreKey = (sid) => {
+          const subj = subjects.find(s => s.id === sid);
+          const label = String((subj?.code || subj?.name || '')).toUpperCase();
+          if (label.includes('TOK') || label.includes('THEORY OF KNOWLEDGE')) return 'TOK';
+          if (label.includes('CAS')) return 'CAS';
+          if (label.includes('EXTENDED ESSAY') || label === 'EE' || label.includes(' EE')) return 'EE';
+          return null;
         };
+        const coreList = inserted.filter(s => s.subject_id && getCoreKey(s.subject_id));
+        const nonCore = inserted.filter(s => !(s.subject_id && getCoreKey(s.subject_id)));
+        sampleSlotsInserted = [...coreList.slice(0,1), ...nonCore.slice(0,4)];
+        coreSlotsInsertedCount = { TOK: 0, CAS: 0, EE: 0 };
+        inserted.forEach(s => {
+          const k = s.subject_id ? getCoreKey(s.subject_id) : null;
+          if (k) coreSlotsInsertedCount[k]++;
+        });
         sampleCoreSlot = sampleTok || sampleCas || sampleEe || null;
         console.log('[callORToolScheduler] coreSlotsInsertedCount =', coreSlotsInsertedCount, 'sampleCoreSlot =', sampleCoreSlot);
       } else {
@@ -359,6 +385,17 @@ Deno.serve(async (req) => {
       warnings_count: warningsCount
       });
 
+    console.log('[callORToolScheduler] persistence diagnostics', { lessonsWithoutTimeslot, missingRoomCount, missingTeacherCount });
+    const buildMeta = {
+      schoolIdInput: requestedSchoolId,
+      schoolIdUsed: schoolId,
+      timeslotsCount: problem.timeslots.length,
+      periodsPerDay: periods_per_day,
+      lastTimeslot: problem.timeslots[problem.timeslots.length - 1] || null,
+      dpTargetPeriodsPerDay: (buildResponse?.data?.stats?.dp_target_periods_per_day) || null,
+    };
+    console.log('[callORToolScheduler] buildMeta =', buildMeta);
+
     return Response.json({
       success: true,
       school_id: user.school_id,
@@ -367,6 +404,7 @@ Deno.serve(async (req) => {
       assignmentsBySubjectCode: assignedBySubjectCode,
       unassignedBySubjectCode,
       coreAssignments,
+      maxPeriodUsedByDay,
       slotsToInsertBySubjectId,
       insertedCount,
       deletedCount: typeof deletedCount === 'number' ? deletedCount : 0,
@@ -375,6 +413,12 @@ Deno.serve(async (req) => {
       sampleSlotsInserted,
       coreSlotsInsertedCount,
       sampleCoreSlot,
+      diagnostics: {
+        lessonsWithoutTimeslot,
+        missingRoomCount,
+        missingTeacherCount,
+      },
+      buildMeta,
       message: 'Schedule generated successfully',
       stats: {
         slots_created: slots.length,

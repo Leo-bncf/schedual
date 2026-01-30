@@ -317,12 +317,22 @@ Deno.serve(async (req) => {
     };
     // Debug summary for core subjects
     const dbgCreatedCore = { TOK: lessons.filter(l => l.subject === 'TOK').length, CAS: lessons.filter(l => l.subject === 'CAS').length, EE: lessons.filter(l => l.subject === 'EE').length };
+    const lastTimeslot = timeslots[timeslots.length - 1] || null;
     console.log('[buildSchedulingProblem] core lessons created =', dbgCreatedCore);
+    console.log('[buildSchedulingProblem] meta', { schoolIdInput: requestedSchoolId, schoolIdUsed: school_id, timeslotsCount: timeslots.length, periodsPerDay: periods_per_day, lastTimeslot });
 
     return Response.json({
       success: true,
       problem,
       subjectIdByCode,
+      meta: {
+        schoolIdInput: requestedSchoolId,
+        schoolIdUsed: school_id,
+        timeslotsCount: timeslots.length,
+        periodsPerDay: periods_per_day,
+        lastTimeslot,
+        dpTargetPeriodsPerDay: dpTargetPeriodsPerDay
+      },
       stats: {
         timeslots: timeslots.length,
         rooms: rooms.length,
