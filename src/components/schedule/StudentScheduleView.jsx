@@ -28,9 +28,9 @@ export default function StudentScheduleView({ students, slots, groups, subjects,
       if (inGroup) return true;
       const subj = group ? subjects.find(s => s.id === group.subject_id) : null;
       const codeNorm = (subj?.code || subj?.name || '').toUpperCase().replace(/\s+/g, '_');
-      const isCore = (group?.is_core === true) || (subj?.is_core === true) || ['TOK','CAS','EE'].some(k => codeNorm.includes(k));
-      const dpFallback = group && subj && group.year_group === 'DP1+DP2' && isCore;
-      return !!dpFallback;
+      const isCore = (subj?.is_core === true) || ['TOK','CAS','EE'].some(k => codeNorm.includes(k));
+      const coreFallback = group && subj && isCore; // Show core TGs even without explicit membership
+      return !!coreFallback;
     });
   };
 
