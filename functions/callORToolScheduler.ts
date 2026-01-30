@@ -162,7 +162,8 @@ Deno.serve(async (req) => {
     const unassignedLessons = solvedLessons.filter(l => {
       const subj = String(l.subject || l.subjectCode || '')
         .toUpperCase().replace(/\s+/g, '_').replace(/[^A-Z0-9_]/g, '');
-      return !l.timeslotId || (!l.roomId && subj !== 'STUDY');
+      const allowNullRoomSubjects = new Set(['STUDY','TOK','CAS','EE']);
+      return !l.timeslotId || (!l.roomId && !allowNullRoomSubjects.has(subj));
     });
     if (unassignedLessons.length > 0) {
       for (const lesson of unassignedLessons) {
