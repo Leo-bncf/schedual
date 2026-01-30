@@ -24,7 +24,8 @@ Deno.serve(async (req) => {
 
     // Step 1: Build scheduling problem
     const buildResponse = await base44.functions.invoke('buildSchedulingProblem', {
-      schedule_version_id
+      schedule_version_id,
+      school_id: user.school_id
     });
 
     if (!buildResponse.data.success) {
@@ -86,6 +87,29 @@ Deno.serve(async (req) => {
       assignmentsReturnedBySubject[subj] = (assignmentsReturnedBySubject[subj] || 0) + 1;
     }
     console.log('[callORToolScheduler] assignmentsReturnedBySubject =', assignmentsReturnedBySubject);
+    const assignedBySubjectCode = {};
+    const unassignedBySubjectCode = {};
+    for (const l of solvedLessons) {
+      const subj = String(l.subject || l.subjectCode || '')
+        .toUpperCase().replace(/\s+/g, '_').replace(/[^A-Z0-9_]/g, '');
+      if (l.timeslotId) {
+        assignedBySubjectCode[subj] = (assignedBySubjectCode[subj] || 0) + 1;
+      } else {
+        unassignedBySubjectCode[subj] = (unassignedBySubjectCode[subj] || 0) + 1;
+      }
+    }
+    console.log('[callORToolScheduler] assignedBySubjectCode =', assignedBySubjectCode);
+    console.log('[callORToolScheduler] unassignedBySubjectCode =', unassignedBySubjectCode);
+    const coreKeys = ['TOK','CAS','EE'];
+    const coreAssignmentSummary = {};
+    for (const k of coreKeys) {
+      coreAssignmentSummary[k] = {
+        assigned: assignedBySubjectCode[k] || 0,
+        unassigned: unassignedBySubjectCode[k] || 0,
+        total: (assignedBySubjectCode[k] || 0) + (unassignedBySubjectCode[k] || 0)
+      };
+    }
+    console.log('[callORToolScheduler] coreAssignmentSummary =', coreAssignmentSummary);
 
     // Step 4: Get Base44 entities to reverse-map IDs
     const [subjects, teachingGroups, rooms, teachers] = await Promise.all([
@@ -165,15 +189,22 @@ Deno.serve(async (req) => {
       slotsPreparedBySubject[code] = (slotsPreparedBySubject[code] || 0) + 1;
     }
     console.log('[callORToolScheduler] slotsPreparedBySubject =', slotsPreparedBySubject);
-    const coreSet = new Set(['TOK','CAS','EE']);
-    const coreSamples = { TOK: [], CAS: [], EE: [] };
+
+    // Counts by subject_id
+    const slotsToInsertBySubjectId = {};
     for (const s of slots) {
-      const code = s.subject_id ? (codeBySubjectId[s.subject_id] || 'UNKNOWN') : (s.notes?.includes('Study') ? 'STUDY' : 'UNKNOWN');
-      if (coreSet.has(code) && coreSamples[code].length < 5) {
-        coreSamples[code].push({ day: s.day, period: s.period, teacher_id: s.teacher_id, room_id: s.room_id, teaching_group_id: s.teaching_group_id });
-      }
+      const key = s.subject_id || 'null';
+      slotsToInsertBySubjectId[key] = (slotsToInsertBySubjectId[key] || 0) + 1;
     }
-    console.log('[callORToolScheduler] coreSamples (first up to 5) =', coreSamples);
+    console.log('[callORToolScheduler] slotsToInsertBySubjectId =', slotsToInsertBySubjectId);
+
+    // Full JSON samples for TOK/CAS/EE
+    const sampleTok = slots.find(s => s.subject_id && codeBySubjectId[s.subject_id] === 'TOK') || null;
+    const sampleCas = slots.find(s => s.subject_id && codeBySubjectId[s.subject_id] === 'CAS') || null;
+    const sampleEe  = slots.find(s => s.subject_id && codeBySubjectId[s.subject_id] === 'EE')  || null;
+    console.log('[callORToolScheduler] sampleSlot.TOK =', sampleTok);
+    console.log('[callORToolScheduler] sampleSlot.CAS =', sampleCas);
+    console.log('[callORToolScheduler] sampleSlot.EE  =', sampleEe);
 
     // Step 6: Delete existing slots for this version
     const existingSlots = await base44.asServiceRole.entities.ScheduleSlot.filter({
@@ -187,9 +218,13 @@ Deno.serve(async (req) => {
 
     // Step 7: Create new slots
     if (slots.length > 0) {
-      await base44.asServiceRole.entities.ScheduleSlot.bulkCreate(slots);
-      // Inserted counts (should match prepared if bulk succeeded)
+      const inserted = await base44.asServiceRole.entities.ScheduleSlot.bulkCreate(slots);
+      const createdIds = Array.isArray(inserted) ? inserted.map(r => r.id) : null;
+      console.log('[callORToolScheduler] insertedCount =', (Array.isArray(inserted) ? inserted.length : slots.length));
       console.log('[callORToolScheduler] insertedCountBySubject =', slotsPreparedBySubject);
+      if (createdIds) {
+        console.log('[callORToolScheduler] createdIds (first 20) =', createdIds.slice(0, 20));
+      }
     }
 
     // Step 8: Create conflict reports for unassigned lessons
