@@ -49,12 +49,13 @@ Deno.serve(async (req) => {
     const school_id = user.school_id;
 
     // Fetch school + resources for mapping (rooms/teachers for numeric IDs, subjects for code normalization)
-    const [school, roomsDb, teachersDb, subjectsDb] = await Promise.all([
-      base44.entities.School.filter({ id: school_id }).then((r) => r[0]),
-      base44.entities.Room.filter({ school_id, is_active: true }),
-      base44.entities.Teacher.filter({ school_id, is_active: true }),
-      base44.entities.Subject.filter({ school_id, is_active: true }),
-    ]);
+    const [school, roomsDb, teachersDb, subjectsDb, teachingGroupsDb] = await Promise.all([
+              base44.entities.School.filter({ id: school_id }).then((r) => r[0]),
+              base44.entities.Room.filter({ school_id, is_active: true }),
+              base44.entities.Teacher.filter({ school_id, is_active: true }),
+              base44.entities.Subject.filter({ school_id, is_active: true }),
+              base44.entities.TeachingGroup.filter({ school_id, is_active: true }),
+            ]);
 
     if (!school) {
       return Response.json({ error: 'School not found' }, { status: 404 });
@@ -133,53 +134,35 @@ Deno.serve(async (req) => {
       return acc;
     }, {});
 
-    // Build lessons exclusively from subjectRequirements
+    // Build lessons exclusively from TeachingGroups (active)
     const lessons = [];
     let lessonId = 1;
     const perSubjectCount = {};
 
-    for (let i = 0; i < subjectRequirements.length; i++) {
-      const reqItem = subjectRequirements[i] || {};
-      const weeklyCount = Number(reqItem.weeklyCount ?? reqItem.weekly_count);
-      if (!Number.isFinite(weeklyCount) || weeklyCount <= 0) {
-        continue; // skip invalid entries
-      }
+    // Numeric → Base44 ID maps for solver payload
+    const teacherNumericIdToBase44Id = {};
+    const roomNumericIdToBase44Id = {};
+    teachersDb.forEach((t, idx) => { teacherNumericIdToBase44Id[idx + 1] = t.id; });
+    roomsDb.forEach((r, idx) => { roomNumericIdToBase44Id[idx + 1] = r.id; });
 
-      let subjectCode = null;
-      let resolvedSubjectId = null;
-      if (reqItem.subject_id) {
-        resolvedSubjectId = reqItem.subject_id;
-        subjectCode = subjectIdToCode[resolvedSubjectId] || null;
-      }
-      if (!subjectCode) {
-        const provided = reqItem.subject_code || reqItem.subject || null;
-        const norm = normalizeSubjectCode(provided);
-        const spaceAlias = norm ? norm.replace(/_/g, ' ') : null;
-        // Try resolve to a known subject.id using multiple keys
-        resolvedSubjectId = (provided ? subjectIdByCode[String(provided).toUpperCase()] : null)
-          || (norm ? subjectIdByCode[norm] : null)
-          || (spaceAlias ? subjectIdByCode[spaceAlias] : null)
-          || null;
-        subjectCode = resolvedSubjectId ? subjectIdToCode[resolvedSubjectId] : norm;
-      }
-      if (!subjectCode) {
-        continue; // cannot proceed without a subject code
-      }
+    for (let i = 0; i < teachingGroupsDb.length; i++) {
+      const tg = teachingGroupsDb[i];
+      if (!tg?.is_active) continue;
 
-      const teacherNumericId = reqItem.teacher_id ? (teacherIdToNumeric[reqItem.teacher_id] || null) : null;
-      const roomNumericId = reqItem.room_id ? (roomIdToNumeric[reqItem.room_id] || null) : null;
+      const subjectCode = subjectIdToCode[tg.subject_id];
+      if (!subjectCode) continue; // skip if subject not resolvable
 
-      const studentGroup = reqItem.student_group
-        || (reqItem.teaching_group_id ? `TG_${reqItem.teaching_group_id}`
-        : (reqItem.classgroup_id ? `CG_${reqItem.classgroup_id}` : `GROUP_${i + 1}`));
+      const weeklyCount = Number(tg.hours_per_week || 1);
+      const teacherNumericId = tg.teacher_id ? (teacherIdToNumeric[tg.teacher_id] || null) : null;
+      const roomNumericId = tg.preferred_room_id ? (roomIdToNumeric[tg.preferred_room_id] || null) : null;
 
-      const requiredCapacity = Number(reqItem.requiredCapacity ?? reqItem.capacity);
-      const capacity = Number.isFinite(requiredCapacity) && requiredCapacity > 0 ? requiredCapacity : 20;
+      const studentGroup = `TG_${tg.id}`;
+      const capacity = 20; // keep default; can be enhanced later
 
       for (let k = 0; k < weeklyCount; k++) {
         lessons.push({
           id: lessonId++,
-          subject: subjectCode,       // normalized code only
+          subject: subjectCode, // canonical subject code
           studentGroup,
           requiredCapacity: capacity,
           timeslotId: null,
@@ -204,7 +187,15 @@ Deno.serve(async (req) => {
       console.warn('[buildSchedulingProblem] UNMAPPED subjects =', missingSubjects);
     }
 
-    const problem = { timeslots, rooms, teachers, lessons, subjectIdByCode };
+    const problem = { 
+      timeslots, 
+      rooms, 
+      teachers, 
+      lessons, 
+      subjectIdByCode,
+      teacherNumericIdToBase44Id,
+      roomNumericIdToBase44Id
+    };
 
     return Response.json({
       success: true,
