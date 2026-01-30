@@ -85,10 +85,107 @@ Deno.serve(async (req) => {
     });
     const schedule_version_id = createdVersion.id;
 
-    // Build scheduling problem
-    const buildRes = await base44.asServiceRole.functions.invoke('buildSchedulingProblem', { schedule_version_id, school_id, dp_target_periods_per_day: 9 });
-    const problem = buildRes.data.problem;
-    const stats = buildRes.data.stats || {};
+    // Build scheduling problem (try function; fallback to local build if forbidden)
+    let problem, stats;
+    try {
+      const buildRes = await base44.asServiceRole.functions.invoke('buildSchedulingProblem', { schedule_version_id, school_id, dp_target_periods_per_day: 9 });
+      problem = buildRes.data.problem;
+      stats = buildRes.data.stats || {};
+    } catch (e) {
+      // Local fallback (no persistence)
+      const schoolArr = await base44.asServiceRole.entities.School.filter({ id: school_id });
+      const school = schoolArr?.[0];
+      if (!school) {
+        return Response.json({ error: 'School not found for fallback builder' }, { status: 404 });
+      }
+
+      const [roomsDb, teachersDb, teachingGroupsDb] = await Promise.all([
+        client.entities.Room.filter({ school_id, is_active: true }),
+        client.entities.Teacher.filter({ school_id, is_active: true }),
+        client.entities.TeachingGroup.filter({ school_id, is_active: true })
+      ]);
+
+      // Timeslots up to 18:00
+      const period_duration = school.period_duration_minutes || 60;
+      const school_start = school.school_start_time || '08:00';
+      const [sh, sm] = school_start.split(':').map(Number);
+      const startM = sh * 60 + sm;
+      const endM = 18 * 60; // 18:00
+      const totalM = Math.max(endM - startM, period_duration);
+      const periods_per_day = Math.max(1, Math.ceil(totalM / period_duration));
+      const DAYS = ['MONDAY','TUESDAY','WEDNESDAY','THURSDAY','FRIDAY'];
+      const timeslots = [];
+      let tsId = 1;
+      for (const d of DAYS) {
+        for (let p = 0; p < periods_per_day; p++) {
+          const st = startM + p * period_duration;
+          const et = st + period_duration;
+          const stH = String(Math.floor(st/60)).padStart(2,'0');
+          const stm = String(st%60).padStart(2,'0');
+          const etH = String(Math.floor(et/60)).padStart(2,'0');
+          const etm = String(et%60).padStart(2,'0');
+          timeslots.push({ id: tsId++, dayOfWeek: d, startTime: `${stH}:${stm}`, endTime: `${etH}:${etm}` });
+        }
+      }
+
+      // Numeric maps for teachers/rooms
+      const teacherIdToNumeric = teachersDb.reduce((acc, t, idx) => { acc[t.id] = idx+1; return acc; }, {});
+      const roomIdToNumeric = roomsDb.reduce((acc, r, idx) => { acc[r.id] = idx+1; return acc; }, {});
+      const teacherNumericIdToBase44Id = {};
+      const roomNumericIdToBase44Id = {};
+      teachersDb.forEach((t, idx) => { teacherNumericIdToBase44Id[idx+1] = t.id; });
+      roomsDb.forEach((r, idx) => { roomNumericIdToBase44Id[idx+1] = r.id; });
+
+      // Lessons from teaching groups
+      const lessons = [];
+      let lessonId = 1;
+      const perSubjectCount = {};
+      for (const tg of teachingGroupsDb) {
+        if (!tg?.is_active) continue;
+        const subj = subjectById[tg.subject_id];
+        if (!subj) continue;
+        const code = codeOf(subj);
+        const weekly = Number(tg.hours_per_week || 0);
+        const teacherNum = tg.teacher_id ? (teacherIdToNumeric[tg.teacher_id] || null) : null;
+        const roomNum = tg.preferred_room_id ? (roomIdToNumeric[tg.preferred_room_id] || null) : null;
+        for (let k = 0; k < weekly; k++) {
+          lessons.push({
+            id: lessonId++,
+            subject: code,
+            studentGroup: `TG_${tg.id}`,
+            requiredCapacity: 20,
+            timeslotId: null,
+            roomId: roomNum,
+            teacherId: teacherNum
+          });
+        }
+        perSubjectCount[code] = (perSubjectCount[code] || 0) + weekly;
+      }
+
+      problem = { timeslots, lessons, subjectIdByCode, teacherNumericIdToBase44Id, roomNumericIdToBase44Id };
+
+      // Minimal stats for recap
+      const expected = {};
+      for (const tg of teachingGroupsDb) {
+        if (!tg?.is_active) continue;
+        const subj = subjectById[tg.subject_id];
+        if (!subj) continue;
+        const code = codeOf(subj);
+        expected[code] = (expected[code] || 0) + Number(tg.hours_per_week || 0);
+      }
+      const created = {};
+      for (const l of lessons) { created[l.subject] = (created[l.subject] || 0) + 1; }
+      const missingCore = ['TOK','CAS','EE'].filter(c => (created[c] || 0) === 0);
+      stats = {
+        timeslots: timeslots.length,
+        lessons: lessons.length,
+        perSubjectCount,
+        periods_per_day,
+        expectedLessonsBySubject: expected,
+        lessonsCreatedBySubject: created,
+        missingCoreSubjects: missingCore
+      };
+    }
 
     // Derive expected/created if not provided
     let expectedLessonsBySubject = stats.expectedLessonsBySubject;
