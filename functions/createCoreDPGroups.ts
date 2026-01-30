@@ -104,6 +104,23 @@ Deno.serve(async (req) => {
       created.push({ code, teaching_group_id: tg.id });
     }
 
+    // Auto-enroll all DP students into core TGs (TOK/CAS/EE)
+    const dpStudents = await client.entities.Student.filter({ school_id, ib_programme: 'DP', is_active: true });
+    const dpStudentIds = (dpStudents || []).map(s => s.id);
+    const coreSubjectIds = targets.map(code => subjectByCode.get(code)?.id).filter(Boolean);
+    const allTGs = await client.entities.TeachingGroup.filter({ school_id, is_active: true });
+    let enrollUpdated = 0;
+    for (const tg of (allTGs || [])) {
+      if (!coreSubjectIds.includes(tg.subject_id)) continue;
+      const current = Array.isArray(tg.student_ids) ? tg.student_ids : [];
+      const merged = Array.from(new Set([...(current || []), ...dpStudentIds]));
+      if (merged.length !== current.length) {
+        await client.entities.TeachingGroup.update(tg.id, { student_ids: merged });
+        enrollUpdated++;
+      }
+    }
+    console.log('[createCoreDPGroups] auto-enroll DP students into core TGs', { dp_students: dpStudentIds.length, groups_updated: enrollUpdated });
+
     // Verification logs
     const verification = {};
     for (const code of targets) {

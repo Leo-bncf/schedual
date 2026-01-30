@@ -22,9 +22,13 @@ export default function StudentScheduleView({ students, slots, groups, subjects,
       if (slot.classgroup_id && student?.classgroup_id) {
         return slot.classgroup_id === student.classgroup_id;
       }
-      // DP: match by teaching_group_id
+      // DP: match by teaching_group_id (fallback: DP1+DP2 core even if student_ids empty)
       const group = groups.find(g => g.id === slot.teaching_group_id);
-      return group?.student_ids?.includes(studentId);
+      const inGroup = group?.student_ids?.includes(studentId);
+      if (inGroup) return true;
+      const subj = group ? subjects.find(s => s.id === group.subject_id) : null;
+      const dpFallback = group && subj && group.year_group === 'DP1+DP2' && subj.ib_level === 'DP';
+      return !!dpFallback;
     });
   };
 

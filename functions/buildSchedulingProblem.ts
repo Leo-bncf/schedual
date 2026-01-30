@@ -211,6 +211,16 @@ Deno.serve(async (req) => {
       roomNumericIdToExternalRef[idx + 1] = r.external_id || r.externalId || r.id; 
     });
 
+    // Soft preference: avoid early finish for DP groups (e.g., before 14:30)
+    const minEndPref = String(body?.dp_min_end_time || Deno.env.get('DP_MIN_END_TIME') || '14:30');
+    const studentGroupSoftPreferences = {};
+    teachingGroupsDb.forEach((tg) => {
+      const isDP = String(tg.year_group || '').toUpperCase().includes('DP') || ((subjectById[tg.subject_id]?.ib_level || '') === 'DP');
+      if (isDP) {
+        studentGroupSoftPreferences[`TG_${tg.id}`] = { minEndTime: minEndPref, penalty: 5 };
+      }
+    });
+
     for (let i = 0; i < teachingGroupsDb.length; i++) {
       const tg = teachingGroupsDb[i];
       if (!tg?.is_active) continue;
@@ -310,7 +320,8 @@ Deno.serve(async (req) => {
       teacherNumericIdToBase44Id,
       roomNumericIdToBase44Id,
       teacherNumericIdToExternalRef,
-      roomNumericIdToExternalRef
+      roomNumericIdToExternalRef,
+      studentGroupSoftPreferences
     };
     // Debug summary for core subjects
     const dbgCreatedCore = { TOK: lessons.filter(l => l.subject === 'TOK').length, CAS: lessons.filter(l => l.subject === 'CAS').length, EE: lessons.filter(l => l.subject === 'EE').length };
