@@ -21,6 +21,7 @@ Deno.serve(async (req) => {
     if (!schedule_version_id) {
       return Response.json({ error: 'schedule_version_id required' }, { status: 400 });
     }
+    const errors = [];
 
     // Step 1: Build scheduling problem
     const buildResponse = await base44.functions.invoke('buildSchedulingProblem', {
@@ -36,6 +37,7 @@ Deno.serve(async (req) => {
     }
 
     const problem = buildResponse.data.problem;
+    const expectedLessonsBySubject = (buildResponse.data?.stats?.expectedLessonsBySubject) || {};
 
     // Step 2: Call OR-Tool service
     const OR_TOOL_ENDPOINT = Deno.env.get('OR_TOOL_ENDPOINT') || Deno.env.get('OR_TOOL_API_URL');
@@ -136,6 +138,31 @@ Deno.serve(async (req) => {
       'FRIDAY': 'Friday'
     };
 
+    // Core assignments (TOK/CAS/EE) with timeslotId + mapped day/period
+    const periodsPerDay = problem.timeslots.length / 5;
+    const coreAssignments = { TOK: [], CAS: [], EE: [] };
+    for (const l of solvedLessons) {
+      const subj = String(l.subject || l.subjectCode || '')
+        .toUpperCase().replace(/\s+/g, '_').replace(/[^A-Z0-9_]/g, '');
+      if (!['TOK','CAS','EE'].includes(subj)) continue;
+      let day = null, period = null;
+      if (l.timeslotId) {
+        const ts = problem.timeslots.find(t => t.id === l.timeslotId) || null;
+        if (ts) {
+          day = dayMapping[ts.dayOfWeek] || ts.dayOfWeek;
+          period = ((ts.id - 1) % periodsPerDay) + 1;
+        }
+      }
+      coreAssignments[subj].push({
+        subject: subj,
+        studentGroup: l.studentGroup || null,
+        timeslotId: l.timeslotId || null,
+        day, period,
+        teacherId: l.teacherId || null,
+        roomId: l.roomId || null
+      });
+    }
+
     // Step 5: Map OptaPlanner solution back to Base44 ScheduleSlot entities
     const periods_per_day = problem.timeslots.length / 5; // 50 slots / 5 days = 10 periods
     const slots = [];
@@ -211,19 +238,33 @@ Deno.serve(async (req) => {
       school_id: user.school_id,
       schedule_version: schedule_version_id
     });
-
+    const deletedCount = existingSlots.length;
     for (const slot of existingSlots) {
-      await base44.asServiceRole.entities.ScheduleSlot.delete(slot.id);
+      try {
+        await base44.asServiceRole.entities.ScheduleSlot.delete(slot.id);
+      } catch (e) {
+        errors.push(`delete:${slot.id}:${e?.message || 'error'}`);
+      }
     }
 
     // Step 7: Create new slots
+    let insertedCount = 0;
+    let sampleSlotsInserted = null;
     if (slots.length > 0) {
       const inserted = await base44.asServiceRole.entities.ScheduleSlot.bulkCreate(slots);
       const createdIds = Array.isArray(inserted) ? inserted.map(r => r.id) : null;
-      console.log('[callORToolScheduler] insertedCount =', (Array.isArray(inserted) ? inserted.length : slots.length));
+      insertedCount = Array.isArray(inserted) ? inserted.length : slots.length;
+      console.log('[callORToolScheduler] insertedCount =', insertedCount);
       console.log('[callORToolScheduler] insertedCountBySubject =', slotsPreparedBySubject);
       if (createdIds) {
         console.log('[callORToolScheduler] createdIds (first 20) =', createdIds.slice(0, 20));
+      }
+      // Build sampleSlotsInserted (5 max, ensure one core if exists)
+      if (Array.isArray(inserted)) {
+        const toCode = (s) => s.subject_id ? (codeBySubjectId[s.subject_id] || 'UNKNOWN') : (s.notes?.includes('Study') ? 'STUDY' : 'UNKNOWN');
+        const coreList = inserted.filter(s => ['TOK','CAS','EE'].includes(toCode(s)));
+        const nonCore = inserted.filter(s => !['TOK','CAS','EE'].includes(toCode(s)));
+        sampleSlotsInserted = [...coreList.slice(0,1), ...nonCore.slice(0,4)];
       }
     }
 
@@ -263,6 +304,17 @@ Deno.serve(async (req) => {
 
     return Response.json({
       success: true,
+      school_id: user.school_id,
+      schedule_version_id,
+      expectedLessonsBySubject,
+      assignmentsBySubjectCode: assignedBySubjectCode,
+      unassignedBySubjectCode,
+      coreAssignments,
+      slotsToInsertBySubjectId,
+      insertedCount,
+      deletedCount: typeof deletedCount === 'number' ? deletedCount : 0,
+      errors,
+      sampleSlotsInserted,
       message: 'Schedule generated successfully',
       stats: {
         slots_created: slots.length,
