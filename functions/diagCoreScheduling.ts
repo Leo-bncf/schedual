@@ -20,9 +20,12 @@ Deno.serve(async (req) => {
     // Allow limited service-mode bypass (no persistence) when explicitly requested
     const { schedule_version_id: bodyVid, run_solver = false, bypass_service = false, school_id: inputSchoolId } = await req.json().catch(() => ({ run_solver: false }));
 
+    console.log('[diagCoreScheduling] input params', { inputSchoolId, bypass_service });
+
     let school_id = user?.school_id || inputSchoolId || null;
     const isAdmin = !!(user && user.school_id && user.role === 'admin');
     const client = isAdmin ? base44 : (bypass_service ? base44.asServiceRole : null);
+    console.log('[diagCoreScheduling] context', { isAdmin, usingServiceRole: client === base44.asServiceRole, school_id_final: school_id });
     if (!client) {
       return Response.json({ error: 'Admin access required or set bypass_service=true' }, { status: 403 });
     }
@@ -56,6 +59,12 @@ Deno.serve(async (req) => {
       return subj ? { id: subj.id, code: String(subj.code || subj.name || '').toUpperCase() } : null;
     }).filter(Boolean);
     console.log('[diagCoreScheduling] subjectsFoundForSchool', { count: subjects.length, sample_core: _coreSubjSample });
+    if ((subjects.length === 0)) {
+      try {
+        const schools = await base44.asServiceRole.entities.School.list();
+        console.log('[diagCoreScheduling] School.list sample', (schools || []).slice(0,5).map(s => ({ id: s.id, name: s.name, created_date: s.created_date })));
+      } catch(e) { console.warn('[diagCoreScheduling] School.list sample fetch failed', e?.message); }
+    }
     console.log('[diagCoreScheduling] filtersUsed', {
       subjects: { school_id, is_active: true },
       teachingGroups: { school_id, is_active: true },
@@ -299,6 +308,12 @@ Deno.serve(async (req) => {
       });
       const _dpSample1 = _dpTGs1.slice(0,3).map(tg => ({ id: tg.id, name: tg.name, subject_id: tg.subject_id, hours_per_week: tg.hours_per_week, is_active: tg.is_active, ib_level: subjectById[tg.subject_id]?.ib_level, year_group: tg.year_group, school_id: tg.school_id }));
       console.log('[diagCoreScheduling] dpTeachingGroupsFound', { count: _dpTGs1.length, sample: _dpSample1 });
+      if (_dpTGs1.length === 0) {
+        try {
+          const schools = await base44.asServiceRole.entities.School.list();
+          console.log('[diagCoreScheduling] School.list sample', (schools || []).slice(0,5).map(s => ({ id: s.id, name: s.name, created_date: s.created_date })));
+        } catch(e) { console.warn('[diagCoreScheduling] School.list sample fetch failed', e?.message); }
+      }
       for (const tg of teachingGroupsDb) {
         const subj = subjectById[tg.subject_id];
         if (!subj) continue;

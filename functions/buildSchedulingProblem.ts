@@ -61,7 +61,7 @@ Deno.serve(async (req) => {
 
     // Choose client based on access to the target school
     const client = (user && user.school_id === school_id) ? base44 : base44.asServiceRole;
-    console.log('[buildSchedulingProblem] context', { usingServiceRole: client === base44.asServiceRole, school_id });
+    console.log('[buildSchedulingProblem] context', { usingServiceRole: client === base44.asServiceRole, receivedOverrideSchoolId: overrideSchoolId, school_id });
 
     // Fetch school + resources for mapping (rooms/teachers for numeric IDs, subjects for code normalization)
     const [school, roomsDb, teachersDb, subjectsDb, teachingGroupsDb] = await Promise.all([
@@ -85,6 +85,12 @@ Deno.serve(async (req) => {
       return subj ? { id: subj.id, code: String(subj.code || subj.name || '').toUpperCase() } : null;
     }).filter(Boolean);
     console.log('[buildSchedulingProblem] subjectsFoundForSchool', { count: subjectsDb.length, sample_core: _coreSubjSample });
+    if (subjectsDb.length === 0) {
+      try {
+        const schools = await base44.asServiceRole.entities.School.list();
+        console.log('[buildSchedulingProblem] School.list sample', (schools || []).slice(0,5).map(s => ({ id: s.id, name: s.name, created_date: s.created_date })));
+      } catch(e) { console.warn('[buildSchedulingProblem] School.list sample fetch failed', e?.message); }
+    }
 
     // Logs: DP TeachingGroups sample
     const _dpTGs = teachingGroupsDb.filter(tg => {
@@ -92,10 +98,18 @@ Deno.serve(async (req) => {
       return tg.is_active === true && (String(tg.year_group || '').toUpperCase().includes('DP') || subj?.ib_level === 'DP');
     });
     const _dpSample = _dpTGs.slice(0,3).map(tg => {
+
+
       const subj = subjectsDb.find(s => s.id === tg.subject_id);
       return { id: tg.id, name: tg.name, subject_id: tg.subject_id, hours_per_week: tg.hours_per_week, is_active: tg.is_active, ib_level: subj?.ib_level, year_group: tg.year_group, school_id: tg.school_id };
     });
     console.log('[buildSchedulingProblem] dpTeachingGroupsFound', { count: _dpTGs.length, sample: _dpSample });
+    if (_dpTGs.length === 0) {
+      try {
+        const schools = await base44.asServiceRole.entities.School.list();
+        console.log('[buildSchedulingProblem] School.list sample', (schools || []).slice(0,5).map(s => ({ id: s.id, name: s.name, created_date: s.created_date })));
+      } catch(e) { console.warn('[buildSchedulingProblem] School.list sample fetch failed', e?.message); }
+    }
 
     if (!school) {
       return Response.json({ error: 'School not found' }, { status: 404 });
