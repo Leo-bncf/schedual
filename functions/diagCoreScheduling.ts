@@ -20,8 +20,10 @@ Deno.serve(async (req) => {
     // Allow limited service-mode bypass (no persistence) when explicitly requested
     const body = await req.json().catch(() => ({}));
     const inputSchoolId = body?.school_id || body?.schoolId || null;
+    const run_solver = body?.run_solver === true;
+    const bypass_service = !!body?.bypass_service;
 
-    console.log('[diagCoreScheduling] input params', { inputSchoolId, bypass_service });
+    console.log('[diagCoreScheduling] input params', { inputSchoolId, bypass_service, run_solver });
 
     const school_id = inputSchoolId;
     if (!school_id) {
