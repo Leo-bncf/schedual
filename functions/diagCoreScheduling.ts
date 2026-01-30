@@ -84,7 +84,8 @@ Deno.serve(async (req) => {
     const stats = buildRes.data.stats || {};
 
     // Derive expected/created if not provided
-    const expectedLessonsBySubject = stats.expectedLessonsBySubject || (() => {
+    let expectedLessonsBySubject = stats.expectedLessonsBySubject;
+    if (!expectedLessonsBySubject) {
       const acc = {};
       const teachingGroupsDb = await base44.entities.TeachingGroup.filter({ school_id, is_active: true });
       for (const tg of teachingGroupsDb) {
@@ -94,17 +95,18 @@ Deno.serve(async (req) => {
         const weekly = Number(tg.hours_per_week || 0);
         acc[code] = (acc[code] || 0) + weekly;
       }
-      return acc;
-    })();
+      expectedLessonsBySubject = acc;
+    }
 
-    const lessonsCreatedBySubject = stats.lessonsCreatedBySubject || (() => {
+    let lessonsCreatedBySubject = stats.lessonsCreatedBySubject;
+    if (!lessonsCreatedBySubject) {
       const acc = {};
       for (const l of (problem?.lessons || [])) {
         const code = norm(l.subject || '');
         acc[code] = (acc[code] || 0) + 1;
       }
-      return acc;
-    })();
+      lessonsCreatedBySubject = acc;
+    }
 
     const missingCoreSubjects = stats.missingCoreSubjects || (['TOK','CAS','EE'].filter(k => (lessonsCreatedBySubject[k] || 0) === 0));
 
