@@ -47,6 +47,7 @@ import PageHeader from '../components/ui-custom/PageHeader';
 import TimetableGrid from '../components/schedule/TimetableGrid';
 import HoursSummary from '../components/schedule/HoursSummary';
 import StudentScheduleView from '../components/schedule/StudentScheduleView';
+import UnassignedBanner from '../components/schedule/UnassignedBanner';
 import OffByOneBanner from '../components/schedule/OffByOneBanner';
 import TeacherScheduleView from '../components/schedule/TeacherScheduleView';
 import ScheduleExporter from '../components/schedule/ScheduleExporter';
@@ -407,7 +408,7 @@ Now process the user's input and return ONLY the JSON object.`,
     setOrToolLoading(true);
     setOrToolError(null);
     try {
-      const res = await base44.functions.invoke('callORToolScheduler', { schedule_version_id: selectedVersion.id });
+      const res = await base44.functions.invoke('callORToolScheduler', { schedule_version_id: selectedVersion.id, dp_min_end_time: '16:00', dp_study_weekly: 8 });
       setOrToolResult(res.data);
       toast.success('OR-Tool response retrieved');
     } catch (e) {
@@ -1649,6 +1650,8 @@ Now process the user's input and return ONLY the JSON object.`,
                   <Card className="border-0 shadow-sm bg-rose-50"><CardContent className="p-4 text-sm text-rose-700">{orToolError}</CardContent></Card>
                 )}
                 {orToolResult && (
+                  <>
+                  <UnassignedBanner unassigned={orToolResult?.unassignedBySubjectCode} />
                   <Card className="border-0 shadow-sm bg-gradient-to-br from-slate-50 to-white">
                     <CardContent className="p-4 space-y-3">
                       <div className="flex items-center justify-between">
@@ -1905,6 +1908,7 @@ Now process the user's input and return ONLY the JSON object.`,
                       selectedStudentId={selectedStudentId}
                       onStudentChange={setSelectedStudentId}
                       exportId="student-schedule"
+                      unassignedBySubjectCode={orToolResult?.unassignedBySubjectCode}
                     />
                   </div>
                 </TabsContent>

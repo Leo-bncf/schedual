@@ -12,7 +12,7 @@ const periodTimes = {
   break: '12:15', lunch: '12:30', 7: '13:00', 8: '13:45', 9: '14:30', 10: '15:15', 11: '16:00', 12: '16:45',
 };
 
-export default function StudentScheduleView({ students, slots, groups, subjects, teachers, rooms, selectedStudentId, onStudentChange, exportId = "student-schedule" }) {
+export default function StudentScheduleView({ students, slots, groups, subjects, teachers, rooms, selectedStudentId, onStudentChange, exportId = "student-schedule", unassignedBySubjectCode = {} }) {
   const selectedStudent = students.find(s => s.id === selectedStudentId);
 
   const getStudentSlots = (studentId) => {
@@ -22,15 +22,10 @@ export default function StudentScheduleView({ students, slots, groups, subjects,
       if (slot.classgroup_id && student?.classgroup_id) {
         return slot.classgroup_id === student.classgroup_id;
       }
-      // DP: match by teaching_group_id (fallback: DP1+DP2 core even if student_ids empty)
+      // DP: strictly by membership in teaching group
       const group = groups.find(g => g.id === slot.teaching_group_id);
       const inGroup = group?.student_ids?.includes(studentId);
-      if (inGroup) return true;
-      const subj = group ? subjects.find(s => s.id === group.subject_id) : null;
-      const codeNorm = (subj?.code || subj?.name || '').toUpperCase().replace(/\s+/g, '_');
-      const isCore = (subj?.is_core === true) || ['TOK','CAS','EE'].some(k => codeNorm.includes(k));
-      const coreFallback = group && subj && isCore; // Show core TGs even without explicit membership
-      return !!coreFallback;
+      return !!inGroup;
     });
   };
 
@@ -67,6 +62,19 @@ export default function StudentScheduleView({ students, slots, groups, subjects,
         </Select>
         {selectedStudent && (
           <Badge variant="outline">{studentSlots.length} periods per week</Badge>
+        )}
+        {selectedStudent && (
+          (() => {
+            const warnCore = (unassignedBySubjectCode?.TOK || 0) + (unassignedBySubjectCode?.CAS || 0) + (unassignedBySubjectCode?.EE || 0);
+            if (warnCore > 0) {
+              return (
+                <div className="text-xs text-rose-700 bg-rose-50 border border-rose-200 rounded px-2 py-1">
+                  Warning: core lessons unassigned (TOK/CAS/EE) — check OR-Tool details.
+                </div>
+              );
+            }
+            return null;
+          })()
         )}
       </div>
 
