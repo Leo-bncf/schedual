@@ -67,6 +67,7 @@ Deno.serve(async (req) => {
     }
 
     const solution = await solverResponse.json();
+    console.log('[callORToolScheduler] solver score =', solution.score);
 
     // Step 3: Validate solution format (support lessons or legacy assignments)
     const solvedLessons = Array.isArray(solution.lessons)
@@ -78,6 +79,13 @@ Deno.serve(async (req) => {
         solution 
       }, { status: 500 });
     }
+    const assignmentsReturnedBySubject = {};
+    for (const l of solvedLessons) {
+      const subj = String(l.subject || l.subjectCode || '')
+        .toUpperCase().replace(/\s+/g, '_').replace(/[^A-Z0-9_]/g, '');
+      assignmentsReturnedBySubject[subj] = (assignmentsReturnedBySubject[subj] || 0) + 1;
+    }
+    console.log('[callORToolScheduler] assignmentsReturnedBySubject =', assignmentsReturnedBySubject);
 
     // Step 4: Get Base44 entities to reverse-map IDs
     const [subjects, teachingGroups, rooms, teachers] = await Promise.all([
@@ -148,6 +156,25 @@ Deno.serve(async (req) => {
       });
     }
 
+    // Log slots prepared by subject and sample core slots
+    const codeBySubjectId = {};
+    Object.entries(subjectIdByCode || {}).forEach(([code, id]) => { codeBySubjectId[id] = code; });
+    const slotsPreparedBySubject = {};
+    for (const s of slots) {
+      const code = s.subject_id ? (codeBySubjectId[s.subject_id] || 'UNKNOWN') : (s.notes?.includes('Study') ? 'STUDY' : 'UNKNOWN');
+      slotsPreparedBySubject[code] = (slotsPreparedBySubject[code] || 0) + 1;
+    }
+    console.log('[callORToolScheduler] slotsPreparedBySubject =', slotsPreparedBySubject);
+    const coreSet = new Set(['TOK','CAS','EE']);
+    const coreSamples = { TOK: [], CAS: [], EE: [] };
+    for (const s of slots) {
+      const code = s.subject_id ? (codeBySubjectId[s.subject_id] || 'UNKNOWN') : (s.notes?.includes('Study') ? 'STUDY' : 'UNKNOWN');
+      if (coreSet.has(code) && coreSamples[code].length < 5) {
+        coreSamples[code].push({ day: s.day, period: s.period, teacher_id: s.teacher_id, room_id: s.room_id, teaching_group_id: s.teaching_group_id });
+      }
+    }
+    console.log('[callORToolScheduler] coreSamples (first up to 5) =', coreSamples);
+
     // Step 6: Delete existing slots for this version
     const existingSlots = await base44.asServiceRole.entities.ScheduleSlot.filter({
       school_id: user.school_id,
@@ -161,6 +188,8 @@ Deno.serve(async (req) => {
     // Step 7: Create new slots
     if (slots.length > 0) {
       await base44.asServiceRole.entities.ScheduleSlot.bulkCreate(slots);
+      // Inserted counts (should match prepared if bulk succeeded)
+      console.log('[callORToolScheduler] insertedCountBySubject =', slotsPreparedBySubject);
     }
 
     // Step 8: Create conflict reports for unassigned lessons

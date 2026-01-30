@@ -114,6 +114,7 @@ Deno.serve(async (req) => {
     const DAYS = ['MONDAY', 'TUESDAY', 'WEDNESDAY', 'THURSDAY', 'FRIDAY'];
     const timeslots = [];
     let timeslotId = 1;
+    console.log('[buildSchedulingProblem] periods_per_day computed =', periods_per_day, 'start', school_start, 'duration', period_duration);
     for (const day of DAYS) {
       for (let p = 0; p < periods_per_day; p++) {
         const periodStart = schoolStartMinutes + p * period_duration;
@@ -220,13 +221,36 @@ Deno.serve(async (req) => {
     const uniqueLessonSubjects = Array.from(new Set(lessons.map(l => l.subject))).sort();
     const mappingKeys = Object.keys(subjectIdByCode).sort();
     const missingSubjects = uniqueLessonSubjects.filter(s => s !== 'STUDY' && !subjectIdByCode[s]);
+
+    // Expected vs created lessons by subject
+    const expectedLessonsBySubject = {};
+    for (const tg of teachingGroupsDb) {
+      if (!tg?.is_active) continue;
+      const code = subjectIdToCode[tg.subject_id];
+      if (!code) continue;
+      const weeklyCount = Number(tg.hours_per_week || 0);
+      expectedLessonsBySubject[code] = (expectedLessonsBySubject[code] || 0) + weeklyCount;
+    }
+    const lessonsCreatedBySubject = {};
+    for (const l of lessons) {
+      const code = l.subject;
+      lessonsCreatedBySubject[code] = (lessonsCreatedBySubject[code] || 0) + 1;
+    }
+    const coreCodes = ['TOK','CAS','EE'];
+    const missingCoreSubjects = coreCodes.filter(c => (lessonsCreatedBySubject[c] || 0) === 0);
+
     console.log('[buildSchedulingProblem] lessons total =', lessons.length);
     console.log('[buildSchedulingProblem] lessons per subject =', perSubjectCount);
+    console.log('[buildSchedulingProblem] expectedLessonsBySubject =', expectedLessonsBySubject);
+    console.log('[buildSchedulingProblem] lessonsCreatedBySubject =', lessonsCreatedBySubject);
     console.log('[buildSchedulingProblem] subjectIdByCode size =', mappingKeys.length);
     console.log('[buildSchedulingProblem] lesson subjects =', uniqueLessonSubjects);
     console.log('[buildSchedulingProblem] mapping keys =', mappingKeys);
     if (missingSubjects.length > 0) {
       console.warn('[buildSchedulingProblem] UNMAPPED subjects =', missingSubjects);
+    }
+    if (missingCoreSubjects.length > 0) {
+      console.warn('[buildSchedulingProblem] missingCoreSubjects =', missingCoreSubjects);
     }
 
     const problem = { 
@@ -240,6 +264,9 @@ Deno.serve(async (req) => {
       teacherNumericIdToExternalRef,
       roomNumericIdToExternalRef
     };
+    // Debug summary for core subjects
+    const dbgCreatedCore = { TOK: lessons.filter(l => l.subject === 'TOK').length, CAS: lessons.filter(l => l.subject === 'CAS').length, EE: lessons.filter(l => l.subject === 'EE').length };
+    console.log('[buildSchedulingProblem] core lessons created =', dbgCreatedCore);
 
     return Response.json({
       success: true,

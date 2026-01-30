@@ -50,6 +50,7 @@ Deno.serve(async (req) => {
           const needsUpdate = (tg.is_active !== true) || (!tg.hours_per_week || tg.hours_per_week < quotas[code]);
           if (needsUpdate) {
             await base44.entities.TeachingGroup.update(tg.id, { is_active: true, hours_per_week: quotas[code] });
+            console.log('[createCoreDPGroups] updated TG', { code, id: tg.id, hours_per_week: quotas[code] });
             updatedAny = true;
           }
         }
@@ -67,11 +68,23 @@ Deno.serve(async (req) => {
         subject_id: subj.id,
         year_group: 'DP1+DP2',
         hours_per_week: quotas[code],
-        is_active: true,
+        is_active: true
         // teacher_id optional (omit)
         // preferred_room_id optional (omit)
       });
+      console.log('[createCoreDPGroups] created TG', { code, id: tg.id, hours_per_week: quotas[code] });
       created.push({ code, teaching_group_id: tg.id });
+    }
+
+    // Verification logs
+    const verification = {};
+    for (const code of targets) {
+      const subj = subjectByCode.get(code);
+      const tgs = await base44.entities.TeachingGroup.filter({ school_id, subject_id: subj.id });
+      const active = (tgs || []).filter(tg => tg.is_active === true);
+      const summary = active.map(tg => ({ id: tg.id, hours_per_week: tg.hours_per_week, year_group: tg.year_group }));
+      verification[code] = { subject_id: subj.id, subject_ib_level: subj.ib_level, total: (tgs || []).length, active_count: active.length, active_summary: summary };
+      console.log('[createCoreDPGroups] verification', code, verification[code]);
     }
 
     return Response.json({
@@ -80,7 +93,8 @@ Deno.serve(async (req) => {
       updated_count: updated.length,
       created,
       updated,
-      skipped
+      skipped,
+      verification
     });
   } catch (error) {
     console.error('createCoreDPGroups error:', error);
