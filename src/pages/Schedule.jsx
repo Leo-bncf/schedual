@@ -47,6 +47,7 @@ import PageHeader from '../components/ui-custom/PageHeader';
 import TimetableGrid from '../components/schedule/TimetableGrid';
 import HoursSummary from '../components/schedule/HoursSummary';
 import StudentScheduleView from '../components/schedule/StudentScheduleView';
+import OffByOneBanner from '../components/schedule/OffByOneBanner';
 import TeacherScheduleView from '../components/schedule/TeacherScheduleView';
 import ScheduleExporter from '../components/schedule/ScheduleExporter';
 import ConflictAlert from '../components/schedule/ConflictAlert';
@@ -165,6 +166,13 @@ export default function Schedule() {
     queryKey: ['scheduleSlots', selectedVersion?.id],
     queryFn: () => selectedVersion ? base44.entities.ScheduleSlot.filter({ schedule_version: selectedVersion.id }) : [],
     enabled: !!selectedVersion,
+  });
+
+  const { data: offByOneConflicts = [] } = useQuery({
+    queryKey: ['offByOneConflicts', selectedVersion?.id],
+    queryFn: async () => selectedVersion ? await base44.entities.ConflictReport.filter({ schedule_version_id: selectedVersion.id }) : [],
+    enabled: !!selectedVersion,
+    select: (rows) => (rows || []).filter(r => r.conflict_type === 'insufficient_hours' || r.conflict_type === 'ib_requirement_violation')
   });
 
   const { data: teachingGroups = [] } = useQuery({
@@ -1370,6 +1378,10 @@ Now process the user's input and return ONLY the JSON object.`,
         onDismiss={() => setShowUpdateBanner(false)}
         isGenerating={isGenerating}
       />
+
+      {selectedVersion && offByOneConflicts.length > 0 && (
+        <OffByOneBanner conflicts={offByOneConflicts} />
+      )
 
       {/* Quick Stats Bar */}
       {selectedVersion && scheduleSlots.length > 0 && (

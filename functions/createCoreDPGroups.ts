@@ -106,6 +106,7 @@ Deno.serve(async (req) => {
 
     // Auto-enroll all DP students into core TGs (TOK/CAS/EE)
     const dpStudents = await client.entities.Student.filter({ school_id, ib_programme: 'DP', is_active: true });
+    // Include both DP1 and DP2 regardless of classgroup membership
     const dpStudentIds = (dpStudents || []).map(s => s.id);
     const coreSubjectIds = targets.map(code => subjectByCode.get(code)?.id).filter(Boolean);
     const allTGs = await client.entities.TeachingGroup.filter({ school_id, is_active: true });

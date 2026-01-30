@@ -16,7 +16,10 @@ Deno.serve(async (req) => {
       return Response.json({ error: 'Admin access required' }, { status: 403 });
     }
 
-    const { schedule_version_id } = await req.json();
+    const body = await req.json();
+    const schedule_version_id = body?.schedule_version_id;
+    const dpStudyWeekly = body?.dp_study_weekly ?? 6; // default per user request
+    const dpMinEndTime = body?.dp_min_end_time ?? '14:30';
 
     if (!schedule_version_id) {
       return Response.json({ error: 'schedule_version_id required' }, { status: 400 });
@@ -26,7 +29,9 @@ Deno.serve(async (req) => {
     // Step 1: Build scheduling problem
     const buildResponse = await base44.functions.invoke('buildSchedulingProblem', {
       schedule_version_id,
-      school_id: user.school_id
+      school_id: user.school_id,
+      dp_study_weekly: dpStudyWeekly,
+      dp_min_end_time: dpMinEndTime
     });
 
     if (!buildResponse.data.success) {

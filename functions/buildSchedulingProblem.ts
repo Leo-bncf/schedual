@@ -191,7 +191,7 @@ Deno.serve(async (req) => {
     let lessonId = 1;
     const dpTargetPeriodsPerDay = Number((body?.dp_target_periods_per_day ?? Deno.env.get('DP_TARGET_PERIODS_PER_DAY') ?? 8));
     const dpDaysPerWeek = 5;
-    const studyTargetWeekly = Number(Deno.env.get('DP_STUDY_WEEKLY') || 0);
+    const studyTargetWeekly = Number((body?.dp_study_weekly ?? Deno.env.get('DP_STUDY_WEEKLY') ?? 0));
     let dpGroupsCount = 0;
     const perSubjectCount = {};
 
