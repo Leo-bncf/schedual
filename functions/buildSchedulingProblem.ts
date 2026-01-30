@@ -38,10 +38,23 @@ Deno.serve(async (req) => {
       return Response.json({ error: 'School not found' }, { status: 404 });
     }
 
-    // Build timeslots with OptaPlanner format - FIXED to respect school.periods_per_day
-    const periods_per_day = school.periods_per_day || 10; // Should be 10 for 08:00-18:00 coverage
+    // Build timeslots with OptaPlanner format - AUTO-CALCULATE to 18:00
     const period_duration = school.period_duration_minutes || 60;
     const school_start = school.school_start_time || "08:00";
+    const school_end = "18:00"; // Fixed end time to ensure PM coverage
+
+    // Calculate start and end times in minutes
+    const [startHour, startMin] = school_start.split(':').map(Number);
+    const [endHour, endMin] = school_end.split(':').map(Number);
+    const schoolStartMinutes = startHour * 60 + startMin;
+    const schoolEndMinutes = endHour * 60 + endMin;
+
+    // Auto-calculate periods needed to reach 18:00
+    const totalMinutes = schoolEndMinutes - schoolStartMinutes;
+    const periods_per_day = Math.ceil(totalMinutes / period_duration);
+
+    console.log(`Auto-calculated ${periods_per_day} periods (${school_start}-${school_end}, ${period_duration}min each)`);
+
     const days = ['MONDAY', 'TUESDAY', 'WEDNESDAY', 'THURSDAY', 'FRIDAY'];
     const timeslots = [];
     let slot_id = 1;
@@ -50,10 +63,6 @@ Deno.serve(async (req) => {
     const breakPeriods = school.settings?.break_periods || [];
     const lunchPeriod = school.settings?.lunch_period || 4;
     const testConfig = school.settings?.test_config || {};
-
-    // Calculate start time in minutes from school start
-    const [startHour, startMin] = school_start.split(':').map(Number);
-    const schoolStartMinutes = startHour * 60 + startMin;
 
     for (const day of days) {
       for (let period = 1; period <= periods_per_day; period++) {
