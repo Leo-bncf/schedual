@@ -30,13 +30,15 @@ Deno.serve(async (req) => {
     }
 
     const base44 = createClientFromRequest(req);
-    const user = await base44.auth.me();
-    if (!user || !user.school_id) {
-      return Response.json({ error: 'Unauthorized' }, { status: 401 });
+    let user = null;
+    try {
+      user = await base44.auth.me();
+    } catch (_) {
+      user = null;
     }
 
     const body = await req.json();
-    const schedule_version_id = body?.schedule_version_id;
+    const schedule_version_id = body?.schedule_version_id; // may be used to derive school_id when no user
     const subjectRequirements = Array.isArray(body?.subjectRequirements) ? body.subjectRequirements : null;
 
     if (!schedule_version_id) {
@@ -44,15 +46,27 @@ Deno.serve(async (req) => {
     }
 
 
-    const school_id = user.school_id;
+    let school_id = user?.school_id;
+    if (!school_id) {
+      if (!schedule_version_id) {
+        return Response.json({ error: 'Unauthorized' }, { status: 401 });
+      }
+      const sv = await base44.asServiceRole.entities.ScheduleVersion.filter({ id: schedule_version_id });
+      school_id = sv?.[0]?.school_id;
+      if (!school_id) {
+        return Response.json({ error: 'Unauthorized' }, { status: 401 });
+      }
+    }
+
+    const client = user?.school_id ? base44 : base44.asServiceRole;
 
     // Fetch school + resources for mapping (rooms/teachers for numeric IDs, subjects for code normalization)
     const [school, roomsDb, teachersDb, subjectsDb, teachingGroupsDb] = await Promise.all([
-              base44.entities.School.filter({ id: school_id }).then((r) => r[0]),
-              base44.entities.Room.filter({ school_id, is_active: true }),
-              base44.entities.Teacher.filter({ school_id, is_active: true }),
-              base44.entities.Subject.filter({ school_id, is_active: true }),
-              base44.entities.TeachingGroup.filter({ school_id, is_active: true }),
+              client.entities.School.filter({ id: school_id }).then((r) => r[0]),
+              client.entities.Room.filter({ school_id, is_active: true }),
+              client.entities.Teacher.filter({ school_id, is_active: true }),
+              client.entities.Subject.filter({ school_id, is_active: true }),
+              client.entities.TeachingGroup.filter({ school_id, is_active: true }),
             ]);
 
     if (!school) {
