@@ -257,7 +257,7 @@ export default function TimetableGrid({ slots = [], groups = [], rooms = [], sub
                             <div className="absolute top-1 right-1 opacity-0 group-hover:opacity-100 transition-opacity z-10">
                               <div className="px-1.5 py-0.5 bg-white/90 rounded shadow text-[10px] font-bold text-slate-600">⋮⋮</div>
                             </div>
-                            {subject ? (
+                            {subject && (
                               <div className={`p-3 border-l-4 ${colorScheme.bg} ${colorScheme.border} border border-slate-200 relative`}>
                                 <div className="font-bold text-sm text-slate-900 leading-tight mb-1.5">
                                   {subject.name}
@@ -279,14 +279,18 @@ export default function TimetableGrid({ slots = [], groups = [], rooms = [], sub
                                   </div>
                                 )}
                               </div>
-                            ) : (slot.notes?.includes('Study')) ? (
+                            )}
+
+                            {!subject && slot.notes?.includes('Study') && (
                               <div className="p-3 border-l-4 border-slate-400 bg-slate-50 border border-slate-200">
                                 <div className="font-bold text-sm text-slate-700 leading-tight mb-1.5">
                                   Study / Free Period
                                 </div>
                                 <div className="text-xs text-slate-500">Self-study time</div>
                               </div>
-                            ) : (slot.notes?.includes('Test') || slot.notes?.includes('Assessment')) ? (
+                            )}
+
+                            {!subject && !slot.notes?.includes('Study') && (slot.notes?.includes('Test') || slot.notes?.includes('Assessment')) && (
                               <div className="p-3 border-l-4 border-red-400 bg-red-50 border border-red-200">
                                 <div className="font-bold text-sm text-red-900 leading-tight mb-1.5">
                                   📝 {slot.notes}
@@ -295,7 +299,9 @@ export default function TimetableGrid({ slots = [], groups = [], rooms = [], sub
                                   Assessment Period
                                 </div>
                               </div>
-                            ) : (
+                            )}
+
+                            {!subject && !slot.notes?.includes('Study') && !(slot.notes?.includes('Test') || slot.notes?.includes('Assessment')) && (
                               <div className="p-3 border-l-4 border-slate-300 bg-slate-50 border border-slate-200">
                                 <div className="font-bold text-sm text-slate-600 leading-tight mb-1.5">
                                   Unassigned Class
