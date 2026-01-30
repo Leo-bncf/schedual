@@ -61,6 +61,7 @@ Deno.serve(async (req) => {
 
     const problem = buildResponse.data.problem;
     const expectedLessonsBySubject = (buildResponse.data?.stats?.expectedLessonsBySubject) || {};
+    const problemLessonsCreated = (buildResponse.data?.stats?.lessonsCreatedBySubject) || {};
 
     // Step 2: Call OR-Tool service
     const OR_TOOL_ENDPOINT = Deno.env.get('OR_TOOL_ENDPOINT') || Deno.env.get('OR_TOOL_API_URL');
@@ -201,6 +202,24 @@ Deno.serve(async (req) => {
     }
     console.log('[callORToolScheduler] maxPeriodUsedByDay =', maxPeriodUsedByDay);
 
+    // Compute latest timeslot actually used and dominant cause for early stop
+    const usedTimeslotIds = solvedLessons.filter(l => l.timeslotId).map(l => l.timeslotId);
+    const maxUsedTimeslotId = usedTimeslotIds.length ? Math.max(...usedTimeslotIds) : null;
+    const latestUsedTimeslot = maxUsedTimeslotId ? (problem.timeslots.find(t => t.id === maxUsedTimeslotId) || null) : null;
+    const latestTimeslotAvailable = problem.timeslots[problem.timeslots.length - 1] || null;
+    const periodsPerDayLocal2 = problem.timeslots.length / 5;
+    const underfilled = !!(buildResponse?.data?.stats?.underfilled);
+    const maxUsedPeriod = Math.max(...Object.values(maxPeriodUsedByDay || { Monday:0, Tuesday:0, Wednesday:0, Thursday:0, Friday:0 }));
+    const dpTarget = (buildResponse?.data?.stats?.dp_target_periods_per_day) || null;
+    let earlyStopCause = 'CONSTRAINT_PUSHING_EARLY';
+    if (underfilled) {
+      earlyStopCause = 'NOT_ENOUGH_LESSONS';
+    } else if (dpTarget && dpTarget < (periodsPerDayLocal2 - 2)) {
+      earlyStopCause = 'DP_TARGET_PERIODS_PER_DAY_TOO_LOW';
+    } else if (maxUsedPeriod <= Math.ceil(periodsPerDayLocal2 / 2)) {
+      earlyStopCause = 'FILTER_DROPPED_PM_SLOTS';
+    }
+
     // Step 5: Map OptaPlanner solution back to Base44 ScheduleSlot entities
     const periods_per_day = problem.timeslots.length / 5; // 50 slots / 5 days = 10 periods
     let lessonsWithoutTimeslot = 0;
@@ -258,6 +277,14 @@ Deno.serve(async (req) => {
       slotsPreparedBySubject[code] = (slotsPreparedBySubject[code] || 0) + 1;
     }
     console.log('[callORToolScheduler] slotsPreparedBySubject =', slotsPreparedBySubject);
+
+    // Test slots counters (solver-based). DP breakdown unavailable in solver payload; provide totals.
+    const testSlotsInsertedCount = {
+      DP1: 0,
+      DP2: 0,
+      total_from_solver: assignmentsReturnedBySubject['TEST'] || 0,
+      prepared_for_insert: slotsPreparedBySubject['TEST'] || 0
+    };
 
     // Counts by subject_id
     const slotsToInsertBySubjectId = {};
@@ -432,6 +459,15 @@ Deno.serve(async (req) => {
         missingTeacherCount,
       },
       buildMeta,
+      problemLessonsCreated,
+      solutionAssignmentsReturned: assignmentsReturnedBySubject,
+      slotsPreparedForInsert: slotsPreparedBySubject,
+      testSlotsInsertedCount,
+      whyStopsEarly: {
+        latestTimeslotAvailable: latestTimeslotAvailable ? { dayOfWeek: latestTimeslotAvailable.dayOfWeek, endTime: latestTimeslotAvailable.endTime } : null,
+        latestTimeslotActuallyUsed: latestUsedTimeslot ? { dayOfWeek: latestUsedTimeslot.dayOfWeek, endTime: latestUsedTimeslot.endTime } : null,
+        cause: earlyStopCause
+      },
       message: 'Schedule generated successfully',
       stats: {
         slots_created: slots.length,

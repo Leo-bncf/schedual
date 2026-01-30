@@ -1723,6 +1723,7 @@ Now process the user's input and return ONLY the JSON object.`,
                                 <div className="space-y-1">
                                   <div>maxPeriodUsedByDay: <code>{JSON.stringify(maxP)}</code></div>
                                   <div>timeslotsCount: <strong>{meta?.timeslotsCount ?? '—'}</strong></div>
+                                  <div>lastTimeslot: <strong>{(meta?.lastTimeslot?.dayOfWeek || '—')} {meta?.lastTimeslot?.endTime ? `• ${meta?.lastTimeslot?.endTime}` : ''}</strong></div>
                                   <div>dpTargetPeriodsPerDay: <strong>{meta?.dpTargetPeriodsPerDay ?? '—'}</strong></div>
                                 </div>
                               </div>
@@ -1740,10 +1741,53 @@ Now process the user's input and return ONLY the JSON object.`,
                               <div className="p-3 rounded-lg bg-slate-100">
                                 <div className="font-semibold text-slate-900 mb-1">coreSlotsInsertedCount</div>
                                 <pre className="bg-white rounded p-2 overflow-x-auto">{JSON.stringify(coreIns, null, 2)}</pre>
+                                {orToolResult?.testSlotsInsertedCount && (
+                                  <div className="mt-2 text-xs">testSlotsInsertedCount: <code>{JSON.stringify(orToolResult.testSlotsInsertedCount)}</code></div>
+                                )}
                               </div>
                               <div className="p-3 rounded-lg bg-slate-100">
                                 <div className="font-semibold text-slate-900 mb-1">slotsToInsertBySubjectId</div>
                                 <pre className="bg-white rounded p-2 overflow-x-auto max-h-32">{JSON.stringify(slotsToInsert, null, 2)}</pre>
+                              </div>
+                              </div>
+
+                              {/* All-subjects comparison */}
+                              <div className="grid md:grid-cols-3 gap-3">
+                              <div className="p-3 rounded-lg bg-slate-100">
+                                <div className="font-semibold text-slate-900 mb-1">expectedLessonsBySubject</div>
+                                <pre className="bg-white rounded p-2 overflow-x-auto max-h-40">{JSON.stringify(exp, null, 2)}</pre>
+                              </div>
+                              <div className="p-3 rounded-lg bg-slate-100">
+                                <div className="font-semibold text-slate-900 mb-1">assignmentsBySubjectCode</div>
+                                <pre className="bg-white rounded p-2 overflow-x-auto max-h-40">{JSON.stringify(asg, null, 2)}</pre>
+                              </div>
+                              <div className="p-3 rounded-lg bg-slate-100">
+                                <div className="font-semibold text-slate-900 mb-1">unassignedBySubjectCode</div>
+                                <pre className="bg-white rounded p-2 overflow-x-auto max-h-40">{JSON.stringify(unasg, null, 2)}</pre>
+                              </div>
+                              </div>
+
+                              {/* Debug counters for TOK/CAS/EE/TEST across stages */}
+                              <div className="p-3 rounded-lg bg-slate-50">
+                              <div className="font-semibold text-slate-900 mb-2">Stage Counters (TOK/CAS/EE/TEST)</div>
+                              {(() => {
+                                const keys = ['TOK','CAS','EE','TEST'];
+                                const plc = orToolResult?.problemLessonsCreated || {};
+                                const sar = orToolResult?.solutionAssignmentsReturned || {};
+                                const spi = orToolResult?.slotsPreparedForInsert || {};
+                                return (
+                                  <div className="grid md:grid-cols-4 gap-2 text-xs">
+                                    {keys.map(k => (
+                                      <div key={k} className="p-2 rounded border bg-white">
+                                        <div className="font-medium mb-1">{k}</div>
+                                        <div>problemLessonsCreated: <strong>{plc[k] || 0}</strong></div>
+                                        <div>solutionAssignmentsReturned: <strong>{sar[k] || 0}</strong></div>
+                                        <div>slotsPreparedForInsert: <strong>{spi[k] || 0}</strong></div>
+                                      </div>
+                                    ))}
+                                  </div>
+                                );
+                              })()}
                               </div>
                             </div>
                           </div>
