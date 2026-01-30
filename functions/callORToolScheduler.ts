@@ -295,12 +295,40 @@ Deno.serve(async (req) => {
       }
     }
 
-    // Step 9: Update schedule version metadata
-    await base44.asServiceRole.entities.ScheduleVersion.update(schedule_version_id, {
+    // Step 9: Off-by-one mismatch check and warnings
+            const offByOneIssues = {};
+            for (const [code, exp] of Object.entries(expectedLessonsBySubject || {})) {
+              const got = assignedBySubjectCode[code] || 0;
+              if (got !== exp) {
+                offByOneIssues[code] = { expected: exp, assigned: got, diff: got - exp };
+              }
+            }
+            console.log('[callORToolScheduler] offByOneIssues =', offByOneIssues);
+            let warningsCount = Object.keys(offByOneIssues).length;
+            if (warningsCount > 0) {
+              for (const [code, info] of Object.entries(offByOneIssues)) {
+                try {
+                  await base44.asServiceRole.entities.ConflictReport.create({
+                    school_id: user.school_id,
+                    schedule_version_id,
+                    conflict_type: info.assigned < info.expected ? 'insufficient_hours' : 'ib_requirement_violation',
+                    severity: 'medium',
+                    description: `Subject ${code}: assigned ${info.assigned} vs expected ${info.expected} (diff ${info.diff >= 0 ? '+' : ''}${info.diff})`,
+                    affected_entities: { subject_code: code },
+                    status: 'unresolved'
+                  });
+                } catch (e) {
+                  errors.push(`warn:${code}:${e?.message || 'error'}`);
+                }
+              }
+            }
+            // Step 9: Update schedule version metadata
+            await base44.asServiceRole.entities.ScheduleVersion.update(schedule_version_id, {
       generated_at: new Date().toISOString(),
       score: solution.score || 0,
-      conflicts_count: unassignedLessons.length
-    });
+      conflicts_count: unassignedLessons.length,
+      warnings_count: warningsCount
+      });
 
     return Response.json({
       success: true,
@@ -314,6 +342,7 @@ Deno.serve(async (req) => {
       insertedCount,
       deletedCount: typeof deletedCount === 'number' ? deletedCount : 0,
       errors,
+      offByOneIssues,
       sampleSlotsInserted,
       message: 'Schedule generated successfully',
       stats: {
