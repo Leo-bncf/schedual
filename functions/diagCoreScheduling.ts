@@ -86,7 +86,7 @@ Deno.serve(async (req) => {
     const schedule_version_id = createdVersion.id;
 
     // Build scheduling problem
-    const buildRes = await base44.asServiceRole.functions.invoke('buildSchedulingProblem', { schedule_version_id, dp_target_periods_per_day: 9 });
+    const buildRes = await base44.asServiceRole.functions.invoke('buildSchedulingProblem', { schedule_version_id, school_id, dp_target_periods_per_day: 9 });
     const problem = buildRes.data.problem;
     const stats = buildRes.data.stats || {};
 

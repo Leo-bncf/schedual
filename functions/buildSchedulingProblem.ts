@@ -40,13 +40,14 @@ Deno.serve(async (req) => {
     const body = await req.json();
     const schedule_version_id = body?.schedule_version_id; // may be used to derive school_id when no user
     const subjectRequirements = Array.isArray(body?.subjectRequirements) ? body.subjectRequirements : null;
+    const overrideSchoolId = body?.school_id || null;
 
     if (!schedule_version_id) {
       return Response.json({ error: 'schedule_version_id required' }, { status: 400 });
     }
 
 
-    let school_id = user?.school_id;
+    let school_id = user?.school_id || overrideSchoolId;
     if (!school_id) {
       if (!schedule_version_id) {
         return Response.json({ error: 'Unauthorized' }, { status: 401 });
