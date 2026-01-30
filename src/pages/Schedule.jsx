@@ -1682,6 +1682,7 @@ Now process the user's input and return ONLY the JSON object.`,
                         </div>
                       )}
 
+                      {/* All-subjects comparison and stage counters will follow */}
                       {/* Requested recap fields */}
                       {(() => {
                         const exp = orToolResult?.expectedLessonsBySubject || {};
