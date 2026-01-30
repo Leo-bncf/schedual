@@ -79,6 +79,13 @@ Deno.serve(async (req) => {
       const base = subj.code || subj.name || subj.id;
       subjectIdToCode[subj.id] = normalizeSubjectCode(base);
     });
+    
+    // Build normalized code -> subject.id map (for push stage)
+    const subjectIdByCode = {};
+    subjectsDb.forEach((subj) => {
+      const code = subjectIdToCode[subj.id];
+      if (code) subjectIdByCode[code] = subj.id;
+    });
 
     // Build timeslots up to 18:00 using school config
     const period_duration = school.period_duration_minutes || 60;
@@ -171,12 +178,14 @@ Deno.serve(async (req) => {
     // Logs required: total lessons + count by subject code (before POST /solve)
     console.log('[buildSchedulingProblem] lessons total =', lessons.length);
     console.log('[buildSchedulingProblem] lessons per subject =', perSubjectCount);
+    console.log('[buildSchedulingProblem] subjectIdByCode size =', Object.keys(subjectIdByCode).length);
 
     const problem = { timeslots, rooms, teachers, lessons };
 
     return Response.json({
       success: true,
       problem,
+      subjectIdByCode,
       stats: {
         timeslots: timeslots.length,
         rooms: rooms.length,
