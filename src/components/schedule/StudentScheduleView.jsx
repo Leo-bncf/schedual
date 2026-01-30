@@ -22,6 +22,10 @@ export default function StudentScheduleView({ students, slots, groups, subjects,
       if (slot.classgroup_id && student?.classgroup_id) {
         return slot.classgroup_id === student.classgroup_id;
       }
+      // DP test slots: include DP1/DP2 test slots by year_group marker in notes
+      if (slot?.notes?.includes('Test') && (slot?.notes?.includes('DP1') || slot?.notes?.includes('DP2'))) {
+        return student?.year_group && slot.notes.includes(student.year_group);
+      }
       // DP: strictly by membership in teaching group
       const group = groups.find(g => g.id === slot.teaching_group_id);
       const inGroup = group?.student_ids?.includes(studentId);
