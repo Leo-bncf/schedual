@@ -50,6 +50,18 @@ Deno.serve(async (req) => {
       [c1, c2, c3].filter(Boolean).forEach(k => { subjectIdByCode[k] = s.id; });
     }
 
+    // Logs: subjects found and filters used
+    const _coreSubjSample = ['TOK','CAS','EE'].map(code => {
+      const subj = subjects.find(s => String(s.code || s.name || '').toUpperCase().includes(code));
+      return subj ? { id: subj.id, code: String(subj.code || subj.name || '').toUpperCase() } : null;
+    }).filter(Boolean);
+    console.log('[diagCoreScheduling] subjectsFoundForSchool', { count: subjects.length, sample_core: _coreSubjSample });
+    console.log('[diagCoreScheduling] filtersUsed', {
+      subjects: { school_id, is_active: true },
+      teachingGroups: { school_id, is_active: true },
+      dpCriteria: { ib_level: 'DP', year_group_includes: 'DP' }
+    });
+
     // Identify TOK/CAS/EE by code heuristics or is_core flag
     const coreTargetCodes = ['TOK','CAS','EE'];
     const coreSubjects = {};
@@ -216,6 +228,7 @@ Deno.serve(async (req) => {
         acc[code] = (acc[code] || 0) + 1;
       }
       lessonsCreatedBySubject = acc;
+      console.log('[diagCoreScheduling] lessonsCreatedFromTG', { count: (problem?.lessons?.length || 0), breakdown: lessonsCreatedBySubject });
     }
 
     const missingCoreSubjects = stats.missingCoreSubjects || (['TOK','CAS','EE'].filter(k => (lessonsCreatedBySubject[k] || 0) === 0));

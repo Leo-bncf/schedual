@@ -70,6 +70,31 @@ Deno.serve(async (req) => {
               client.entities.TeachingGroup.filter({ school_id, is_active: true }),
             ]);
 
+    // Logs: filters used
+    console.log('[buildSchedulingProblem] filtersUsed', {
+      subjects: { school_id, is_active: true },
+      teachingGroups: { school_id, is_active: true },
+      dpCriteria: { ib_level: 'DP', year_group_includes: 'DP' }
+    });
+
+    // Logs: subjects found + TOK/CAS/EE sample
+    const _coreSubjSample = ['TOK','CAS','EE'].map(code => {
+      const subj = subjectsDb.find(s => String(s.code || s.name || '').toUpperCase().includes(code));
+      return subj ? { id: subj.id, code: String(subj.code || subj.name || '').toUpperCase() } : null;
+    }).filter(Boolean);
+    console.log('[buildSchedulingProblem] subjectsFoundForSchool', { count: subjectsDb.length, sample_core: _coreSubjSample });
+
+    // Logs: DP TeachingGroups sample
+    const _dpTGs = teachingGroupsDb.filter(tg => {
+      const subj = subjectsDb.find(s => s.id === tg.subject_id);
+      return tg.is_active === true && (String(tg.year_group || '').toUpperCase().includes('DP') || subj?.ib_level === 'DP');
+    });
+    const _dpSample = _dpTGs.slice(0,3).map(tg => {
+      const subj = subjectsDb.find(s => s.id === tg.subject_id);
+      return { id: tg.id, name: tg.name, subject_id: tg.subject_id, hours_per_week: tg.hours_per_week, is_active: tg.is_active, ib_level: subj?.ib_level, year_group: tg.year_group, school_id: tg.school_id };
+    });
+    console.log('[buildSchedulingProblem] dpTeachingGroupsFound', { count: _dpTGs.length, sample: _dpSample });
+
     if (!school) {
       return Response.json({ error: 'School not found' }, { status: 404 });
     }
@@ -252,6 +277,7 @@ Deno.serve(async (req) => {
     const coreCodes = ['TOK','CAS','EE'];
     const missingCoreSubjects = coreCodes.filter(c => (lessonsCreatedBySubject[c] || 0) === 0);
 
+    console.log('[buildSchedulingProblem] lessonsCreatedFromTG', { count: lessons.length, breakdown: perSubjectCount });
     console.log('[buildSchedulingProblem] lessons total =', lessons.length);
     console.log('[buildSchedulingProblem] lessons per subject =', perSubjectCount);
     console.log('[buildSchedulingProblem] expectedLessonsBySubject =', expectedLessonsBySubject);
