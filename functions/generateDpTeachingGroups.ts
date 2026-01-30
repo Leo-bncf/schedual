@@ -2,9 +2,60 @@ import { createClientFromRequest } from 'npm:@base44/sdk@0.8.6';
 
 /**
  * Auto-generates DP teaching groups based on student subject choices
- * Groups students by subject + level (HL/SL)
+ * Adds detailed logging and light retries with exponential backoff
  */
 Deno.serve(async (req) => {
+  const startedAt = Date.now();
+  const logs = {
+    timestamp_utc: new Date().toISOString(),
+    school_id: null,
+    sdk_calls: [], // { step, attempt, query, started_at, ended_at, duration_ms, success, error }
+    notes: []
+  };
+
+  // Small helper to sleep
+  const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
+
+  // Wrap an SDK call with timing + retries
+  async function withRetry(label, queryDesc, fn, maxAttempts = 3, baseDelay = 500) {
+    let lastErr;
+    for (let attempt = 1; attempt <= maxAttempts; attempt++) {
+      const callStart = Date.now();
+      const stepLog = {
+        step: label,
+        attempt,
+        query: queryDesc,
+        started_at: new Date(callStart).toISOString(),
+        ended_at: null,
+        duration_ms: null,
+        success: false,
+        error: null,
+      };
+      try {
+        const res = await fn();
+        stepLog.ended_at = new Date().toISOString();
+        stepLog.duration_ms = Date.now() - callStart;
+        stepLog.success = true;
+        logs.sdk_calls.push(stepLog);
+        console.log(`[generateDpTeachingGroups] ${label} succeeded in ${stepLog.duration_ms}ms (attempt ${attempt})`);
+        return res;
+      } catch (err) {
+        stepLog.ended_at = new Date().toISOString();
+        stepLog.duration_ms = Date.now() - callStart;
+        stepLog.success = false;
+        stepLog.error = String(err?.stack || err?.message || err);
+        logs.sdk_calls.push(stepLog);
+        lastErr = err;
+        console.error(`[generateDpTeachingGroups] ${label} failed (attempt ${attempt}) in ${stepLog.duration_ms}ms`, err?.stack || err?.message || err);
+        if (attempt < maxAttempts) {
+          const backoff = baseDelay * Math.pow(3, attempt - 1); // 500ms, 1500ms, ...
+          await sleep(backoff);
+        }
+      }
+    }
+    throw lastErr;
+  }
+
   try {
     const base44 = createClientFromRequest(req);
     const user = await base44.auth.me();
@@ -14,24 +65,41 @@ Deno.serve(async (req) => {
     }
 
     const school_id = user.school_id;
+    logs.school_id = school_id;
 
-    // Fetch DP students and DP subjects with server-side filtering to reduce payload
-    const [dpStudentsRaw, dpSubjectsRaw] = await Promise.all([
-      base44.entities.Student.filter({ school_id, ib_programme: 'DP' }),
-      base44.entities.Subject.filter({ school_id, ib_level: 'DP' })
-    ]);
+    // Fetch school (for settings if needed later)
+    const school = await withRetry(
+      'fetch_school',
+      { entity: 'School', filter: { id: school_id } },
+      async () => (await base44.entities.School.filter({ id: school_id }))[0]
+    );
+
+    // Fetch DP students and DP subjects with retries (main source of timeouts)
+    const studentsRaw = await withRetry(
+      'fetch_dp_students',
+      { entity: 'Student', filter: { school_id, ib_programme: 'DP' } },
+      async () => await base44.entities.Student.filter({ school_id, ib_programme: 'DP' })
+    );
+
+    const subjectsRaw = await withRetry(
+      'fetch_dp_subjects',
+      { entity: 'Subject', filter: { school_id, ib_level: 'DP' } },
+      async () => await base44.entities.Subject.filter({ school_id, ib_level: 'DP' })
+    );
 
     // Final client-side filter keeps semantics: exclude only when is_active === false
-    const students = dpStudentsRaw.filter(s => s.is_active !== false);
-    const dpSubjects = dpSubjectsRaw.filter(s => s.is_active !== false);
+    const students = studentsRaw.filter((s) => s.is_active !== false);
+    const dpSubjects = subjectsRaw.filter((s) => s.is_active !== false);
 
-    console.log(`Found ${students.length} DP students and ${dpSubjects.length} DP subjects`);
+    console.log(`[generateDpTeachingGroups] Found ${students.length} DP students and ${dpSubjects.length} DP subjects`);
 
     if (students.length === 0) {
-      return Response.json({ 
-        success: true, 
+      return Response.json({
+        success: true,
         message: 'No DP students found',
-        groups_created: 0 
+        groups_created: 0,
+        logs,
+        total_duration_ms: Date.now() - startedAt,
       });
     }
 
@@ -40,44 +108,48 @@ Deno.serve(async (req) => {
 
     for (const student of students) {
       const subjectChoices = student.subject_choices || [];
-      
       for (const choice of subjectChoices) {
-        // Check if this subject should combine DP1/DP2 (from subject settings)
-        const subject = dpSubjects.find(s => s.id === choice.subject_id);
+        const subject = dpSubjects.find((s) => s.id === choice.subject_id);
+        if (!subject) continue;
         const shouldCombine = subject?.combine_dp1_dp2 === true;
         const yearGroup = shouldCombine ? 'DP1+DP2' : student.year_group;
         const key = `${choice.subject_id}_${choice.level}_${yearGroup}`;
-        
         if (!groupMap.has(key)) {
           groupMap.set(key, {
             subject_id: choice.subject_id,
             level: choice.level,
             year_group: yearGroup,
-            student_ids: []
+            student_ids: [],
           });
         }
-        
         groupMap.get(key).student_ids.push(student.id);
       }
     }
 
-    // Delete existing auto-generated DP groups
-    const existingGroups = await base44.entities.TeachingGroup.filter({ 
-      school_id,
-      year_group: { $in: ['DP1', 'DP2'] }
-    });
-    
+    // Delete existing auto-generated DP groups (DP1/DP2)
+    const existingGroups = await withRetry(
+      'fetch_existing_groups',
+      { entity: 'TeachingGroup', filter: { school_id, year_group: { $in: ['DP1', 'DP2', 'DP1+DP2'] } } },
+      async () => await base44.entities.TeachingGroup.filter({ school_id, year_group: { $in: ['DP1', 'DP2', 'DP1+DP2'] } })
+    );
+
+    // Delete in small batches with per-call timing
     for (const group of existingGroups) {
-      await base44.asServiceRole.entities.TeachingGroup.delete(group.id);
+      await withRetry(
+        'delete_teaching_group',
+        { entity: 'TeachingGroup.delete', id: group.id },
+        async () => await base44.asServiceRole.entities.TeachingGroup.delete(group.id),
+        3,
+        300
+      );
     }
 
-    // Create new groups
+    // Create new groups (compute hours from subject settings)
     const newGroups = [];
-    for (const [key, groupData] of groupMap.entries()) {
-      const subject = dpSubjects.find(s => s.id === groupData.subject_id);
+    for (const [, groupData] of groupMap.entries()) {
+      const subject = dpSubjects.find((s) => s.id === groupData.subject_id);
       if (!subject) continue;
-
-      const hoursPerWeek = groupData.level === 'HL' 
+      const hoursPerWeek = groupData.level === 'HL'
         ? (subject.hl_hours_per_week || 6)
         : (subject.sl_hours_per_week || 4);
 
@@ -89,24 +161,35 @@ Deno.serve(async (req) => {
         year_group: groupData.year_group,
         student_ids: groupData.student_ids,
         hours_per_week: hoursPerWeek,
-        is_active: true
+        is_active: true,
       });
     }
 
     if (newGroups.length > 0) {
-      await base44.asServiceRole.entities.TeachingGroup.bulkCreate(newGroups);
+      await withRetry(
+        'bulk_create_teaching_groups',
+        { entity: 'TeachingGroup.bulkCreate', count: newGroups.length },
+        async () => await base44.asServiceRole.entities.TeachingGroup.bulkCreate(newGroups)
+      );
     }
 
-    return Response.json({ 
+    return Response.json({
       success: true,
       groups_created: newGroups.length,
-      message: `Created ${newGroups.length} DP teaching groups`
+      message: `Created ${newGroups.length} DP teaching groups`,
+      logs,
+      total_duration_ms: Date.now() - startedAt,
     });
-
   } catch (error) {
-    console.error('Generate DP teaching groups error:', error);
-    return Response.json({ 
-      error: error.message || 'Failed to generate DP teaching groups' 
+    // Capture error stack fully
+    const errStack = String(error?.stack || error?.message || error);
+    console.error('[generateDpTeachingGroups] ERROR:', errStack);
+    logs.notes.push('Unhandled error in generateDpTeachingGroups');
+    return Response.json({
+      error: error?.message || 'Failed to generate DP teaching groups',
+      stack: errStack,
+      logs,
+      total_duration_ms: Date.now() - startedAt,
     }, { status: 500 });
   }
 });
