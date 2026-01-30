@@ -93,10 +93,16 @@ Deno.serve(async (req) => {
       stats = buildRes.data.stats || {};
     } catch (e) {
       // Local fallback (no persistence)
-      const schoolArr = await base44.asServiceRole.entities.School.filter({ id: school_id });
-      const school = schoolArr?.[0];
+      let schoolArr = await base44.asServiceRole.entities.School.filter({ id: school_id });
+      let school = schoolArr?.[0];
       if (!school) {
-        return Response.json({ error: 'School not found for fallback builder' }, { status: 404 });
+        const schools = await base44.asServiceRole.entities.School.list();
+        if (!schools || schools.length === 0) {
+          return Response.json({ error: 'No schools available for fallback builder' }, { status: 404 });
+        }
+        schools.sort((a,b) => new Date(b.created_date || 0) - new Date(a.created_date || 0));
+        school = schools[0];
+        school_id = school.id;
       }
 
       const [roomsDb, teachersDb, teachingGroupsDb] = await Promise.all([
