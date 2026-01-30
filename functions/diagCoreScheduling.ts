@@ -204,8 +204,87 @@ Deno.serve(async (req) => {
         missingCoreSubjects: missingCore
       };
     }
+    // If buildSchedulingProblem returned no problem, fallback locally
+    if (!problem || !Array.isArray(problem.lessons)) {
+      let schoolArr = await base44.asServiceRole.entities.School.filter({ id: school_id });
+      let school = schoolArr?.[0];
+      if (!school) {
+        const schools = await base44.asServiceRole.entities.School.list();
+        if (!schools || schools.length === 0) {
+          return Response.json({ error: 'No schools available for fallback builder' }, { status: 404 });
+        }
+        schools.sort((a,b) => new Date(b.created_date || 0) - new Date(a.created_date || 0));
+        school = schools[0];
+        school_id = school.id;
+      }
 
-    // Derive expected/created if not provided
+      const [roomsDb, teachersDb, teachingGroupsDb] = await Promise.all([
+        client.entities.Room.filter({ school_id, is_active: true }),
+        client.entities.Teacher.filter({ school_id, is_active: true }),
+        client.entities.TeachingGroup.filter({ school_id, is_active: true })
+      ]);
+
+      const period_duration = school.period_duration_minutes || 60;
+      const school_start = school.school_start_time || '08:00';
+      const [sh, sm] = school_start.split(':').map(Number);
+      const startM = sh * 60 + sm;
+      const endM = 18 * 60;
+      const totalM = Math.max(endM - startM, period_duration);
+      const periods_per_day = Math.max(1, Math.ceil(totalM / period_duration));
+      const DAYS = ['MONDAY','TUESDAY','WEDNESDAY','THURSDAY','FRIDAY'];
+      const timeslots = [];
+      let tsId = 1;
+      for (const d of DAYS) {
+        for (let p = 0; p < periods_per_day; p++) {
+          const st = startM + p * period_duration;
+          const et = st + period_duration;
+          const stH = String(Math.floor(st/60)).padStart(2,'0');
+          const stm = String(st%60).padStart(2,'0');
+          const etH = String(Math.floor(et/60)).padStart(2,'0');
+          const etm = String(et%60).padStart(2,'0');
+          timeslots.push({ id: tsId++, dayOfWeek: d, startTime: `${stH}:${stm}`, endTime: `${etH}:${etm}` });
+        }
+      }
+
+      const teacherIdToNumeric = teachersDb.reduce((acc, t, idx) => { acc[t.id] = idx+1; return acc; }, {});
+      const roomIdToNumeric = roomsDb.reduce((acc, r, idx) => { acc[r.id] = idx+1; return acc; }, {});
+      const teacherNumericIdToBase44Id = {};
+      const roomNumericIdToBase44Id = {};
+      teachersDb.forEach((t, idx) => { teacherNumericIdToBase44Id[idx+1] = t.id; });
+      roomsDb.forEach((r, idx) => { roomNumericIdToBase44Id[idx+1] = r.id; });
+
+      const lessons = [];
+      let lessonId = 1;
+      const perSubjectCount = {};
+      const tgsLocal = await client.entities.TeachingGroup.filter({ school_id, is_active: true });
+      for (const tg of tgsLocal) {
+        if (!tg?.is_active) continue;
+        const subj = subjectById[tg.subject_id];
+        if (!subj) continue;
+        const code = codeOf(subj);
+        const weekly = Number(tg.hours_per_week || 0);
+        const teacherNum = tg.teacher_id ? (teacherIdToNumeric[tg.teacher_id] || null) : null;
+        const roomNum = tg.preferred_room_id ? (roomIdToNumeric[tg.preferred_room_id] || null) : null;
+        for (let k = 0; k < weekly; k++) {
+          lessons.push({
+            id: lessonId++,
+            subject: code,
+            studentGroup: `TG_${tg.id}`,
+            requiredCapacity: 20,
+            timeslotId: null,
+            roomId: roomNum,
+            teacherId: teacherNum
+          });
+        }
+        perSubjectCount[code] = (perSubjectCount[code] || 0) + weekly;
+      }
+
+      problem = { timeslots, lessons, subjectIdByCode, teacherNumericIdToBase44Id, roomNumericIdToBase44Id };
+      // Log fallback results
+      console.log('[diagCoreScheduling] lessonsCreatedFromTG', { count: lessons.length, breakdown: perSubjectCount });
+    }
+
+     // Derive expected/created if not provided
     let expectedLessonsBySubject = stats.expectedLessonsBySubject;
     if (!expectedLessonsBySubject) {
       const acc = {};
