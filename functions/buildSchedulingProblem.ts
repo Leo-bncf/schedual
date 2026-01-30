@@ -75,16 +75,22 @@ Deno.serve(async (req) => {
 
     // Build subject id -> normalized code map
     const subjectIdToCode = {};
+    const subjectRawCode = {};
     subjectsDb.forEach((subj) => {
-      const base = subj.code || subj.name || subj.id;
-      subjectIdToCode[subj.id] = normalizeSubjectCode(base);
+      const raw = (subj.code || subj.name || subj.id).toString().trim();
+      subjectRawCode[subj.id] = raw;
+      subjectIdToCode[subj.id] = normalizeSubjectCode(raw); // e.g., AN A -> AN_A
     });
-    
-    // Build normalized code -> subject.id map (for push stage)
+
+    // Build code -> subject.id map with aliases (space/underscore + raw uppercase)
     const subjectIdByCode = {};
     subjectsDb.forEach((subj) => {
-      const code = subjectIdToCode[subj.id];
-      if (code) subjectIdByCode[code] = subj.id;
+      const raw = subjectRawCode[subj.id] || '';
+      const upperRaw = raw.toUpperCase(); // preserve original spacing if any
+      const normUnderscore = subjectIdToCode[subj.id]; // AN_A
+      const spaceAlias = normUnderscore ? normUnderscore.replace(/_/g, ' ') : null; // AN A
+      const keys = new Set([upperRaw, normUnderscore, spaceAlias].filter(Boolean));
+      keys.forEach((k) => { subjectIdByCode[k] = subj.id; });
     });
 
     // Build timeslots up to 18:00 using school config
@@ -140,11 +146,21 @@ Deno.serve(async (req) => {
       }
 
       let subjectCode = null;
+      let resolvedSubjectId = null;
       if (reqItem.subject_id) {
-        subjectCode = subjectIdToCode[reqItem.subject_id] || null;
+        resolvedSubjectId = reqItem.subject_id;
+        subjectCode = subjectIdToCode[resolvedSubjectId] || null;
       }
       if (!subjectCode) {
-        subjectCode = normalizeSubjectCode(reqItem.subject_code || reqItem.subject || null);
+        const provided = reqItem.subject_code || reqItem.subject || null;
+        const norm = normalizeSubjectCode(provided);
+        const spaceAlias = norm ? norm.replace(/_/g, ' ') : null;
+        // Try resolve to a known subject.id using multiple keys
+        resolvedSubjectId = (provided ? subjectIdByCode[String(provided).toUpperCase()] : null)
+          || (norm ? subjectIdByCode[norm] : null)
+          || (spaceAlias ? subjectIdByCode[spaceAlias] : null)
+          || null;
+        subjectCode = resolvedSubjectId ? subjectIdToCode[resolvedSubjectId] : norm;
       }
       if (!subjectCode) {
         continue; // cannot proceed without a subject code
@@ -176,9 +192,17 @@ Deno.serve(async (req) => {
     }
 
     // Logs required: total lessons + count by subject code (before POST /solve)
+    const uniqueLessonSubjects = Array.from(new Set(lessons.map(l => l.subject))).sort();
+    const mappingKeys = Object.keys(subjectIdByCode).sort();
+    const missingSubjects = uniqueLessonSubjects.filter(s => !subjectIdByCode[s]);
     console.log('[buildSchedulingProblem] lessons total =', lessons.length);
     console.log('[buildSchedulingProblem] lessons per subject =', perSubjectCount);
-    console.log('[buildSchedulingProblem] subjectIdByCode size =', Object.keys(subjectIdByCode).length);
+    console.log('[buildSchedulingProblem] subjectIdByCode size =', mappingKeys.length);
+    console.log('[buildSchedulingProblem] lesson subjects =', uniqueLessonSubjects);
+    console.log('[buildSchedulingProblem] mapping keys =', mappingKeys);
+    if (missingSubjects.length > 0) {
+      console.warn('[buildSchedulingProblem] UNMAPPED subjects =', missingSubjects);
+    }
 
     const problem = { timeslots, rooms, teachers, lessons };
 
