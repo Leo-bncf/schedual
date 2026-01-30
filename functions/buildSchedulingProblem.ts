@@ -41,14 +41,23 @@ Deno.serve(async (req) => {
       return Response.json({ error: 'schedule_version_id required' }, { status: 400 });
     }
 
+    const whoami = user ? { userId: user.id, role: user.role, school_id: user.school_id || null } : null;
+    let scheduleVersionSchoolId = null;
+    try {
+      if (schedule_version_id) {
+        const sv = await client.entities.ScheduleVersion.filter({ id: schedule_version_id });
+        scheduleVersionSchoolId = sv?.[0]?.school_id || null;
+      }
+    } catch (_) {}
+
     if (!user) {
-      return Response.json({ error: 'Unauthorized', code: 'NO_USER' }, { status: 401 });
+      return Response.json({ error: 'Unauthorized', code: 'NO_USER', guardFailureCode: 'NOT_AUTHENTICATED', whoami, requestedSchoolId, scheduleVersionSchoolId }, { status: 401 });
     }
     if (!user.school_id) {
-      return Response.json({ error: 'Forbidden: user missing school_id', code: 'NO_SCHOOL_ON_USER' }, { status: 403 });
+      return Response.json({ error: 'Forbidden: user missing school_id', code: 'NO_SCHOOL_ON_USER', guardFailureCode: 'NO_SCHOOL_ON_USER', whoami, requestedSchoolId, scheduleVersionSchoolId }, { status: 403 });
     }
     if (requestedSchoolId && requestedSchoolId !== user.school_id) {
-      return Response.json({ error: 'Forbidden: Cross-school access', code: 'CROSS_SCHOOL', requestedSchoolId, user_school_id: user.school_id }, { status: 403 });
+      return Response.json({ error: 'Forbidden: Cross-school access', code: 'CROSS_SCHOOL', guardFailureCode: 'CROSS_SCHOOL', whoami, requestedSchoolId, scheduleVersionSchoolId }, { status: 403 });
     }
 
     const school_id = user.school_id;

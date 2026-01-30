@@ -412,6 +412,10 @@ Now process the user's input and return ONLY the JSON object.`,
       toast.success('OR-Tool response retrieved');
     } catch (e) {
       console.error('OR-Tool fetch failed:', e);
+      const data = e?.response?.data;
+      if (data) {
+        setOrToolResult(data);
+      }
       setOrToolError(e?.message || 'Failed to fetch OR-Tool response');
       toast.error('Failed to retrieve OR-Tool response');
     } finally {
@@ -1663,6 +1667,17 @@ Now process the user's input and return ONLY the JSON object.`,
                           </div>
                         )}
                       </div>
+
+                      {orToolResult?.guardFailureCode && (
+                        <div className="p-3 rounded-lg bg-rose-50 border border-rose-200 text-rose-800 text-xs">
+                          <div className="font-semibold mb-1">Guard Failure: {orToolResult.guardFailureCode}</div>
+                          <div className="grid md:grid-cols-3 gap-2">
+                            <div>requestedSchoolId: <strong>{String(orToolResult.requestedSchoolId ?? 'null')}</strong></div>
+                            <div>scheduleVersion.school_id: <strong>{String(orToolResult.scheduleVersionSchoolId ?? 'null')}</strong></div>
+                            <div>whoami: <code>{JSON.stringify(orToolResult.whoami || orToolResult.user || null)}</code></div>
+                          </div>
+                        </div>
+                      )}
 
                       {/* Requested recap fields */}
                       {(() => {

@@ -12,21 +12,31 @@ Deno.serve(async (req) => {
     const base44 = createClientFromRequest(req);
     const user = await base44.auth.me();
 
+    let requestedSchoolId = null;
+    let scheduleVersionSchoolId = null;
+    const whoami = user ? { userId: user.id, role: user.role, school_id: user.school_id || null } : null;
+
     if (!user) {
-      return Response.json({ error: 'Unauthorized', code: 'NO_USER' }, { status: 401 });
+      return Response.json({ error: 'Unauthorized', code: 'NO_USER', guardFailureCode: 'NOT_AUTHENTICATED', whoami, requestedSchoolId, scheduleVersionSchoolId }, { status: 401 });
     }
     if (!user.school_id) {
-      return Response.json({ error: 'Forbidden: user missing school_id', code: 'NO_SCHOOL_ON_USER' }, { status: 403 });
+      return Response.json({ error: 'Forbidden: user missing school_id', code: 'NO_SCHOOL_ON_USER', guardFailureCode: 'NO_SCHOOL_ON_USER', whoami, requestedSchoolId, scheduleVersionSchoolId }, { status: 403 });
     }
 
     const body = await req.json();
     const schedule_version_id = body?.schedule_version_id;
     const dpStudyWeekly = body?.dp_study_weekly ?? 6; // default per user request
     const dpMinEndTime = body?.dp_min_end_time ?? '14:30';
-    const requestedSchoolId = body?.school_id || null;
+    requestedSchoolId = body?.school_id || null;
     const schoolId = requestedSchoolId || user.school_id;
+    try {
+      if (schedule_version_id) {
+        const sv = await base44.entities.ScheduleVersion.filter({ id: schedule_version_id });
+        scheduleVersionSchoolId = sv?.[0]?.school_id || null;
+      }
+    } catch (_) {}
     if (requestedSchoolId && requestedSchoolId !== user.school_id) {
-      return Response.json({ error: 'Forbidden: Cross-school access' }, { status: 403 });
+      return Response.json({ error: 'Forbidden: Cross-school access', guardFailureCode: 'CROSS_SCHOOL', whoami, requestedSchoolId, scheduleVersionSchoolId }, { status: 403 });
     }
 
     if (!schedule_version_id) {
