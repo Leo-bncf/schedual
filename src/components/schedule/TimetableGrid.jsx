@@ -279,6 +279,13 @@ export default function TimetableGrid({ slots = [], groups = [], rooms = [], sub
                                   </div>
                                 )}
                               </div>
+                            ) : (slot.notes?.includes('Study')) ? (
+                              <div className="p-3 border-l-4 border-slate-400 bg-slate-50 border border-slate-200">
+                                <div className="font-bold text-sm text-slate-700 leading-tight mb-1.5">
+                                  Study / Free Period
+                                </div>
+                                <div className="text-xs text-slate-500">Self-study time</div>
+                              </div>
                             ) : (slot.notes?.includes('Test') || slot.notes?.includes('Assessment')) ? (
                               <div className="p-3 border-l-4 border-red-400 bg-red-50 border border-red-200">
                                 <div className="font-bold text-sm text-red-900 leading-tight mb-1.5">
@@ -302,7 +309,7 @@ export default function TimetableGrid({ slots = [], groups = [], rooms = [], sub
                                   <div className="font-medium">📍 {room?.name || 'TBD'}</div>
                                 </div>
                               </div>
-                            )}
+                            )
                           </div>
                         );
                       })}
@@ -358,7 +365,7 @@ export default function TimetableGrid({ slots = [], groups = [], rooms = [], sub
           >
             <div className="flex items-start justify-between mb-6">
               <div className="flex-1">
-                <h3 className="text-3xl font-bold text-slate-900 mb-2">{selectedSlot.subject?.name}</h3>
+                <h3 className="text-3xl font-bold text-slate-900 mb-2">{selectedSlot.subject?.name || selectedSlot.slot.notes || 'Slot'}</h3>
                 <p className="text-slate-500 text-lg">{selectedSlot.slot.day}, Period {selectedSlot.slot.period}</p>
               </div>
               <button 

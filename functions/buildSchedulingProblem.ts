@@ -94,6 +94,10 @@ Deno.serve(async (req) => {
       keys.forEach((k) => { subjectIdByCode[k] = subj.id; });
     });
 
+    // Subject lookup by id
+    const subjectById = {};
+    subjectsDb.forEach((s) => { subjectById[s.id] = s; });
+
     // Build timeslots up to 18:00 using school config
     const period_duration = school.period_duration_minutes || 60;
     const school_start = school.school_start_time || '08:00';
@@ -169,6 +173,7 @@ Deno.serve(async (req) => {
       const studentGroup = `TG_${tg.id}`;
       const capacity = 20; // keep default; can be enhanced later
 
+      // Real lessons from the teaching group
       for (let k = 0; k < weeklyCount; k++) {
         lessons.push({
           id: lessonId++,
@@ -180,14 +185,36 @@ Deno.serve(async (req) => {
           teacherId: teacherNumericId || null,
         });
       }
-
       perSubjectCount[subjectCode] = (perSubjectCount[subjectCode] || 0) + weeklyCount;
+
+      // STUDY filler for DP only (hybrid weekly target)
+      const isDP = String(tg.year_group || '').toUpperCase().includes('DP') || ((subjectById[tg.subject_id]?.ib_level || '') === 'DP');
+      if (isDP) {
+        const realTotal = weeklyCount;
+        const studyWeeklyCount = Math.max(0, studyTargetWeekly - realTotal);
+        for (let s = 0; s < studyWeeklyCount; s++) {
+          lessons.push({
+            id: lessonId++,
+            subject: 'STUDY',
+            studentGroup,
+            requiredCapacity: capacity,
+            timeslotId: null,
+            roomId: null,
+            teacherId: null,
+            isStudy: true,
+            softConstraints: { maxConsecutive: 2, preferAfternoon: true }
+          });
+        }
+        if (studyWeeklyCount > 0) {
+          perSubjectCount['STUDY'] = (perSubjectCount['STUDY'] || 0) + studyWeeklyCount;
+        }
+      }
     }
 
     // Logs required: total lessons + count by subject code (before POST /solve)
     const uniqueLessonSubjects = Array.from(new Set(lessons.map(l => l.subject))).sort();
     const mappingKeys = Object.keys(subjectIdByCode).sort();
-    const missingSubjects = uniqueLessonSubjects.filter(s => !subjectIdByCode[s]);
+    const missingSubjects = uniqueLessonSubjects.filter(s => s !== 'STUDY' && !subjectIdByCode[s]);
     console.log('[buildSchedulingProblem] lessons total =', lessons.length);
     console.log('[buildSchedulingProblem] lessons per subject =', perSubjectCount);
     console.log('[buildSchedulingProblem] subjectIdByCode size =', mappingKeys.length);

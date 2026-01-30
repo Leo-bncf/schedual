@@ -127,6 +127,7 @@ Deno.serve(async (req) => {
       const subjectId = subjectIdByCode[normalizedSubject] || null;
       const teacherId = lesson.teacherId ? numericToTeacherId[lesson.teacherId] : null;
       const roomId = numericToRoomId[lesson.roomId] || null;
+      const tgIdFromGroup = (lesson.studentGroup && lesson.studentGroup.startsWith('TG_')) ? lesson.studentGroup.slice(3) : null;
       
       // Calculate period from timeslot ID: ((id - 1) % periods_per_day) + 1
       const period = ((timeslot.id - 1) % periods_per_day) + 1;
@@ -134,14 +135,15 @@ Deno.serve(async (req) => {
       slots.push({
         school_id: user.school_id,
         schedule_version: schedule_version_id,
-        teaching_group_id: null,
+        teaching_group_id: tgIdFromGroup || null,
         subject_id: subjectId || null,
         teacher_id: teacherId,
         room_id: roomId,
         day: dayMapping[timeslot.dayOfWeek] || timeslot.dayOfWeek,
         period: period,
         is_double_period: false,
-        status: 'scheduled'
+        status: 'scheduled',
+        notes: normalizedSubject === 'STUDY' ? 'Study / Free Period' : undefined
       });
     }
 
