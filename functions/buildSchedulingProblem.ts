@@ -1,242 +1,193 @@
 import { createClientFromRequest } from 'npm:@base44/sdk@0.8.6';
 
-/**
- * Converts Base44 IB data into OptaPlanner format
- * 
- * Resolves all IB semantics (DP/MYP/PYP, HL/SL, subject choices, class groups)
- * into lessons for OptaPlanner constraint solver.
- */
+// Build scheduling problem exclusively from subjectRequirements
+// Input JSON:
+// {
+//   schedule_version_id: string,
+//   subjectRequirements: Array<{
+//     subject_id?: string,      // Base44 subject id (preferred)
+//     subject_code?: string,    // Fallback: raw code or name to normalize
+//     teaching_group_id?: string,
+//     classgroup_id?: string,
+//     student_group?: string,   // Free label if not using ids
+//     weeklyCount: number,      // REQUIRED: number of weekly sessions
+//     requiredCapacity?: number,
+//     teacher_id?: string,
+//     room_id?: string
+//   }>
+// }
+// Output: { success, problem: { timeslots, rooms, teachers, lessons }, stats }
+// Notes:
+// - lessons[] is created by duplicating a single entry weeklyCount times with unique IDs
+// - subjects sent to solver are Base44-normalized codes (e.g., "AN A" -> "AN_A")
+// - reverse mapping to subject_id is handled downstream (callORToolScheduler) using DB subjects
+// - We DO NOT derive lessons from ScheduleSlots or any other logic
+
 Deno.serve(async (req) => {
   try {
+    if (req.method !== 'POST') {
+      return new Response('Method Not Allowed', { status: 405, headers: { 'Allow': 'POST' } });
+    }
+
     const base44 = createClientFromRequest(req);
     const user = await base44.auth.me();
-
     if (!user || !user.school_id) {
       return Response.json({ error: 'Unauthorized' }, { status: 401 });
     }
 
-    const { schedule_version_id } = await req.json();
+    const body = await req.json();
+    const schedule_version_id = body?.schedule_version_id;
+    const subjectRequirements = body?.subjectRequirements;
 
     if (!schedule_version_id) {
       return Response.json({ error: 'schedule_version_id required' }, { status: 400 });
     }
+    if (!Array.isArray(subjectRequirements) || subjectRequirements.length === 0) {
+      return Response.json({ error: 'subjectRequirements[] required' }, { status: 400 });
+    }
 
     const school_id = user.school_id;
 
-    // Fetch all relevant data
-    const [school, teachers, rooms, teachingGroups, subjects, students, classGroups] = await Promise.all([
-      base44.entities.School.filter({ id: school_id }).then(s => s[0]),
-      base44.entities.Teacher.filter({ school_id, is_active: true }),
+    // Fetch school + resources for mapping (rooms/teachers for numeric IDs, subjects for code normalization)
+    const [school, roomsDb, teachersDb, subjectsDb] = await Promise.all([
+      base44.entities.School.filter({ id: school_id }).then((r) => r[0]),
       base44.entities.Room.filter({ school_id, is_active: true }),
-      base44.entities.TeachingGroup.filter({ school_id, is_active: true }),
+      base44.entities.Teacher.filter({ school_id, is_active: true }),
       base44.entities.Subject.filter({ school_id, is_active: true }),
-      base44.entities.Student.filter({ school_id, is_active: true }),
-      base44.entities.ClassGroup.filter({ school_id, is_active: true })
     ]);
 
     if (!school) {
       return Response.json({ error: 'School not found' }, { status: 404 });
     }
 
-    // Build timeslots with OptaPlanner format - AUTO-CALCULATE to 18:00
-    const period_duration = school.period_duration_minutes || 60;
-    const school_start = school.school_start_time || "08:00";
-    const school_end = "18:00"; // Fixed end time to ensure PM coverage
+    // Helpers
+    const normalizeSubjectCode = (raw) => {
+      if (!raw) return null;
+      const s = String(raw)
+        .trim()
+        .toUpperCase()
+        .replace(/\s+/g, '_')
+        .replace(/[^A-Z0-9_]/g, '_')
+        .replace(/_+/g, '_')
+        .replace(/^_|_$/g, '');
+      return s || null;
+    };
 
-    // Calculate start and end times in minutes
+    // Build subject id -> normalized code map
+    const subjectIdToCode = {};
+    subjectsDb.forEach((subj) => {
+      const base = subj.code || subj.name || subj.id;
+      subjectIdToCode[subj.id] = normalizeSubjectCode(base);
+    });
+
+    // Build timeslots up to 18:00 using school config
+    const period_duration = school.period_duration_minutes || 60;
+    const school_start = school.school_start_time || '08:00';
+    const school_end = '18:00';
+
     const [startHour, startMin] = school_start.split(':').map(Number);
     const [endHour, endMin] = school_end.split(':').map(Number);
     const schoolStartMinutes = startHour * 60 + startMin;
     const schoolEndMinutes = endHour * 60 + endMin;
 
-    // Auto-calculate periods needed to reach 18:00
     const totalMinutes = schoolEndMinutes - schoolStartMinutes;
-    const periods_per_day = Math.ceil(totalMinutes / period_duration);
+    const periods_per_day = Math.max(1, Math.ceil(totalMinutes / period_duration));
 
-    console.log(`Auto-calculated ${periods_per_day} periods (${school_start}-${school_end}, ${period_duration}min each)`);
-
-    const days = ['MONDAY', 'TUESDAY', 'WEDNESDAY', 'THURSDAY', 'FRIDAY'];
+    const DAYS = ['MONDAY', 'TUESDAY', 'WEDNESDAY', 'THURSDAY', 'FRIDAY'];
     const timeslots = [];
-    let slot_id = 1;
-
-    // Get break and lunch configuration
-    const breakPeriods = school.settings?.break_periods || [];
-    const lunchPeriod = school.settings?.lunch_period || 4;
-    const testConfig = school.settings?.test_config || {};
-
-    for (const day of days) {
-      for (let period = 1; period <= periods_per_day; period++) {
-        // Calculate time for this period
-        const periodStartMinutes = schoolStartMinutes + ((period - 1) * period_duration);
-        const periodEndMinutes = periodStartMinutes + period_duration;
-        
-        const startTime = `${String(Math.floor(periodStartMinutes / 60)).padStart(2, '0')}:${String(periodStartMinutes % 60).padStart(2, '0')}`;
-        const endTime = `${String(Math.floor(periodEndMinutes / 60)).padStart(2, '0')}:${String(periodEndMinutes % 60).padStart(2, '0')}`;
-
-        timeslots.push({
-          id: slot_id++,
-          dayOfWeek: day,
-          startTime,
-          endTime
-        });
+    let timeslotId = 1;
+    for (const day of DAYS) {
+      for (let p = 0; p < periods_per_day; p++) {
+        const periodStart = schoolStartMinutes + p * period_duration;
+        const periodEnd = periodStart + period_duration;
+        const startTime = `${String(Math.floor(periodStart / 60)).padStart(2, '0')}:${String(periodStart % 60).padStart(2, '0')}`;
+        const endTime = `${String(Math.floor(periodEnd / 60)).padStart(2, '0')}:${String(periodEnd % 60).padStart(2, '0')}`;
+        timeslots.push({ id: timeslotId++, dayOfWeek: day, startTime, endTime });
       }
     }
 
-    // Build rooms (OptaPlanner format - numeric IDs)
-    const roomIdMap = {};
-    const solver_rooms = rooms.map((room, index) => {
-      const numericId = index + 1;
-      roomIdMap[room.id] = numericId;
-      return {
-        id: numericId,
-        name: room.name || `Room ${numericId}`,
-        capacity: room.capacity
-      };
-    });
+    // Rooms/Teachers in numeric-id format (keep order stable for downstream mapping by index)
+    const rooms = roomsDb.map((r, idx) => ({ id: idx + 1, name: r.name || `Room ${idx + 1}`, capacity: r.capacity || 0 }));
+    const teachers = teachersDb.map((t, idx) => ({ id: idx + 1, name: t.full_name || `Teacher ${idx + 1}` }));
 
-    // Build teachers (OptaPlanner format - numeric IDs)
-    const teacherIdMap = {};
-    const solver_teachers = teachers.map((teacher, index) => {
-      const numericId = index + 1;
-      teacherIdMap[teacher.id] = numericId;
-      return {
-        id: numericId,
-        name: teacher.full_name || `Teacher ${numericId}`
-      };
-    });
+    // Build id -> numeric maps for teacher/room
+    const teacherIdToNumeric = teachersDb.reduce((acc, t, idx) => {
+      acc[t.id] = idx + 1;
+      return acc;
+    }, {});
+    const roomIdToNumeric = roomsDb.reduce((acc, r, idx) => {
+      acc[r.id] = idx + 1;
+      return acc;
+    }, {});
 
-    // Build subject capability map for lessons
-    const subjectCapabilities = {};
-    subjects.forEach(subject => {
-      const code = subject.code || subject.name;
-      subjectCapabilities[subject.id] = code
-        .toUpperCase()
-        .replace(/\s+/g, '_')
-        .replace(/[^A-Z0-9_]/g, '');
-    });
-
-    // Build lessons from teaching groups (OptaPlanner format)
-    let lessonId = 1;
+    // Build lessons exclusively from subjectRequirements
     const lessons = [];
+    let lessonId = 1;
+    const perSubjectCount = {};
 
-    teachingGroups.forEach(group => {
-      const subject = subjects.find(s => s.id === group.subject_id);
-      if (!subject) return;
-
-      // Determine required sessions based on level
-      let required_sessions = group.hours_per_week;
-      if (!required_sessions) {
-        if (group.level === 'HL') {
-          required_sessions = subject.hl_hours_per_week || 6;
-        } else if (group.level === 'SL') {
-          required_sessions = subject.sl_hours_per_week || 4;
-        } else {
-          required_sessions = subject.pyp_myp_hours_per_week || 4;
-        }
+    for (let i = 0; i < subjectRequirements.length; i++) {
+      const reqItem = subjectRequirements[i] || {};
+      const weeklyCount = Number(reqItem.weeklyCount ?? reqItem.weekly_count);
+      if (!Number.isFinite(weeklyCount) || weeklyCount <= 0) {
+        continue; // skip invalid entries
       }
 
-      const studentCount = (group.student_ids || []).length;
-      const teacherNumericId = group.teacher_id ? teacherIdMap[group.teacher_id] : null;
+      let subjectCode = null;
+      if (reqItem.subject_id) {
+        subjectCode = subjectIdToCode[reqItem.subject_id] || null;
+      }
+      if (!subjectCode) {
+        subjectCode = normalizeSubjectCode(reqItem.subject_code || reqItem.subject || null);
+      }
+      if (!subjectCode) {
+        continue; // cannot proceed without a subject code
+      }
 
-      // Create one lesson per required session
-      for (let i = 0; i < required_sessions; i++) {
+      const teacherNumericId = reqItem.teacher_id ? (teacherIdToNumeric[reqItem.teacher_id] || null) : null;
+      const roomNumericId = reqItem.room_id ? (roomIdToNumeric[reqItem.room_id] || null) : null;
+
+      const studentGroup = reqItem.student_group
+        || (reqItem.teaching_group_id ? `TG_${reqItem.teaching_group_id}`
+        : (reqItem.classgroup_id ? `CG_${reqItem.classgroup_id}` : `GROUP_${i + 1}`));
+
+      const requiredCapacity = Number(reqItem.requiredCapacity ?? reqItem.capacity);
+      const capacity = Number.isFinite(requiredCapacity) && requiredCapacity > 0 ? requiredCapacity : 20;
+
+      for (let k = 0; k < weeklyCount; k++) {
         lessons.push({
           id: lessonId++,
-          subject: subjectCapabilities[subject.id],
-          studentGroup: group.name || group.id,
-          requiredCapacity: studentCount || 20,
+          subject: subjectCode,       // normalized code only
+          studentGroup,
+          requiredCapacity: capacity,
           timeslotId: null,
-          roomId: null,
-          teacherId: teacherNumericId
+          roomId: roomNumericId || null,
+          teacherId: teacherNumericId || null,
         });
       }
-    });
 
-    // Add TOK/CAS/EE core components as lessons
-    const coreSubjects = subjects.filter(s => s.is_core && s.ib_level === 'DP');
-    const dpStudents = students.filter(s => s.ib_programme === 'DP');
+      perSubjectCount[subjectCode] = (perSubjectCount[subjectCode] || 0) + weeklyCount;
+    }
 
-    coreSubjects.forEach(coreSubject => {
-      const studentsByYear = {};
-      dpStudents.forEach(student => {
-        if (!studentsByYear[student.year_group]) {
-          studentsByYear[student.year_group] = [];
-        }
-        studentsByYear[student.year_group].push(student.id);
-      });
+    // Logs required: total lessons + count by subject code (before POST /solve)
+    console.log('[buildSchedulingProblem] lessons total =', lessons.length);
+    console.log('[buildSchedulingProblem] lessons per subject =', perSubjectCount);
 
-      Object.entries(studentsByYear).forEach(([year_group, student_ids]) => {
-        const hoursPerWeek = coreSubject.code === 'TOK' ? 
-          (school.settings?.tok_hours_per_week || 3) :
-          (school.settings?.cas_ee_hours_per_week || 1);
+    const problem = { timeslots, rooms, teachers, lessons };
 
-        for (let i = 0; i < hoursPerWeek; i++) {
-          lessons.push({
-            id: lessonId++,
-            subject: subjectCapabilities[coreSubject.id],
-            studentGroup: `${coreSubject.code}_${year_group}`,
-            requiredCapacity: student_ids.length,
-            timeslotId: null,
-            roomId: null,
-            teacherId: null
-          });
-        }
-      });
-    });
-
-    // Add test slots as lessons per level
-    ['PYP', 'MYP', 'DP1', 'DP2'].forEach(level => {
-      const config = testConfig[level] || { tests_per_week: 0, test_duration_minutes: 0, supervisor_id: null };
-      const testsPerWeek = config.tests_per_week || 0;
-      
-      if (testsPerWeek > 0) {
-        const levelStudents = students.filter(s => {
-          if (level === 'PYP' || level === 'MYP') return s.ib_programme === level;
-          return s.year_group === level;
-        });
-
-        if (levelStudents.length > 0) {
-          const testSubject = subjects.find(s => s.code === `TEST_${level}`);
-          const supervisorNumericId = testSubject?.supervisor_teacher_id ? teacherIdMap[testSubject.supervisor_teacher_id] : null;
-
-          for (let i = 0; i < testsPerWeek; i++) {
-            lessons.push({
-              id: lessonId++,
-              subject: 'TEST_ASSESSMENT',
-              studentGroup: `TEST_${level}`,
-              requiredCapacity: levelStudents.length,
-              timeslotId: null,
-              roomId: null,
-              teacherId: supervisorNumericId
-            });
-          }
-        }
-      }
-    });
-
-    // Build OptaPlanner payload
-    const problem = {
-      timeslots,
-      rooms: solver_rooms,
-      teachers: solver_teachers,
-      lessons
-    };
-
-    return Response.json({ 
-      success: true, 
+    return Response.json({
+      success: true,
       problem,
       stats: {
         timeslots: timeslots.length,
-        rooms: solver_rooms.length,
-        teachers: solver_teachers.length,
-        lessons: lessons.length
-      }
+        rooms: rooms.length,
+        teachers: teachers.length,
+        lessons: lessons.length,
+        perSubjectCount,
+        periods_per_day,
+      },
     });
-
   } catch (error) {
-    console.error('Build scheduling problem error:', error);
-    return Response.json({ 
-      error: error.message || 'Failed to build scheduling problem' 
-    }, { status: 500 });
+    console.error('buildSchedulingProblem error:', error);
+    return Response.json({ error: error.message || 'Failed to build scheduling problem' }, { status: 500 });
   }
 });
