@@ -47,7 +47,7 @@ Deno.serve(async (req) => {
     }
 
 
-    let school_id = user?.school_id || overrideSchoolId;
+    let school_id = overrideSchoolId || user?.school_id || null;
     if (!school_id) {
       if (!schedule_version_id) {
         return Response.json({ error: 'Unauthorized' }, { status: 401 });
@@ -59,7 +59,9 @@ Deno.serve(async (req) => {
       }
     }
 
-    const client = user?.school_id ? base44 : base44.asServiceRole;
+    // Choose client based on access to the target school
+    const client = (user && user.school_id === school_id) ? base44 : base44.asServiceRole;
+    console.log('[buildSchedulingProblem] context', { usingServiceRole: client === base44.asServiceRole, school_id });
 
     // Fetch school + resources for mapping (rooms/teachers for numeric IDs, subjects for code normalization)
     const [school, roomsDb, teachersDb, subjectsDb, teachingGroupsDb] = await Promise.all([
