@@ -62,27 +62,17 @@ Deno.serve(async (req) => {
       verification[key] = { found: true, subject_id: subj.id, subject_code: codeOf(subj), active_count: active.length, active_summary: summary };
     }
 
-    // Determine schedule version: use provided or latest for school
-    let schedule_version_id = bodyVid || null;
-    if (!schedule_version_id) {
-      const versions = await base44.entities.ScheduleVersion.filter({ school_id });
-      versions.sort((a,b) => new Date(b.created_date || b.generated_at || 0) - new Date(a.created_date || a.generated_at || 0));
-      schedule_version_id = versions[0]?.id || null;
-    }
-
-    if (!schedule_version_id) {
-      // Create a draft schedule version automatically for diagnostics
-      const created = await base44.asServiceRole.entities.ScheduleVersion.create({
-        school_id,
-        name: 'Draft (auto)',
-        status: 'draft',
-        notes: 'Auto-created for diagnostic preview'
-      });
-      schedule_version_id = created.id;
-    }
+    // Always create a fresh draft version for diagnostic (no persistence of slots)
+    const createdVersion = await base44.asServiceRole.entities.ScheduleVersion.create({
+      school_id,
+      name: `Draft (auto)`,
+      status: 'draft',
+      notes: 'Auto-created for diagnostic preview'
+    });
+    const schedule_version_id = createdVersion.id;
 
     // Build scheduling problem
-    const buildRes = await base44.functions.invoke('buildSchedulingProblem', { schedule_version_id, dp_target_periods_per_day: 9 });
+    const buildRes = await base44.asServiceRole.functions.invoke('buildSchedulingProblem', { schedule_version_id, dp_target_periods_per_day: 9 });
     const problem = buildRes.data.problem;
     const stats = buildRes.data.stats || {};
 
