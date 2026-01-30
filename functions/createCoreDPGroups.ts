@@ -9,30 +9,13 @@ Deno.serve(async (req) => {
     }
 
     const base44 = createClientFromRequest(req);
-    let user = null;
-    try { user = await base44.auth.me(); } catch (_) { user = null; }
-
-    const { bypass_service = false, school_id: inputSchoolId } = await req.json().catch(() => ({ bypass_service: false }));
-
-    let client = null;
-    let school_id = user?.school_id || null;
-
-    if (user && user.school_id && user.role === 'admin') {
-      client = base44;
-    } else if (bypass_service) {
-      client = base44.asServiceRole;
-      school_id = school_id || inputSchoolId || null;
-      if (!school_id) {
-        const schools = await client.entities.School.list();
-        if (!schools || schools.length === 0) {
-          return Response.json({ error: 'No schools available' }, { status: 404 });
-        }
-        schools.sort((a,b) => new Date(b.created_date || 0) - new Date(a.created_date || 0));
-        school_id = schools[0].id;
-      }
-    } else {
+    const user = await base44.auth.me();
+    if (!user || user.role !== 'admin' || !user.school_id) {
       return Response.json({ error: 'Admin access required' }, { status: 403 });
     }
+
+    const client = base44;
+    const school_id = user.school_id;
 
     // Fetch core subjects for DP
     const subjects = await client.entities.Subject.filter({ school_id, is_active: true });

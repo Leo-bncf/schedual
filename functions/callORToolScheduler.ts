@@ -20,6 +20,11 @@ Deno.serve(async (req) => {
     const schedule_version_id = body?.schedule_version_id;
     const dpStudyWeekly = body?.dp_study_weekly ?? 6; // default per user request
     const dpMinEndTime = body?.dp_min_end_time ?? '14:30';
+    const requestedSchoolId = body?.school_id || null;
+    const schoolId = requestedSchoolId || user.school_id;
+    if (requestedSchoolId && requestedSchoolId !== user.school_id) {
+      return Response.json({ error: 'Forbidden: Cross-school access' }, { status: 403 });
+    }
 
     if (!schedule_version_id) {
       return Response.json({ error: 'schedule_version_id required' }, { status: 400 });
@@ -29,7 +34,7 @@ Deno.serve(async (req) => {
     // Step 1: Build scheduling problem
     const buildResponse = await base44.functions.invoke('buildSchedulingProblem', {
       schedule_version_id,
-      school_id: user.school_id,
+      school_id: schoolId,
       dp_study_weekly: dpStudyWeekly,
       dp_min_end_time: dpMinEndTime
     });
@@ -120,10 +125,10 @@ Deno.serve(async (req) => {
 
     // Step 4: Get Base44 entities to reverse-map IDs
     const [subjects, teachingGroups, rooms, teachers] = await Promise.all([
-      base44.asServiceRole.entities.Subject.filter({ school_id: user.school_id }),
-      base44.asServiceRole.entities.TeachingGroup.filter({ school_id: user.school_id }),
-      base44.asServiceRole.entities.Room.filter({ school_id: user.school_id }),
-      base44.asServiceRole.entities.Teacher.filter({ school_id: user.school_id })
+      base44.entities.Subject.filter({ school_id: user.school_id }),
+      base44.entities.TeachingGroup.filter({ school_id: user.school_id }),
+      base44.entities.Room.filter({ school_id: user.school_id }),
+      base44.entities.Teacher.filter({ school_id: user.school_id })
     ]);
 
     // Use mappings provided by the problem payload (no DB index ordering)
@@ -243,14 +248,14 @@ Deno.serve(async (req) => {
     console.log('[callORToolScheduler] coreSlotsInsertedCount (init) =', coreSlotsInsertedCount, 'sampleCoreSlot =', sampleCoreSlot);
 
     // Step 6: Delete existing slots for this version
-    const existingSlots = await base44.asServiceRole.entities.ScheduleSlot.filter({
+    const existingSlots = await base44.entities.ScheduleSlot.filter({
       school_id: user.school_id,
       schedule_version: schedule_version_id
     });
     const deletedCount = existingSlots.length;
     for (const slot of existingSlots) {
       try {
-        await base44.asServiceRole.entities.ScheduleSlot.delete(slot.id);
+        await base44.entities.ScheduleSlot.delete(slot.id);
       } catch (e) {
         errors.push(`delete:${slot.id}:${e?.message || 'error'}`);
       }
@@ -260,7 +265,7 @@ Deno.serve(async (req) => {
     let insertedCount = 0;
     let sampleSlotsInserted = null;
     if (slots.length > 0) {
-      const inserted = await base44.asServiceRole.entities.ScheduleSlot.bulkCreate(slots);
+      const inserted = await base44.entities.ScheduleSlot.bulkCreate(slots);
       const createdIds = Array.isArray(inserted) ? inserted.map(r => r.id) : null;
       insertedCount = Array.isArray(inserted) ? inserted.length : slots.length;
       console.log('[callORToolScheduler] insertedCount =', insertedCount);
@@ -303,7 +308,7 @@ Deno.serve(async (req) => {
     });
     if (unassignedLessons.length > 0) {
       for (const lesson of unassignedLessons) {
-        await base44.asServiceRole.entities.ConflictReport.create({
+        await base44.entities.ConflictReport.create({
           school_id: user.school_id,
           schedule_version_id,
           conflict_type: 'unassigned_teaching_unit',
@@ -332,7 +337,7 @@ Deno.serve(async (req) => {
             if (warningsCount > 0) {
               for (const [code, info] of Object.entries(offByOneIssues)) {
                 try {
-                  await base44.asServiceRole.entities.ConflictReport.create({
+                  await base44.entities.ConflictReport.create({
                     school_id: user.school_id,
                     schedule_version_id,
                     conflict_type: info.assigned < info.expected ? 'insufficient_hours' : 'ib_requirement_violation',
@@ -347,7 +352,7 @@ Deno.serve(async (req) => {
               }
             }
             // Step 9: Update schedule version metadata
-            await base44.asServiceRole.entities.ScheduleVersion.update(schedule_version_id, {
+            await base44.entities.ScheduleVersion.update(schedule_version_id, {
       generated_at: new Date().toISOString(),
       score: solution.score || 0,
       conflicts_count: unassignedLessons.length,

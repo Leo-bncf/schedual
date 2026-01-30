@@ -30,31 +30,29 @@ Deno.serve(async (req) => {
     }
 
     const base44 = createClientFromRequest(req);
-    let user = null;
-    try {
-      user = await base44.auth.me();
-    } catch (_) {
-      user = null;
-    }
+    const user = await base44.auth.me();
 
     const body = await req.json();
-    const schedule_version_id = body?.schedule_version_id; // may be used to derive school_id when no user
+    const schedule_version_id = body?.schedule_version_id;
     const subjectRequirements = Array.isArray(body?.subjectRequirements) ? body.subjectRequirements : null;
-    const overrideSchoolId = body?.school_id || body?.schoolId || null;
+    const requestedSchoolId = body?.school_id || body?.schoolId || user?.school_id || null;
 
     if (!schedule_version_id) {
       return Response.json({ error: 'schedule_version_id required' }, { status: 400 });
     }
 
-
-    const school_id = overrideSchoolId;
-    if (!school_id) {
-      return Response.json({ error: 'school_id required in payload' }, { status: 400 });
+    if (!user || !user.school_id || user.role !== 'admin') {
+      return Response.json({ error: 'Admin access required' }, { status: 403 });
+    }
+    if (requestedSchoolId && requestedSchoolId !== user.school_id) {
+      return Response.json({ error: 'Forbidden: Cross-school access' }, { status: 403 });
     }
 
-    // Always use service role to avoid user-tenant mismatch
-    const client = base44.asServiceRole;
-    console.log('[buildSchedulingProblem] context', { usingServiceRole: true, schoolIdInput: overrideSchoolId, schoolIdUsed: school_id });
+    const school_id = user.school_id;
+
+    // Use user-scoped client within school RLS
+    const client = base44;
+    console.log('[buildSchedulingProblem] context', { usingServiceRole: false, schoolIdUsed: school_id });
 
     // Fetch school + resources for mapping (rooms/teachers for numeric IDs, subjects for code normalization)
     const [school, roomsDb, teachersDb, subjectsDb, teachingGroupsDb] = await Promise.all([
@@ -79,10 +77,7 @@ Deno.serve(async (req) => {
     }).filter(Boolean);
     console.log('[buildSchedulingProblem] subjectsFoundForSchool', { count: subjectsDb.length, sample_core: _coreSubjSample });
     if (subjectsDb.length === 0) {
-      try {
-        const schools = await base44.asServiceRole.entities.School.list();
-        console.log('[buildSchedulingProblem] School.list sample', (schools || []).slice(0,5).map(s => ({ id: s.id, name: s.name, created_date: s.created_date })));
-      } catch(e) { console.warn('[buildSchedulingProblem] School.list sample fetch failed', e?.message); }
+      console.warn('[buildSchedulingProblem] No active subjects for school', { school_id });
     }
 
     // Logs: DP TeachingGroups sample
@@ -98,10 +93,7 @@ Deno.serve(async (req) => {
     });
     console.log('[buildSchedulingProblem] dpTeachingGroupsFound', { count: _dpTGs.length, sample: _dpSample });
     if (_dpTGs.length === 0) {
-      try {
-        const schools = await base44.asServiceRole.entities.School.list();
-        console.log('[buildSchedulingProblem] School.list sample', (schools || []).slice(0,5).map(s => ({ id: s.id, name: s.name, created_date: s.created_date })));
-      } catch(e) { console.warn('[buildSchedulingProblem] School.list sample fetch failed', e?.message); }
+      console.warn('[buildSchedulingProblem] No active DP teaching groups for school', { school_id });
     }
 
     if (!school) {
