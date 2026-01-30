@@ -132,7 +132,7 @@ Deno.serve(async (req) => {
     });
 
     // 4) Rebuild scheduling problem and pull breakdown
-    const { data: build } = await base44.functions.invoke('buildSchedulingProblem', {
+    const { data: build } = await base44.asServiceRole.functions.invoke('buildSchedulingProblem', {
       schedule_version_id: `audit_${school_id}`,
       school_id,
     });
