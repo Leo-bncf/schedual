@@ -210,6 +210,13 @@ Deno.serve(async (req) => {
     if (!expectedLessonsBySubject) {
       const acc = {};
       const teachingGroupsDb = await client.entities.TeachingGroup.filter({ school_id, is_active: true });
+      // DP TGs log sample
+      const _dpTGs1 = teachingGroupsDb.filter(tg => {
+        const subj = subjectById[tg.subject_id];
+        return tg.is_active === true && (String(tg.year_group || '').toUpperCase().includes('DP') || subj?.ib_level === 'DP');
+      });
+      const _dpSample1 = _dpTGs1.slice(0,3).map(tg => ({ id: tg.id, name: tg.name, subject_id: tg.subject_id, hours_per_week: tg.hours_per_week, is_active: tg.is_active, ib_level: subjectById[tg.subject_id]?.ib_level, year_group: tg.year_group, school_id: tg.school_id }));
+      console.log('[diagCoreScheduling] dpTeachingGroupsFound', { count: _dpTGs1.length, sample: _dpSample1 });
       for (const tg of teachingGroupsDb) {
         const subj = subjectById[tg.subject_id];
         if (!subj) continue;

@@ -46,12 +46,22 @@ Deno.serve(async (req) => {
     const targets = Object.keys(quotas);
 
     const missing = targets.filter(code => !subjectByCode.has(code));
+    const subjects_created = [];
     if (missing.length > 0) {
-      return Response.json({
-        success: false,
-        message: 'Missing DP core subjects in this school',
-        missing_codes: missing
-      }, { status: 400 });
+      for (const code of missing) {
+        const nameByCode = { TOK: 'Theory of Knowledge', CAS: 'Creativity, Activity, Service', EE: 'Extended Essay' };
+        const created = await client.entities.Subject.create({
+          school_id,
+          name: nameByCode[code] || code,
+          code,
+          ib_level: 'DP',
+          is_core: true,
+          is_active: true
+        });
+        subjectByCode.set(code, created);
+        subjects_created.push({ code, id: created.id });
+        console.log('[createCoreDPGroups] created Subject', { code, id: created.id });
+      }
     }
 
     // Check existing TGs and create if absent
