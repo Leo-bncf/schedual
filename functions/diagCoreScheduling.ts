@@ -287,6 +287,9 @@ Deno.serve(async (req) => {
      // Derive expected/created if not provided
     let expectedLessonsBySubject = stats.expectedLessonsBySubject;
     if (!expectedLessonsBySubject) {
+      expectedLessonsBySubject = {};
+    }
+    if (Object.keys(expectedLessonsBySubject).length === 0) {
       const acc = {};
       const teachingGroupsDb = await client.entities.TeachingGroup.filter({ school_id, is_active: true });
       // DP TGs log sample
@@ -308,6 +311,9 @@ Deno.serve(async (req) => {
 
     let lessonsCreatedBySubject = stats.lessonsCreatedBySubject;
     if (!lessonsCreatedBySubject) {
+      lessonsCreatedBySubject = {};
+    }
+    if (Object.keys(lessonsCreatedBySubject).length === 0) {
       const acc = {};
       for (const l of (problem?.lessons || [])) {
         const code = norm(l.subject || '');
