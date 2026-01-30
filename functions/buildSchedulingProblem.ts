@@ -145,6 +145,16 @@ Deno.serve(async (req) => {
     teachersDb.forEach((t, idx) => { teacherNumericIdToBase44Id[idx + 1] = t.id; });
     roomsDb.forEach((r, idx) => { roomNumericIdToBase44Id[idx + 1] = r.id; });
 
+    // Optional external references for traceability (solver/debug)
+    const teacherNumericIdToExternalRef = {};
+    const roomNumericIdToExternalRef = {};
+    teachersDb.forEach((t, idx) => { 
+      teacherNumericIdToExternalRef[idx + 1] = t.external_id || t.externalId || t.employee_id || t.id; 
+    });
+    roomsDb.forEach((r, idx) => { 
+      roomNumericIdToExternalRef[idx + 1] = r.external_id || r.externalId || r.id; 
+    });
+
     for (let i = 0; i < teachingGroupsDb.length; i++) {
       const tg = teachingGroupsDb[i];
       if (!tg?.is_active) continue;
@@ -194,7 +204,9 @@ Deno.serve(async (req) => {
       lessons, 
       subjectIdByCode,
       teacherNumericIdToBase44Id,
-      roomNumericIdToBase44Id
+      roomNumericIdToBase44Id,
+      teacherNumericIdToExternalRef,
+      roomNumericIdToExternalRef
     };
 
     return Response.json({

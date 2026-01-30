@@ -68,10 +68,13 @@ Deno.serve(async (req) => {
 
     const solution = await solverResponse.json();
 
-    // Step 3: Validate solution format
-    if (!solution.assignments || !Array.isArray(solution.assignments)) {
+    // Step 3: Validate solution format (support lessons or legacy assignments)
+    const solvedLessons = Array.isArray(solution.lessons)
+      ? solution.lessons
+      : (Array.isArray(solution.assignments) ? solution.assignments : null);
+    if (!solvedLessons) {
       return Response.json({ 
-        error: 'Invalid solution format from OR-Tool',
+        error: 'Invalid solution format from OR-Tool (expected lessons[] or assignments[])',
         solution 
       }, { status: 500 });
     }
@@ -84,15 +87,10 @@ Deno.serve(async (req) => {
       base44.asServiceRole.entities.Teacher.filter({ school_id: user.school_id })
     ]);
 
-    // Build reverse mappings: capability → subject_id, numeric → Base44 ID
-    const capabilityToSubjectId = {};
-    subjects.forEach(subject => {
-      const code = (subject.code || subject.name)
-        .toUpperCase()
-        .replace(/\s+/g, '_')
-        .replace(/[^A-Z0-9_]/g, '');
-      capabilityToSubjectId[code] = subject.id;
-    });
+    // Use mappings provided by the problem payload (no DB index ordering)
+    const subjectIdByCode = problem.subjectIdByCode || {};
+    const numericToRoomId = problem.roomNumericIdToBase44Id || {};
+    const numericToTeacherId = problem.teacherNumericIdToBase44Id || {};
 
     const numericToRoomId = {};
     problem.rooms.forEach((room, index) => {
