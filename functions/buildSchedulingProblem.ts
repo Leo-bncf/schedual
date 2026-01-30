@@ -41,11 +41,17 @@ Deno.serve(async (req) => {
       return Response.json({ error: 'schedule_version_id required' }, { status: 400 });
     }
 
-    if (!user || !user.school_id || user.role !== 'admin') {
-      return Response.json({ error: 'Admin access required' }, { status: 403 });
+    if (!user) {
+      return Response.json({ error: 'Unauthorized', code: 'NO_USER' }, { status: 401 });
+    }
+    if (user.role !== 'admin') {
+      return Response.json({ error: 'Forbidden: role must be admin', code: 'ROLE_NOT_ADMIN', user_role: user.role }, { status: 403 });
+    }
+    if (!user.school_id) {
+      return Response.json({ error: 'Forbidden: user missing school_id', code: 'NO_SCHOOL_ON_USER' }, { status: 403 });
     }
     if (requestedSchoolId && requestedSchoolId !== user.school_id) {
-      return Response.json({ error: 'Forbidden: Cross-school access' }, { status: 403 });
+      return Response.json({ error: 'Forbidden: Cross-school access', code: 'CROSS_SCHOOL', requestedSchoolId, user_school_id: user.school_id }, { status: 403 });
     }
 
     const school_id = user.school_id;

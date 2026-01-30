@@ -12,8 +12,14 @@ Deno.serve(async (req) => {
     const base44 = createClientFromRequest(req);
     const user = await base44.auth.me();
 
-    if (!user || !user.school_id || user.role !== 'admin') {
-      return Response.json({ error: 'Admin access required' }, { status: 403 });
+    if (!user) {
+      return Response.json({ error: 'Unauthorized', code: 'NO_USER' }, { status: 401 });
+    }
+    if (user.role !== 'admin') {
+      return Response.json({ error: 'Forbidden: role must be admin', code: 'ROLE_NOT_ADMIN', user_role: user.role }, { status: 403 });
+    }
+    if (!user.school_id) {
+      return Response.json({ error: 'Forbidden: user missing school_id', code: 'NO_SCHOOL_ON_USER' }, { status: 403 });
     }
 
     const body = await req.json();
