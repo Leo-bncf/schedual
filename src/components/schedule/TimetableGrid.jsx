@@ -315,7 +315,7 @@ export default function TimetableGrid({ slots = [], groups = [], rooms = [], sub
                                   <div className="font-medium">📍 {room?.name || 'TBD'}</div>
                                 </div>
                               </div>
-                            )
+                            )}
                           </div>
                         );
                       })}
