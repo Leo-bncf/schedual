@@ -82,6 +82,10 @@ export default function Schedule() {
   const [dpDiagData, setDpDiagData] = useState(null);
   const [dpDiagLoading, setDpDiagLoading] = useState(false);
   const [constraintType, setConstraintType] = useState('hard');
+  // OR-Tool response state
+  const [orToolResult, setOrToolResult] = useState(null);
+  const [orToolLoading, setOrToolLoading] = useState(false);
+  const [orToolError, setOrToolError] = useState(null);
   const [showUpdateBanner, setShowUpdateBanner] = useState(false);
   const [formData, setFormData] = useState({
     name: '',
@@ -394,6 +398,24 @@ Now process the user's input and return ONLY the JSON object.`,
       toast.error('DP diagnostic failed');
     } finally {
       setDpDiagLoading(false);
+    }
+  };
+
+  // Fetch full OR-Tool scheduler JSON response and display it
+  const handleFetchORTool = async () => {
+    if (!selectedVersion) return;
+    setOrToolLoading(true);
+    setOrToolError(null);
+    try {
+      const res = await base44.functions.invoke('callORToolScheduler', { schedule_version_id: selectedVersion.id });
+      setOrToolResult(res.data);
+      toast.success('OR-Tool response retrieved');
+    } catch (e) {
+      console.error('OR-Tool fetch failed:', e);
+      setOrToolError(e?.message || 'Failed to fetch OR-Tool response');
+      toast.error('Failed to retrieve OR-Tool response');
+    } finally {
+      setOrToolLoading(false);
     }
   };
 
@@ -1519,10 +1541,10 @@ Now process the user's input and return ONLY the JSON object.`,
             {selectedVersion && (
               <div className="flex gap-2">
                 <Button 
-                  onClick={handleGenerateSchedule}
-                  disabled={isGenerating}
-                  className="bg-indigo-600 hover:bg-indigo-700"
-                  size="lg"
+                 onClick={handleGenerateSchedule}
+                 disabled={isGenerating}
+                 className="bg-indigo-600 hover:bg-indigo-700"
+                 size="lg"
                 >
                   {isGenerating ? (
                     <>
@@ -1537,14 +1559,31 @@ Now process the user's input and return ONLY the JSON object.`,
                   )}
                 </Button>
                 {selectedVersion.status === 'draft' && scheduleSlots.length > 0 && (
-                  <Button 
-                    className="bg-emerald-600 hover:bg-emerald-700"
-                    onClick={() => handlePublish(selectedVersion)}
-                  >
-                    <CheckCircle className="w-4 h-4 mr-2" />
-                    Publish
-                  </Button>
+                 <Button 
+                   className="bg-emerald-600 hover:bg-emerald-700"
+                   onClick={() => handlePublish(selectedVersion)}
+                 >
+                   <CheckCircle className="w-4 h-4 mr-2" />
+                   Publish
+                 </Button>
                 )}
+                <Button 
+                 variant="outline"
+                 onClick={handleFetchORTool}
+                 disabled={!selectedVersion || orToolLoading}
+                >
+                 {orToolLoading ? (
+                   <>
+                     <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+                     OR-Tool JSON...
+                   </>
+                 ) : (
+                   <>
+                     <Hash className="w-4 h-4 mr-2" />
+                     Run OR-Tool + JSON
+                   </>
+                 )}
+                </Button>
                 {selectedVersion.status === 'draft' && (
                   <Button 
                     variant="outline"
@@ -1601,6 +1640,34 @@ Now process the user's input and return ONLY the JSON object.`,
                 )}
 
                 {/* Core recap (from persisted slots) */}
+                {/* OR-Tool JSON response (on-demand) */}
+                {orToolError && (
+                  <Card className="border-0 shadow-sm bg-rose-50"><CardContent className="p-4 text-sm text-rose-700">{orToolError}</CardContent></Card>
+                )}
+                {orToolResult && (
+                  <Card className="border-0 shadow-sm bg-gradient-to-br from-slate-50 to-white">
+                    <CardContent className="p-4 space-y-2">
+                      <div className="flex items-center justify-between">
+                        <div className="text-sm text-slate-700">
+                          <div className="font-semibold text-slate-900 mb-1">OR-Tool Response</div>
+                          <div className="flex gap-3">
+                            <span>Assigned TOK: <strong>{orToolResult?.coreSlotsInsertedCount?.TOK || 0}</strong></span>
+                            <span>CAS: <strong>{orToolResult?.coreSlotsInsertedCount?.CAS || 0}</strong></span>
+                            <span>EE: <strong>{orToolResult?.coreSlotsInsertedCount?.EE || 0}</strong></span>
+                          </div>
+                        </div>
+                        {orToolResult?.sampleCoreSlot && (
+                          <div className="text-xs text-slate-600">
+                            <div className="font-medium text-slate-800">Sample Core Slot</div>
+                            <div>{orToolResult.sampleCoreSlot.day} • Period {orToolResult.sampleCoreSlot.period}</div>
+                          </div>
+                        )}
+                      </div>
+                      <pre className="text-xs bg-slate-900 text-slate-100 p-3 rounded-lg overflow-x-auto max-h-72">{JSON.stringify(orToolResult, null, 2)}</pre>
+                    </CardContent>
+                  </Card>
+                )}
+
                 {coreRecap && (
                   <Card className="border-0 shadow-sm bg-gradient-to-br from-indigo-50 to-white">
                     <CardContent className="p-4">
