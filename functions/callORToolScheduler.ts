@@ -121,8 +121,9 @@ Deno.serve(async (req) => {
       const roomId = numericToRoomId[lesson.roomId] || null;
       const tgIdFromGroup = (lesson.studentGroup && lesson.studentGroup.startsWith('TG_')) ? lesson.studentGroup.slice(3) : null;
       
-      // Allow null room only for STUDY
-      if (!roomId && normalizedSubject !== 'STUDY') continue;
+      // Allow null room for STUDY and DP core subjects (TOK/CAS/EE)
+      const allowNullRoomSubjects = new Set(['STUDY','TOK','CAS','EE']);
+      if (!roomId && !allowNullRoomSubjects.has(normalizedSubject)) continue;
       
       // Calculate period from timeslot ID: ((id - 1) % periods_per_day) + 1
       const period = ((timeslot.id - 1) % periods_per_day) + 1;
