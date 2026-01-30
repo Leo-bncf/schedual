@@ -1790,8 +1790,6 @@ Now process the user's input and return ONLY the JSON object.`,
                                 );
                               })()}
                               </div>
-                            </div>
-                          </div>
                         );
                       })()}
 
