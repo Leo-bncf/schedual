@@ -237,6 +237,10 @@ Deno.serve(async (req) => {
     console.log('[callORToolScheduler] sampleSlot.TOK =', sampleTok);
     console.log('[callORToolScheduler] sampleSlot.CAS =', sampleCas);
     console.log('[callORToolScheduler] sampleSlot.EE  =', sampleEe);
+    // Prepare core verification helpers
+    let coreSlotsInsertedCount = { TOK: 0, CAS: 0, EE: 0 };
+    let sampleCoreSlot = sampleTok || sampleCas || sampleEe || null;
+    console.log('[callORToolScheduler] coreSlotsInsertedCount (init) =', coreSlotsInsertedCount, 'sampleCoreSlot =', sampleCoreSlot);
 
     // Step 6: Delete existing slots for this version
     const existingSlots = await base44.asServiceRole.entities.ScheduleSlot.filter({
@@ -270,6 +274,21 @@ Deno.serve(async (req) => {
         const coreList = inserted.filter(s => ['TOK','CAS','EE'].includes(toCode(s)));
         const nonCore = inserted.filter(s => !['TOK','CAS','EE'].includes(toCode(s)));
         sampleSlotsInserted = [...coreList.slice(0,1), ...nonCore.slice(0,4)];
+        coreSlotsInsertedCount = {
+          TOK: inserted.filter(s => toCode(s) === 'TOK').length,
+          CAS: inserted.filter(s => toCode(s) === 'CAS').length,
+          EE: inserted.filter(s => toCode(s) === 'EE').length,
+        };
+        sampleCoreSlot = sampleTok || sampleCas || sampleEe || null;
+        console.log('[callORToolScheduler] coreSlotsInsertedCount =', coreSlotsInsertedCount, 'sampleCoreSlot =', sampleCoreSlot);
+      } else {
+        coreSlotsInsertedCount = {
+          TOK: slotsPreparedBySubject['TOK'] || 0,
+          CAS: slotsPreparedBySubject['CAS'] || 0,
+          EE: slotsPreparedBySubject['EE'] || 0,
+        };
+        sampleCoreSlot = sampleTok || sampleCas || sampleEe || null;
+        console.log('[callORToolScheduler] coreSlotsInsertedCount (from prepared) =', coreSlotsInsertedCount, 'sampleCoreSlot =', sampleCoreSlot);
       }
     }
 
@@ -349,6 +368,8 @@ Deno.serve(async (req) => {
       errors,
       offByOneIssues,
       sampleSlotsInserted,
+      coreSlotsInsertedCount,
+      sampleCoreSlot,
       message: 'Schedule generated successfully',
       stats: {
         slots_created: slots.length,

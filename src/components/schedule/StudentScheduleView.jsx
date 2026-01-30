@@ -27,7 +27,9 @@ export default function StudentScheduleView({ students, slots, groups, subjects,
       const inGroup = group?.student_ids?.includes(studentId);
       if (inGroup) return true;
       const subj = group ? subjects.find(s => s.id === group.subject_id) : null;
-      const dpFallback = group && subj && group.year_group === 'DP1+DP2' && subj.ib_level === 'DP'; // covers TOK/CAS/EE for all DP
+      const codeNorm = (subj?.code || subj?.name || '').toUpperCase().replace(/\s+/g, '_');
+      const isCore = (group?.is_core === true) || (subj?.is_core === true) || ['TOK','CAS','EE'].some(k => codeNorm.includes(k));
+      const dpFallback = group && subj && group.year_group === 'DP1+DP2' && isCore;
       return !!dpFallback;
     });
   };
