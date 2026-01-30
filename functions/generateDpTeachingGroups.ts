@@ -15,21 +15,15 @@ Deno.serve(async (req) => {
 
     const school_id = user.school_id;
 
-    // Fetch all students and subjects
-    const [allStudents, subjects] = await Promise.all([
-      base44.entities.Student.filter({ school_id }),
-      base44.entities.Subject.filter({ school_id })
+    // Fetch DP students and DP subjects with server-side filtering to reduce payload
+    const [dpStudentsRaw, dpSubjectsRaw] = await Promise.all([
+      base44.entities.Student.filter({ school_id, ib_programme: 'DP' }),
+      base44.entities.Subject.filter({ school_id, ib_level: 'DP' })
     ]);
 
-    // Filter for DP students manually
-    const students = allStudents.filter(s => 
-      s.ib_programme === 'DP' && s.is_active !== false
-    );
-
-    // Filter DP subjects
-    const dpSubjects = subjects.filter(s => 
-      s.ib_level === 'DP' && s.is_active !== false
-    );
+    // Final client-side filter keeps semantics: exclude only when is_active === false
+    const students = dpStudentsRaw.filter(s => s.is_active !== false);
+    const dpSubjects = dpSubjectsRaw.filter(s => s.is_active !== false);
 
     console.log(`Found ${students.length} DP students and ${dpSubjects.length} DP subjects`);
 
