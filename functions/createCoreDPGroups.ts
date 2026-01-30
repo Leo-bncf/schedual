@@ -38,13 +38,26 @@ Deno.serve(async (req) => {
 
     // Check existing TGs and create if absent
     const created = [];
+    const updated = [];
     const skipped = [];
 
     for (const code of targets) {
       const subj = subjectByCode.get(code);
-      const existing = await base44.entities.TeachingGroup.filter({ school_id, subject_id: subj.id, is_active: true });
+      const existing = await base44.entities.TeachingGroup.filter({ school_id, subject_id: subj.id });
+      let updatedAny = false;
       if (existing && existing.length > 0) {
-        skipped.push({ code, reason: 'already_exists', existing_count: existing.length });
+        for (const tg of existing) {
+          const needsUpdate = (tg.is_active !== true) || (!tg.hours_per_week || tg.hours_per_week < quotas[code]);
+          if (needsUpdate) {
+            await base44.entities.TeachingGroup.update(tg.id, { is_active: true, hours_per_week: quotas[code] });
+            updatedAny = true;
+          }
+        }
+        if (updatedAny) {
+          updated.push({ code, updated_count: existing.length });
+        } else {
+          skipped.push({ code, reason: 'already_satisfies_quota', existing_count: existing.length });
+        }
         continue;
       }
 
@@ -64,7 +77,9 @@ Deno.serve(async (req) => {
     return Response.json({
       success: true,
       created_count: created.length,
+      updated_count: updated.length,
       created,
+      updated,
       skipped
     });
   } catch (error) {

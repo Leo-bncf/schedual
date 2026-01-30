@@ -141,6 +141,10 @@ Deno.serve(async (req) => {
     // Build lessons exclusively from TeachingGroups (active)
     const lessons = [];
     let lessonId = 1;
+    const dpTargetPeriodsPerDay = Number(Deno.env.get('DP_TARGET_PERIODS_PER_DAY') || 8);
+    const dpDaysPerWeek = 5;
+    const studyTargetWeekly = Number(Deno.env.get('DP_STUDY_WEEKLY') || 0);
+    let dpGroupsCount = 0;
     const perSubjectCount = {};
 
     // Numeric → Base44 ID maps for solver payload
@@ -189,6 +193,7 @@ Deno.serve(async (req) => {
 
       // STUDY filler for DP only (hybrid weekly target)
       const isDP = String(tg.year_group || '').toUpperCase().includes('DP') || ((subjectById[tg.subject_id]?.ib_level || '') === 'DP');
+      if (isDP) { dpGroupsCount++; }
       if (isDP) {
         const realTotal = weeklyCount;
         const studyWeeklyCount = Math.max(0, studyTargetWeekly - realTotal);
@@ -247,6 +252,10 @@ Deno.serve(async (req) => {
         lessons: lessons.length,
         perSubjectCount,
         periods_per_day,
+        dp_groups_count: dpGroupsCount,
+        dp_target_periods_per_day: dpTargetPeriodsPerDay,
+        expected_lessons_for_dp: dpGroupsCount * dpTargetPeriodsPerDay * dpDaysPerWeek,
+        underfilled: lessons.length < (dpGroupsCount * dpTargetPeriodsPerDay * dpDaysPerWeek)
       },
     });
   } catch (error) {

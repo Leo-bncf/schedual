@@ -121,9 +121,14 @@ Deno.serve(async (req) => {
       const roomId = numericToRoomId[lesson.roomId] || null;
       const tgIdFromGroup = (lesson.studentGroup && lesson.studentGroup.startsWith('TG_')) ? lesson.studentGroup.slice(3) : null;
       
-      // Allow null room for STUDY and DP core subjects (TOK/CAS/EE)
+      // Allow null room for STUDY and any DP core subject (based on is_core or well-known codes)
       const allowNullRoomSubjects = new Set(['STUDY','TOK','CAS','EE']);
-      if (!roomId && !allowNullRoomSubjects.has(normalizedSubject)) continue;
+      const isCore = (() => {
+        const subjId = subjectId;
+        const byFlag = subjId && subjects.some(s => s.id === subjId && s.is_core === true);
+        return byFlag || allowNullRoomSubjects.has(normalizedSubject);
+      })();
+      if (!roomId && !isCore) continue;
       
       // Calculate period from timeslot ID: ((id - 1) % periods_per_day) + 1
       const period = ((timeslot.id - 1) % periods_per_day) + 1;
@@ -163,7 +168,9 @@ Deno.serve(async (req) => {
       const subj = String(l.subject || l.subjectCode || '')
         .toUpperCase().replace(/\s+/g, '_').replace(/[^A-Z0-9_]/g, '');
       const allowNullRoomSubjects = new Set(['STUDY','TOK','CAS','EE']);
-      return !l.timeslotId || (!l.roomId && !allowNullRoomSubjects.has(subj));
+      const subjId = (problem.subjectIdByCode && problem.subjectIdByCode[subj]) || null;
+      const isCore = (subjId && subjects.some(s => s.id === subjId && s.is_core === true)) || allowNullRoomSubjects.has(subj);
+      return !l.timeslotId || (!l.roomId && !isCore);
     });
     if (unassignedLessons.length > 0) {
       for (const lesson of unassignedLessons) {
