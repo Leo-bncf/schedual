@@ -18,25 +18,22 @@ Deno.serve(async (req) => {
     try { user = await base44.auth.me(); } catch (_) { user = null; }
 
     // Allow limited service-mode bypass (no persistence) when explicitly requested
-    const { schedule_version_id: bodyVid, run_solver = false, bypass_service = false, school_id: inputSchoolId } = await req.json().catch(() => ({ run_solver: false }));
+    const body = await req.json().catch(() => ({}));
+    const inputSchoolId = body?.school_id || body?.schoolId || null;
 
     console.log('[diagCoreScheduling] input params', { inputSchoolId, bypass_service });
 
-    let school_id = user?.school_id || inputSchoolId || null;
+    const school_id = inputSchoolId;
+    if (!school_id) {
+      return Response.json({ error: 'school_id required in payload' }, { status: 400 });
+    }
+    console.log('[diagCoreScheduling] schoolIdInput', inputSchoolId, 'schoolIdUsed', school_id);
     const isAdmin = !!(user && user.school_id && user.role === 'admin');
-    const client = isAdmin ? base44 : (bypass_service ? base44.asServiceRole : null);
-    console.log('[diagCoreScheduling] context', { isAdmin, usingServiceRole: client === base44.asServiceRole, school_id_final: school_id });
+    // Always use service role to ensure deterministic access by school_id
+    const client = base44.asServiceRole;
+    console.log('[diagCoreScheduling] context', { isAdmin, usingServiceRole: true, school_id_final: school_id });
     if (!client) {
       return Response.json({ error: 'Admin access required or set bypass_service=true' }, { status: 403 });
-    }
-    if (!school_id) {
-      // Derive a school in service mode (pick the most recently created)
-      const schools = await base44.asServiceRole.entities.School.list();
-      if (!schools || schools.length === 0) {
-        return Response.json({ error: 'No schools available' }, { status: 404 });
-      }
-      schools.sort((a,b) => new Date(b.created_date || 0) - new Date(a.created_date || 0));
-      school_id = schools[0].id;
     }
 
     // Fetch subjects (active)

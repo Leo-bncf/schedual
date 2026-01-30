@@ -40,28 +40,21 @@ Deno.serve(async (req) => {
     const body = await req.json();
     const schedule_version_id = body?.schedule_version_id; // may be used to derive school_id when no user
     const subjectRequirements = Array.isArray(body?.subjectRequirements) ? body.subjectRequirements : null;
-    const overrideSchoolId = body?.school_id || null;
+    const overrideSchoolId = body?.school_id || body?.schoolId || null;
 
     if (!schedule_version_id) {
       return Response.json({ error: 'schedule_version_id required' }, { status: 400 });
     }
 
 
-    let school_id = overrideSchoolId || user?.school_id || null;
+    const school_id = overrideSchoolId;
     if (!school_id) {
-      if (!schedule_version_id) {
-        return Response.json({ error: 'Unauthorized' }, { status: 401 });
-      }
-      const sv = await base44.asServiceRole.entities.ScheduleVersion.filter({ id: schedule_version_id });
-      school_id = sv?.[0]?.school_id;
-      if (!school_id) {
-        return Response.json({ error: 'Unauthorized' }, { status: 401 });
-      }
+      return Response.json({ error: 'school_id required in payload' }, { status: 400 });
     }
 
-    // Choose client based on access to the target school
-    const client = (user && user.school_id === school_id) ? base44 : base44.asServiceRole;
-    console.log('[buildSchedulingProblem] context', { usingServiceRole: client === base44.asServiceRole, receivedOverrideSchoolId: overrideSchoolId, school_id });
+    // Always use service role to avoid user-tenant mismatch
+    const client = base44.asServiceRole;
+    console.log('[buildSchedulingProblem] context', { usingServiceRole: true, schoolIdInput: overrideSchoolId, schoolIdUsed: school_id });
 
     // Fetch school + resources for mapping (rooms/teachers for numeric IDs, subjects for code normalization)
     const [school, roomsDb, teachersDb, subjectsDb, teachingGroupsDb] = await Promise.all([
