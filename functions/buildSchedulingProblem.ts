@@ -37,14 +37,12 @@ Deno.serve(async (req) => {
 
     const body = await req.json();
     const schedule_version_id = body?.schedule_version_id;
-    const subjectRequirements = body?.subjectRequirements;
+    const subjectRequirements = Array.isArray(body?.subjectRequirements) ? body.subjectRequirements : null;
 
     if (!schedule_version_id) {
       return Response.json({ error: 'schedule_version_id required' }, { status: 400 });
     }
-    if (!Array.isArray(subjectRequirements) || subjectRequirements.length === 0) {
-      return Response.json({ error: 'subjectRequirements[] required' }, { status: 400 });
-    }
+
 
     const school_id = user.school_id;
 
@@ -282,7 +280,10 @@ Deno.serve(async (req) => {
         dp_groups_count: dpGroupsCount,
         dp_target_periods_per_day: dpTargetPeriodsPerDay,
         expected_lessons_for_dp: dpGroupsCount * dpTargetPeriodsPerDay * dpDaysPerWeek,
-        underfilled: lessons.length < (dpGroupsCount * dpTargetPeriodsPerDay * dpDaysPerWeek)
+        underfilled: lessons.length < (dpGroupsCount * dpTargetPeriodsPerDay * dpDaysPerWeek),
+        expectedLessonsBySubject,
+        lessonsCreatedBySubject,
+        missingCoreSubjects
       },
     });
   } catch (error) {
