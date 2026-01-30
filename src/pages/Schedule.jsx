@@ -1332,6 +1332,29 @@ Now process the user's input and return ONLY the JSON object.`,
     };
   }, [selectedVersion, scheduleSlots, students, teachingGroups, classGroups]);
 
+  // Core recap (TOK/CAS/EE) derived from current slots
+  const coreRecap = React.useMemo(() => {
+    if (!selectedVersion || scheduleSlots.length === 0) return null;
+    const codeById = {};
+    subjects.forEach(s => {
+      const code = String(s.code || s.name || '')
+        .toUpperCase()
+        .replace(/\s+/g, '_')
+        .replace(/[^A-Z0-9_]/g, '');
+      codeById[s.id] = code;
+    });
+    const counts = { TOK: 0, CAS: 0, EE: 0 };
+    let sample = null;
+    scheduleSlots.forEach(slot => {
+      const code = slot.subject_id ? codeById[slot.subject_id] : null;
+      if (code && (code === 'TOK' || code === 'CAS' || code === 'EE')) {
+        counts[code] += 1;
+        if (!sample) sample = slot;
+      }
+    });
+    return { counts, sample };
+  }, [selectedVersion, scheduleSlots, subjects]);
+
   return (
     <div className="space-y-6">
       <PageHeader 
@@ -1575,6 +1598,30 @@ Now process the user's input and return ONLY the JSON object.`,
                     )}
                     {selectedVersion?.id && <ConflictViewer scheduleVersionId={selectedVersion.id} />}
                   </div>
+                )}
+
+                {/* Core recap (from persisted slots) */}
+                {coreRecap && (
+                  <Card className="border-0 shadow-sm bg-gradient-to-br from-indigo-50 to-white">
+                    <CardContent className="p-4">
+                      <div className="flex items-center justify-between">
+                        <div className="text-sm text-slate-700">
+                          <div className="font-semibold text-slate-900 mb-1">DP Core Recap</div>
+                          <div className="flex gap-3">
+                            <span className="text-indigo-700">TOK: <strong>{coreRecap.counts.TOK}</strong></span>
+                            <span className="text-purple-700">CAS: <strong>{coreRecap.counts.CAS}</strong></span>
+                            <span className="text-amber-700">EE: <strong>{coreRecap.counts.EE}</strong></span>
+                          </div>
+                        </div>
+                        {coreRecap.sample && (
+                          <div className="text-xs text-slate-600">
+                            <div className="font-medium text-slate-800">Sample Core Slot</div>
+                            <div>{coreRecap.sample.day} • Period {coreRecap.sample.period}</div>
+                          </div>
+                        )}
+                      </div>
+                    </CardContent>
+                  </Card>
                 )}
 
                 {/* Schedule Views */}
