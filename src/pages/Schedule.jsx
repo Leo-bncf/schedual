@@ -1753,6 +1753,7 @@ Now process the user's input and return ONLY the JSON object.`,
                       <pre className="text-xs bg-slate-900 text-slate-100 p-3 rounded-lg overflow-x-auto max-h-72">{JSON.stringify(orToolResult, null, 2)}</pre>
                     </CardContent>
                   </Card>
+                  </>
                 )}
 
                 {coreRecap && (
