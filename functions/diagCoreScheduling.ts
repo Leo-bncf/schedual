@@ -71,15 +71,18 @@ Deno.serve(async (req) => {
     }
 
     if (!schedule_version_id) {
-      return Response.json({
-        success: true,
-        note: 'No ScheduleVersion found for school',
-        verification
+      // Create a draft schedule version automatically for diagnostics
+      const created = await base44.asServiceRole.entities.ScheduleVersion.create({
+        school_id,
+        name: 'Draft (auto)',
+        status: 'draft',
+        notes: 'Auto-created for diagnostic preview'
       });
+      schedule_version_id = created.id;
     }
 
     // Build scheduling problem
-    const buildRes = await base44.functions.invoke('buildSchedulingProblem', { schedule_version_id });
+    const buildRes = await base44.functions.invoke('buildSchedulingProblem', { schedule_version_id, dp_target_periods_per_day: 9 });
     const problem = buildRes.data.problem;
     const stats = buildRes.data.stats || {};
 
@@ -110,9 +113,52 @@ Deno.serve(async (req) => {
 
     const missingCoreSubjects = stats.missingCoreSubjects || (['TOK','CAS','EE'].filter(k => (lessonsCreatedBySubject[k] || 0) === 0));
 
+    // Compute DP totals and underfilled_days (approximation without solver)
+    const dpTarget = 9; // as requested for diagnostic
+    const dpDaysPerWeek = 5;
+    const teachingGroupsDb = await base44.entities.TeachingGroup.filter({ school_id, is_active: true });
+    const isDPGroup = (tg) => String(tg.year_group || '').toUpperCase().includes('DP') || (subjectById[tg.subject_id]?.ib_level === 'DP');
+    const dpTgIds = new Set(teachingGroupsDb.filter(isDPGroup).map(t => t.id));
+
+    // created lessons for DP (from problem.lessons using TG_ prefix)
+    let createdLessonsForDp = 0;
+    const perGroupWeekly = {};
+    for (const l of (problem?.lessons || [])) {
+      const sg = String(l.studentGroup || '');
+      if (sg.startsWith('TG_')) {
+        const id = sg.slice(3);
+        if (dpTgIds.has(id)) {
+          createdLessonsForDp += 1;
+          perGroupWeekly[id] = (perGroupWeekly[id] || 0) + 1;
+        }
+      }
+    }
+    const targetPerGroupWeekly = dpTarget * dpDaysPerWeek;
+    const underfilledDays = Object.values(perGroupWeekly).reduce((acc, weekly) => {
+      const deficit = Math.max(0, targetPerGroupWeekly - weekly);
+      const days = Math.ceil(deficit / dpTarget);
+      return acc + days;
+    }, 0);
+
+    // Sample core lessons from problem (pre-solver)
+    const coreSamples = { TOK: [], CAS: [], EE: [] };
+    for (const l of (problem?.lessons || [])) {
+      const code = norm(l.subject || '');
+      if (coreSamples[code] && coreSamples[code].length < 5) {
+        coreSamples[code].push({ subject: code, studentGroup: l.studentGroup, teacherId: l.teacherId, roomId: l.roomId });
+      }
+    }
+
+    // Off-by-one check per subject against expected
+    const offByOneIssues = {};
+    for (const [code, exp] of Object.entries(expectedLessonsBySubject)) {
+      const got = lessonsCreatedBySubject[code] || 0;
+      const diff = got - exp;
+      if (diff !== 0) offByOneIssues[code] = { expected: exp, created: got, diff };
+    }
+
     // Optionally run solver and then compute inserted counts per subject
     let insertedCountBySubject = null;
-    let coreSamples = null;
     if (run_solver) {
       await base44.functions.invoke('callORToolScheduler', { schedule_version_id });
       const allSlots = await base44.entities.ScheduleSlot.filter({ school_id, schedule_version: schedule_version_id });
@@ -132,12 +178,20 @@ Deno.serve(async (req) => {
     return Response.json({
       success: true,
       schedule_version_id,
-      verification,
-      expectedLessonsBySubject,
-      lessonsCreatedBySubject,
-      missingCoreSubjects,
-      insertedCountBySubject,
-      coreSamples
+      dp_target_periods_per_day: 9,
+      recap: {
+        expected_lessons_for_dp: stats.expected_lessons_for_dp,
+        created_lessons_for_dp: createdLessonsForDp,
+        missing_core_subjects: missingCoreSubjects,
+        underfilled_days: underfilledDays,
+        core_lessons_sample: coreSamples,
+        off_by_one_issues: offByOneIssues
+      },
+      details: {
+        expectedLessonsBySubject,
+        lessonsCreatedBySubject
+      },
+      insertedCountBySubject
     });
   } catch (error) {
     console.error('diagCoreScheduling error:', error);
