@@ -92,15 +92,7 @@ Deno.serve(async (req) => {
     const numericToRoomId = problem.roomNumericIdToBase44Id || {};
     const numericToTeacherId = problem.teacherNumericIdToBase44Id || {};
 
-    const numericToRoomId = {};
-    problem.rooms.forEach((room, index) => {
-      numericToRoomId[index + 1] = rooms[index]?.id;
-    });
 
-    const numericToTeacherId = {};
-    problem.teachers.forEach((teacher, index) => {
-      numericToTeacherId[index + 1] = teachers[index]?.id;
-    });
 
     // Map timeslot ID → day/period
     const days = ['MONDAY', 'TUESDAY', 'WEDNESDAY', 'THURSDAY', 'FRIDAY'];
@@ -117,7 +109,7 @@ Deno.serve(async (req) => {
     const slots = [];
     
     for (const lesson of solvedLessons) {
-      if (!lesson.timeslotId || !lesson.roomId) continue; // Skip unassigned
+      if (!lesson.timeslotId) continue; // Skip if no timeslot assigned
 
       const timeslot = problem.timeslots.find(ts => ts.id === lesson.timeslotId);
       if (!timeslot) continue;
@@ -128,6 +120,9 @@ Deno.serve(async (req) => {
       const teacherId = lesson.teacherId ? numericToTeacherId[lesson.teacherId] : null;
       const roomId = numericToRoomId[lesson.roomId] || null;
       const tgIdFromGroup = (lesson.studentGroup && lesson.studentGroup.startsWith('TG_')) ? lesson.studentGroup.slice(3) : null;
+      
+      // Allow null room only for STUDY
+      if (!roomId && normalizedSubject !== 'STUDY') continue;
       
       // Calculate period from timeslot ID: ((id - 1) % periods_per_day) + 1
       const period = ((timeslot.id - 1) % periods_per_day) + 1;
@@ -163,7 +158,11 @@ Deno.serve(async (req) => {
     }
 
     // Step 8: Create conflict reports for unassigned lessons
-    const unassignedLessons = solvedLessons.filter(l => !l.timeslotId || !l.roomId);
+    const unassignedLessons = solvedLessons.filter(l => {
+      const subj = String(l.subject || l.subjectCode || '')
+        .toUpperCase().replace(/\s+/g, '_').replace(/[^A-Z0-9_]/g, '');
+      return !l.timeslotId || (!l.roomId && subj !== 'STUDY');
+    });
     if (unassignedLessons.length > 0) {
       for (const lesson of unassignedLessons) {
         await base44.asServiceRole.entities.ConflictReport.create({
