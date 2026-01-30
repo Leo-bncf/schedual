@@ -204,7 +204,7 @@ Deno.serve(async (req) => {
       console.warn('[buildSchedulingProblem] UNMAPPED subjects =', missingSubjects);
     }
 
-    const problem = { timeslots, rooms, teachers, lessons };
+    const problem = { timeslots, rooms, teachers, lessons, subjectIdByCode };
 
     return Response.json({
       success: true,
