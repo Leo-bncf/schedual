@@ -77,6 +77,9 @@ export default function Schedule() {
   const [constraintDialogOpen, setConstraintDialogOpen] = useState(false);
   const [constraintInput, setConstraintInput] = useState('');
   const [isGeneratingConstraint, setIsGeneratingConstraint] = useState(false);
+  const [dpDiagOpen, setDpDiagOpen] = useState(false);
+  const [dpDiagData, setDpDiagData] = useState(null);
+  const [dpDiagLoading, setDpDiagLoading] = useState(false);
   const [constraintType, setConstraintType] = useState('hard');
   const [showUpdateBanner, setShowUpdateBanner] = useState(false);
   const [formData, setFormData] = useState({
@@ -369,6 +372,20 @@ Now process the user's input and return ONLY the JSON object.`,
       toast.error('Failed to save configuration');
     } finally {
       setIsSavingConfig(false);
+    }
+  };
+
+  const handleRunDPDiagnostic = async () => {
+    try {
+      setDpDiagLoading(true);
+      const { data } = await base44.functions.invoke('diagCoreScheduling', { run_solver: false });
+      setDpDiagData(data);
+      setDpDiagOpen(true);
+    } catch (e) {
+      console.error('DP diagnostic failed:', e);
+      toast.error('DP diagnostic failed');
+    } finally {
+      setDpDiagLoading(false);
     }
   };
 
@@ -1313,10 +1330,29 @@ Now process the user's input and return ONLY the JSON object.`,
         title="Master Schedule"
         description={`Generate and manage timetables for ${allowedProgrammes.join(', ')}`}
         actions={
-          <Button onClick={() => setIsDialogOpen(true)} className="bg-slate-900 hover:bg-slate-800 rounded-xl">
-            <Plus className="w-4 h-4 mr-2" />
-            New Version
-          </Button>
+          <div className="flex gap-2">
+            <Button
+              variant="outline"
+              onClick={handleRunDPDiagnostic}
+              disabled={dpDiagLoading}
+            >
+              {dpDiagLoading ? (
+                <>
+                  <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+                  Running DP Diagnostic...
+                </>
+              ) : (
+                <>
+                  <Eye className="w-4 h-4 mr-2" />
+                  Preview DP Diagnostic
+                </>
+              )}
+            </Button>
+            <Button onClick={() => setIsDialogOpen(true)} className="bg-slate-900 hover:bg-slate-800 rounded-xl">
+              <Plus className="w-4 h-4 mr-2" />
+              New Version
+            </Button>
+          </div>
         }
       />
 
@@ -2458,6 +2494,64 @@ Now process the user's input and return ONLY the JSON object.`,
           toast.info('Cancelling schedule generation...');
         }}
       />
+
+      <Dialog open={dpDiagOpen} onOpenChange={setDpDiagOpen}>
+        <DialogContent className="sm:max-w-2xl">
+          <DialogHeader>
+            <DialogTitle>DP Diagnostic (Preview)</DialogTitle>
+            <DialogDescription>DP target: 9 periods/day • No slots persisted</DialogDescription>
+          </DialogHeader>
+          {dpDiagData ? (
+            <div className="space-y-4 text-sm">
+              <div className="grid grid-cols-2 gap-4">
+                <Card className="border-0 bg-slate-50">
+                  <CardContent className="p-4">
+                    <div className="font-semibold text-slate-700 mb-1">Expected vs Created (DP)</div>
+                    <div className="text-slate-900">
+                      {dpDiagData.recap?.expected_lessons_for_dp} expected vs {dpDiagData.recap?.created_lessons_for_dp} created
+                    </div>
+                  </CardContent>
+                </Card>
+                <Card className="border-0 bg-slate-50">
+                  <CardContent className="p-4">
+                    <div className="font-semibold text-slate-700 mb-1">Underfilled Days</div>
+                    <div className="text-slate-900">{dpDiagData.recap?.underfilled_days}</div>
+                  </CardContent>
+                </Card>
+              </div>
+              <div>
+                <div className="font-semibold text-slate-700 mb-1">Missing Core Subjects</div>
+                <div className="text-slate-900">
+                  {(dpDiagData.recap?.missing_core_subjects || []).length === 0 ? 'None' : (dpDiagData.recap?.missing_core_subjects || []).join(', ')}
+                </div>
+              </div>
+              <div className="grid md:grid-cols-3 gap-4">
+                {['TOK','CAS','EE'].map(key => (
+                  <Card key={key} className="border-0 bg-slate-50">
+                    <CardContent className="p-4">
+                      <div className="font-semibold text-slate-700 mb-1">{key} Samples</div>
+                      <pre className="text-xs text-slate-700 whitespace-pre-wrap">{JSON.stringify((dpDiagData.recap?.core_lessons_sample?.[key] || []).slice(0,3), null, 2)}</pre>
+                    </CardContent>
+                  </Card>
+                ))}
+              </div>
+              <div>
+                <div className="font-semibold text-slate-700 mb-1">Off-by-one Check</div>
+                <div className="text-slate-900">
+                  {dpDiagData.recap?.off_by_one_issues && Object.keys(dpDiagData.recap.off_by_one_issues).length > 0
+                    ? JSON.stringify(dpDiagData.recap.off_by_one_issues)
+                    : 'OK — no +1/-1 discrepancies per subject'}
+                </div>
+              </div>
+            </div>
+          ) : (
+            <div className="text-slate-500">No data</div>
+          )}
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setDpDiagOpen(false)}>Close</Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
 
       {/* Add Constraint Dialog with AI */}
       <Dialog open={constraintDialogOpen} onOpenChange={setConstraintDialogOpen}>
