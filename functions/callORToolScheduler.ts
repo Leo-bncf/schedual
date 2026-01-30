@@ -116,16 +116,17 @@ Deno.serve(async (req) => {
     const periods_per_day = problem.timeslots.length / 5; // 50 slots / 5 days = 10 periods
     const slots = [];
     
-    for (const lesson of solution.lessons || []) {
+    for (const lesson of solvedLessons) {
       if (!lesson.timeslotId || !lesson.roomId) continue; // Skip unassigned
 
       const timeslot = problem.timeslots.find(ts => ts.id === lesson.timeslotId);
       if (!timeslot) continue;
 
-      const normalizedSubject = lesson.subject.toUpperCase().replace(/\s+/g, '_').replace(/[^A-Z0-9_]/g, '');
-      const subjectId = capabilityToSubjectId[normalizedSubject];
+      const normalizedSubject = String(lesson.subject || lesson.subjectCode || '')
+        .toUpperCase().replace(/\s+/g, '_').replace(/[^A-Z0-9_]/g, '');
+      const subjectId = subjectIdByCode[normalizedSubject] || null;
       const teacherId = lesson.teacherId ? numericToTeacherId[lesson.teacherId] : null;
-      const roomId = numericToRoomId[lesson.roomId];
+      const roomId = numericToRoomId[lesson.roomId] || null;
       
       // Calculate period from timeslot ID: ((id - 1) % periods_per_day) + 1
       const period = ((timeslot.id - 1) % periods_per_day) + 1;
@@ -160,7 +161,7 @@ Deno.serve(async (req) => {
     }
 
     // Step 8: Create conflict reports for unassigned lessons
-    const unassignedLessons = (solution.lessons || []).filter(l => !l.timeslotId || !l.roomId);
+    const unassignedLessons = solvedLessons.filter(l => !l.timeslotId || !l.roomId);
     if (unassignedLessons.length > 0) {
       for (const lesson of unassignedLessons) {
         await base44.asServiceRole.entities.ConflictReport.create({
