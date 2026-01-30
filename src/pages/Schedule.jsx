@@ -1646,7 +1646,7 @@ Now process the user's input and return ONLY the JSON object.`,
                 )}
                 {orToolResult && (
                   <Card className="border-0 shadow-sm bg-gradient-to-br from-slate-50 to-white">
-                    <CardContent className="p-4 space-y-2">
+                    <CardContent className="p-4 space-y-3">
                       <div className="flex items-center justify-between">
                         <div className="text-sm text-slate-700">
                           <div className="font-semibold text-slate-900 mb-1">OR-Tool Response</div>
@@ -1663,6 +1663,75 @@ Now process the user's input and return ONLY the JSON object.`,
                           </div>
                         )}
                       </div>
+
+                      {/* Requested recap fields */}
+                      {(() => {
+                        const exp = orToolResult?.expectedLessonsBySubject || {};
+                        const asg = orToolResult?.assignmentsBySubjectCode || {};
+                        const unasg = orToolResult?.unassignedBySubjectCode || {};
+                        const core = orToolResult?.coreAssignments || {};
+                        const meta = orToolResult?.buildMeta || {};
+                        const maxP = orToolResult?.maxPeriodUsedByDay || {};
+                        const slotsToInsert = orToolResult?.slotsToInsertBySubjectId || {};
+                        const coreIns = orToolResult?.coreSlotsInsertedCount || {};
+                        const sampleLine = (arr) => {
+                          const s = Array.isArray(arr) && arr[0];
+                          return s && (s.day && s.period) ? `${s.day} • P${s.period}` : '—';
+                        };
+                        return (
+                          <div className="space-y-3 text-xs text-slate-700">
+                            <div className="grid md:grid-cols-3 gap-3">
+                              <div className="p-3 rounded-lg bg-slate-100">
+                                <div className="font-semibold text-slate-900 mb-1">Expected Core (per week)</div>
+                                <div className="flex gap-4">
+                                  <span>TOK: <strong>{exp.TOK ?? 0}</strong></span>
+                                  <span>CAS: <strong>{exp.CAS ?? 0}</strong></span>
+                                  <span>EE: <strong>{exp.EE ?? 0}</strong></span>
+                                </div>
+                              </div>
+                              <div className="p-3 rounded-lg bg-slate-100">
+                                <div className="font-semibold text-slate-900 mb-1">Assigned vs Unassigned (Core)</div>
+                                <div className="grid grid-cols-3 gap-2">
+                                  {['TOK','CAS','EE'].map(k => (
+                                    <div key={k}>
+                                      <div className="text-[11px] text-slate-500">{k}</div>
+                                      <div>✓ {asg[k] || 0} • ✗ {unasg[k] || 0}</div>
+                                    </div>
+                                  ))}
+                                </div>
+                              </div>
+                              <div className="p-3 rounded-lg bg-slate-100">
+                                <div className="font-semibold text-slate-900 mb-1">Schedule Span</div>
+                                <div className="space-y-1">
+                                  <div>maxPeriodUsedByDay: <code>{JSON.stringify(maxP)}</code></div>
+                                  <div>timeslotsCount: <strong>{meta?.timeslotsCount ?? '—'}</strong></div>
+                                  <div>dpTargetPeriodsPerDay: <strong>{meta?.dpTargetPeriodsPerDay ?? '—'}</strong></div>
+                                </div>
+                              </div>
+                            </div>
+
+                            <div className="grid md:grid-cols-3 gap-3">
+                              <div className="p-3 rounded-lg bg-slate-100">
+                                <div className="font-semibold text-slate-900 mb-1">Core Assignments Samples</div>
+                                <div className="space-y-1">
+                                  <div>TOK: {sampleLine(core?.TOK)}</div>
+                                  <div>CAS: {sampleLine(core?.CAS)}</div>
+                                  <div>EE: {sampleLine(core?.EE)}</div>
+                                </div>
+                              </div>
+                              <div className="p-3 rounded-lg bg-slate-100">
+                                <div className="font-semibold text-slate-900 mb-1">coreSlotsInsertedCount</div>
+                                <pre className="bg-white rounded p-2 overflow-x-auto">{JSON.stringify(coreIns, null, 2)}</pre>
+                              </div>
+                              <div className="p-3 rounded-lg bg-slate-100">
+                                <div className="font-semibold text-slate-900 mb-1">slotsToInsertBySubjectId</div>
+                                <pre className="bg-white rounded p-2 overflow-x-auto max-h-32">{JSON.stringify(slotsToInsert, null, 2)}</pre>
+                              </div>
+                            </div>
+                          </div>
+                        );
+                      })()}
+
                       <pre className="text-xs bg-slate-900 text-slate-100 p-3 rounded-lg overflow-x-auto max-h-72">{JSON.stringify(orToolResult, null, 2)}</pre>
                     </CardContent>
                   </Card>
