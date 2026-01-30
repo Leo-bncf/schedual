@@ -1381,7 +1381,7 @@ Now process the user's input and return ONLY the JSON object.`,
 
       {selectedVersion && offByOneConflicts.length > 0 && (
         <OffByOneBanner conflicts={offByOneConflicts} />
-      )
+      )}
 
       {/* Quick Stats Bar */}
       {selectedVersion && scheduleSlots.length > 0 && (
