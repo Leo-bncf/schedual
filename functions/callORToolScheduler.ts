@@ -37,12 +37,12 @@ Deno.serve(async (req) => {
     const problem = buildResponse.data.problem;
 
     // Step 2: Call OR-Tool service
-    const OR_TOOL_ENDPOINT = Deno.env.get('OR_TOOL_ENDPOINT');
+    const OR_TOOL_ENDPOINT = Deno.env.get('OR_TOOL_ENDPOINT') || Deno.env.get('OR_TOOL_API_URL');
     const OR_TOOL_API_KEY = Deno.env.get('OR_TOOL_API_KEY');
 
     if (!OR_TOOL_ENDPOINT || !OR_TOOL_API_KEY) {
       return Response.json({ 
-        error: 'OR-Tool service not configured. Set OR_TOOL_ENDPOINT and OR_TOOL_API_KEY.'
+        error: 'OR-Tool service not configured. Set OR_TOOL_ENDPOINT/OR_TOOL_API_URL and OR_TOOL_API_KEY.'
       }, { status: 503 });
     }
 
