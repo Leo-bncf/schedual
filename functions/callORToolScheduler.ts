@@ -15,9 +15,6 @@ Deno.serve(async (req) => {
     if (!user) {
       return Response.json({ error: 'Unauthorized', code: 'NO_USER' }, { status: 401 });
     }
-    if (user.role !== 'admin') {
-      return Response.json({ error: 'Forbidden: role must be admin', code: 'ROLE_NOT_ADMIN', user_role: user.role }, { status: 403 });
-    }
     if (!user.school_id) {
       return Response.json({ error: 'Forbidden: user missing school_id', code: 'NO_SCHOOL_ON_USER' }, { status: 403 });
     }
@@ -131,10 +128,10 @@ Deno.serve(async (req) => {
 
     // Step 4: Get Base44 entities to reverse-map IDs
     const [subjects, teachingGroups, rooms, teachers] = await Promise.all([
-      base44.entities.Subject.filter({ school_id: user.school_id }),
-      base44.entities.TeachingGroup.filter({ school_id: user.school_id }),
-      base44.entities.Room.filter({ school_id: user.school_id }),
-      base44.entities.Teacher.filter({ school_id: user.school_id })
+      base44.entities.Subject.filter({ school_id: schoolId }),
+      base44.entities.TeachingGroup.filter({ school_id: schoolId }),
+      base44.entities.Room.filter({ school_id: schoolId }),
+      base44.entities.Teacher.filter({ school_id: schoolId })
     ]);
 
     // Use mappings provided by the problem payload (no DB index ordering)
@@ -228,7 +225,7 @@ Deno.serve(async (req) => {
       const period = ((timeslot.id - 1) % periods_per_day) + 1;
 
       slots.push({
-        school_id: user.school_id,
+        school_id: schoolId,
         schedule_version: schedule_version_id,
         teaching_group_id: tgIdFromGroup || null,
         subject_id: subjectId || null,
