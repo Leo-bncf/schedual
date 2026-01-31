@@ -396,7 +396,7 @@ Deno.serve(async (req) => {
         await base44.entities.ConflictReport.create({
           school_id: user.school_id,
           schedule_version_id,
-          conflict_type: 'unassigned_teaching_unit',
+          conflict_type: 'insufficient_hours',
           severity: 'critical',
           description: `Lesson "${lesson.subject} - ${lesson.studentGroup}" could not be scheduled. No valid time slots found.`,
           affected_entities: {

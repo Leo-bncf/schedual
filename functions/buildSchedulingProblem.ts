@@ -123,7 +123,7 @@ Deno.serve(async (req) => {
       const [h,m] = String(hhmm).split(':').map(Number);
       return (h||0) * 60 + (m||0);
     };
-    const overlapsBreak = (start: number, end: number) => {
+    const overlapsBreak = (start, end) => {
       for (const b of breaks) {
         if (!b?.start || !b?.end) continue;
         const bs = timeToMin(b.start), be = timeToMin(b.end);
@@ -161,12 +161,12 @@ Deno.serve(async (req) => {
     teachersDb.forEach((t, idx) => { teacherNumericIdToExternalRef[idx+1] = t.external_id || t.externalId || t.employee_id || t.id; });
 
     // Compute lessons from minutes/week
-    const lessons: any[] = [];
+    const lessons = [];
     let lessonId = 1;
     const perSubjectCount = {};
     const expectedLessonsBySubject = {};
 
-    const minutesForTG = (tg: any) => {
+    const minutesForTG = (tg) => {
       if (typeof tg.minutes_per_week === 'number' && tg.minutes_per_week > 0) return tg.minutes_per_week;
       if (typeof tg.hours_per_week === 'number' && tg.hours_per_week > 0) return Math.round(tg.hours_per_week * 60);
       const subj = subjectById[tg.subject_id];
