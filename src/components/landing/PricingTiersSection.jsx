@@ -11,7 +11,6 @@ const TIERS = {
     price: 1100,
     description: 'PYP-only or MYP-only schools up to 300 students',
     students: '≤300',
-    icon: '🌱',
     features: [
       'Full timetable generation',
       'Teacher & room constraints',
