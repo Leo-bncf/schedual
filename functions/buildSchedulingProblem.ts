@@ -165,6 +165,27 @@ Deno.serve(async (req) => {
     let lessonId = 1;
     const perSubjectCount = {};
     const expectedLessonsBySubject = {};
+    const expectedMinutesBySubject = {};
+    const teachingGroupsFilteredOut = [];
+    let teachingGroupsIncludedCount = 0;
+
+    const teachingGroupFilteredPush = (tg, reason) => {
+      const subjCode = subjectIdToCode[tg.subject_id] || null;
+      const has_students = Array.isArray(tg.student_ids) && tg.student_ids.length > 0;
+      teachingGroupsFilteredOut.push({
+        tg_id: tg.id,
+        name: tg.name || null,
+        subject_code: subjCode,
+        minutes_per_week: typeof tg.minutes_per_week === 'number' ? tg.minutes_per_week : null,
+        ib_level: subjectById[tg.subject_id]?.ib_level || null,
+        year_group: tg.year_group || null,
+        is_active: !!tg.is_active,
+        has_students,
+        teacher_id: tg.teacher_id || null,
+        room_id: tg.preferred_room_id || null,
+        reason
+      });
+    };
 
     const minutesForTG = (tg) => {
       if (typeof tg.minutes_per_week === 'number' && tg.minutes_per_week > 0) return tg.minutes_per_week;
@@ -187,18 +208,34 @@ Deno.serve(async (req) => {
     const studentGroupSoftPreferences = {};
 
     for (const tg of teachingGroupsDb) {
-      if (!tg?.is_active) continue;
+      if (!tg?.is_active) {
+        teachingGroupFilteredPush(tg, 'INACTIVE');
+        continue;
+      }
       const subjCode = subjectIdToCode[tg.subject_id];
-      if (!subjCode) continue;
+      if (!subjCode) {
+        teachingGroupFilteredPush(tg, 'MISSING_SUBJECT');
+        continue;
+      }
+
+      const minutesUsed = minutesForTG(tg);
+      const weeklyCount = minutesToPeriods(minutesUsed);
+      const minutesOrig = typeof tg.minutes_per_week === 'number' ? tg.minutes_per_week : null;
+      if (!weeklyCount || weeklyCount <= 0) {
+        teachingGroupFilteredPush(tg, minutesOrig === 0 ? 'ZERO_MINUTES' : 'MISSING_MINUTES');
+        continue;
+      }
+
+      teachingGroupsIncludedCount++;
+
       const studentGroup = `TG_${tg.id}`;
       const cap = 20;
-      const minutes = minutesForTG(tg);
-      const weeklyCount = minutesToPeriods(minutes);
       const teacherNumeric = tg.teacher_id ? (teachersDb.findIndex(t => t.id === tg.teacher_id) + 1 || null) : null;
       const roomNumeric = tg.preferred_room_id ? (roomsDb.findIndex(r => r.id === tg.preferred_room_id) + 1 || null) : null;
 
       // Expected + created counters
       expectedLessonsBySubject[subjCode] = (expectedLessonsBySubject[subjCode] || 0) + weeklyCount;
+      expectedMinutesBySubject[subjCode] = (expectedMinutesBySubject[subjCode] || 0) + minutesUsed;
 
       for (let i = 0; i < weeklyCount; i++) {
         lessons.push({
@@ -280,6 +317,24 @@ Deno.serve(async (req) => {
       success: true,
       problem,
       subjectIdByCode,
+      // Debug summary
+      schoolIdUsed: school_id,
+      scheduleVersionIdUsed: schedule_version_id,
+      periodDurationMinutes,
+      dayStartTime,
+      dayEndTime,
+      daysOfWeek,
+      breaks,
+      timeslotsCount: timeslots.length,
+      periodsPerDay,
+      subjectsIncludedCodes: Object.keys(expectedLessonsBySubject || {}),
+      teachingGroupsIncludedCount,
+      teachingGroupsFilteredOutCount: teachingGroupsFilteredOut.length,
+      teachingGroupsFilteredOut: teachingGroupsFilteredOut.slice(0, 200),
+      expectedMinutesBySubject,
+      expectedLessonsBySubject,
+      totalRequiredMinutes: (Object.values(expectedMinutesBySubject || {}).reduce((a,b)=>a+b,0)),
+      totalRequiredPeriods: (Object.values(expectedLessonsBySubject || {}).reduce((a,b)=>a+b,0)),
       meta: {
         schoolIdInput: requestedSchoolId,
         schoolIdUsed: school_id,
@@ -296,6 +351,9 @@ Deno.serve(async (req) => {
         perSubjectCount,
         periods_per_day: periodsPerDay,
         expectedLessonsBySubject,
+        expectedMinutesBySubject,
+        totalRequiredMinutes: (Object.values(expectedMinutesBySubject || {}).reduce((a,b)=>a+b,0)),
+        totalRequiredPeriods: (Object.values(expectedLessonsBySubject || {}).reduce((a,b)=>a+b,0)),
         lessonsCreatedBySubject
       }
     });

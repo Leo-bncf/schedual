@@ -338,6 +338,7 @@ Deno.serve(async (req) => {
     const sampleTok = slots.find(s => s.subject_id && codeBySubjectId[s.subject_id] === 'TOK') || null;
     const sampleCas = slots.find(s => s.subject_id && codeBySubjectId[s.subject_id] === 'CAS') || null;
     const sampleEe  = slots.find(s => s.subject_id && codeBySubjectId[s.subject_id] === 'EE')  || null;
+    const sampleTest  = slots.find(s => s.subject_id && codeBySubjectId[s.subject_id] === 'TEST')  || null;
     console.log('[callORToolScheduler] sampleSlot.TOK =', sampleTok);
     console.log('[callORToolScheduler] sampleSlot.CAS =', sampleCas);
     console.log('[callORToolScheduler] sampleSlot.EE  =', sampleEe);
@@ -477,11 +478,25 @@ Deno.serve(async (req) => {
     };
     console.log('[callORToolScheduler] buildMeta =', buildMeta);
 
+    const totalExpectedLessons = Object.values(expectedLessonsBySubject || {}).reduce((a,b)=>a+(b||0),0);
+    const totalAssignedLessons = Object.values(assignedBySubjectCode || {}).reduce((a,b)=>a+(b||0),0);
+    const totalUnassignedLessons = Object.values(unassignedBySubjectCode || {}).reduce((a,b)=>a+(b||0),0);
+    const totalTimeslots = problem.timeslots.length;
+    const periodsPerDayOut = periodsPerDayComputed;
+    let underfillReason = earlyStopCause;
+    if (totalExpectedLessons < totalTimeslots) {
+      underfillReason = 'BUILDER_NOT_ENOUGH_LESSONS';
+    } else if (totalUnassignedLessons > 0) {
+      underfillReason = 'SOLVER_UNASSIGNED_LESSONS';
+    }
+    const isUnderfilled = totalAssignedLessons < totalTimeslots;
+
     return Response.json({
       success: true,
       school_id: user.school_id,
       schedule_version_id,
       expectedLessonsBySubject,
+      assignedBySubjectCode,
       assignmentsBySubjectCode: assignedBySubjectCode,
       unassignedBySubjectCode,
       coreAssignments,
@@ -493,10 +508,14 @@ Deno.serve(async (req) => {
       expectedMinutesBySubject,
       assignedLessonsBySubject: assignedBySubjectCode,
       unassignedLessonsBySubject: unassignedBySubjectCode,
-      sampleCoreSlots: { TOK: sampleTok, CAS: sampleCas, EE: sampleEe },
+      sampleCoreSlots: { TOK: sampleTok, CAS: sampleCas, EE: sampleEe, TEST: sampleTest },
       underfill: {
-        underfilled,
-        reason: earlyStopCause,
+        underfilled: isUnderfilled,
+        totalExpectedLessons,
+        totalAssignedLessons,
+        totalTimeslots,
+        periodsPerDay: periodsPerDayOut,
+        reason: underfillReason,
         study: {
           assigned_in_solver: assignedBySubjectCode['STUDY'] || 0,
           total_from_solver: assignmentsReturnedBySubject['STUDY'] || 0,
