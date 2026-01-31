@@ -2,7 +2,7 @@ import React, { useState } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
-import { CheckCircle2, Zap, Users, Building2, Plug, SlidersHorizontal, LifeBuoy, Sparkles } from 'lucide-react';
+import { CheckCircle2, Zap, Users, Building2, Plug, SlidersHorizontal, LifeBuoy, Sparkles, ChevronDown } from 'lucide-react';
 
 const TIERS = {
   tier1: {
@@ -110,7 +110,8 @@ const CATEGORY_ICONS = {
 };
 
 export default function PricingTiersSection() {
-  const [showAddOns, setShowAddOns] = useState(false);
+  const [openCategories, setOpenCategories] = useState({});
+  const toggleCategory = (cat) => setOpenCategories((prev) => ({ ...prev, [cat]: !prev[cat] }));
 
   return (
     <section id="pricing" className="py-20 bg-white">
@@ -193,61 +194,67 @@ export default function PricingTiersSection() {
         <div id="addons" className="relative pt-24">
           <div className="text-center mb-8">
             <h3 className="text-3xl font-bold text-slate-900">Customize Your Plan</h3>
-            <p className="text-slate-600 mt-2">Add optional features to enhance your tier</p>
-            <div className="mt-6">
-              <button
-                onClick={() => setShowAddOns(!showAddOns)}
-                className="inline-flex items-center gap-2 px-6 py-3 rounded-xl bg-blue-900 text-white hover:bg-blue-800 transition-colors font-semibold shadow-sm"
-              >
-                <Sparkles className="w-5 h-5" />
-                {showAddOns ? 'Hide Add-ons' : 'View Add-ons'}
-              </button>
-            </div>
+            <p className="text-slate-600 mt-2">Tap a category to explore optional add-ons</p>
           </div>
 
-          <AnimatePresence>
-            {showAddOns && (
-              <motion.div
-                key="addons-panel"
-                initial={{ opacity: 0, y: 16, scale: 0.98 }}
-                animate={{ opacity: 1, y: 0, scale: 1 }}
-                exit={{ opacity: 0, y: 8, scale: 0.98 }}
-                transition={{ type: 'spring', stiffness: 260, damping: 24 }}
-                className="rounded-3xl border border-slate-200/80 bg-gradient-to-b from-white to-indigo-50/40 p-6 sm:p-10 shadow-sm"
-              >
-                <div className="grid gap-6 sm:grid-cols-2 lg:grid-cols-3">
-                  {ADD_ONS.map((category, idx) => {
-                    const Icon = CATEGORY_ICONS[category.category] || Zap;
-                    return (
-                      <motion.div
-                        key={category.category}
-                        layout
-                        initial={{ opacity: 0, y: 12 }}
-                        whileInView={{ opacity: 1, y: 0 }}
-                        viewport={{ once: true, amount: 0.2 }}
-                        transition={{ duration: 0.35, delay: idx * 0.05 }}
-                        whileHover={{ y: -6, boxShadow: '0 10px 20px -10px rgba(2,6,23,0.25)' }}
-                        className="rounded-2xl bg-white/70 backdrop-blur-sm border border-slate-200 p-5 sm:p-6 transition-all"
-                      >
-                        <div className="flex items-center justify-between mb-4">
-                          <div className="flex items-center gap-3">
-                            <div className="h-9 w-9 rounded-xl bg-blue-100 text-blue-900 flex items-center justify-center">
-                              <Icon className="w-5 h-5" />
-                            </div>
-                            <h4 className="text-lg font-semibold text-slate-900">{category.category}</h4>
-                          </div>
+          <div className="grid gap-6 sm:grid-cols-2 lg:grid-cols-3">
+            {ADD_ONS.map((category, idx) => {
+              const Icon = CATEGORY_ICONS[category.category] || Zap;
+              const open = !!openCategories[category.category];
+              return (
+                <motion.div
+                  key={category.category}
+                  layout
+                  initial={{ opacity: 0, y: 12 }}
+                  whileInView={{ opacity: 1, y: 0 }}
+                  viewport={{ once: true, amount: 0.2 }}
+                  transition={{ duration: 0.35, delay: idx * 0.05 }}
+                  className={`rounded-2xl border ${open ? 'border-blue-300 shadow-md' : 'border-slate-200'} bg-white/80 backdrop-blur-sm p-5 sm:p-6`}
+                >
+                  <button
+                    type="button"
+                    onClick={() => toggleCategory(category.category)}
+                    className="w-full"
+                    role="button"
+                    aria-expanded={open}
+                  >
+                    <div className="flex items-center justify-between">
+                      <div className="flex items-center gap-3 text-left">
+                        <div className="h-9 w-9 rounded-xl bg-blue-100 text-blue-900 flex items-center justify-center">
+                          <Icon className="w-5 h-5" />
                         </div>
+                        <div>
+                          <h4 className="text-lg font-semibold text-slate-900">{category.category}</h4>
+                          <p className="text-slate-500 text-sm">{category.items.length} options</p>
+                        </div>
+                      </div>
+                      <motion.div animate={{ rotate: open ? 180 : 0 }} transition={{ duration: 0.2 }}>
+                        <ChevronDown className="w-5 h-5 text-slate-500" />
+                      </motion.div>
+                    </div>
+                  </button>
+
+                  <AnimatePresence initial={false}>
+                    {open && (
+                      <motion.div
+                        key="content"
+                        initial={{ opacity: 0, height: 0 }}
+                        animate={{ opacity: 1, height: 'auto' }}
+                        exit={{ opacity: 0, height: 0 }}
+                        transition={{ duration: 0.25 }}
+                        className="mt-4 pt-4 border-t border-slate-200"
+                      >
                         <div className="grid gap-4">
                           {category.items.map((addon, j) => (
                             <motion.div
                               key={addon.id}
                               layout
-                              initial={{ opacity: 0, y: 8 }}
+                              initial={{ opacity: 0, y: 6 }}
                               whileInView={{ opacity: 1, y: 0 }}
                               viewport={{ once: true, amount: 0.3 }}
-                              transition={{ duration: 0.3, delay: j * 0.03 }}
-                              whileHover={{ scale: 1.02 }}
-                              className="group rounded-xl border border-slate-200 bg-white hover:border-blue-300 hover:shadow transition-all p-4"
+                              transition={{ duration: 0.25, delay: j * 0.03 }}
+                              whileHover={{ scale: 1.01 }}
+                              className="group rounded-xl border border-slate-200 bg-white hover:border-blue-300 hover:shadow-sm transition-all p-4"
                             >
                               <div className="flex items-start justify-between gap-3">
                                 <h5 className="font-medium text-slate-900 text-sm leading-5">{addon.name}</h5>
@@ -265,12 +272,12 @@ export default function PricingTiersSection() {
                           ))}
                         </div>
                       </motion.div>
-                    );
-                  })}
-                </div>
-              </motion.div>
-            )}
-          </AnimatePresence>
+                    )}
+                  </AnimatePresence>
+                </motion.div>
+              );
+            })}
+          </div>
         </div>
 
         {/* CTA */}
