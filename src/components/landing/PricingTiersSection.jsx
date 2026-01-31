@@ -109,6 +109,8 @@ const CATEGORY_ICONS = {
   'Support & Services': LifeBuoy,
 };
 
+import PricingCoverflow from './PricingCoverflow';
+
 export default function PricingTiersSection() {
   const [openCategories, setOpenCategories] = useState({});
   const toggleCategory = (cat) => setOpenCategories((prev) => ({ ...prev, [cat]: !prev[cat] }));
