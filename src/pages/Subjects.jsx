@@ -453,10 +453,10 @@ ${trainingFeedback ? `LESSONS FROM ADMIN FEEDBACK:\n${trainingFeedback}\n\n` : '
       {/* DP Core Subjects Section */}
       {allowedProgrammes.includes('DP') && (
         <Card className="border-0 shadow-sm">
-          <CardHeader className="bg-gradient-to-r from-purple-50 to-indigo-50">
+          <CardHeader className="bg-gradient-to-r from-blue-50 to-indigo-50">
             <div className="flex items-center gap-3">
-              <div className="p-2 rounded-lg bg-purple-100">
-                <Sparkles className="w-5 h-5 text-purple-700" />
+              <div className="p-2 rounded-lg bg-blue-100">
+                <Sparkles className="w-5 h-5 text-blue-700" />
               </div>
               <div>
                 <h3 className="text-lg font-semibold text-slate-900">DP Core Components</h3>
@@ -472,22 +472,22 @@ ${trainingFeedback ? `LESSONS FROM ADMIN FEEDBACK:\n${trainingFeedback}\n\n` : '
                 const existingCore = subjects.find(s => s.code === coreType && s.is_core);
                 
                 return (
-                  <div key={coreType} className="flex items-center justify-between p-4 rounded-lg border-2 bg-gradient-to-r from-purple-50 to-indigo-50 border-purple-200">
+                  <div key={coreType} className="flex items-center justify-between p-4 rounded-lg border-2 bg-gradient-to-r from-blue-50 to-indigo-50 border-blue-200">
                     <div className="flex-1">
                       <div className="flex items-center gap-3">
-                        <div className="w-10 h-10 rounded-full bg-purple-200 flex items-center justify-center">
+                        <div className="w-10 h-10 rounded-full bg-blue-200 flex items-center justify-center">
                           <span className="font-bold text-purple-900 text-sm">{coreType}</span>
                         </div>
                         <div>
-                          <h4 className="font-semibold text-purple-900">
+                          <h4 className="font-semibold text-blue-900">
                             {coreType === 'TOK' ? 'Theory of Knowledge' : coreType === 'CAS' ? 'Creativity, Activity, Service' : 'Extended Essay'}
                           </h4>
                           {existingCore ? (
-                            <p className="text-sm text-purple-700">
+                            <p className="text-sm text-blue-700">
                               {existingCore.pyp_myp_hours_per_week || 2} hours/week
                             </p>
                           ) : (
-                            <p className="text-sm text-purple-600">Not configured yet</p>
+                            <p className="text-sm text-blue-600">Not configured yet</p>
                           )}
                         </div>
                       </div>
@@ -512,7 +512,7 @@ ${trainingFeedback ? `LESSONS FROM ADMIN FEEDBACK:\n${trainingFeedback}\n\n` : '
                         }
                       }}
                       variant={existingCore ? "outline" : "default"}
-                      className={existingCore ? "" : "bg-purple-600 hover:bg-purple-700"}
+                      className={existingCore ? "" : "bg-blue-600 hover:bg-blue-700"}
                     >
                       {existingCore ? 'Edit' : 'Add'}
                     </Button>
@@ -647,7 +647,7 @@ ${trainingFeedback ? `LESSONS FROM ADMIN FEEDBACK:\n${trainingFeedback}\n\n` : '
                           )}
 
                           {/* Core Components (DP only) */}
-          {allowedProgrammes.includes('DP') && coreSubjects.length > 0 && (
+          {false && (
             <div>
               <h3 className="text-lg font-bold text-slate-700 mb-4 flex items-center gap-2">
                 <div className="h-1 w-12 bg-gradient-to-r from-slate-700 to-slate-900 rounded-full" />
