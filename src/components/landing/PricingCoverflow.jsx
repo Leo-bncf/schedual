@@ -39,8 +39,7 @@ function SlideCard({ tierId, tier, isActive, offset, onClick }) {
         }`}
         style={{
           transformStyle: 'preserve-3d',
-          transform: `translateX(${translateX}px) rotateY(${rotateY}deg)`,
-          scale,
+          transform: `translateX(${translateX}px) rotateY(${rotateY}deg) scale(${scale})`,
           filter: `blur(${blur}px)`,
           opacity,
         }}
