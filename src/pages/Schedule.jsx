@@ -1812,6 +1812,42 @@ Now process the user's input and return ONLY the JSON object.`,
                         );
                       })()}
 
+                      {(() => {
+                        const period = school?.period_duration_minutes || schoolConfig.period_duration_minutes || 60;
+                        const items = teachingGroups
+                          .filter(tg => {
+                            const subj = subjects.find(s => s.id === tg.subject_id);
+                            return subj?.ib_level === 'DP';
+                          })
+                          .slice(0, 8)
+                          .map(tg => {
+                            const subj = subjects.find(s => s.id === tg.subject_id);
+                            const title = (subj?.name || subj?.code || 'Subject') + (tg.level ? ` ${String(tg.level).toUpperCase()}` : '');
+                            const minutes = (typeof tg.minutes_per_week === 'number' && tg.minutes_per_week > 0)
+                              ? tg.minutes_per_week
+                              : (String(tg.level||'').toUpperCase()==='HL'
+                                  ? (subj?.hl_minutes_per_week_default || 300)
+                                  : (subj?.sl_minutes_per_week_default || 180));
+                            const periods = Math.ceil(minutes / period);
+                            const total = periods * period;
+                            const over = total - minutes;
+                            const exact = over === 0;
+                            const text = exact
+                              ? `${title} = ${minutes} min/week with ${period}-min periods → ${periods} periods (exact)`
+                              : `${title} = ${minutes} min/week with ${period}-min periods → ${periods} periods (${total} min) (+${over} min rounding)`;
+                            return { text };
+                          });
+                        if (items.length === 0) return null;
+                        return (
+                          <div className="p-3 rounded-lg bg-amber-50 border border-amber-200 text-amber-900">
+                            <div className="font-semibold mb-1">Minutes → Periods Audit (DP)</div>
+                            <ul className="list-disc pl-5 space-y-1 text-xs">
+                              {items.map((it, i) => (<li key={i}>{it.text}</li>))}
+                            </ul>
+                          </div>
+                        );
+                      })()}
+
                       <pre className="text-xs bg-slate-900 text-slate-100 p-3 rounded-lg overflow-x-auto max-h-72">{JSON.stringify(orToolResult, null, 2)}</pre>
                     </CardContent>
                   </Card>
@@ -2112,6 +2148,24 @@ Now process the user's input and return ONLY the JSON object.`,
                               </SelectContent>
                             </Select>
                             <p className="text-xs text-slate-500">Teaching days per week</p>
+                          </div>
+
+                          {/* Period Duration */}
+                          <div className="space-y-3">
+                            <Label htmlFor="periodDuration" className="flex items-center gap-2 text-sm font-bold text-slate-900">
+                              <Clock className="w-4 h-4 text-indigo-600" />
+                              Period Duration (minutes)
+                            </Label>
+                            <Input
+                              id="periodDuration"
+                              type="number"
+                              min="30"
+                              step="5"
+                              value={schoolConfig.period_duration_minutes}
+                              onChange={(e) => setSchoolConfig({...schoolConfig, period_duration_minutes: parseInt(e.target.value || '0')})}
+                              className="h-14 text-xl font-bold text-center border-2 border-slate-300 focus:border-indigo-500"
+                            />
+                            <p className="text-xs text-slate-500">Typical values: 45 or 60</p>
                           </div>
 
                           {/* Start Time */}
