@@ -1749,9 +1749,10 @@ Now process the user's input and return ONLY the JSON object.`,
                               <div className="p-3 rounded-lg bg-slate-100">
                                 <div className="font-semibold text-slate-900 mb-1">slotsToInsertBySubjectId</div>
                                 <pre className="bg-white rounded p-2 overflow-x-auto max-h-32">{JSON.stringify(slotsToInsert, null, 2)}</pre>
-                              </div>
+                                </div>
+                                </div>
 
-                              {/* All-subjects comparison */}
+                                {/* All-subjects comparison */}
                               <div className="grid md:grid-cols-3 gap-3">
                               <div className="p-3 rounded-lg bg-slate-100">
                                 <div className="font-semibold text-slate-900 mb-1">expectedLessonsBySubject</div>
