@@ -128,7 +128,7 @@ export default function PricingTiersSection() {
 
         {/* Tiers Grid */}
         <div className="mb-16">
-          <div className="grid gap-6 sm:grid-cols-2 lg:grid-cols-3">
+          <div className="grid gap-6 sm:grid-cols-2 lg:grid-cols-3" role="list">
             {Object.entries(TIERS).map(([tierId, tier]) => (
               <div key={tierId} className={`rounded-2xl border ${tier.featured ? 'border-blue-900 bg-blue-50/30' : 'border-slate-200 bg-white'} hover:shadow-sm transition-all`}>
                 <div
