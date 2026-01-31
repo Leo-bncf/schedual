@@ -1655,12 +1655,12 @@ Now process the user's input and return ONLY the JSON object.`,
       {/* Configuration & Constraints - Always Visible */}
       <Tabs defaultValue={selectedVersion ? "schedule" : "config"} className="w-full">
         <TabsList className="bg-slate-100">
-          <TabsTrigger value="schedule" disabled={!selectedVersion}>
+          <TabsTrigger value="schedule" disabled={!selectedVersion} className="hover:bg-blue-50 hover:text-blue-700 data-[state=active]:bg-blue-100 data-[state=active]:text-blue-900 transition-colors">
             <Calendar className="w-4 h-4 mr-2" />
             Schedule
           </TabsTrigger>
-          <TabsTrigger value="config">Configuration</TabsTrigger>
-          <TabsTrigger value="constraints">Constraints</TabsTrigger>
+          <TabsTrigger value="config" className="hover:bg-blue-50 hover:text-blue-700 data-[state=active]:bg-blue-100 data-[state=active]:text-blue-900 transition-colors">Configuration</TabsTrigger>
+          <TabsTrigger value="constraints" className="hover:bg-blue-50 hover:text-blue-700 data-[state=active]:bg-blue-100 data-[state=active]:text-blue-900 transition-colors">Constraints</TabsTrigger>
         </TabsList>
 
           {/* Schedule Tab Content */}
@@ -1908,10 +1908,10 @@ Now process the user's input and return ONLY the JSON object.`,
                 <Tabs defaultValue="grid">
                 <div className="flex items-center justify-between mb-4">
                   <TabsList className="bg-slate-100">
-                    <TabsTrigger value="grid">Master Schedule</TabsTrigger>
-                    <TabsTrigger value="student">Student View</TabsTrigger>
-                    <TabsTrigger value="teacher">Teacher View</TabsTrigger>
-                    <TabsTrigger value="list">List View</TabsTrigger>
+                    <TabsTrigger value="grid" className="hover:bg-blue-50 hover:text-blue-700 data-[state=active]:bg-blue-100 data-[state=active]:text-blue-900 transition-colors">Master Schedule</TabsTrigger>
+                    <TabsTrigger value="student" className="hover:bg-blue-50 hover:text-blue-700 data-[state=active]:bg-blue-100 data-[state=active]:text-blue-900 transition-colors">Student View</TabsTrigger>
+                    <TabsTrigger value="teacher" className="hover:bg-blue-50 hover:text-blue-700 data-[state=active]:bg-blue-100 data-[state=active]:text-blue-900 transition-colors">Teacher View</TabsTrigger>
+                    <TabsTrigger value="list" className="hover:bg-blue-50 hover:text-blue-700 data-[state=active]:bg-blue-100 data-[state=active]:text-blue-900 transition-colors">List View</TabsTrigger>
                   </TabsList>
                 </div>
                 
@@ -3027,7 +3027,7 @@ Now process the user's input and return ONLY the JSON object.`,
                 <Shield className="w-4 h-4 mr-2" />
                 Hard Constraint
               </TabsTrigger>
-              <TabsTrigger value="soft" className="data-[state=active]:bg-blue-600 data-[state=active]:text-white">
+              <TabsTrigger value="soft" className="data-[state=active]:bg-blue-600 data-[state=active]:text-white hover:bg-blue-50 hover:text-blue-700 transition-colors">
                 <Info className="w-4 h-4 mr-2" />
                 Soft Constraint
               </TabsTrigger>
