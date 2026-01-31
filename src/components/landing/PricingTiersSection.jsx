@@ -132,8 +132,8 @@ export default function PricingTiersSection() {
         {/* Tiers Coverflow */}
         <div className="mb-16">
           <PricingCoverflow tiers={TIERS} onSelect={(id) => setActiveTier(id)} />
-          {/* Desktop: expandable islands */}
-          <div className="hidden lg:flex gap-6 items-stretch">
+          {/* Desktop coverflow injected above */}
+          <div className="hidden" style={{display:'none'}} >
             {Object.entries(TIERS).map(([tierId, tier], idx) => (
               <motion.div
                 key={tierId}
