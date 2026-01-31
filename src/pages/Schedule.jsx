@@ -99,6 +99,12 @@ export default function Schedule() {
     period_duration_minutes: 60,
     days_per_week: 5,
     school_start_time: '08:00',
+    day_start_time: '08:00',
+    day_end_time: '18:00',
+    days_of_week: ['MONDAY','TUESDAY','WEDNESDAY','THURSDAY','FRIDAY'],
+    breaks: [],
+    min_periods_per_day: 10,
+    target_periods_per_day: 10,
     hl_hours: 6,
     sl_hours: 4,
     lunch_duration_minutes: 30,
@@ -145,6 +151,12 @@ export default function Schedule() {
         period_duration_minutes: school.period_duration_minutes || 60,
         days_per_week: school.days_per_week || 5,
         school_start_time: school.school_start_time || '08:00',
+        day_start_time: school.day_start_time || school.school_start_time || '08:00',
+        day_end_time: school.day_end_time || '18:00',
+        days_of_week: Array.isArray(school.days_of_week) && school.days_of_week.length > 0 ? school.days_of_week : ['MONDAY','TUESDAY','WEDNESDAY','THURSDAY','FRIDAY'],
+        breaks: school.breaks || [],
+        min_periods_per_day: school.min_periods_per_day || 10,
+        target_periods_per_day: school.target_periods_per_day || 10,
         hl_hours: school.settings?.hl_hours || 6,
         sl_hours: school.settings?.sl_hours || 4,
         lunch_duration_minutes: school.settings?.lunch_duration_minutes || 30,
@@ -363,6 +375,13 @@ Now process the user's input and return ONLY the JSON object.`,
         data: {
           days_per_week: schoolConfig.days_per_week,
           school_start_time: schoolConfig.school_start_time,
+          period_duration_minutes: schoolConfig.period_duration_minutes,
+          day_start_time: schoolConfig.day_start_time,
+          day_end_time: schoolConfig.day_end_time,
+          days_of_week: schoolConfig.days_of_week,
+          breaks: schoolConfig.breaks,
+          min_periods_per_day: schoolConfig.min_periods_per_day,
+          target_periods_per_day: schoolConfig.target_periods_per_day,
           settings: {
             ...school.settings,
             hl_hours: schoolConfig.hl_hours,
@@ -2264,6 +2283,103 @@ Now process the user's input and return ONLY the JSON object.`,
                     </Card>
 
 
+
+                    {/* Advanced Schedule Settings */}
+                    <Card className="border-0 shadow-md">
+                      <CardHeader className="bg-gradient-to-r from-slate-50 to-slate-100">
+                        <div className="flex items-center justify-between">
+                          <div>
+                            <CardTitle className="text-lg">Advanced Schedule Settings</CardTitle>
+                            <CardDescription>Control day window, active weekdays, breaks, and period targets</CardDescription>
+                          </div>
+                        </div>
+                      </CardHeader>
+                      <CardContent className="pt-6 space-y-6">
+                        <div className="grid sm:grid-cols-2 gap-6">
+                          <div className="space-y-2">
+                            <Label className="text-sm font-bold text-slate-900">Day Start Time</Label>
+                            <Input type="time" value={schoolConfig.day_start_time}
+                              onChange={(e)=>setSchoolConfig({...schoolConfig, day_start_time: e.target.value})}
+                              className="h-12 text-center font-semibold" />
+                          </div>
+                          <div className="space-y-2">
+                            <Label className="text-sm font-bold text-slate-900">Day End Time</Label>
+                            <Input type="time" value={schoolConfig.day_end_time}
+                              onChange={(e)=>setSchoolConfig({...schoolConfig, day_end_time: e.target.value})}
+                              className="h-12 text-center font-semibold" />
+                          </div>
+                        </div>
+
+                        <div className="grid sm:grid-cols-2 gap-6">
+                          <div className="space-y-2">
+                            <Label className="text-sm font-bold text-slate-900">Min Periods / Day</Label>
+                            <Input type="number" min="1" value={schoolConfig.min_periods_per_day}
+                              onChange={(e)=>setSchoolConfig({...schoolConfig, min_periods_per_day: parseInt(e.target.value || '0')})}
+                              className="h-12 text-center font-semibold" />
+                          </div>
+                          <div className="space-y-2">
+                            <Label className="text-sm font-bold text-slate-900">Target Periods / Day</Label>
+                            <Input type="number" min="1" value={schoolConfig.target_periods_per_day}
+                              onChange={(e)=>setSchoolConfig({...schoolConfig, target_periods_per_day: parseInt(e.target.value || '0')})}
+                              className="h-12 text-center font-semibold" />
+                          </div>
+                        </div>
+
+                        <div className="space-y-2">
+                          <Label className="text-sm font-bold text-slate-900">Active Days of Week</Label>
+                          <div className="flex flex-wrap gap-2">
+                            {['MONDAY','TUESDAY','WEDNESDAY','THURSDAY','FRIDAY'].map(d => {
+                              const active = (schoolConfig.days_of_week||[]).includes(d);
+                              return (
+                                <button key={d} type="button"
+                                  onClick={()=>{
+                                    const cur = schoolConfig.days_of_week || [];
+                                    const next = active ? cur.filter(x=>x!==d) : [...cur, d];
+                                    setSchoolConfig({...schoolConfig, days_of_week: next});
+                                  }}
+                                  className={`px-3 py-1.5 rounded-lg text-xs font-semibold border ${active ? 'bg-slate-900 text-white' : 'bg-white text-slate-700 border-slate-300'}`}
+                                >{d.slice(0,3)}</button>
+                              );
+                            })}
+                          </div>
+                        </div>
+
+                        <div className="space-y-2">
+                          <div className="flex items-center justify-between">
+                            <Label className="text-sm font-bold text-slate-900">Breaks</Label>
+                            <Button variant="outline" size="sm" onClick={()=>{
+                              const next = [...(schoolConfig.breaks||[]), {start: '12:00', end: '13:00'}];
+                              setSchoolConfig({...schoolConfig, breaks: next});
+                            }}>Add Break</Button>
+                          </div>
+                          <div className="space-y-2">
+                            {(schoolConfig.breaks||[]).length === 0 ? (
+                              <p className="text-xs text-slate-500">No breaks configured</p>
+                            ) : (
+                              (schoolConfig.breaks||[]).map((b, idx) => (
+                                <div key={idx} className="flex items-center gap-2">
+                                  <Input type="time" value={b.start||''} onChange={(e)=>{
+                                    const next = [...(schoolConfig.breaks||[])];
+                                    next[idx] = { ...(next[idx]||{}), start: e.target.value };
+                                    setSchoolConfig({...schoolConfig, breaks: next});
+                                  }} className="h-10 w-32" />
+                                  <span className="text-slate-500">to</span>
+                                  <Input type="time" value={b.end||''} onChange={(e)=>{
+                                    const next = [...(schoolConfig.breaks||[])];
+                                    next[idx] = { ...(next[idx]||{}), end: e.target.value };
+                                    setSchoolConfig({...schoolConfig, breaks: next});
+                                  }} className="h-10 w-32" />
+                                  <Button variant="ghost" size="icon" onClick={()=>{
+                                    const next = (schoolConfig.breaks||[]).filter((_,i)=>i!==idx);
+                                    setSchoolConfig({...schoolConfig, breaks: next});
+                                  }}>✕</Button>
+                                </div>
+                              ))
+                            )}
+                          </div>
+                        </div>
+                      </CardContent>
+                    </Card>
 
                     {/* Test & Assessment Slots */}
                     <Card className="border-0 shadow-lg">
