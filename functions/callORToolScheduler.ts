@@ -61,7 +61,17 @@ Deno.serve(async (req) => {
 
     const problem = buildResponse.data.problem;
     const expectedLessonsBySubject = (buildResponse.data?.stats?.expectedLessonsBySubject) || {};
+    const expectedMinutesBySubject = (buildResponse.data?.stats?.expectedMinutesBySubject) || null;
     const problemLessonsCreated = (buildResponse.data?.stats?.lessonsCreatedBySubject) || {};
+    const scheduleSettingsSent = {
+      day_start_time: problem?.scheduleSettings?.dayStartTime || problem?.scheduleSettings?.schoolStartTime || null,
+      day_end_time: problem?.scheduleSettings?.dayEndTime || null,
+      period_duration_minutes: problem?.scheduleSettings?.periodDurationMinutes || null,
+      days_of_week: problem?.scheduleSettings?.daysOfWeek || null,
+      breaks: problem?.scheduleSettings?.breaks || [],
+      min_periods_per_day: problem?.scheduleSettings?.minPeriodsPerDay || null,
+      target_periods_per_day: problem?.scheduleSettings?.targetPeriodsPerDay || (buildResponse?.data?.stats?.dp_target_periods_per_day || null),
+    };
 
     // Step 2: Call OR-Tool service
     const OR_TOOL_ENDPOINT = Deno.env.get('OR_TOOL_ENDPOINT') || Deno.env.get('OR_TOOL_API_URL');
@@ -477,6 +487,22 @@ Deno.serve(async (req) => {
       coreAssignments,
       maxPeriodUsedByDay,
       endTimeUsedByDay,
+      timeslotsCount: problem.timeslots.length,
+      lastTimeslotUsed: latestUsedTimeslot ? { dayOfWeek: latestUsedTimeslot.dayOfWeek, startTime: latestUsedTimeslot.startTime, endTime: latestUsedTimeslot.endTime, id: latestUsedTimeslot.id } : null,
+      scheduleSettingsSent,
+      expectedMinutesBySubject,
+      assignedLessonsBySubject: assignedBySubjectCode,
+      unassignedLessonsBySubject: unassignedBySubjectCode,
+      sampleCoreSlots: { TOK: sampleTok, CAS: sampleCas, EE: sampleEe },
+      underfill: {
+        underfilled,
+        reason: earlyStopCause,
+        study: {
+          assigned_in_solver: assignedBySubjectCode['STUDY'] || 0,
+          total_from_solver: assignmentsReturnedBySubject['STUDY'] || 0,
+          prepared_for_insert: slotsPreparedBySubject['STUDY'] || 0
+        }
+      },
       slotsToInsertBySubjectId,
       insertedCount,
       deletedCount: typeof deletedCount === 'number' ? deletedCount : 0,
