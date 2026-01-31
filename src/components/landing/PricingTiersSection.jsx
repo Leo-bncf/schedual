@@ -1,4 +1,5 @@
 import React, { useState } from 'react';
+import { motion, AnimatePresence } from 'framer-motion';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { CheckCircle2, Zap, Users, Building2, Plug, SlidersHorizontal, LifeBuoy, Sparkles } from 'lucide-react';
@@ -204,45 +205,72 @@ export default function PricingTiersSection() {
             </div>
           </div>
 
-          {showAddOns && (
-            <div className="rounded-3xl border border-slate-200/80 bg-gradient-to-b from-white to-indigo-50/40 p-6 sm:p-10 shadow-sm">
-              <div className="grid gap-6">
-                {ADD_ONS.map((category) => {
-                  const Icon = CATEGORY_ICONS[category.category] || Zap;
-                  return (
-                    <div key={category.category} className="rounded-2xl bg-white/70 backdrop-blur-sm border border-slate-200 p-5 sm:p-6 hover:shadow-md transition-shadow">
-                      <div className="flex items-center justify-between mb-4">
-                        <div className="flex items-center gap-3">
-                          <div className="h-9 w-9 rounded-xl bg-blue-100 text-blue-900 flex items-center justify-center">
-                            <Icon className="w-5 h-5" />
+          <AnimatePresence>
+            {showAddOns && (
+              <motion.div
+                key="addons-panel"
+                initial={{ opacity: 0, y: 16, scale: 0.98 }}
+                animate={{ opacity: 1, y: 0, scale: 1 }}
+                exit={{ opacity: 0, y: 8, scale: 0.98 }}
+                transition={{ type: 'spring', stiffness: 260, damping: 24 }}
+                className="rounded-3xl border border-slate-200/80 bg-gradient-to-b from-white to-indigo-50/40 p-6 sm:p-10 shadow-sm"
+              >
+                <div className="grid gap-6 sm:grid-cols-2 lg:grid-cols-3">
+                  {ADD_ONS.map((category, idx) => {
+                    const Icon = CATEGORY_ICONS[category.category] || Zap;
+                    return (
+                      <motion.div
+                        key={category.category}
+                        layout
+                        initial={{ opacity: 0, y: 12 }}
+                        whileInView={{ opacity: 1, y: 0 }}
+                        viewport={{ once: true, amount: 0.2 }}
+                        transition={{ duration: 0.35, delay: idx * 0.05 }}
+                        whileHover={{ y: -6, boxShadow: '0 10px 20px -10px rgba(2,6,23,0.25)' }}
+                        className="rounded-2xl bg-white/70 backdrop-blur-sm border border-slate-200 p-5 sm:p-6 transition-all"
+                      >
+                        <div className="flex items-center justify-between mb-4">
+                          <div className="flex items-center gap-3">
+                            <div className="h-9 w-9 rounded-xl bg-blue-100 text-blue-900 flex items-center justify-center">
+                              <Icon className="w-5 h-5" />
+                            </div>
+                            <h4 className="text-lg font-semibold text-slate-900">{category.category}</h4>
                           </div>
-                          <h4 className="text-lg font-semibold text-slate-900">{category.category}</h4>
                         </div>
-                      </div>
-                      <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
-                        {category.items.map((addon) => (
-                          <div key={addon.id} className="group rounded-xl border border-slate-200 bg-white hover:border-blue-300 hover:shadow transition-all p-4">
-                            <div className="flex items-start justify-between gap-3">
-                              <h5 className="font-medium text-slate-900 text-sm leading-5">{addon.name}</h5>
-                              <Badge className={`${addon.type === 'onetime' ? 'bg-amber-100 text-amber-800' : 'bg-indigo-100 text-indigo-800'} text-[10px]`}>
-                                {addon.type === 'onetime' ? 'One-time' : 'Annual'}
-                              </Badge>
-                            </div>
-                            <div className="mt-3 flex items-end justify-between">
-                              <div className="text-blue-900 font-bold text-xl">${addon.price}</div>
-                              <button className="text-sm font-semibold text-blue-900 opacity-0 group-hover:opacity-100 transition-opacity">
-                                Learn more →
-                              </button>
-                            </div>
-                          </div>
-                        ))}
-                      </div>
-                    </div>
-                  );
-                })}
-              </div>
-            </div>
-          )}
+                        <div className="grid gap-4">
+                          {category.items.map((addon, j) => (
+                            <motion.div
+                              key={addon.id}
+                              layout
+                              initial={{ opacity: 0, y: 8 }}
+                              whileInView={{ opacity: 1, y: 0 }}
+                              viewport={{ once: true, amount: 0.3 }}
+                              transition={{ duration: 0.3, delay: j * 0.03 }}
+                              whileHover={{ scale: 1.02 }}
+                              className="group rounded-xl border border-slate-200 bg-white hover:border-blue-300 hover:shadow transition-all p-4"
+                            >
+                              <div className="flex items-start justify-between gap-3">
+                                <h5 className="font-medium text-slate-900 text-sm leading-5">{addon.name}</h5>
+                                <Badge className={`${addon.type === 'onetime' ? 'bg-amber-100 text-amber-800' : 'bg-indigo-100 text-indigo-800'} text-[10px]`}>
+                                  {addon.type === 'onetime' ? 'One-time' : 'Annual'}
+                                </Badge>
+                              </div>
+                              <div className="mt-3 flex items-end justify-between">
+                                <div className="text-blue-900 font-bold text-xl">${addon.price}</div>
+                                <button className="text-sm font-semibold text-blue-900 opacity-0 group-hover:opacity-100 transition-opacity">
+                                  Learn more →
+                                </button>
+                              </div>
+                            </motion.div>
+                          ))}
+                        </div>
+                      </motion.div>
+                    );
+                  })}
+                </div>
+              </motion.div>
+            )}
+          </AnimatePresence>
         </div>
 
         {/* CTA */}
