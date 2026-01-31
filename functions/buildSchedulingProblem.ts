@@ -95,9 +95,9 @@ Deno.serve(async (req) => {
     };
 
     // Subject id->code and lookups
-    const subjectIdToCode = {} as Record<string, string>;
-    const subjectIdByCode = {} as Record<string, string>;
-    const subjectById: Record<string, any> = {};
+    const subjectIdToCode = {};
+    const subjectIdByCode = {};
+    const subjectById = {};
     for (const subj of subjectsDb) {
       subjectById[subj.id] = subj;
       const raw = (subj.code || subj.name || subj.id).toString();
@@ -119,7 +119,7 @@ Deno.serve(async (req) => {
     const targetPeriodsPerDay = Number(school.target_periods_per_day || 10);
 
     // Build timeslots across dayStart->dayEnd, step by periodDuration, skip break overlaps
-    const timeToMin = (hhmm: string) => {
+    const timeToMin = (hhmm) => {
       const [h,m] = String(hhmm).split(':').map(Number);
       return (h||0) * 60 + (m||0);
     };
@@ -134,7 +134,7 @@ Deno.serve(async (req) => {
 
     const startMin = timeToMin(dayStartTime);
     const endMin = timeToMin(dayEndTime);
-    const timeslots: Array<{id:number, dayOfWeek:string, startTime:string, endTime:string}> = [];
+    const timeslots = [];
     let tsId = 1;
     for (const day of daysOfWeek) {
       for (let cur = startMin; cur + periodDurationMinutes <= endMin; cur += periodDurationMinutes) {
@@ -151,20 +151,20 @@ Deno.serve(async (req) => {
     // Rooms/Teachers numeric format & maps
     const rooms = roomsDb.map((r, idx) => ({ id: idx + 1, name: r.name || `Room ${idx+1}`, capacity: r.capacity || 0 }));
     const teachers = teachersDb.map((t, idx) => ({ id: idx + 1, name: t.full_name || `Teacher ${idx+1}` }));
-    const roomNumericIdToBase44Id: Record<number, string> = {};
-    const teacherNumericIdToBase44Id: Record<number, string> = {};
+    const roomNumericIdToBase44Id = {};
+    const teacherNumericIdToBase44Id = {};
     roomsDb.forEach((r, idx) => { roomNumericIdToBase44Id[idx+1] = r.id; });
     teachersDb.forEach((t, idx) => { teacherNumericIdToBase44Id[idx+1] = t.id; });
-    const roomNumericIdToExternalRef: Record<number, string> = {};
-    const teacherNumericIdToExternalRef: Record<number, string> = {};
+    const roomNumericIdToExternalRef = {};
+    const teacherNumericIdToExternalRef = {};
     roomsDb.forEach((r, idx) => { roomNumericIdToExternalRef[idx+1] = r.external_id || r.externalId || r.id; });
     teachersDb.forEach((t, idx) => { teacherNumericIdToExternalRef[idx+1] = t.external_id || t.externalId || t.employee_id || t.id; });
 
     // Compute lessons from minutes/week
     const lessons: any[] = [];
     let lessonId = 1;
-    const perSubjectCount: Record<string, number> = {};
-    const expectedLessonsBySubject: Record<string, number> = {};
+    const perSubjectCount = {};
+    const expectedLessonsBySubject = {};
 
     const minutesForTG = (tg: any) => {
       if (typeof tg.minutes_per_week === 'number' && tg.minutes_per_week > 0) return tg.minutes_per_week;
@@ -179,12 +179,12 @@ Deno.serve(async (req) => {
       return Number(subj?.pyp_myp_minutes_per_week_default || 180);
     };
 
-    const minutesToPeriods = (m: number) => Math.max(0, Math.ceil(m / periodDurationMinutes));
+    const minutesToPeriods = (m) => Math.max(0, Math.ceil(m / periodDurationMinutes));
 
     // Study filler for DP groups
     const dpStudyWeekly = Number(body?.dp_study_weekly ?? Deno.env.get('DP_STUDY_WEEKLY') ?? 0);
     const dpMinEndTime = String(body?.dp_min_end_time || Deno.env.get('DP_MIN_END_TIME') || '14:30');
-    const studentGroupSoftPreferences: Record<string, any> = {};
+    const studentGroupSoftPreferences = {};
 
     for (const tg of teachingGroupsDb) {
       if (!tg?.is_active) continue;
@@ -236,7 +236,7 @@ Deno.serve(async (req) => {
       }
     }
 
-    const lessonsCreatedBySubject: Record<string, number> = {};
+    const lessonsCreatedBySubject = {};
     for (const l of lessons) {
       lessonsCreatedBySubject[l.subject] = (lessonsCreatedBySubject[l.subject] || 0) + 1;
     }
