@@ -1850,9 +1850,11 @@ Now process the user's input and return ONLY the JSON object.`,
                     </CardContent>
                   </Card>
                   </>
-                )}
+                  )}
 
-                {coreRecap && (
+                  {/* Close CardContent/Card properly above, continue other sections */}
+
+                  {coreRecap && (
                   <Card className="border-0 shadow-sm bg-gradient-to-br from-indigo-50 to-white">
                     <CardContent className="p-4">
                       <div className="flex items-center justify-between">
