@@ -75,20 +75,31 @@ Deno.serve(async (req) => {
 
     console.log(`Calling OR-Tool at ${OR_TOOL_ENDPOINT}...`);
 
-    const solverResponse = await fetch(OR_TOOL_ENDPOINT, {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-        'Authorization': `Bearer ${OR_TOOL_API_KEY}`
-      },
-      body: JSON.stringify(problem)
-    });
+    let solverResponse;
+    try {
+      solverResponse = await fetch(OR_TOOL_ENDPOINT, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${OR_TOOL_API_KEY}`
+        },
+        body: JSON.stringify(problem)
+      });
+    } catch (e) {
+      console.error('OR-Tool network error:', e);
+      return Response.json({
+        error: 'Unable to connect to OR-Tool endpoint',
+        endpoint: OR_TOOL_ENDPOINT,
+        details: String(e?.message || e)
+      }, { status: 502 });
+    }
 
     if (!solverResponse.ok) {
       const errorText = await solverResponse.text();
       console.error('OR-Tool error:', errorText);
       return Response.json({ 
         error: 'OR-Tool scheduling failed',
+        endpoint: OR_TOOL_ENDPOINT,
         details: errorText 
       }, { status: 500 });
     }
