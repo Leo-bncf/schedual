@@ -1730,13 +1730,15 @@ Now process the user's input and return ONLY the JSON object.`,
                       {/* Requested recap fields */}
                       {(() => {
                         const exp = orToolResult?.expectedLessonsBySubject || {};
-                        const asg = orToolResult?.assignmentsBySubjectCode || {};
-                        const unasg = orToolResult?.unassignedBySubjectCode || {};
+                        const expMin = orToolResult?.expectedMinutesBySubject || {};
+                        const asg = orToolResult?.assignedLessonsBySubject || orToolResult?.assignmentsBySubjectCode || {};
+                        const unasg = orToolResult?.unassignedLessonsBySubject || orToolResult?.unassignedBySubjectCode || {};
                         const core = orToolResult?.coreAssignments || {};
                         const meta = orToolResult?.buildMeta || {};
                         const maxP = orToolResult?.maxPeriodUsedByDay || {};
                         const slotsToInsert = orToolResult?.slotsToInsertBySubjectId || {};
                         const coreIns = orToolResult?.coreSlotsInsertedCount || {};
+                        const sampleCores = orToolResult?.sampleCoreSlots || null;
                         const sampleLine = (arr) => {
                           const s = Array.isArray(arr) && arr[0];
                           return s && (s.day && s.period) ? `${s.day} • P${s.period}` : '—';
@@ -1798,7 +1800,58 @@ Now process the user's input and return ONLY the JSON object.`,
                                 </div>
                                 </div>
 
-                                {/* All-subjects comparison */}
+                                {/* Extended Diagnostics */}
+                              <div className="grid md:grid-cols-3 gap-3">
+                                <div className="p-3 rounded-lg bg-slate-100">
+                                  <div className="font-semibold text-slate-900 mb-1">Schedule Settings Sent</div>
+                                  <div className="grid grid-cols-2 gap-x-3 gap-y-1">
+                                    <div className="text-slate-500">start</div>
+                                    <div className="font-medium">{orToolResult?.scheduleSettingsSent?.day_start_time || '—'}</div>
+                                    <div className="text-slate-500">end</div>
+                                    <div className="font-medium">{orToolResult?.scheduleSettingsSent?.day_end_time || '—'}</div>
+                                    <div className="text-slate-500">period</div>
+                                    <div className="font-medium">{orToolResult?.scheduleSettingsSent?.period_duration_minutes ?? '—'} min</div>
+                                    <div className="text-slate-500">days</div>
+                                    <div className="font-medium">{(orToolResult?.scheduleSettingsSent?.days_of_week || []).join(', ') || '—'}</div>
+                                    <div className="text-slate-500">min/target</div>
+                                    <div className="font-medium">{orToolResult?.scheduleSettingsSent?.min_periods_per_day ?? '—'} / {orToolResult?.scheduleSettingsSent?.target_periods_per_day ?? '—'}</div>
+                                    <div className="text-slate-500">breaks</div>
+                                    <div className="font-medium">{(orToolResult?.scheduleSettingsSent?.breaks || []).map(b=>`${b.start}-${b.end}`).join(', ') || '—'}</div>
+                                  </div>
+                                </div>
+                                <div className="p-3 rounded-lg bg-slate-100">
+                                  <div className="font-semibold text-slate-900 mb-1">Timeslots & Usage</div>
+                                  <div className="space-y-1">
+                                    <div>timeslotsCount: <strong>{orToolResult?.timeslotsCount ?? meta?.timeslotsCount ?? '—'}</strong></div>
+                                    <div>lastTimeslotUsed: <strong>{orToolResult?.lastTimeslotUsed ? `${orToolResult.lastTimeslotUsed.dayOfWeek} • ${orToolResult.lastTimeslotUsed.endTime}` : '—'}</strong></div>
+                                  </div>
+                                </div>
+                                <div className="p-3 rounded-lg bg-slate-100">
+                                  <div className="font-semibold text-slate-900 mb-1">Underfill</div>
+                                  <div className="space-y-1">
+                                    <div>underfilled: <strong>{String(orToolResult?.underfill?.underfilled ?? false)}</strong></div>
+                                    <div>reason: <strong>{orToolResult?.underfill?.reason || '—'}</strong></div>
+                                    <div>STUDY created: <strong>{orToolResult?.underfill?.study?.assigned_in_solver || 0}</strong> / returned: <strong>{orToolResult?.underfill?.study?.total_from_solver || 0}</strong> • prepared: <strong>{orToolResult?.underfill?.study?.prepared_for_insert || 0}</strong></div>
+                                  </div>
+                                </div>
+                              </div>
+
+                              <div className="grid md:grid-cols-2 gap-3">
+                                <div className="p-3 rounded-lg bg-slate-100">
+                                  <div className="font-semibold text-slate-900 mb-1">expectedMinutesBySubject</div>
+                                  <pre className="bg-white rounded p-2 overflow-x-auto max-h-40">{JSON.stringify(expMin || {}, null, 2)}</pre>
+                                </div>
+                                <div className="p-3 rounded-lg bg-slate-100">
+                                  <div className="font-semibold text-slate-900 mb-1">sampleCoreSlots</div>
+                                  <div className="space-y-1">
+                                    <div>TOK: {sampleCores?.TOK ? (sampleCores.TOK.day ? `${sampleCores.TOK.day} • P${sampleCores.TOK.period}` : '—') : '—'}</div>
+                                    <div>CAS: {sampleCores?.CAS ? (sampleCores.CAS.day ? `${sampleCores.CAS.day} • P${sampleCores.CAS.period}` : '—') : '—'}</div>
+                                    <div>EE: {sampleCores?.EE ? (sampleCores.EE.day ? `${sampleCores.EE.day} • P${sampleCores.EE.period}` : '—') : '—'}</div>
+                                  </div>
+                                </div>
+                              </div>
+
+                              {/* All-subjects comparison */}
                               <div className="grid md:grid-cols-3 gap-3">
                                 <div className="p-3 rounded-lg bg-slate-100">
                                   <div className="font-semibold text-slate-900 mb-1">expectedLessonsBySubject</div>
