@@ -1754,18 +1754,18 @@ Now process the user's input and return ONLY the JSON object.`,
 
                                 {/* All-subjects comparison */}
                               <div className="grid md:grid-cols-3 gap-3">
-                              <div className="p-3 rounded-lg bg-slate-100">
-                                <div className="font-semibold text-slate-900 mb-1">expectedLessonsBySubject</div>
-                                <pre className="bg-white rounded p-2 overflow-x-auto max-h-40">{JSON.stringify(exp, null, 2)}</pre>
-                              </div>
-                              <div className="p-3 rounded-lg bg-slate-100">
-                                <div className="font-semibold text-slate-900 mb-1">assignmentsBySubjectCode</div>
-                                <pre className="bg-white rounded p-2 overflow-x-auto max-h-40">{JSON.stringify(asg, null, 2)}</pre>
-                              </div>
-                              <div className="p-3 rounded-lg bg-slate-100">
-                                <div className="font-semibold text-slate-900 mb-1">unassignedBySubjectCode</div>
-                                <pre className="bg-white rounded p-2 overflow-x-auto max-h-40">{JSON.stringify(unasg, null, 2)}</pre>
-                              </div>
+                                <div className="p-3 rounded-lg bg-slate-100">
+                                  <div className="font-semibold text-slate-900 mb-1">expectedLessonsBySubject</div>
+                                  <pre className="bg-white rounded p-2 overflow-x-auto max-h-40">{JSON.stringify(exp, null, 2)}</pre>
+                                </div>
+                                <div className="p-3 rounded-lg bg-slate-100">
+                                  <div className="font-semibold text-slate-900 mb-1">assignmentsBySubjectCode</div>
+                                  <pre className="bg-white rounded p-2 overflow-x-auto max-h-40">{JSON.stringify(asg, null, 2)}</pre>
+                                </div>
+                                <div className="p-3 rounded-lg bg-slate-100">
+                                  <div className="font-semibold text-slate-900 mb-1">unassignedBySubjectCode</div>
+                                  <pre className="bg-white rounded p-2 overflow-x-auto max-h-40">{JSON.stringify(unasg, null, 2)}</pre>
+                                </div>
                               </div>
 
                               {/* Debug counters for TOK/CAS/EE/TEST across stages */}
