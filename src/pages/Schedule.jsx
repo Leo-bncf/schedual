@@ -1789,28 +1789,26 @@ Now process the user's input and return ONLY the JSON object.`,
 
                               {/* Debug counters for TOK/CAS/EE/TEST across stages */}
                               <div className="p-3 rounded-lg bg-slate-50">
-                              <div className="font-semibold text-slate-900 mb-2">Stage Counters (TOK/CAS/EE/TEST)</div>
-                              {(() => {
-                                const keys = ['TOK','CAS','EE','TEST'];
-                                const plc = orToolResult?.problemLessonsCreated || {};
-                                const sar = orToolResult?.solutionAssignmentsReturned || {};
-                                const spi = orToolResult?.slotsPreparedForInsert || {};
-                                return (
-                                  <div className="grid md:grid-cols-4 gap-2 text-xs">
-                                    {keys.map(k => (
+                                <div className="font-semibold text-slate-900 mb-2">Stage Counters (TOK/CAS/EE/TEST)</div>
+                                <div className="grid md:grid-cols-4 gap-2 text-xs">
+                                  {['TOK','CAS','EE','TEST'].map(k => {
+                                    const plc = orToolResult?.problemLessonsCreated || {};
+                                    const sar = orToolResult?.solutionAssignmentsReturned || {};
+                                    const spi = orToolResult?.slotsPreparedForInsert || {};
+                                    return (
                                       <div key={k} className="p-2 rounded border bg-white">
                                         <div className="font-medium mb-1">{k}</div>
                                         <div>problemLessonsCreated: <strong>{plc[k] || 0}</strong></div>
                                         <div>solutionAssignmentsReturned: <strong>{sar[k] || 0}</strong></div>
                                         <div>slotsPreparedForInsert: <strong>{spi[k] || 0}</strong></div>
                                       </div>
-                                    ))}
-                                  </div>
-                                  );
-                                  })()}
+                                    );
+                                  })}
+                                </div>
                               </div>
-                        );
-                      })()}
+                            </div>
+                          );
+                        })()}
 
                       {(() => {
                         const period = school?.period_duration_minutes || schoolConfig.period_duration_minutes || 60;
