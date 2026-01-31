@@ -131,6 +131,7 @@ export default function PricingTiersSection() {
 
         {/* Tiers Coverflow */}
         <div className="mb-16">
+          <PricingCoverflow tiers={TIERS} onSelect={(id) => setActiveTier(id)} />
           {/* Desktop: expandable islands */}
           <div className="hidden lg:flex gap-6 items-stretch">
             {Object.entries(TIERS).map(([tierId, tier], idx) => (
