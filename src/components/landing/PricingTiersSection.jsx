@@ -129,7 +129,7 @@ export default function PricingTiersSection() {
           </p>
         </div>
 
-        {/* Tiers Grid (interactive islands) */}
+        {/* Tiers Coverflow */}
         <div className="mb-16">
           {/* Desktop: expandable islands */}
           <div className="hidden lg:flex gap-6 items-stretch">
