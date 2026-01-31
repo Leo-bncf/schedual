@@ -162,8 +162,24 @@ Deno.serve(async (req) => {
       'FRIDAY': 'Friday'
     };
 
+    // Build per-day timeslot index for flexible days/periods
+    const cfgDays = (problem.scheduleSettings && Array.isArray(problem.scheduleSettings.daysOfWeek) && problem.scheduleSettings.daysOfWeek.length)
+      ? problem.scheduleSettings.daysOfWeek
+      : days;
+    const timeslotsByDay = {};
+    cfgDays.forEach(d => {
+      timeslotsByDay[d] = (problem.timeslots || [])
+        .filter(t => t.dayOfWeek === d)
+        .sort((a,b) => String(a.startTime||'').localeCompare(String(b.startTime||'')));
+    });
+    const timeslotIndexInDay = {};
+    Object.values(timeslotsByDay).forEach(arr => {
+      arr.forEach((t, i) => { timeslotIndexInDay[t.id] = i + 1; });
+    });
+    const periodsPerDayComputed = Math.max(0, ...Object.values(timeslotsByDay).map(arr => arr.length));
+
     // Core assignments (TOK/CAS/EE) with timeslotId + mapped day/period
-    const periodsPerDay = problem.timeslots.length / 5;
+    const periodsPerDay = periodsPerDayComputed;
     const coreAssignments = { TOK: [], CAS: [], EE: [] };
     for (const l of solvedLessons) {
       const subj = String(l.subject || l.subjectCode || '')
@@ -174,7 +190,7 @@ Deno.serve(async (req) => {
         const ts = problem.timeslots.find(t => t.id === l.timeslotId) || null;
         if (ts) {
           day = dayMapping[ts.dayOfWeek] || ts.dayOfWeek;
-          period = ((ts.id - 1) % periodsPerDay) + 1;
+          period = timeslotIndexInDay[ts.id] || 1;
         }
       }
       coreAssignments[subj].push({
@@ -189,13 +205,13 @@ Deno.serve(async (req) => {
 
     // After solve: compute max period used by day
     const maxPeriodUsedByDay = { Monday: 0, Tuesday: 0, Wednesday: 0, Thursday: 0, Friday: 0 };
-    const periodsPerDayLocal = problem.timeslots.length / 5;
+    const periodsPerDayLocal = periodsPerDayComputed;
     for (const l of solvedLessons) {
       if (!l.timeslotId) continue;
       const ts = problem.timeslots.find(t => t.id === l.timeslotId);
       if (!ts) continue;
       const day = dayMapping[ts.dayOfWeek] || ts.dayOfWeek;
-      const period = ((ts.id - 1) % periodsPerDayLocal) + 1;
+      const period = timeslotIndexInDay[ts.id] || 1;
       if (maxPeriodUsedByDay[day] === undefined || period > maxPeriodUsedByDay[day]) {
         maxPeriodUsedByDay[day] = period;
       }
@@ -207,7 +223,7 @@ Deno.serve(async (req) => {
     const maxUsedTimeslotId = usedTimeslotIds.length ? Math.max(...usedTimeslotIds) : null;
     const latestUsedTimeslot = maxUsedTimeslotId ? (problem.timeslots.find(t => t.id === maxUsedTimeslotId) || null) : null;
     const latestTimeslotAvailable = problem.timeslots[problem.timeslots.length - 1] || null;
-    const periodsPerDayLocal2 = problem.timeslots.length / 5;
+    const periodsPerDayLocal2 = periodsPerDayComputed;
     const underfilled = !!(buildResponse?.data?.stats?.underfilled);
     const maxUsedPeriod = Math.max(...Object.values(maxPeriodUsedByDay || { Monday:0, Tuesday:0, Wednesday:0, Thursday:0, Friday:0 }));
     const dpTarget = (buildResponse?.data?.stats?.dp_target_periods_per_day) || null;
@@ -221,7 +237,7 @@ Deno.serve(async (req) => {
     }
 
     // Step 5: Map OptaPlanner solution back to Base44 ScheduleSlot entities
-    const periods_per_day = problem.timeslots.length / 5; // 50 slots / 5 days = 10 periods
+    const periods_per_day = periodsPerDayComputed; // derived from schedule settings
     let lessonsWithoutTimeslot = 0;
     let missingRoomCount = 0;
     let missingTeacherCount = 0;
@@ -251,7 +267,7 @@ Deno.serve(async (req) => {
       if (!teacherId) { missingTeacherCount++; }
       
       // Calculate period from timeslot ID: ((id - 1) % periods_per_day) + 1
-      const period = ((timeslot.id - 1) % periods_per_day) + 1;
+      const period = timeslotIndexInDay[timeslot.id] || 1;
 
       slots.push({
         school_id: schoolId,
@@ -430,7 +446,7 @@ Deno.serve(async (req) => {
       schoolIdInput: requestedSchoolId,
       schoolIdUsed: schoolId,
       timeslotsCount: problem.timeslots.length,
-      periodsPerDay: periods_per_day,
+      periodsPerDay: periodsPerDayComputed,
       lastTimeslot: problem.timeslots[problem.timeslots.length - 1] || null,
       dpTargetPeriodsPerDay: (buildResponse?.data?.stats?.dp_target_periods_per_day) || null,
     };
