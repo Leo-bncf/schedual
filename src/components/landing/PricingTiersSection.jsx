@@ -45,7 +45,6 @@ const TIERS = {
     price: 4950,
     description: 'Large schools with 800+ students, multiple campuses',
     students: '800+',
-    icon: '🚀',
     features: [
       'Everything in Tier 2',
       'Multi-campus support',
