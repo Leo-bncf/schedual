@@ -128,6 +128,7 @@ export default function PricingTiersSection() {
             Choose the tier that fits your school. All plans include AI-powered scheduling and conflict resolution.
           </p>
         </div>
+        </div>
 
         {/* Tiers Grid */}
         <div className="mb-16">
@@ -166,8 +167,6 @@ export default function PricingTiersSection() {
           </div>
 
 
-
-        </div>
 
         </div>
 
