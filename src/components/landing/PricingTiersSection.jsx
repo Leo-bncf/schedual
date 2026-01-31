@@ -205,8 +205,8 @@ export default function PricingTiersSection() {
             ))}
           </div>
 
-          {/* Mobile: stacked cards */}
-          <div className="grid lg:hidden gap-6">
+          {/* Mobile list hidden (covered by carousel) */}
+          <div className="hidden">
             {Object.entries(TIERS).map(([tierId, tier]) => (
               <motion.div
                 key={tierId}
