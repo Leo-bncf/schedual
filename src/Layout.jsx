@@ -342,7 +342,7 @@ export default function Layout({ children, currentPageName }) {
                       transition-all duration-200
                       ${isActive 
                         ? 'bg-slate-900 text-white shadow-lg' 
-                        : 'text-slate-600 hover:bg-slate-100 hover:text-slate-900'
+                                                      : 'text-slate-600 hover:bg-blue-50 hover:text-blue-800'
                       }
                     `}
                     onClick={() => setSidebarOpen(false)}

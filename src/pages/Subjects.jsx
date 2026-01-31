@@ -452,7 +452,7 @@ ${trainingFeedback ? `LESSONS FROM ADMIN FEEDBACK:\n${trainingFeedback}\n\n` : '
 
       {/* DP Core Subjects Section */}
       {allowedProgrammes.includes('DP') && (
-        <Card className="border-0 shadow-sm">
+        <Card className="border-0 shadow-sm hidden">
           <CardHeader className="bg-gradient-to-r from-blue-50 to-indigo-50">
             <div className="flex items-center gap-3">
               <div className="p-2 rounded-lg bg-blue-100">
@@ -782,7 +782,80 @@ ${trainingFeedback ? `LESSONS FROM ADMIN FEEDBACK:\n${trainingFeedback}\n\n` : '
         </div>
       )}
 
-      <Dialog open={isDialogOpen} onOpenChange={(open) => { if (!open) resetForm(); }}>
+      {allowedProgrammes.includes('DP') && (
+  <Card className="border-0 shadow-sm">
+    <CardHeader className="bg-gradient-to-r from-blue-50 to-indigo-50">
+      <div className="flex items-center gap-3">
+        <div className="p-2 rounded-lg bg-blue-100">
+          <Sparkles className="w-5 h-5 text-blue-700" />
+        </div>
+        <div>
+          <h3 className="text-lg font-semibold text-slate-900">DP Core Components</h3>
+          <p className="text-sm text-slate-600">
+            Add TOK, CAS, and Extended Essay subjects with their teaching requirements
+          </p>
+        </div>
+      </div>
+    </CardHeader>
+    <CardContent className="pt-6">
+      <div className="space-y-3">
+        {['TOK', 'CAS', 'EE'].map((coreType) => {
+          const existingCore = subjects.find(s => s.code === coreType && s.is_core);
+          
+          return (
+            <div key={coreType} className="flex items-center justify-between p-4 rounded-lg border-2 bg-gradient-to-r from-blue-50 to-indigo-50 border-blue-200">
+              <div className="flex-1">
+                <div className="flex items-center gap-3">
+                  <div className="w-10 h-10 rounded-full bg-blue-200 flex items-center justify-center">
+                    <span className="font-bold text-blue-900 text-sm">{coreType}</span>
+                  </div>
+                  <div>
+                    <h4 className="font-semibold text-blue-900">
+                      {coreType === 'TOK' ? 'Theory of Knowledge' : coreType === 'CAS' ? 'Creativity, Activity, Service' : 'Extended Essay'}
+                    </h4>
+                    {existingCore ? (
+                      <p className="text-sm text-blue-700">
+                        {existingCore.pyp_myp_hours_per_week || 2} hours/week
+                      </p>
+                    ) : (
+                      <p className="text-sm text-blue-600">Not configured yet</p>
+                    )}
+                  </div>
+                </div>
+              </div>
+              <Button
+                onClick={() => {
+                  if (existingCore) {
+                    handleEdit(existingCore);
+                  } else {
+                    setFormData({
+                      name: coreType === 'TOK' ? 'Theory of Knowledge' : coreType === 'CAS' ? 'Creativity, Activity, Service' : 'Extended Essay',
+                      code: coreType,
+                      ib_level: 'DP',
+                      ib_group: 1,
+                      ib_group_name: 'Language & Literature',
+                      is_core: true,
+                      pyp_myp_hours_per_week: coreType === 'TOK' ? 3 : 1,
+                      is_active: true
+                    });
+                    setEditingSubject(null);
+                    setIsDialogOpen(true);
+                  }
+                }}
+                variant={existingCore ? "outline" : "default"}
+                className={existingCore ? "" : "bg-blue-600 hover:bg-blue-700"}
+              >
+                {existingCore ? 'Edit' : 'Add'}
+              </Button>
+            </div>
+          );
+        })}
+      </div>
+    </CardContent>
+  </Card>
+)}
+
+<Dialog open={isDialogOpen} onOpenChange={(open) => { if (!open) resetForm(); }}>
         <DialogContent className="sm:max-w-lg">
           <DialogHeader>
             <DialogTitle>{editingSubject ? 'Edit Subject' : 'Add New Subject'}</DialogTitle>
