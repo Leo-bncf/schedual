@@ -228,6 +228,25 @@ export default function Schedule() {
     enabled: !!schoolId,
   });
 
+  // Minutes-based helpers
+  const getMinutesForGroup = (tg) => {
+    const subj = subjects.find(s => s.id === tg.subject_id);
+    const level = String(tg.level || '').toUpperCase();
+    if (typeof tg.minutes_per_week === 'number' && tg.minutes_per_week > 0) return tg.minutes_per_week;
+    if (typeof tg.hours_per_week === 'number' && tg.hours_per_week > 0) return Math.round(tg.hours_per_week * 60); // legacy fallback
+    if (subj?.ib_level === 'DP') {
+      return level === 'HL' ? (subj?.hl_minutes_per_week_default || 300) : (subj?.sl_minutes_per_week_default || 180);
+    }
+    return subj?.pyp_myp_minutes_per_week_default || 180;
+  };
+
+  const minutesToPeriods = (m) => {
+    const period = school?.period_duration_minutes || schoolConfig.period_duration_minutes || 60;
+    return Math.max(0, Math.ceil(m / period));
+  };
+
+  const periodsForGroup = (tg) => minutesToPeriods(getMinutesForGroup(tg));
+
   const { data: constraints = [], refetch: refetchConstraints } = useQuery({
     queryKey: ['constraints', schoolId],
     queryFn: async () => {
@@ -642,7 +661,8 @@ Now process the user's input and return ONLY the JSON object.`,
           console.log(`Group ${i}:`, {
             name: g.name,
             is_active: g.is_active,
-            hours_per_week: g.hours_per_week,
+            minutes_per_week: getMinutesForGroup(g),
+            periods_per_week: minutesToPeriods(getMinutesForGroup(g)),
             teacher_id: g.teacher_id,
             student_ids_count: g.student_ids?.length || 0
           });
@@ -667,7 +687,8 @@ Now process the user's input and return ONLY the JSON object.`,
 
       teachingGroups.forEach(g => {
         if (g.is_active === false) return;
-        if (!g.hours_per_week || g.hours_per_week <= 0) return;
+        const mins = getMinutesForGroup(g);
+        if (!mins || mins <= 0) return;
 
         const level = getIBLevel(g.year_group);
         if (level) {
@@ -981,10 +1002,14 @@ Now process the user's input and return ONLY the JSON object.`,
           const slGroups = groups.filter(g => g.level === 'SL');
           const hlGroups = groups.filter(g => g.level === 'HL');
 
-          const slHours = subject.sl_hours_per_week || schoolConfig.sl_hours || 4;
-          const hlHours = subject.hl_hours_per_week || schoolConfig.hl_hours || 6;
-          const sharedCount = Math.min(slHours, hlHours); // usually SL hours
-          const hlExtra = Math.max(0, hlHours - slHours);
+          const slPeriods = slGroups.length > 0
+            ? periodsForGroup(slGroups[0])
+            : minutesToPeriods(subject?.sl_minutes_per_week_default || 180);
+          const hlPeriods = hlGroups.length > 0
+            ? periodsForGroup(hlGroups[0])
+            : minutesToPeriods(subject?.hl_minutes_per_week_default || 300);
+          const sharedCount = Math.min(slPeriods, hlPeriods);
+          const hlExtra = Math.max(0, hlPeriods - slPeriods);
 
           if (slGroups.length > 0 && (hlGroups.length > 0 || sharedCount > 0)) {
             // Use first SL group as primary for shared sessions
