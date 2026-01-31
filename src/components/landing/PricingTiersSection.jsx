@@ -112,6 +112,7 @@ const CATEGORY_ICONS = {
 export default function PricingTiersSection() {
   const [openCategories, setOpenCategories] = useState({});
   const toggleCategory = (cat) => setOpenCategories((prev) => ({ ...prev, [cat]: !prev[cat] }));
+  const [activeTier, setActiveTier] = useState('tier2');
 
   return (
     <section id="pricing" className="py-20 bg-white">
@@ -126,23 +127,30 @@ export default function PricingTiersSection() {
           </p>
         </div>
 
-        {/* Tiers Grid */}
-        <div className="grid lg:grid-cols-3 gap-8 mb-16">
-          {Object.entries(TIERS).map(([tierId, tier]) => (
-            <div key={tierId} className="relative group">
-              {tier.featured && (
-                <div className="absolute -top-5 left-1/2 -translate-x-1/2 z-10">
-                  <Badge className="bg-blue-900 text-white px-3 py-1 text-xs font-semibold">MOST POPULAR</Badge>
-                </div>
-              )}
-              <div className={`
-                h-full rounded-2xl border-2 transition-all duration-300 overflow-hidden
-                ${tier.featured 
-                  ? 'border-blue-900 bg-gradient-to-br from-blue-900/5 to-blue-900/10 shadow-xl' 
-                  : 'border-slate-200 bg-white hover:border-slate-300 hover:shadow-lg'
-                }
-              `}>
-                <div className="p-8 sm:p-10 flex flex-col h-full">
+        {/* Tiers Grid (interactive islands) */}
+        <div className="mb-16">
+          {/* Desktop: expandable islands */}
+          <div className="hidden lg:flex gap-6 items-stretch">
+            {Object.entries(TIERS).map(([tierId, tier], idx) => (
+              <motion.div
+                key={tierId}
+                layout
+                onClick={() => setActiveTier(tierId)}
+                className={`relative group cursor-pointer rounded-2xl border-2 overflow-hidden ${
+                  tier.featured
+                    ? 'border-blue-900 bg-gradient-to-br from-blue-900/5 to-blue-900/10 shadow-xl'
+                    : 'border-slate-200 bg-white hover:border-slate-300 hover:shadow-lg'
+                }`}
+                style={{ flex: activeTier === tierId ? 1.6 : 0.8, minWidth: 0 }}
+                transition={{ type: 'spring', stiffness: 260, damping: 26 }}
+                whileHover={{ y: -6 }}
+              >
+                {tier.featured && (
+                  <div className="absolute -top-5 left-1/2 -translate-x-1/2 z-10">
+                    <Badge className="bg-blue-900 text-white px-3 py-1 text-xs font-semibold">MOST POPULAR</Badge>
+                  </div>
+                )}
+                <div className={`p-8 flex flex-col h-full transition-all ${activeTier === tierId ? 'opacity-100' : 'opacity-95'}`}>
                   {/* Top meta pill */}
                   <div className="mb-4">
                     <span className="inline-flex items-center gap-2 text-xs px-3 py-1 rounded-full bg-slate-100 text-slate-700 border border-slate-200">
@@ -169,14 +177,19 @@ export default function PricingTiersSection() {
                   </div>
 
                   {/* Features */}
-                  <div className="mt-8 pt-6 border-t border-slate-200 grid grid-cols-1 sm:grid-cols-2 gap-3">
-                    {tier.features.map((feature, idx) => (
-                      <div key={idx} className="flex items-start gap-2">
+                  <motion.div
+                    layout
+                    className={`mt-8 pt-6 border-t border-slate-200 grid grid-cols-1 gap-3 ${activeTier === tierId ? 'sm:grid-cols-2' : 'sm:grid-cols-1'}`}
+                    animate={{ opacity: activeTier === tierId ? 1 : 0.85 }}
+                    transition={{ duration: 0.2 }}
+                  >
+                    {tier.features.map((feature, idx2) => (
+                      <div key={idx2} className="flex items-start gap-2">
                         <CheckCircle2 className="w-5 h-5 text-emerald-600 flex-shrink-0 mt-0.5" />
                         <span className="text-sm text-slate-700">{feature}</span>
                       </div>
                     ))}
-                  </div>
+                  </motion.div>
 
                   {/* Card footer */}
                   <div className="mt-auto pt-6">
@@ -185,9 +198,36 @@ export default function PricingTiersSection() {
                     </a>
                   </div>
                 </div>
-              </div>
-            </div>
-          ))}
+              </motion.div>
+            ))}
+          </div>
+
+          {/* Mobile: stacked cards */}
+          <div className="grid lg:hidden gap-6">
+            {Object.entries(TIERS).map(([tierId, tier]) => (
+              <motion.div
+                key={tierId}
+                layout
+                onClick={() => setActiveTier(tierId)}
+                className="relative group rounded-2xl border-2 bg-white overflow-hidden"
+              >
+                <div className="p-8 flex flex-col">
+                  <div className="flex items-start justify-between gap-4 mb-4">
+                    <div className="text-5xl">{tier.icon}</div>
+                    {tier.featured && <Badge className="bg-yellow-400 text-slate-900">Recommended</Badge>}
+                  </div>
+                  <h3 className="text-2xl font-bold text-slate-900">{tier.subtitle}</h3>
+                  <p className="text-sm text-slate-600 mt-2">{tier.description}</p>
+                  <div className="mt-6">
+                    <div className="flex items-baseline gap-2">
+                      <span className="text-5xl font-bold text-slate-900">${tier.price}</span>
+                      <span className="text-slate-600">/year</span>
+                    </div>
+                  </div>
+                </div>
+              </motion.div>
+            ))}
+          </div>
         </div>
 
         {/* Add-ons Section */}
