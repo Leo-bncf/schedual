@@ -27,7 +27,6 @@ const TIERS = {
     price: 2200,
     description: 'PYP + MYP + DP schools (300-800 students)',
     students: '300-800',
-    icon: '⭐',
     features: [
       'Everything in Tier 1',
       'Advanced constraint solver',
