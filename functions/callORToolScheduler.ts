@@ -203,8 +203,9 @@ Deno.serve(async (req) => {
       });
     }
 
-    // After solve: compute max period used by day
+    // After solve: compute max period used by day + last endTime actually used per day
     const maxPeriodUsedByDay = { Monday: 0, Tuesday: 0, Wednesday: 0, Thursday: 0, Friday: 0 };
+    const endTimeUsedByDay = { Monday: null, Tuesday: null, Wednesday: null, Thursday: null, Friday: null };
     const periodsPerDayLocal = periodsPerDayComputed;
     for (const l of solvedLessons) {
       if (!l.timeslotId) continue;
@@ -214,9 +215,11 @@ Deno.serve(async (req) => {
       const period = timeslotIndexInDay[ts.id] || 1;
       if (maxPeriodUsedByDay[day] === undefined || period > maxPeriodUsedByDay[day]) {
         maxPeriodUsedByDay[day] = period;
+        endTimeUsedByDay[day] = ts.endTime || null;
       }
     }
     console.log('[callORToolScheduler] maxPeriodUsedByDay =', maxPeriodUsedByDay);
+    console.log('[callORToolScheduler] endTimeUsedByDay =', endTimeUsedByDay);
 
     // Compute latest timeslot actually used and dominant cause for early stop
     const usedTimeslotIds = solvedLessons.filter(l => l.timeslotId).map(l => l.timeslotId);
@@ -449,6 +452,7 @@ Deno.serve(async (req) => {
       periodsPerDay: periodsPerDayComputed,
       lastTimeslot: problem.timeslots[problem.timeslots.length - 1] || null,
       dpTargetPeriodsPerDay: (buildResponse?.data?.stats?.dp_target_periods_per_day) || null,
+      periodDurationMinutes: (problem?.scheduleSettings?.periodDurationMinutes) || null,
     };
     console.log('[callORToolScheduler] buildMeta =', buildMeta);
 
@@ -461,6 +465,7 @@ Deno.serve(async (req) => {
       unassignedBySubjectCode,
       coreAssignments,
       maxPeriodUsedByDay,
+      endTimeUsedByDay,
       slotsToInsertBySubjectId,
       insertedCount,
       deletedCount: typeof deletedCount === 'number' ? deletedCount : 0,

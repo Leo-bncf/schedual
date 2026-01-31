@@ -1768,6 +1768,8 @@ Now process the user's input and return ONLY the JSON object.`,
                                 <div className="space-y-1">
                                   <div>maxPeriodUsedByDay: <code>{JSON.stringify(maxP)}</code></div>
                                   <div>timeslotsCount: <strong>{meta?.timeslotsCount ?? '—'}</strong></div>
+                                  <div>periodDurationMinutes: <strong>{meta?.periodDurationMinutes ?? '—'}</strong></div>
+                                  <div>endTimeUsedByDay: <code>{JSON.stringify(orToolResult?.endTimeUsedByDay || {})}</code></div>
                                   <div>lastTimeslot: <strong>{(meta?.lastTimeslot?.dayOfWeek || '—')} {meta?.lastTimeslot?.endTime ? `• ${meta?.lastTimeslot?.endTime}` : ''}</strong></div>
                                   <div>dpTargetPeriodsPerDay: <strong>{meta?.dpTargetPeriodsPerDay ?? '—'}</strong></div>
                                 </div>
