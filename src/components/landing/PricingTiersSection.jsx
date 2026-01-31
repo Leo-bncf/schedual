@@ -165,72 +165,10 @@ export default function PricingTiersSection() {
             ))}
           </div>
 
-                )}
-                <div className={`p-8 flex flex-col h-full transition-all ${activeTier === tierId ? 'opacity-100' : 'opacity-95'}`}>
-                  {/* Top meta pill */}
-                  <div className="mb-4">
-                    <span className="inline-flex items-center gap-2 text-xs px-3 py-1 rounded-full bg-slate-100 text-slate-700 border border-slate-200">
-                      <span className="w-1.5 h-1.5 rounded-full bg-blue-900" /> Best for {tier.students} students
-                    </span>
-                  </div>
-
-                  {/* Icon & Title */}
-                  <div className="flex items-start justify-between gap-4 mb-4">
-                    <div className="text-5xl">{tier.icon}</div>
-                    {tier.featured && (
-                      <Badge className="bg-yellow-400 text-slate-900">Recommended</Badge>
-                    )}
-                  </div>
-                  <h3 className="text-2xl font-bold text-slate-900">{tier.subtitle}</h3>
-                  <p className="text-sm text-slate-600 mt-2">{tier.description}</p>
-
-                  {/* Price */}
-                  <div className="mt-6">
-                    <div className="flex items-baseline gap-2">
-                      <span className="text-5xl font-bold text-slate-900">${tier.price}</span>
-                      <span className="text-slate-600">/year</span>
-                    </div>
-                  </div>
-
-                  {/* Features */}
-                  <motion.div
-                    layout
-                    className={`mt-8 pt-6 border-t border-slate-200 grid grid-cols-1 gap-3 ${activeTier === tierId ? 'sm:grid-cols-2' : 'sm:grid-cols-1'}`}
-                    animate={{ opacity: activeTier === tierId ? 1 : 0.85 }}
-                    transition={{ duration: 0.2 }}
-                  >
-                    {tier.features.map((feature, idx2) => (
-                      <div key={idx2} className="flex items-start gap-2">
-                        <CheckCircle2 className="w-5 h-5 text-emerald-600 flex-shrink-0 mt-0.5" />
-                        <span className="text-sm text-slate-700">{feature}</span>
-                      </div>
-                    ))}
-                  </motion.div>
-
-                  {/* Card footer */}
-                  <div className="mt-auto pt-6">
-                    <a href="#addons" className="text-sm font-medium text-blue-900 hover:underline">
-                      See optional add-ons →
-                    </a>
-                  </div>
-                </div>
-              </motion.div>
-            ))}
-          </div>
 
 
-                  <h3 className="text-2xl font-bold text-slate-900">{tier.subtitle}</h3>
-                  <p className="text-sm text-slate-600 mt-2">{tier.description}</p>
-                  <div className="mt-6">
-                    <div className="flex items-baseline gap-2">
-                      <span className="text-5xl font-bold text-slate-900">${tier.price}</span>
-                      <span className="text-slate-600">/year</span>
-                    </div>
-                  </div>
-                </div>
-              </motion.div>
-            ))}
-          </div>
+        </div>
+
         </div>
 
         {/* Add-ons Section */}
