@@ -109,12 +109,12 @@ const CATEGORY_ICONS = {
   'Support & Services': LifeBuoy,
 };
 
-import PricingCoverflow from './PricingCoverflow';
+
 
 export default function PricingTiersSection() {
   const [openCategories, setOpenCategories] = useState({});
   const toggleCategory = (cat) => setOpenCategories((prev) => ({ ...prev, [cat]: !prev[cat] }));
-  const [activeTier, setActiveTier] = useState('tier2');
+
 
   return (
     <section id="pricing" className="py-20 bg-white">
@@ -129,29 +129,42 @@ export default function PricingTiersSection() {
           </p>
         </div>
 
-        {/* Tiers Coverflow */}
+        {/* Tiers Grid */}
         <div className="mb-16">
-          <PricingCoverflow tiers={TIERS} onSelect={(id) => setActiveTier(id)} />
-          {/* Desktop coverflow injected above */}
-          <div className="hidden" style={{display:'none'}} >
-            {Object.entries(TIERS).map(([tierId, tier], idx) => (
-              <motion.div
-                key={tierId}
-                layout
-                onClick={() => setActiveTier(tierId)}
-                className={`relative group cursor-pointer rounded-2xl border-2 overflow-hidden ${
-                  tier.featured
-                    ? 'border-blue-900 bg-gradient-to-br from-blue-900/5 to-blue-900/10 shadow-xl'
-                    : 'border-slate-200 bg-white hover:border-slate-300 hover:shadow-lg'
-                }`}
-                style={{ flex: activeTier === tierId ? 1.6 : 0.8, minWidth: 0 }}
-                transition={{ type: 'spring', stiffness: 260, damping: 26 }}
-                whileHover={{ y: -6 }}
-              >
-                {tier.featured && (
-                  <div className="absolute -top-5 left-1/2 -translate-x-1/2 z-10">
-                    <Badge className="bg-blue-900 text-white px-3 py-1 text-xs font-semibold">MOST POPULAR</Badge>
+          <div className="grid gap-6 sm:grid-cols-2 lg:grid-cols-3">
+            {Object.entries(TIERS).map(([tierId, tier]) => (
+              <div key={tierId} className={`rounded-2xl border ${tier.featured ? 'border-blue-900 bg-blue-50/30' : 'border-slate-200 bg-white'} hover:shadow-sm transition-all`}>
+                <div className="p-6 flex flex-col h-full">
+                  <div className="flex items-start justify-between gap-4 mb-3">
+                    <div className="text-4xl">{tier.icon}</div>
+                    {tier.featured && (
+                      <Badge className="bg-yellow-400 text-slate-900">Recommended</Badge>
+                    )}
                   </div>
+                  <h3 className="text-xl font-bold text-slate-900">{tier.subtitle}</h3>
+                  <p className="text-sm text-slate-600 mt-1">{tier.description}</p>
+                  <div className="mt-4">
+                    <div className="flex items-baseline gap-2">
+                      <span className="text-4xl font-bold text-slate-900">${tier.price}</span>
+                      <span className="text-slate-600">/year</span>
+                    </div>
+                  </div>
+                  <div className="mt-5 grid gap-2">
+                    {(tier.features || []).slice(0, 6).map((feature, i) => (
+                      <div key={i} className="flex items-start gap-2">
+                        <CheckCircle2 className="w-5 h-5 text-emerald-600 mt-0.5" />
+                        <span className="text-sm text-slate-700">{feature}</span>
+                      </div>
+                    ))}
+                  </div>
+                  <div className="mt-auto pt-5">
+                    <a href="#addons" className="text-sm font-medium text-blue-900 hover:underline">See optional add-ons →</a>
+                  </div>
+                </div>
+              </div>
+            ))}
+          </div>
+
                 )}
                 <div className={`p-8 flex flex-col h-full transition-all ${activeTier === tierId ? 'opacity-100' : 'opacity-95'}`}>
                   {/* Top meta pill */}
@@ -205,20 +218,7 @@ export default function PricingTiersSection() {
             ))}
           </div>
 
-          {/* Mobile list hidden (covered by carousel) */}
-          <div className="hidden">
-            {Object.entries(TIERS).map(([tierId, tier]) => (
-              <motion.div
-                key={tierId}
-                layout
-                onClick={() => setActiveTier(tierId)}
-                className="relative group rounded-2xl border-2 bg-white overflow-hidden"
-              >
-                <div className="p-8 flex flex-col">
-                  <div className="flex items-start justify-between gap-4 mb-4">
-                    <div className="text-5xl">{tier.icon}</div>
-                    {tier.featured && <Badge className="bg-yellow-400 text-slate-900">Recommended</Badge>}
-                  </div>
+
                   <h3 className="text-2xl font-bold text-slate-900">{tier.subtitle}</h3>
                   <p className="text-sm text-slate-600 mt-2">{tier.description}</p>
                   <div className="mt-6">
