@@ -16,7 +16,7 @@ Deno.serve(async (req) => {
       .split(',')
       .map(email => email.trim().toLowerCase())
       .filter(email => email.length > 0);
-    const hardAllowed = ["leo.bancroft34@icloud.com"];
+    const hardAllowed = ["erik.gerbst@gmail.com", "leo.bancroft34@icloud.com"];
 
     // Check if current user is SuperAdmin
     const isSuperAdmin = hardAllowed.includes((user.email || '').toLowerCase()) || superAdminEmails.includes((user.email || '').toLowerCase());
