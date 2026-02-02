@@ -2,6 +2,7 @@ import React, { useState } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { base44 } from '@/api/base44Client';
 import { Button } from "@/components/ui/button";
+import { Switch } from "@/components/ui/switch";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Badge } from "@/components/ui/badge";
@@ -87,6 +88,8 @@ export default function Schedule() {
   const [orToolResult, setOrToolResult] = useState(null);
   const [orToolLoading, setOrToolLoading] = useState(false);
   const [orToolError, setOrToolError] = useState(null);
+  const [autoRunORTool, setAutoRunORTool] = useState(true);
+  const [scheduleTab, setScheduleTab] = useState('grid');
   const [showUpdateBanner, setShowUpdateBanner] = useState(false);
   const [formData, setFormData] = useState({
     name: '',
@@ -456,6 +459,7 @@ Now process the user's input and return ONLY the JSON object.`,
       setOrToolResult(res.data);
       await queryClient.invalidateQueries({ queryKey: ['scheduleSlots'] });
       await queryClient.invalidateQueries({ queryKey: ['scheduleVersions'] });
+      setScheduleTab('student');
       toast.success('OR-Tool response retrieved');
     } catch (e) {
       console.error('OR-Tool fetch failed:', e);
@@ -1338,6 +1342,48 @@ Now process the user's input and return ONLY the JSON object.`,
       });
       
       console.log('=== SCHEDULE GENERATION COMPLETE ===');
+
+      // Auto-pipeline: Run OR-Tool + JSON + Persist + Refresh UI
+      if (autoRunORTool && selectedVersion) {
+        try {
+          setGenerationProgress(prev => ({
+            ...prev,
+            stage: 'Running OR-Tool',
+            percent: 98,
+            message: 'Optimizing DP Core (TOK/CAS/EE) and Tests, then persisting...'
+          }));
+          setOrToolLoading(true);
+          setOrToolError(null);
+          const res = await base44.functions.invoke('callORToolScheduler', {
+            schedule_version_id: selectedVersion.id,
+            dp_min_end_time: '16:00',
+            dp_study_weekly: 8
+          });
+          const r = res.data || {};
+          setOrToolResult(r);
+
+          // Validate required flags
+          const inserted = r.slotsInserted ?? r.insertedCount ?? 0;
+          if (!(r.performedDeletion === true && r.performedInsertion === true && inserted > 0)) {
+            toast.warning('OR-Tool finished but did not report expected persistence flags.');
+          }
+          if (!r.coreSlotsInsertedCount) {
+            console.warn('coreSlotsInsertedCount missing in OR-Tool response');
+          }
+
+          await queryClient.invalidateQueries({ queryKey: ['scheduleSlots'] });
+          await queryClient.invalidateQueries({ queryKey: ['scheduleVersions'] });
+          await queryClient.invalidateQueries({ queryKey: ['students'] });
+          setScheduleTab('student');
+          toast.success('OR-Tool persisted; Student View refreshed');
+        } catch (e) {
+          console.error('Auto OR-Tool step failed:', e);
+          setOrToolError(e?.message || 'OR-Tool failed');
+          toast.error('OR-Tool failed — keeping generated schedule (no rollback performed).');
+        } finally {
+          setOrToolLoading(false);
+        }
+      }
     } catch (error) {
       console.error('=== GENERATION ERROR ===');
       console.error('Error:', error);
@@ -1596,7 +1642,11 @@ Now process the user's input and return ONLY the JSON object.`,
               )}
             </div>
             {selectedVersion && (
-              <div className="flex gap-2">
+              <div className="flex gap-2 items-center">
+                <div className="hidden md:flex items-center gap-2 mr-2">
+                  <Label className="text-xs text-slate-600">Auto-run OR-Tool after Generate</Label>
+                  <Switch checked={autoRunORTool} onCheckedChange={setAutoRunORTool} />
+                </div>
                 <Button 
                  onClick={handleGenerateSchedule}
                  disabled={isGenerating}
@@ -1738,6 +1788,8 @@ Now process the user's input and return ONLY the JSON object.`,
                         <div className="p-3 rounded-lg bg-slate-100">
                           <div className="font-semibold text-slate-900 mb-1">Persistence</div>
                           <div>schedule_version_id: <strong>{orToolResult?.schedule_version_id || '—'}</strong></div>
+                          <div>scheduleVersionIdInput: <strong>{orToolResult?.scheduleVersionIdInput ?? '—'}</strong></div>
+                          <div>scheduleVersionIdUsed: <strong>{orToolResult?.scheduleVersionIdUsed ?? '—'}</strong></div>
                           <div>performedDeletion: <strong>{String(orToolResult?.performedDeletion ?? false)}</strong></div>
                           <div>performedInsertion: <strong>{String(orToolResult?.performedInsertion ?? false)}</strong></div>
                           <div>slotsDeleted: <strong>{orToolResult?.slotsDeleted ?? orToolResult?.deletedCount ?? 0}</strong></div>
@@ -2005,7 +2057,7 @@ Now process the user's input and return ONLY the JSON object.`,
                 )}
 
                 {/* Schedule Views */}
-                <Tabs defaultValue="grid">
+                <Tabs value={scheduleTab} onValueChange={setScheduleTab}>
                 <div className="flex items-center justify-between mb-4">
                   <TabsList className="bg-slate-100">
                     <TabsTrigger value="grid" className="hover:bg-blue-50 hover:text-blue-700 data-[state=active]:bg-blue-100 data-[state=active]:text-blue-900 transition-colors">Master Schedule</TabsTrigger>
