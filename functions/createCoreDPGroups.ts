@@ -95,18 +95,18 @@ Deno.serve(async (req) => {
     }
 
     // Auto-enroll all DP students into core TGs (TOK/CAS/EE)
-    const dpStudents = await client.entities.Student.filter({ school_id, ib_programme: 'DP', is_active: true });
+    const dpStudents = await client.asServiceRole.entities.Student.filter({ school_id, ib_programme: 'DP', is_active: true });
     // Include both DP1 and DP2 regardless of classgroup membership
     const dpStudentIds = (dpStudents || []).map(s => s.id);
     const coreSubjectIds = targets.map(code => subjectByCode.get(code)?.id).filter(Boolean);
-    const allTGs = await client.entities.TeachingGroup.filter({ school_id, is_active: true });
+    const allTGs = await client.asServiceRole.entities.TeachingGroup.filter({ school_id, is_active: true });
     let enrollUpdated = 0;
     for (const tg of (allTGs || [])) {
       if (!coreSubjectIds.includes(tg.subject_id)) continue;
       const current = Array.isArray(tg.student_ids) ? tg.student_ids : [];
       const merged = Array.from(new Set([...(current || []), ...dpStudentIds]));
       if (merged.length !== current.length) {
-        await client.entities.TeachingGroup.update(tg.id, { student_ids: merged });
+        await client.asServiceRole.entities.TeachingGroup.update(tg.id, { student_ids: merged });
         enrollUpdated++;
       }
     }
