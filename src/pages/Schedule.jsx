@@ -1720,7 +1720,7 @@ Now process the user's input and return ONLY the JSON object.`,
                         <div className="p-3 rounded-lg bg-slate-100">
                           <div className="font-semibold text-slate-900 mb-1">Endpoint</div>
                           <div className="truncate">{String(orToolResult?.orToolEndpointUsed || orToolResult?.endpoint || '—')}</div>
-                          <div className="mt-1">HTTP: <strong>{orToolResult?.orToolResult?.orToolHttpStatus ?? '—'}</strong></div>
+                          <div className="mt-1">HTTP: <strong>{orToolResult?.orToolResult?.orToolResult?.orToolHttpStatus ?? '—'}</strong></div>
                           <div className="mt-1">Error: <span className="break-all">{(orToolResult?.orToolErrorBody || '').slice(0,140) || '—'}</span></div>
                         </div>
                         <div className="p-3 rounded-lg bg-slate-100">
