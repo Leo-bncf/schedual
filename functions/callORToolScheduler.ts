@@ -90,8 +90,18 @@ Deno.serve(async (req) => {
       }, { status: 503 });
     }
 
+    const REQUIRED_OR_TOOL_ENDPOINT = 'http://87.106.27.27:8080/solve-and-push';
+    if (OR_TOOL_ENDPOINT !== REQUIRED_OR_TOOL_ENDPOINT) {
+      console.error('[callORToolScheduler] OR_TOOL_ENDPOINT mismatch', { configured: OR_TOOL_ENDPOINT, required: REQUIRED_OR_TOOL_ENDPOINT });
+      return Response.json({ 
+        error: 'OR-Tool endpoint misconfigured',
+        orToolEndpointConfigured: OR_TOOL_ENDPOINT,
+        required: REQUIRED_OR_TOOL_ENDPOINT
+      }, { status: 503 });
+    }
+
     const orToolEndpointUsed = OR_TOOL_ENDPOINT;
-    console.log('[callORToolScheduler] Calling OR-Tool at', orToolEndpointUsed);
+    console.log('[callORToolScheduler] Calling OR-Tool at', orToolEndpointUsed, 'schedule_version_id =', schedule_version_id);
 
     let solverResponse;
     try {
