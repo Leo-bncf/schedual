@@ -31,8 +31,22 @@ const subjectGroupColors = {
 export default function TimetableGrid({ slots = [], groups = [], rooms = [], subjects = [], teachers = [], classGroups = [], periodsPerDay = 8, breakPeriods = [], lunchPeriod = 4, onSlotClick, exportId = "timetable-grid" }) {
   const [selectedSlot, setSelectedSlot] = React.useState(null);
 
+  // Normalize incoming slot day/period formats (e.g., MONDAY -> Monday, "5" -> 5)
+  const DAY_MAP = { MONDAY: 'Monday', TUESDAY: 'Tuesday', WEDNESDAY: 'Wednesday', THURSDAY: 'Thursday', FRIDAY: 'Friday' };
+  const normalizeDay = (d) => {
+    if (!d) return d;
+    const up = String(d).toUpperCase();
+    if (DAY_MAP[up]) return DAY_MAP[up];
+    return String(d).charAt(0).toUpperCase() + String(d).slice(1).toLowerCase();
+  };
+  const normalizedSlots = React.useMemo(() => (slots || []).map(s => ({
+    ...s,
+    day: normalizeDay(s.day),
+    period: typeof s.period === 'string' ? parseInt(s.period) : s.period,
+  })), [slots]);
+
   const getSlotData = (day, period) => {
-    return slots.filter(s => s.day === day && s.period === period);
+    return normalizedSlots.filter(s => s.day === day && s.period === period);
   };
 
   const getGroupInfo = (groupId) => {
