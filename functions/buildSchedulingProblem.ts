@@ -209,6 +209,50 @@ Deno.serve(async (req) => {
 
     const minutesToPeriods = (m) => Math.max(0, Math.ceil(m / periodDurationMinutes));
 
+    // CRITICAL: Ensure core DP subjects (TOK/CAS/EE) have active TeachingGroups
+    // If not, create them automatically for all DP students
+    const coreSubjectsToEnsure = ['TOK', 'CAS', 'EE'];
+    for (const coreCode of coreSubjectsToEnsure) {
+      const coreSubject = subjectsDb.find(s => normalizeSubjectCode(s.code) === coreCode || normalizeSubjectCode(s.name) === coreCode);
+      if (!coreSubject) {
+        console.warn(`[buildSchedulingProblem] Core subject ${coreCode} not found in database`);
+        continue;
+      }
+
+      // Check if there are any active TeachingGroups for this core subject
+      const coreGroups = teachingGroupsDb.filter(tg => tg.subject_id === coreSubject.id && tg.is_active);
+      if (coreGroups.length === 0) {
+        console.log(`[buildSchedulingProblem] No active TeachingGroup for ${coreCode}, creating one...`);
+        
+        // Get all DP students
+        const [students] = await Promise.all([
+          base44.entities.Student.filter({ school_id, ib_programme: 'DP', is_active: true })
+        ]);
+
+        const dpStudentIds = students.map(s => s.id);
+        
+        if (dpStudentIds.length > 0) {
+          try {
+            const newGroup = await base44.entities.TeachingGroup.create({
+              school_id,
+              name: `${coreCode} - All DP`,
+              subject_id: coreSubject.id,
+              level: 'Standard',
+              year_group: 'DP1,DP2',
+              student_ids: dpStudentIds,
+              minutes_per_week: 60,
+              is_active: true
+            });
+            console.log(`[buildSchedulingProblem] Created TeachingGroup for ${coreCode}: ${newGroup.id}`);
+            // Reload teachingGroupsDb to include new group
+            teachingGroupsDb.push(newGroup);
+          } catch (e) {
+            console.error(`[buildSchedulingProblem] Failed to create TeachingGroup for ${coreCode}:`, e);
+          }
+        }
+      }
+    }
+
     // Study filler for DP groups
     const dpStudyWeekly = Number(body?.dp_study_weekly ?? Deno.env.get('DP_STUDY_WEEKLY') ?? 0);
     const dpMinEndTime = String(body?.dp_min_end_time || Deno.env.get('DP_MIN_END_TIME') || '14:30');
