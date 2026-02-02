@@ -570,13 +570,51 @@ Deno.serve(async (req) => {
       }
     }
 
+    // Step 6.5: Inject STUDY slots into empty timeslots (post-solver)
+    const allTimeslots = problem.timeslots || [];
+    const occupiedSlots = new Set();
+    slots.forEach(s => {
+      const key = `${s.day}_${s.period}`;
+      occupiedSlots.add(key);
+    });
+
+    const studySlots = [];
+    const studySubject = subjects.find(s => s.code === 'STUDY' || s.name === 'STUDY');
+    if (studySubject) {
+      for (const ts of allTimeslots) {
+        const day = dayMapping[ts.dayOfWeek] || ts.dayOfWeek;
+        const period = timeslotIndexInDay[ts.id] || 1;
+        const key = `${day}_${period}`;
+        
+        if (!occupiedSlots.has(key)) {
+          studySlots.push({
+            school_id: schoolId,
+            schedule_version: schedule_version_id,
+            teaching_group_id: null,
+            subject_id: studySubject.id,
+            teacher_id: null,
+            room_id: null,
+            day,
+            period,
+            is_double_period: false,
+            status: 'scheduled',
+            notes: 'Study / Free Period'
+          });
+        }
+      }
+      console.log('[callORToolScheduler] Injected STUDY slots:', studySlots.length);
+    }
+
+    // Combine solver slots + STUDY slots
+    const allSlots = [...slots, ...studySlots];
+
     // Step 7: Create new slots
     let insertedCount = 0;
     let sampleSlotsInserted = null;
-    if (slots.length > 0) {
-      const inserted = await base44.entities.ScheduleSlot.bulkCreate(slots);
+    if (allSlots.length > 0) {
+      const inserted = await base44.entities.ScheduleSlot.bulkCreate(allSlots);
       const createdIds = Array.isArray(inserted) ? inserted.map(r => r.id) : null;
-      insertedCount = Array.isArray(inserted) ? inserted.length : slots.length;
+      insertedCount = Array.isArray(inserted) ? inserted.length : allSlots.length;
       console.log('[callORToolScheduler] insertedCount =', insertedCount);
       console.log('[callORToolScheduler] insertedCountBySubject =', slotsPreparedBySubject);
       if (createdIds) {
