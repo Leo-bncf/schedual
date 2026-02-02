@@ -158,6 +158,20 @@ export default function TimetableGrid({
 
   return (
     <>
+      <div className="mb-3 p-3 bg-blue-50 border border-blue-200 rounded-lg text-xs text-blue-900">
+        <div className="grid grid-cols-3 gap-4 font-mono">
+          <div>
+            <span className="font-bold">dayStartTime:</span> {dayStartTime}
+          </div>
+          <div>
+            <span className="font-bold">periodDurationMinutes:</span> {periodDurationMinutes}
+          </div>
+          <div>
+            <span className="font-bold">dayEndTime:</span> {dayEndTime}
+          </div>
+        </div>
+      </div>
+      
       <Card className="overflow-hidden border-0 shadow-sm" id={exportId}>
         <div className="overflow-x-auto">
           <div className="min-w-[1200px]">
