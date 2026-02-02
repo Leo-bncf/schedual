@@ -1698,6 +1698,8 @@ Now process the user's input and return ONLY the JSON object.`,
                 {orToolResult && (
                   <>
                   <UnassignedBanner unassigned={orToolResult?.unassignedBySubjectCode} />
+                  {/* Force refresh hint: show current slot counts */}
+                  <div className="text-xs text-slate-500">Persisted slots: {scheduleSlots.length} • Inserted this run: {orToolResult?.slotsInserted ?? orToolResult?.insertedCount ?? 0}</div>
                   <Card className="border-0 shadow-sm bg-gradient-to-br from-slate-50 to-white">
                     <CardContent className="p-4 space-y-3">
                       <div className="flex items-center justify-between">
