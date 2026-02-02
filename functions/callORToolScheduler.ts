@@ -105,7 +105,7 @@ Deno.serve(async (req) => {
 
     // Diagnostics defaults + /health check
     let orToolHttpStatus = null;
-    let orToolRequestHeadersSent = ['Content-Type','X-API-Key'];
+    let orToolRequestHeadersSent = { 'Content-Type': 'application/json', 'X-API-Key': '***' };
     let orToolHealthStatus = null;
     let orToolHealthOk = null;
     try {
@@ -119,33 +119,15 @@ Deno.serve(async (req) => {
       orToolHealthStatus = null;
       orToolHealthOk = false;
     }
-    // Diagnostics defaults
-    let orToolHttpStatus = null;
-    let orToolRequestHeadersSent = ['Content-Type','X-API-Key'];
-    let orToolHealthStatus = null;
-    let orToolHealthOk = null;
-    // Health check (no auth) to distinguish service-down vs auth issues
-    try {
-      const healthUrl = orToolEndpointUsed.replace('/solve-and-push', '/health');
-      const healthRes = await fetch(healthUrl, { method: 'GET' });
-      orToolHealthStatus = healthRes.status;
-      orToolHealthOk = healthRes.ok;
-      console.log('[callORToolScheduler] OR-Tool /health status =', orToolHealthStatus);
-    } catch (e) {
-      console.warn('[callORToolScheduler] OR-Tool /health check failed:', String(e?.message || e));
-      orToolHealthStatus = null;
-      orToolHealthOk = false;
-    }
-    let orToolHttpStatus = null;
-    let orToolRequestHeadersSent = ['Content-Type','X-API-Key'];
 
     let solverResponse;
     try {
+      const maskApiKey = (k) => (k && k.length >= 6) ? `${k.slice(0,3)}***${k.slice(-3)}` : '***';
       const requestHeaders = {
         'Content-Type': 'application/json',
         'X-API-Key': OR_TOOL_API_KEY
       };
-      orToolRequestHeadersSent = Object.keys(requestHeaders);
+      orToolRequestHeadersSent = { 'Content-Type': 'application/json', 'X-API-Key': maskApiKey(OR_TOOL_API_KEY) };
       solverResponse = await fetch(orToolEndpointUsed, {
         method: 'POST',
         headers: requestHeaders,
@@ -157,12 +139,18 @@ Deno.serve(async (req) => {
       console.error('OR-Tool network error:', e);
       return Response.json({
         error: 'Unable to connect to OR-Tool endpoint',
-        endpoint: orToolEndpointUsed,
+        orToolEndpointUsed,
         orToolHttpStatus: null,
-        orToolErrorBody: String(e?.message || e).slice(0, 500),
+        orToolErrorBody: String(e?.message || e),
         orToolRequestHeadersSent,
         orToolHealthStatus,
         orToolHealthOk,
+        scheduleVersionIdInput: schedule_version_id,
+        scheduleVersionIdUsed: schedule_version_id,
+        performedDeletion: false,
+        performedInsertion: false,
+        slotsDeleted: 0,
+        slotsInserted: 0,
         details: String(e?.message || e)
       }, { status: 502 });
     }
@@ -172,12 +160,18 @@ Deno.serve(async (req) => {
       console.error('OR-Tool error:', errorText);
       return Response.json({ 
         error: 'OR-Tool scheduling failed',
-        endpoint: orToolEndpointUsed,
+        orToolEndpointUsed,
         orToolHttpStatus,
-        orToolErrorBody: errorText ? errorText.slice(0, 500) : null,
+        orToolErrorBody: errorText,
         orToolRequestHeadersSent,
         orToolHealthStatus,
         orToolHealthOk,
+        scheduleVersionIdInput: schedule_version_id,
+        scheduleVersionIdUsed: schedule_version_id,
+        performedDeletion: false,
+        performedInsertion: false,
+        slotsDeleted: 0,
+        slotsInserted: 0,
         details: errorText 
       }, { status: 500 });
     }
@@ -413,8 +407,7 @@ Deno.serve(async (req) => {
     }
 
     // Log slots prepared by subject and sample core slots
-    const codeBySubjectId = {};
-    Object.entries(subjectIdByCode || {}).forEach(([code, id]) => { codeBySubjectId[id] = code; });
+    // codeBySubjectId already defined above
     const slotsPreparedBySubject = {};
     for (const s of slots) {
       const code = s.subject_id ? (codeBySubjectId[s.subject_id] || 'UNKNOWN') : (s.notes?.includes('Study') ? 'STUDY' : 'UNKNOWN');
@@ -599,6 +592,8 @@ Deno.serve(async (req) => {
       success: true,
       school_id: user.school_id,
       schedule_version_id,
+      scheduleVersionIdInput: schedule_version_id,
+      scheduleVersionIdUsed: schedule_version_id,
       orToolEndpointUsed,
       orToolHttpStatus,
       orToolErrorBody: null,
