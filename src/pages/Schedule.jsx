@@ -1876,7 +1876,7 @@ Now process the user's input and return ONLY the JSON object.`,
                                 </div>
                               </div>
 
-                              {/* Problem Build / Input Summary */}\n                               <div className=\"grid md:grid-cols-2 gap-3\">\n                                 <div className=\"p-3 rounded-lg bg-slate-100\">\n                                   <div className=\"font-semibold text-slate-900 mb-1\">Input Summary (minutes → periods)</div>\n                                   <pre className=\"bg-white rounded p-2 overflow-x-auto max-h-40\">{JSON.stringify(orToolResult?.inputSummaryBySubject || {}, null, 2)}</pre>\n                                 </div>\n                                 <div className=\"p-3 rounded-lg bg-slate-100\">\n                                   <div className=\"font-semibold text-slate-900 mb-1\">Core TG Detected</div>\n                                   <pre className=\"bg-white rounded p-2 overflow-x-auto max-h-40\">{JSON.stringify(orToolResult?.coreTeachingGroupsDetected || [], null, 2)}</pre>\n                                 </div>\n                               </div>\n\n                               {/* Problem Build / Input Summary */}
+
                                <div className="grid md:grid-cols-2 gap-3">
                                  <div className="p-3 rounded-lg bg-slate-100">
                                    <div className="font-semibold text-slate-900 mb-1">Input Summary (minutes → periods)</div>
