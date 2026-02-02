@@ -191,6 +191,13 @@ Deno.serve(async (req) => {
       if (typeof tg.minutes_per_week === 'number' && tg.minutes_per_week > 0) return tg.minutes_per_week;
       if (typeof tg.hours_per_week === 'number' && tg.hours_per_week > 0) return Math.round(tg.hours_per_week * 60);
       const subj = subjectById[tg.subject_id];
+      const subjCode = subjectIdToCode[tg.subject_id];
+      
+      // CRITICAL FIX: Default minutes for core subjects if not set
+      if (subjCode && ['TOK', 'CAS', 'EE'].includes(subjCode)) {
+        return 60; // 1 hour/week default for DP core
+      }
+      
       const level = String(tg.level || '').toUpperCase();
       if (subj?.ib_level === 'DP') {
         if (level === 'HL') return Number(subj.hl_minutes_per_week_default || 300);
@@ -221,9 +228,16 @@ Deno.serve(async (req) => {
       const minutesUsed = minutesForTG(tg);
       const weeklyCount = minutesToPeriods(minutesUsed);
       const minutesOrig = typeof tg.minutes_per_week === 'number' ? tg.minutes_per_week : null;
+      
+      // CRITICAL: Never filter out core subjects (TOK/CAS/EE), even if minutes = 0
+      const isCoreSubject = subjCode && ['TOK', 'CAS', 'EE'].includes(subjCode);
       if (!weeklyCount || weeklyCount <= 0) {
-        teachingGroupFilteredPush(tg, minutesOrig === 0 ? 'ZERO_MINUTES' : 'MISSING_MINUTES');
-        continue;
+        if (isCoreSubject) {
+          console.warn(`[buildSchedulingProblem] Core subject ${subjCode} TG ${tg.id} has 0 minutes, using default 60 min`);
+        } else {
+          teachingGroupFilteredPush(tg, minutesOrig === 0 ? 'ZERO_MINUTES' : 'MISSING_MINUTES');
+          continue;
+        }
       }
 
       teachingGroupsIncludedCount++;
@@ -323,8 +337,14 @@ Deno.serve(async (req) => {
     for (const tg of teachingGroupsDb) {
       if (!tg?.is_active || !subjectIdToCode[tg.subject_id]) continue;
       const subjCode = subjectIdToCode[tg.subject_id];
-      const minutesUsed = minutesForTG(tg);
-      if (!minutesUsed || minutesUsed <= 0) continue;
+      let minutesUsed = minutesForTG(tg);
+      
+      // CRITICAL: Core subjects must have requirements even if minutes = 0
+      const isCoreSubject = ['TOK', 'CAS', 'EE'].includes(subjCode);
+      if ((!minutesUsed || minutesUsed <= 0) && !isCoreSubject) continue;
+      if ((!minutesUsed || minutesUsed <= 0) && isCoreSubject) {
+        minutesUsed = 60; // Force 1 hour/week for core
+      }
       
       subjectRequirements.push({
         studentGroup: `TG_${tg.id}`,
