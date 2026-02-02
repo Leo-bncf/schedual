@@ -117,7 +117,7 @@ Deno.serve(async (req) => {
       console.error('OR-Tool network error:', e);
       return Response.json({
         error: 'Unable to connect to OR-Tool endpoint',
-        endpoint: OR_TOOL_ENDPOINT,
+        endpoint: orToolEndpointUsed,
         details: String(e?.message || e)
       }, { status: 502 });
     }
