@@ -17,7 +17,7 @@ export default function StudentScheduleView({ students, slots, groups, subjects,
 
   const getStudentSlots = (studentId) => {
     const student = students.find(s => s.id === studentId);
-    return slots.filter(slot => {
+    const matchedSlots = slots.filter(slot => {
       // PYP/MYP: match by classgroup_id
       if (slot.classgroup_id && student?.classgroup_id) {
         return slot.classgroup_id === student.classgroup_id;
@@ -26,11 +26,43 @@ export default function StudentScheduleView({ students, slots, groups, subjects,
       if (slot?.notes?.includes('Test') && (slot?.notes?.includes('DP1') || slot?.notes?.includes('DP2'))) {
         return student?.year_group && slot.notes.includes(student.year_group);
       }
-      // DP: strictly by membership in teaching group
-      const group = groups.find(g => g.id === slot.teaching_group_id);
-      const inGroup = group?.student_ids?.includes(studentId);
-      return !!inGroup;
+      // DP: check membership in teaching group
+      if (slot.teaching_group_id) {
+        const group = groups.find(g => g.id === slot.teaching_group_id);
+        const inGroup = group?.student_ids?.includes(studentId);
+        if (inGroup) return true;
+        
+        // CRITICAL FIX: Include core subjects (TOK/CAS/EE) for same DP year
+        // Core TGs may not have student_ids populated, but should be included for all DP students in that year
+        const subject = subjects.find(s => s.id === group?.subject_id);
+        const coreSubjects = ['TOK', 'CAS', 'EE'];
+        const isCoreSubject = subject && (subject.is_core || coreSubjects.some(c => 
+          subject.code?.toUpperCase().includes(c) || subject.name?.toUpperCase().includes(c)
+        ));
+        
+        if (isCoreSubject && student?.year_group && group?.year_group) {
+          return student.year_group === group.year_group;
+        }
+      }
+      
+      return false;
     });
+
+    // Diagnostic 3: Log teaching group IDs used for this student
+    const tgIds = new Set(matchedSlots.filter(s => s.teaching_group_id).map(s => s.teaching_group_id));
+    console.log(`[StudentScheduleView] Student ${student?.full_name} (${student?.year_group}):`, {
+      teaching_group_ids_matched: Array.from(tgIds),
+      total_slots: matchedSlots.length,
+      core_slots: matchedSlots.filter(s => {
+        const group = groups.find(g => g.id === s.teaching_group_id);
+        const subject = subjects.find(sub => sub.id === group?.subject_id);
+        return subject && (subject.is_core || ['TOK','CAS','EE'].some(c => 
+          subject.code?.toUpperCase().includes(c) || subject.name?.toUpperCase().includes(c)
+        ));
+      }).length
+    });
+
+    return matchedSlots;
   };
 
   const studentSlots = selectedStudent ? getStudentSlots(selectedStudent.id) : [];
