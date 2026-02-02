@@ -282,15 +282,30 @@ Deno.serve(async (req) => {
     const periodsPerDay = Math.floor(timeslots.length / Math.max(1, daysCount));
 
     // Build subjects[] and subjectRequirements[] for solver validation
-    const subjectsList = Array.from(new Set(lessons.map(l => l.subject).filter(Boolean)));
-    const subjectRequirements = teachingGroupsDb
-      .filter(tg => tg?.is_active && subjectIdToCode[tg.subject_id])
-      .map(tg => ({
-        subjectCode: subjectIdToCode[tg.subject_id],
-        minutesPerWeek: minutesForTG(tg),
-        teachingGroupId: String(tg.id)
-      }))
-      .filter(r => (typeof r.minutesPerWeek === 'number') && r.minutesPerWeek > 0);
+    const subjectCodesInLessons = Array.from(new Set(lessons.map(l => l.subject).filter(Boolean)));
+    const subjectsList = subjectCodesInLessons.map(code => {
+      const subjId = subjectIdByCode[code] || null;
+      const subj = subjId ? subjectById[subjId] : null;
+      return {
+        id: subjId || code,
+        code: code,
+        name: subj?.name || code
+      };
+    });
+    
+    const subjectRequirements = [];
+    for (const tg of teachingGroupsDb) {
+      if (!tg?.is_active || !subjectIdToCode[tg.subject_id]) continue;
+      const subjCode = subjectIdToCode[tg.subject_id];
+      const minutesUsed = minutesForTG(tg);
+      if (!minutesUsed || minutesUsed <= 0) continue;
+      
+      subjectRequirements.push({
+        studentGroup: `TG_${tg.id}`,
+        subject: subjCode,
+        minutesPerWeek: minutesUsed
+      });
+    }
 
     const problem = {
       timeslots,

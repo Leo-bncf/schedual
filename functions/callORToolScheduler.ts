@@ -77,6 +77,18 @@ Deno.serve(async (req) => {
     const subjectsForSolver = Array.isArray(problem?.subjects) ? problem.subjects : [];
     const subjectRequirementsForSolver = Array.isArray(problem?.subjectRequirements) ? problem.subjectRequirements : [];
 
+    console.log('[callORToolScheduler] subjects validation:', {
+      isArray: Array.isArray(subjectsForSolver),
+      type: typeof subjectsForSolver,
+      length: subjectsForSolver.length,
+      first3: subjectsForSolver.slice(0, 3)
+    });
+    console.log('[callORToolScheduler] subjectRequirements validation:', {
+      isArray: Array.isArray(subjectRequirementsForSolver),
+      length: subjectRequirementsForSolver.length,
+      first3: subjectRequirementsForSolver.slice(0, 3)
+    });
+
     if (subjectsForSolver.length === 0 || subjectRequirementsForSolver.length === 0) {
       const reason = subjectsForSolver.length === 0 ? 'subjects[] is empty' : 'subjectRequirements[] is empty';
       console.error('[callORToolScheduler] INVALID_INPUT:', reason);
@@ -95,7 +107,9 @@ Deno.serve(async (req) => {
         performedInsertion: false,
         slotsDeleted: 0,
         slotsInserted: 0,
-        orToolRequestPayload: problem
+        orToolRequestPayload: problem,
+        orToolRequestPayloadSubjects: subjectsForSolver.slice(0, 3),
+        orToolRequestPayloadSubjectRequirements: subjectRequirementsForSolver.slice(0, 3)
       }, { status: 400 });
     }
 
@@ -178,6 +192,8 @@ Deno.serve(async (req) => {
         performedInsertion: false,
         slotsDeleted: 0,
         slotsInserted: 0,
+        orToolRequestPayloadSubjects: (problem?.subjects || []).slice(0, 3),
+        orToolRequestPayloadSubjectRequirements: (problem?.subjectRequirements || []).slice(0, 3),
         details: String(e?.message || e)
       }, { status: 502 });
     }
@@ -199,7 +215,8 @@ Deno.serve(async (req) => {
         performedInsertion: false,
         slotsDeleted: 0,
         slotsInserted: 0,
-        orToolRequestPayload: problem,
+        orToolRequestPayloadSubjects: (problem?.subjects || []).slice(0, 3),
+        orToolRequestPayloadSubjectRequirements: (problem?.subjectRequirements || []).slice(0, 3),
         details: errorText 
       }, { status: 500 });
     }
@@ -677,7 +694,8 @@ Deno.serve(async (req) => {
       solutionAssignmentsReturned: assignmentsReturnedBySubject,
       slotsPreparedForInsert: slotsPreparedBySubject,
       testSlotsInsertedCount,
-      orToolRequestPayload: problem,
+      orToolRequestPayloadSubjects: (problem?.subjects || []).slice(0, 3),
+      orToolRequestPayloadSubjectRequirements: (problem?.subjectRequirements || []).slice(0, 3),
       whyStopsEarly: {
         latestTimeslotAvailable: latestTimeslotAvailable ? { dayOfWeek: latestTimeslotAvailable.dayOfWeek, endTime: latestTimeslotAvailable.endTime } : null,
         latestTimeslotActuallyUsed: latestUsedTimeslot ? { dayOfWeek: latestUsedTimeslot.dayOfWeek, endTime: latestUsedTimeslot.endTime } : null,
