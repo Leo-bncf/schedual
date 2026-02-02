@@ -1786,8 +1786,16 @@ Now process the user's input and return ONLY the JSON object.`,
                                                      {orToolResult?.orToolErrorBody && (
                                                        <div className="mt-1 font-semibold text-rose-700">Error: <span className="break-all">{(orToolResult?.orToolErrorBody || '').slice(0,300)}</span></div>
                                                      )}
-                                                     {orToolResult?.orToolHttpStatus !== 200 && orToolResult?.orToolHttpStatus && (
-                                                       <div className="mt-3 space-y-2 border-t border-slate-300 pt-2">
+                                                     {orToolResult?.orToolHttpStatus && orToolResult?.orToolHttpStatus !== 200 && (
+                                                                                      <div className="mt-3 space-y-2 border-t border-slate-300 pt-2">
+                                                                                        <div className="text-[10px] text-slate-600 bg-rose-50 p-2 rounded border border-rose-200">
+                                                                                          <div className="font-bold text-rose-700 mb-1">🔴 OR-Tool Scheduler Failed (HTTP {orToolResult?.orToolHttpStatus})</div>
+                                                                                          <div className="text-rose-700">{orToolResult?.orToolErrorBody}</div>
+                                                                                        </div>
+                                                                                      </div>
+                                                                                    )}
+                                                                                    {orToolResult?.orToolHttpStatus === 200 && (
+                                                                                      <div className="mt-3 space-y-2 border-t border-slate-300 pt-2">
                                                          <div className="text-[10px] text-slate-600">
                                                            <div className="font-bold mb-1">📤 subjects sent (first 5):</div>
                                                            <pre className="bg-white rounded p-1.5 overflow-x-auto max-h-40">{JSON.stringify(orToolResult?.orToolRequestPayloadSubjects || [], null, 2)}</pre>
