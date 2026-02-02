@@ -81,32 +81,65 @@ Deno.serve(async (req) => {
     const isValidMongoId = (id) => /^[a-f0-9]{24}$/i.test(String(id || ''));
     const subjectsInvalidIds = subjectsForSolver
       .filter(s => !isValidMongoId(s?.id))
-      .map(s => ({ code: s?.code, id: s?.id, idLength: String(s?.id || '').length }));
+      .map(s => ({ id: s?.id, code: s?.code, name: s?.name }));
+
+    // Normalization helper (trim, collapse whitespace, _ ↔ space)
+    const normalize = (s) => {
+      if (!s) return '';
+      return String(s).trim().replace(/\s+/g, ' ').replace(/_/g, ' ').toUpperCase();
+    };
+
+    // Build normalized index: normalized string → original subject
+    const normalizedSubjectsIndex = {};
+    subjectsForSolver.forEach(s => {
+      const normCode = normalize(s?.code);
+      const normName = normalize(s?.name);
+      if (normCode) normalizedSubjectsIndex[normCode] = s?.code || s?.name;
+      if (normName) normalizedSubjectsIndex[normName] = s?.name || s?.code;
+    });
 
     // Validation 2: Check subjectRequirements reference valid subject codes
     const validSubjectCodes = new Set(subjectsForSolver.map(s => s?.code).filter(Boolean));
-    const requirementsUnknownSubjectCodes = subjectRequirementsForSolver
-      .filter(r => !validSubjectCodes.has(r?.subject))
-      .map(r => ({ subject: r?.subject, studentGroup: r?.studentGroup }));
+    const validSubjectNames = new Set(subjectsForSolver.map(s => s?.name).filter(Boolean));
+    const requirementsUnknownSubjects = subjectRequirementsForSolver
+      .filter(r => {
+        const subj = r?.subject;
+        if (!subj) return true;
+        // Check exact match first
+        if (validSubjectCodes.has(subj) || validSubjectNames.has(subj)) return false;
+        // Check normalized match
+        const normSubj = normalize(subj);
+        return !normalizedSubjectsIndex[normSubj];
+      })
+      .map(r => ({ studentGroup: r?.studentGroup, subject: r?.subject, minutesPerWeek: r?.minutesPerWeek }));
 
     // Validation 3: Check minutesPerWeek > 0
     const requirementsInvalidMinutes = subjectRequirementsForSolver
       .filter(r => !(typeof r?.minutesPerWeek === 'number' && r.minutesPerWeek > 0))
-      .map(r => ({ subject: r?.subject, studentGroup: r?.studentGroup, minutesPerWeek: r?.minutesPerWeek }));
+      .map(r => ({ studentGroup: r?.studentGroup, subject: r?.subject, minutesPerWeek: r?.minutesPerWeek }));
+
+    // Normalized requirements subjects (first 20)
+    const normalizedRequirementsSubjects = subjectRequirementsForSolver
+      .slice(0, 20)
+      .map(r => ({ original: r?.subject, normalized: normalize(r?.subject) }));
 
     console.log('[callORToolScheduler] subjects validation:', {
       isArray: Array.isArray(subjectsForSolver),
       type: typeof subjectsForSolver,
       length: subjectsForSolver.length,
-      first3: subjectsForSolver.slice(0, 3),
+      first5: subjectsForSolver.slice(0, 5),
       invalidIds: subjectsInvalidIds
     });
     console.log('[callORToolScheduler] subjectRequirements validation:', {
       isArray: Array.isArray(subjectRequirementsForSolver),
       length: subjectRequirementsForSolver.length,
-      first3: subjectRequirementsForSolver.slice(0, 3),
-      unknownSubjectCodes: requirementsUnknownSubjectCodes,
+      first10: subjectRequirementsForSolver.slice(0, 10),
+      unknownSubjects: requirementsUnknownSubjects,
       invalidMinutes: requirementsInvalidMinutes
+    });
+    console.log('[callORToolScheduler] normalization:', {
+      normalizedSubjectsIndex,
+      normalizedRequirementsSubjects
     });
 
     if (subjectsForSolver.length === 0 || subjectRequirementsForSolver.length === 0) {
@@ -240,11 +273,13 @@ Deno.serve(async (req) => {
         performedInsertion: false,
         slotsDeleted: 0,
         slotsInserted: 0,
-        orToolRequestPayloadSubjects: (problem?.subjects || []).slice(0, 3),
-        orToolRequestPayloadSubjectRequirements: (problem?.subjectRequirements || []).slice(0, 3),
+        orToolRequestPayloadSubjects: (problem?.subjects || []).slice(0, 5),
+        orToolRequestPayloadSubjectRequirements: (problem?.subjectRequirements || []).slice(0, 10),
         subjectsInvalidIds: subjectsInvalidIds || [],
-        requirementsUnknownSubjectCodes: requirementsUnknownSubjectCodes || [],
+        requirementsUnknownSubjects: requirementsUnknownSubjects || [],
         requirementsInvalidMinutes: requirementsInvalidMinutes || [],
+        normalizedSubjectsIndex: normalizedSubjectsIndex || {},
+        normalizedRequirementsSubjects: normalizedRequirementsSubjects || [],
         details: errorText 
       }, { status: 500 });
     }
@@ -722,11 +757,13 @@ Deno.serve(async (req) => {
       solutionAssignmentsReturned: assignmentsReturnedBySubject,
       slotsPreparedForInsert: slotsPreparedBySubject,
       testSlotsInsertedCount,
-      orToolRequestPayloadSubjects: (problem?.subjects || []).slice(0, 3),
-      orToolRequestPayloadSubjectRequirements: (problem?.subjectRequirements || []).slice(0, 3),
+      orToolRequestPayloadSubjects: (problem?.subjects || []).slice(0, 5),
+      orToolRequestPayloadSubjectRequirements: (problem?.subjectRequirements || []).slice(0, 10),
       subjectsInvalidIds: subjectsInvalidIds || [],
-      requirementsUnknownSubjectCodes: requirementsUnknownSubjectCodes || [],
+      requirementsUnknownSubjects: requirementsUnknownSubjects || [],
       requirementsInvalidMinutes: requirementsInvalidMinutes || [],
+      normalizedSubjectsIndex: normalizedSubjectsIndex || {},
+      normalizedRequirementsSubjects: normalizedRequirementsSubjects || [],
       whyStopsEarly: {
         latestTimeslotAvailable: latestTimeslotAvailable ? { dayOfWeek: latestTimeslotAvailable.dayOfWeek, endTime: latestTimeslotAvailable.endTime } : null,
         latestTimeslotActuallyUsed: latestUsedTimeslot ? { dayOfWeek: latestUsedTimeslot.dayOfWeek, endTime: latestUsedTimeslot.endTime } : null,
