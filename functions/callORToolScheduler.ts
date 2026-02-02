@@ -77,16 +77,36 @@ Deno.serve(async (req) => {
     const subjectsForSolver = Array.isArray(problem?.subjects) ? problem.subjects : [];
     const subjectRequirementsForSolver = Array.isArray(problem?.subjectRequirements) ? problem.subjectRequirements : [];
 
+    // Validation 1: Check subject ID format (24-char hex for MongoDB ObjectId)
+    const isValidMongoId = (id) => /^[a-f0-9]{24}$/i.test(String(id || ''));
+    const subjectsInvalidIds = subjectsForSolver
+      .filter(s => !isValidMongoId(s?.id))
+      .map(s => ({ code: s?.code, id: s?.id, idLength: String(s?.id || '').length }));
+
+    // Validation 2: Check subjectRequirements reference valid subject codes
+    const validSubjectCodes = new Set(subjectsForSolver.map(s => s?.code).filter(Boolean));
+    const requirementsUnknownSubjectCodes = subjectRequirementsForSolver
+      .filter(r => !validSubjectCodes.has(r?.subject))
+      .map(r => ({ subject: r?.subject, studentGroup: r?.studentGroup }));
+
+    // Validation 3: Check minutesPerWeek > 0
+    const requirementsInvalidMinutes = subjectRequirementsForSolver
+      .filter(r => !(typeof r?.minutesPerWeek === 'number' && r.minutesPerWeek > 0))
+      .map(r => ({ subject: r?.subject, studentGroup: r?.studentGroup, minutesPerWeek: r?.minutesPerWeek }));
+
     console.log('[callORToolScheduler] subjects validation:', {
       isArray: Array.isArray(subjectsForSolver),
       type: typeof subjectsForSolver,
       length: subjectsForSolver.length,
-      first3: subjectsForSolver.slice(0, 3)
+      first3: subjectsForSolver.slice(0, 3),
+      invalidIds: subjectsInvalidIds
     });
     console.log('[callORToolScheduler] subjectRequirements validation:', {
       isArray: Array.isArray(subjectRequirementsForSolver),
       length: subjectRequirementsForSolver.length,
-      first3: subjectRequirementsForSolver.slice(0, 3)
+      first3: subjectRequirementsForSolver.slice(0, 3),
+      unknownSubjectCodes: requirementsUnknownSubjectCodes,
+      invalidMinutes: requirementsInvalidMinutes
     });
 
     if (subjectsForSolver.length === 0 || subjectRequirementsForSolver.length === 0) {
@@ -107,9 +127,11 @@ Deno.serve(async (req) => {
         performedInsertion: false,
         slotsDeleted: 0,
         slotsInserted: 0,
-        orToolRequestPayload: problem,
         orToolRequestPayloadSubjects: subjectsForSolver.slice(0, 3),
-        orToolRequestPayloadSubjectRequirements: subjectRequirementsForSolver.slice(0, 3)
+        orToolRequestPayloadSubjectRequirements: subjectRequirementsForSolver.slice(0, 3),
+        subjectsInvalidIds,
+        requirementsUnknownSubjectCodes,
+        requirementsInvalidMinutes
       }, { status: 400 });
     }
 
@@ -194,6 +216,9 @@ Deno.serve(async (req) => {
         slotsInserted: 0,
         orToolRequestPayloadSubjects: (problem?.subjects || []).slice(0, 3),
         orToolRequestPayloadSubjectRequirements: (problem?.subjectRequirements || []).slice(0, 3),
+        subjectsInvalidIds: subjectsInvalidIds || [],
+        requirementsUnknownSubjectCodes: requirementsUnknownSubjectCodes || [],
+        requirementsInvalidMinutes: requirementsInvalidMinutes || [],
         details: String(e?.message || e)
       }, { status: 502 });
     }
@@ -217,6 +242,9 @@ Deno.serve(async (req) => {
         slotsInserted: 0,
         orToolRequestPayloadSubjects: (problem?.subjects || []).slice(0, 3),
         orToolRequestPayloadSubjectRequirements: (problem?.subjectRequirements || []).slice(0, 3),
+        subjectsInvalidIds: subjectsInvalidIds || [],
+        requirementsUnknownSubjectCodes: requirementsUnknownSubjectCodes || [],
+        requirementsInvalidMinutes: requirementsInvalidMinutes || [],
         details: errorText 
       }, { status: 500 });
     }
@@ -696,6 +724,9 @@ Deno.serve(async (req) => {
       testSlotsInsertedCount,
       orToolRequestPayloadSubjects: (problem?.subjects || []).slice(0, 3),
       orToolRequestPayloadSubjectRequirements: (problem?.subjectRequirements || []).slice(0, 3),
+      subjectsInvalidIds: subjectsInvalidIds || [],
+      requirementsUnknownSubjectCodes: requirementsUnknownSubjectCodes || [],
+      requirementsInvalidMinutes: requirementsInvalidMinutes || [],
       whyStopsEarly: {
         latestTimeslotAvailable: latestTimeslotAvailable ? { dayOfWeek: latestTimeslotAvailable.dayOfWeek, endTime: latestTimeslotAvailable.endTime } : null,
         latestTimeslotActuallyUsed: latestUsedTimeslot ? { dayOfWeek: latestUsedTimeslot.dayOfWeek, endTime: latestUsedTimeslot.endTime } : null,

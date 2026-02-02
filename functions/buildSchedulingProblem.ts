@@ -282,12 +282,15 @@ Deno.serve(async (req) => {
     const periodsPerDay = Math.floor(timeslots.length / Math.max(1, daysCount));
 
     // Build subjects[] and subjectRequirements[] for solver validation
+    const isValidMongoId = (id) => /^[a-f0-9]{24}$/i.test(String(id || ''));
     const subjectCodesInLessons = Array.from(new Set(lessons.map(l => l.subject).filter(Boolean)));
     const subjectsList = subjectCodesInLessons.map(code => {
       const subjId = subjectIdByCode[code] || null;
       const subj = subjId ? subjectById[subjId] : null;
+      // Ensure valid MongoDB ObjectId format
+      const validId = subjId && isValidMongoId(subjId) ? subjId : '000000000000000000000000';
       return {
-        id: subjId || code,
+        id: validId,
         code: code,
         name: subj?.name || code
       };
