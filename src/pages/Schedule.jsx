@@ -1782,8 +1782,38 @@ Now process the user's input and return ONLY the JSON object.`,
                                                      <div className="truncate">{String(orToolResult?.orToolEndpointUsed || orToolResult?.endpoint || '—')}</div>
                                                      <div className="mt-1">HTTP: <strong>{orToolResult?.orToolHttpStatus ?? '—'}</strong></div>
                                                      <div className="mt-1">/health: <strong>{orToolResult?.orToolHealthStatus ?? '—'}</strong> {orToolResult?.orToolHealthOk === false ? '(down)' : ''}</div>
-                                                     <div className="mt-1">Headers: <code>{JSON.stringify(orToolResult?.orToolRequestHeadersSent || [])}</code></div>
-                                                     <div className="mt-1">Error: <span className="break-all">{(orToolResult?.orToolErrorBody || '').slice(0,140) || '—'}</span></div>
+                                                     <div className="mt-1">Headers: <code className="text-[10px]">{JSON.stringify(orToolResult?.orToolRequestHeadersSent || {})}</code></div>
+                                                     <div className="mt-1 font-semibold text-rose-700">Error: <span className="break-all">{(orToolResult?.orToolErrorBody || '').slice(0,240) || '—'}</span></div>
+                                                     {orToolResult?.orToolHttpStatus === 400 && (
+                                                       <div className="mt-2 space-y-2">
+                                                         <div className="text-[10px] text-slate-600">
+                                                           <div className="font-bold mb-1">subjects (first 3):</div>
+                                                           <pre className="bg-white rounded p-1 overflow-x-auto">{JSON.stringify(orToolResult?.orToolRequestPayloadSubjects || [], null, 2)}</pre>
+                                                         </div>
+                                                         <div className="text-[10px] text-slate-600">
+                                                           <div className="font-bold mb-1">subjectRequirements (first 3):</div>
+                                                           <pre className="bg-white rounded p-1 overflow-x-auto">{JSON.stringify(orToolResult?.orToolRequestPayloadSubjectRequirements || [], null, 2)}</pre>
+                                                         </div>
+                                                         {(orToolResult?.subjectsInvalidIds || []).length > 0 && (
+                                                           <div className="text-[10px] text-rose-700">
+                                                             <div className="font-bold">❌ Invalid Subject IDs:</div>
+                                                             <pre className="bg-rose-50 rounded p-1">{JSON.stringify(orToolResult.subjectsInvalidIds, null, 2)}</pre>
+                                                           </div>
+                                                         )}
+                                                         {(orToolResult?.requirementsUnknownSubjectCodes || []).length > 0 && (
+                                                           <div className="text-[10px] text-rose-700">
+                                                             <div className="font-bold">❌ Unknown Subject Codes:</div>
+                                                             <pre className="bg-rose-50 rounded p-1">{JSON.stringify(orToolResult.requirementsUnknownSubjectCodes, null, 2)}</pre>
+                                                           </div>
+                                                         )}
+                                                         {(orToolResult?.requirementsInvalidMinutes || []).length > 0 && (
+                                                           <div className="text-[10px] text-rose-700">
+                                                             <div className="font-bold">❌ Invalid Minutes:</div>
+                                                             <pre className="bg-rose-50 rounded p-1">{JSON.stringify(orToolResult.requirementsInvalidMinutes, null, 2)}</pre>
+                                                           </div>
+                                                         )}
+                                                       </div>
+                                                     )}
                         </div>
                         <div className="p-3 rounded-lg bg-slate-100">
                           <div className="font-semibold text-slate-900 mb-1">Persistence</div>
