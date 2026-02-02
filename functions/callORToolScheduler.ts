@@ -844,6 +844,7 @@ Deno.serve(async (req) => {
       solutionAssignmentsReturned: assignmentsReturnedBySubject,
       slotsPreparedForInsert: slotsPreparedBySubject,
       testSlotsInsertedCount,
+      slotsInsertedBySubjectCode,
       orToolRequestPayloadSubjects: (problem?.subjects || []).slice(0, 5),
       orToolRequestPayloadSubjectRequirements: (problem?.subjectRequirements || []).slice(0, 10),
       subjectsInvalidIds: subjectsInvalidIds || [],
@@ -851,6 +852,7 @@ Deno.serve(async (req) => {
       requirementsInvalidMinutes: requirementsInvalidMinutes || [],
       normalizedSubjectsIndex: normalizedSubjectsIndex || {},
       normalizedRequirementsSubjects: normalizedRequirementsSubjects || [],
+      coreSubjectRequirementsSample: coreSubjectRequirements,
       whyStopsEarly: {
         latestTimeslotAvailable: latestTimeslotAvailable ? { dayOfWeek: latestTimeslotAvailable.dayOfWeek, endTime: latestTimeslotAvailable.endTime } : null,
         latestTimeslotActuallyUsed: latestUsedTimeslot ? { dayOfWeek: latestUsedTimeslot.dayOfWeek, endTime: latestUsedTimeslot.endTime } : null,
