@@ -102,6 +102,8 @@ Deno.serve(async (req) => {
 
     const orToolEndpointUsed = OR_TOOL_ENDPOINT;
     console.log('[callORToolScheduler] Calling OR-Tool at', orToolEndpointUsed, 'schedule_version_id =', schedule_version_id);
+    let orToolHttpStatus = null;
+    let orToolRequestHeadersSent = ['Content-Type','X-API-Key'];
 
     let solverResponse;
     try {
@@ -109,13 +111,13 @@ Deno.serve(async (req) => {
         'Content-Type': 'application/json',
         'X-API-Key': OR_TOOL_API_KEY
       };
-      const orToolRequestHeadersSent = Object.keys(requestHeaders);
+      orToolRequestHeadersSent = Object.keys(requestHeaders);
       solverResponse = await fetch(orToolEndpointUsed, {
         method: 'POST',
         headers: requestHeaders,
         body: JSON.stringify(problem)
       });
-      const orToolHttpStatus = solverResponse.status;
+      orToolHttpStatus = solverResponse.status;
       console.log('[callORToolScheduler] OR-Tool HTTP status =', orToolHttpStatus);
     } catch (e) {
       console.error('OR-Tool network error:', e);
