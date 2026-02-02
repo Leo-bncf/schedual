@@ -105,12 +105,14 @@ Deno.serve(async (req) => {
 
     let solverResponse;
     try {
+      const requestHeaders = {
+        'Content-Type': 'application/json',
+        'X-API-Key': OR_TOOL_API_KEY
+      };
+      const orToolRequestHeadersSent = Object.keys(requestHeaders);
       solverResponse = await fetch(orToolEndpointUsed, {
         method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'X-API-Key': OR_TOOL_API_KEY
-        },
+        headers: requestHeaders,
         body: JSON.stringify(problem)
       });
       const orToolHttpStatus = solverResponse.status;
@@ -122,6 +124,9 @@ Deno.serve(async (req) => {
         endpoint: orToolEndpointUsed,
         orToolHttpStatus: null,
         orToolErrorBody: String(e?.message || e).slice(0, 500),
+        orToolRequestHeadersSent: ['Content-Type','X-API-Key'],
+        orToolHealthStatus,
+        orToolHealthOk,
         details: String(e?.message || e)
       }, { status: 502 });
     }
@@ -134,6 +139,9 @@ Deno.serve(async (req) => {
         endpoint: orToolEndpointUsed,
         orToolHttpStatus,
         orToolErrorBody: errorText ? errorText.slice(0, 500) : null,
+        orToolRequestHeadersSent: ['Content-Type','X-API-Key'],
+        orToolHealthStatus,
+        orToolHealthOk,
         details: errorText 
       }, { status: 500 });
     }
@@ -266,6 +274,42 @@ Deno.serve(async (req) => {
     console.log('[callORToolScheduler] maxPeriodUsedByDay =', maxPeriodUsedByDay);
     console.log('[callORToolScheduler] endTimeUsedByDay =', endTimeUsedByDay);
 
+    // Build Problem Build/Input Summary
+    const subjectKeySet = new Set(Object.keys(expectedLessonsBySubject || {}).concat(Object.keys(expectedMinutesBySubject || {})));
+    const normalize = (s) => String(s||'').toUpperCase().replace(/\s+/g,'_').replace(/[^A-Z0-9_]/g,'');
+    // Ensure common subjects
+    ['TOK','CAS','EE','TEST','ENGLISH','FILM'].forEach(k => subjectKeySet.add(k));
+    const minutesPerPeriod = scheduleSettingsSent.period_duration_minutes || 60;
+    const inputSummaryBySubject = {};
+    for (const code of subjectKeySet) {
+      // Handle English and Film fuzzy matching
+      const matchKey = (target) => {
+        const candidates = Object.keys(expectedMinutesBySubject || {});
+        const found = candidates.find(k => normalize(k).includes(target));
+        return found ? normalize(found) : target;
+      };
+      const key = (code === 'ENGLISH') ? matchKey('ENGLISH') : (code === 'FILM' ? matchKey('FILM') : code);
+      const minutes = (expectedMinutesBySubject && expectedMinutesBySubject[key]) || 0;
+      const requiredPeriods = minutes ? Math.ceil(minutes / minutesPerPeriod) : 0;
+      inputSummaryBySubject[code] = {
+        minutes_per_week: minutes,
+        requiredPeriods,
+        expectedLessons: (expectedLessonsBySubject && expectedLessonsBySubject[key]) || 0,
+        problemLessonsCreated: (problemLessonsCreated && problemLessonsCreated[key]) || 0
+      };
+    }
+
+    // Detect core teaching groups (TOK/CAS/EE/TEST)
+    const codeBySubjectId = {};
+    Object.entries(subjectIdByCode || {}).forEach(([code, id]) => { codeBySubjectId[id] = code; });
+    const coreSubjectsSet = new Set(['TOK','CAS','EE','TEST']);
+    const coreTeachingGroupsDetected = (teachingGroups || []).filter(g => coreSubjectsSet.has(codeBySubjectId[g.subject_id] || ''))
+      .map(g => ({
+        id: g.id,
+        subject_code: codeBySubjectId[g.subject_id] || null,
+        minutes_per_week: typeof g.minutes_per_week === 'number' ? g.minutes_per_week : null,
+        is_active: g.is_active !== false
+      }));
     // Compute latest timeslot actually used and dominant cause for early stop
     const usedTimeslotIds = solvedLessons.filter(l => l.timeslotId).map(l => l.timeslotId);
     const maxUsedTimeslotId = usedTimeslotIds.length ? Math.max(...usedTimeslotIds) : null;
@@ -522,6 +566,9 @@ Deno.serve(async (req) => {
       orToolEndpointUsed,
       orToolHttpStatus,
       orToolErrorBody: null,
+      orToolRequestHeadersSent,
+      orToolHealthStatus,
+      orToolHealthOk,
       expectedLessonsBySubject,
       assignedBySubjectCode,
       assignmentsBySubjectCode: assignedBySubjectCode,
@@ -581,7 +628,9 @@ Deno.serve(async (req) => {
         slots_created: slots.length,
         unassigned_lessons: unassignedLessons.length,
         score: solution.score || 0
-      }
+      },
+      inputSummaryBySubject,
+      coreTeachingGroupsDetected
     });
 
   } catch (error) {
