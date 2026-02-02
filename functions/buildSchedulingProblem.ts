@@ -281,6 +281,29 @@ Deno.serve(async (req) => {
     const daysCount = daysOfWeek.length || 5;
     const periodsPerDay = Math.floor(timeslots.length / Math.max(1, daysCount));
 
+    // Diagnostic 1: Core Teaching Groups Detection
+    const coreSubjectsSet = new Set(['TOK', 'CAS', 'EE']);
+    const coreTeachingGroupsDetected = teachingGroupsDb
+      .filter(tg => {
+        const code = subjectIdToCode[tg.subject_id];
+        return code && coreSubjectsSet.has(code);
+      })
+      .map(tg => ({
+        id: tg.id,
+        subject_code: subjectIdToCode[tg.subject_id],
+        minutes_per_week: minutesForTG(tg),
+        dp_year: tg.year_group,
+        is_active: tg.is_active,
+        has_students: Array.isArray(tg.student_ids) && tg.student_ids.length > 0,
+        student_count: Array.isArray(tg.student_ids) ? tg.student_ids.length : 0
+      }));
+
+    // Diagnostic 2: Core Requirements Generated
+    const coreRequirementsGeneratedByCode = {};
+    for (const code of coreSubjectsSet) {
+      coreRequirementsGeneratedByCode[code] = subjectRequirements.filter(r => r.subject === code).length;
+    }
+
     // Build subjects[] and subjectRequirements[] for solver validation
     const isValidMongoId = (id) => /^[a-f0-9]{24}$/i.test(String(id || ''));
     const subjectCodesInLessons = Array.from(new Set(lessons.map(l => l.subject).filter(Boolean)));
@@ -405,7 +428,14 @@ Deno.serve(async (req) => {
         expectedMinutesBySubject,
         totalRequiredMinutes: (Object.values(expectedMinutesBySubject || {}).reduce((a,b)=>a+b,0)),
         totalRequiredPeriods: (Object.values(expectedLessonsBySubject || {}).reduce((a,b)=>a+b,0)),
-        lessonsCreatedBySubject
+        lessonsCreatedBySubject,
+        coreTeachingGroupsDetected,
+        coreRequirementsGeneratedByCode,
+        coreExpectedLessons: {
+          TOK: expectedLessonsBySubject['TOK'] || 0,
+          CAS: expectedLessonsBySubject['CAS'] || 0,
+          EE: expectedLessonsBySubject['EE'] || 0
+        }
       }
     });
   } catch (error) {

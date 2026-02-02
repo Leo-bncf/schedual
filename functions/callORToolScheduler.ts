@@ -789,6 +789,7 @@ Deno.serve(async (req) => {
       sampleSlotsInserted,
       coreSlotsInsertedCount,
       sampleCoreSlot,
+      coreSlotsPersisted,
       diagnostics: {
         lessonsWithoutTimeslot,
         missingRoomCount,
