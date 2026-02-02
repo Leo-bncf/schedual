@@ -381,13 +381,21 @@ Deno.serve(async (req) => {
     for (const tg of teachingGroupsDb) {
       if (!tg?.is_active || !subjectIdToCode[tg.subject_id]) continue;
       const subjCode = subjectIdToCode[tg.subject_id];
+      
+      // Option A: Use teaching_group.minutes_per_week or fallback 60 for all subjects (including core)
       let minutesUsed = minutesForTG(tg);
       
-      // CRITICAL: Core subjects must have requirements even if minutes = 0
+      // RULE: Core subjects (TOK/CAS/EE) are MANDATORY and never skip
+      // If minutes_per_week is missing/invalid, use fallback 60
       const isCoreSubject = ['TOK', 'CAS', 'EE'].includes(subjCode);
-      if ((!minutesUsed || minutesUsed <= 0) && !isCoreSubject) continue;
+      if ((!minutesUsed || minutesUsed <= 0) && !isCoreSubject) {
+        // Skip non-core subjects with zero minutes
+        continue;
+      }
       if ((!minutesUsed || minutesUsed <= 0) && isCoreSubject) {
-        minutesUsed = 60; // Force 1 hour/week for core
+        // Core subjects: force 60 min/week fallback
+        minutesUsed = 60;
+        console.log(`[buildSchedulingProblem] Core ${subjCode} TG ${tg.id}: 0/missing minutes, using fallback 60 min/week`);
       }
       
       subjectRequirements.push({
