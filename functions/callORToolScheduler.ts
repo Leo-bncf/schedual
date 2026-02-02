@@ -784,6 +784,16 @@ Deno.serve(async (req) => {
       orToolRequestHeadersSent,
       orToolHealthStatus,
       orToolHealthOk,
+      orToolRequestPayload: {
+        scheduleSettings: scheduleSettingsSent,
+        subjects: (problem?.subjects || []).slice(0, 5),
+        subjectRequirements: coreSubjectRequirements.length > 0 
+          ? coreSubjectRequirements 
+          : (problem?.subjectRequirements || []).slice(0, 10),
+        lessonsCount: solvedLessons ? solvedLessons.length : null,
+        timeslotsCount: problem.timeslots ? problem.timeslots.length : null,
+        coreRequirementsFound: coreSubjectRequirements.length
+      },
       expectedLessonsBySubject,
       assignedBySubjectCode,
       assignmentsBySubjectCode: assignedBySubjectCode,
