@@ -29,8 +29,28 @@ const subjectGroupColors = {
   '6': { bg: 'bg-pink-100', border: 'border-l-pink-600', text: 'text-pink-900', name: 'The Arts' },
 };
 
-export default function TimetableGrid({ slots = [], groups = [], rooms = [], subjects = [], teachers = [], classGroups = [], periodsPerDay = 8, breakPeriods = [], lunchPeriod = 4, onSlotClick, exportId = "timetable-grid" }) {
+export default function TimetableGrid({ 
+  slots = [], 
+  groups = [], 
+  rooms = [], 
+  subjects = [], 
+  teachers = [], 
+  classGroups = [], 
+  periodsPerDay = 8, 
+  breakPeriods = [], 
+  lunchPeriod = 4, 
+  onSlotClick, 
+  exportId = "timetable-grid",
+  dayStartTime = '08:00',
+  dayEndTime = '18:00',
+  periodDurationMinutes = 60
+}) {
   const [selectedSlot, setSelectedSlot] = React.useState(null);
+  
+  const periodTimes = React.useMemo(() => 
+    calculatePeriodTimes(dayStartTime, periodDurationMinutes, periodsPerDay),
+    [dayStartTime, periodDurationMinutes, periodsPerDay]
+  );
 
   // Normalize incoming slot day/period formats (e.g., MONDAY -> Monday, "5" -> 5)
   const DAY_MAP = { MONDAY: 'Monday', TUESDAY: 'Tuesday', WEDNESDAY: 'Wednesday', THURSDAY: 'Thursday', FRIDAY: 'Friday' };
