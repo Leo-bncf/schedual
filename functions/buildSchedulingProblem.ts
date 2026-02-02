@@ -344,9 +344,29 @@ Deno.serve(async (req) => {
 
     const lastTimeslot = timeslots[timeslots.length - 1] || null;
 
+    // Filter out STUDY and TEST from subjects/lessons/requirements for solver
+    // These will be injected post-solver to fill empty slots
+    const excludeFromSolver = new Set(['STUDY', 'TEST']);
+    const problemSubjectsFiltered = problem.subjects.filter(s => !excludeFromSolver.has(s.code));
+    const problemLessonsFiltered = problem.lessons.filter(l => !excludeFromSolver.has(l.subject));
+    const problemRequirementsFiltered = problem.subjectRequirements.filter(r => !excludeFromSolver.has(r.subject));
+
+    console.log('[buildSchedulingProblem] Filtered for solver:', {
+      subjects: { before: problem.subjects.length, after: problemSubjectsFiltered.length },
+      lessons: { before: problem.lessons.length, after: problemLessonsFiltered.length },
+      requirements: { before: problem.subjectRequirements.length, after: problemRequirementsFiltered.length }
+    });
+
+    const problemForSolver = {
+      ...problem,
+      subjects: problemSubjectsFiltered,
+      lessons: problemLessonsFiltered,
+      subjectRequirements: problemRequirementsFiltered
+    };
+
     return Response.json({
       success: true,
-      problem,
+      problem: problemForSolver,
       subjectIdByCode,
       // Debug summary
       schoolIdUsed: school_id,
