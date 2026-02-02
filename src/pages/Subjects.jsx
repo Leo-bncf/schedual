@@ -929,7 +929,7 @@ ${trainingFeedback ? `LESSONS FROM ADMIN FEEDBACK:\n${trainingFeedback}\n\n` : '
               </Select>
             </div>
 
-            {formData.ib_level === 'DP' ? (
+            {formData.ib_level === 'DP' && !formData.is_core ? (
               <div className="grid grid-cols-2 gap-4">
                 <div className="space-y-2">
                   <Label htmlFor="hl_hours">HL Hours/Week</Label>
@@ -967,7 +967,10 @@ ${trainingFeedback ? `LESSONS FROM ADMIN FEEDBACK:\n${trainingFeedback}\n\n` : '
                   placeholder="e.g., 4"
                 />
                 <p className="text-xs text-slate-500">
-                  Allocated teaching hours per week for this {formData.ib_level} subject
+                  {formData.is_core 
+                    ? 'Hours per week for all DP students (applied to entire year group)'
+                    : `Allocated teaching hours per week for this ${formData.ib_level} subject`
+                  }
                 </p>
               </div>
             )}
@@ -994,20 +997,9 @@ ${trainingFeedback ? `LESSONS FROM ADMIN FEEDBACK:\n${trainingFeedback}\n\n` : '
               
               {formData.is_core && (
                 <div className="p-4 bg-purple-50 rounded-lg border border-purple-200">
-                  <Label htmlFor="core_hours" className="font-semibold text-purple-900">
-                    Teaching Hours per Week
-                  </Label>
-                  <Input
-                    id="core_hours"
-                    type="number"
-                    min="1"
-                    max="10"
-                    value={formData.pyp_myp_hours_per_week || 2}
-                    onChange={(e) => setFormData({ ...formData, pyp_myp_hours_per_week: parseInt(e.target.value) })}
-                    className="mt-2"
-                  />
-                  <p className="text-xs text-purple-600 mt-2">
-                    Recommended: TOK = 3 hours, CAS/EE = 1 hour
+                  <p className="text-sm text-purple-900 font-semibold">ℹ️ Core Component</p>
+                  <p className="text-xs text-purple-700 mt-1">
+                    This subject will be automatically assigned to ALL DP1 and DP2 students. Teaching groups will be created per year level.
                   </p>
                 </div>
               )}
