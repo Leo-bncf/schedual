@@ -279,7 +279,7 @@ Deno.serve(async (req) => {
       const errorText = await solverResponse.text();
       console.error('OR-Tool error:', errorText);
       return Response.json({ 
-        error: 'OR-Tool scheduling failed',
+        error: 'OR-Tool scheduling failed - solver rejected request, no slots inserted',
         orToolEndpointUsed,
         orToolHttpStatus,
         orToolErrorBody: errorText,
@@ -295,7 +295,9 @@ Deno.serve(async (req) => {
         orToolRequestPayload: {
           scheduleSettings: scheduleSettingsSent,
           subjects: (problem?.subjects || []).slice(0, 5),
-          subjectRequirements: (problem?.subjectRequirements || []).slice(0, 10),
+          subjectRequirements: coreSubjectRequirements.length > 0 
+            ? coreSubjectRequirements 
+            : (problem?.subjectRequirements || []).slice(0, 10),
           lessonsCount: solvedLessons ? solvedLessons.length : null,
           timeslotsCount: problem.timeslots ? problem.timeslots.length : null
         },
@@ -306,6 +308,7 @@ Deno.serve(async (req) => {
         requirementsInvalidMinutes: requirementsInvalidMinutes || [],
         normalizedSubjectsIndex: normalizedSubjectsIndex || {},
         normalizedRequirementsSubjects: normalizedRequirementsSubjects || [],
+        coreSubjectRequirementsSample: coreSubjectRequirements,
         details: errorText 
       }, { status: 500 });
     }
