@@ -73,7 +73,33 @@ Deno.serve(async (req) => {
       target_periods_per_day: problem?.scheduleSettings?.targetPeriodsPerDay || (buildResponse?.data?.stats?.dp_target_periods_per_day || null),
     };
 
-    // Step 2: Call OR-Tool service
+    // Step 2: Validate problem before calling OR-Tool
+    const subjectsForSolver = Array.isArray(problem?.subjects) ? problem.subjects : [];
+    const subjectRequirementsForSolver = Array.isArray(problem?.subjectRequirements) ? problem.subjectRequirements : [];
+
+    if (subjectsForSolver.length === 0 || subjectRequirementsForSolver.length === 0) {
+      const reason = subjectsForSolver.length === 0 ? 'subjects[] is empty' : 'subjectRequirements[] is empty';
+      console.error('[callORToolScheduler] INVALID_INPUT:', reason);
+      return Response.json({
+        error: 'INVALID_INPUT',
+        message: `Invalid problem for solver: ${reason}. Fix data and retry.`,
+        scheduleVersionIdInput: schedule_version_id,
+        scheduleVersionIdUsed: schedule_version_id,
+        orToolEndpointUsed: Deno.env.get('OR_TOOL_ENDPOINT') || null,
+        orToolHttpStatus: null,
+        orToolHealthStatus: null,
+        orToolHealthOk: null,
+        orToolRequestHeadersSent: { 'Content-Type': 'application/json', 'X-API-Key': '***' },
+        orToolErrorBody: null,
+        performedDeletion: false,
+        performedInsertion: false,
+        slotsDeleted: 0,
+        slotsInserted: 0,
+        orToolRequestPayload: problem
+      }, { status: 400 });
+    }
+
+    // Step 3: Call OR-Tool service
     const OR_TOOL_ENDPOINT = Deno.env.get('OR_TOOL_ENDPOINT');
     const OR_TOOL_API_KEY = Deno.env.get('OR_TOOL_API_KEY');
 
@@ -128,10 +154,11 @@ Deno.serve(async (req) => {
         'X-API-Key': OR_TOOL_API_KEY
       };
       orToolRequestHeadersSent = { 'Content-Type': 'application/json', 'X-API-Key': maskApiKey(OR_TOOL_API_KEY) };
+      const payloadJson = JSON.stringify(problem);
       solverResponse = await fetch(orToolEndpointUsed, {
         method: 'POST',
         headers: requestHeaders,
-        body: JSON.stringify(problem)
+        body: payloadJson
       });
       orToolHttpStatus = solverResponse.status;
       console.log('[callORToolScheduler] OR-Tool HTTP status =', orToolHttpStatus);
@@ -172,6 +199,7 @@ Deno.serve(async (req) => {
         performedInsertion: false,
         slotsDeleted: 0,
         slotsInserted: 0,
+        orToolRequestPayload: problem,
         details: errorText 
       }, { status: 500 });
     }
@@ -649,6 +677,7 @@ Deno.serve(async (req) => {
       solutionAssignmentsReturned: assignmentsReturnedBySubject,
       slotsPreparedForInsert: slotsPreparedBySubject,
       testSlotsInsertedCount,
+      orToolRequestPayload: problem,
       whyStopsEarly: {
         latestTimeslotAvailable: latestTimeslotAvailable ? { dayOfWeek: latestTimeslotAvailable.dayOfWeek, endTime: latestTimeslotAvailable.endTime } : null,
         latestTimeslotActuallyUsed: latestUsedTimeslot ? { dayOfWeek: latestUsedTimeslot.dayOfWeek, endTime: latestUsedTimeslot.endTime } : null,

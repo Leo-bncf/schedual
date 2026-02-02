@@ -281,11 +281,24 @@ Deno.serve(async (req) => {
     const daysCount = daysOfWeek.length || 5;
     const periodsPerDay = Math.floor(timeslots.length / Math.max(1, daysCount));
 
+    // Build subjects[] and subjectRequirements[] for solver validation
+    const subjectsList = Array.from(new Set(lessons.map(l => l.subject).filter(Boolean)));
+    const subjectRequirements = teachingGroupsDb
+      .filter(tg => tg?.is_active && subjectIdToCode[tg.subject_id])
+      .map(tg => ({
+        subjectCode: subjectIdToCode[tg.subject_id],
+        minutesPerWeek: minutesForTG(tg),
+        teachingGroupId: String(tg.id)
+      }))
+      .filter(r => (typeof r.minutesPerWeek === 'number') && r.minutesPerWeek > 0);
+
     const problem = {
       timeslots,
       rooms,
       teachers,
       lessons,
+      subjects: subjectsList,
+      subjectRequirements,
       subjectIdByCode,
       teacherNumericIdToBase44Id,
       roomNumericIdToBase44Id,
