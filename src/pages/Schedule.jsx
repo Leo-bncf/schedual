@@ -181,7 +181,13 @@ export default function Schedule() {
 
   const { data: scheduleSlots = [], isLoading: loadingSlots } = useQuery({
     queryKey: ['scheduleSlots', selectedVersion?.id],
-    queryFn: () => selectedVersion ? base44.entities.ScheduleSlot.filter({ schedule_version: selectedVersion.id }) : [],
+    queryFn: async () => {
+      if (!selectedVersion) return [];
+      const slots = await base44.entities.ScheduleSlot.filter({ schedule_version: selectedVersion.id });
+      // If OR-Tool returned newly inserted slots, merge them in memory until cache updates
+      const inserted = (orToolResult?.persistedSlotsSample || []).map(s => ({ ...s, schedule_version: selectedVersion.id }));
+      return Array.isArray(inserted) && inserted.length > 0 ? [...slots, ...inserted] : slots;
+    },
     enabled: !!selectedVersion,
   });
 
