@@ -74,20 +74,28 @@ Deno.serve(async (req) => {
     };
 
     // Step 2: Call OR-Tool service
-    const OR_TOOL_ENDPOINT = Deno.env.get('OR_TOOL_ENDPOINT') || Deno.env.get('OR_TOOL_API_URL');
+    const OR_TOOL_ENDPOINT = Deno.env.get('OR_TOOL_ENDPOINT');
     const OR_TOOL_API_KEY = Deno.env.get('OR_TOOL_API_KEY');
 
-    if (!OR_TOOL_ENDPOINT || !OR_TOOL_API_KEY) {
+    if (!OR_TOOL_ENDPOINT) {
+      console.error('[callORToolScheduler] Missing OR_TOOL_ENDPOINT');
       return Response.json({ 
-        error: 'OR-Tool service not configured. Set OR_TOOL_ENDPOINT/OR_TOOL_API_URL and OR_TOOL_API_KEY.'
+        error: 'OR-Tool endpoint missing: set OR_TOOL_ENDPOINT to http://87.106.27.27:8080/solve-and-push'
+      }, { status: 503 });
+    }
+    if (!OR_TOOL_API_KEY) {
+      console.error('[callORToolScheduler] Missing OR_TOOL_API_KEY');
+      return Response.json({ 
+        error: 'OR-Tool API key missing: set OR_TOOL_API_KEY'
       }, { status: 503 });
     }
 
-    console.log(`Calling OR-Tool at ${OR_TOOL_ENDPOINT}...`);
+    const orToolEndpointUsed = OR_TOOL_ENDPOINT;
+    console.log('[callORToolScheduler] Calling OR-Tool at', orToolEndpointUsed);
 
     let solverResponse;
     try {
-      solverResponse = await fetch(OR_TOOL_ENDPOINT, {
+      solverResponse = await fetch(orToolEndpointUsed, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -109,7 +117,7 @@ Deno.serve(async (req) => {
       console.error('OR-Tool error:', errorText);
       return Response.json({ 
         error: 'OR-Tool scheduling failed',
-        endpoint: OR_TOOL_ENDPOINT,
+        endpoint: orToolEndpointUsed,
         details: errorText 
       }, { status: 500 });
     }
@@ -495,6 +503,7 @@ Deno.serve(async (req) => {
       success: true,
       school_id: user.school_id,
       schedule_version_id,
+      orToolEndpointUsed,
       expectedLessonsBySubject,
       assignedBySubjectCode,
       assignmentsBySubjectCode: assignedBySubjectCode,
@@ -525,6 +534,10 @@ Deno.serve(async (req) => {
       slotsToInsertBySubjectId,
       insertedCount,
       deletedCount: typeof deletedCount === 'number' ? deletedCount : 0,
+      slotsInserted: insertedCount,
+      slotsDeleted: typeof deletedCount === 'number' ? deletedCount : 0,
+      performedInsertion: insertedCount > 0,
+      performedDeletion: (typeof deletedCount === 'number' ? deletedCount : 0) > 0,
       errors,
       offByOneIssues,
       sampleSlotsInserted,
