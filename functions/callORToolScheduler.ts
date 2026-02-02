@@ -160,11 +160,13 @@ Deno.serve(async (req) => {
         performedInsertion: false,
         slotsDeleted: 0,
         slotsInserted: 0,
-        orToolRequestPayloadSubjects: subjectsForSolver.slice(0, 3),
-        orToolRequestPayloadSubjectRequirements: subjectRequirementsForSolver.slice(0, 3),
-        subjectsInvalidIds,
-        requirementsUnknownSubjectCodes,
-        requirementsInvalidMinutes
+        orToolRequestPayloadSubjects: subjectsForSolver.slice(0, 5),
+        orToolRequestPayloadSubjectRequirements: subjectRequirementsForSolver.slice(0, 10),
+        subjectsInvalidIds: subjectsInvalidIds || [],
+        requirementsUnknownSubjects: requirementsUnknownSubjects || [],
+        requirementsInvalidMinutes: requirementsInvalidMinutes || [],
+        normalizedSubjectsIndex: normalizedSubjectsIndex || {},
+        normalizedRequirementsSubjects: normalizedRequirementsSubjects || []
       }, { status: 400 });
     }
 
