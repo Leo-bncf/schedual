@@ -102,6 +102,23 @@ Deno.serve(async (req) => {
 
     const orToolEndpointUsed = OR_TOOL_ENDPOINT;
     console.log('[callORToolScheduler] Calling OR-Tool at', orToolEndpointUsed, 'schedule_version_id =', schedule_version_id);
+
+    // Diagnostics defaults + /health check
+    let orToolHttpStatus = null;
+    let orToolRequestHeadersSent = ['Content-Type','X-API-Key'];
+    let orToolHealthStatus = null;
+    let orToolHealthOk = null;
+    try {
+      const healthUrl = orToolEndpointUsed.replace('/solve-and-push', '/health');
+      const healthRes = await fetch(healthUrl, { method: 'GET' });
+      orToolHealthStatus = healthRes.status;
+      orToolHealthOk = healthRes.ok;
+      console.log('[callORToolScheduler] OR-Tool /health status =', orToolHealthStatus);
+    } catch (e) {
+      console.warn('[callORToolScheduler] OR-Tool /health check failed:', String(e?.message || e));
+      orToolHealthStatus = null;
+      orToolHealthOk = false;
+    }
     // Diagnostics defaults
     let orToolHttpStatus = null;
     let orToolRequestHeadersSent = ['Content-Type','X-API-Key'];
@@ -143,7 +160,7 @@ Deno.serve(async (req) => {
         endpoint: orToolEndpointUsed,
         orToolHttpStatus: null,
         orToolErrorBody: String(e?.message || e).slice(0, 500),
-        orToolRequestHeadersSent: ['Content-Type','X-API-Key'],
+        orToolRequestHeadersSent,
         orToolHealthStatus,
         orToolHealthOk,
         details: String(e?.message || e)
@@ -158,7 +175,7 @@ Deno.serve(async (req) => {
         endpoint: orToolEndpointUsed,
         orToolHttpStatus,
         orToolErrorBody: errorText ? errorText.slice(0, 500) : null,
-        orToolRequestHeadersSent: ['Content-Type','X-API-Key'],
+        orToolRequestHeadersSent,
         orToolHealthStatus,
         orToolHealthOk,
         details: errorText 
