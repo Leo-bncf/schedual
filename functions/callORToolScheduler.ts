@@ -63,6 +63,21 @@ Deno.serve(async (req) => {
     const expectedLessonsBySubject = (buildResponse.data?.stats?.expectedLessonsBySubject) || {};
     const expectedMinutesBySubject = (buildResponse.data?.stats?.expectedMinutesBySubject) || null;
     const problemLessonsCreated = (buildResponse.data?.stats?.lessonsCreatedBySubject) || {};
+    
+    // DIAGNOSTIC: Filter subjectRequirements for TOK/CAS/EE
+    const coreCodesSet = new Set(['TOK', 'CAS', 'EE']);
+    const coreSubjectRequirements = (problem?.subjectRequirements || [])
+      .filter(r => {
+        const subj = String(r.subject || '')
+          .toUpperCase().replace(/\s+/g, '_').replace(/[^A-Z0-9_]/g, '');
+        return coreCodesSet.has(subj);
+      })
+      .slice(0, 20); // First 20 for logging
+    
+    console.log('[callORToolScheduler] Core subject requirements (TOK/CAS/EE):', {
+      count: coreSubjectRequirements.length,
+      sample: coreSubjectRequirements.slice(0, 10)
+    });
     const scheduleSettingsSent = {
       day_start_time: problem?.scheduleSettings?.dayStartTime || problem?.scheduleSettings?.schoolStartTime || null,
       day_end_time: problem?.scheduleSettings?.dayEndTime || null,
