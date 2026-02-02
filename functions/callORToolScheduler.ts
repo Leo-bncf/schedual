@@ -581,21 +581,8 @@ Deno.serve(async (req) => {
     let sampleCoreSlot = sampleTok || sampleCas || sampleEe || null;
     console.log('[callORToolScheduler] coreSlotsInsertedCount (init) =', coreSlotsInsertedCount, 'sampleCoreSlot =', sampleCoreSlot);
 
-    // Step 6: Delete existing slots for this version
-    const existingSlots = await base44.entities.ScheduleSlot.filter({
-      school_id: user.school_id,
-      schedule_version: schedule_version_id
-    });
-    const deletedCount = existingSlots.length;
-    for (const slot of existingSlots) {
-      try {
-        await base44.entities.ScheduleSlot.delete(slot.id);
-      } catch (e) {
-        errors.push(`delete:${slot.id}:${e?.message || 'error'}`);
-      }
-    }
-
-    // Step 6.5: Inject STUDY slots into empty timeslots (post-solver)
+    // Step 6.5: Inject STUDY slots into empty timeslots (post-solver, ONLY if solver succeeded)
+    // CRITICAL: STUDY/TEST only injected when orToolHttpStatus === 200
     const allTimeslots = problem.timeslots || [];
     const occupiedSlots = new Set();
     slots.forEach(s => {
@@ -605,12 +592,13 @@ Deno.serve(async (req) => {
 
     const studySlots = [];
     const studySubject = subjects.find(s => s.code === 'STUDY' || s.name === 'STUDY');
-    if (studySubject) {
+    if (studySubject && orToolHttpStatus === 200) {
+      // Only inject STUDY if solver succeeded
       for (const ts of allTimeslots) {
         const day = dayMapping[ts.dayOfWeek] || ts.dayOfWeek;
         const period = timeslotIndexInDay[ts.id] || 1;
         const key = `${day}_${period}`;
-        
+
         if (!occupiedSlots.has(key)) {
           studySlots.push({
             school_id: schoolId,
@@ -632,6 +620,20 @@ Deno.serve(async (req) => {
 
     // Combine solver slots + STUDY slots
     const allSlots = [...slots, ...studySlots];
+
+    // Step 6: Delete existing slots for this version (ONLY if solver succeeded)
+    const existingSlots = await base44.entities.ScheduleSlot.filter({
+      school_id: user.school_id,
+      schedule_version: schedule_version_id
+    });
+    const deletedCount = existingSlots.length;
+    for (const slot of existingSlots) {
+      try {
+        await base44.entities.ScheduleSlot.delete(slot.id);
+      } catch (e) {
+        errors.push(`delete:${slot.id}:${e?.message || 'error'}`);
+      }
+    }
 
     // Step 7: Create new slots
     let insertedCount = 0;
