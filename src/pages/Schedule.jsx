@@ -2202,6 +2202,9 @@ Now process the user's input and return ONLY the JSON object.`,
                          periodsPerDay={orToolResult?.buildMeta?.periodsPerDay || school?.periods_per_day || 8}
                          breakPeriods={school?.settings?.break_periods || []}
                          lunchPeriod={school?.settings?.lunch_period || 4}
+                         dayStartTime={school?.day_start_time || schoolConfig.day_start_time}
+                         dayEndTime={school?.day_end_time || schoolConfig.day_end_time}
+                         periodDurationMinutes={school?.period_duration_minutes || schoolConfig.period_duration_minutes}
                          onSlotClick={(day, period, slot) => {
                            console.log('Clicked:', day, period, slot);
                          }}
