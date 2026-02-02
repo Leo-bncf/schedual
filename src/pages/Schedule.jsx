@@ -448,6 +448,8 @@ Now process the user's input and return ONLY the JSON object.`,
     try {
       const res = await base44.functions.invoke('callORToolScheduler', { schedule_version_id: selectedVersion.id, dp_min_end_time: '16:00', dp_study_weekly: 8 });
       setOrToolResult(res.data);
+      await queryClient.invalidateQueries({ queryKey: ['scheduleSlots'] });
+      await queryClient.invalidateQueries({ queryKey: ['scheduleVersions'] });
       toast.success('OR-Tool response retrieved');
     } catch (e) {
       console.error('OR-Tool fetch failed:', e);
