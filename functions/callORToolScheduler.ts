@@ -633,11 +633,23 @@ Deno.serve(async (req) => {
     // Step 7: Create new slots
     let insertedCount = 0;
     let sampleSlotsInserted = null;
+    let slotsInsertedBySubjectCode = {};
+    
     if (allSlots.length > 0) {
       const inserted = await base44.entities.ScheduleSlot.bulkCreate(allSlots);
       const createdIds = Array.isArray(inserted) ? inserted.map(r => r.id) : null;
       insertedCount = Array.isArray(inserted) ? inserted.length : allSlots.length;
+      
+      // Count inserted slots by subject code
+      if (Array.isArray(inserted)) {
+        for (const slot of inserted) {
+          const code = slot.subject_id ? (codeBySubjectId[slot.subject_id] || 'UNKNOWN') : 'UNKNOWN';
+          slotsInsertedBySubjectCode[code] = (slotsInsertedBySubjectCode[code] || 0) + 1;
+        }
+      }
+      
       console.log('[callORToolScheduler] insertedCount =', insertedCount);
+      console.log('[callORToolScheduler] slotsInsertedBySubjectCode =', slotsInsertedBySubjectCode);
       console.log('[callORToolScheduler] insertedCountBySubject =', slotsPreparedBySubject);
       if (createdIds) {
         console.log('[callORToolScheduler] createdIds (first 20) =', createdIds.slice(0, 20));
