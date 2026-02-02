@@ -247,11 +247,13 @@ Deno.serve(async (req) => {
         performedInsertion: false,
         slotsDeleted: 0,
         slotsInserted: 0,
-        orToolRequestPayloadSubjects: (problem?.subjects || []).slice(0, 3),
-        orToolRequestPayloadSubjectRequirements: (problem?.subjectRequirements || []).slice(0, 3),
+        orToolRequestPayloadSubjects: (problem?.subjects || []).slice(0, 5),
+        orToolRequestPayloadSubjectRequirements: (problem?.subjectRequirements || []).slice(0, 10),
         subjectsInvalidIds: subjectsInvalidIds || [],
-        requirementsUnknownSubjectCodes: requirementsUnknownSubjectCodes || [],
+        requirementsUnknownSubjects: requirementsUnknownSubjects || [],
         requirementsInvalidMinutes: requirementsInvalidMinutes || [],
+        normalizedSubjectsIndex: normalizedSubjectsIndex || {},
+        normalizedRequirementsSubjects: normalizedRequirementsSubjects || [],
         details: String(e?.message || e)
       }, { status: 502 });
     }
