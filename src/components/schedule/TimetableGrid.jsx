@@ -4,19 +4,20 @@ import { Badge } from "@/components/ui/badge";
 
 const DAYS = ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday'];
 
-const periodTimes = {
-  1: '08:00',
-  2: '08:45',
-  3: '09:30',
-  4: '10:15',
-  5: '11:00',
-  6: '11:45',
-  7: '13:00',
-  8: '13:45',
-  9: '14:30',
-  10: '15:15',
-  11: '16:00',
-  12: '16:45',
+// Calculate period times dynamically from dayStartTime + periodDurationMinutes
+const calculatePeriodTimes = (dayStartTime = '08:00', periodDurationMinutes = 60, periodsPerDay = 8) => {
+  const times = {};
+  const [startHour, startMin] = (dayStartTime || '08:00').split(':').map(Number);
+  let totalMinutes = startHour * 60 + startMin;
+  
+  for (let i = 1; i <= periodsPerDay; i++) {
+    const h = Math.floor(totalMinutes / 60);
+    const m = totalMinutes % 60;
+    times[i] = `${String(h).padStart(2, '0')}:${String(m).padStart(2, '0')}`;
+    totalMinutes += (periodDurationMinutes || 60);
+  }
+  
+  return times;
 };
 
 const subjectGroupColors = {
