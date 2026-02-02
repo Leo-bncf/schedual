@@ -277,6 +277,13 @@ Deno.serve(async (req) => {
         performedInsertion: false,
         slotsDeleted: 0,
         slotsInserted: 0,
+        orToolRequestPayload: {
+          scheduleSettings: scheduleSettingsSent,
+          subjects: (problem?.subjects || []).slice(0, 5),
+          subjectRequirements: (problem?.subjectRequirements || []).slice(0, 10),
+          lessonsCount: solvedLessons ? solvedLessons.length : null,
+          timeslotsCount: problem.timeslots ? problem.timeslots.length : null
+        },
         orToolRequestPayloadSubjects: (problem?.subjects || []).slice(0, 5),
         orToolRequestPayloadSubjectRequirements: (problem?.subjectRequirements || []).slice(0, 10),
         subjectsInvalidIds: subjectsInvalidIds || [],
