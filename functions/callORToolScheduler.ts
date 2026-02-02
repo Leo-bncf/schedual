@@ -109,15 +109,19 @@ Deno.serve(async (req) => {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
-          'Authorization': `Bearer ${OR_TOOL_API_KEY}`
+          'X-API-Key': OR_TOOL_API_KEY
         },
         body: JSON.stringify(problem)
       });
+      const orToolHttpStatus = solverResponse.status;
+      console.log('[callORToolScheduler] OR-Tool HTTP status =', orToolHttpStatus);
     } catch (e) {
       console.error('OR-Tool network error:', e);
       return Response.json({
         error: 'Unable to connect to OR-Tool endpoint',
         endpoint: orToolEndpointUsed,
+        orToolHttpStatus: null,
+        orToolErrorBody: String(e?.message || e).slice(0, 500),
         details: String(e?.message || e)
       }, { status: 502 });
     }
@@ -128,6 +132,8 @@ Deno.serve(async (req) => {
       return Response.json({ 
         error: 'OR-Tool scheduling failed',
         endpoint: orToolEndpointUsed,
+        orToolHttpStatus,
+        orToolErrorBody: errorText ? errorText.slice(0, 500) : null,
         details: errorText 
       }, { status: 500 });
     }
@@ -514,6 +520,8 @@ Deno.serve(async (req) => {
       school_id: user.school_id,
       schedule_version_id,
       orToolEndpointUsed,
+      orToolHttpStatus,
+      orToolErrorBody: null,
       expectedLessonsBySubject,
       assignedBySubjectCode,
       assignmentsBySubjectCode: assignedBySubjectCode,

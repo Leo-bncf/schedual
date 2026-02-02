@@ -1715,6 +1715,29 @@ Now process the user's input and return ONLY the JSON object.`,
                         )}
                       </div>
 
+                      {/* Quick verification panel */}
+                      <div className="grid md:grid-cols-3 gap-3 text-xs">
+                        <div className="p-3 rounded-lg bg-slate-100">
+                          <div className="font-semibold text-slate-900 mb-1">Endpoint</div>
+                          <div className="truncate">{String(orToolResult?.orToolEndpointUsed || orToolResult?.endpoint || '—')}</div>
+                          <div className="mt-1">HTTP: <strong>{orToolResult?.orToolHttpStatus ?? '—'}</strong></div>
+                          <div className="mt-1">Error: <span className="break-all">{(orToolResult?.orToolErrorBody || '').slice(0,140) || '—'}</span></div>
+                        </div>
+                        <div className="p-3 rounded-lg bg-slate-100">
+                          <div className="font-semibold text-slate-900 mb-1">Persistence</div>
+                          <div>schedule_version_id: <strong>{orToolResult?.schedule_version_id || '—'}</strong></div>
+                          <div>performedDeletion: <strong>{String(orToolResult?.performedDeletion ?? false)}</strong></div>
+                          <div>performedInsertion: <strong>{String(orToolResult?.performedInsertion ?? false)}</strong></div>
+                          <div>slotsDeleted: <strong>{orToolResult?.slotsDeleted ?? orToolResult?.deletedCount ?? 0}</strong></div>
+                          <div>slotsInserted: <strong>{orToolResult?.slotsInserted ?? orToolResult?.insertedCount ?? 0}</strong></div>
+                        </div>
+                        <div className="p-3 rounded-lg bg-slate-100">
+                          <div className="font-semibold text-slate-900 mb-1">Timeslots</div>
+                          <div>timeslotsCount: <strong>{orToolResult?.timeslotsCount ?? orToolResult?.buildMeta?.timeslotsCount ?? '—'}</strong></div>
+                          <div>endTimeUsedByDay: <code>{JSON.stringify(orToolResult?.endTimeUsedByDay || {})}</code></div>
+                        </div>
+                      </div>
+
                       {orToolResult?.guardFailureCode && (
                         <div className="p-3 rounded-lg bg-rose-50 border border-rose-200 text-rose-800 text-xs">
                           <div className="font-semibold mb-1">Guard Failure: {orToolResult.guardFailureCode}</div>
