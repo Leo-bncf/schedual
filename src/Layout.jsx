@@ -164,8 +164,7 @@ export default function Layout({ children, currentPageName }) {
           }
         }
 
-        // Check login verification for non-superadmins
-        await checkLoginVerification(userData);
+        setIsLoading(false);
       } catch (error) {
         console.error('Auth error:', error);
         setIsLoading(false);
