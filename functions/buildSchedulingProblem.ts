@@ -269,19 +269,25 @@ Deno.serve(async (req) => {
         continue;
       }
 
-      const minutesUsed = minutesForTG(tg);
-      const weeklyCount = minutesToPeriods(minutesUsed);
+      let minutesUsed = minutesForTG(tg);
       const minutesOrig = typeof tg.minutes_per_week === 'number' ? tg.minutes_per_week : null;
       
-      // CRITICAL: Never filter out core subjects (TOK/CAS/EE), even if minutes = 0
+      // CRITICAL: Core subjects (TOK/CAS/EE) MUST have minutes, force fallback BEFORE calculating weeklyCount
       const isCoreSubject = subjCode && ['TOK', 'CAS', 'EE'].includes(subjCode);
+      if ((!minutesUsed || minutesUsed <= 0) && isCoreSubject) {
+        minutesUsed = 60; // Force 60 min/week for core
+        console.warn(`[buildSchedulingProblem] Core subject ${subjCode} TG ${tg.id} has 0/missing minutes, forcing 60 min/week`);
+      }
+
+      const weeklyCount = minutesToPeriods(minutesUsed);
+
       if (!weeklyCount || weeklyCount <= 0) {
         if (isCoreSubject) {
-          console.warn(`[buildSchedulingProblem] Core subject ${subjCode} TG ${tg.id} has 0 minutes, using default 60 min`);
-        } else {
-          teachingGroupFilteredPush(tg, minutesOrig === 0 ? 'ZERO_MINUTES' : 'MISSING_MINUTES');
-          continue;
+          // This should never happen after forcing 60 min, but safeguard
+          console.error(`[buildSchedulingProblem] CRITICAL: Core subject ${subjCode} still has 0 weeklyCount after fallback!`);
         }
+        teachingGroupFilteredPush(tg, minutesOrig === 0 ? 'ZERO_MINUTES' : 'MISSING_MINUTES');
+        continue;
       }
 
       teachingGroupsIncludedCount++;
