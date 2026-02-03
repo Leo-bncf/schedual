@@ -260,6 +260,18 @@ Deno.serve(async (req) => {
       const coreGroups = teachingGroupsDb.filter(tg => tg.subject_id === coreSubject.id && tg.is_active);
       console.log(`[buildSchedulingProblem] ${coreCode}: found ${coreGroups.length} active TeachingGroups`);
       
+      // DIAGNOSTIC 3: Check student membership in core groups
+      if (coreGroups.length > 0) {
+        const sampleGroup = coreGroups[0];
+        console.log(`[buildSchedulingProblem] ${coreCode} sample group:`, {
+          id: sampleGroup.id,
+          name: sampleGroup.name,
+          student_count: Array.isArray(sampleGroup.student_ids) ? sampleGroup.student_ids.length : 0,
+          minutes: sampleGroup.minutes_per_week,
+          teacher: sampleGroup.teacher_id
+        });
+      }
+      
       if (coreGroups.length === 0) {
         console.log(`[buildSchedulingProblem] No active TeachingGroup for ${coreCode}, creating one...`);
         
