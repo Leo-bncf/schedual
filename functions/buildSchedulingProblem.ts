@@ -209,25 +209,49 @@ Deno.serve(async (req) => {
 
     const minutesToPeriods = (m) => Math.max(0, Math.ceil(m / periodDurationMinutes));
 
+    // DIAGNOSTIC: Log all subjects before core check
+    console.log('[buildSchedulingProblem] All subjects in DB:', subjectsDb.map(s => ({ 
+      id: s.id, 
+      code: s.code, 
+      name: s.name, 
+      normalized: normalizeSubjectCode(s.code || s.name),
+      is_core: s.is_core,
+      ib_level: s.ib_level
+    })));
+
     // CRITICAL: Ensure core DP subjects (TOK/CAS/EE) have active TeachingGroups
     // If not, create them automatically for all DP students
     const coreSubjectsToEnsure = ['TOK', 'CAS', 'EE'];
+    console.log('[buildSchedulingProblem] Starting core subjects check...');
+    
     for (const coreCode of coreSubjectsToEnsure) {
-      const coreSubject = subjectsDb.find(s => normalizeSubjectCode(s.code) === coreCode || normalizeSubjectCode(s.name) === coreCode);
+      console.log(`[buildSchedulingProblem] Checking ${coreCode}...`);
+      
+      const coreSubject = subjectsDb.find(s => {
+        const normCode = normalizeSubjectCode(s.code);
+        const normName = normalizeSubjectCode(s.name);
+        const match = normCode === coreCode || normName === coreCode;
+        if (match) {
+          console.log(`[buildSchedulingProblem] Found ${coreCode} subject:`, { id: s.id, code: s.code, name: s.name, normCode, normName });
+        }
+        return match;
+      });
+      
       if (!coreSubject) {
-        console.warn(`[buildSchedulingProblem] Core subject ${coreCode} not found in database`);
+        console.error(`[buildSchedulingProblem] ❌ Core subject ${coreCode} NOT FOUND in database!`);
         continue;
       }
 
       // Check if there are any active TeachingGroups for this core subject
       const coreGroups = teachingGroupsDb.filter(tg => tg.subject_id === coreSubject.id && tg.is_active);
+      console.log(`[buildSchedulingProblem] ${coreCode}: found ${coreGroups.length} active TeachingGroups`);
+      
       if (coreGroups.length === 0) {
         console.log(`[buildSchedulingProblem] No active TeachingGroup for ${coreCode}, creating one...`);
         
         // Get all DP students
-        const [students] = await Promise.all([
-          base44.entities.Student.filter({ school_id, ib_programme: 'DP', is_active: true })
-        ]);
+        const students = await base44.entities.Student.filter({ school_id, ib_programme: 'DP', is_active: true });
+        console.log(`[buildSchedulingProblem] Found ${students.length} DP students for ${coreCode}`);
 
         const dpStudentIds = students.map(s => s.id);
         
@@ -243,15 +267,21 @@ Deno.serve(async (req) => {
               minutes_per_week: 60,
               is_active: true
             });
-            console.log(`[buildSchedulingProblem] Created TeachingGroup for ${coreCode}: ${newGroup.id}`);
+            console.log(`[buildSchedulingProblem] ✅ Created TeachingGroup for ${coreCode}: ${newGroup.id}`);
             // Reload teachingGroupsDb to include new group
             teachingGroupsDb.push(newGroup);
           } catch (e) {
-            console.error(`[buildSchedulingProblem] Failed to create TeachingGroup for ${coreCode}:`, e);
+            console.error(`[buildSchedulingProblem] ❌ Failed to create TeachingGroup for ${coreCode}:`, e);
           }
+        } else {
+          console.warn(`[buildSchedulingProblem] ⚠️ No DP students found, cannot create ${coreCode} TeachingGroup`);
         }
+      } else {
+        console.log(`[buildSchedulingProblem] ✅ ${coreCode} already has ${coreGroups.length} active TeachingGroup(s):`, coreGroups.map(g => ({ id: g.id, name: g.name, minutes: g.minutes_per_week })));
       }
     }
+    
+    console.log('[buildSchedulingProblem] Core subjects check complete. Total TeachingGroups:', teachingGroupsDb.length);
 
     // Study filler for DP groups
     const dpStudyWeekly = Number(body?.dp_study_weekly ?? Deno.env.get('DP_STUDY_WEEKLY') ?? 0);
