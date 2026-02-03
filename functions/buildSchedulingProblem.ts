@@ -414,16 +414,27 @@ Deno.serve(async (req) => {
     });
     
     const subjectRequirements = [];
+    console.log('[buildSchedulingProblem] Building subjectRequirements from', teachingGroupsDb.length, 'TeachingGroups...');
+    
     for (const tg of teachingGroupsDb) {
-      if (!tg?.is_active || !subjectIdToCode[tg.subject_id]) continue;
       const subjCode = subjectIdToCode[tg.subject_id];
+      const isCoreSubject = subjCode && ['TOK', 'CAS', 'EE'].includes(subjCode);
+      
+      if (!tg?.is_active) {
+        if (isCoreSubject) console.warn(`[buildSchedulingProblem] ⚠️ Core TG ${tg.id} (${subjCode}) is INACTIVE, skipping`);
+        continue;
+      }
+      
+      if (!subjCode) {
+        if (isCoreSubject) console.error(`[buildSchedulingProblem] ❌ Core TG ${tg.id} has NO SUBJECT CODE!`);
+        continue;
+      }
       
       // Option A: Use teaching_group.minutes_per_week or fallback 60 for all subjects (including core)
       let minutesUsed = minutesForTG(tg);
       
       // RULE: Core subjects (TOK/CAS/EE) are MANDATORY and never skip
       // If minutes_per_week is missing/invalid, use fallback 60
-      const isCoreSubject = ['TOK', 'CAS', 'EE'].includes(subjCode);
       if ((!minutesUsed || minutesUsed <= 0) && !isCoreSubject) {
         // Skip non-core subjects with zero minutes
         continue;
@@ -431,7 +442,11 @@ Deno.serve(async (req) => {
       if ((!minutesUsed || minutesUsed <= 0) && isCoreSubject) {
         // Core subjects: force 60 min/week fallback
         minutesUsed = 60;
-        console.log(`[buildSchedulingProblem] Core ${subjCode} TG ${tg.id}: 0/missing minutes, using fallback 60 min/week`);
+        console.log(`[buildSchedulingProblem] ✅ Core ${subjCode} TG ${tg.id}: 0/missing minutes, forcing fallback 60 min/week`);
+      }
+      
+      if (isCoreSubject) {
+        console.log(`[buildSchedulingProblem] ✅ Adding core requirement: ${subjCode} (TG ${tg.id}), ${minutesUsed} min/week`);
       }
       
       subjectRequirements.push({
@@ -440,6 +455,9 @@ Deno.serve(async (req) => {
         minutesPerWeek: minutesUsed
       });
     }
+    
+    console.log('[buildSchedulingProblem] Total subjectRequirements:', subjectRequirements.length);
+    console.log('[buildSchedulingProblem] Core requirements:', subjectRequirements.filter(r => ['TOK','CAS','EE'].includes(r.subject)));
 
     const problem = {
       timeslots,
