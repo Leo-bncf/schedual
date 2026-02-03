@@ -173,34 +173,7 @@ export default function Layout({ children, currentPageName }) {
       }
     };
 
-    const checkLoginVerification = async (userData) => {
-      try {
-        // Check for verified session in last 24 hours
-        const sessions = await base44.entities.LoginSession.list().catch(() => []);
-        const validSession = sessions.find(s => 
-          s.user_email === userData.email && 
-          s.verified === true &&
-          new Date(s.expires_at) > new Date()
-        );
 
-        if (validSession) {
-          // Valid session exists
-          setIsLoading(false);
-          return;
-        }
-
-        // No valid session - need verification
-        const response = await base44.functions.invoke('sendLoginVerification');
-        if (response.data.success) {
-          setSessionToken(response.data.sessionToken);
-          setNeedsVerification(true);
-          setIsLoading(false);
-        }
-      } catch (error) {
-        console.error('Login verification check error:', error);
-        setIsLoading(false);
-      }
-    };
 
     loadAuth();
   }, []);
