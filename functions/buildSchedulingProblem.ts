@@ -209,7 +209,7 @@ Deno.serve(async (req) => {
 
     const minutesToPeriods = (m) => Math.max(0, Math.ceil(m / periodDurationMinutes));
 
-    // DIAGNOSTIC: Log all subjects before core check
+    // DIAGNOSTIC 1: Log all subjects before core check
     console.log('[buildSchedulingProblem] All subjects in DB:', subjectsDb.map(s => ({ 
       id: s.id, 
       code: s.code, 
@@ -218,6 +218,20 @@ Deno.serve(async (req) => {
       is_core: s.is_core,
       ib_level: s.ib_level
     })));
+
+    // DIAGNOSTIC 2: Check DP students and their core assignments
+    const dpStudents = await base44.entities.Student.filter({ school_id, ib_programme: 'DP', is_active: true });
+    console.log('[buildSchedulingProblem] DP Students check:', {
+      total: dpStudents.length,
+      sample: dpStudents.slice(0, 3).map(s => ({
+        id: s.id,
+        name: s.full_name,
+        year: s.year_group,
+        core_components: s.core_components,
+        subject_choices: s.subject_choices?.length || 0,
+        assigned_groups: s.assigned_groups?.length || 0
+      }))
+    });
 
     // CRITICAL: Ensure core DP subjects (TOK/CAS/EE) have active TeachingGroups
     // If not, create them automatically for all DP students
