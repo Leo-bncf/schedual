@@ -55,25 +55,38 @@ Deno.serve(async (req) => {
     console.log(`[callORToolScheduler] ${stage}: calling buildSchedulingProblem`);
     
     // Step 1: Build scheduling problem
-    const buildResponse = await base44.functions.invoke('buildSchedulingProblem', {
-      schedule_version_id,
-      school_id: schoolId,
-      dp_study_weekly: dpStudyWeekly,
-      dp_min_end_time: dpMinEndTime
-    });
-
-    if (!buildResponse.data.success || buildResponse.data.ok === false) {
-      console.error(`[callORToolScheduler] buildProblem failed:`, buildResponse.data);
+    let buildResponse;
+    try {
+      buildResponse = await base44.functions.invoke('buildSchedulingProblem', {
+        schedule_version_id,
+        school_id: schoolId,
+        dp_study_weekly: dpStudyWeekly,
+        dp_min_end_time: dpMinEndTime
+      });
+    } catch (buildError) {
+      console.error(`[callORToolScheduler] buildSchedulingProblem invocation error:`, buildError);
       return Response.json({ 
         ok: false,
-        stage: buildResponse.data.stage || stage,
+        stage: 'buildProblem',
+        error: 'Failed to invoke buildSchedulingProblem',
+        errorMessage: String(buildError?.message || buildError),
+        errorStack: String(buildError?.stack || ''),
+        meta: { schedule_version_id, schoolId }
+      }, { status: 200 });
+    }
+
+    if (!buildResponse?.data?.success || buildResponse?.data?.ok === false) {
+      console.error(`[callORToolScheduler] buildProblem failed:`, buildResponse?.data);
+      return Response.json({ 
+        ok: false,
+        stage: buildResponse?.data?.stage || 'buildProblem',
         error: 'buildSchedulingProblem failed',
-        errorMessage: buildResponse.data.errorMessage || buildResponse.data.error || 'Unknown error',
-        errorStack: buildResponse.data.errorStack || '',
-        buildError: buildResponse.data,
+        errorMessage: buildResponse?.data?.errorMessage || buildResponse?.data?.error || 'Unknown error',
+        errorStack: buildResponse?.data?.errorStack || '',
+        buildError: buildResponse?.data || null,
         meta: { schedule_version_id, schoolId },
-        counts: buildResponse.data.counts || null,
-        samples: buildResponse.data.samples || null
+        counts: buildResponse?.data?.counts || null,
+        samples: buildResponse?.data?.samples || null
       }, { status: 200 }); // Return 200 so UI can parse
     }
 
@@ -257,6 +270,7 @@ Deno.serve(async (req) => {
     }
 
     let solverResponse;
+    let solverResponseText = null;
     try {
       const maskApiKey = (k) => (k && k.length >= 6) ? `${k.slice(0,3)}***${k.slice(-3)}` : '***';
       const requestHeaders = {
@@ -265,6 +279,15 @@ Deno.serve(async (req) => {
       };
       orToolRequestHeadersSent = { 'Content-Type': 'application/json', 'X-API-Key': maskApiKey(OR_TOOL_API_KEY) };
       const payloadJson = JSON.stringify(problem);
+
+      console.log('[callORToolScheduler] Sending to OR-Tool:', {
+        endpoint: orToolEndpointUsed,
+        subjectsCount: problem?.subjects?.length || 0,
+        requirementsCount: problem?.subjectRequirements?.length || 0,
+        lessonsCount: problem?.lessons?.length || 0,
+        timeslotsCount: problem?.timeslots?.length || 0
+      });
+
       solverResponse = await fetch(orToolEndpointUsed, {
         method: 'POST',
         headers: requestHeaders,
@@ -272,10 +295,19 @@ Deno.serve(async (req) => {
       });
       orToolHttpStatus = solverResponse.status;
       console.log('[callORToolScheduler] OR-Tool HTTP status =', orToolHttpStatus);
+
+      // Read response body once
+      solverResponseText = await solverResponse.text();
+      console.log('[callORToolScheduler] OR-Tool response preview:', solverResponseText?.slice(0, 500));
     } catch (e) {
-      console.error('OR-Tool network error:', e);
+      console.error('[callORToolScheduler] OR-Tool network/fetch error:', e);
+      console.error('[callORToolScheduler] Error stack:', e?.stack);
       return Response.json({
-        error: 'Unable to connect to OR-Tool endpoint',
+        ok: false,
+        stage: 'callORTool',
+        error: 'Network error calling OR-Tool',
+        errorMessage: String(e?.message || e),
+        errorStack: String(e?.stack || ''),
         orToolEndpointUsed,
         orToolHttpStatus: null,
         orToolErrorBody: String(e?.message || e),
@@ -288,25 +320,36 @@ Deno.serve(async (req) => {
         performedInsertion: false,
         slotsDeleted: 0,
         slotsInserted: 0,
-        orToolRequestPayloadSubjects: (problem?.subjects || []).slice(0, 5),
-        orToolRequestPayloadSubjectRequirements: (problem?.subjectRequirements || []).slice(0, 10),
-        subjectsInvalidIds: subjectsInvalidIds || [],
-        requirementsUnknownSubjects: requirementsUnknownSubjects || [],
-        requirementsInvalidMinutes: requirementsInvalidMinutes || [],
-        normalizedSubjectsIndex: normalizedSubjectsIndex || {},
-        normalizedRequirementsSubjects: normalizedRequirementsSubjects || [],
-        details: String(e?.message || e)
-      }, { status: 502 });
+        orToolRequestPayload: {
+          subjects: (problem?.subjects || []).slice(0, 5),
+          subjectRequirements: (problem?.subjectRequirements || []).slice(0, 10),
+          lessonsCount: problem?.lessons?.length || 0,
+          timeslotsCount: problem?.timeslots?.length || 0
+        }
+      }, { status: 200 }); // Return 200 so UI can parse
     }
 
     if (!solverResponse.ok) {
-      const errorText = await solverResponse.text();
-      console.error('OR-Tool error:', errorText);
+      console.error('[callORToolScheduler] OR-Tool returned error status:', orToolHttpStatus);
+      console.error('[callORToolScheduler] OR-Tool error body:', solverResponseText);
+
+      // Try to parse as JSON, fallback to text
+      let parsedError = null;
+      try {
+        parsedError = JSON.parse(solverResponseText);
+      } catch {
+        parsedError = { rawText: solverResponseText };
+      }
+
       return Response.json({ 
-        error: 'OR-Tool scheduling failed - solver rejected request, no slots inserted',
+        ok: false,
+        stage: 'callORTool',
+        error: 'OR-Tool rejected the request',
+        errorMessage: `OR-Tool returned HTTP ${orToolHttpStatus}`,
         orToolEndpointUsed,
         orToolHttpStatus,
-        orToolErrorBody: errorText,
+        orToolErrorBody: solverResponseText,
+        orToolErrorParsed: parsedError,
         orToolRequestHeadersSent,
         orToolHealthStatus,
         orToolHealthOk,
@@ -322,22 +365,32 @@ Deno.serve(async (req) => {
           subjectRequirements: coreSubjectRequirements.length > 0 
             ? coreSubjectRequirements 
             : (problem?.subjectRequirements || []).slice(0, 10),
-          lessonsCount: solvedLessons ? solvedLessons.length : null,
-          timeslotsCount: problem.timeslots ? problem.timeslots.length : null
+          lessonsCount: problem?.lessons?.length || 0,
+          timeslotsCount: problem?.timeslots?.length || 0
         },
-        orToolRequestPayloadSubjects: (problem?.subjects || []).slice(0, 5),
-        orToolRequestPayloadSubjectRequirements: (problem?.subjectRequirements || []).slice(0, 10),
         subjectsInvalidIds: subjectsInvalidIds || [],
         requirementsUnknownSubjects: requirementsUnknownSubjects || [],
-        requirementsInvalidMinutes: requirementsInvalidMinutes || [],
-        normalizedSubjectsIndex: normalizedSubjectsIndex || {},
-        normalizedRequirementsSubjects: normalizedRequirementsSubjects || [],
-        coreSubjectRequirementsSample: coreSubjectRequirements,
-        details: errorText 
-      }, { status: 500 });
+        requirementsInvalidMinutes: requirementsInvalidMinutes || []
+      }, { status: 200 }); // Return 200 so UI can parse
     }
 
-    const solution = await solverResponse.json();
+    // Parse solution from response text
+    let solution;
+    try {
+      solution = JSON.parse(solverResponseText);
+    } catch (parseError) {
+      console.error('[callORToolScheduler] Failed to parse OR-Tool response as JSON:', parseError);
+      return Response.json({
+        ok: false,
+        stage: 'parseORToolResponse',
+        error: 'Invalid JSON from OR-Tool',
+        errorMessage: String(parseError?.message || parseError),
+        errorStack: String(parseError?.stack || ''),
+        orToolHttpStatus,
+        orToolErrorBody: solverResponseText?.slice(0, 1000),
+        meta: { schedule_version_id, schoolId }
+      }, { status: 200 });
+    }
     console.log('[callORToolScheduler] solver score =', solution.score);
 
     // Step 3: Validate solution format (support lessons or legacy assignments)

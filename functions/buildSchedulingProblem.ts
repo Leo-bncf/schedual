@@ -46,14 +46,16 @@ Deno.serve(async (req) => {
   let stage = 'init';
   let school_id = null;
   let schedule_version_id = null;
+  let base44 = null;
   
   try {
+    stage = 'method_check';
     if (req.method !== 'POST') {
       return new Response('Method Not Allowed', { status: 405, headers: { 'Allow': 'POST' } });
     }
 
     stage = 'auth';
-    const base44 = createClientFromRequest(req);
+    base44 = createClientFromRequest(req);
     const user = await base44.auth.me();
 
     stage = 'parseRequest';
