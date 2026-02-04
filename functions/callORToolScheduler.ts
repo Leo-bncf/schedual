@@ -8,7 +8,12 @@ import { createClientFromRequest } from 'npm:@base44/sdk@0.8.6';
  * Maps assignments back to Base44 entities (ScheduleSlot)
  */
 Deno.serve(async (req) => {
+  let stage = 'init';
+  let schedule_version_id = null;
+  let schoolId = null;
+  
   try {
+    stage = 'auth';
     const base44 = createClientFromRequest(req);
     const user = await base44.auth.me();
 
@@ -23,12 +28,14 @@ Deno.serve(async (req) => {
       return Response.json({ error: 'Forbidden: user missing school_id', code: 'NO_SCHOOL_ON_USER', guardFailureCode: 'NO_SCHOOL_ON_USER', whoami, requestedSchoolId, scheduleVersionSchoolId }, { status: 403 });
     }
 
+    stage = 'parseRequest';
     const body = await req.json();
-    const schedule_version_id = body?.schedule_version_id;
-    const dpStudyWeekly = body?.dp_study_weekly ?? 6; // default per user request
+    schedule_version_id = body?.schedule_version_id;
+    const dpStudyWeekly = body?.dp_study_weekly ?? 6;
     const dpMinEndTime = body?.dp_min_end_time ?? '14:30';
     requestedSchoolId = body?.school_id || null;
-    const schoolId = requestedSchoolId || user.school_id;
+    schoolId = requestedSchoolId || user.school_id;
+    console.log(`[callORToolScheduler] ${stage}: schedule_version_id=${schedule_version_id}, school_id=${schoolId}`);
     try {
       if (schedule_version_id) {
         const sv = await base44.entities.ScheduleVersion.filter({ id: schedule_version_id });
@@ -40,10 +47,13 @@ Deno.serve(async (req) => {
     }
 
     if (!schedule_version_id) {
-      return Response.json({ error: 'schedule_version_id required' }, { status: 400 });
+      return Response.json({ ok: false, stage, error: 'schedule_version_id required', meta: { schedule_version_id, schoolId } }, { status: 400 });
     }
     const errors = [];
 
+    stage = 'buildProblem';
+    console.log(`[callORToolScheduler] ${stage}: calling buildSchedulingProblem`);
+    
     // Step 1: Build scheduling problem
     const buildResponse = await base44.functions.invoke('buildSchedulingProblem', {
       schedule_version_id,
@@ -53,9 +63,13 @@ Deno.serve(async (req) => {
     });
 
     if (!buildResponse.data.success) {
+      console.error(`[callORToolScheduler] buildProblem failed:`, buildResponse.data);
       return Response.json({ 
+        ok: false,
+        stage,
         error: 'Failed to build scheduling problem',
-        details: buildResponse.data 
+        buildError: buildResponse.data,
+        meta: { schedule_version_id, schoolId }
       }, { status: 500 });
     }
 
@@ -88,6 +102,9 @@ Deno.serve(async (req) => {
       target_periods_per_day: problem?.scheduleSettings?.targetPeriodsPerDay || (buildResponse?.data?.stats?.dp_target_periods_per_day || null),
     };
 
+    stage = 'validateProblem';
+    console.log(`[callORToolScheduler] ${stage}: validating solver inputs`);
+    
     // Step 2: Validate problem before calling OR-Tool
     const subjectsForSolver = Array.isArray(problem?.subjects) ? problem.subjects : [];
     const subjectRequirementsForSolver = Array.isArray(problem?.subjectRequirements) ? problem.subjectRequirements : [];
@@ -185,6 +202,9 @@ Deno.serve(async (req) => {
       }, { status: 400 });
     }
 
+    stage = 'callORTool';
+    console.log(`[callORToolScheduler] ${stage}: preparing OR-Tool request`);
+    
     // Step 3: Call OR-Tool service
     const OR_TOOL_ENDPOINT = Deno.env.get('OR_TOOL_ENDPOINT');
     const OR_TOOL_API_KEY = Deno.env.get('OR_TOOL_API_KEY');
@@ -621,6 +641,9 @@ Deno.serve(async (req) => {
     // Combine solver slots + STUDY slots
     const allSlots = [...slots, ...studySlots];
 
+    stage = 'deleteOldSlots';
+    console.log(`[callORToolScheduler] ${stage}: deleting old slots`);
+    
     // Step 6: Delete existing slots for this version (ONLY if solver succeeded)
     const existingSlots = await base44.entities.ScheduleSlot.filter({
       school_id: user.school_id,
@@ -635,6 +658,9 @@ Deno.serve(async (req) => {
       }
     }
 
+    stage = 'insertNewSlots';
+    console.log(`[callORToolScheduler] ${stage}: inserting ${allSlots.length} new slots`);
+    
     // Step 7: Create new slots
     let insertedCount = 0;
     let sampleSlotsInserted = null;
@@ -874,9 +900,13 @@ Deno.serve(async (req) => {
     });
 
   } catch (error) {
-    console.error('OR-Tool scheduler error:', error);
+    console.error(`[callORToolScheduler] ERROR at stage="${stage}":`, error);
     return Response.json({ 
-      error: error.message || 'Failed to generate schedule' 
+      ok: false,
+      stage,
+      errorMessage: String(error?.message || error),
+      errorStack: String(error?.stack || ''),
+      meta: { schedule_version_id, schoolId }
     }, { status: 500 });
   }
 });

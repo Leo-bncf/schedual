@@ -43,20 +43,26 @@ Response:
 */
 
 Deno.serve(async (req) => {
+  let stage = 'init';
+  let school_id = null;
+  let schedule_version_id = null;
+  
   try {
     if (req.method !== 'POST') {
       return new Response('Method Not Allowed', { status: 405, headers: { 'Allow': 'POST' } });
     }
 
+    stage = 'auth';
     const base44 = createClientFromRequest(req);
     const user = await base44.auth.me();
 
+    stage = 'parseRequest';
     const body = await req.json();
-    const schedule_version_id = body?.schedule_version_id;
+    schedule_version_id = body?.schedule_version_id;
     const requestedSchoolId = body?.school_id || body?.schoolId || user?.school_id || null;
 
     if (!schedule_version_id) {
-      return Response.json({ error: 'schedule_version_id required' }, { status: 400 });
+      return Response.json({ ok: false, stage, error: 'schedule_version_id required', meta: { schedule_version_id, school_id: requestedSchoolId } }, { status: 400 });
     }
 
     const whoami = user ? { userId: user.id, role: user.role, school_id: user.school_id || null } : null;
@@ -72,8 +78,11 @@ Deno.serve(async (req) => {
       return Response.json({ error: 'Forbidden: Cross-school access', code: 'CROSS_SCHOOL', guardFailureCode: 'CROSS_SCHOOL', whoami, requestedSchoolId, scheduleVersionSchoolId }, { status: 403 });
     }
 
-    const school_id = user.school_id;
+    school_id = user.school_id;
 
+    stage = 'loadSchool';
+    console.log(`[buildSchedulingProblem] ${stage}: school_id=${school_id}, schedule_version_id=${schedule_version_id}`);
+    
     // Fetch school + resources
     const [school, roomsDb, teachersDb, subjectsDb, teachingGroupsDb] = await Promise.all([
       base44.entities.School.filter({ id: school_id }).then(r => r[0]),
@@ -84,9 +93,58 @@ Deno.serve(async (req) => {
     ]);
 
     if (!school) {
-      return Response.json({ error: 'School not found' }, { status: 404 });
+      return Response.json({ ok: false, stage, error: 'School not found', meta: { schedule_version_id, school_id } }, { status: 404 });
     }
 
+    stage = 'validateSchoolSettings';
+    console.log(`[buildSchedulingProblem] ${stage}: validating school settings`);
+    
+    // Validate required school settings
+    const periodDurationMinutes = Number(school.period_duration_minutes || 60);
+    const dayStartTime = String(school.day_start_time || school.school_start_time || '08:00');
+    const dayEndTime = String(school.day_end_time || '18:00');
+    const daysOfWeek = Array.isArray(school.days_of_week) && school.days_of_week.length > 0
+      ? school.days_of_week
+      : ['MONDAY','TUESDAY','WEDNESDAY','THURSDAY','FRIDAY'];
+    
+    if (!periodDurationMinutes || periodDurationMinutes <= 0) {
+      return Response.json({ 
+        ok: false, stage, 
+        error: 'Invalid period_duration_minutes in school settings', 
+        meta: { schedule_version_id, school_id, period_duration_minutes: school.period_duration_minutes } 
+      }, { status: 400 });
+    }
+    
+    if (!daysOfWeek || daysOfWeek.length === 0) {
+      return Response.json({ 
+        ok: false, stage, 
+        error: 'Invalid or missing days_of_week in school settings', 
+        meta: { schedule_version_id, school_id, days_of_week: school.days_of_week } 
+      }, { status: 400 });
+    }
+
+    stage = 'validateResources';
+    console.log(`[buildSchedulingProblem] ${stage}: subjects=${subjectsDb.length}, teachingGroups=${teachingGroupsDb.length}, rooms=${roomsDb.length}, teachers=${teachersDb.length}`);
+    
+    if (subjectsDb.length === 0) {
+      return Response.json({ 
+        ok: false, stage, 
+        error: 'No subjects found in database', 
+        meta: { schedule_version_id, school_id, subjects: 0, teachingGroups: teachingGroupsDb.length } 
+      }, { status: 400 });
+    }
+    
+    if (teachingGroupsDb.length === 0) {
+      return Response.json({ 
+        ok: false, stage, 
+        error: 'No teaching groups found in database', 
+        meta: { schedule_version_id, school_id, subjects: subjectsDb.length, teachingGroups: 0 } 
+      }, { status: 400 });
+    }
+
+    stage = 'buildSubjectsIndex';
+    console.log(`[buildSchedulingProblem] ${stage}: building subject mappings`);
+    
     // Helpers
     const normalizeSubjectCode = (raw) => {
       if (!raw) return null;
@@ -107,13 +165,9 @@ Deno.serve(async (req) => {
       aliases.forEach((k) => { if (k) subjectIdByCode[k] = subj.id; });
     }
 
-    // Schedule settings from School (top-level fields)
-    const periodDurationMinutes = Number(school.period_duration_minutes || 60);
-    const dayStartTime = String(school.day_start_time || school.school_start_time || '08:00');
-    const dayEndTime = String(school.day_end_time || '18:00');
-    const daysOfWeek = Array.isArray(school.days_of_week) && school.days_of_week.length > 0
-      ? school.days_of_week
-      : ['MONDAY','TUESDAY','WEDNESDAY','THURSDAY','FRIDAY'];
+    stage = 'generateTimeslots';
+    console.log(`[buildSchedulingProblem] ${stage}: period=${periodDurationMinutes}min, days=${daysOfWeek.length}`);
+    
     const breaks = Array.isArray(school.breaks) ? school.breaks : [];
     const minPeriodsPerDay = Number(school.min_periods_per_day || 10);
     const targetPeriodsPerDay = Number(school.target_periods_per_day || 10);
@@ -160,6 +214,9 @@ Deno.serve(async (req) => {
     roomsDb.forEach((r, idx) => { roomNumericIdToExternalRef[idx+1] = r.external_id || r.externalId || r.id; });
     teachersDb.forEach((t, idx) => { teacherNumericIdToExternalRef[idx+1] = t.external_id || t.externalId || t.employee_id || t.id; });
 
+    stage = 'buildLessons';
+    console.log(`[buildSchedulingProblem] ${stage}: processing ${teachingGroupsDb.length} teaching groups`);
+    
     // Compute lessons from minutes/week
     const lessons = [];
     let lessonId = 1;
@@ -517,7 +574,13 @@ Deno.serve(async (req) => {
       }
     });
   } catch (error) {
-    console.error('buildSchedulingProblem error:', error);
-    return Response.json({ error: error.message || 'Failed to build scheduling problem' }, { status: 500 });
+    console.error(`[buildSchedulingProblem] ERROR at stage="${stage}":`, error);
+    return Response.json({ 
+      ok: false,
+      stage,
+      errorMessage: String(error?.message || error),
+      errorStack: String(error?.stack || ''),
+      meta: { schedule_version_id, school_id }
+    }, { status: 500 });
   }
 });
