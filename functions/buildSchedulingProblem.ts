@@ -401,7 +401,10 @@ Deno.serve(async (req) => {
     const daysCount = daysOfWeek.length || 5;
     const periodsPerDay = Math.floor(timeslots.length / Math.max(1, daysCount));
 
-    // Build subjects[] and subjectRequirements[] for solver validation (DECLARE BEFORE USE!)
+    // CRITICAL: Declare subjectRequirements FIRST before any code that uses it
+    const subjectRequirements = [];
+    
+    // Build subjects[] for solver validation
     const isValidMongoId = (id) => /^[a-f0-9]{24}$/i.test(String(id || ''));
     const subjectCodesInLessons = Array.from(new Set(lessons.map(l => l.subject).filter(Boolean)));
     const subjectsList = subjectCodesInLessons.map(code => {
@@ -415,9 +418,6 @@ Deno.serve(async (req) => {
         name: subj?.name || code
       };
     });
-    
-    const subjectRequirements = [];
-    console.log('[buildSchedulingProblem] Building subjectRequirements from', teachingGroupsDb.length, 'TeachingGroups...');
 
     // Build reverse lookup: normalized code -> original subjCode
     const normalizedToOriginal = {};
@@ -425,6 +425,8 @@ Deno.serve(async (req) => {
       const norm = normalizeCode(code);
       if (norm) normalizedToOriginal[norm] = code;
     });
+    
+    console.log('[buildSchedulingProblem] Building subjectRequirements from', teachingGroupsDb.length, 'TeachingGroups...');
 
     for (const tg of teachingGroupsDb) {
       const subjCode = subjectIdToCode[tg.subject_id];
