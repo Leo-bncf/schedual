@@ -1798,58 +1798,78 @@ Now process the user's input and return ONLY the JSON object.`,
 
                   {/* CORE DIAGNOSTICS PANEL */}
                   <Card className="border-2 border-rose-300 bg-rose-50">
-                    <CardContent className="p-4">
-                      <div className="font-bold text-rose-900 mb-3">🔍 TOK/CAS/EE Diagnostic</div>
+                   <CardContent className="p-4">
+                     <div className="font-bold text-rose-900 mb-3">🔍 TOK/CAS/EE Diagnostic</div>
 
-                      <div className="grid md:grid-cols-2 gap-3 text-xs font-mono">
-                        {/* Input: What we sent */}
-                        <div className="bg-white p-3 rounded border border-rose-200">
-                          <div className="font-bold text-rose-700 mb-2">📤 Input (buildSchedulingProblem)</div>
-                          <div className="space-y-1 text-slate-700">
-                            <div>coreRequirementsFound: <strong className={orToolResult?.orToolRequestPayload?.coreRequirementsFound > 0 ? 'text-green-600' : 'text-rose-600'}>{orToolResult?.orToolRequestPayload?.coreRequirementsFound || 0}</strong></div>
-                            {(orToolResult?.coreSubjectRequirementsSample || []).slice(0, 5).map((req, i) => (
-                              <div key={i} className="text-[11px] text-slate-600 truncate">
-                                {req.subject}: {req.minutesPerWeek}min/week ({req.studentGroup})
-                              </div>
-                            ))}
-                          </div>
-                        </div>
+                     {/* Show error if present */}
+                     {(orToolResult?.ok === false || orToolResult?.error) && (
+                       <div className="mb-4 p-4 bg-rose-100 border-2 border-rose-400 rounded-lg">
+                         <div className="font-bold text-rose-900 mb-2">❌ Error at Stage: {orToolResult?.stage || 'unknown'}</div>
+                         <div className="text-sm text-rose-800 mb-2">{orToolResult?.errorMessage || orToolResult?.error}</div>
+                         {orToolResult?.errorStack && (
+                           <details className="mt-2">
+                             <summary className="cursor-pointer text-xs font-semibold text-rose-700">Stack Trace</summary>
+                             <pre className="mt-2 text-xs text-rose-700 bg-white p-2 rounded overflow-x-auto max-h-48">{orToolResult.errorStack}</pre>
+                           </details>
+                         )}
+                         {orToolResult?.meta && (
+                           <div className="mt-2 text-xs text-rose-700">
+                             Meta: {JSON.stringify(orToolResult.meta)}
+                           </div>
+                         )}
+                       </div>
+                     )}
 
-                        {/* Output: What solver returned */}
-                        <div className="bg-white p-3 rounded border border-rose-200">
-                          <div className="font-bold text-rose-700 mb-2">📥 Output (OR-Tool solver)</div>
-                          <div className="space-y-1 text-slate-700">
-                            <div>TOK assigned: <strong className={orToolResult?.assignedBySubjectCode?.TOK > 0 ? 'text-green-600' : 'text-rose-600'}>{orToolResult?.assignedBySubjectCode?.TOK || 0}</strong></div>
-                            <div>CAS assigned: <strong className={orToolResult?.assignedBySubjectCode?.CAS > 0 ? 'text-green-600' : 'text-rose-600'}>{orToolResult?.assignedBySubjectCode?.CAS || 0}</strong></div>
-                            <div>EE assigned: <strong className={orToolResult?.assignedBySubjectCode?.EE > 0 ? 'text-green-600' : 'text-rose-600'}>{orToolResult?.assignedBySubjectCode?.EE || 0}</strong></div>
-                          </div>
-                        </div>
+                     <div className="grid md:grid-cols-2 gap-3 text-xs font-mono">
+                       {/* Input: What we sent */}
+                       <div className="bg-white p-3 rounded border border-rose-200">
+                         <div className="font-bold text-rose-700 mb-2">📤 Input (buildSchedulingProblem)</div>
+                         <div className="space-y-1 text-slate-700">
+                           <div>coreRequirementsFound: <strong className={orToolResult?.orToolRequestPayload?.coreRequirementsFound > 0 ? 'text-green-600' : 'text-rose-600'}>{orToolResult?.orToolRequestPayload?.coreRequirementsFound || 0}</strong></div>
+                           {(orToolResult?.coreSubjectRequirementsSample || []).slice(0, 5).map((req, i) => (
+                             <div key={i} className="text-[11px] text-slate-600 truncate">
+                               {req.subject}: {req.minutesPerWeek}min/week ({req.studentGroup})
+                             </div>
+                           ))}
+                         </div>
+                       </div>
 
-                        {/* DB Insertion */}
-                        <div className="bg-white p-3 rounded border border-rose-200">
-                          <div className="font-bold text-rose-700 mb-2">💾 DB Insertion</div>
-                          <div className="space-y-1 text-slate-700">
-                            <div>TOK inserted: <strong className={orToolResult?.slotsInsertedBySubjectCode?.TOK > 0 ? 'text-green-600' : 'text-rose-600'}>{orToolResult?.slotsInsertedBySubjectCode?.TOK || 0}</strong></div>
-                            <div>CAS inserted: <strong className={orToolResult?.slotsInsertedBySubjectCode?.CAS > 0 ? 'text-green-600' : 'text-rose-600'}>{orToolResult?.slotsInsertedBySubjectCode?.CAS || 0}</strong></div>
-                            <div>EE inserted: <strong className={orToolResult?.slotsInsertedBySubjectCode?.EE > 0 ? 'text-green-600' : 'text-rose-600'}>{orToolResult?.slotsInsertedBySubjectCode?.EE || 0}</strong></div>
-                          </div>
-                        </div>
+                       {/* Output: What solver returned */}
+                       <div className="bg-white p-3 rounded border border-rose-200">
+                         <div className="font-bold text-rose-700 mb-2">📥 Output (OR-Tool solver)</div>
+                         <div className="space-y-1 text-slate-700">
+                           <div>TOK assigned: <strong className={orToolResult?.assignedBySubjectCode?.TOK > 0 ? 'text-green-600' : 'text-rose-600'}>{orToolResult?.assignedBySubjectCode?.TOK || 0}</strong></div>
+                           <div>CAS assigned: <strong className={orToolResult?.assignedBySubjectCode?.CAS > 0 ? 'text-green-600' : 'text-rose-600'}>{orToolResult?.assignedBySubjectCode?.CAS || 0}</strong></div>
+                           <div>EE assigned: <strong className={orToolResult?.assignedBySubjectCode?.EE > 0 ? 'text-green-600' : 'text-rose-600'}>{orToolResult?.assignedBySubjectCode?.EE || 0}</strong></div>
+                         </div>
+                       </div>
 
-                        {/* Error Status */}
-                        <div className="bg-white p-3 rounded border border-rose-200">
-                          <div className="font-bold text-rose-700 mb-2">⚠️ Status</div>
-                          <div className="space-y-1 text-slate-700">
-                            <div>HTTP Status: <strong className={orToolResult?.orToolHttpStatus === 200 ? 'text-green-600' : 'text-rose-600'}>{orToolResult?.orToolHttpStatus || '—'}</strong></div>
-                            <div className="text-[10px]">Total inserted: {orToolResult?.slotsInserted || 0}</div>
-                            {orToolResult?.orToolErrorBody && (
-                              <div className="mt-2 text-rose-700 bg-rose-100 p-1 rounded">
-                                {(orToolResult.orToolErrorBody || '').slice(0, 150)}
-                              </div>
-                            )}
-                          </div>
-                        </div>
-                      </div>
-                    </CardContent>
+                       {/* DB Insertion */}
+                       <div className="bg-white p-3 rounded border border-rose-200">
+                         <div className="font-bold text-rose-700 mb-2">💾 DB Insertion</div>
+                         <div className="space-y-1 text-slate-700">
+                           <div>TOK inserted: <strong className={orToolResult?.slotsInsertedBySubjectCode?.TOK > 0 ? 'text-green-600' : 'text-rose-600'}>{orToolResult?.slotsInsertedBySubjectCode?.TOK || 0}</strong></div>
+                           <div>CAS inserted: <strong className={orToolResult?.slotsInsertedBySubjectCode?.CAS > 0 ? 'text-green-600' : 'text-rose-600'}>{orToolResult?.slotsInsertedBySubjectCode?.CAS || 0}</strong></div>
+                           <div>EE inserted: <strong className={orToolResult?.slotsInsertedBySubjectCode?.EE > 0 ? 'text-green-600' : 'text-rose-600'}>{orToolResult?.slotsInsertedBySubjectCode?.EE || 0}</strong></div>
+                         </div>
+                       </div>
+
+                       {/* Error Status */}
+                       <div className="bg-white p-3 rounded border border-rose-200">
+                         <div className="font-bold text-rose-700 mb-2">⚠️ Status</div>
+                         <div className="space-y-1 text-slate-700">
+                           <div>Stage: <strong>{orToolResult?.stage || '—'}</strong></div>
+                           <div>HTTP Status: <strong className={orToolResult?.orToolHttpStatus === 200 ? 'text-green-600' : 'text-rose-600'}>{orToolResult?.orToolHttpStatus || '—'}</strong></div>
+                           <div className="text-[10px]">Total inserted: {orToolResult?.slotsInserted || 0}</div>
+                           {orToolResult?.orToolErrorBody && (
+                             <div className="mt-2 text-rose-700 bg-rose-100 p-1 rounded text-[10px]">
+                               {(orToolResult.orToolErrorBody || '').slice(0, 150)}
+                             </div>
+                           )}
+                         </div>
+                       </div>
+                     </div>
+                   </CardContent>
                   </Card>
 
                   {/* Force refresh hint: show current slot counts */}

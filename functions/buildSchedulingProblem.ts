@@ -290,6 +290,9 @@ Deno.serve(async (req) => {
       }))
     });
 
+    stage = 'buildRequirements';
+    console.log(`[buildSchedulingProblem] ${stage}: generating subjectRequirements for ${teachingGroupsDb.length} teaching groups`);
+
     console.log('[buildSchedulingProblem] Core subjects check: using existing TeachingGroups only');
 
     // Study filler for DP groups
@@ -401,11 +404,13 @@ Deno.serve(async (req) => {
         student_count: Array.isArray(tg.student_ids) ? tg.student_ids.length : 0
       }));
 
-    // Diagnostic 2: Core Requirements Generated
+    // Diagnostic 2: Core Requirements Generated (with normalization)
+    const normalizeForCheck = (s) => String(s||'').trim().toUpperCase().replace(/\s+/g,'_').replace(/[^A-Z0-9_]/g,'_');
     const coreRequirementsGeneratedByCode = {};
     for (const code of coreSubjectsSet) {
-      coreRequirementsGeneratedByCode[code] = subjectRequirements.filter(r => r.subject === code).length;
+      coreRequirementsGeneratedByCode[code] = subjectRequirements.filter(r => normalizeForCheck(r.subject) === code).length;
     }
+    console.log('[buildSchedulingProblem] coreRequirementsGeneratedByCode:', coreRequirementsGeneratedByCode);
 
     // Build subjects[] and subjectRequirements[] for solver validation
     const isValidMongoId = (id) => /^[a-f0-9]{24}$/i.test(String(id || ''));
@@ -422,51 +427,70 @@ Deno.serve(async (req) => {
       };
     });
     
+    // CRITICAL: Normalize subject code matching to handle spaces, underscores, case
+    const normalizeCode = (raw) => {
+      if (!raw) return '';
+      return String(raw).trim().toUpperCase().replace(/\s+/g, '_').replace(/[^A-Z0-9_]/g, '_').replace(/_+/g, '_');
+    };
+
     const subjectRequirements = [];
     console.log('[buildSchedulingProblem] Building subjectRequirements from', teachingGroupsDb.length, 'TeachingGroups...');
-    
+
+    // Build reverse lookup: normalized code -> original subjCode
+    const normalizedToOriginal = {};
+    Object.entries(subjectIdToCode).forEach(([id, code]) => {
+      const norm = normalizeCode(code);
+      if (norm) normalizedToOriginal[norm] = code;
+    });
+
     for (const tg of teachingGroupsDb) {
       const subjCode = subjectIdToCode[tg.subject_id];
-      const isCoreSubject = subjCode && ['TOK', 'CAS', 'EE'].includes(subjCode);
-      
+      const normCode = normalizeCode(subjCode);
+      const isCoreSubject = normCode && ['TOK', 'CAS', 'EE'].includes(normCode);
+
       if (!tg?.is_active) {
         if (isCoreSubject) console.warn(`[buildSchedulingProblem] ⚠️ Core TG ${tg.id} (${subjCode}) is INACTIVE, skipping`);
         continue;
       }
-      
-      if (!subjCode) {
+
+      if (!subjCode || !normCode) {
         if (isCoreSubject) console.error(`[buildSchedulingProblem] ❌ Core TG ${tg.id} has NO SUBJECT CODE!`);
         continue;
       }
-      
-      // Option A: Use teaching_group.minutes_per_week or fallback 60 for all subjects (including core)
+
+      // Option A: Use teaching_group.minutes_per_week or fallback 60 for core
       let minutesUsed = minutesForTG(tg);
-      
+
       // RULE: Core subjects (TOK/CAS/EE) are MANDATORY and never skip
       // If minutes_per_week is missing/invalid, use fallback 60
       if ((!minutesUsed || minutesUsed <= 0) && !isCoreSubject) {
         // Skip non-core subjects with zero minutes
+        console.log(`[buildSchedulingProblem] Skipping non-core TG ${tg.id} (${subjCode}): 0 minutes`);
         continue;
       }
       if ((!minutesUsed || minutesUsed <= 0) && isCoreSubject) {
         // Core subjects: force 60 min/week fallback
         minutesUsed = 60;
-        console.log(`[buildSchedulingProblem] ✅ Core ${subjCode} TG ${tg.id}: 0/missing minutes, forcing fallback 60 min/week`);
+        console.log(`[buildSchedulingProblem] ✅ Core ${normCode} TG ${tg.id}: 0/missing minutes, forcing fallback 60 min/week`);
       }
-      
+
       if (isCoreSubject) {
-        console.log(`[buildSchedulingProblem] ✅ Adding core requirement: ${subjCode} (TG ${tg.id}), ${minutesUsed} min/week`);
+        console.log(`[buildSchedulingProblem] ✅ Adding core requirement: ${normCode} (original: ${subjCode}, TG ${tg.id}), ${minutesUsed} min/week`);
       }
-      
+
       subjectRequirements.push({
         studentGroup: `TG_${tg.id}`,
-        subject: subjCode,
+        subject: subjCode, // Use original code, not normalized
         minutesPerWeek: minutesUsed
       });
     }
-    
+
     console.log('[buildSchedulingProblem] Total subjectRequirements:', subjectRequirements.length);
-    console.log('[buildSchedulingProblem] Core requirements:', subjectRequirements.filter(r => ['TOK','CAS','EE'].includes(r.subject)));
+    const coreReqs = subjectRequirements.filter(r => {
+      const norm = normalizeCode(r.subject);
+      return ['TOK','CAS','EE'].includes(norm);
+    });
+    console.log('[buildSchedulingProblem] Core requirements:', coreReqs.length, coreReqs.slice(0, 10));
 
     const problem = {
       timeslots,
@@ -522,8 +546,11 @@ Deno.serve(async (req) => {
       subjectRequirements: problemRequirementsFiltered
     };
 
+    console.log(`[buildSchedulingProblem] SUCCESS at stage="${stage}": returning problem with ${problemForSolver.lessons.length} lessons, ${problemForSolver.subjects.length} subjects, ${problemForSolver.subjectRequirements.length} requirements`);
+
     return Response.json({
       success: true,
+      ok: true,
       problem: problemForSolver,
       subjectIdByCode,
       // Debug summary
