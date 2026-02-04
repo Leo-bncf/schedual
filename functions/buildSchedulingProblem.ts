@@ -147,11 +147,16 @@ Deno.serve(async (req) => {
     stage = 'buildSubjectsIndex';
     console.log(`[buildSchedulingProblem] ${stage}: building subject mappings`);
     
-    // Helpers
+    // CRITICAL: Helpers declared FIRST to avoid Temporal Dead Zone
     const normalizeSubjectCode = (raw) => {
       if (!raw) return null;
       const s = String(raw).trim().toUpperCase().replace(/\s+/g, '_').replace(/[^A-Z0-9_]/g, '_').replace(/_+/g, '_').replace(/^_|_$/g, '');
       return s || null;
+    };
+    
+    const normalizeCode = (raw) => {
+      if (!raw) return '';
+      return String(raw).trim().toUpperCase().replace(/\s+/g, '_').replace(/[^A-Z0-9_]/g, '_').replace(/_+/g, '_');
     };
 
     // Subject id->code and lookups (null-safe)
@@ -436,12 +441,6 @@ Deno.serve(async (req) => {
       };
     });
     
-    // CRITICAL: Normalize subject code matching to handle spaces, underscores, case
-    const normalizeCode = (raw) => {
-      if (!raw) return '';
-      return String(raw).trim().toUpperCase().replace(/\s+/g, '_').replace(/[^A-Z0-9_]/g, '_').replace(/_+/g, '_');
-    };
-
     const subjectRequirements = [];
     console.log('[buildSchedulingProblem] Building subjectRequirements from', teachingGroupsDb.length, 'TeachingGroups...');
 
