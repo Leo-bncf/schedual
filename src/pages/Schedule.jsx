@@ -456,19 +456,36 @@ Now process the user's input and return ONLY the JSON object.`,
     setOrToolError(null);
     try {
       const res = await base44.functions.invoke('callORToolScheduler', { schedule_version_id: selectedVersion.id, dp_min_end_time: '16:00', dp_study_weekly: 8 });
-      setOrToolResult(res.data);
-      await queryClient.invalidateQueries({ queryKey: ['scheduleSlots'] });
-      await queryClient.invalidateQueries({ queryKey: ['scheduleVersions'] });
-      setScheduleTab('student');
-      toast.success('OR-Tool response retrieved');
+      const data = res.data;
+      setOrToolResult(data);
+      
+      // Check if function returned error
+      if (data?.ok === false) {
+        console.error('❌ OR-Tool returned error:', data);
+        setOrToolError(`Stage: ${data.stage}\nError: ${data.errorMessage || data.error}\n\nStack:\n${data.errorStack || 'N/A'}`);
+        toast.error(`OR-Tool failed at stage "${data.stage}": ${data.errorMessage || data.error}`);
+      } else {
+        await queryClient.invalidateQueries({ queryKey: ['scheduleSlots'] });
+        await queryClient.invalidateQueries({ queryKey: ['scheduleVersions'] });
+        setScheduleTab('student');
+        toast.success('OR-Tool response retrieved');
+      }
     } catch (e) {
       console.error('OR-Tool fetch failed:', e);
-      const data = e?.response?.data;
-      if (data) {
-        setOrToolResult(data);
+      const errorData = e?.response?.data;
+      if (errorData) {
+        setOrToolResult(errorData);
+        if (errorData.ok === false) {
+          setOrToolError(`Stage: ${errorData.stage}\nError: ${errorData.errorMessage || errorData.error}\n\nStack:\n${errorData.errorStack || 'N/A'}`);
+          toast.error(`OR-Tool crashed at "${errorData.stage}": ${errorData.errorMessage || errorData.error}`);
+        } else {
+          setOrToolError(e?.message || 'Failed to fetch OR-Tool response');
+          toast.error('Failed to retrieve OR-Tool response');
+        }
+      } else {
+        setOrToolError(e?.message || 'Failed to fetch OR-Tool response');
+        toast.error('Failed to retrieve OR-Tool response');
       }
-      setOrToolError(e?.message || 'Failed to fetch OR-Tool response');
-      toast.error('Failed to retrieve OR-Tool response');
     } finally {
       setOrToolLoading(false);
     }
@@ -1362,24 +1379,38 @@ Now process the user's input and return ONLY the JSON object.`,
           const r = res.data || {};
           setOrToolResult(r);
 
-          // Validate required flags
-          const inserted = r.slotsInserted ?? r.insertedCount ?? 0;
-          if (!(r.performedDeletion === true && r.performedInsertion === true && inserted > 0)) {
-            toast.warning('OR-Tool finished but did not report expected persistence flags.');
-          }
-          if (!r.coreSlotsInsertedCount) {
-            console.warn('coreSlotsInsertedCount missing in OR-Tool response');
-          }
+          // Check if function returned error
+          if (r.ok === false) {
+            console.error('❌ OR-Tool returned error:', r);
+            toast.error(`OR-Tool failed at stage "${r.stage}": ${r.errorMessage || r.error || 'Unknown error'}`);
+            setOrToolError(`Stage: ${r.stage}\nError: ${r.errorMessage || r.error}\n\nStack:\n${r.errorStack || 'N/A'}`);
+          } else {
+            // Success path
+            const inserted = r.slotsInserted ?? r.insertedCount ?? 0;
+            if (!(r.performedDeletion === true && r.performedInsertion === true && inserted > 0)) {
+              toast.warning('OR-Tool finished but did not report expected persistence flags.');
+            }
+            if (!r.coreSlotsInsertedCount) {
+              console.warn('coreSlotsInsertedCount missing in OR-Tool response');
+            }
 
-          await queryClient.invalidateQueries({ queryKey: ['scheduleSlots'] });
-          await queryClient.invalidateQueries({ queryKey: ['scheduleVersions'] });
-          await queryClient.invalidateQueries({ queryKey: ['students'] });
-          setScheduleTab('student');
-          toast.success('OR-Tool persisted; Student View refreshed');
+            await queryClient.invalidateQueries({ queryKey: ['scheduleSlots'] });
+            await queryClient.invalidateQueries({ queryKey: ['scheduleVersions'] });
+            await queryClient.invalidateQueries({ queryKey: ['students'] });
+            setScheduleTab('student');
+            toast.success('OR-Tool persisted; Student View refreshed');
+          }
         } catch (e) {
           console.error('Auto OR-Tool step failed:', e);
-          setOrToolError(e?.message || 'OR-Tool failed');
-          toast.error('OR-Tool failed — keeping generated schedule (no rollback performed).');
+          const errorData = e?.response?.data;
+          if (errorData?.ok === false) {
+            setOrToolError(`Stage: ${errorData.stage}\nError: ${errorData.errorMessage || errorData.error}\n\nStack:\n${errorData.errorStack || 'N/A'}`);
+            setOrToolResult(errorData);
+            toast.error(`OR-Tool crashed at "${errorData.stage}": ${errorData.errorMessage || errorData.error}`);
+          } else {
+            setOrToolError(e?.message || 'OR-Tool failed');
+            toast.error('OR-Tool failed — keeping generated schedule (no rollback performed).');
+          }
         } finally {
           setOrToolLoading(false);
         }
@@ -1749,7 +1780,17 @@ Now process the user's input and return ONLY the JSON object.`,
                 {/* Core recap (from persisted slots) */}
                 {/* OR-Tool JSON response (on-demand) */}
                 {orToolError && (
-                  <Card className="border-0 shadow-sm bg-rose-50"><CardContent className="p-4 text-sm text-rose-700">{orToolError}</CardContent></Card>
+                  <Card className="border-2 border-rose-500 shadow-lg bg-rose-50">
+                    <CardHeader className="bg-rose-100 pb-3">
+                      <CardTitle className="text-rose-900 flex items-center gap-2">
+                        <AlertTriangle className="w-5 h-5" />
+                        Schedule Generation Error
+                      </CardTitle>
+                    </CardHeader>
+                    <CardContent className="p-4">
+                      <pre className="text-xs text-rose-900 whitespace-pre-wrap bg-white p-3 rounded border border-rose-200 overflow-x-auto">{orToolError}</pre>
+                    </CardContent>
+                  </Card>
                 )}
                 {orToolResult && (
                   <>
