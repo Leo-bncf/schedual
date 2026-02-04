@@ -62,15 +62,19 @@ Deno.serve(async (req) => {
       dp_min_end_time: dpMinEndTime
     });
 
-    if (!buildResponse.data.success) {
+    if (!buildResponse.data.success || buildResponse.data.ok === false) {
       console.error(`[callORToolScheduler] buildProblem failed:`, buildResponse.data);
       return Response.json({ 
         ok: false,
-        stage,
-        error: 'Failed to build scheduling problem',
+        stage: buildResponse.data.stage || stage,
+        error: 'buildSchedulingProblem failed',
+        errorMessage: buildResponse.data.errorMessage || buildResponse.data.error || 'Unknown error',
+        errorStack: buildResponse.data.errorStack || '',
         buildError: buildResponse.data,
-        meta: { schedule_version_id, schoolId }
-      }, { status: 500 });
+        meta: { schedule_version_id, schoolId },
+        counts: buildResponse.data.counts || null,
+        samples: buildResponse.data.samples || null
+      }, { status: 200 }); // Return 200 so UI can parse
     }
 
     const problem = buildResponse.data.problem;
@@ -901,12 +905,15 @@ Deno.serve(async (req) => {
 
   } catch (error) {
     console.error(`[callORToolScheduler] ERROR at stage="${stage}":`, error);
+    console.error(`[callORToolScheduler] Error message:`, error?.message);
+    console.error(`[callORToolScheduler] Error stack:`, error?.stack);
+    
     return Response.json({ 
       ok: false,
       stage,
       errorMessage: String(error?.message || error),
       errorStack: String(error?.stack || ''),
       meta: { schedule_version_id, schoolId }
-    }, { status: 500 });
+    }, { status: 200 }); // Return 200 so UI can always parse JSON
   }
 });

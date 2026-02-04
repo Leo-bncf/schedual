@@ -83,13 +83,13 @@ Deno.serve(async (req) => {
     stage = 'loadSchool';
     console.log(`[buildSchedulingProblem] ${stage}: school_id=${school_id}, schedule_version_id=${schedule_version_id}`);
     
-    // Fetch school + resources
+    // Fetch school + resources (with null-safety)
     const [school, roomsDb, teachersDb, subjectsDb, teachingGroupsDb] = await Promise.all([
-      base44.entities.School.filter({ id: school_id }).then(r => r[0]),
-      base44.entities.Room.filter({ school_id, is_active: true }),
-      base44.entities.Teacher.filter({ school_id, is_active: true }),
-      base44.entities.Subject.filter({ school_id, is_active: true }),
-      base44.entities.TeachingGroup.filter({ school_id, is_active: true }),
+      base44.entities.School.filter({ id: school_id }).then(r => r?.[0] || null).catch(() => null),
+      base44.entities.Room.filter({ school_id, is_active: true }).catch(() => []),
+      base44.entities.Teacher.filter({ school_id, is_active: true }).catch(() => []),
+      base44.entities.Subject.filter({ school_id, is_active: true }).catch(() => []),
+      base44.entities.TeachingGroup.filter({ school_id, is_active: true }).catch(() => []),
     ]);
 
     if (!school) {
@@ -152,15 +152,16 @@ Deno.serve(async (req) => {
       return s || null;
     };
 
-    // Subject id->code and lookups
+    // Subject id->code and lookups (null-safe)
     const subjectIdToCode = {};
     const subjectIdByCode = {};
     const subjectById = {};
-    for (const subj of subjectsDb) {
+    for (const subj of (subjectsDb || [])) {
+      if (!subj?.id) continue;
       subjectById[subj.id] = subj;
-      const raw = (subj.code || subj.name || subj.id).toString();
+      const raw = String(subj.code || subj.name || subj.id || '').trim();
       const norm = normalizeSubjectCode(raw);
-      subjectIdToCode[subj.id] = norm;
+      if (norm) subjectIdToCode[subj.id] = norm;
       const aliases = new Set([raw.toUpperCase(), norm, norm?.replace(/_/g, ' ')]);
       aliases.forEach((k) => { if (k) subjectIdByCode[k] = subj.id; });
     }
@@ -202,17 +203,17 @@ Deno.serve(async (req) => {
       }
     }
 
-    // Rooms/Teachers numeric format & maps
-    const rooms = roomsDb.map((r, idx) => ({ id: idx + 1, name: r.name || `Room ${idx+1}`, capacity: r.capacity || 0 }));
-    const teachers = teachersDb.map((t, idx) => ({ id: idx + 1, name: t.full_name || `Teacher ${idx+1}` }));
+    // Rooms/Teachers numeric format & maps (null-safe)
+    const rooms = (roomsDb || []).map((r, idx) => ({ id: idx + 1, name: r?.name || `Room ${idx+1}`, capacity: r?.capacity || 0 }));
+    const teachers = (teachersDb || []).map((t, idx) => ({ id: idx + 1, name: t?.full_name || `Teacher ${idx+1}` }));
     const roomNumericIdToBase44Id = {};
     const teacherNumericIdToBase44Id = {};
-    roomsDb.forEach((r, idx) => { roomNumericIdToBase44Id[idx+1] = r.id; });
-    teachersDb.forEach((t, idx) => { teacherNumericIdToBase44Id[idx+1] = t.id; });
+    (roomsDb || []).forEach((r, idx) => { if (r?.id) roomNumericIdToBase44Id[idx+1] = r.id; });
+    (teachersDb || []).forEach((t, idx) => { if (t?.id) teacherNumericIdToBase44Id[idx+1] = t.id; });
     const roomNumericIdToExternalRef = {};
     const teacherNumericIdToExternalRef = {};
-    roomsDb.forEach((r, idx) => { roomNumericIdToExternalRef[idx+1] = r.external_id || r.externalId || r.id; });
-    teachersDb.forEach((t, idx) => { teacherNumericIdToExternalRef[idx+1] = t.external_id || t.externalId || t.employee_id || t.id; });
+    (roomsDb || []).forEach((r, idx) => { if (r) roomNumericIdToExternalRef[idx+1] = r.external_id || r.externalId || r.id; });
+    (teachersDb || []).forEach((t, idx) => { if (t) teacherNumericIdToExternalRef[idx+1] = t.external_id || t.externalId || t.employee_id || t.id; });
 
     stage = 'buildLessons';
     console.log(`[buildSchedulingProblem] ${stage}: processing ${teachingGroupsDb.length} teaching groups`);
@@ -227,14 +228,16 @@ Deno.serve(async (req) => {
     let teachingGroupsIncludedCount = 0;
 
     const teachingGroupFilteredPush = (tg, reason) => {
-      const subjCode = subjectIdToCode[tg.subject_id] || null;
+      if (!tg) return;
+      const subjCode = (tg.subject_id && subjectIdToCode[tg.subject_id]) || null;
       const has_students = Array.isArray(tg.student_ids) && tg.student_ids.length > 0;
+      const subj = (tg.subject_id && subjectById[tg.subject_id]) || null;
       teachingGroupsFilteredOut.push({
-        tg_id: tg.id,
+        tg_id: tg.id || null,
         name: tg.name || null,
         subject_code: subjCode,
         minutes_per_week: typeof tg.minutes_per_week === 'number' ? tg.minutes_per_week : null,
-        ib_level: subjectById[tg.subject_id]?.ib_level || null,
+        ib_level: subj?.ib_level || null,
         year_group: tg.year_group || null,
         is_active: !!tg.is_active,
         has_students,
@@ -245,14 +248,17 @@ Deno.serve(async (req) => {
     };
 
     const minutesForTG = (tg) => {
+      if (!tg) return 0;
       if (typeof tg.minutes_per_week === 'number' && tg.minutes_per_week > 0) return tg.minutes_per_week;
       if (typeof tg.hours_per_week === 'number' && tg.hours_per_week > 0) return Math.round(tg.hours_per_week * 60);
-      const subj = subjectById[tg.subject_id];
-      const subjCode = subjectIdToCode[tg.subject_id];
       
-      // CRITICAL FIX: Default minutes for core subjects if not set
-      if (subjCode && ['TOK', 'CAS', 'EE'].includes(subjCode)) {
-        return 60; // 1 hour/week default for DP core
+      const subj = (tg.subject_id && subjectById[tg.subject_id]) || null;
+      const subjCode = (tg.subject_id && subjectIdToCode[tg.subject_id]) || null;
+      const normCode = normalizeCode(subjCode);
+      
+      // CRITICAL: Core subjects (TOK/CAS/EE) default to 60 min/week
+      if (normCode && ['TOK', 'CAS', 'EE'].includes(normCode)) {
+        return 60;
       }
       
       const level = String(tg.level || '').toUpperCase();
@@ -264,29 +270,29 @@ Deno.serve(async (req) => {
       return Number(subj?.pyp_myp_minutes_per_week_default || 180);
     };
 
-    const minutesToPeriods = (m) => Math.max(0, Math.ceil(m / periodDurationMinutes));
+    const minutesToPeriods = (m) => Math.max(0, Math.ceil((m || 0) / periodDurationMinutes));
 
-    // DIAGNOSTIC 1: Log all subjects before core check
-    console.log('[buildSchedulingProblem] All subjects in DB:', subjectsDb.map(s => ({ 
-      id: s.id, 
-      code: s.code, 
-      name: s.name, 
-      normalized: normalizeSubjectCode(s.code || s.name),
-      is_core: s.is_core,
-      ib_level: s.ib_level
+    // DIAGNOSTIC 1: Log all subjects before core check (null-safe)
+    console.log('[buildSchedulingProblem] All subjects in DB:', (subjectsDb || []).map(s => ({ 
+      id: s?.id || null, 
+      code: s?.code || null, 
+      name: s?.name || null, 
+      normalized: normalizeSubjectCode(s?.code || s?.name),
+      is_core: s?.is_core || false,
+      ib_level: s?.ib_level || null
     })));
 
-    // DIAGNOSTIC 2: Check DP students and their core assignments
-    const dpStudents = await base44.entities.Student.filter({ school_id, ib_programme: 'DP', is_active: true });
+    // DIAGNOSTIC 2: Check DP students and their core assignments (null-safe)
+    const dpStudents = await base44.entities.Student.filter({ school_id, ib_programme: 'DP', is_active: true }).catch(() => []);
     console.log('[buildSchedulingProblem] DP Students check:', {
-      total: dpStudents.length,
-      sample: dpStudents.slice(0, 3).map(s => ({
-        id: s.id,
-        name: s.full_name,
-        year: s.year_group,
-        core_components: s.core_components,
-        subject_choices: s.subject_choices?.length || 0,
-        assigned_groups: s.assigned_groups?.length || 0
+      total: (dpStudents || []).length,
+      sample: (dpStudents || []).slice(0, 3).map(s => ({
+        id: s?.id || null,
+        name: s?.full_name || null,
+        year: s?.year_group || null,
+        core_components: s?.core_components || null,
+        subject_choices: s?.subject_choices?.length || 0,
+        assigned_groups: s?.assigned_groups?.length || 0
       }))
     });
 
@@ -300,12 +306,13 @@ Deno.serve(async (req) => {
     const dpMinEndTime = String(body?.dp_min_end_time || Deno.env.get('DP_MIN_END_TIME') || '14:30');
     const studentGroupSoftPreferences = {};
 
-    for (const tg of teachingGroupsDb) {
+    for (const tg of (teachingGroupsDb || [])) {
+      if (!tg) continue;
       if (!tg?.is_active) {
         teachingGroupFilteredPush(tg, 'INACTIVE');
         continue;
       }
-      const subjCode = subjectIdToCode[tg.subject_id];
+      const subjCode = (tg.subject_id && subjectIdToCode[tg.subject_id]) || null;
       if (!subjCode) {
         teachingGroupFilteredPush(tg, 'MISSING_SUBJECT');
         continue;
@@ -336,8 +343,8 @@ Deno.serve(async (req) => {
 
       const studentGroup = `TG_${tg.id}`;
       const cap = 20;
-      const teacherNumeric = tg.teacher_id ? (teachersDb.findIndex(t => t.id === tg.teacher_id) + 1 || null) : null;
-      const roomNumeric = tg.preferred_room_id ? (roomsDb.findIndex(r => r.id === tg.preferred_room_id) + 1 || null) : null;
+      const teacherNumeric = (tg.teacher_id && teachersDb) ? (teachersDb.findIndex(t => t?.id === tg.teacher_id) + 1 || null) : null;
+      const roomNumeric = (tg.preferred_room_id && roomsDb) ? (roomsDb.findIndex(r => r?.id === tg.preferred_room_id) + 1 || null) : null;
 
       // Expected + created counters
       expectedLessonsBySubject[subjCode] = (expectedLessonsBySubject[subjCode] || 0) + weeklyCount;
@@ -356,8 +363,8 @@ Deno.serve(async (req) => {
       }
       perSubjectCount[subjCode] = (perSubjectCount[subjCode] || 0) + weeklyCount;
 
-      // DP preferences + Study blocks
-      const subj = subjectById[tg.subject_id];
+      // DP preferences + Study blocks (null-safe)
+      const subj = (tg.subject_id && subjectById[tg.subject_id]) || null;
       const isDP = (String(tg.year_group || '').toUpperCase().includes('DP')) || (subj?.ib_level === 'DP');
       if (isDP) {
         studentGroupSoftPreferences[studentGroup] = { minEndTime: dpMinEndTime, penalty: 5 };
@@ -602,12 +609,31 @@ Deno.serve(async (req) => {
     });
   } catch (error) {
     console.error(`[buildSchedulingProblem] ERROR at stage="${stage}":`, error);
+    console.error(`[buildSchedulingProblem] Error message:`, error?.message);
+    console.error(`[buildSchedulingProblem] Error stack:`, error?.stack);
+    
+    // Gather diagnostic counts (safe access)
+    const counts = {
+      students: (await base44.entities.Student.filter({ school_id }).catch(() => [])).length,
+      teachingGroups: (await base44.entities.TeachingGroup.filter({ school_id }).catch(() => [])).length,
+      subjects: (await base44.entities.Subject.filter({ school_id }).catch(() => [])).length,
+      teachers: (await base44.entities.Teacher.filter({ school_id }).catch(() => [])).length,
+      rooms: (await base44.entities.Room.filter({ school_id }).catch(() => [])).length
+    };
+    
+    const samples = {
+      firstTG: (await base44.entities.TeachingGroup.filter({ school_id }).catch(() => []))[0] || null,
+      firstSubject: (await base44.entities.Subject.filter({ school_id }).catch(() => []))[0] || null
+    };
+    
     return Response.json({ 
       ok: false,
       stage,
       errorMessage: String(error?.message || error),
       errorStack: String(error?.stack || ''),
-      meta: { schedule_version_id, school_id }
-    }, { status: 500 });
+      meta: { schedule_version_id, school_id },
+      counts,
+      samples
+    }, { status: 200 }); // Return 200 so UI can always parse JSON
   }
 });
