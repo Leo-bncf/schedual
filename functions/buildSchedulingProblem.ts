@@ -401,32 +401,7 @@ Deno.serve(async (req) => {
     const daysCount = daysOfWeek.length || 5;
     const periodsPerDay = Math.floor(timeslots.length / Math.max(1, daysCount));
 
-    // Diagnostic 1: Core Teaching Groups Detection
-    const coreSubjectsSet = new Set(['TOK', 'CAS', 'EE']);
-    const coreTeachingGroupsDetected = teachingGroupsDb
-      .filter(tg => {
-        const code = subjectIdToCode[tg.subject_id];
-        return code && coreSubjectsSet.has(code);
-      })
-      .map(tg => ({
-        id: tg.id,
-        subject_code: subjectIdToCode[tg.subject_id],
-        minutes_per_week: minutesForTG(tg),
-        dp_year: tg.year_group,
-        is_active: tg.is_active,
-        has_students: Array.isArray(tg.student_ids) && tg.student_ids.length > 0,
-        student_count: Array.isArray(tg.student_ids) ? tg.student_ids.length : 0
-      }));
-
-    // Diagnostic 2: Core Requirements Generated (with normalization)
-    const normalizeForCheck = (s) => String(s||'').trim().toUpperCase().replace(/\s+/g,'_').replace(/[^A-Z0-9_]/g,'_');
-    const coreRequirementsGeneratedByCode = {};
-    for (const code of coreSubjectsSet) {
-      coreRequirementsGeneratedByCode[code] = subjectRequirements.filter(r => normalizeForCheck(r.subject) === code).length;
-    }
-    console.log('[buildSchedulingProblem] coreRequirementsGeneratedByCode:', coreRequirementsGeneratedByCode);
-
-    // Build subjects[] and subjectRequirements[] for solver validation
+    // Build subjects[] and subjectRequirements[] for solver validation (DECLARE BEFORE USE!)
     const isValidMongoId = (id) => /^[a-f0-9]{24}$/i.test(String(id || ''));
     const subjectCodesInLessons = Array.from(new Set(lessons.map(l => l.subject).filter(Boolean)));
     const subjectsList = subjectCodesInLessons.map(code => {
@@ -499,6 +474,30 @@ Deno.serve(async (req) => {
       return ['TOK','CAS','EE'].includes(norm);
     });
     console.log('[buildSchedulingProblem] Core requirements:', coreReqs.length, coreReqs.slice(0, 10));
+
+    // Diagnostic: Core Teaching Groups Detection & Requirements
+    const coreSubjectsSet = new Set(['TOK', 'CAS', 'EE']);
+    const coreTeachingGroupsDetected = teachingGroupsDb
+      .filter(tg => {
+        const code = subjectIdToCode[tg.subject_id];
+        return code && coreSubjectsSet.has(code);
+      })
+      .map(tg => ({
+        id: tg.id,
+        subject_code: subjectIdToCode[tg.subject_id],
+        minutes_per_week: minutesForTG(tg),
+        dp_year: tg.year_group,
+        is_active: tg.is_active,
+        has_students: Array.isArray(tg.student_ids) && tg.student_ids.length > 0,
+        student_count: Array.isArray(tg.student_ids) ? tg.student_ids.length : 0
+      }));
+
+    const normalizeForCheck = (s) => String(s||'').trim().toUpperCase().replace(/\s+/g,'_').replace(/[^A-Z0-9_]/g,'_');
+    const coreRequirementsGeneratedByCode = {};
+    for (const code of coreSubjectsSet) {
+      coreRequirementsGeneratedByCode[code] = subjectRequirements.filter(r => normalizeForCheck(r.subject) === code).length;
+    }
+    console.log('[buildSchedulingProblem] coreRequirementsGeneratedByCode:', coreRequirementsGeneratedByCode);
 
     const problem = {
       timeslots,
