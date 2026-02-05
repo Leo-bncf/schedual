@@ -279,10 +279,11 @@ Deno.serve(async (req) => {
       };
       orToolRequestHeadersSent = { 'Content-Type': 'application/json', 'X-API-Key': maskApiKey(OR_TOOL_API_KEY) };
       // OR-Tool expects top-level schoolId + scheduleVersionId + problem data
+      // Spread problem first, then overwrite to prevent null/undefined from problem overwriting our values
       const orToolPayload = {
+        ...problem,
         schoolId: schoolId,
-        scheduleVersionId: schedule_version_id,
-        ...problem
+        scheduleVersionId: schedule_version_id
       };
       const payloadJson = JSON.stringify(orToolPayload);
 
@@ -290,6 +291,8 @@ Deno.serve(async (req) => {
         endpoint: orToolEndpointUsed,
         schoolId: schoolId,
         scheduleVersionId: schedule_version_id,
+        payloadSchoolId: orToolPayload.schoolId,
+        payloadScheduleVersionId: orToolPayload.scheduleVersionId,
         subjectsCount: problem?.subjects?.length || 0,
         requirementsCount: problem?.subjectRequirements?.length || 0,
         lessonsCount: problem?.lessons?.length || 0,
