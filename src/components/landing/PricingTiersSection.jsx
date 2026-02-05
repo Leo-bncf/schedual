@@ -133,7 +133,7 @@ export default function PricingTiersSection() {
             {Object.entries(TIERS).map(([tierId, tier]) => (
               <button
                 key={tierId}
-                className={`rounded-2xl border border-slate-200 bg-white hover:border-blue-300 hover:shadow-sm ${expandedTier === tierId ? 'ring-2 ring-blue-900' : ''} p-5 flex flex-col gap-2 text-left cursor-pointer transition-all`}
+                className={`rounded-2xl border border-slate-200 bg-white hover:bg-blue-50 hover:border-blue-300 hover:shadow-sm ${expandedTier === tierId ? 'ring-2 ring-blue-900' : ''} p-5 flex flex-col gap-2 text-left cursor-pointer transition-all`}
                 onClick={() => setExpandedTier(expandedTier === tierId ? null : tierId)}
                 role="button"
                 aria-label={`View details for ${tier.name}`}
