@@ -1,3 +1,4 @@
+
 import React, { useState } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { base44 } from '@/api/base44Client';
@@ -25,12 +26,12 @@ import {
 } from "@/components/ui/select";
 import { toast } from 'sonner';
 import { Textarea } from "@/components/ui/textarea";
-import { 
-  Plus, 
-  Calendar, 
-  Play, 
-  CheckCircle, 
-  Clock, 
+import {
+  Plus,
+  Calendar,
+  Play,
+  CheckCircle,
+  Clock,
   AlertTriangle,
   Sparkles,
   Download,
@@ -42,7 +43,9 @@ import {
   Hash,
   Timer,
   Shield,
-  Info
+  Info,
+  Settings,
+  FileText
 } from 'lucide-react';
 import PageHeader from '../components/ui-custom/PageHeader';
 import TimetableGrid from '../components/schedule/TimetableGrid';
@@ -91,6 +94,7 @@ export default function Schedule() {
   const [autoRunORTool, setAutoRunORTool] = useState(true);
   const [scheduleTab, setScheduleTab] = useState('grid');
   const [showUpdateBanner, setShowUpdateBanner] = useState(false);
+  const [showAdvanced, setShowAdvanced] = useState(false);
   const [formData, setFormData] = useState({
     name: '',
     academic_year: '2024-2025',
@@ -104,7 +108,7 @@ export default function Schedule() {
     school_start_time: '08:00',
     day_start_time: '08:00',
     day_end_time: '18:00',
-    days_of_week: ['MONDAY','TUESDAY','WEDNESDAY','THURSDAY','FRIDAY'],
+    days_of_week: ['MONDAY', 'TUESDAY', 'WEDNESDAY', 'THURSDAY', 'FRIDAY'],
     breaks: [],
     min_periods_per_day: 10,
     target_periods_per_day: 10,
@@ -140,10 +144,10 @@ export default function Schedule() {
   });
 
   const allowedProgrammes = React.useMemo(() => {
-    if (!school) return ['PYP','MYP','DP'];
+    if (!school) return ['PYP', 'MYP', 'DP'];
     if (school.subscription_tier === 'tier1') return ['MYP'];
-    if (school.subscription_tier === 'tier2' || school.subscription_tier === 'tier3') return ['PYP','MYP','DP'];
-    return ['PYP','MYP','DP'];
+    if (school.subscription_tier === 'tier2' || school.subscription_tier === 'tier3') return ['PYP', 'MYP', 'DP'];
+    return ['PYP', 'MYP', 'DP'];
   }, [school]);
 
   // Initialize school config when school data loads
@@ -156,7 +160,7 @@ export default function Schedule() {
         school_start_time: school.school_start_time || '08:00',
         day_start_time: school.day_start_time || school.school_start_time || '08:00',
         day_end_time: school.day_end_time || '18:00',
-        days_of_week: Array.isArray(school.days_of_week) && school.days_of_week.length > 0 ? school.days_of_week : ['MONDAY','TUESDAY','WEDNESDAY','THURSDAY','FRIDAY'],
+        days_of_week: Array.isArray(school.days_of_week) && school.days_of_week.length > 0 ? school.days_of_week : ['MONDAY', 'TUESDAY', 'WEDNESDAY', 'THURSDAY', 'FRIDAY'],
         breaks: school.breaks || [],
         min_periods_per_day: school.min_periods_per_day || 10,
         target_periods_per_day: school.target_periods_per_day || 10,
@@ -187,7 +191,6 @@ export default function Schedule() {
     queryFn: async () => {
       if (!selectedVersion) return [];
       const slots = await base44.entities.ScheduleSlot.filter({ schedule_version: selectedVersion.id });
-      // If OR-Tool returned newly inserted slots, merge them in memory until cache updates
       const inserted = (orToolResult?.persistedSlotsSample || []).map(s => ({ ...s, schedule_version: selectedVersion.id }));
       return Array.isArray(inserted) && inserted.length > 0 ? [...slots, ...inserted] : slots;
     },
@@ -242,7 +245,7 @@ export default function Schedule() {
     const subj = subjects.find(s => s.id === tg.subject_id);
     const level = String(tg.level || '').toUpperCase();
     if (typeof tg.minutes_per_week === 'number' && tg.minutes_per_week > 0) return tg.minutes_per_week;
-    if (typeof tg.hours_per_week === 'number' && tg.hours_per_week > 0) return Math.round(tg.hours_per_week * 60); // legacy fallback
+    if (typeof tg.hours_per_week === 'number' && tg.hours_per_week > 0) return Math.round(tg.hours_per_week * 60);
     if (subj?.ib_level === 'DP') {
       return level === 'HL' ? (subj?.hl_minutes_per_week_default || 300) : (subj?.sl_minutes_per_week_default || 180);
     }
@@ -271,12 +274,12 @@ export default function Schedule() {
   React.useEffect(() => {
     if (selectedVersion?.generated_at) {
       const generatedTime = new Date(selectedVersion.generated_at).getTime();
-      const hasRecentChanges = 
+      const hasRecentChanges =
         teachers.some(t => new Date(t.updated_date).getTime() > generatedTime) ||
         students.some(s => new Date(s.updated_date).getTime() > generatedTime) ||
         rooms.some(r => new Date(r.updated_date).getTime() > generatedTime) ||
         teachingGroups.some(g => new Date(g.updated_date).getTime() > generatedTime);
-      
+
       setShowUpdateBanner(hasRecentChanges);
     }
   }, [selectedVersion, teachers, students, rooms, teachingGroups]);
@@ -318,14 +321,14 @@ export default function Schedule() {
 
   const handleGenerateConstraint = async () => {
     if (!constraintInput.trim()) return;
-    
+
     setIsGeneratingConstraint(true);
-    
+
     try {
       console.log('Generating constraint with input:', constraintInput);
       console.log('Constraint type:', constraintType);
       console.log('School ID:', schoolId);
-      
+
       const response = await base44.integrations.Core.InvokeLLM({
         prompt: `You are a school scheduling constraint expert. Convert this natural language preference into a structured scheduling constraint:
 
@@ -377,10 +380,10 @@ Now process the user's input and return ONLY the JSON object.`,
 
       const created = await base44.entities.Constraint.create(constraintData);
       console.log('Constraint created:', created);
-      
+
       await queryClient.invalidateQueries({ queryKey: ['constraints', schoolId] });
       await refetchConstraints();
-      
+
       setConstraintDialogOpen(false);
       setConstraintInput('');
       setConstraintType('hard');
@@ -425,7 +428,7 @@ Now process the user's input and return ONLY the JSON object.`,
 
       // Sync test subjects to Subject entity
       await base44.functions.invoke('syncTestSubjects');
-      
+
       toast.success('Configuration saved successfully');
     } catch (error) {
       console.error('Failed to save configuration:', error);
@@ -458,7 +461,7 @@ Now process the user's input and return ONLY the JSON object.`,
       const res = await base44.functions.invoke('callORToolScheduler', { schedule_version_id: selectedVersion.id, dp_min_end_time: '16:00', dp_study_weekly: 8 });
       const data = res.data;
       setOrToolResult(data);
-      
+
       // Check if function returned error
       if (data?.ok === false) {
         console.error('❌ OR-Tool returned error:', data);
@@ -495,21 +498,21 @@ Now process the user's input and return ONLY the JSON object.`,
     // First unpublish any currently published version
     const currentPublished = scheduleVersions.find(v => v.status === 'published');
     if (currentPublished) {
-      await updateVersionMutation.mutateAsync({ 
-        id: currentPublished.id, 
-        data: { status: 'archived' } 
+      await updateVersionMutation.mutateAsync({
+        id: currentPublished.id,
+        data: { status: 'archived' }
       });
     }
     // Then publish the selected version
-    await updateVersionMutation.mutateAsync({ 
-      id: version.id, 
-      data: { status: 'published', published_at: new Date().toISOString() } 
+    await updateVersionMutation.mutateAsync({
+      id: version.id,
+      data: { status: 'published', published_at: new Date().toISOString() }
     });
   };
 
   const handleGenerateSchedule = async () => {
     if (!selectedVersion) return;
-    
+
     setIsGenerating(true);
     setCancelGeneration(false);
     setGenerationProgress({
@@ -520,7 +523,7 @@ Now process the user's input and return ONLY the JSON object.`,
       completedSteps: [],
       completed: false
     });
-    
+
     try {
       if (cancelGeneration) {
         setGenerationProgress({
@@ -542,17 +545,17 @@ Now process the user's input and return ONLY the JSON object.`,
       console.log('Students:', students.length);
       console.log('Rooms:', rooms.length);
       console.log('Active Constraints:', constraints.filter(c => c.is_active).length);
-      
+
       // Load active constraints
       const activeConstraints = constraints.filter(c => c.is_active);
       const hardConstraints = activeConstraints.filter(c => c.type === 'hard');
       const softConstraints = activeConstraints.filter(c => c.type === 'soft');
       console.log('Hard Constraints:', hardConstraints.length);
       console.log('Soft Constraints:', softConstraints.length);
-      
+
       // Step 0: Auto-generate DP teaching groups
       if (cancelGeneration) throw new Error('Cancelled by user');
-      
+
       if (allowedProgrammes.includes('DP')) {
         setGenerationProgress(prev => ({
           ...prev,
@@ -561,48 +564,48 @@ Now process the user's input and return ONLY the JSON object.`,
           message: 'Automatically creating DP teaching groups from student choices...'
         }));
         console.log('Auto-generating DP teaching groups...');
-        
+
         try {
-        // Try to clean up any duplicate subject assignments (optional)
-        try {
-          const { data: cleanupResult } = await base44.functions.invoke('cleanupDuplicateSubjects');
-          if (cleanupResult?.students_fixed > 0) {
-            console.log(`Fixed ${cleanupResult.students_fixed} students with duplicate subjects`);
+          // Try to clean up any duplicate subject assignments (optional)
+          try {
+            const { data: cleanupResult } = await base44.functions.invoke('cleanupDuplicateSubjects');
+            if (cleanupResult?.students_fixed > 0) {
+              console.log(`Fixed ${cleanupResult.students_fixed} students with duplicate subjects`);
+            }
+          } catch (cleanupError) {
+            console.log('Cleanup function not available, continuing anyway...');
           }
-        } catch (cleanupError) {
-          console.log('Cleanup function not available, continuing anyway...');
-        }
 
-        const { data: dpGroupResult } = await base44.functions.invoke('generateDpTeachingGroups', { 
-          action: 'create', 
-          max_group_size: 20 
-        });
-        console.log('DP group generation result:', dpGroupResult);
-        console.log('DP groups created:', dpGroupResult?.created || 0);
-        console.log('DP group names:', dpGroupResult?.groups?.map(g => g.name) || []);
+          const { data: dpGroupResult } = await base44.functions.invoke('generateDpTeachingGroups', {
+            action: 'create',
+            max_group_size: 20
+          });
+          console.log('DP group generation result:', dpGroupResult);
+          console.log('DP groups created:', dpGroupResult?.created || 0);
+          console.log('DP group names:', dpGroupResult?.groups?.map(g => g.name) || []);
 
-        if (dpGroupResult?.duplicate_subjects?.length > 0) {
-          console.warn('⚠️ Students with duplicate subjects:', dpGroupResult.duplicate_subjects);
-        }
+          if (dpGroupResult?.duplicate_subjects?.length > 0) {
+            console.warn('⚠️ Students with duplicate subjects:', dpGroupResult.duplicate_subjects);
+          }
 
-        if (!dpGroupResult?.success) {
-          console.error('❌ DP group generation failed:', dpGroupResult?.message || dpGroupResult?.error);
+          if (!dpGroupResult?.success) {
+            console.error('❌ DP group generation failed:', dpGroupResult?.message || dpGroupResult?.error);
+          }
+        } catch (dpError) {
+          console.error('❌ DP group generation error:', dpError);
+          console.error('Error details:', dpError.message, dpError.response?.data);
         }
-      } catch (dpError) {
-        console.error('❌ DP group generation error:', dpError);
-        console.error('Error details:', dpError.message, dpError.response?.data);
-      }
       } else {
         console.log('Skipping DP group generation due to plan restrictions');
       }
-      
+
       // Refresh teaching groups after auto-generation
       await queryClient.invalidateQueries({ queryKey: ['teachingGroups'] });
       await new Promise(resolve => setTimeout(resolve, 1000));
-      
+
       // Step 1: Assign teachers to teaching groups
       if (cancelGeneration) throw new Error('Cancelled by user');
-      
+
       setGenerationProgress(prev => ({
         ...prev,
         stage: 'Assigning Teachers',
@@ -612,10 +615,10 @@ Now process the user's input and return ONLY the JSON object.`,
       console.log('Assigning teachers to teaching groups...');
       const { data: assignmentResult } = await base44.functions.invoke('assignTeachers');
       console.log('Teacher assignments:', assignmentResult);
-      
+
       // Refresh teaching groups to get updated teacher assignments
       if (cancelGeneration) throw new Error('Cancelled by user');
-      
+
       setGenerationProgress(prev => ({
         ...prev,
         stage: 'Preparing Data',
@@ -627,10 +630,10 @@ Now process the user's input and return ONLY the JSON object.`,
       await new Promise(resolve => setTimeout(resolve, 1000));
       const updatedGroups = await base44.entities.TeachingGroup.filter({ school_id: schoolId });
       console.log('Updated groups with teachers:', updatedGroups.filter(g => g.teacher_id).length);
-      
+
       // Delete existing slots for this version (batch to avoid rate limits)
       if (cancelGeneration) throw new Error('Cancelled by user');
-      
+
       setGenerationProgress(prev => ({
         ...prev,
         percent: 20,
@@ -638,9 +641,9 @@ Now process the user's input and return ONLY the JSON object.`,
       }));
       const existingSlots = await base44.entities.ScheduleSlot.list();
       const slotsToDelete = existingSlots.filter(s => s.schedule_version === selectedVersion.id);
-      
+
       console.log('Existing slots to delete:', slotsToDelete.length);
-      
+
       if (slotsToDelete.length > 0) {
         // Delete in small batches with delays to avoid rate limits
         const batchSize = 3; // Reduced from 5
@@ -667,8 +670,8 @@ Now process the user's input and return ONLY the JSON object.`,
       const studentConsecutiveSubjects = {}; // Track consecutive subject periods
 
       // Initialize availability tracking
-      students.forEach(s => { 
-        studentSchedules[s.id] = []; 
+      students.forEach(s => {
+        studentSchedules[s.id] = [];
         studentConsecutiveSubjects[s.id] = {}; // { day: [{ period, subjectId, count }] }
       });
       teachers.forEach(t => { teacherSchedules[t.id] = []; });
@@ -742,7 +745,7 @@ Now process the user's input and return ONLY the JSON object.`,
 
       // Schedule each IB level separately but track teachers globally
       const scheduleLevels = ['DP', 'MYP', 'PYP'].filter(level => allowedProgrammes.includes(level));
-      
+
       for (const level of scheduleLevels) {
         if (cancelGeneration) throw new Error('Cancelled by user');
 
@@ -762,31 +765,31 @@ Now process the user's input and return ONLY the JSON object.`,
             message: `Creating ${level} class schedules across the week...`,
             currentStep: level.toLowerCase()
           }));
-          
+
           const levelClassGroups = classGroups.filter(cg => cg.ib_programme === level);
           console.log(`Using ClassGroup-based scheduling for ${level}`);
           console.log(`Found ${levelClassGroups.length} ${level} ClassGroups`);
-          
+
           if (levelClassGroups.length === 0) {
             console.warn(`⚠️ No ${level} ClassGroups found - skipping ${level} scheduling`);
             continue;
           }
-          
+
           const { data: result } = await base44.functions.invoke('generatePYPMYPSchedule', {
             schedule_version_id: selectedVersion.id,
             level
           });
-          
+
           if (result.slots) {
             console.log(`✓ Generated ${result.slots.length} slots for ${level}`);
             newSlots.push(...result.slots);
-            
+
             setGenerationProgress(prev => ({
               ...prev,
               message: `Created ${result.slots.length} ${level} schedule slots`,
               completedSteps: [...prev.completedSteps, level.toLowerCase()]
             }));
-            
+
             // Update availability tracking
             result.slots.forEach(slot => {
               if (slot.teacher_id) {
@@ -1217,7 +1220,7 @@ Now process the user's input and return ONLY the JSON object.`,
 
       // Create all slots in batches to avoid rate limits
       if (cancelGeneration) throw new Error('Cancelled by user');
-      
+
       setGenerationProgress(prev => ({
         ...prev,
         stage: 'Creating Schedule Slots',
@@ -1226,7 +1229,7 @@ Now process the user's input and return ONLY the JSON object.`,
         currentStep: 'slots',
         completedSteps: [...prev.completedSteps, 'dp']
       }));
-      
+
       console.log('Total slots to create:', newSlots.length);
       console.log('Sample slot:', newSlots[0]);
 
@@ -1236,8 +1239,8 @@ Now process the user's input and return ONLY the JSON object.`,
 
         for (let i = 0; i < newSlots.length; i += batchSize) {
           const batch = newSlots.slice(i, i + batchSize);
-          const batchNum = Math.floor(i/batchSize) + 1;
-          const totalBatches = Math.ceil(newSlots.length/batchSize);
+          const batchNum = Math.floor(i / batchSize) + 1;
+          const totalBatches = Math.ceil(newSlots.length / batchSize);
 
           setGenerationProgress(prev => ({
             ...prev,
@@ -1332,10 +1335,10 @@ Now process the user's input and return ONLY the JSON object.`,
         currentStep: 'finalize',
         completedSteps: [...prev.completedSteps, 'slots']
       }));
-      
+
       await updateVersionMutation.mutateAsync({
         id: selectedVersion.id,
-        data: { 
+        data: {
           generated_at: new Date().toISOString(),
           score: Math.floor((newSlots.length / (totalGroups * 6)) * 100),
           conflicts_count: 0,
@@ -1348,7 +1351,7 @@ Now process the user's input and return ONLY the JSON object.`,
       await queryClient.invalidateQueries({ queryKey: ['scheduleSlots'] });
       await queryClient.invalidateQueries({ queryKey: ['scheduleVersions'] });
       await queryClient.invalidateQueries({ queryKey: ['teachingGroups'] });
-      
+
       setGenerationProgress({
         stage: 'Complete',
         percent: 100,
@@ -1357,7 +1360,7 @@ Now process the user's input and return ONLY the JSON object.`,
         completedSteps: ['teachers', 'dp', 'myp', 'pyp', 'slots', 'finalize'],
         completed: true
       });
-      
+
       console.log('=== SCHEDULE GENERATION COMPLETE ===');
 
       // Auto-pipeline: Run OR-Tool + JSON + Persist + Refresh UI
@@ -1420,9 +1423,9 @@ Now process the user's input and return ONLY the JSON object.`,
       console.error('Error:', error);
       console.error('Error message:', error.message);
       console.error('Error stack:', error.stack);
-      
+
       const wasCancelled = error.message === 'Cancelled by user' || cancelGeneration;
-      
+
       setGenerationProgress({
         stage: wasCancelled ? 'Cancelled' : 'Error',
         percent: 0,
@@ -1432,7 +1435,7 @@ Now process the user's input and return ONLY the JSON object.`,
         completed: true
       });
     }
-    
+
     setTimeout(() => {
       setIsGenerating(false);
       setCancelGeneration(false);
@@ -1464,13 +1467,13 @@ Now process the user's input and return ONLY the JSON object.`,
 
     scheduleSlots.forEach(slot => {
       if (slot.teacher_id) scheduledTeachers.add(slot.teacher_id);
-      
+
       // For classgroup-based slots (PYP/MYP)
       if (slot.classgroup_id) {
         const cg = classGroups.find(c => c.id === slot.classgroup_id);
         cg?.student_ids?.forEach(sid => scheduledStudents.add(sid));
       }
-      
+
       // For teaching group-based slots (DP)
       if (slot.teaching_group_id) {
         const tg = teachingGroups.find(g => g.id === slot.teaching_group_id);
@@ -1513,45 +1516,177 @@ Now process the user's input and return ONLY the JSON object.`,
 
   return (
     <div className="space-y-6">
-      <PageHeader 
-        title="Master Schedule"
-        description={`Generate and manage timetables for ${allowedProgrammes.join(', ')}`}
-        actions={
-          <div className="flex gap-2">
-            <Button
-              variant="outline"
-              onClick={handleRunDPDiagnostic}
-              disabled={dpDiagLoading}
-            >
-              {dpDiagLoading ? (
-                <>
-                  <Loader2 className="w-4 h-4 mr-2 animate-spin" />
-                  Running DP Diagnostic...
-                </>
-              ) : (
-                <>
-                  <Eye className="w-4 h-4 mr-2" />
-                  Preview DP Diagnostic
-                </>
-              )}
-            </Button>
-            <Button onClick={() => setIsDialogOpen(true)} className="bg-slate-900 hover:bg-slate-800 rounded-xl">
-              <Plus className="w-4 h-4 mr-2" />
-              New Version
-            </Button>
-          </div>
-        }
-      />
+      {/* Header with Actions */}
+      <div className="flex items-start justify-between">
+        <div>
+          <h1 className="text-3xl font-bold text-slate-900 mb-2">Master Schedule</h1>
+          <p className="text-slate-600">Generate and manage timetables for {allowedProgrammes.join(', ')}</p>
+        </div>
+        <div className="flex gap-2">
+          <Button
+            variant="outline"
+            onClick={handleRunDPDiagnostic}
+            disabled={dpDiagLoading}
+            className="border-slate-200"
+          >
+            {dpDiagLoading ? (
+              <>
+                <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+                Running DP Diagnostic...
+              </>
+            ) : (
+              <>
+                <Eye className="w-4 h-4 mr-2" />
+                Preview DP Diagnostic
+              </>
+            )}
+          </Button>
+          <Button onClick={() => setIsDialogOpen(true)} className="bg-blue-900 hover:bg-blue-800">
+            <Plus className="w-4 h-4 mr-2" />
+            New Version
+          </Button>
+        </div>
+      </div>
 
+      {/* Subscription tier notice */}
       {school && (
-        <div className="rounded-lg border border-slate-200 bg-slate-50 p-4">
-          <p className="text-sm text-slate-700">
-            Your plan: <strong>{(school.subscription_tier || 'unknown').toUpperCase()}</strong>. Enabled programmes: {allowedProgrammes.join(', ')}.
+        <div className="rounded-xl border border-blue-200 bg-blue-50 p-4">
+          <p className="text-sm text-blue-900">
+            <strong>{(school.subscription_tier || 'unknown').toUpperCase()}</strong> plan • Enabled: {allowedProgrammes.join(', ')}.
           </p>
         </div>
       )}
 
-      <ScheduleUpdateBanner 
+      {/* Version Selector & Controls */}
+      <Card className="border-blue-200 bg-white shadow-sm">
+        <CardContent className="p-6">
+          <div className="flex flex-col lg:flex-row lg:items-center lg:justify-between gap-4">
+            <div className="flex flex-col sm:flex-row sm:items-center gap-4 flex-1">
+              <div className="flex-1">
+                <Label className="text-sm text-slate-600 mb-2 block">Active Version</Label>
+                <Select value={selectedVersion?.id || ''} onValueChange={(id) => setSelectedVersion(scheduleVersions.find(v => v.id === id))}>
+                  <SelectTrigger className="w-full">
+                    <SelectValue placeholder="Select a schedule version" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {scheduleVersions.length === 0 ? (
+                      <div className="p-4 text-sm text-slate-500">No versions yet. Create one to start.</div>
+                    ) : (
+                      <>
+                        {publishedVersion && (
+                          <SelectItem value={publishedVersion.id}>
+                            <div className="flex items-center gap-2">
+                              <CheckCircle className="w-4 h-4 text-emerald-600" />
+                              <span className="font-medium">{publishedVersion.name}</span>
+                              <Badge className="ml-2 bg-emerald-100 text-emerald-700 text-xs">Published</Badge>
+                            </div>
+                          </SelectItem>
+                        )}
+                        {draftVersions.map(version => (
+                          <SelectItem key={version.id} value={version.id}>
+                            <div className="flex items-center gap-2">
+                              <Clock className="w-4 h-4 text-slate-400" />
+                              <span>{version.name}</span>
+                              <Badge variant="outline" className="ml-2 text-xs">Draft</Badge>
+                            </div>
+                          </SelectItem>
+                        ))}
+                      </>
+                    )}
+                  </SelectContent>
+                </Select>
+              </div>
+              {selectedVersion && (
+                <div className="flex items-center gap-2 text-sm text-slate-500">
+                  <span>{selectedVersion.academic_year}</span>
+                  <span>•</span>
+                  <span>{selectedVersion.term || 'Full Year'}</span>
+                </div>
+              )}
+            </div>
+
+            {selectedVersion && (
+              <div className="flex flex-wrap gap-2">
+                <Button
+                  onClick={handleGenerateSchedule}
+                  disabled={isGenerating}
+                  className="bg-blue-900 hover:bg-blue-800"
+                >
+                  {isGenerating ? (
+                    <>
+                      <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+                      Generating...
+                    </>
+                  ) : (
+                    <>
+                      <Sparkles className="w-4 h-4 mr-2" />
+                      Generate
+                    </>
+                  )}
+                </Button>
+                {selectedVersion.status === 'draft' && scheduleSlots.length > 0 && (
+                  <Button
+                    variant="outline"
+                    className="border-blue-200 text-blue-900 hover:bg-blue-50"
+                    onClick={() => handlePublish(selectedVersion)}
+                  >
+                    <CheckCircle className="w-4 h-4 mr-2" />
+                    Publish
+                  </Button>
+                )}
+              </div>
+            )}
+          </div>
+
+          {selectedVersion && (
+            <div className="mt-4 pt-4 border-t border-slate-100 flex flex-wrap items-center gap-4">
+              <div className="flex items-center gap-2 text-sm">
+                <Switch checked={autoRunORTool} onCheckedChange={setAutoRunORTool} />
+                <Label className="text-slate-600 cursor-pointer" onClick={() => setAutoRunORTool(!autoRunORTool)}>
+                  Auto-run optimizer
+                </Label>
+              </div>
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={handleFetchORTool}
+                disabled={!selectedVersion || orToolLoading}
+                className="border-slate-200"
+              >
+                {orToolLoading ? (
+                  <>
+                    <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+                    Running...
+                  </>
+                ) : (
+                  <>
+                    <Hash className="w-4 h-4 mr-2" />
+                    Run OR-Tool
+                  </>
+                )}
+              </Button>
+              {selectedVersion.status === 'draft' && (
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  className="text-rose-600 hover:text-rose-700 hover:bg-rose-50"
+                  onClick={() => {
+                    if (confirm(`Delete "${selectedVersion.name}"?`)) {
+                      deleteVersionMutation.mutate(selectedVersion.id);
+                    }
+                  }}
+                >
+                  <Trash2 className="w-4 h-4 mr-2" />
+                  Delete
+                </Button>
+              )}
+            </div>
+          )}
+        </CardContent>
+      </Card>
+
+      {/* Banners */}
+      <ScheduleUpdateBanner
         show={showUpdateBanner && selectedVersion && scheduleSlots.length > 0}
         onRegenerate={handleGenerateSchedule}
         onDismiss={() => setShowUpdateBanner(false)}
@@ -1562,11 +1697,11 @@ Now process the user's input and return ONLY the JSON object.`,
         <OffByOneBanner conflicts={offByOneConflicts} />
       )}
 
-      {/* Quick Stats Bar */}
+      {/* Quick Stats */}
       {selectedVersion && scheduleSlots.length > 0 && (
-        <div className="grid grid-cols-4 gap-4">
-          <Card className="border-0 shadow-sm bg-gradient-to-br from-blue-50 to-white">
-            <CardContent className="p-4">
+        <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
+          <Card className="border-blue-200 bg-gradient-to-br from-blue-50 to-white">
+            <CardContent className="p-5">
               <div className="flex items-center justify-between">
                 <div>
                   <p className="text-xs text-slate-600 mb-1">Students Scheduled</p>
@@ -1576,34 +1711,32 @@ Now process the user's input and return ONLY the JSON object.`,
               </div>
             </CardContent>
           </Card>
-          <Card className="border-0 shadow-sm bg-gradient-to-br from-emerald-50 to-white">
-            <CardContent className="p-4">
+          <Card className="border-blue-200 bg-white">
+            <CardContent className="p-5">
               <div className="flex items-center justify-between">
                 <div>
                   <p className="text-xs text-slate-600 mb-1">Teachers Assigned</p>
-                  <p className="text-2xl font-bold text-emerald-900">{stats.teachersAssigned}/{teachers.length}</p>
+                  <p className="text-2xl font-bold text-slate-900">{stats.teachersAssigned}/{teachers.length}</p>
                 </div>
-                <Users className="w-8 h-8 text-emerald-600" />
+                <Users className="w-8 h-8 text-blue-600" />
               </div>
             </CardContent>
           </Card>
-          <Card className="border-0 shadow-sm bg-gradient-to-br from-violet-50 to-white">
-            <CardContent className="p-4">
+          <Card className="border-blue-200 bg-white">
+            <CardContent className="p-5">
               <div className="flex items-center justify-between">
                 <div>
                   <p className="text-xs text-slate-600 mb-1">Total Periods</p>
-                  <p className="text-2xl font-bold text-violet-900">{stats.totalSlots}</p>
+                  <p className="text-2xl font-bold text-slate-900">{stats.totalSlots}</p>
                 </div>
-                <Calendar className="w-8 h-8 text-violet-600" />
+                <Calendar className="w-8 h-8 text-blue-600" />
               </div>
             </CardContent>
           </Card>
-          <Card className={`border-0 shadow-sm ${
-            (selectedVersion?.conflicts_count || 0) > 0 
-              ? 'bg-gradient-to-br from-rose-50 to-white' 
-              : 'bg-gradient-to-br from-slate-50 to-white'
+          <Card className={`border-blue-200 ${
+            (selectedVersion?.conflicts_count || 0) > 0 ? 'bg-rose-50' : 'bg-white'
           }`}>
-            <CardContent className="p-4">
+            <CardContent className="p-5">
               <div className="flex items-center justify-between">
                 <div>
                   <p className="text-xs text-slate-600 mb-1">Issues</p>
@@ -1624,440 +1757,816 @@ Now process the user's input and return ONLY the JSON object.`,
         </div>
       )}
 
-      {/* Version Selector Card */}
-      <Card className="border-0 shadow-sm">
-        <CardContent className="p-6">
-          <div className="flex items-center justify-between">
-            <div className="flex items-center gap-4 flex-1">
-              <div>
-                <Label className="text-sm text-slate-600 mb-2 block">Active Version</Label>
-                <Select value={selectedVersion?.id || ''} onValueChange={(id) => setSelectedVersion(scheduleVersions.find(v => v.id === id))}>
-                  <SelectTrigger className="w-[320px]">
-                    <SelectValue placeholder="Select a schedule version" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {scheduleVersions.length === 0 ? (
-                      <div className="p-4 text-sm text-slate-500">No versions yet. Create one to start.</div>
-                    ) : (
-                      <>
-                        {publishedVersion && (
-                          <SelectItem value={publishedVersion.id}>
-                            <div className="flex items-center gap-2">
-                              <CheckCircle className="w-4 h-4 text-emerald-600" />
-                              <span className="font-medium">{publishedVersion.name}</span>
-                              <Badge className="ml-2 bg-emerald-100 text-emerald-700 border-0 text-xs">Published</Badge>
-                            </div>
-                          </SelectItem>
-                        )}
-                        {draftVersions.map(version => (
-                          <SelectItem key={version.id} value={version.id}>
-                            <div className="flex items-center gap-2">
-                              <Clock className="w-4 h-4 text-slate-400" />
-                              <span>{version.name}</span>
-                              <Badge variant="outline" className="ml-2 text-xs">Draft</Badge>
-                            </div>
-                          </SelectItem>
-                        ))}
-                      </>
-                    )}
-                  </SelectContent>
-                </Select>
-              </div>
-              {selectedVersion && (
-                <div className="flex items-center gap-2 text-sm text-slate-500">
-                  <span>•</span>
-                  <span>{selectedVersion.academic_year}</span>
-                  <span>•</span>
-                  <span>{selectedVersion.term || 'Full Year'}</span>
-                </div>
-              )}
-            </div>
-            {selectedVersion && (
-              <div className="flex gap-2 items-center">
-                <div className="hidden md:flex items-center gap-2 mr-2">
-                  <Label className="text-xs text-slate-600">Auto-run OR-Tool after Generate</Label>
-                  <Switch checked={autoRunORTool} onCheckedChange={setAutoRunORTool} />
-                </div>
-                <Button 
-                 onClick={handleGenerateSchedule}
-                 disabled={isGenerating}
-                 className="bg-indigo-600 hover:bg-indigo-700"
-                 size="lg"
-                >
-                  {isGenerating ? (
-                    <>
-                      <Loader2 className="w-4 h-4 mr-2 animate-spin" />
-                      Generating...
-                    </>
-                  ) : (
-                    <>
-                      <Sparkles className="w-4 h-4 mr-2" />
-                      Generate Schedule
-                    </>
-                  )}
-                </Button>
-                {selectedVersion.status === 'draft' && scheduleSlots.length > 0 && (
-                 <Button 
-                   className="bg-emerald-600 hover:bg-emerald-700"
-                   onClick={() => handlePublish(selectedVersion)}
-                 >
-                   <CheckCircle className="w-4 h-4 mr-2" />
-                   Publish
-                 </Button>
+      {/* Main Content Tabs */}
+      {selectedVersion ? (
+        <Tabs defaultValue="schedule" className="w-full">
+          <TabsList className="bg-white border border-blue-200">
+            <TabsTrigger value="schedule" className="data-[state=active]:bg-blue-900 data-[state=active]:text-white">
+              <Calendar className="w-4 h-4 mr-2" />
+              Timetables
+            </TabsTrigger>
+            <TabsTrigger value="settings" className="data-[state=active]:bg-blue-900 data-[state=active]:text-white">
+              <Settings className="w-4 h-4 mr-2" />
+              Settings
+            </TabsTrigger>
+            <TabsTrigger value="constraints" className="data-[state=active]:bg-blue-900 data-[state=active]:text-white">
+              <Shield className="w-4 h-4 mr-2" />
+              Constraints
+            </TabsTrigger>
+            {showAdvanced && (
+              <TabsTrigger value="diagnostics" className="data-[state=active]:bg-blue-900 data-[state=active]:text-white">
+                <FileText className="w-4 h-4 mr-2" />
+                Diagnostics
+              </TabsTrigger>
+            )}
+          </TabsList>
+
+          {/* Timetables Tab */}
+          <TabsContent value="schedule" className="space-y-6">
+            {((selectedVersion.conflicts_count || 0) > 0 || (selectedVersion.warnings_count || 0) > 0) && (
+              <div className="space-y-3">
+                {(selectedVersion.conflicts_count || 0) > 0 && (
+                  <ConflictAlert
+                    severity="error"
+                    title={`${selectedVersion.conflicts_count || 0} Scheduling Conflicts`}
+                    description="Unresolved conflicts need attention before publishing."
+                  />
                 )}
-                <Button 
-                 variant="outline"
-                 onClick={handleFetchORTool}
-                 disabled={!selectedVersion || orToolLoading}
-                >
-                 {orToolLoading ? (
-                   <>
-                     <Loader2 className="w-4 h-4 mr-2 animate-spin" />
-                     OR-Tool JSON...
-                   </>
-                 ) : (
-                   <>
-                     <Hash className="w-4 h-4 mr-2" />
-                     Run OR-Tool + JSON
-                   </>
-                 )}
-                </Button>
-                {selectedVersion.status === 'draft' && (
-                  <Button 
-                    variant="outline"
-                    className="text-rose-600 hover:text-rose-700 hover:bg-rose-50"
-                    onClick={() => {
-                      if (confirm(`Delete "${selectedVersion.name}"?`)) {
-                        deleteVersionMutation.mutate(selectedVersion.id);
-                      }
-                    }}
-                  >
-                    <Trash2 className="w-4 h-4" />
-                  </Button>
+                {(selectedVersion.warnings_count || 0) > 0 && (
+                  <ConflictAlert
+                    severity="warning"
+                    title={`${selectedVersion.warnings_count || 0} Warnings`}
+                    description="Review these soft constraint violations."
+                  />
                 )}
+                <ConflictViewer scheduleVersionId={selectedVersion.id} />
               </div>
             )}
-          </div>
-        </CardContent>
-      </Card>
 
-      {/* Configuration & Constraints - Always Visible */}
-      <Tabs defaultValue={selectedVersion ? "schedule" : "config"} className="w-full">
-        <TabsList className="bg-slate-100">
-          <TabsTrigger value="schedule" disabled={!selectedVersion} className="hover:bg-blue-50 hover:text-blue-700 data-[state=active]:bg-blue-100 data-[state=active]:text-blue-900 transition-colors">
-            <Calendar className="w-4 h-4 mr-2" />
-            Schedule
-          </TabsTrigger>
-          <TabsTrigger value="config" className="hover:bg-blue-50 hover:text-blue-700 data-[state=active]:bg-blue-100 data-[state=active]:text-blue-900 transition-colors">Configuration</TabsTrigger>
-          <TabsTrigger value="constraints" className="hover:bg-blue-50 hover:text-blue-700 data-[state=active]:bg-blue-100 data-[state=active]:text-blue-900 transition-colors">Constraints</TabsTrigger>
-        </TabsList>
+            {scheduleSlots.length === 0 ? (
+              <Card className="border-blue-200">
+                <CardContent className="py-20 text-center">
+                  <Calendar className="w-16 h-16 text-slate-300 mx-auto mb-4" />
+                  <h3 className="text-lg font-semibold text-slate-900 mb-2">No Schedule Generated</h3>
+                  <p className="text-slate-500 mb-6">Click "Generate" above to create timetables</p>
+                  <Button
+                    onClick={handleGenerateSchedule}
+                    disabled={isGenerating}
+                    className="bg-blue-900 hover:bg-blue-800"
+                  >
+                    <Sparkles className="w-4 h-4 mr-2" />
+                    Generate Schedule Now
+                  </Button>
+                </CardContent>
+              </Card>
+            ) : (
+              <Tabs value={scheduleTab} onValueChange={setScheduleTab}>
+                <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 mb-4">
+                  <TabsList className="bg-white border border-blue-200">
+                    <TabsTrigger value="grid" className="data-[state=active]:bg-blue-900 data-[state=active]:text-white">Master Grid</TabsTrigger>
+                    <TabsTrigger value="student" className="data-[state=active]:bg-blue-900 data-[state=active]:text-white">Students</TabsTrigger>
+                    <TabsTrigger value="teacher" className="data-[state=active]:bg-blue-900 data-[state=active]:text-white">Teachers</TabsTrigger>
+                  </TabsList>
+                </div>
 
-          {/* Schedule Tab Content */}
-          <TabsContent value="schedule">
-            {selectedVersion ? (
-              <div className="space-y-4">
-                {/* Conflicts/Warnings */}
-                {((selectedVersion.conflicts_count || 0) > 0 || (selectedVersion.warnings_count || 0) > 0) && (
+                <TabsContent value="grid" className="space-y-4">
+                  {scheduleSlots.length > 0 && (
+                    <UtilizationStats
+                      slots={scheduleSlots}
+                      teachers={teachers}
+                      rooms={rooms}
+                      schoolConfig={schoolConfig}
+                    />
+                  )}
+
+                  <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
+                    <div className="flex items-center gap-3">
+                      <Label className="text-sm font-medium text-slate-700">Filter by Class:</Label>
+                      <Select
+                        value={selectedClassGroupId || 'all'}
+                        onValueChange={(value) => setSelectedClassGroupId(value === 'all' ? null : value)}
+                      >
+                        <SelectTrigger className="w-[280px]">
+                          <SelectValue />
+                        </SelectTrigger>
+                        <SelectContent>
+                          <SelectItem value="all">All ClassGroups</SelectItem>
+                          {classGroups.map(cg => (
+                            <SelectItem key={cg.id} value={cg.id}>
+                              {cg.name} ({cg.ib_programme} - {cg.year_group})
+                            </SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
+                    </div>
+                    <ScheduleExporter
+                      elementId="master-schedule-grid"
+                      filename={`schedule-${selectedClassGroupId ? classGroups.find(cg => cg.id === selectedClassGroupId)?.name : 'master'}`}
+                      label="Export"
+                      headerData={{
+                        schoolName: school?.name || '',
+                        studentName: selectedClassGroupId ? classGroups.find(cg => cg.id === selectedClassGroupId)?.name : 'Master Schedule',
+                        lastUpdated: selectedVersion?.generated_at ? new Date(selectedVersion.generated_at).toLocaleDateString() : ''
+                      }}
+                    />
+                  </div>
+
+                  <div id="master-schedule-grid">
+                    <TimetableGrid
+                      slots={selectedClassGroupId ? scheduleSlots.filter(slot => {
+                        if (slot.classgroup_id) {
+                          return slot.classgroup_id === selectedClassGroupId;
+                        }
+                        const group = teachingGroups.find(g => g.id === slot.teaching_group_id);
+                        if (!group) return false;
+                        const groupStudents = group.student_ids || [];
+                        const classGroupStudents = students
+                          .filter(s => s.classgroup_id === selectedClassGroupId)
+                          .map(s => s.id);
+                        return groupStudents.some(sid => classGroupStudents.includes(sid));
+                      }) : scheduleSlots}
+                      groups={teachingGroups}
+                      rooms={rooms}
+                      subjects={subjects}
+                      teachers={teachers}
+                      classGroups={classGroups}
+                      periodsPerDay={orToolResult?.buildMeta?.periodsPerDay || school?.periods_per_day || 8}
+                      breakPeriods={school?.settings?.break_periods || []}
+                      lunchPeriod={school?.settings?.lunch_period || 4}
+                      dayStartTime={school?.day_start_time || schoolConfig.day_start_time}
+                      dayEndTime={school?.day_end_time || schoolConfig.day_end_time}
+                      periodDurationMinutes={school?.period_duration_minutes || schoolConfig.period_duration_minutes}
+                      onSlotClick={(day, period, slot) => {
+                        console.log('Clicked:', day, period, slot);
+                      }}
+                      exportId="master-timetable"
+                    />
+                  </div>
+                </TabsContent>
+
+                <TabsContent value="student">
+                  <StudentScheduleView
+                    students={students.filter(s => s.is_active)}
+                    slots={scheduleSlots}
+                    groups={teachingGroups}
+                    subjects={subjects}
+                    teachers={teachers}
+                    rooms={rooms}
+                    selectedStudentId={selectedStudentId}
+                    onStudentChange={setSelectedStudentId}
+                    exportId="student-schedule"
+                    unassignedBySubjectCode={orToolResult?.unassignedBySubjectCode}
+                  />
+                </TabsContent>
+
+                <TabsContent value="teacher">
+                  <TeacherScheduleView
+                    teachers={teachers.filter(t => t.is_active)}
+                    slots={scheduleSlots}
+                    groups={teachingGroups}
+                    subjects={subjects}
+                    rooms={rooms}
+                    selectedTeacherId={selectedTeacherId}
+                    onTeacherChange={setSelectedTeacherId}
+                    exportId="teacher-schedule"
+                  />
+                </TabsContent>
+              </Tabs>
+            )}
+          </TabsContent>
+
+          {/* Settings Tab */}
+          <TabsContent value="settings" className="space-y-6">
+            <div className="flex justify-end">
+              <Button
+                onClick={handleSaveConfig}
+                disabled={isSavingConfig}
+                className="bg-blue-900 hover:bg-blue-800"
+              >
+                {isSavingConfig ? (
+                  <>
+                    <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+                    Saving...
+                  </>
+                ) : (
+                  <>
+                    <CheckCircle className="w-4 h-4 mr-2" />
+                    Save Changes
+                  </>
+                )}
+              </Button>
+            </div>
+
+            {/* Basic Settings */}
+            <Card className="border-blue-200">
+              <CardHeader className="bg-blue-50">
+                <CardTitle className="text-lg flex items-center gap-2">
+                  <Clock className="w-5 h-5 text-blue-900" />
+                  Basic Schedule Settings
+                </CardTitle>
+                <CardDescription>Configure your school's daily structure</CardDescription>
+              </CardHeader>
+              <CardContent className="pt-6 space-y-4">
+                <div className="grid sm:grid-cols-3 gap-4">
+                  <div>
+                    <Label className="text-sm font-medium text-slate-700 mb-2 block">School Week</Label>
+                    <Select
+                      value={String(schoolConfig.days_per_week)}
+                      onValueChange={(value) => setSchoolConfig({ ...schoolConfig, days_per_week: parseInt(value) })}
+                    >
+                      <SelectTrigger className="h-12 text-lg font-semibold">
+                        <SelectValue />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="5">5 Days</SelectItem>
+                        <SelectItem value="6">6 Days</SelectItem>
+                      </SelectContent>
+                    </Select>
+                  </div>
+
+                  <div>
+                    <Label className="text-sm font-medium text-slate-700 mb-2 block">Period Duration</Label>
+                    <Input
+                      type="number"
+                      min="30"
+                      step="5"
+                      value={schoolConfig.period_duration_minutes}
+                      onChange={(e) => setSchoolConfig({ ...schoolConfig, period_duration_minutes: parseInt(e.target.value || '0') })}
+                      className="h-12 text-lg font-semibold text-center"
+                    />
+                    <p className="text-xs text-slate-500 mt-1">minutes</p>
+                  </div>
+
+                  <div>
+                    <Label className="text-sm font-medium text-slate-700 mb-2 block">Start Time</Label>
+                    <Input
+                      type="time"
+                      value={schoolConfig.school_start_time}
+                      onChange={(e) => setSchoolConfig({ ...schoolConfig, school_start_time: e.target.value })}
+                      className="h-12 text-lg font-semibold text-center"
+                    />
+                  </div>
+                </div>
+
+                <div className="p-4 rounded-xl bg-blue-50 border border-blue-200">
+                  <p className="text-sm text-blue-900">
+                    School runs <strong>{schoolConfig.days_per_week} days/week</strong> with <strong>{schoolConfig.period_duration_minutes}-minute</strong> periods starting at <strong>{schoolConfig.school_start_time}</strong>
+                  </p>
+                </div>
+              </CardContent>
+            </Card>
+
+            {/* Breaks & Lunch */}
+            <Card className="border-blue-200">
+              <CardHeader className="bg-blue-50">
+                <CardTitle className="text-lg flex items-center gap-2">
+                  <Timer className="w-5 h-5 text-blue-900" />
+                  Breaks & Lunch
+                </CardTitle>
+              </CardHeader>
+              <CardContent className="pt-6 space-y-6">
+                <div className="grid sm:grid-cols-2 gap-6">
+                  <div className="p-5 rounded-xl bg-white border-2 border-blue-200">
+                    <p className="font-semibold text-slate-900 mb-4">Lunch Break</p>
+                    <div className="space-y-3">
+                      <div>
+                        <Label className="text-xs text-slate-600 mb-1.5 block">Duration (minutes)</Label>
+                        <Input
+                          type="number"
+                          min="20"
+                          max="60"
+                          className="h-10 text-center font-medium"
+                          value={schoolConfig.lunch_duration_minutes}
+                          onChange={(e) => setSchoolConfig({ ...schoolConfig, lunch_duration_minutes: parseInt(e.target.value) })}
+                        />
+                      </div>
+                      <div>
+                        <Label className="text-xs text-slate-600 mb-1.5 block">After Period</Label>
+                        <Select
+                          value={String(schoolConfig.lunch_period)}
+                          onValueChange={(value) => setSchoolConfig({ ...schoolConfig, lunch_period: parseInt(value) })}
+                        >
+                          <SelectTrigger className="h-10">
+                            <SelectValue />
+                          </SelectTrigger>
+                          <SelectContent>
+                            {Array.from({ length: schoolConfig.periods_per_day }, (_, i) => i + 1).map(p => (
+                              <SelectItem key={p} value={String(p)}>Period {p}</SelectItem>
+                            ))}
+                          </SelectContent>
+                        </Select>
+                      </div>
+                    </div>
+                  </div>
+
+                  <div className="p-5 rounded-xl bg-white border-2 border-blue-200">
+                    <p className="font-semibold text-slate-900 mb-4">Short Breaks</p>
+                    <div className="space-y-3">
+                      <div>
+                        <Label className="text-xs text-slate-600 mb-1.5 block">Duration (minutes)</Label>
+                        <Input
+                          type="number"
+                          min="5"
+                          max="30"
+                          className="h-10 text-center font-medium"
+                          value={schoolConfig.break_duration_minutes}
+                          onChange={(e) => setSchoolConfig({ ...schoolConfig, break_duration_minutes: parseInt(e.target.value) })}
+                        />
+                      </div>
+                      <div>
+                        <Label className="text-xs text-slate-600 mb-1.5 block">After Periods</Label>
+                        <div className="flex flex-wrap gap-2">
+                          {Array.from({ length: schoolConfig.periods_per_day }, (_, i) => i + 1)
+                            .filter(p => p !== schoolConfig.lunch_period)
+                            .map(period => (
+                              <button
+                                key={period}
+                                type="button"
+                                onClick={() => {
+                                  const current = schoolConfig.break_periods || [];
+                                  const updated = current.includes(period)
+                                    ? current.filter(p => p !== period)
+                                    : [...current, period].sort((a, b) => a - b);
+                                  setSchoolConfig({ ...schoolConfig, break_periods: updated });
+                                }}
+                                className={`px-3 py-1.5 rounded-lg text-xs font-semibold transition-all ${
+                                  (schoolConfig.break_periods || []).includes(period)
+                                    ? 'bg-blue-900 text-white'
+                                    : 'bg-white text-slate-700 border-2 border-slate-200 hover:bg-blue-50'
+                                }`}
+                              >
+                                {period}
+                              </button>
+                            ))}
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              </CardContent>
+            </Card>
+
+            {/* Test Configuration */}
+            <Card className="border-blue-200">
+              <CardHeader className="bg-blue-50">
+                <CardTitle className="text-lg flex items-center gap-2">
+                  <FileText className="w-5 h-5 text-blue-900" />
+                  Test & Assessment Slots
+                </CardTitle>
+                <CardDescription>Configure test periods for each IB programme</CardDescription>
+              </CardHeader>
+              <CardContent className="pt-6">
+                <div className="grid sm:grid-cols-2 gap-4">
+                  {['PYP', 'MYP', 'DP1', 'DP2'].map(level => {
+                    const colors = {
+                      PYP: { bg: 'from-yellow-50 to-amber-50', border: 'border-yellow-300', text: 'text-yellow-900', badge: 'bg-yellow-400' },
+                      MYP: { bg: 'from-emerald-50 to-green-50', border: 'border-emerald-300', text: 'text-emerald-900', badge: 'bg-emerald-500' },
+                      DP1: { bg: 'from-blue-50 to-sky-50', border: 'border-blue-300', text: 'text-blue-900', badge: 'bg-blue-500' },
+                      DP2: { bg: 'from-indigo-50 to-violet-50', border: 'border-indigo-300', text: 'text-indigo-900', badge: 'bg-indigo-600' }
+                    }[level];
+
+                    return (
+                      <div key={level} className={`p-5 rounded-xl bg-gradient-to-br ${colors.bg} border-2 ${colors.border}`}>
+                        <div className="flex items-center gap-2 mb-4">
+                          <div className={`px-3 py-1 rounded-lg ${colors.badge} text-white font-bold text-sm`}>
+                            {level}
+                          </div>
+                        </div>
+
+                        <div className="space-y-3">
+                          <div className="grid grid-cols-2 gap-3">
+                            <div>
+                              <Label className={`text-xs font-semibold ${colors.text} mb-1.5 block`}>Tests/Week</Label>
+                              <Input
+                                type="number"
+                                min="0"
+                                max="5"
+                                className={`h-10 text-center font-semibold border-2 ${colors.border}`}
+                                value={schoolConfig.test_config[level].tests_per_week}
+                                onChange={(e) => setSchoolConfig({
+                                  ...schoolConfig,
+                                  test_config: {
+                                    ...schoolConfig.test_config,
+                                    [level]: { ...schoolConfig.test_config[level], tests_per_week: parseInt(e.target.value) }
+                                  }
+                                })}
+                              />
+                            </div>
+                            <div>
+                              <Label className={`text-xs font-semibold ${colors.text} mb-1.5 block`}>Duration (min)</Label>
+                              <Input
+                                type="number"
+                                min="30"
+                                max="180"
+                                step="15"
+                                className={`h-10 text-center font-semibold border-2 ${colors.border}`}
+                                value={schoolConfig.test_config[level].test_duration_minutes}
+                                onChange={(e) => setSchoolConfig({
+                                  ...schoolConfig,
+                                  test_config: {
+                                    ...schoolConfig.test_config,
+                                    [level]: { ...schoolConfig.test_config[level], test_duration_minutes: parseInt(e.target.value) }
+                                  }
+                                })}
+                              />
+                            </div>
+                          </div>
+                        </div>
+                      </div>
+                    );
+                  })}
+                </div>
+              </CardContent>
+            </Card>
+
+            {/* Advanced Settings Toggle */}
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={() => setShowAdvanced(!showAdvanced)}
+              className="border-slate-200"
+            >
+              {showAdvanced ? 'Hide' : 'Show'} Advanced Settings
+            </Button>
+
+            {showAdvanced && (
+              <Card className="border-slate-200">
+                <CardHeader>
+                  <CardTitle className="text-lg">Advanced Settings</CardTitle>
+                </CardHeader>
+                <CardContent className="space-y-4">
+                  <div className="grid sm:grid-cols-2 gap-4">
+                    <div>
+                      <Label className="text-sm mb-2 block">Day Start Time</Label>
+                      <Input type="time" value={schoolConfig.day_start_time}
+                        onChange={(e) => setSchoolConfig({ ...schoolConfig, day_start_time: e.target.value })}
+                        className="h-10" />
+                    </div>
+                    <div>
+                      <Label className="text-sm mb-2 block">Day End Time</Label>
+                      <Input type="time" value={schoolConfig.day_end_time}
+                        onChange={(e) => setSchoolConfig({ ...schoolConfig, day_end_time: e.target.value })}
+                        className="h-10" />
+                    </div>
+                    <div>
+                      <Label className="text-sm mb-2 block">Min Periods/Day</Label>
+                      <Input type="number" min="1" value={schoolConfig.min_periods_per_day}
+                        onChange={(e) => setSchoolConfig({ ...schoolConfig, min_periods_per_day: parseInt(e.target.value || '0') })}
+                        className="h-10 text-center" />
+                    </div>
+                    <div>
+                      <Label className="text-sm mb-2 block">Target Periods/Day</Label>
+                      <Input type="number" min="1" value={schoolConfig.target_periods_per_day}
+                        onChange={(e) => setSchoolConfig({ ...schoolConfig, target_periods_per_day: parseInt(e.target.value || '0') })}
+                        className="h-10 text-center" />
+                    </div>
+                  </div>
+                </CardContent>
+              </Card>
+            )}
+          </TabsContent>
+
+          {/* Constraints Tab */}
+          <TabsContent value="constraints" className="space-y-4">
+            <Card className="border-blue-200">
+              <CardHeader className="bg-blue-50">
+                <div className="flex items-center justify-between">
+                  <div>
+                    <CardTitle className="text-lg flex items-center gap-2">
+                      <Shield className="w-5 h-5 text-blue-900" />
+                      Scheduling Rules
+                    </CardTitle>
+                    <CardDescription>Define constraints for schedule generation</CardDescription>
+                  </div>
+                  <Button
+                    className="bg-blue-900 hover:bg-blue-800"
+                    onClick={() => setConstraintDialogOpen(true)}
+                  >
+                    <Plus className="w-4 h-4 mr-2" />
+                    Add Rule
+                  </Button>
+                </div>
+              </CardHeader>
+              <CardContent className="pt-6">
+                {constraints.length === 0 ? (
+                  <div className="text-center py-12 text-slate-500">
+                    <Shield className="w-12 h-12 mx-auto mb-3 text-slate-300" />
+                    <p className="font-medium">No constraints defined</p>
+                    <p className="text-sm mt-1">Add rules to guide schedule generation</p>
+                  </div>
+                ) : (
                   <div className="space-y-3">
-                    {(selectedVersion.conflicts_count || 0) > 0 && (
-                      <ConflictAlert 
-                        severity="error"
-                        title={`${selectedVersion.conflicts_count || 0} Scheduling Conflicts`}
-                        description="There are unresolved conflicts that need attention before publishing."
-                      />
-                    )}
-                    {(selectedVersion.warnings_count || 0) > 0 && (
-                      <ConflictAlert 
-                        severity="warning"
-                        title={`${selectedVersion.warnings_count || 0} Warnings`}
-                        description="Review these soft constraint violations for optimal scheduling."
-                      />
-                    )}
-                    {selectedVersion?.id && <ConflictViewer scheduleVersionId={selectedVersion.id} />}
+                    {constraints.map((constraint) => (
+                      <div key={constraint.id} className="flex items-center justify-between p-4 rounded-xl bg-white border-2 border-slate-200 hover:border-blue-300 transition-colors">
+                        <div>
+                          <div className="flex items-center gap-2 mb-1">
+                            <h4 className="font-semibold text-slate-900">{constraint.name}</h4>
+                            <Badge className={constraint.type === 'hard' ? 'bg-rose-100 text-rose-700' : 'bg-blue-100 text-blue-700'}>
+                              {constraint.type}
+                            </Badge>
+                            <Badge variant="outline" className="text-xs">{constraint.category}</Badge>
+                          </div>
+                          <p className="text-sm text-slate-600">{constraint.description}</p>
+                        </div>
+                        <Button
+                          variant="ghost"
+                          size="icon"
+                          onClick={async () => {
+                            if (confirm('Delete this constraint?')) {
+                              await base44.entities.Constraint.delete(constraint.id);
+                              queryClient.invalidateQueries({ queryKey: ['constraints'] });
+                            }
+                          }}
+                        >
+                          <Trash2 className="w-4 h-4 text-slate-400 hover:text-rose-600" />
+                        </Button>
+                      </div>
+                    ))}
                   </div>
                 )}
+              </CardContent>
+            </Card>
+          </TabsContent>
 
-                {/* Core recap (from persisted slots) */}
-                {/* OR-Tool JSON response (on-demand) */}
-                {orToolError && (
-                  <Card className="border-2 border-rose-500 shadow-lg bg-rose-50">
-                    <CardHeader className="bg-rose-100 pb-3">
-                      <CardTitle className="text-rose-900 flex items-center gap-2">
-                        <AlertTriangle className="w-5 h-5" />
-                        Schedule Generation Error
-                      </CardTitle>
-                    </CardHeader>
-                    <CardContent className="p-4">
-                      <pre className="text-xs text-rose-900 whitespace-pre-wrap bg-white p-3 rounded border border-rose-200 overflow-x-auto">{orToolError}</pre>
-                    </CardContent>
-                  </Card>
-                )}
-                {orToolResult && (
-                  <>
+          {/* Diagnostics Tab */}
+          {showAdvanced && (
+            <TabsContent value="diagnostics" className="space-y-4">
+              {orToolError && (
+                <Card className="border-2 border-rose-500 shadow-lg bg-rose-50">
+                  <CardHeader className="bg-rose-100 pb-3">
+                    <CardTitle className="text-rose-900 flex items-center gap-2">
+                      <AlertTriangle className="w-5 h-5" />
+                      Schedule Generation Error
+                    </CardTitle>
+                  </CardHeader>
+                  <CardContent className="p-4">
+                    <pre className="text-xs text-rose-900 whitespace-pre-wrap bg-white p-3 rounded border border-rose-200 overflow-x-auto">{orToolError}</pre>
+                  </CardContent>
+                </Card>
+              )}
+              {orToolResult && (
+                <>
                   <UnassignedBanner unassigned={orToolResult?.unassignedBySubjectCode} />
 
                   {/* CORE DIAGNOSTICS PANEL */}
                   <Card className="border-2 border-rose-300 bg-rose-50">
-                   <CardContent className="p-4">
-                     <div className="font-bold text-rose-900 mb-3">🔍 TOK/CAS/EE Diagnostic</div>
+                    <CardContent className="p-4">
+                      <div className="font-bold text-rose-900 mb-3">🔍 TOK/CAS/EE Diagnostic</div>
 
-                     {/* Show error if present */}
-                     {(orToolResult?.ok === false || orToolResult?.error) && (
-                       <div className="mb-4 p-4 bg-rose-100 border-2 border-rose-400 rounded-lg">
-                         <div className="font-bold text-rose-900 mb-2">❌ Error at Stage: {orToolResult?.stage || 'unknown'}</div>
-                         <div className="text-sm text-rose-800 mb-2">{orToolResult?.errorMessage || orToolResult?.error}</div>
-                         {orToolResult?.errorStack && (
-                           <details className="mt-2">
-                             <summary className="cursor-pointer text-xs font-semibold text-rose-700">Stack Trace</summary>
-                             <pre className="mt-2 text-xs text-rose-700 bg-white p-2 rounded overflow-x-auto max-h-48">{orToolResult.errorStack}</pre>
-                           </details>
-                         )}
-                         {orToolResult?.meta && (
-                           <div className="mt-2 text-xs text-rose-700">
-                             Meta: {JSON.stringify(orToolResult.meta)}
-                           </div>
-                         )}
-                       </div>
-                     )}
-
-                     <div className="grid md:grid-cols-2 gap-3 text-xs font-mono">
-                       {/* Input: What we sent */}
-                       <div className="bg-white p-3 rounded border border-rose-200">
-                         <div className="font-bold text-rose-700 mb-2">📤 Input (buildSchedulingProblem)</div>
-                         <div className="space-y-1 text-slate-700">
-                           <div>coreRequirementsFound: <strong className={orToolResult?.orToolRequestPayload?.coreRequirementsFound > 0 ? 'text-green-600' : 'text-rose-600'}>{orToolResult?.orToolRequestPayload?.coreRequirementsFound || 0}</strong></div>
-                           {(orToolResult?.coreSubjectRequirementsSample || []).slice(0, 5).map((req, i) => (
-                             <div key={i} className="text-[11px] text-slate-600 truncate">
-                               {req.subject}: {req.minutesPerWeek}min/week ({req.studentGroup})
-                             </div>
-                           ))}
-                         </div>
-                       </div>
-
-                       {/* Output: What solver returned */}
-                       <div className="bg-white p-3 rounded border border-rose-200">
-                         <div className="font-bold text-rose-700 mb-2">📥 Output (OR-Tool solver)</div>
-                         <div className="space-y-1 text-slate-700">
-                           <div>TOK assigned: <strong className={orToolResult?.assignedBySubjectCode?.TOK > 0 ? 'text-green-600' : 'text-rose-600'}>{orToolResult?.assignedBySubjectCode?.TOK || 0}</strong></div>
-                           <div>CAS assigned: <strong className={orToolResult?.assignedBySubjectCode?.CAS > 0 ? 'text-green-600' : 'text-rose-600'}>{orToolResult?.assignedBySubjectCode?.CAS || 0}</strong></div>
-                           <div>EE assigned: <strong className={orToolResult?.assignedBySubjectCode?.EE > 0 ? 'text-green-600' : 'text-rose-600'}>{orToolResult?.assignedBySubjectCode?.EE || 0}</strong></div>
-                         </div>
-                       </div>
-
-                       {/* DB Insertion */}
-                       <div className="bg-white p-3 rounded border border-rose-200">
-                         <div className="font-bold text-rose-700 mb-2">💾 DB Insertion</div>
-                         <div className="space-y-1 text-slate-700">
-                           <div>TOK inserted: <strong className={orToolResult?.slotsInsertedBySubjectCode?.TOK > 0 ? 'text-green-600' : 'text-rose-600'}>{orToolResult?.slotsInsertedBySubjectCode?.TOK || 0}</strong></div>
-                           <div>CAS inserted: <strong className={orToolResult?.slotsInsertedBySubjectCode?.CAS > 0 ? 'text-green-600' : 'text-rose-600'}>{orToolResult?.slotsInsertedBySubjectCode?.CAS || 0}</strong></div>
-                           <div>EE inserted: <strong className={orToolResult?.slotsInsertedBySubjectCode?.EE > 0 ? 'text-green-600' : 'text-rose-600'}>{orToolResult?.slotsInsertedBySubjectCode?.EE || 0}</strong></div>
-                         </div>
-                       </div>
-
-                       {/* Error Status */}
-                       <div className="bg-white p-3 rounded border border-rose-200">
-                         <div className="font-bold text-rose-700 mb-2">⚠️ Status</div>
-                         <div className="space-y-1 text-slate-700">
-                           <div>Stage: <strong>{orToolResult?.stage || '—'}</strong></div>
-                           <div>HTTP Status: <strong className={orToolResult?.orToolHttpStatus === 200 ? 'text-green-600' : 'text-rose-600'}>{orToolResult?.orToolHttpStatus || '—'}</strong></div>
-                           <div className="text-[10px]">Total inserted: {orToolResult?.slotsInserted || 0}</div>
-                           {orToolResult?.orToolErrorBody && (
-                             <div className="mt-2 text-rose-700 bg-rose-100 p-1 rounded text-[10px]">
-                               {(orToolResult.orToolErrorBody || '').slice(0, 150)}
-                             </div>
-                           )}
-                         </div>
-                       </div>
-                     </div>
-                   </CardContent>
-                  </Card>
-
-                  {/* Force refresh hint: show current slot counts */}
-                  <div className="text-xs text-slate-500">Persisted slots: {scheduleSlots.length} • Inserted this run: {orToolResult?.slotsInserted ?? orToolResult?.insertedCount ?? 0}</div>
-                  <Card className="border-0 shadow-sm bg-gradient-to-br from-slate-50 to-white">
-                    <CardContent className="p-4 space-y-3">
-                      <div className="flex items-center justify-between">
-                        <div className="text-sm text-slate-700">
-                          <div className="font-semibold text-slate-900 mb-1">OR-Tool Response</div>
-                          <div className="flex gap-3">
-                            <span>Assigned TOK: <strong>{orToolResult?.coreSlotsInsertedCount?.TOK || 0}</strong></span>
-                            <span>CAS: <strong>{orToolResult?.coreSlotsInsertedCount?.CAS || 0}</strong></span>
-                            <span>EE: <strong>{orToolResult?.coreSlotsInsertedCount?.EE || 0}</strong></span>
-                          </div>
-                        </div>
-                        {orToolResult?.sampleCoreSlot && (
-                          <div className="text-xs text-slate-600">
-                            <div className="font-medium text-slate-800">Sample Core Slot</div>
-                            <div>{orToolResult.sampleCoreSlot.day} • Period {orToolResult.sampleCoreSlot.period}</div>
-                          </div>
-                        )}
-                      </div>
-
-                      {/* Quick verification panel */}
-                      <div className="grid md:grid-cols-3 gap-3 text-xs">
-                        <div className="p-3 rounded-lg bg-slate-100">
-                          <div className="font-semibold text-slate-900 mb-1">Endpoint</div>
-                                                     <div className="truncate">{String(orToolResult?.orToolEndpointUsed || orToolResult?.endpoint || '—')}</div>
-                                                     <div className="mt-1">HTTP: <strong className={orToolResult?.orToolHttpStatus === 200 ? 'text-green-600' : 'text-rose-600'}>{orToolResult?.orToolHttpStatus ?? '—'}</strong></div>
-                                                     <div className="mt-1">/health: <strong>{orToolResult?.orToolHealthStatus ?? '—'}</strong> {orToolResult?.orToolHealthOk === false ? '(down)' : ''}</div>
-                                                     <div className="mt-1">Headers: <code className="text-[10px]">{JSON.stringify(orToolResult?.orToolRequestHeadersSent || {})}</code></div>
-                                                     {orToolResult?.orToolErrorBody && (
-                                                       <div className="mt-1 font-semibold text-rose-700">Error: <span className="break-all">{(orToolResult?.orToolErrorBody || '').slice(0,300)}</span></div>
-                                                     )}
-                                                     {orToolResult?.orToolHttpStatus && orToolResult?.orToolHttpStatus !== 200 && (
-                                                                                      <div className="mt-3 space-y-2 border-t border-slate-300 pt-2">
-                                                                                        <div className="text-[10px] text-slate-600 bg-rose-50 p-2 rounded border border-rose-200">
-                                                                                          <div className="font-bold text-rose-700 mb-1">🔴 OR-Tool Scheduler Failed (HTTP {orToolResult?.orToolHttpStatus})</div>
-                                                                                          <div className="text-rose-700">{orToolResult?.orToolErrorBody}</div>
-                                                                                        </div>
-                                                                                      </div>
-                                                                                    )}
-                                                                                    {orToolResult?.orToolHttpStatus === 200 && (
-                                                                                      <div className="mt-3 space-y-2 border-t border-slate-300 pt-2">
-                                                         <div className="text-[10px] text-slate-600">
-                                                           <div className="font-bold mb-1">📤 subjects sent (first 5):</div>
-                                                           <pre className="bg-white rounded p-1.5 overflow-x-auto max-h-40">{JSON.stringify(orToolResult?.orToolRequestPayloadSubjects || [], null, 2)}</pre>
-                                                         </div>
-                                                         <div className="text-[10px] text-slate-600">
-                                                           <div className="font-bold mb-1">📤 subjectRequirements sent (first 10):</div>
-                                                           <pre className="bg-white rounded p-1.5 overflow-x-auto max-h-40">{JSON.stringify(orToolResult?.orToolRequestPayloadSubjectRequirements || [], null, 2)}</pre>
-                                                         </div>
-                                                         {(orToolResult?.subjectsInvalidIds || []).length > 0 && (
-                                                           <div className="text-[10px] text-rose-700">
-                                                             <div className="font-bold">❌ Invalid Subject IDs (not 24-char hex):</div>
-                                                             <pre className="bg-rose-50 rounded p-1.5">{JSON.stringify(orToolResult.subjectsInvalidIds, null, 2)}</pre>
-                                                           </div>
-                                                         )}
-                                                         {(orToolResult?.requirementsUnknownSubjects || []).length > 0 && (
-                                                           <div className="text-[10px] text-rose-700">
-                                                             <div className="font-bold">❌ Unknown Subjects in Requirements:</div>
-                                                             <pre className="bg-rose-50 rounded p-1.5">{JSON.stringify(orToolResult.requirementsUnknownSubjects, null, 2)}</pre>
-                                                           </div>
-                                                         )}
-                                                         {(orToolResult?.requirementsInvalidMinutes || []).length > 0 && (
-                                                           <div className="text-[10px] text-rose-700">
-                                                             <div className="font-bold">❌ Invalid minutesPerWeek:</div>
-                                                             <pre className="bg-rose-50 rounded p-1.5">{JSON.stringify(orToolResult.requirementsInvalidMinutes, null, 2)}</pre>
-                                                           </div>
-                                                         )}
-                                                         {orToolResult?.normalizedSubjectsIndex && (
-                                                           <div className="text-[10px] text-slate-600">
-                                                             <div className="font-bold mb-1">🔍 Normalized Subjects Index:</div>
-                                                             <pre className="bg-white rounded p-1.5 overflow-x-auto max-h-32">{JSON.stringify(orToolResult.normalizedSubjectsIndex, null, 2)}</pre>
-                                                           </div>
-                                                         )}
-                                                         {orToolResult?.normalizedRequirementsSubjects && (
-                                                           <div className="text-[10px] text-slate-600">
-                                                             <div className="font-bold mb-1">🔍 Normalized Requirements (first 20):</div>
-                                                             <pre className="bg-white rounded p-1.5 overflow-x-auto max-h-32">{JSON.stringify(orToolResult.normalizedRequirementsSubjects, null, 2)}</pre>
-                                                           </div>
-                                                         )}
-                                                       </div>
-                                                     )}
-                        </div>
-                        <div className="p-3 rounded-lg bg-slate-100">
-                          <div className="font-semibold text-slate-900 mb-1">Persistence</div>
-                          <div>schedule_version_id: <strong>{orToolResult?.schedule_version_id || '—'}</strong></div>
-                          <div>scheduleVersionIdInput: <strong>{orToolResult?.scheduleVersionIdInput ?? '—'}</strong></div>
-                          <div>scheduleVersionIdUsed: <strong>{orToolResult?.scheduleVersionIdUsed ?? '—'}</strong></div>
-                          <div>performedDeletion: <strong>{String(orToolResult?.performedDeletion ?? false)}</strong></div>
-                          <div>performedInsertion: <strong>{String(orToolResult?.performedInsertion ?? false)}</strong></div>
-                          <div>slotsDeleted: <strong>{orToolResult?.slotsDeleted ?? orToolResult?.deletedCount ?? 0}</strong></div>
-                          <div>slotsInserted: <strong>{orToolResult?.slotsInserted ?? orToolResult?.insertedCount ?? 0}</strong></div>
-                        </div>
-                        <div className="p-3 rounded-lg bg-slate-100">
-                          <div className="font-semibold text-slate-900 mb-1">Timeslots</div>
-                          <div>timeslotsCount: <strong>{orToolResult?.timeslotsCount ?? orToolResult?.buildMeta?.timeslotsCount ?? '—'}</strong></div>
-                          <div>endTimeUsedByDay: <code>{JSON.stringify(orToolResult?.endTimeUsedByDay || {})}</code></div>
-                        </div>
-                      </div>
-
-                      {orToolResult?.guardFailureCode && (
-                        <div className="p-3 rounded-lg bg-rose-50 border border-rose-200 text-rose-800 text-xs">
-                          <div className="font-semibold mb-1">Guard Failure: {orToolResult.guardFailureCode}</div>
-                          <div className="grid md:grid-cols-3 gap-2">
-                            <div>requestedSchoolId: <strong>{String(orToolResult.requestedSchoolId ?? 'null')}</strong></div>
-                            <div>scheduleVersion.school_id: <strong>{String(orToolResult.scheduleVersionSchoolId ?? 'null')}</strong></div>
-                            <div>whoami: <code>{JSON.stringify(orToolResult.whoami || orToolResult.user || null)}</code></div>
-                          </div>
+                      {/* Show error if present */}
+                      {(orToolResult?.ok === false || orToolResult?.error) && (
+                        <div className="mb-4 p-4 bg-rose-100 border-2 border-rose-400 rounded-lg">
+                          <div className="font-bold text-rose-900 mb-2">❌ Error at Stage: {orToolResult?.stage || 'unknown'}</div>
+                          <div className="text-sm text-rose-800 mb-2">{orToolResult?.errorMessage || orToolResult?.error}</div>
+                          {orToolResult?.errorStack && (
+                            <details className="mt-2">
+                              <summary className="cursor-pointer text-xs font-semibold text-rose-700">Stack Trace</summary>
+                              <pre className="mt-2 text-xs text-rose-700 bg-white p-2 rounded overflow-x-auto max-h-48">{orToolResult.errorStack}</pre>
+                            </details>
+                          )}
+                          {orToolResult?.meta && (
+                            <div className="mt-2 text-xs text-rose-700">
+                              Meta: {JSON.stringify(orToolResult.meta)}
+                            </div>
+                          )}
                         </div>
                       )}
 
-                      {/* All-subjects comparison and stage counters will follow */}
-                      {/* Requested recap fields */}
-                      {(() => {
-                        const exp = orToolResult?.expectedLessonsBySubject || {};
-                        const expMin = orToolResult?.expectedMinutesBySubject || {};
-                        const asg = orToolResult?.assignedLessonsBySubject || orToolResult?.assignmentsBySubjectCode || {};
-                        const unasg = orToolResult?.unassignedLessonsBySubject || orToolResult?.unassignedBySubjectCode || {};
-                        const core = orToolResult?.coreAssignments || {};
-                        const meta = orToolResult?.buildMeta || {};
-                        const maxP = orToolResult?.maxPeriodUsedByDay || {};
-                        const slotsToInsert = orToolResult?.slotsToInsertBySubjectId || {};
-                        const coreIns = orToolResult?.coreSlotsInsertedCount || {};
-                        const sampleCores = orToolResult?.sampleCoreSlots || null;
-                        const sampleLine = (arr) => {
-                          const s = Array.isArray(arr) && arr[0];
-                          return s && (s.day && s.period) ? `${s.day} • P${s.period}` : '—';
-                        };
-                        return (
-                          <div className="space-y-3 text-xs text-slate-700">
-                            <div className="grid md:grid-cols-3 gap-3">
-                              <div className="p-3 rounded-lg bg-slate-100">
-                                <div className="font-semibold text-slate-900 mb-1">Expected Core (per week)</div>
-                                <div className="flex gap-4">
-                                  <span>TOK: <strong>{exp.TOK ?? 0}</strong></span>
-                                  <span>CAS: <strong>{exp.CAS ?? 0}</strong></span>
-                                  <span>EE: <strong>{exp.EE ?? 0}</strong></span>
-                                </div>
+                      <div className="grid md:grid-cols-2 gap-3 text-xs font-mono">
+                        {/* Input: What we sent */}
+                        <div className="bg-white p-3 rounded border border-rose-200">
+                          <div className="font-bold text-rose-700 mb-2">📤 Input (buildSchedulingProblem)</div>
+                          <div className="space-y-1 text-slate-700">
+                            <div>coreRequirementsFound: <strong className={orToolResult?.orToolRequestPayload?.coreRequirementsFound > 0 ? 'text-green-600' : 'text-rose-600'}>{orToolResult?.orToolRequestPayload?.coreRequirementsFound || 0}</strong></div>
+                            {(orToolResult?.coreSubjectRequirementsSample || []).slice(0, 5).map((req, i) => (
+                              <div key={i} className="text-[11px] text-slate-600 truncate">
+                                {req.subject}: {req.minutesPerWeek}min/week ({req.studentGroup})
                               </div>
-                              <div className="p-3 rounded-lg bg-slate-100">
-                                <div className="font-semibold text-slate-900 mb-1">Assigned vs Unassigned (Core)</div>
-                                <div className="grid grid-cols-3 gap-2">
-                                  {['TOK','CAS','EE'].map(k => (
-                                    <div key={k}>
-                                      <div className="text-[11px] text-slate-500">{k}</div>
-                                      <div>✓ {asg[k] || 0} • ✗ {unasg[k] || 0}</div>
-                                    </div>
-                                  ))}
-                                </div>
-                              </div>
-                              <div className="p-3 rounded-lg bg-slate-100">
-                                <div className="font-semibold text-slate-900 mb-1">Schedule Span</div>
-                                <div className="space-y-1">
-                                  <div>maxPeriodUsedByDay: <code>{JSON.stringify(maxP)}</code></div>
-                                  <div>timeslotsCount: <strong>{meta?.timeslotsCount ?? '—'}</strong></div>
-                                  <div>periodDurationMinutes: <strong>{meta?.periodDurationMinutes ?? '—'}</strong></div>
-                                  <div>endTimeUsedByDay: <code>{JSON.stringify(orToolResult?.endTimeUsedByDay || {})}</code></div>
-                                  <div>lastTimeslot: <strong>{(meta?.lastTimeslot?.dayOfWeek || '—')} {meta?.lastTimeslot?.endTime ? `• ${meta?.lastTimeslot?.endTime}` : ''}</strong></div>
-                                  <div>dpTargetPeriodsPerDay: <strong>{meta?.dpTargetPeriodsPerDay ?? '—'}</strong></div>
-                                </div>
-                              </div>
-                            </div>
+                            ))}
+                          </div>
+                        </div>
 
-                            <div className="grid md:grid-cols-3 gap-3">
-                              <div className="p-3 rounded-lg bg-slate-100">
-                                <div className="font-semibold text-slate-900 mb-1">Core Assignments Samples</div>
-                                <div className="space-y-1">
-                                  <div>TOK: {sampleLine(core?.TOK)}</div>
-                                  <div>CAS: {sampleLine(core?.CAS)}</div>
-                                  <div>EE: {sampleLine(core?.EE)}</div>
+                        {/* Output: What solver returned */}
+                        <div className="bg-white p-3 rounded border border-rose-200">
+                          <div className="font-bold text-rose-700 mb-2">📥 Output (OR-Tool solver)</div>
+                          <div className="space-y-1 text-slate-700">
+                            <div>TOK assigned: <strong className={orToolResult?.assignedBySubjectCode?.TOK > 0 ? 'text-green-600' : 'text-rose-600'}>{orToolResult?.assignedBySubjectCode?.TOK || 0}</strong></div>
+                            <div>CAS assigned: <strong className={orToolResult?.assignedBySubjectCode?.CAS > 0 ? 'text-green-600' : 'text-rose-600'}>{orToolResult?.assignedBySubjectCode?.CAS || 0}</strong></div>
+                            <div>EE assigned: <strong className={orToolResult?.assignedBySubjectCode?.EE > 0 ? 'text-green-600' : 'text-rose-600'}>{orToolResult?.assignedBySubjectCode?.EE || 0}</strong></div>
+                          </div>
+                        </div>
+
+                        {/* DB Insertion */}
+                        <div className="bg-white p-3 rounded border border-rose-200">
+                          <div className="font-bold text-rose-700 mb-2">💾 DB Insertion</div>
+                          <div className="space-y-1 text-slate-700">
+                            <div>TOK inserted: <strong className={orToolResult?.slotsInsertedBySubjectCode?.TOK > 0 ? 'text-green-600' : 'text-rose-600'}>{orToolResult?.slotsInsertedBySubjectCode?.TOK || 0}</strong></div>
+                            <div>CAS inserted: <strong className={orToolResult?.slotsInsertedBySubjectCode?.CAS > 0 ? 'text-green-600' : 'text-rose-600'}>{orToolResult?.slotsInsertedBySubjectCode?.CAS || 0}</strong></div>
+                            <div>EE inserted: <strong className={orToolResult?.slotsInsertedBySubjectCode?.EE > 0 ? 'text-green-600' : 'text-rose-600'}>{orToolResult?.slotsInsertedBySubjectCode?.EE || 0}</strong></div>
+                          </div>
+                        </div>
+
+                        {/* Error Status */}
+                        <div className="bg-white p-3 rounded border border-rose-200">
+                          <div className="font-bold text-rose-700 mb-2">⚠️ Status</div>
+                          <div className="space-y-1 text-slate-700">
+                            <div>Stage: <strong>{orToolResult?.stage || '—'}</strong></div>
+                            <div>HTTP Status: <strong className={orToolResult?.orToolHttpStatus === 200 ? 'text-green-600' : 'text-rose-600'}>{orToolResult?.orToolHttpStatus || '—'}</strong></div>
+                            <div className="text-[10px]">Total inserted: {orToolResult?.slotsInserted || 0}</div>
+                            {orToolResult?.orToolErrorBody && (
+                              <div className="mt-2 text-rose-700 bg-rose-100 p-1 rounded text-[10px]">
+                                {(orToolResult.orToolErrorBody || '').slice(0, 150)}
+                              </div>
+                            )}
+                          </div>
+                        </div>
+                      </div>
+
+                      {/* Force refresh hint: show current slot counts */}
+                      <div className="text-xs text-slate-500 mt-4">Persisted slots: {scheduleSlots.length} • Inserted this run: {orToolResult?.slotsInserted ?? orToolResult?.insertedCount ?? 0}</div>
+                      <div className="p-4 space-y-3">
+                        <div className="flex items-center justify-between">
+                          <div className="text-sm text-slate-700">
+                            <div className="font-semibold text-slate-900 mb-1">OR-Tool Response</div>
+                            <div className="flex gap-3">
+                              <span>Assigned TOK: <strong>{orToolResult?.coreSlotsInsertedCount?.TOK || 0}</strong></span>
+                              <span>CAS: <strong>{orToolResult?.coreSlotsInsertedCount?.CAS || 0}</strong></span>
+                              <span>EE: <strong>{orToolResult?.coreSlotsInsertedCount?.EE || 0}</strong></span>
+                            </div>
+                          </div>
+                          {orToolResult?.sampleCoreSlot && (
+                            <div className="text-xs text-slate-600">
+                              <div className="font-medium text-slate-800">Sample Core Slot</div>
+                              <div>{orToolResult.sampleCoreSlot.day} • Period {orToolResult.sampleCoreSlot.period}</div>
+                            </div>
+                          )}
+                        </div>
+
+                        {/* Quick verification panel */}
+                        <div className="grid md:grid-cols-3 gap-3 text-xs">
+                          <div className="p-3 rounded-lg bg-slate-100">
+                            <div className="font-semibold text-slate-900 mb-1">Endpoint</div>
+                            <div className="truncate">{String(orToolResult?.orToolEndpointUsed || orToolResult?.endpoint || '—')}</div>
+                            <div className="mt-1">HTTP: <strong className={orToolResult?.orToolHttpStatus === 200 ? 'text-green-600' : 'text-rose-600'}>{orToolResult?.orToolHttpStatus ?? '—'}</strong></div>
+                            <div className="mt-1">/health: <strong>{orToolResult?.orToolHealthStatus ?? '—'}</strong> {orToolResult?.orToolHealthOk === false ? '(down)' : ''}</div>
+                            <div className="mt-1">Headers: <code className="text-[10px]">{JSON.stringify(orToolResult?.orToolRequestHeadersSent || {})}</code></div>
+                            {orToolResult?.orToolErrorBody && (
+                              <div className="mt-1 font-semibold text-rose-700">Error: <span className="break-all">{(orToolResult?.orToolErrorBody || '').slice(0, 300)}</span></div>
+                            )}
+                            {orToolResult?.orToolHttpStatus && orToolResult?.orToolHttpStatus !== 200 && (
+                              <div className="mt-3 space-y-2 border-t border-slate-300 pt-2">
+                                <div className="text-[10px] text-slate-600 bg-rose-50 p-2 rounded border border-rose-200">
+                                  <div className="font-bold text-rose-700 mb-1">🔴 OR-Tool Scheduler Failed (HTTP {orToolResult?.orToolHttpStatus})</div>
+                                  <div className="text-rose-700">{orToolResult?.orToolErrorBody}</div>
                                 </div>
                               </div>
-                              <div className="p-3 rounded-lg bg-slate-100">
-                                <div className="font-semibold text-slate-900 mb-1">coreSlotsInsertedCount</div>
-                                <pre className="bg-white rounded p-2 overflow-x-auto">{JSON.stringify(coreIns, null, 2)}</pre>
-                                {orToolResult?.testSlotsInsertedCount && (
-                                  <div className="mt-2 text-xs">testSlotsInsertedCount: <code>{JSON.stringify(orToolResult.testSlotsInsertedCount)}</code></div>
+                            )}
+                            {orToolResult?.orToolHttpStatus === 200 && (
+                              <div className="mt-3 space-y-2 border-t border-slate-300 pt-2">
+                                <div className="text-[10px] text-slate-600">
+                                  <div className="font-bold mb-1">📤 subjects sent (first 5):</div>
+                                  <pre className="bg-white rounded p-1.5 overflow-x-auto max-h-40">{JSON.stringify(orToolResult?.orToolRequestPayloadSubjects || [], null, 2)}</pre>
+                                </div>
+                                <div className="text-[10px] text-slate-600">
+                                  <div className="font-bold mb-1">📤 subjectRequirements sent (first 10):</div>
+                                  <pre className="bg-white rounded p-1.5 overflow-x-auto max-h-40">{JSON.stringify(orToolResult?.orToolRequestPayloadSubjectRequirements || [], null, 2)}</pre>
+                                </div>
+                                {(orToolResult?.subjectsInvalidIds || []).length > 0 && (
+                                  <div className="text-[10px] text-rose-700">
+                                    <div className="font-bold">❌ Invalid Subject IDs (not 24-char hex):</div>
+                                    <pre className="bg-rose-50 rounded p-1.5">{JSON.stringify(orToolResult.subjectsInvalidIds, null, 2)}</pre>
+                                  </div>
+                                )}
+                                {(orToolResult?.requirementsUnknownSubjects || []).length > 0 && (
+                                  <div className="text-[10px] text-rose-700">
+                                    <div className="font-bold">❌ Unknown Subjects in Requirements:</div>
+                                    <pre className="bg-rose-50 rounded p-1.5">{JSON.stringify(orToolResult.requirementsUnknownSubjects, null, 2)}</pre>
+                                  </div>
+                                )}
+                                {(orToolResult?.requirementsInvalidMinutes || []).length > 0 && (
+                                  <div className="text-[10px] text-rose-700">
+                                    <div className="font-bold">❌ Invalid minutesPerWeek:</div>
+                                    <pre className="bg-rose-50 rounded p-1.5">{JSON.stringify(orToolResult.requirementsInvalidMinutes, null, 2)}</pre>
+                                  </div>
+                                )}
+                                {orToolResult?.normalizedSubjectsIndex && (
+                                  <div className="text-[10px] text-slate-600">
+                                    <div className="font-bold mb-1">🔍 Normalized Subjects Index:</div>
+                                    <pre className="bg-white rounded p-1.5 overflow-x-auto max-h-32">{JSON.stringify(orToolResult.normalizedSubjectsIndex, null, 2)}</pre>
+                                  </div>
+                                )}
+                                {orToolResult?.normalizedRequirementsSubjects && (
+                                  <div className="text-[10px] text-slate-600">
+                                    <div className="font-bold mb-1">🔍 Normalized Requirements (first 20):</div>
+                                    <pre className="bg-white rounded p-1.5 overflow-x-auto max-h-32">{JSON.stringify(orToolResult.normalizedRequirementsSubjects, null, 2)}</pre>
+                                  </div>
                                 )}
                               </div>
-                              <div className="p-3 rounded-lg bg-slate-100">
-                                <div className="font-semibold text-slate-900 mb-1">slotsToInsertBySubjectId</div>
-                                <pre className="bg-white rounded p-2 overflow-x-auto max-h-32">{JSON.stringify(slotsToInsert, null, 2)}</pre>
-                                </div>
-                                </div>
+                            )}
+                          </div>
+                          <div className="p-3 rounded-lg bg-slate-100">
+                            <div className="font-semibold text-slate-900 mb-1">Persistence</div>
+                            <div>schedule_version_id: <strong>{orToolResult?.schedule_version_id || '—'}</strong></div>
+                            <div>scheduleVersionIdInput: <strong>{orToolResult?.scheduleVersionIdInput ?? '—'}</strong></div>
+                            <div>scheduleVersionIdUsed: <strong>{orToolResult?.scheduleVersionIdUsed ?? '—'}</strong></div>
+                            <div>performedDeletion: <strong>{String(orToolResult?.performedDeletion ?? false)}</strong></div>
+                            <div>performedInsertion: <strong>{String(orToolResult?.performedInsertion ?? false)}</strong></div>
+                            <div>slotsDeleted: <strong>{orToolResult?.slotsDeleted ?? orToolResult?.deletedCount ?? 0}</strong></div>
+                            <div>slotsInserted: <strong>{orToolResult?.slotsInserted ?? orToolResult?.insertedCount ?? 0}</strong></div>
+                          </div>
+                          <div className="p-3 rounded-lg bg-slate-100">
+                            <div className="font-semibold text-slate-900 mb-1">Timeslots</div>
+                            <div>timeslotsCount: <strong>{orToolResult?.timeslotsCount ?? orToolResult?.buildMeta?.timeslotsCount ?? '—'}</strong></div>
+                            <div>endTimeUsedByDay: <code>{JSON.stringify(orToolResult?.endTimeUsedByDay || {})}</code></div>
+                          </div>
+                        </div>
 
-                                {/* Extended Diagnostics */}
+                        {orToolResult?.guardFailureCode && (
+                          <div className="p-3 rounded-lg bg-rose-50 border border-rose-200 text-rose-800 text-xs">
+                            <div className="font-semibold mb-1">Guard Failure: {orToolResult.guardFailureCode}</div>
+                            <div className="grid md:grid-cols-3 gap-2">
+                              <div>requestedSchoolId: <strong>{String(orToolResult.requestedSchoolId ?? 'null')}</strong></div>
+                              <div>scheduleVersion.school_id: <strong>{String(orToolResult.scheduleVersionSchoolId ?? 'null')}</strong></div>
+                              <div>whoami: <code>{JSON.stringify(orToolResult.whoami || orToolResult.user || null)}</code></div>
+                            </div>
+                          </div>
+                        )}
+
+                        {/* All-subjects comparison and stage counters will follow */}
+                        {/* Requested recap fields */}
+                        {(() => {
+                          const exp = orToolResult?.expectedLessonsBySubject || {};
+                          const expMin = orToolResult?.expectedMinutesBySubject || {};
+                          const asg = orToolResult?.assignedLessonsBySubject || orToolResult?.assignmentsBySubjectCode || {};
+                          const unasg = orToolResult?.unassignedLessonsBySubject || orToolResult?.unassignedBySubjectCode || {};
+                          const core = orToolResult?.coreAssignments || {};
+                          const meta = orToolResult?.buildMeta || {};
+                          const maxP = orToolResult?.maxPeriodUsedByDay || {};
+                          const slotsToInsert = orToolResult?.slotsToInsertBySubjectId || {};
+                          const coreIns = orToolResult?.coreSlotsInsertedCount || {};
+                          const sampleCores = orToolResult?.sampleCoreSlots || null;
+                          const sampleLine = (arr) => {
+                            const s = Array.isArray(arr) && arr[0];
+                            return s && (s.day && s.period) ? `${s.day} • P${s.period}` : '—';
+                          };
+                          return (
+                            <div className="space-y-3 text-xs text-slate-700">
+                              <div className="grid md:grid-cols-3 gap-3">
+                                <div className="p-3 rounded-lg bg-slate-100">
+                                  <div className="font-semibold text-slate-900 mb-1">Expected Core (per week)</div>
+                                  <div className="flex gap-4">
+                                    <span>TOK: <strong>{exp.TOK ?? 0}</strong></span>
+                                    <span>CAS: <strong>{exp.CAS ?? 0}</strong></span>
+                                    <span>EE: <strong>{exp.EE ?? 0}</strong></span>
+                                  </div>
+                                </div>
+                                <div className="p-3 rounded-lg bg-slate-100">
+                                  <div className="font-semibold text-slate-900 mb-1">Assigned vs Unassigned (Core)</div>
+                                  <div className="grid grid-cols-3 gap-2">
+                                    {['TOK', 'CAS', 'EE'].map(k => (
+                                      <div key={k}>
+                                        <div className="text-[11px] text-slate-500">{k}</div>
+                                        <div>✓ {asg[k] || 0} • ✗ {unasg[k] || 0}</div>
+                                      </div>
+                                    ))}
+                                  </div>
+                                </div>
+                                <div className="p-3 rounded-lg bg-slate-100">
+                                  <div className="font-semibold text-slate-900 mb-1">Schedule Span</div>
+                                  <div className="space-y-1">
+                                    <div>maxPeriodUsedByDay: <code>{JSON.stringify(maxP)}</code></div>
+                                    <div>timeslotsCount: <strong>{meta?.timeslotsCount ?? '—'}</strong></div>
+                                    <div>periodDurationMinutes: <strong>{meta?.periodDurationMinutes ?? '—'}</strong></div>
+                                    <div>endTimeUsedByDay: <code>{JSON.stringify(orToolResult?.endTimeUsedByDay || {})}</code></div>
+                                    <div>lastTimeslot: <strong>{(meta?.lastTimeslot?.dayOfWeek || '—')} {meta?.lastTimeslot?.endTime ? `• ${meta?.lastTimeslot?.endTime}` : ''}</strong></div>
+                                    <div>dpTargetPeriodsPerDay: <strong>{meta?.dpTargetPeriodsPerDay ?? '—'}</strong></div>
+                                  </div>
+                                </div>
+                              </div>
+
+                              <div className="grid md:grid-cols-3 gap-3">
+                                <div className="p-3 rounded-lg bg-slate-100">
+                                  <div className="font-semibold text-slate-900 mb-1">Core Assignments Samples</div>
+                                  <div className="space-y-1">
+                                    <div>TOK: {sampleLine(core?.TOK)}</div>
+                                    <div>CAS: {sampleLine(core?.CAS)}</div>
+                                    <div>EE: {sampleLine(core?.EE)}</div>
+                                  </div>
+                                </div>
+                                <div className="p-3 rounded-lg bg-slate-100">
+                                  <div className="font-semibold text-slate-900 mb-1">coreSlotsInsertedCount</div>
+                                  <pre className="bg-white rounded p-2 overflow-x-auto">{JSON.stringify(coreIns, null, 2)}</pre>
+                                  {orToolResult?.testSlotsInsertedCount && (
+                                    <div className="mt-2 text-xs">testSlotsInsertedCount: <code>{JSON.stringify(orToolResult.testSlotsInsertedCount)}</code></div>
+                                  )}
+                                </div>
+                                <div className="p-3 rounded-lg bg-slate-100">
+                                  <div className="font-semibold text-slate-900 mb-1">slotsToInsertBySubjectId</div>
+                                  <pre className="bg-white rounded p-2 overflow-x-auto max-h-32">{JSON.stringify(slotsToInsert, null, 2)}</pre>
+                                </div>
+                              </div>
+
+                              {/* Extended Diagnostics */}
                               <div className="grid md:grid-cols-3 gap-3">
                                 <div className="p-3 rounded-lg bg-slate-100">
                                   <div className="font-semibold text-slate-900 mb-1">Schedule Settings Sent</div>
@@ -2073,7 +2582,7 @@ Now process the user's input and return ONLY the JSON object.`,
                                     <div className="text-slate-500">min/target</div>
                                     <div className="font-medium">{orToolResult?.scheduleSettingsSent?.min_periods_per_day ?? '—'} / {orToolResult?.scheduleSettingsSent?.target_periods_per_day ?? '—'}</div>
                                     <div className="text-slate-500">breaks</div>
-                                    <div className="font-medium">{(orToolResult?.scheduleSettingsSent?.breaks || []).map(b=>`${b.start}-${b.end}`).join(', ') || '—'}</div>
+                                    <div className="font-medium">{(orToolResult?.scheduleSettingsSent?.breaks || []).map(b => `${b.start}-${b.end}`).join(', ') || '—'}</div>
                                   </div>
                                 </div>
                                 <div className="p-3 rounded-lg bg-slate-100">
@@ -2109,18 +2618,18 @@ Now process the user's input and return ONLY the JSON object.`,
                               </div>
 
 
-                               <div className="grid md:grid-cols-2 gap-3">
-                                 <div className="p-3 rounded-lg bg-slate-100">
-                                   <div className="font-semibold text-slate-900 mb-1">Input Summary (minutes → periods)</div>
-                                   <pre className="bg-white rounded p-2 overflow-x-auto max-h-40">{JSON.stringify(orToolResult?.inputSummaryBySubject || {}, null, 2)}</pre>
-                                 </div>
-                                 <div className="p-3 rounded-lg bg-slate-100">
-                                   <div className="font-semibold text-slate-900 mb-1">Core TG Detected</div>
-                                   <pre className="bg-white rounded p-2 overflow-x-auto max-h-40">{JSON.stringify(orToolResult?.coreTeachingGroupsDetected || [], null, 2)}</pre>
-                                 </div>
-                               </div>
+                              <div className="grid md:grid-cols-2 gap-3">
+                                <div className="p-3 rounded-lg bg-slate-100">
+                                  <div className="font-semibold text-slate-900 mb-1">Input Summary (minutes → periods)</div>
+                                  <pre className="bg-white rounded p-2 overflow-x-auto max-h-40">{JSON.stringify(orToolResult?.inputSummaryBySubject || {}, null, 2)}</pre>
+                                </div>
+                                <div className="p-3 rounded-lg bg-slate-100">
+                                  <div className="font-semibold text-slate-900 mb-1">Core TG Detected</div>
+                                  <pre className="bg-white rounded p-2 overflow-x-auto max-h-40">{JSON.stringify(orToolResult?.coreTeachingGroupsDetected || [], null, 2)}</pre>
+                                </div>
+                              </div>
 
-                               {/* All-subjects comparison */}
+                              {/* All-subjects comparison */}
                               <div className="grid md:grid-cols-3 gap-3">
                                 <div className="p-3 rounded-lg bg-slate-100">
                                   <div className="font-semibold text-slate-900 mb-1">expectedLessonsBySubject</div>
@@ -2140,7 +2649,7 @@ Now process the user's input and return ONLY the JSON object.`,
                               <div className="p-3 rounded-lg bg-slate-50">
                                 <div className="font-semibold text-slate-900 mb-2">Stage Counters (TOK/CAS/EE/TEST)</div>
                                 <div className="grid md:grid-cols-4 gap-2 text-xs">
-                                  {['TOK','CAS','EE','TEST'].map(k => {
+                                  {['TOK', 'CAS', 'EE', 'TEST'].map(k => {
                                     const plc = orToolResult?.problemLessonsCreated || {};
                                     const sar = orToolResult?.solutionAssignmentsReturned || {};
                                     const spi = orToolResult?.slotsPreparedForInsert || {};
@@ -2159,1032 +2668,63 @@ Now process the user's input and return ONLY the JSON object.`,
                           );
                         })()}
 
-                      {(() => {
-                        const period = school?.period_duration_minutes || schoolConfig.period_duration_minutes || 60;
-                        const items = teachingGroups
-                          .filter(tg => {
-                            const subj = subjects.find(s => s.id === tg.subject_id);
-                            return subj?.ib_level === 'DP';
-                          })
-                          .slice(0, 8)
-                          .map(tg => {
-                            const subj = subjects.find(s => s.id === tg.subject_id);
-                            const title = (subj?.name || subj?.code || 'Subject') + (tg.level ? ` ${String(tg.level).toUpperCase()}` : '');
-                            const minutes = (typeof tg.minutes_per_week === 'number' && tg.minutes_per_week > 0)
-                              ? tg.minutes_per_week
-                              : (String(tg.level||'').toUpperCase()==='HL'
+                        {(() => {
+                          const period = school?.period_duration_minutes || schoolConfig.period_duration_minutes || 60;
+                          const items = teachingGroups
+                            .filter(tg => {
+                              const subj = subjects.find(s => s.id === tg.subject_id);
+                              return subj?.ib_level === 'DP';
+                            })
+                            .slice(0, 8)
+                            .map(tg => {
+                              const subj = subjects.find(s => s.id === tg.subject_id);
+                              const title = (subj?.name || subj?.code || 'Subject') + (tg.level ? ` ${String(tg.level).toUpperCase()}` : '');
+                              const minutes = (typeof tg.minutes_per_week === 'number' && tg.minutes_per_week > 0)
+                                ? tg.minutes_per_week
+                                : (String(tg.level || '').toUpperCase() === 'HL'
                                   ? (subj?.hl_minutes_per_week_default || 300)
                                   : (subj?.sl_minutes_per_week_default || 180));
-                            const periods = Math.ceil(minutes / period);
-                            const total = periods * period;
-                            const over = total - minutes;
-                            const exact = over === 0;
-                            const text = exact
-                              ? `${title} = ${minutes} min/week with ${period}-min periods → ${periods} periods (exact)`
-                              : `${title} = ${minutes} min/week with ${period}-min periods → ${periods} periods (${total} min) (+${over} min rounding)`;
-                            return { text };
-                          });
-                        if (items.length === 0) return null;
-                        return (
-                          <div className="p-3 rounded-lg bg-amber-50 border border-amber-200 text-amber-900">
-                            <div className="font-semibold mb-1">Minutes → Periods Audit (DP)</div>
-                            <ul className="list-disc pl-5 space-y-1 text-xs">
-                              {items.map((it, i) => (<li key={i}>{it.text}</li>))}
-                            </ul>
-                          </div>
-                        );
-                      })()}
-
-                      <pre className="text-xs bg-slate-900 text-slate-100 p-3 rounded-lg overflow-x-auto max-h-72">{JSON.stringify(orToolResult, null, 2)}</pre>
-                    </CardContent>
-                  </Card>
-                  </>
-                  )}
-
-                  {/* Close CardContent/Card properly above, continue other sections */}
-
-                  {coreRecap && (
-                  <Card className="border-0 shadow-sm bg-gradient-to-br from-indigo-50 to-white">
-                    <CardContent className="p-4">
-                      <div className="flex items-center justify-between">
-                        <div className="text-sm text-slate-700">
-                          <div className="font-semibold text-slate-900 mb-1">DP Core Recap</div>
-                          <div className="flex gap-3">
-                            <span className="text-indigo-700">TOK: <strong>{coreRecap.counts.TOK}</strong></span>
-                            <span className="text-purple-700">CAS: <strong>{coreRecap.counts.CAS}</strong></span>
-                            <span className="text-amber-700">EE: <strong>{coreRecap.counts.EE}</strong></span>
-                          </div>
-                        </div>
-                        {coreRecap.sample && (
-                          <div className="text-xs text-slate-600">
-                            <div className="font-medium text-slate-800">Sample Core Slot</div>
-                            <div>{coreRecap.sample.day} • Period {coreRecap.sample.period}</div>
-                          </div>
-                        )}
-                      </div>
-                    </CardContent>
-                  </Card>
-                )}
-
-                {/* Schedule Views */}
-                <Tabs value={scheduleTab} onValueChange={setScheduleTab}>
-                <div className="flex items-center justify-between mb-4">
-                  <TabsList className="bg-slate-100">
-                    <TabsTrigger value="grid" className="hover:bg-blue-50 hover:text-blue-700 data-[state=active]:bg-blue-100 data-[state=active]:text-blue-900 transition-colors">Master Schedule</TabsTrigger>
-                    <TabsTrigger value="student" className="hover:bg-blue-50 hover:text-blue-700 data-[state=active]:bg-blue-100 data-[state=active]:text-blue-900 transition-colors">Student View</TabsTrigger>
-                    <TabsTrigger value="teacher" className="hover:bg-blue-50 hover:text-blue-700 data-[state=active]:bg-blue-100 data-[state=active]:text-blue-900 transition-colors">Teacher View</TabsTrigger>
-                    <TabsTrigger value="list" className="hover:bg-blue-50 hover:text-blue-700 data-[state=active]:bg-blue-100 data-[state=active]:text-blue-900 transition-colors">List View</TabsTrigger>
-                  </TabsList>
-                </div>
-                
-                <TabsContent value="grid" className="space-y-6">
-                  {scheduleSlots.length > 0 && (
-                    <UtilizationStats 
-                      slots={scheduleSlots}
-                      teachers={teachers}
-                      rooms={rooms}
-                      schoolConfig={schoolConfig}
-                    />
-                  )}
-
-                  {scheduleSlots.length === 0 ? (
-                    <Card className="border-0 shadow-sm">
-                      <CardContent className="py-16 text-center">
-                        <Calendar className="w-16 h-16 text-slate-300 mx-auto mb-4" />
-                        <h3 className="text-lg font-semibold text-slate-900 mb-2">No Schedule Generated Yet</h3>
-                        <p className="text-slate-500 mb-6">Click "Generate Schedule" above to create timetables for all programmes</p>
-                        <Button 
-                          onClick={handleGenerateSchedule}
-                          disabled={isGenerating}
-                          className="bg-indigo-600 hover:bg-indigo-700"
-                        >
-                          <Sparkles className="w-4 h-4 mr-2" />
-                          Generate Schedule Now
-                        </Button>
-                      </CardContent>
-                    </Card>
-                  ) : (
-                    <div className="space-y-4">
-                      <div className="flex items-center justify-between">
-                        <div className="flex items-center gap-3">
-                          <Label className="text-sm font-medium text-slate-700">Filter by ClassGroup:</Label>
-                          <Select 
-                            value={selectedClassGroupId || 'all'} 
-                            onValueChange={(value) => setSelectedClassGroupId(value === 'all' ? null : value)}
-                          >
-                            <SelectTrigger className="w-[320px]">
-                              <SelectValue />
-                            </SelectTrigger>
-                            <SelectContent>
-                              <SelectItem value="all">All ClassGroups (Master View)</SelectItem>
-                              {classGroups.map(cg => (
-                                <SelectItem key={cg.id} value={cg.id}>
-                                  {cg.name} ({cg.ib_programme} - {cg.year_group})
-                                </SelectItem>
-                              ))}
-                            </SelectContent>
-                          </Select>
-                        </div>
-                        <ScheduleExporter 
-                          elementId="master-schedule-grid"
-                          filename={`master-schedule-${selectedClassGroupId ? classGroups.find(cg => cg.id === selectedClassGroupId)?.name : 'all'}`}
-                          label="Export Schedule"
-                          headerData={{
-                            schoolName: school?.name || '',
-                            studentName: selectedClassGroupId ? classGroups.find(cg => cg.id === selectedClassGroupId)?.name : 'Master Schedule',
-                            lastUpdated: selectedVersion?.generated_at ? new Date(selectedVersion.generated_at).toLocaleDateString() : ''
-                          }}
-                        />
-                      </div>
-                     <div id="master-schedule-grid">
-                       <TimetableGrid 
-                         slots={selectedClassGroupId ? scheduleSlots.filter(slot => {
-                           // PYP/MYP slots use classgroup_id directly
-                           if (slot.classgroup_id) {
-                             return slot.classgroup_id === selectedClassGroupId;
-                           }
-                           // DP slots use teaching_group_id
-                           const group = teachingGroups.find(g => g.id === slot.teaching_group_id);
-                           if (!group) return false;
-                           const groupStudents = group.student_ids || [];
-                           const classGroupStudents = students
-                             .filter(s => s.classgroup_id === selectedClassGroupId)
-                             .map(s => s.id);
-                           return groupStudents.some(sid => classGroupStudents.includes(sid));
-                         }) : scheduleSlots}
-                         groups={teachingGroups}
-                         rooms={rooms}
-                         subjects={subjects}
-                         teachers={teachers}
-                         classGroups={classGroups}
-                         periodsPerDay={orToolResult?.buildMeta?.periodsPerDay || school?.periods_per_day || 8}
-                         breakPeriods={school?.settings?.break_periods || []}
-                         lunchPeriod={school?.settings?.lunch_period || 4}
-                         dayStartTime={school?.day_start_time || schoolConfig.day_start_time}
-                         dayEndTime={school?.day_end_time || schoolConfig.day_end_time}
-                         periodDurationMinutes={school?.period_duration_minutes || schoolConfig.period_duration_minutes}
-                         onSlotClick={(day, period, slot) => {
-                           console.log('Clicked:', day, period, slot);
-                         }}
-                         exportId="master-timetable"
-                       />
-                     </div>
-                    </div>
-                    )}
-                    </TabsContent>
-
-                <TabsContent value="student">
-                  <div className="space-y-4">
-                    {selectedStudentId && (
-                      <div className="flex justify-end">
-                        <ScheduleExporter 
-                          elementId="student-schedule"
-                          filename={`student-schedule-${students.find(s => s.id === selectedStudentId)?.full_name || 'student'}`}
-                          label="Export Student Schedule"
-                          headerData={{
-                            schoolName: school?.name || '',
-                            studentName: students.find(s => s.id === selectedStudentId)?.full_name || '',
-                            lastUpdated: selectedVersion?.generated_at ? new Date(selectedVersion.generated_at).toLocaleDateString() : ''
-                          }}
-                        />
-                      </div>
-                    )}
-                    <StudentScheduleView
-                      students={students.filter(s => s.is_active)}
-                      slots={scheduleSlots}
-                      groups={teachingGroups}
-                      subjects={subjects}
-                      teachers={teachers}
-                      rooms={rooms}
-                      selectedStudentId={selectedStudentId}
-                      onStudentChange={setSelectedStudentId}
-                      exportId="student-schedule"
-                      unassignedBySubjectCode={orToolResult?.unassignedBySubjectCode}
-                    />
-                  </div>
-                </TabsContent>
-
-                <TabsContent value="teacher">
-                  <div className="space-y-4">
-                    {selectedTeacherId && (
-                      <div className="flex justify-end">
-                        <ScheduleExporter 
-                          elementId="teacher-schedule"
-                          filename={`teacher-schedule-${teachers.find(t => t.id === selectedTeacherId)?.full_name || 'teacher'}`}
-                          label="Export Teacher Schedule"
-                          headerData={{
-                            schoolName: school?.name || '',
-                            studentName: teachers.find(t => t.id === selectedTeacherId)?.full_name || '',
-                            lastUpdated: selectedVersion?.generated_at ? new Date(selectedVersion.generated_at).toLocaleDateString() : ''
-                          }}
-                        />
-                      </div>
-                    )}
-                    <TeacherScheduleView
-                      teachers={teachers.filter(t => t.is_active)}
-                      slots={scheduleSlots}
-                      groups={teachingGroups}
-                      subjects={subjects}
-                      rooms={rooms}
-                      selectedTeacherId={selectedTeacherId}
-                      onTeacherChange={setSelectedTeacherId}
-                      exportId="teacher-schedule"
-                    />
-                  </div>
-                </TabsContent>
-                
-                <TabsContent value="list">
-                  <Card className="border-0 shadow-sm">
-                    <CardContent className="p-6">
-                      {scheduleSlots.length === 0 ? (
-                        <div className="text-center py-12">
-                          <Calendar className="w-12 h-12 text-slate-300 mx-auto mb-3" />
-                          <p className="text-slate-500">No schedule slots yet. Click "Generate" to create a schedule.</p>
-                        </div>
-                      ) : (
-                        <div className="space-y-2">
-                          {scheduleSlots.map(slot => {
-                            const group = teachingGroups.find(g => g.id === slot.teaching_group_id);
-                            const room = rooms.find(r => r.id === slot.room_id);
-                            return (
-                              <div key={slot.id} className="flex items-center justify-between p-3 rounded-lg bg-slate-50">
-                                <div>
-                                  <p className="font-medium text-slate-900">{group?.name || 'Unknown Group'}</p>
-                                  <p className="text-sm text-slate-500">
-                                    {slot.day} Period {slot.period} • {room?.name || 'No room'}
-                                  </p>
-                                </div>
-                                <Badge variant="outline">{group?.level}</Badge>
-                              </div>
-                            );
-                          })}
-                        </div>
-                      )}
-                    </CardContent>
-                  </Card>
-                </TabsContent>
-
-                </Tabs>
-                </div>
-                ) : (
-                <Card className="border-0 shadow-sm">
-                <CardContent className="py-16 text-center">
-                  <Calendar className="w-16 h-16 text-slate-300 mx-auto mb-4" />
-                  <h3 className="text-lg font-semibold text-slate-900 mb-2">No Schedule Version Selected</h3>
-                  <p className="text-slate-500 mb-6">Create a schedule version to start generating timetables</p>
-                  <Button onClick={() => setIsDialogOpen(true)} className="bg-indigo-600 hover:bg-indigo-700">
-                    <Plus className="w-4 h-4 mr-2" />
-                    Create Schedule Version
-                  </Button>
-                </CardContent>
-                </Card>
-                )}
-                </TabsContent>
-
-                {/* Configuration Tab Content */}
-                <TabsContent value="config">
-                  <div className="space-y-6">
-                    {/* Top Action Bar */}
-                    <div className="flex justify-end">
-                      <Button 
-                        onClick={handleSaveConfig}
-                        disabled={isSavingConfig}
-                        size="lg"
-                        className="bg-indigo-600 hover:bg-indigo-700"
-                      >
-                        {isSavingConfig ? (
-                          <>
-                            <Loader2 className="w-4 h-4 mr-2 animate-spin" />
-                            Saving...
-                          </>
-                        ) : (
-                          <>
-                            <CheckCircle className="w-4 h-4 mr-2" />
-                            Save All Changes
-                          </>
-                        )}
-                      </Button>
-                    </div>
-
-                    {/* Daily Schedule Configuration */}
-                    <Card className="border-0 shadow-lg">
-                      <CardHeader className="bg-gradient-to-r from-slate-900 to-slate-800 text-white">
-                        <div className="flex items-center gap-3">
-                          <div className="p-3 rounded-lg bg-white/10 backdrop-blur">
-                            <Clock className="w-6 h-6" />
-                          </div>
-                          <div>
-                            <CardTitle className="text-xl">Daily Schedule Configuration</CardTitle>
-                            <CardDescription className="text-slate-300">Define your school's daily timetable structure</CardDescription>
-                          </div>
-                        </div>
-                      </CardHeader>
-                      <CardContent className="pt-8 pb-8">
-                        <div className="grid md:grid-cols-2 gap-6">
-                          {/* School Week */}
-                          <div className="space-y-3">
-                            <Label htmlFor="days" className="flex items-center gap-2 text-sm font-bold text-slate-900">
-                              <Calendar className="w-4 h-4 text-violet-600" />
-                              School Week
-                            </Label>
-                            <Select 
-                              value={String(schoolConfig.days_per_week)} 
-                              onValueChange={(value) => setSchoolConfig({...schoolConfig, days_per_week: parseInt(value)})}
-                            >
-                              <SelectTrigger className="h-14 text-lg font-bold border-2 border-slate-300 focus:border-violet-500">
-                                <SelectValue />
-                              </SelectTrigger>
-                              <SelectContent>
-                                <SelectItem value="5">5 Days</SelectItem>
-                                <SelectItem value="6">6 Days</SelectItem>
-                              </SelectContent>
-                            </Select>
-                            <p className="text-xs text-slate-500">Teaching days per week</p>
-                          </div>
-
-                          {/* Period Duration */}
-                          <div className="space-y-3">
-                            <Label htmlFor="periodDuration" className="flex items-center gap-2 text-sm font-bold text-slate-900">
-                              <Clock className="w-4 h-4 text-indigo-600" />
-                              Period Duration (minutes)
-                            </Label>
-                            <Input
-                              id="periodDuration"
-                              type="number"
-                              min="30"
-                              step="5"
-                              value={schoolConfig.period_duration_minutes}
-                              onChange={(e) => setSchoolConfig({...schoolConfig, period_duration_minutes: parseInt(e.target.value || '0')})}
-                              className="h-14 text-xl font-bold text-center border-2 border-slate-300 focus:border-indigo-500"
-                            />
-                            <p className="text-xs text-slate-500">Typical values: 45 or 60</p>
-                          </div>
-
-                          {/* Start Time */}
-                          <div className="space-y-3">
-                            <Label htmlFor="startTime" className="flex items-center gap-2 text-sm font-bold text-slate-900">
-                              <Clock className="w-4 h-4 text-rose-600" />
-                              Start Time
-                            </Label>
-                            <Input 
-                              id="startTime"
-                              type="time"
-                              value={schoolConfig.school_start_time}
-                              onChange={(e) => setSchoolConfig({...schoolConfig, school_start_time: e.target.value})}
-                              className="h-14 text-xl font-bold text-center border-2 border-slate-300 focus:border-rose-500"
-                            />
-                            <p className="text-xs text-slate-500">First period begins at</p>
-                          </div>
-                        </div>
-
-                        {/* Schedule Preview */}
-                        <div className="mt-8 p-5 rounded-xl bg-gradient-to-r from-indigo-50 to-blue-50 border-2 border-indigo-200">
-                          <div className="flex items-start gap-3">
-                            <div className="p-2 rounded-lg bg-indigo-100 mt-0.5">
-                              <Info className="w-5 h-5 text-indigo-700" />
+                              const periods = Math.ceil(minutes / period);
+                              const total = periods * period;
+                              const over = total - minutes;
+                              const exact = over === 0;
+                              const text = exact
+                                ? `${title} = ${minutes} min/week with ${period}-min periods → ${periods} periods (exact)`
+                                : `${title} = ${minutes} min/week with ${period}-min periods → ${periods} periods (${total} min) (+${over} min rounding)`;
+                              return { text };
+                            });
+                          if (items.length === 0) return null;
+                          return (
+                            <div className="p-3 rounded-lg bg-amber-50 border border-amber-200 text-amber-900">
+                              <div className="font-semibold mb-1">Minutes → Periods Audit (DP)</div>
+                              <ul className="list-disc pl-5 space-y-1 text-xs">
+                                {items.map((it, i) => (<li key={i}>{it.text}</li>))}
+                              </ul>
                             </div>
-                            <div className="flex-1">
-                              <p className="font-bold text-indigo-900 mb-2">Schedule Preview</p>
-                              <p className="text-sm text-indigo-800 leading-relaxed">
-                                School day starts at <span className="font-bold">{schoolConfig.school_start_time}</span>, running <span className="font-bold">{schoolConfig.days_per_week} days</span> per week. The system will optimize period allocation automatically.
-                              </p>
-                            </div>
-                          </div>
-                        </div>
-                      </CardContent>
-                    </Card>
-
-                    {/* Breaks & Lunch */}
-                    <Card className="border-0 shadow-md">
-                      <CardHeader className="bg-gradient-to-r from-green-50 to-emerald-50">
-                        <div className="flex items-center gap-3">
-                          <div className="p-2 rounded-lg bg-green-100">
-                            <Timer className="w-5 h-5 text-green-700" />
-                          </div>
-                          <div>
-                            <CardTitle className="text-lg">Breaks & Lunch Configuration</CardTitle>
-                            <CardDescription>Set mandatory break and lunch times per local regulations</CardDescription>
-                          </div>
-                        </div>
-                      </CardHeader>
-                      <CardContent className="pt-6 space-y-6">
-                        <div className="grid sm:grid-cols-2 gap-6">
-                          {/* Lunch Settings */}
-                          <div className="p-5 rounded-xl bg-gradient-to-br from-orange-50 to-orange-100 border-2 border-orange-200">
-                            <div className="flex items-center gap-2 mb-4">
-                              <div className="w-10 h-10 rounded-full bg-orange-200 flex items-center justify-center">
-                                <Clock className="w-5 h-5 text-orange-700" />
-                              </div>
-                              <div>
-                                <p className="font-bold text-orange-900 text-base">Lunch Break</p>
-                                <p className="text-xs text-orange-700">Required duration & timing</p>
-                              </div>
-                            </div>
-                            <div className="space-y-3">
-                              <div>
-                                <Label className="text-xs text-orange-800 mb-1.5 block">Duration (minutes)</Label>
-                                <div className="flex items-center gap-2">
-                                  <Input 
-                                    type="number"
-                                    min="20"
-                                    max="60"
-                                    className="h-10 text-center font-semibold border-orange-300"
-                                    value={schoolConfig.lunch_duration_minutes}
-                                    onChange={(e) => setSchoolConfig({...schoolConfig, lunch_duration_minutes: parseInt(e.target.value)})}
-                                  />
-                                  <span className="text-sm text-orange-700 font-medium">min</span>
-                                </div>
-                              </div>
-                              <div>
-                                <Label className="text-xs text-orange-800 mb-1.5 block">After Period</Label>
-                                <Select 
-                                  value={String(schoolConfig.lunch_period)} 
-                                  onValueChange={(value) => setSchoolConfig({...schoolConfig, lunch_period: parseInt(value)})}
-                                >
-                                  <SelectTrigger className="h-10 font-semibold border-orange-300">
-                                    <SelectValue />
-                                  </SelectTrigger>
-                                  <SelectContent>
-                                    {Array.from({length: schoolConfig.periods_per_day}, (_, i) => i + 1).map(p => (
-                                      <SelectItem key={p} value={String(p)}>Period {p}</SelectItem>
-                                    ))}
-                                  </SelectContent>
-                                </Select>
-                              </div>
-                            </div>
-                            <p className="text-xs text-orange-600 mt-3">Lunch occurs after this period</p>
-                          </div>
-
-                          {/* Break Settings */}
-                          <div className="p-5 rounded-xl bg-gradient-to-br from-cyan-50 to-cyan-100 border-2 border-cyan-200">
-                            <div className="flex items-center gap-2 mb-4">
-                              <div className="w-10 h-10 rounded-full bg-cyan-200 flex items-center justify-center">
-                                <Timer className="w-5 h-5 text-cyan-700" />
-                              </div>
-                              <div>
-                                <p className="font-bold text-cyan-900 text-base">Short Breaks</p>
-                                <p className="text-xs text-cyan-700">Spread throughout day</p>
-                              </div>
-                            </div>
-                            <div className="space-y-3">
-                              <div>
-                                <Label className="text-xs text-cyan-800 mb-1.5 block">Duration (minutes)</Label>
-                                <div className="flex items-center gap-2">
-                                  <Input 
-                                    type="number"
-                                    min="5"
-                                    max="30"
-                                    className="h-10 text-center font-semibold border-cyan-300"
-                                    value={schoolConfig.break_duration_minutes}
-                                    onChange={(e) => setSchoolConfig({...schoolConfig, break_duration_minutes: parseInt(e.target.value)})}
-                                  />
-                                  <span className="text-sm text-cyan-700 font-medium">min</span>
-                                </div>
-                              </div>
-                              <div>
-                                <Label className="text-xs text-cyan-800 mb-1.5 block">After Periods</Label>
-                                <div className="flex flex-wrap gap-2">
-                                  {Array.from({length: schoolConfig.periods_per_day}, (_, i) => i + 1)
-                                    .filter(p => p !== schoolConfig.lunch_period)
-                                    .map(period => (
-                                    <button
-                                      key={period}
-                                      type="button"
-                                      onClick={() => {
-                                        const current = schoolConfig.break_periods || [];
-                                        const updated = current.includes(period)
-                                          ? current.filter(p => p !== period)
-                                          : [...current, period].sort((a, b) => a - b);
-                                        setSchoolConfig({...schoolConfig, break_periods: updated});
-                                      }}
-                                      className={`px-3 py-1.5 rounded-lg text-xs font-semibold transition-all ${
-                                        (schoolConfig.break_periods || []).includes(period)
-                                          ? 'bg-cyan-600 text-white shadow-md'
-                                          : 'bg-white text-cyan-700 border-2 border-cyan-200 hover:bg-cyan-50'
-                                      }`}
-                                    >
-                                      {period}
-                                    </button>
-                                  ))}
-                                </div>
-                              </div>
-                            </div>
-                            <p className="text-xs text-cyan-600 mt-3">Select periods for breaks ({(schoolConfig.break_periods || []).length} selected)</p>
-                          </div>
-                        </div>
-
-                        <div className="p-4 rounded-lg bg-green-50 border border-green-200">
-                          <div className="flex gap-2">
-                            <Info className="w-4 h-4 text-green-600 mt-0.5 flex-shrink-0" />
-                            <div className="text-xs text-green-800">
-                              <p className="font-semibold mb-1">Daily Break Schedule:</p>
-                              <p>
-                                <strong>{(schoolConfig.break_periods || []).length}</strong> short breaks of <strong>{schoolConfig.break_duration_minutes} min</strong> after periods {(schoolConfig.break_periods || []).join(', ')}, 
-                                and <strong>1</strong> lunch break of <strong>{schoolConfig.lunch_duration_minutes} min</strong> after period <strong>{schoolConfig.lunch_period}</strong>.
-                              </p>
-                            </div>
-                          </div>
-                        </div>
-                      </CardContent>
-                    </Card>
-
-
-
-                    {/* Advanced Schedule Settings */}
-                    <Card className="border-0 shadow-md">
-                      <CardHeader className="bg-gradient-to-r from-slate-50 to-slate-100">
-                        <div className="flex items-center justify-between">
-                          <div>
-                            <CardTitle className="text-lg">Advanced Schedule Settings</CardTitle>
-                            <CardDescription>Control day window, active weekdays, breaks, and period targets</CardDescription>
-                          </div>
-                        </div>
-                      </CardHeader>
-                      <CardContent className="pt-6 space-y-6">
-                        <div className="grid sm:grid-cols-2 gap-6">
-                          <div className="space-y-2">
-                            <Label className="text-sm font-bold text-slate-900">Day Start Time</Label>
-                            <Input type="time" value={schoolConfig.day_start_time}
-                              onChange={(e)=>setSchoolConfig({...schoolConfig, day_start_time: e.target.value})}
-                              className="h-12 text-center font-semibold" />
-                          </div>
-                          <div className="space-y-2">
-                            <Label className="text-sm font-bold text-slate-900">Day End Time</Label>
-                            <Input type="time" value={schoolConfig.day_end_time}
-                              onChange={(e)=>setSchoolConfig({...schoolConfig, day_end_time: e.target.value})}
-                              className="h-12 text-center font-semibold" />
-                          </div>
-                        </div>
-
-                        <div className="grid sm:grid-cols-2 gap-6">
-                          <div className="space-y-2">
-                            <Label className="text-sm font-bold text-slate-900">Min Periods / Day</Label>
-                            <Input type="number" min="1" value={schoolConfig.min_periods_per_day}
-                              onChange={(e)=>setSchoolConfig({...schoolConfig, min_periods_per_day: parseInt(e.target.value || '0')})}
-                              className="h-12 text-center font-semibold" />
-                          </div>
-                          <div className="space-y-2">
-                            <Label className="text-sm font-bold text-slate-900">Target Periods / Day</Label>
-                            <Input type="number" min="1" value={schoolConfig.target_periods_per_day}
-                              onChange={(e)=>setSchoolConfig({...schoolConfig, target_periods_per_day: parseInt(e.target.value || '0')})}
-                              className="h-12 text-center font-semibold" />
-                          </div>
-                        </div>
-
-                        <div className="space-y-2">
-                          <Label className="text-sm font-bold text-slate-900">Active Days of Week</Label>
-                          <div className="flex flex-wrap gap-2">
-                            {['MONDAY','TUESDAY','WEDNESDAY','THURSDAY','FRIDAY'].map(d => {
-                              const active = (schoolConfig.days_of_week||[]).includes(d);
-                              return (
-                                <button key={d} type="button"
-                                  onClick={()=>{
-                                    const cur = schoolConfig.days_of_week || [];
-                                    const next = active ? cur.filter(x=>x!==d) : [...cur, d];
-                                    setSchoolConfig({...schoolConfig, days_of_week: next});
-                                  }}
-                                  className={`px-3 py-1.5 rounded-lg text-xs font-semibold border ${active ? 'bg-slate-900 text-white' : 'bg-white text-slate-700 border-slate-300'}`}
-                                >{d.slice(0,3)}</button>
-                              );
-                            })}
-                          </div>
-                        </div>
-
-                        <div className="space-y-2">
-                          <div className="flex items-center justify-between">
-                            <Label className="text-sm font-bold text-slate-900">Breaks</Label>
-                            <Button variant="outline" size="sm" onClick={()=>{
-                              const next = [...(schoolConfig.breaks||[]), {start: '12:00', end: '13:00'}];
-                              setSchoolConfig({...schoolConfig, breaks: next});
-                            }}>Add Break</Button>
-                          </div>
-                          <div className="space-y-2">
-                            {(schoolConfig.breaks||[]).length === 0 ? (
-                              <p className="text-xs text-slate-500">No breaks configured</p>
-                            ) : (
-                              (schoolConfig.breaks||[]).map((b, idx) => (
-                                <div key={idx} className="flex items-center gap-2">
-                                  <Input type="time" value={b.start||''} onChange={(e)=>{
-                                    const next = [...(schoolConfig.breaks||[])];
-                                    next[idx] = { ...(next[idx]||{}), start: e.target.value };
-                                    setSchoolConfig({...schoolConfig, breaks: next});
-                                  }} className="h-10 w-32" />
-                                  <span className="text-slate-500">to</span>
-                                  <Input type="time" value={b.end||''} onChange={(e)=>{
-                                    const next = [...(schoolConfig.breaks||[])];
-                                    next[idx] = { ...(next[idx]||{}), end: e.target.value };
-                                    setSchoolConfig({...schoolConfig, breaks: next});
-                                  }} className="h-10 w-32" />
-                                  <Button variant="ghost" size="icon" onClick={()=>{
-                                    const next = (schoolConfig.breaks||[]).filter((_,i)=>i!==idx);
-                                    setSchoolConfig({...schoolConfig, breaks: next});
-                                  }}>✕</Button>
-                                </div>
-                              ))
-                            )}
-                          </div>
-                        </div>
-                      </CardContent>
-                    </Card>
-
-                    {/* Test & Assessment Slots */}
-                    <Card className="border-0 shadow-lg">
-                      <CardHeader className="bg-gradient-to-r from-slate-900 to-slate-800 text-white">
-                        <div className="flex items-center gap-3">
-                          <div className="p-3 rounded-lg bg-white/10 backdrop-blur">
-                            <AlertTriangle className="w-6 h-6" />
-                          </div>
-                          <div>
-                            <CardTitle className="text-xl">Test & Assessment Slots by Level</CardTitle>
-                            <CardDescription className="text-slate-300">Configure weekly test allocation and supervision for each IB programme</CardDescription>
-                          </div>
-                        </div>
-                      </CardHeader>
-                      <CardContent className="pt-8 pb-8">
-                        <div className="grid md:grid-cols-2 gap-6">
-                          {/* PYP */}
-                          <div className="p-6 rounded-2xl bg-gradient-to-br from-yellow-50 via-amber-50 to-yellow-50 border-2 border-yellow-300 hover:border-yellow-400 transition-all">
-                            <div className="flex items-center gap-3 mb-6">
-                              <div className="w-12 h-12 rounded-xl bg-gradient-to-br from-yellow-400 to-amber-500 flex items-center justify-center shadow-lg">
-                                <span className="font-black text-white text-lg">PYP</span>
-                              </div>
-                              <div>
-                                <p className="font-bold text-yellow-900 text-lg">Primary Years Programme</p>
-                                <p className="text-xs text-yellow-700 font-medium">Weekly test configuration</p>
-                              </div>
-                            </div>
-                            
-                            <div className="space-y-4">
-                              <div className="grid grid-cols-2 gap-4">
-                                <div>
-                                  <Label className="text-xs font-bold text-yellow-900 mb-2 block">Tests/Week</Label>
-                                  <Input 
-                                    type="number"
-                                    min="0"
-                                    max="5"
-                                    className="h-12 text-xl font-bold text-center border-2 border-yellow-300 focus:border-yellow-500"
-                                    value={schoolConfig.test_config.PYP.tests_per_week}
-                                    onChange={(e) => setSchoolConfig({
-                                      ...schoolConfig, 
-                                      test_config: {
-                                        ...schoolConfig.test_config,
-                                        PYP: { ...schoolConfig.test_config.PYP, tests_per_week: parseInt(e.target.value) }
-                                      }
-                                    })}
-                                  />
-                                </div>
-                                <div>
-                                  <Label className="text-xs font-bold text-yellow-900 mb-2 block">Duration (min)</Label>
-                                  <Input 
-                                    type="number"
-                                    min="30"
-                                    max="120"
-                                    step="15"
-                                    className="h-12 text-xl font-bold text-center border-2 border-yellow-300 focus:border-yellow-500"
-                                    value={schoolConfig.test_config.PYP.test_duration_minutes}
-                                    onChange={(e) => setSchoolConfig({
-                                      ...schoolConfig, 
-                                      test_config: {
-                                        ...schoolConfig.test_config,
-                                        PYP: { ...schoolConfig.test_config.PYP, test_duration_minutes: parseInt(e.target.value) }
-                                      }
-                                    })}
-                                  />
-                                </div>
-                              </div>
-                              
-                              <div>
-                                <Label className="text-xs font-bold text-yellow-900 mb-2 block">Supervisor Teacher</Label>
-                                <Select 
-                                  value={schoolConfig.test_config.PYP.supervisor_id || 'none'}
-                                  onValueChange={(value) => setSchoolConfig({
-                                    ...schoolConfig,
-                                    test_config: {
-                                      ...schoolConfig.test_config,
-                                      PYP: { ...schoolConfig.test_config.PYP, supervisor_id: value === 'none' ? null : value }
-                                    }
-                                  })}
-                                >
-                                  <SelectTrigger className="h-11 border-2 border-yellow-300 focus:border-yellow-500">
-                                    <SelectValue />
-                                  </SelectTrigger>
-                                  <SelectContent>
-                                    <SelectItem value="none">No supervisor assigned</SelectItem>
-                                    {teachers.map(t => (
-                                      <SelectItem key={t.id} value={t.id}>{t.full_name}</SelectItem>
-                                    ))}
-                                  </SelectContent>
-                                </Select>
-                              </div>
-                            </div>
-                          </div>
-
-                          {/* MYP */}
-                          <div className="p-6 rounded-2xl bg-gradient-to-br from-emerald-50 via-green-50 to-emerald-50 border-2 border-emerald-300 hover:border-emerald-400 transition-all">
-                            <div className="flex items-center gap-3 mb-6">
-                              <div className="w-12 h-12 rounded-xl bg-gradient-to-br from-emerald-500 to-green-600 flex items-center justify-center shadow-lg">
-                                <span className="font-black text-white text-lg">MYP</span>
-                              </div>
-                              <div>
-                                <p className="font-bold text-emerald-900 text-lg">Middle Years Programme</p>
-                                <p className="text-xs text-emerald-700 font-medium">Weekly test configuration</p>
-                              </div>
-                            </div>
-                            
-                            <div className="space-y-4">
-                              <div className="grid grid-cols-2 gap-4">
-                                <div>
-                                  <Label className="text-xs font-bold text-emerald-900 mb-2 block">Tests/Week</Label>
-                                  <Input 
-                                    type="number"
-                                    min="0"
-                                    max="5"
-                                    className="h-12 text-xl font-bold text-center border-2 border-emerald-300 focus:border-emerald-500"
-                                    value={schoolConfig.test_config.MYP.tests_per_week}
-                                    onChange={(e) => setSchoolConfig({
-                                      ...schoolConfig, 
-                                      test_config: {
-                                        ...schoolConfig.test_config,
-                                        MYP: { ...schoolConfig.test_config.MYP, tests_per_week: parseInt(e.target.value) }
-                                      }
-                                    })}
-                                  />
-                                </div>
-                                <div>
-                                  <Label className="text-xs font-bold text-emerald-900 mb-2 block">Duration (min)</Label>
-                                  <Input 
-                                    type="number"
-                                    min="30"
-                                    max="120"
-                                    step="15"
-                                    className="h-12 text-xl font-bold text-center border-2 border-emerald-300 focus:border-emerald-500"
-                                    value={schoolConfig.test_config.MYP.test_duration_minutes}
-                                    onChange={(e) => setSchoolConfig({
-                                      ...schoolConfig, 
-                                      test_config: {
-                                        ...schoolConfig.test_config,
-                                        MYP: { ...schoolConfig.test_config.MYP, test_duration_minutes: parseInt(e.target.value) }
-                                      }
-                                    })}
-                                  />
-                                </div>
-                              </div>
-                              
-                              <div>
-                                <Label className="text-xs font-bold text-emerald-900 mb-2 block">Supervisor Teacher</Label>
-                                <Select 
-                                  value={schoolConfig.test_config.MYP.supervisor_id || 'none'}
-                                  onValueChange={(value) => setSchoolConfig({
-                                    ...schoolConfig,
-                                    test_config: {
-                                      ...schoolConfig.test_config,
-                                      MYP: { ...schoolConfig.test_config.MYP, supervisor_id: value === 'none' ? null : value }
-                                    }
-                                  })}
-                                >
-                                  <SelectTrigger className="h-11 border-2 border-emerald-300 focus:border-emerald-500">
-                                    <SelectValue />
-                                  </SelectTrigger>
-                                  <SelectContent>
-                                    <SelectItem value="none">No supervisor assigned</SelectItem>
-                                    {teachers.map(t => (
-                                      <SelectItem key={t.id} value={t.id}>{t.full_name}</SelectItem>
-                                    ))}
-                                  </SelectContent>
-                                </Select>
-                              </div>
-                            </div>
-                          </div>
-
-                          {/* DP1 */}
-                          <div className="p-6 rounded-2xl bg-gradient-to-br from-blue-50 via-sky-50 to-blue-50 border-2 border-blue-300 hover:border-blue-400 transition-all">
-                            <div className="flex items-center gap-3 mb-6">
-                              <div className="w-12 h-12 rounded-xl bg-gradient-to-br from-blue-500 to-sky-600 flex items-center justify-center shadow-lg">
-                                <span className="font-black text-white text-lg">DP1</span>
-                              </div>
-                              <div>
-                                <p className="font-bold text-blue-900 text-lg">Diploma Programme Year 1</p>
-                                <p className="text-xs text-blue-700 font-medium">Weekly test configuration</p>
-                              </div>
-                            </div>
-                            
-                            <div className="space-y-4">
-                              <div className="grid grid-cols-2 gap-4">
-                                <div>
-                                  <Label className="text-xs font-bold text-blue-900 mb-2 block">Tests/Week</Label>
-                                  <Input 
-                                    type="number"
-                                    min="0"
-                                    max="5"
-                                    className="h-12 text-xl font-bold text-center border-2 border-blue-300 focus:border-blue-500"
-                                    value={schoolConfig.test_config.DP1.tests_per_week}
-                                    onChange={(e) => setSchoolConfig({
-                                      ...schoolConfig, 
-                                      test_config: {
-                                        ...schoolConfig.test_config,
-                                        DP1: { ...schoolConfig.test_config.DP1, tests_per_week: parseInt(e.target.value) }
-                                      }
-                                    })}
-                                  />
-                                </div>
-                                <div>
-                                  <Label className="text-xs font-bold text-blue-900 mb-2 block">Duration (min)</Label>
-                                  <Input 
-                                    type="number"
-                                    min="30"
-                                    max="180"
-                                    step="15"
-                                    className="h-12 text-xl font-bold text-center border-2 border-blue-300 focus:border-blue-500"
-                                    value={schoolConfig.test_config.DP1.test_duration_minutes}
-                                    onChange={(e) => setSchoolConfig({
-                                      ...schoolConfig, 
-                                      test_config: {
-                                        ...schoolConfig.test_config,
-                                        DP1: { ...schoolConfig.test_config.DP1, test_duration_minutes: parseInt(e.target.value) }
-                                      }
-                                    })}
-                                  />
-                                </div>
-                              </div>
-                              
-                              <div>
-                                <Label className="text-xs font-bold text-blue-900 mb-2 block">Supervisor Teacher</Label>
-                                <Select 
-                                  value={schoolConfig.test_config.DP1.supervisor_id || 'none'}
-                                  onValueChange={(value) => setSchoolConfig({
-                                    ...schoolConfig,
-                                    test_config: {
-                                      ...schoolConfig.test_config,
-                                      DP1: { ...schoolConfig.test_config.DP1, supervisor_id: value === 'none' ? null : value }
-                                    }
-                                  })}
-                                >
-                                  <SelectTrigger className="h-11 border-2 border-blue-300 focus:border-blue-500">
-                                    <SelectValue />
-                                  </SelectTrigger>
-                                  <SelectContent>
-                                    <SelectItem value="none">No supervisor assigned</SelectItem>
-                                    {teachers.map(t => (
-                                      <SelectItem key={t.id} value={t.id}>{t.full_name}</SelectItem>
-                                    ))}
-                                  </SelectContent>
-                                </Select>
-                              </div>
-                            </div>
-                          </div>
-
-                          {/* DP2 */}
-                          <div className="p-6 rounded-2xl bg-gradient-to-br from-indigo-50 via-violet-50 to-indigo-50 border-2 border-indigo-300 hover:border-indigo-400 transition-all">
-                            <div className="flex items-center gap-3 mb-6">
-                              <div className="w-12 h-12 rounded-xl bg-gradient-to-br from-indigo-600 to-violet-700 flex items-center justify-center shadow-lg">
-                                <span className="font-black text-white text-lg">DP2</span>
-                              </div>
-                              <div>
-                                <p className="font-bold text-indigo-900 text-lg">Diploma Programme Year 2</p>
-                                <p className="text-xs text-indigo-700 font-medium">Weekly test configuration</p>
-                              </div>
-                            </div>
-                            
-                            <div className="space-y-4">
-                              <div className="grid grid-cols-2 gap-4">
-                                <div>
-                                  <Label className="text-xs font-bold text-indigo-900 mb-2 block">Tests/Week</Label>
-                                  <Input 
-                                    type="number"
-                                    min="0"
-                                    max="5"
-                                    className="h-12 text-xl font-bold text-center border-2 border-indigo-300 focus:border-indigo-500"
-                                    value={schoolConfig.test_config.DP2.tests_per_week}
-                                    onChange={(e) => setSchoolConfig({
-                                      ...schoolConfig, 
-                                      test_config: {
-                                        ...schoolConfig.test_config,
-                                        DP2: { ...schoolConfig.test_config.DP2, tests_per_week: parseInt(e.target.value) }
-                                      }
-                                    })}
-                                  />
-                                </div>
-                                <div>
-                                  <Label className="text-xs font-bold text-indigo-900 mb-2 block">Duration (min)</Label>
-                                  <Input 
-                                    type="number"
-                                    min="30"
-                                    max="180"
-                                    step="15"
-                                    className="h-12 text-xl font-bold text-center border-2 border-indigo-300 focus:border-indigo-500"
-                                    value={schoolConfig.test_config.DP2.test_duration_minutes}
-                                    onChange={(e) => setSchoolConfig({
-                                      ...schoolConfig, 
-                                      test_config: {
-                                        ...schoolConfig.test_config,
-                                        DP2: { ...schoolConfig.test_config.DP2, test_duration_minutes: parseInt(e.target.value) }
-                                      }
-                                    })}
-                                  />
-                                </div>
-                              </div>
-                              
-                              <div>
-                                <Label className="text-xs font-bold text-indigo-900 mb-2 block">Supervisor Teacher</Label>
-                                <Select 
-                                  value={schoolConfig.test_config.DP2.supervisor_id || 'none'}
-                                  onValueChange={(value) => setSchoolConfig({
-                                    ...schoolConfig,
-                                    test_config: {
-                                      ...schoolConfig.test_config,
-                                      DP2: { ...schoolConfig.test_config.DP2, supervisor_id: value === 'none' ? null : value }
-                                    }
-                                  })}
-                                >
-                                  <SelectTrigger className="h-11 border-2 border-indigo-300 focus:border-indigo-500">
-                                    <SelectValue />
-                                  </SelectTrigger>
-                                  <SelectContent>
-                                    <SelectItem value="none">No supervisor assigned</SelectItem>
-                                    {teachers.map(t => (
-                                      <SelectItem key={t.id} value={t.id}>{t.full_name}</SelectItem>
-                                    ))}
-                                  </SelectContent>
-                                </Select>
-                              </div>
-                            </div>
-                          </div>
-                        </div>
-                      </CardContent>
-                    </Card>
-                    </div>
-              </TabsContent>
-
-              {/* Constraints Tab Content */}
-              <TabsContent value="constraints">
-                  <div className="space-y-4">
-                    <Card className="border-0 shadow-sm">
-                      <CardHeader>
-                        <div className="flex items-center justify-between">
-                          <div>
-                            <CardTitle>Scheduling Constraints</CardTitle>
-                            <CardDescription>Define rules and constraints for intelligent schedule generation</CardDescription>
-                          </div>
-                          <Button 
-                            className="bg-indigo-600 hover:bg-indigo-700"
-                            onClick={() => setConstraintDialogOpen(true)}
-                          >
-                            <Plus className="w-4 h-4 mr-2" />
-                            Add Constraint
-                          </Button>
-                        </div>
-                      </CardHeader>
-                      <CardContent>
-                        {(() => {
-                          console.log('Rendering constraints tab. Total constraints:', constraints.length);
-                          console.log('Constraints data:', constraints);
-                          return null;
+                          );
                         })()}
-                        {constraints.length === 0 ? (
-                          <div className="text-center py-12 text-slate-500">
-                            <AlertTriangle className="w-12 h-12 mx-auto mb-3 text-slate-300" />
-                            <p className="font-medium">No constraints defined yet</p>
-                            <p className="text-sm mt-1">Add custom rules to optimize schedule generation</p>
-                          </div>
-                        ) : (
-                          <div className="space-y-3">
-                            {constraints.map((constraint) => (
-                              <Card key={constraint.id} className="border-2">
-                                <CardContent className="p-4">
-                                  <div className="flex items-center justify-between">
-                                    <div>
-                                      <div className="flex items-center gap-2 mb-1">
-                                        <h4 className="font-semibold text-slate-900">{constraint.name}</h4>
-                                        <Badge variant={constraint.type === 'hard' ? 'destructive' : 'secondary'}>
-                                          {constraint.type === 'hard' ? 'Hard' : 'Soft'}
-                                        </Badge>
-                                        <Badge variant="outline">{constraint.category}</Badge>
-                                      </div>
-                                      <p className="text-sm text-slate-600">{constraint.description}</p>
-                                    </div>
-                                    <Button
-                                      variant="ghost"
-                                      size="icon"
-                                      onClick={async () => {
-                                        if (confirm('Delete this constraint?')) {
-                                          await base44.entities.Constraint.delete(constraint.id);
-                                          queryClient.invalidateQueries({ queryKey: ['constraints'] });
-                                        }
-                                      }}
-                                    >
-                                      <Trash2 className="w-4 h-4 text-slate-400" />
-                                    </Button>
-                                  </div>
-                                </CardContent>
-                              </Card>
-                            ))}
-                          </div>
-                        )}
-                      </CardContent>
-                    </Card>
-                  </div>
-                </TabsContent>
-                </Tabs>
+                        <pre className="text-xs bg-slate-900 text-slate-100 p-3 rounded-lg overflow-x-auto max-h-72">{JSON.stringify(orToolResult, null, 2)}</pre>
+                      </div>
+                    </CardContent>
+                  </Card>
+                </>
+              )}
+            </TabsContent>
+          )}
+        </Tabs>
+      ) : (
+        <Card className="border-blue-200">
+          <CardContent className="py-20 text-center">
+            <Calendar className="w-16 h-16 text-slate-300 mx-auto mb-4" />
+            <h3 className="text-lg font-semibold text-slate-900 mb-2">No Schedule Version Selected</h3>
+            <p className="text-slate-500 mb-6">Create a version to start generating timetables</p>
+            <Button onClick={() => setIsDialogOpen(true)} className="bg-blue-900 hover:bg-blue-800">
+              <Plus className="w-4 h-4 mr-2" />
+              Create Schedule Version
+            </Button>
+          </CardContent>
+        </Card>
+      )}
 
       {/* Create Version Dialog */}
       <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
@@ -3198,7 +2738,7 @@ Now process the user's input and return ONLY the JSON object.`,
           <form onSubmit={(e) => { e.preventDefault(); createVersionMutation.mutate(formData); }} className="space-y-4">
             <div className="space-y-2">
               <Label htmlFor="name">Version Name *</Label>
-              <Input 
+              <Input
                 id="name"
                 value={formData.name}
                 onChange={(e) => setFormData({ ...formData, name: e.target.value })}
@@ -3210,8 +2750,8 @@ Now process the user's input and return ONLY the JSON object.`,
             <div className="grid grid-cols-2 gap-4">
               <div className="space-y-2">
                 <Label htmlFor="academic_year">Academic Year</Label>
-                <Select 
-                  value={formData.academic_year} 
+                <Select
+                  value={formData.academic_year}
                   onValueChange={(value) => setFormData({ ...formData, academic_year: value })}
                 >
                   <SelectTrigger>
@@ -3225,8 +2765,8 @@ Now process the user's input and return ONLY the JSON object.`,
               </div>
               <div className="space-y-2">
                 <Label htmlFor="term">Term</Label>
-                <Select 
-                  value={formData.term} 
+                <Select
+                  value={formData.term}
                   onValueChange={(value) => setFormData({ ...formData, term: value })}
                 >
                   <SelectTrigger>
@@ -3245,7 +2785,7 @@ Now process the user's input and return ONLY the JSON object.`,
               <Button type="button" variant="outline" onClick={() => setIsDialogOpen(false)}>
                 Cancel
               </Button>
-              <Button type="submit" className="bg-indigo-600 hover:bg-indigo-700" disabled={createVersionMutation.isPending}>
+              <Button type="submit" className="bg-blue-900 hover:bg-blue-800" disabled={createVersionMutation.isPending}>
                 {createVersionMutation.isPending ? 'Creating...' : 'Create Version'}
               </Button>
             </DialogFooter>
@@ -3254,7 +2794,7 @@ Now process the user's input and return ONLY the JSON object.`,
       </Dialog>
 
       {/* Generation Progress Modal */}
-      <GenerationProgress 
+      <GenerationProgress
         open={isGenerating}
         progress={generationProgress}
         onClose={() => {
@@ -3306,11 +2846,11 @@ Now process the user's input and return ONLY the JSON object.`,
                 </div>
               </div>
               <div className="grid md:grid-cols-3 gap-4">
-                {['TOK','CAS','EE'].map(key => (
+                {['TOK', 'CAS', 'EE'].map(key => (
                   <Card key={key} className="border-0 bg-slate-50">
                     <CardContent className="p-4">
                       <div className="font-semibold text-slate-700 mb-1">{key} Samples</div>
-                      <pre className="text-xs text-slate-700 whitespace-pre-wrap">{JSON.stringify((dpDiagData.recap?.core_lessons_sample?.[key] || []).slice(0,3), null, 2)}</pre>
+                      <pre className="text-xs text-slate-700 whitespace-pre-wrap">{JSON.stringify((dpDiagData.recap?.core_lessons_sample?.[key] || []).slice(0, 3), null, 2)}</pre>
                     </CardContent>
                   </Card>
                 ))}
@@ -3338,83 +2878,67 @@ Now process the user's input and return ONLY the JSON object.`,
         <DialogContent className="sm:max-w-2xl">
           <DialogHeader>
             <DialogTitle className="flex items-center gap-2">
-              <Sparkles className="w-5 h-5 text-violet-600" />
+              <Sparkles className="w-5 h-5 text-blue-900" />
               Add Scheduling Constraint
             </DialogTitle>
             <DialogDescription>
-              Choose constraint type and describe your preference in natural language
+              Describe your preference in natural language
             </DialogDescription>
           </DialogHeader>
-          
-          <Tabs value={constraintType} onValueChange={setConstraintType} className="w-full">
+
+          <Tabs value={constraintType} onValueChange={setConstraintType}>
             <TabsList className="grid w-full grid-cols-2">
               <TabsTrigger value="hard" className="data-[state=active]:bg-rose-600 data-[state=active]:text-white">
                 <Shield className="w-4 h-4 mr-2" />
-                Hard Constraint
+                Hard (Must Follow)
               </TabsTrigger>
-              <TabsTrigger value="soft" className="data-[state=active]:bg-blue-600 data-[state=active]:text-white hover:bg-blue-50 hover:text-blue-700 transition-colors">
+              <TabsTrigger value="soft" className="data-[state=active]:bg-blue-900 data-[state=active]:text-white">
                 <Info className="w-4 h-4 mr-2" />
-                Soft Constraint
+                Soft (Prefer)
               </TabsTrigger>
             </TabsList>
 
             <TabsContent value="hard" className="space-y-4 mt-4">
-              <div className="p-4 bg-rose-50 border-2 border-rose-200 rounded-lg">
-                <div className="flex items-start gap-3">
-                  <Shield className="w-5 h-5 text-rose-600 mt-0.5 flex-shrink-0" />
-                  <div className="text-sm">
-                    <p className="font-semibold text-rose-900 mb-1">Hard Constraint - Must Be Respected</p>
-                    <p className="text-rose-700">This constraint <strong>must</strong> be followed no matter what, even if it requires regenerating the entire schedule. The system will never violate this rule.</p>
-                  </div>
-                </div>
+              <div className="p-4 bg-rose-50 border border-rose-200 rounded-lg">
+                <p className="text-sm text-rose-900">
+                  <strong>Hard constraints</strong> must be respected - the system will never violate this rule
+                </p>
               </div>
-              
-              <div className="space-y-2">
-                <Label htmlFor="hard-constraint-input">Describe Your Hard Constraint</Label>
-                <Textarea 
-                  id="hard-constraint-input"
+
+              <div>
+                <Label>Describe Your Rule</Label>
+                <Textarea
                   value={constraintInput}
                   onChange={(e) => setConstraintInput(e.target.value)}
-                  placeholder="e.g., 'Teachers cannot teach more than 4 consecutive periods' or 'No teacher can work on Fridays'"
-                  className="min-h-[120px] resize-none border-rose-200 focus:ring-rose-500"
+                  placeholder="e.g., 'Teachers cannot teach more than 4 consecutive periods'"
+                  className="min-h-[100px] mt-2"
                 />
-                <p className="text-xs text-slate-500">
-                  Examples: "Students must have lunch after period 4", "Room 101 is unavailable on Mondays", "Teachers maximum 25 hours per week"
-                </p>
               </div>
             </TabsContent>
 
             <TabsContent value="soft" className="space-y-4 mt-4">
-              <div className="p-4 bg-blue-50 border-2 border-blue-200 rounded-lg">
-                <div className="flex items-start gap-3">
-                  <Info className="w-5 h-5 text-blue-600 mt-0.5 flex-shrink-0" />
-                  <div className="text-sm">
-                    <p className="font-semibold text-blue-900 mb-1">Soft Constraint - Optimize When Possible</p>
-                    <p className="text-blue-700">This constraint will be followed <strong>only if possible</strong> without violating any hard constraints. The system will try its best but may ignore it if necessary.</p>
-                  </div>
-                </div>
+              <div className="p-4 bg-blue-50 border border-blue-200 rounded-lg">
+                <p className="text-sm text-blue-900">
+                  <strong>Soft constraints</strong> are followed when possible without violating hard constraints
+                </p>
               </div>
-              
-              <div className="space-y-2">
-                <Label htmlFor="soft-constraint-input">Describe Your Soft Constraint</Label>
-                <Textarea 
-                  id="soft-constraint-input"
+
+              <div>
+                <Label>Describe Your Preference</Label>
+                <Textarea
                   value={constraintInput}
                   onChange={(e) => setConstraintInput(e.target.value)}
-                  placeholder="e.g., 'Dr. Smith prefers not to teach on Wednesday afternoons' or 'Try to schedule labs in the morning'"
-                  className="min-h-[120px] resize-none border-blue-200 focus:ring-blue-500"
+                  placeholder="e.g., 'Prefer morning slots for science labs'"
+                  className="min-h-[100px] mt-2"
                 />
-                <p className="text-xs text-slate-500">
-                  Examples: "Prefer morning slots for science labs", "Balance teacher workload evenly", "Avoid back-to-back classes for the same subject"
-                </p>
               </div>
             </TabsContent>
           </Tabs>
 
           <DialogFooter>
-            <Button 
-              type="button" 
-              variant="outline" 
+            <Button
+              type="button"
+              variant="outline"
               onClick={() => {
                 setConstraintDialogOpen(false);
                 setConstraintInput('');
@@ -3423,12 +2947,12 @@ Now process the user's input and return ONLY the JSON object.`,
             >
               Cancel
             </Button>
-            <Button 
+            <Button
               onClick={handleGenerateConstraint}
               disabled={!constraintInput.trim() || isGeneratingConstraint}
-              className={constraintType === 'hard' 
-                ? 'bg-gradient-to-r from-rose-600 to-red-600 hover:from-rose-700 hover:to-red-700'
-                : 'bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-700 hover:to-indigo-700'
+              className={constraintType === 'hard'
+                ? 'bg-rose-600 hover:bg-rose-700'
+                : 'bg-blue-900 hover:bg-blue-800'
               }
             >
               {isGeneratingConstraint ? (
@@ -3439,7 +2963,7 @@ Now process the user's input and return ONLY the JSON object.`,
               ) : (
                 <>
                   <Sparkles className="w-4 h-4 mr-2" />
-                  Generate {constraintType === 'hard' ? 'Hard' : 'Soft'} Constraint
+                  Generate Constraint
                 </>
               )}
             </Button>
