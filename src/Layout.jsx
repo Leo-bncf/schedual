@@ -313,13 +313,13 @@ export default function Layout({ children, currentPageName }) {
                       flex items-center gap-3 px-4 py-3 rounded-xl text-sm font-medium
                       transition-all duration-200
                       ${isActive 
-                        ? 'bg-slate-900 text-white shadow-lg' 
+                        ? 'bg-blue-600 text-white shadow-lg' 
                                                       : 'text-slate-600 hover:bg-blue-50 hover:text-blue-800'
                       }
                     `}
                     onClick={() => setSidebarOpen(false)}
                   >
-                    <item.icon className={`w-5 h-5 ${isActive ? 'text-blue-900' : 'text-slate-400'}`} />
+                    <item.icon className={`w-5 h-5 ${isActive ? 'text-white' : 'text-slate-400'}`} />
                     {item.name}
                   </Link>
                 );
