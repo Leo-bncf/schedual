@@ -7,6 +7,14 @@ import { createClientFromRequest } from 'npm:@base44/sdk@0.8.6';
  * Receives schedule_solution_v1 response
  * Maps assignments back to Base44 entities (ScheduleSlot)
  */
+
+// Helper: chunk array into batches
+const chunk = (arr, n) => {
+  const out = [];
+  for (let i = 0; i < arr.length; i += n) out.push(arr.slice(i, i + n));
+  return out;
+};
+
 Deno.serve(async (req) => {
   let stage = 'init';
   let schedule_version_id = null;
@@ -745,18 +753,22 @@ Deno.serve(async (req) => {
     stage = 'deleteOldSlots';
     console.log(`[callORToolScheduler] ${stage}: deleting old slots`);
     
-    // Step 6: Delete existing slots for this version (ONLY if solver succeeded)
+    // Step 6: Delete existing slots for this version (ONLY if solver succeeded) - BATCH DELETE
     const existingSlots = await base44.entities.ScheduleSlot.filter({
       school_id: user.school_id,
       schedule_version: schedule_version_id
     });
     const deletedCount = existingSlots.length;
-    for (const slot of existingSlots) {
-      try {
-        await base44.entities.ScheduleSlot.delete(slot.id);
-      } catch (e) {
-        errors.push(`delete:${slot.id}:${e?.message || 'error'}`);
-      }
+    console.log(`[callORToolScheduler] Deleting ${deletedCount} existing slots in batches`);
+    
+    const deleteBatches = chunk(existingSlots, 25);
+    for (const batch of deleteBatches) {
+      const results = await Promise.allSettled(batch.map(s => base44.entities.ScheduleSlot.delete(s.id)));
+      results.forEach((r, i) => {
+        if (r.status === 'rejected') {
+          errors.push(`delete:${batch[i]?.id}:${r.reason?.message || 'error'}`);
+        }
+      });
     }
 
     stage = 'insertNewSlots';
@@ -817,7 +829,7 @@ Deno.serve(async (req) => {
       }
     }
 
-    // Step 8: Create conflict reports for unassigned lessons
+    // Step 8: Create conflict reports for unassigned lessons - BATCH CREATE
     const unassignedLessons = solvedLessons.filter(l => {
       const subj = String(l.subject || l.subjectCode || '')
         .toUpperCase().replace(/\s+/g, '_').replace(/[^A-Z0-9_]/g, '');
@@ -826,21 +838,30 @@ Deno.serve(async (req) => {
       const isCore = (subjId && subjects.some(s => s.id === subjId && s.is_core === true)) || allowNullRoomSubjects.has(subj);
       return !l.timeslotId || (!l.roomId && !isCore);
     });
+    
+    console.log(`[callORToolScheduler] Creating ${unassignedLessons.length} conflict reports in batches`);
     if (unassignedLessons.length > 0) {
-      for (const lesson of unassignedLessons) {
-        await base44.entities.ConflictReport.create({
-          school_id: user.school_id,
-          schedule_version_id,
-          conflict_type: 'insufficient_hours',
-          severity: 'critical',
-          description: `Lesson "${lesson.subject} - ${lesson.studentGroup}" could not be scheduled. No valid time slots found.`,
-          affected_entities: {
-            subject_code: lesson.subject,
-            student_group: lesson.studentGroup
-          },
-          suggested_resolution: 'Try adding more rooms, adjusting teacher availability, or reducing required sessions.',
-          status: 'unresolved'
-        });
+      const conflictReports = unassignedLessons.map(lesson => ({
+        school_id: user.school_id,
+        schedule_version_id,
+        conflict_type: 'insufficient_hours',
+        severity: 'critical',
+        description: `Lesson "${lesson.subject} - ${lesson.studentGroup}" could not be scheduled. No valid time slots found.`,
+        affected_entities: {
+          subject_code: lesson.subject,
+          student_group: lesson.studentGroup
+        },
+        suggested_resolution: 'Try adding more rooms, adjusting teacher availability, or reducing required sessions.',
+        status: 'unresolved'
+      }));
+      
+      const conflictBatches = chunk(conflictReports, 25);
+      for (const batch of conflictBatches) {
+        try {
+          await base44.entities.ConflictReport.bulkCreate(batch);
+        } catch (e) {
+          errors.push(`conflictBatch:${e?.message || 'error'}`);
+        }
       }
     }
 
@@ -854,20 +875,25 @@ Deno.serve(async (req) => {
             }
             console.log('[callORToolScheduler] offByOneIssues =', offByOneIssues);
             let warningsCount = Object.keys(offByOneIssues).length;
+            
+            // Create warning conflict reports in batch
             if (warningsCount > 0) {
-              for (const [code, info] of Object.entries(offByOneIssues)) {
+              const warningReports = Object.entries(offByOneIssues).map(([code, info]) => ({
+                school_id: user.school_id,
+                schedule_version_id,
+                conflict_type: info.assigned < info.expected ? 'insufficient_hours' : 'ib_requirement_violation',
+                severity: 'medium',
+                description: `Subject ${code}: assigned ${info.assigned} vs expected ${info.expected} (diff ${info.diff >= 0 ? '+' : ''}${info.diff})`,
+                affected_entities: { subject_code: code },
+                status: 'unresolved'
+              }));
+              
+              const warningBatches = chunk(warningReports, 25);
+              for (const batch of warningBatches) {
                 try {
-                  await base44.entities.ConflictReport.create({
-                    school_id: user.school_id,
-                    schedule_version_id,
-                    conflict_type: info.assigned < info.expected ? 'insufficient_hours' : 'ib_requirement_violation',
-                    severity: 'medium',
-                    description: `Subject ${code}: assigned ${info.assigned} vs expected ${info.expected} (diff ${info.diff >= 0 ? '+' : ''}${info.diff})`,
-                    affected_entities: { subject_code: code },
-                    status: 'unresolved'
-                  });
+                  await base44.entities.ConflictReport.bulkCreate(batch);
                 } catch (e) {
-                  errors.push(`warn:${code}:${e?.message || 'error'}`);
+                  errors.push(`warningBatch:${e?.message || 'error'}`);
                 }
               }
             }
