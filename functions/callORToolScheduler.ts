@@ -278,10 +278,18 @@ Deno.serve(async (req) => {
         'X-API-Key': OR_TOOL_API_KEY
       };
       orToolRequestHeadersSent = { 'Content-Type': 'application/json', 'X-API-Key': maskApiKey(OR_TOOL_API_KEY) };
-      const payloadJson = JSON.stringify(problem);
+      // OR-Tool expects top-level schoolId + scheduleVersionId + problem data
+      const orToolPayload = {
+        schoolId: schoolId,
+        scheduleVersionId: schedule_version_id,
+        ...problem
+      };
+      const payloadJson = JSON.stringify(orToolPayload);
 
       console.log('[callORToolScheduler] Sending to OR-Tool:', {
         endpoint: orToolEndpointUsed,
+        schoolId: schoolId,
+        scheduleVersionId: schedule_version_id,
         subjectsCount: problem?.subjects?.length || 0,
         requirementsCount: problem?.subjectRequirements?.length || 0,
         lessonsCount: problem?.lessons?.length || 0,
@@ -341,6 +349,7 @@ Deno.serve(async (req) => {
         parsedError = { rawText: solverResponseText };
       }
 
+      // Return actual OR-Tool HTTP status (400, 500, etc.) for proper debugging
       return Response.json({ 
         ok: false,
         stage: 'callORTool',
@@ -355,11 +364,14 @@ Deno.serve(async (req) => {
         orToolHealthOk,
         scheduleVersionIdInput: schedule_version_id,
         scheduleVersionIdUsed: schedule_version_id,
+        schoolIdSent: schoolId,
         performedDeletion: false,
         performedInsertion: false,
         slotsDeleted: 0,
         slotsInserted: 0,
         orToolRequestPayload: {
+          schoolId: schoolId,
+          scheduleVersionId: schedule_version_id,
           scheduleSettings: scheduleSettingsSent,
           subjects: (problem?.subjects || []).slice(0, 5),
           subjectRequirements: coreSubjectRequirements.length > 0 
@@ -371,7 +383,7 @@ Deno.serve(async (req) => {
         subjectsInvalidIds: subjectsInvalidIds || [],
         requirementsUnknownSubjects: requirementsUnknownSubjects || [],
         requirementsInvalidMinutes: requirementsInvalidMinutes || []
-      }, { status: 200 }); // Return 200 so UI can parse
+      }, { status: orToolHttpStatus }); // Return actual OR-Tool status (400/500)
     }
 
     // Parse solution from response text
