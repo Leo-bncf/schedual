@@ -195,6 +195,7 @@ Deno.serve(async (req) => {
       const reason = subjectsForSolver.length === 0 ? 'subjects[] is empty' : 'subjectRequirements[] is empty';
       console.error('[callORToolScheduler] INVALID_INPUT:', reason);
       return Response.json({
+        ok: false,
         error: 'INVALID_INPUT',
         message: `Invalid problem for solver: ${reason}. Fix data and retry.`,
         scheduleVersionIdInput: schedule_version_id,
@@ -216,7 +217,7 @@ Deno.serve(async (req) => {
         requirementsInvalidMinutes: requirementsInvalidMinutes || [],
         normalizedSubjectsIndex: normalizedSubjectsIndex || {},
         normalizedRequirementsSubjects: normalizedRequirementsSubjects || []
-      }, { status: 400 });
+      }, { status: 200 });
     }
 
     stage = 'callORTool';
