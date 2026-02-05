@@ -128,77 +128,78 @@ export default function PricingTiersSection() {
         </div>
 
         {/* Tiers Grid */}
-        <div className="mb-16">
+        <div className="mb-8">
           <div className="grid gap-6 sm:grid-cols-2 lg:grid-cols-3" role="list">
             {Object.entries(TIERS).map(([tierId, tier]) => (
-              <div key={tierId} className={`rounded-2xl border ${tier.featured ? 'border-blue-900 bg-blue-50/30' : 'border-slate-200 bg-white'} transition-all`}>
-                <button
-                  className="w-full p-5 flex flex-col gap-2 text-left cursor-pointer hover:shadow-md transition-all"
-                  onClick={() => setExpandedTier(expandedTier === tierId ? null : tierId)}
-                  role="button"
-                  aria-label={`View details for ${tier.name}`}
-                  aria-expanded={expandedTier === tierId}
-                >
-                  <div className="flex items-center justify-between">
-                    <h3 className="text-lg font-semibold text-slate-900">{tier.name}</h3>
-                    <div className="flex items-center gap-2">
-                      {tier.featured && (
-                        <Badge className="bg-yellow-400 text-slate-900">Recommended</Badge>
-                      )}
-                      <motion.div animate={{ rotate: expandedTier === tierId ? 180 : 0 }} transition={{ duration: 0.2 }}>
-                        <ChevronDown className="w-5 h-5 text-slate-500" />
-                      </motion.div>
-                    </div>
-                  </div>
-                  <p className="text-sm text-slate-600">{tier.subtitle}</p>
-                  <div className="mt-1">
-                    <div className="flex items-baseline gap-1.5">
-                      <span className="text-2xl font-bold text-slate-900">${tier.price}</span>
-                      <span className="text-slate-600 text-sm">/year</span>
-                    </div>
-                  </div>
-                </button>
-
-                <AnimatePresence initial={false}>
-                  {expandedTier === tierId && (
-                    <motion.div
-                      key="content"
-                      initial={{ opacity: 0, height: 0 }}
-                      animate={{ opacity: 1, height: 'auto' }}
-                      exit={{ opacity: 0, height: 0 }}
-                      transition={{ duration: 0.3 }}
-                      className="px-5 pb-5"
-                    >
-                      <div className="pt-4 border-t border-slate-200">
-                        <div className="text-xs text-slate-500 mb-2">Best for {tier.students} students</div>
-                        {tier.description && (
-                          <p className="text-slate-700 mb-4">{tier.description}</p>
-                        )}
-
-                        <div className="grid sm:grid-cols-2 gap-3 mb-6">
-                          {(tier.features || []).map((feature, i) => (
-                            <div key={i} className="flex items-start gap-2">
-                              <CheckCircle2 className="w-4 h-4 text-emerald-600 mt-0.5 flex-shrink-0" />
-                              <span className="text-sm text-slate-700">{feature}</span>
-                            </div>
-                          ))}
-                        </div>
-
-                        <a
-                          href="/Subscription"
-                          className="inline-flex items-center gap-2 px-5 py-2.5 bg-blue-900 text-white rounded-lg hover:bg-blue-800 transition-colors text-sm font-medium"
-                        >
-                          Choose this plan
-                          <span>→</span>
-                        </a>
-                      </div>
+              <button
+                key={tierId}
+                className={`rounded-2xl border ${tier.featured ? 'border-blue-900 bg-blue-50/30' : 'border-slate-200 bg-white'} ${expandedTier === tierId ? 'ring-2 ring-blue-900' : ''} p-5 flex flex-col gap-2 text-left cursor-pointer hover:shadow-md transition-all`}
+                onClick={() => setExpandedTier(expandedTier === tierId ? null : tierId)}
+                role="button"
+                aria-label={`View details for ${tier.name}`}
+                aria-expanded={expandedTier === tierId}
+              >
+                <div className="flex items-center justify-between">
+                  <h3 className="text-lg font-semibold text-slate-900">{tier.name}</h3>
+                  <div className="flex items-center gap-2">
+                    {tier.featured && (
+                      <Badge className="bg-yellow-400 text-slate-900">Recommended</Badge>
+                    )}
+                    <motion.div animate={{ rotate: expandedTier === tierId ? 180 : 0 }} transition={{ duration: 0.2 }}>
+                      <ChevronDown className="w-5 h-5 text-slate-500" />
                     </motion.div>
-                  )}
-                </AnimatePresence>
-              </div>
+                  </div>
+                </div>
+                <p className="text-sm text-slate-600">{tier.subtitle}</p>
+                <div className="mt-1">
+                  <div className="flex items-baseline gap-1.5">
+                    <span className="text-2xl font-bold text-slate-900">${tier.price}</span>
+                    <span className="text-slate-600 text-sm">/year</span>
+                  </div>
+                </div>
+              </button>
             ))}
           </div>
         </div>
+
+        {/* Expanded Details Section */}
+        <AnimatePresence mode="wait">
+          {expandedTier && TIERS[expandedTier] && (
+            <motion.div
+              key={expandedTier}
+              initial={{ opacity: 0, height: 0 }}
+              animate={{ opacity: 1, height: 'auto' }}
+              exit={{ opacity: 0, height: 0 }}
+              transition={{ duration: 0.3 }}
+              className="mb-16 overflow-hidden"
+            >
+              <div className="rounded-2xl border border-blue-300 bg-gradient-to-br from-blue-50 to-white p-8">
+                <div className="text-xs text-slate-500 mb-2">Best for {TIERS[expandedTier].students} students</div>
+                <h3 className="text-2xl font-bold text-slate-900 mb-2">{TIERS[expandedTier].name}</h3>
+                {TIERS[expandedTier].description && (
+                  <p className="text-slate-700 mb-6">{TIERS[expandedTier].description}</p>
+                )}
+
+                <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-4 mb-8">
+                  {TIERS[expandedTier].features.map((feature, i) => (
+                    <div key={i} className="flex items-start gap-2">
+                      <CheckCircle2 className="w-5 h-5 text-emerald-600 mt-0.5 flex-shrink-0" />
+                      <span className="text-slate-700">{feature}</span>
+                    </div>
+                  ))}
+                </div>
+
+                <a
+                  href="/Subscription"
+                  className="inline-flex items-center gap-2 px-6 py-3 bg-blue-900 text-white rounded-lg hover:bg-blue-800 transition-colors font-medium"
+                >
+                  Choose {TIERS[expandedTier].name}
+                  <span>→</span>
+                </a>
+              </div>
+            </motion.div>
+          )}
+        </AnimatePresence>
 
         {/* Add-ons Section */}
         <div id="addons" className="relative pt-24">
