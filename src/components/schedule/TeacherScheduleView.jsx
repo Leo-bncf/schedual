@@ -65,7 +65,7 @@ export default function TeacherScheduleView({ teachers, slots, groups, subjects,
 
       {selectedTeacher && (
         <Card className="overflow-hidden border-blue-200 shadow-sm" id={exportId}>
-          <div className="h-1 bg-blue-900" />
+          <div className="h-1 bg-blue-500" />
           <div className="overflow-x-auto">
             <div className="min-w-[900px]">
               <div className="grid grid-cols-[80px_repeat(5,1fr)] bg-white border-b-2 border-slate-300">
