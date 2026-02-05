@@ -19,13 +19,13 @@ export default function Landing() {
       <LandingHeader />
       <HeroSection />
       <ImmersivePreview />
+      <PricingTiersSection />
       <InfoSection />
       <HowItWorksSection />
       <TrustSection />
       <DemoBooking />
       <MissionSection />
       <ComparisonSection />
-      <PricingTiersSection />
       <LandingFooter />
     </div>
   );
