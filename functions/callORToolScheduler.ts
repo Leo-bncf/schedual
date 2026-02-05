@@ -330,11 +330,14 @@ Deno.serve(async (req) => {
         orToolHealthOk,
         scheduleVersionIdInput: schedule_version_id,
         scheduleVersionIdUsed: schedule_version_id,
+        schoolIdSent: schoolId,
         performedDeletion: false,
         performedInsertion: false,
         slotsDeleted: 0,
         slotsInserted: 0,
         orToolRequestPayload: {
+          schoolId: schoolId,
+          scheduleVersionId: schedule_version_id,
           subjects: (problem?.subjects || []).slice(0, 5),
           subjectRequirements: (problem?.subjectRequirements || []).slice(0, 10),
           lessonsCount: problem?.lessons?.length || 0,
@@ -371,6 +374,12 @@ Deno.serve(async (req) => {
         scheduleVersionIdInput: schedule_version_id,
         scheduleVersionIdUsed: schedule_version_id,
         schoolIdSent: schoolId,
+        payloadPreview: {
+          schoolId: schoolId,
+          scheduleVersionId: schedule_version_id,
+          hasSubjects: !!(problem?.subjects?.length),
+          hasRequirements: !!(problem?.subjectRequirements?.length)
+        },
         performedDeletion: false,
         performedInsertion: false,
         slotsDeleted: 0,
