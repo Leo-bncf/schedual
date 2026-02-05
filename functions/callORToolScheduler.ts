@@ -300,6 +300,8 @@ Deno.serve(async (req) => {
         timeslotsCount: problem?.timeslots?.length || 0
       });
 
+      console.log('[OR-Tool payload] schoolId=', orToolPayload.schoolId, 'scheduleVersionId=', orToolPayload.scheduleVersionId, 'keys=', Object.keys(orToolPayload).slice(0, 20));
+
       solverResponse = await fetch(orToolEndpointUsed, {
         method: 'POST',
         headers: requestHeaders,
