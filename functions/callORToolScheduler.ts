@@ -291,6 +291,16 @@ Deno.serve(async (req) => {
       orToolPayload.scheduleVersionId = schedule_version_id;
       const payloadJson = JSON.stringify(orToolPayload);
 
+      console.log('[callORToolScheduler] PRE-SEND VALIDATION:', {
+        schoolId_var: schoolId,
+        schoolId_type: typeof schoolId,
+        schoolId_exists: !!schoolId,
+        payload_schoolId: orToolPayload.schoolId,
+        payload_schoolId_type: typeof orToolPayload.schoolId,
+        payload_schoolId_exists: !!orToolPayload.schoolId,
+        scheduleVersionId: schedule_version_id
+      });
+
       console.log('[callORToolScheduler] Sending to OR-Tool:', {
         endpoint: orToolEndpointUsed,
         schoolId: schoolId,
@@ -304,6 +314,7 @@ Deno.serve(async (req) => {
       });
 
       console.log('[OR-Tool payload] schoolId=', orToolPayload.schoolId, 'scheduleVersionId=', orToolPayload.scheduleVersionId, 'keys=', Object.keys(orToolPayload).slice(0, 20));
+      console.log('[OR-Tool payload JSON preview]:', payloadJson.slice(0, 300));
 
       solverResponse = await fetch(orToolEndpointUsed, {
         method: 'POST',
