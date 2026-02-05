@@ -349,7 +349,7 @@ Deno.serve(async (req) => {
         parsedError = { rawText: solverResponseText };
       }
 
-      // Return actual OR-Tool HTTP status (400, 500, etc.) for proper debugging
+      // Return 200 with ok:false so UI can parse JSON and show real OR-Tool status
       return Response.json({ 
         ok: false,
         stage: 'callORTool',
@@ -383,7 +383,7 @@ Deno.serve(async (req) => {
         subjectsInvalidIds: subjectsInvalidIds || [],
         requirementsUnknownSubjects: requirementsUnknownSubjects || [],
         requirementsInvalidMinutes: requirementsInvalidMinutes || []
-      }, { status: orToolHttpStatus }); // Return actual OR-Tool status (400/500)
+      }, { status: 200 }); // Always 200 so UI can parse, check ok:false + orToolHttpStatus
     }
 
     // Parse solution from response text
