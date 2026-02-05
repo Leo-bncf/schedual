@@ -131,7 +131,7 @@ export default function PricingTiersSection() {
         <div className="mb-16">
           <div className="grid gap-6 sm:grid-cols-2 lg:grid-cols-3" role="list">
             {Object.entries(TIERS).map(([tierId, tier]) => (
-              <motion.div key={tierId} layout className={`rounded-2xl border ${tier.featured ? 'border-blue-900 bg-blue-50/30' : 'border-slate-200 bg-white'} ${expandedTier === tierId ? 'col-span-full' : ''} transition-all`}>
+              <div key={tierId} className={`rounded-2xl border ${tier.featured ? 'border-blue-900 bg-blue-50/30' : 'border-slate-200 bg-white'} transition-all`}>
                 <button
                   className="w-full p-5 flex flex-col gap-2 text-left cursor-pointer hover:shadow-md transition-all"
                   onClick={() => setExpandedTier(expandedTier === tierId ? null : tierId)}
@@ -195,7 +195,7 @@ export default function PricingTiersSection() {
                     </motion.div>
                   )}
                 </AnimatePresence>
-              </motion.div>
+              </div>
             ))}
           </div>
         </div>
