@@ -313,7 +313,7 @@ export default function Layout({ children, currentPageName }) {
                       flex items-center gap-3 px-4 py-3 rounded-xl text-sm font-medium
                       transition-all duration-200
                       ${isActive 
-                        ? 'bg-blue-600 text-white shadow-lg' 
+                        ? 'bg-blue-500 text-white shadow-lg' 
                                                       : 'text-slate-600 hover:bg-blue-50 hover:text-blue-800'
                       }
                     `}
