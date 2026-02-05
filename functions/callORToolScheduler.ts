@@ -872,12 +872,23 @@ Deno.serve(async (req) => {
               }
             }
             // Step 9: Update schedule version metadata
-            await base44.entities.ScheduleVersion.update(schedule_version_id, {
-      generated_at: new Date().toISOString(),
-      score: solution.score || 0,
-      conflicts_count: unassignedLessons.length,
-      warnings_count: warningsCount
-      });
+            const scoreRaw = solution?.score;
+            const scoreNum =
+              typeof scoreRaw === 'number'
+                ? scoreRaw
+                : Number.parseFloat(String(scoreRaw ?? '').replace(',', '.'));
+
+            try {
+              await base44.entities.ScheduleVersion.update(schedule_version_id, {
+                generated_at: new Date().toISOString(),
+                score: Number.isFinite(scoreNum) ? scoreNum : 0,
+                conflicts_count: Number(unassignedLessons?.length || 0),
+                warnings_count: Number(warningsCount || 0),
+              });
+            } catch (e) {
+              console.error('[callORToolScheduler] ScheduleVersion.update failed:', e?.message || e);
+              errors.push(`scheduleVersionUpdate:${e?.message || e}`);
+            }
 
     console.log('[callORToolScheduler] persistence diagnostics', { lessonsWithoutTimeslot, missingRoomCount, missingTeacherCount });
     const buildMeta = {
