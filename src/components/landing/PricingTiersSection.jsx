@@ -115,7 +115,7 @@ export default function PricingTiersSection() {
 
 
   return (
-    <section id="pricing" className="py-20 bg-white">
+    <section id="pricing" className="py-20 bg-white relative z-10">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
         {/* Header */}
         <div className="text-center mb-16">
@@ -220,7 +220,7 @@ export default function PricingTiersSection() {
                   whileInView={{ opacity: 1, y: 0 }}
                   viewport={{ once: true, amount: 0.2 }}
                   transition={{ duration: 0.35, delay: idx * 0.05 }}
-                  className={`rounded-2xl border ${open ? 'border-blue-300 shadow-md' : 'border-slate-200'} bg-white hover:bg-blue-50 hover:border-blue-300 p-5 sm:p-6 transition-all`}
+                  className={`rounded-2xl border ${open ? 'border-blue-300 shadow-md' : 'border-slate-200'} bg-white/100 hover:bg-blue-50 hover:border-blue-300 p-5 sm:p-6 transition-all backdrop-blur-none`}
                 >
                   <button
                     type="button"
