@@ -286,6 +286,9 @@ Deno.serve(async (req) => {
         schoolId: schoolId,
         scheduleVersionId: schedule_version_id
       };
+      // Double assurance: force overwrite even if problem contained null/undefined
+      orToolPayload.schoolId = schoolId;
+      orToolPayload.scheduleVersionId = schedule_version_id;
       const payloadJson = JSON.stringify(orToolPayload);
 
       console.log('[callORToolScheduler] Sending to OR-Tool:', {
@@ -426,9 +429,12 @@ Deno.serve(async (req) => {
       : (Array.isArray(solution.assignments) ? solution.assignments : null);
     if (!solvedLessons) {
       return Response.json({ 
+        ok: false,
         error: 'Invalid solution format from OR-Tool (expected lessons[] or assignments[])',
-        solution 
-      }, { status: 500 });
+        solution,
+        orToolHttpStatus,
+        meta: { schedule_version_id, schoolId }
+      }, { status: 200 });
     }
     const assignmentsReturnedBySubject = {};
     for (const l of solvedLessons) {
