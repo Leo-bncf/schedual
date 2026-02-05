@@ -109,9 +109,9 @@ const CATEGORY_ICONS = {
 
 
 export default function PricingTiersSection() {
-  const [openCategories, setOpenCategories] = useState({});
+  const [expandedCategory, setExpandedCategory] = useState(null);
   const [expandedTier, setExpandedTier] = useState(null);
-  const toggleCategory = (cat) => setOpenCategories((prev) => ({ ...prev, [cat]: !prev[cat] }));
+  const toggleCategory = (cat) => setExpandedCategory(expandedCategory === cat ? null : cat);
 
 
   return (
@@ -208,29 +208,22 @@ export default function PricingTiersSection() {
             <p className="text-slate-600 mt-2">Tap a category to explore optional add-ons</p>
           </div>
 
-          <div className="grid gap-6 sm:grid-cols-2 lg:grid-cols-3">
-            {ADD_ONS.map((category, idx) => {
-              const Icon = CATEGORY_ICONS[category.category] || Zap;
-              const open = !!openCategories[category.category];
-              return (
-                <motion.div
-                  key={category.category}
-                  layout
-                  initial={{ opacity: 0, y: 12 }}
-                  whileInView={{ opacity: 1, y: 0 }}
-                  viewport={{ once: true, amount: 0.2 }}
-                  transition={{ duration: 0.35, delay: idx * 0.05 }}
-                  className={`rounded-2xl border ${open ? 'border-blue-300 shadow-md' : 'border-slate-200'} bg-white/100 hover:bg-blue-50 hover:border-blue-300 p-5 sm:p-6 transition-all backdrop-blur-none`}
-                >
+          <div className="mb-8">
+            <div className="grid gap-6 sm:grid-cols-2 lg:grid-cols-3" role="list">
+              {ADD_ONS.map((category, idx) => {
+                const Icon = CATEGORY_ICONS[category.category] || Zap;
+                const isExpanded = expandedCategory === category.category;
+                return (
                   <button
-                    type="button"
+                    key={category.category}
+                    className={`rounded-2xl border border-slate-200 bg-white hover:bg-blue-50 hover:border-blue-300 hover:shadow-sm ${isExpanded ? 'ring-2 ring-blue-900' : ''} p-5 flex flex-col gap-2 text-left cursor-pointer transition-all`}
                     onClick={() => toggleCategory(category.category)}
-                    className="w-full"
                     role="button"
-                    aria-expanded={open}
+                    aria-label={`View details for ${category.category}`}
+                    aria-expanded={isExpanded}
                   >
                     <div className="flex items-center justify-between">
-                      <div className="flex items-center gap-3 text-left">
+                      <div className="flex items-center gap-3">
                         <div className="h-9 w-9 rounded-xl bg-blue-100 text-blue-900 flex items-center justify-center">
                           <Icon className="w-5 h-5" />
                         </div>
@@ -239,56 +232,50 @@ export default function PricingTiersSection() {
                           <p className="text-slate-500 text-sm">{category.items.length} options</p>
                         </div>
                       </div>
-                      <motion.div animate={{ rotate: open ? 180 : 0 }} transition={{ duration: 0.2 }}>
+                      <motion.div animate={{ rotate: isExpanded ? 180 : 0 }} transition={{ duration: 0.2 }}>
                         <ChevronDown className="w-5 h-5 text-slate-500" />
                       </motion.div>
                     </div>
                   </button>
-
-                  <AnimatePresence initial={false}>
-                    {open && (
-                      <motion.div
-                        key="content"
-                        initial={{ opacity: 0, height: 0 }}
-                        animate={{ opacity: 1, height: 'auto' }}
-                        exit={{ opacity: 0, height: 0 }}
-                        transition={{ duration: 0.25 }}
-                        className="mt-4 pt-4 border-t border-slate-200"
-                      >
-                        <div className="grid gap-4">
-                          {category.items.map((addon, j) => (
-                            <motion.div
-                              key={addon.id}
-                              layout
-                              initial={{ opacity: 0, y: 6 }}
-                              whileInView={{ opacity: 1, y: 0 }}
-                              viewport={{ once: true, amount: 0.3 }}
-                              transition={{ duration: 0.25, delay: j * 0.03 }}
-                              whileHover={{ scale: 1.01 }}
-                              className="group rounded-xl border border-slate-200 bg-white hover:border-blue-300 hover:shadow-sm transition-all p-4"
-                            >
-                              <div className="flex items-start justify-between gap-3">
-                                <h5 className="font-medium text-slate-900 text-sm leading-5">{addon.name}</h5>
-                                <Badge className={`${addon.type === 'onetime' ? 'bg-amber-100 text-amber-800' : 'bg-indigo-100 text-indigo-800'} text-[10px]`}>
-                                  {addon.type === 'onetime' ? 'One-time' : 'Annual'}
-                                </Badge>
-                              </div>
-                              <div className="mt-3 flex items-end justify-between">
-                                <div className="text-blue-900 font-bold text-xl">${addon.price}</div>
-                                <button className="text-sm font-semibold text-blue-900 opacity-0 group-hover:opacity-100 transition-opacity">
-                                  Learn more →
-                                </button>
-                              </div>
-                            </motion.div>
-                          ))}
-                        </div>
-                      </motion.div>
-                    )}
-                  </AnimatePresence>
-                </motion.div>
-              );
-            })}
+                );
+              })}
+            </div>
           </div>
+
+          {/* Expanded Details Section */}
+          <AnimatePresence mode="wait">
+            {expandedCategory && ADD_ONS.find(cat => cat.category === expandedCategory) && (
+              <motion.div
+                key={expandedCategory}
+                initial={{ opacity: 0, height: 0 }}
+                animate={{ opacity: 1, height: 'auto' }}
+                exit={{ opacity: 0, height: 0 }}
+                transition={{ duration: 0.3 }}
+                className="mb-16 overflow-hidden"
+              >
+                <div className="rounded-2xl border border-blue-300 bg-gradient-to-br from-blue-50 to-white p-8">
+                  <h3 className="text-2xl font-bold text-slate-900 mb-6">{expandedCategory}</h3>
+
+                  <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
+                    {ADD_ONS.find(cat => cat.category === expandedCategory).items.map((addon) => (
+                      <div
+                        key={addon.id}
+                        className="rounded-xl border border-slate-200 bg-white hover:border-blue-300 hover:shadow-sm transition-all p-5"
+                      >
+                        <div className="flex items-start justify-between gap-3 mb-3">
+                          <h5 className="font-semibold text-slate-900 text-base leading-snug">{addon.name}</h5>
+                          <Badge className={`${addon.type === 'onetime' ? 'bg-amber-100 text-amber-800' : 'bg-indigo-100 text-indigo-800'} text-xs shrink-0`}>
+                            {addon.type === 'onetime' ? 'One-time' : 'Annual'}
+                          </Badge>
+                        </div>
+                        <div className="text-blue-900 font-bold text-2xl">${addon.price}</div>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              </motion.div>
+            )}
+          </AnimatePresence>
         </div>
 
         {/* CTA */}
