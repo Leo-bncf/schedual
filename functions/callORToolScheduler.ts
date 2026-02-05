@@ -133,7 +133,7 @@ Deno.serve(async (req) => {
       .map(s => ({ id: s?.id, code: s?.code, name: s?.name }));
 
     // Normalization helper (trim, collapse whitespace, _ ↔ space)
-    const normalize = (s) => {
+    const normalizeKey = (s) => {
       if (!s) return '';
       return String(s).trim().replace(/\s+/g, ' ').replace(/_/g, ' ').toUpperCase();
     };
@@ -141,8 +141,8 @@ Deno.serve(async (req) => {
     // Build normalized index: normalized string → original subject
     const normalizedSubjectsIndex = {};
     subjectsForSolver.forEach(s => {
-      const normCode = normalize(s?.code);
-      const normName = normalize(s?.name);
+      const normCode = normalizeKey(s?.code);
+      const normName = normalizeKey(s?.name);
       if (normCode) normalizedSubjectsIndex[normCode] = s?.code || s?.name;
       if (normName) normalizedSubjectsIndex[normName] = s?.name || s?.code;
     });
@@ -157,7 +157,7 @@ Deno.serve(async (req) => {
         // Check exact match first
         if (validSubjectCodes.has(subj) || validSubjectNames.has(subj)) return false;
         // Check normalized match
-        const normSubj = normalize(subj);
+        const normSubj = normalizeKey(subj);
         return !normalizedSubjectsIndex[normSubj];
       })
       .map(r => ({ studentGroup: r?.studentGroup, subject: r?.subject, minutesPerWeek: r?.minutesPerWeek }));
@@ -170,7 +170,7 @@ Deno.serve(async (req) => {
     // Normalized requirements subjects (first 20)
     const normalizedRequirementsSubjects = subjectRequirementsForSolver
       .slice(0, 20)
-      .map(r => ({ original: r?.subject, normalized: normalize(r?.subject) }));
+      .map(r => ({ original: r?.subject, normalized: normalizeKey(r?.subject) }));
 
     console.log('[callORToolScheduler] subjects validation:', {
       isArray: Array.isArray(subjectsForSolver),
@@ -965,7 +965,6 @@ Deno.serve(async (req) => {
       sampleSlotsInserted,
       coreSlotsInsertedCount,
       sampleCoreSlot,
-      coreSlotsPersisted,
       diagnostics: {
         lessonsWithoutTimeslot,
         missingRoomCount,
