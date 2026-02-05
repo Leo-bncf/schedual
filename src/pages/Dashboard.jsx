@@ -15,14 +15,11 @@ import {
   CheckCircle,
   Clock,
   ArrowRight,
-  Sparkles,
-  Shield
+  Sparkles
 } from 'lucide-react';
 import { Link } from 'react-router-dom';
 import { createPageUrl } from '../utils';
-import StatCard from '../components/ui-custom/StatCard';
 import PageHeader from '../components/ui-custom/PageHeader';
-import SupportTicketForm from '../components/support/SupportTicketForm';
 
 export default function Dashboard() {
   const { data: user } = useQuery({
@@ -60,11 +57,7 @@ export default function Dashboard() {
     enabled: !!user?.school_id,
   });
 
-  const { data: constraints = [], isLoading: loadingConstraints } = useQuery({
-    queryKey: ['constraints', user?.school_id],
-    queryFn: () => base44.entities.Constraint.filter({ school_id: user?.school_id, is_active: true }),
-    enabled: !!user?.school_id,
-  });
+
 
   // School dashboard stats
   const activeTeachers = teachers.filter(t => t.is_active !== false).length;
@@ -82,9 +75,10 @@ export default function Dashboard() {
         description="Overview of your scheduling system"
         actions={
           <Link to={createPageUrl('Schedule')}>
-            <Button className="bg-blue-900 hover:bg-blue-800">
-              <Calendar className="w-4 h-4 mr-2" />
-              View Schedule
+            <Button size="lg" className="bg-blue-600 hover:bg-blue-700 shadow-lg">
+              <Calendar className="w-5 h-5 mr-2" />
+              Go to Scheduling
+              <ArrowRight className="w-4 h-4 ml-2" />
             </Button>
           </Link>
         }
@@ -97,21 +91,22 @@ export default function Dashboard() {
             initial={{ opacity: 0, y: 20 }}
             animate={{ opacity: 1, y: 0 }}
             transition={{ duration: 0.3, delay: 0 }}
-            whileHover={{ scale: 1.05, y: -8 }}
+            whileHover={{ scale: 1.02, y: -4 }}
             className="cursor-pointer"
           >
-          <Card className="border-0 shadow-sm bg-white hover:shadow-xl transition-all duration-300 overflow-hidden">
+          <Card className="border-0 shadow-lg bg-white hover:shadow-2xl transition-all duration-300 overflow-hidden relative">
+            <div className="absolute top-0 left-0 right-0 h-1 bg-gradient-to-r from-blue-500 to-blue-600"></div>
             <CardContent className="p-8">
               <div className="flex items-center gap-4 mb-4">
-                <div className="w-14 h-14 rounded-2xl bg-blue-500 flex items-center justify-center">
-                  <Users className="w-7 h-7 text-white" />
+                <div className="w-16 h-16 rounded-2xl bg-gradient-to-br from-blue-500 to-blue-600 flex items-center justify-center shadow-lg">
+                  <Users className="w-8 h-8 text-white" />
                 </div>
                 <div>
-                  <div className="text-4xl font-bold text-slate-900">{activeTeachers}</div>
-                  <div className="text-sm font-medium text-slate-500">Teachers</div>
+                  <div className="text-5xl font-bold text-slate-900">{activeTeachers}</div>
+                  <div className="text-sm font-semibold text-slate-500 uppercase tracking-wide">Teachers</div>
                 </div>
               </div>
-              <div className="text-xs text-slate-400">{teachers.length} total</div>
+              <div className="text-xs text-slate-400 font-medium">{teachers.length} total</div>
             </CardContent>
           </Card>
           </motion.div>
@@ -122,21 +117,22 @@ export default function Dashboard() {
             initial={{ opacity: 0, y: 20 }}
             animate={{ opacity: 1, y: 0 }}
             transition={{ duration: 0.3, delay: 0.1 }}
-            whileHover={{ scale: 1.05, y: -8 }}
+            whileHover={{ scale: 1.02, y: -4 }}
             className="cursor-pointer"
           >
-          <Card className="border-0 shadow-sm bg-white hover:shadow-xl transition-all duration-300 overflow-hidden">
+          <Card className="border-0 shadow-lg bg-white hover:shadow-2xl transition-all duration-300 overflow-hidden relative">
+            <div className="absolute top-0 left-0 right-0 h-1 bg-gradient-to-r from-emerald-500 to-emerald-600"></div>
             <CardContent className="p-8">
               <div className="flex items-center gap-4 mb-4">
-                <div className="w-14 h-14 rounded-2xl bg-emerald-500 flex items-center justify-center">
-                  <GraduationCap className="w-7 h-7 text-white" />
+                <div className="w-16 h-16 rounded-2xl bg-gradient-to-br from-emerald-500 to-emerald-600 flex items-center justify-center shadow-lg">
+                  <GraduationCap className="w-8 h-8 text-white" />
                 </div>
                 <div>
-                  <div className="text-4xl font-bold text-slate-900">{activeStudents}</div>
-                  <div className="text-sm font-medium text-slate-500">Students</div>
+                  <div className="text-5xl font-bold text-slate-900">{activeStudents}</div>
+                  <div className="text-sm font-semibold text-slate-500 uppercase tracking-wide">Students</div>
                 </div>
               </div>
-              <div className="text-xs text-slate-400">
+              <div className="text-xs text-slate-400 font-medium">
                 {students.filter(s => s.year_group === 'DP2').length} DP2, {students.filter(s => s.year_group === 'DP1').length} DP1
               </div>
             </CardContent>
@@ -149,21 +145,22 @@ export default function Dashboard() {
             initial={{ opacity: 0, y: 20 }}
             animate={{ opacity: 1, y: 0 }}
             transition={{ duration: 0.3, delay: 0.2 }}
-            whileHover={{ scale: 1.05, y: -8 }}
+            whileHover={{ scale: 1.02, y: -4 }}
             className="cursor-pointer"
           >
-          <Card className="border-0 shadow-sm bg-white hover:shadow-xl transition-all duration-300 overflow-hidden">
+          <Card className="border-0 shadow-lg bg-white hover:shadow-2xl transition-all duration-300 overflow-hidden relative">
+            <div className="absolute top-0 left-0 right-0 h-1 bg-gradient-to-r from-violet-500 to-violet-600"></div>
             <CardContent className="p-8">
               <div className="flex items-center gap-4 mb-4">
-                <div className="w-14 h-14 rounded-2xl bg-violet-500 flex items-center justify-center">
-                  <BookOpen className="w-7 h-7 text-white" />
+                <div className="w-16 h-16 rounded-2xl bg-gradient-to-br from-violet-500 to-violet-600 flex items-center justify-center shadow-lg">
+                  <BookOpen className="w-8 h-8 text-white" />
                 </div>
                 <div>
-                  <div className="text-4xl font-bold text-slate-900">{activeSubjects}</div>
-                  <div className="text-sm font-medium text-slate-500">Subjects</div>
+                  <div className="text-5xl font-bold text-slate-900">{activeSubjects}</div>
+                  <div className="text-sm font-semibold text-slate-500 uppercase tracking-wide">Subjects</div>
                 </div>
               </div>
-              <div className="text-xs text-slate-400">{subjects.filter(s => s.is_core).length} core</div>
+              <div className="text-xs text-slate-400 font-medium">{subjects.filter(s => s.is_core).length} core</div>
             </CardContent>
           </Card>
           </motion.div>
@@ -174,199 +171,151 @@ export default function Dashboard() {
             initial={{ opacity: 0, y: 20 }}
             animate={{ opacity: 1, y: 0 }}
             transition={{ duration: 0.3, delay: 0.3 }}
-            whileHover={{ scale: 1.05, y: -8 }}
+            whileHover={{ scale: 1.02, y: -4 }}
             className="cursor-pointer"
           >
-          <Card className="border-0 shadow-sm bg-white hover:shadow-xl transition-all duration-300 overflow-hidden">
+          <Card className="border-0 shadow-lg bg-white hover:shadow-2xl transition-all duration-300 overflow-hidden relative">
+            <div className="absolute top-0 left-0 right-0 h-1 bg-gradient-to-r from-orange-500 to-orange-600"></div>
             <CardContent className="p-8">
               <div className="flex items-center gap-4 mb-4">
-                <div className="w-14 h-14 rounded-2xl bg-orange-500 flex items-center justify-center">
-                  <Building2 className="w-7 h-7 text-white" />
+                <div className="w-16 h-16 rounded-2xl bg-gradient-to-br from-orange-500 to-orange-600 flex items-center justify-center shadow-lg">
+                  <Building2 className="w-8 h-8 text-white" />
                 </div>
                 <div>
-                  <div className="text-4xl font-bold text-slate-900">{activeRooms}</div>
-                  <div className="text-sm font-medium text-slate-500">Rooms</div>
+                  <div className="text-5xl font-bold text-slate-900">{activeRooms}</div>
+                  <div className="text-sm font-semibold text-slate-500 uppercase tracking-wide">Rooms</div>
                 </div>
               </div>
-              <div className="text-xs text-slate-400">{rooms.filter(r => r.room_type === 'lab').length} labs</div>
+              <div className="text-xs text-slate-400 font-medium">{rooms.filter(r => r.room_type === 'lab').length} labs</div>
             </CardContent>
           </Card>
           </motion.div>
         </Link>
       </div>
 
-      {/* Main Content Grid */}
-      <div className="grid lg:grid-cols-3 gap-6">
-        {/* Schedule Status */}
-        <motion.div
-          initial={{ opacity: 0, y: 30 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{ duration: 0.4, delay: 0.4 }}
-          className="lg:col-span-2"
-        >
-        <Card className="border-0 shadow-sm bg-white rounded-3xl">
-          <CardHeader className="pb-6 border-b border-slate-100">
-            <div className="flex items-center justify-between">
-              <CardTitle className="text-xl font-semibold text-slate-900 flex items-center gap-3">
-                <div className="w-10 h-10 rounded-xl bg-blue-100 flex items-center justify-center">
-                  <Calendar className="w-5 h-5 text-blue-600" />
-                </div>
-                Schedule Status
-              </CardTitle>
-              <Link to={createPageUrl('Schedule')}>
-                <Button variant="ghost" size="sm" className="text-slate-600 hover:text-slate-900 hover:bg-slate-100 rounded-xl">
-                  View All <ArrowRight className="w-4 h-4 ml-1" />
-                </Button>
-              </Link>
-            </div>
-          </CardHeader>
-          <CardContent>
-            {publishedSchedule ? (
-              <div className="p-4 rounded-2xl bg-emerald-50 border border-emerald-200 mb-4">
-                <div className="flex items-center gap-3 mb-2">
-                  <CheckCircle className="w-5 h-5 text-emerald-600" />
-                  <span className="font-semibold text-emerald-900">Published Schedule</span>
-                  <Badge className="bg-emerald-100 text-emerald-700 border-0">{publishedSchedule.name}</Badge>
-                </div>
-                <p className="text-sm text-emerald-700">
-                  Academic Year: {publishedSchedule.academic_year || 'Not set'} • 
-                  Score: {publishedSchedule.score || 'N/A'}
-                </p>
-              </div>
-            ) : (
-              <div className="p-4 rounded-2xl bg-amber-50 border border-amber-200 mb-4">
-                <div className="flex items-center gap-3 mb-2">
-                  <AlertTriangle className="w-5 h-5 text-amber-600" />
-                  <span className="font-semibold text-amber-900">No Published Schedule</span>
-                </div>
-                <p className="text-sm text-amber-700">
-                  Create and publish a schedule to get started.
-                </p>
-              </div>
-            )}
-
-            {draftSchedules.length > 0 && (
-              <div className="space-y-3">
-                <h4 className="text-sm font-medium text-slate-600">Draft Schedules</h4>
-                {draftSchedules.slice(0, 3).map((schedule, index) => (
-                  <motion.div 
-                    key={schedule.id} 
-                    className="flex items-center justify-between p-4 rounded-2xl bg-slate-50 hover:bg-slate-100 transition-colors cursor-pointer"
-                    initial={{ opacity: 0, x: -20 }}
-                    animate={{ opacity: 1, x: 0 }}
-                    transition={{ duration: 0.3, delay: 0.5 + index * 0.1 }}
-                    whileHover={{ scale: 1.02, x: 5 }}
-                  >
-                    <div className="flex items-center gap-3">
-                      <Clock className="w-4 h-4 text-slate-400" />
-                      <span className="font-medium text-slate-700">{schedule.name}</span>
-                    </div>
-                    <div className="flex items-center gap-2">
-                      {schedule.conflicts_count > 0 && (
-                        <Badge variant="outline" className="text-rose-600 border-rose-200">
-                          {schedule.conflicts_count} conflicts
-                        </Badge>
-                      )}
-                      <Badge variant="outline" className="text-slate-600">
-                        Draft
-                      </Badge>
-                    </div>
-                  </motion.div>
-                ))}
-              </div>
-            )}
-
-            {scheduleVersions.length === 0 && !loadingSchedules && (
-              <div className="text-center py-8">
-                <Calendar className="w-12 h-12 text-slate-300 mx-auto mb-3" />
-                <p className="text-slate-500">No schedules created yet</p>
-                <Link to={createPageUrl('Schedule')}>
-                  <Button className="mt-4 bg-blue-900 hover:bg-blue-800">
-                    Create First Schedule
-                  </Button>
-                </Link>
-              </div>
-            )}
-          </CardContent>
-        </Card>
-        </motion.div>
-
-        {/* Active Constraints */}
-        <motion.div
-          initial={{ opacity: 0, y: 30 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{ duration: 0.4, delay: 0.5 }}
-        >
-        <Card className="border-0 shadow-sm bg-white rounded-3xl">
-          <CardHeader className="pb-6 border-b border-slate-100">
-            <div className="flex items-center justify-between">
-              <CardTitle className="text-xl font-semibold text-slate-900 flex items-center gap-3">
-                <div className="w-10 h-10 rounded-xl bg-indigo-100 flex items-center justify-center">
-                  <Shield className="w-5 h-5 text-indigo-600" />
-                </div>
-                Scheduling Rules
-              </CardTitle>
-              <Link to={createPageUrl('Schedule')}>
-                <Button variant="ghost" size="sm" className="text-slate-600 hover:text-slate-900 hover:bg-slate-100 rounded-xl">
-                  Manage
-                </Button>
-              </Link>
-            </div>
-          </CardHeader>
-          <CardContent>
-            {constraints.length > 0 ? (
-              <div className="space-y-3">
-                {constraints.slice(0, 4).map((constraint, index) => (
-                  <motion.div 
-                    key={constraint.id} 
-                    className="p-4 rounded-2xl bg-slate-50 border border-slate-200 hover:shadow-md hover:border-slate-300 transition-all"
-                    initial={{ opacity: 0, x: -20 }}
-                    animate={{ opacity: 1, x: 0 }}
-                    transition={{ duration: 0.3, delay: 0.6 + index * 0.1 }}
-                    whileHover={{ scale: 1.02 }}
-                  >
-                    <div className="flex items-center gap-2 mb-2">
-                      <Badge className={
-                        constraint.type === 'hard' 
-                          ? 'bg-rose-100 text-rose-600 text-xs border-0' 
-                          : 'bg-blue-100 text-blue-600 text-xs border-0'
-                      }>
-                        {constraint.type}
-                      </Badge>
-                      <span className="text-xs text-slate-400 capitalize">{constraint.category?.replace(/_/g, ' ')}</span>
-                    </div>
-                    <p className="text-sm font-medium text-slate-900 mb-1">{constraint.name}</p>
-                    <p className="text-xs text-slate-600 line-clamp-2">
-                      {constraint.description}
-                    </p>
-                  </motion.div>
-                ))}
-              </div>
-            ) : (
-              <div className="text-center py-8">
-                <Shield className="w-12 h-12 text-indigo-300 mx-auto mb-3" />
-                <p className="text-slate-500 text-sm mb-2">No constraints defined</p>
-                <Link to={createPageUrl('Schedule')}>
-                  <Button size="sm" variant="outline" className="text-xs">
-                    Add Constraints
-                  </Button>
-                </Link>
-              </div>
-            )}
-          </CardContent>
-        </Card>
-        </motion.div>
-      </div>
-
-
-
-      {/* Support Ticket Form */}
+      {/* Schedule Status - Full Width */}
       <motion.div
         initial={{ opacity: 0, y: 30 }}
         animate={{ opacity: 1, y: 0 }}
-        transition={{ duration: 0.4, delay: 0.7 }}
+        transition={{ duration: 0.4, delay: 0.4 }}
       >
-      <SupportTicketForm />
+      <Card className="border-0 shadow-lg bg-white rounded-3xl">
+        <CardHeader className="pb-6 border-b border-slate-100">
+          <div className="flex items-center justify-between">
+            <CardTitle className="text-xl font-semibold text-slate-900 flex items-center gap-3">
+              <div className="w-10 h-10 rounded-xl bg-blue-100 flex items-center justify-center">
+                <Calendar className="w-5 h-5 text-blue-600" />
+              </div>
+              Schedule Status
+            </CardTitle>
+            <Link to={createPageUrl('Schedule')}>
+              <Button variant="ghost" size="sm" className="text-slate-600 hover:text-slate-900 hover:bg-slate-100 rounded-xl">
+                View All <ArrowRight className="w-4 h-4 ml-1" />
+              </Button>
+            </Link>
+          </div>
+        </CardHeader>
+        <CardContent>
+          {publishedSchedule ? (
+            <div className="p-6 rounded-2xl bg-emerald-50 border-2 border-emerald-200 mb-4">
+              <div className="flex items-center gap-3 mb-2">
+                <CheckCircle className="w-6 h-6 text-emerald-600" />
+                <span className="font-semibold text-lg text-emerald-900">Published Schedule</span>
+                <Badge className="bg-emerald-100 text-emerald-700 border-0">{publishedSchedule.name}</Badge>
+              </div>
+              <p className="text-sm text-emerald-700">
+                Academic Year: {publishedSchedule.academic_year || 'Not set'} • 
+                Score: {publishedSchedule.score || 'N/A'}
+              </p>
+            </div>
+          ) : (
+            <div className="p-6 rounded-2xl bg-amber-50 border-2 border-amber-200 mb-4">
+              <div className="flex items-center gap-3 mb-2">
+                <AlertTriangle className="w-6 h-6 text-amber-600" />
+                <span className="font-semibold text-lg text-amber-900">No Published Schedule</span>
+              </div>
+              <p className="text-sm text-amber-700">
+                Create and publish a schedule to get started.
+              </p>
+            </div>
+          )}
+
+          {draftSchedules.length > 0 && (
+            <div className="space-y-3">
+              <h4 className="text-sm font-medium text-slate-600">Draft Schedules</h4>
+              {draftSchedules.slice(0, 3).map((schedule, index) => (
+                <motion.div 
+                  key={schedule.id} 
+                  className="flex items-center justify-between p-5 rounded-2xl bg-slate-50 hover:bg-slate-100 transition-colors cursor-pointer border border-slate-200"
+                  initial={{ opacity: 0, x: -20 }}
+                  animate={{ opacity: 1, x: 0 }}
+                  transition={{ duration: 0.3, delay: 0.5 + index * 0.1 }}
+                  whileHover={{ scale: 1.01, x: 5 }}
+                >
+                  <div className="flex items-center gap-3">
+                    <Clock className="w-5 h-5 text-slate-400" />
+                    <span className="font-medium text-slate-700">{schedule.name}</span>
+                  </div>
+                  <div className="flex items-center gap-2">
+                    {schedule.conflicts_count > 0 && (
+                      <Badge variant="outline" className="text-rose-600 border-rose-200">
+                        {schedule.conflicts_count} conflicts
+                      </Badge>
+                    )}
+                    <Badge variant="outline" className="text-slate-600">
+                      Draft
+                    </Badge>
+                  </div>
+                </motion.div>
+              ))}
+            </div>
+          )}
+
+          {scheduleVersions.length === 0 && !loadingSchedules && (
+            <div className="text-center py-12">
+              <Calendar className="w-16 h-16 text-slate-300 mx-auto mb-4" />
+              <p className="text-slate-500 mb-4">No schedules created yet</p>
+              <Link to={createPageUrl('Schedule')}>
+                <Button size="lg" className="bg-blue-600 hover:bg-blue-700 shadow-lg">
+                  <Sparkles className="w-5 h-5 mr-2" />
+                  Create First Schedule
+                </Button>
+              </Link>
+            </div>
+          )}
+        </CardContent>
+      </Card>
+      </motion.div>
+
+
+
+      {/* Need Help Section */}
+      <motion.div
+        initial={{ opacity: 0, y: 30 }}
+        animate={{ opacity: 1, y: 0 }}
+        transition={{ duration: 0.4, delay: 0.6 }}
+      >
+      <Card className="border-0 shadow-lg bg-gradient-to-br from-blue-50 to-indigo-50 rounded-3xl overflow-hidden">
+        <CardContent className="p-8">
+          <div className="flex items-start gap-6">
+            <div className="w-16 h-16 rounded-2xl bg-gradient-to-br from-blue-600 to-indigo-600 flex items-center justify-center shadow-lg flex-shrink-0">
+              <Sparkles className="w-8 h-8 text-white" />
+            </div>
+            <div className="flex-1">
+              <h3 className="text-2xl font-bold text-slate-900 mb-2">Need Help?</h3>
+              <p className="text-slate-600 mb-6">
+                Our support team is here to assist you with any questions about scheduling, setup, or platform features.
+              </p>
+              <Link to={createPageUrl('Support')}>
+                <Button size="lg" className="bg-blue-600 hover:bg-blue-700 shadow-lg">
+                  Contact Support
+                  <ArrowRight className="w-4 h-4 ml-2" />
+                </Button>
+              </Link>
+            </div>
+          </div>
+        </CardContent>
+      </Card>
       </motion.div>
     </div>
   );
