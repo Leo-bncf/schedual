@@ -624,7 +624,51 @@ Deno.serve(async (req) => {
       earlyStopCause = 'FILTER_DROPPED_PM_SLOTS';
     }
 
-    // Step 5: Map OptaPlanner solution back to Base44 ScheduleSlot entities
+    // Step 5a: Collect unassigned lessons for diagnostics
+    const unassignedLessons = solvedLessons.filter(l => !l.timeslotId);
+    const unassignedBySubject = {};
+    for (const ul of unassignedLessons) {
+      const code = ul.subject || 'UNKNOWN';
+      if (!unassignedBySubject[code]) unassignedBySubject[code] = [];
+      unassignedBySubject[code].push({ studentGroup: ul.studentGroup, requiredCapacity: ul.requiredCapacity });
+    }
+    
+    console.log(`[callORToolScheduler] Unassigned lessons: ${unassignedLessons.length} / ${solvedLessons.length}`);
+    console.log(`[callORToolScheduler] Unassigned by subject:`, Object.keys(unassignedBySubject).map(k => `${k}: ${unassignedBySubject[k].length}`).join(', '));
+    
+    // Step 5b: GUARD - if too many unassigned, abort without overwriting
+    const unassignedThreshold = 0.3; // 30% unassigned = fail
+    const unassignedRatio = unassignedLessons.length / Math.max(1, solvedLessons.length);
+    
+    if (unassignedRatio > unassignedThreshold) {
+      console.error(`[callORToolScheduler] ABORT: ${(unassignedRatio*100).toFixed(1)}% lessons unassigned (threshold: ${(unassignedThreshold*100).toFixed(0)}%)`);
+      const allowNullRoomSubjects = new Set(['STUDY','TOK','CAS','EE']);
+      return Response.json({
+        ok: false,
+        status: 'generation_failed',
+        error: 'Too many unassigned lessons - schedule generation aborted to prevent data loss',
+        unassignedCount: unassignedLessons.length,
+        totalLessons: solvedLessons.length,
+        unassignedRatio: parseFloat((unassignedRatio * 100).toFixed(1)),
+        unassignedBySubject,
+        unassignedPreview: unassignedLessons.slice(0, 50).map(l => ({
+          subject: l.subject,
+          studentGroup: l.studentGroup,
+          reason: !l.roomId && !allowNullRoomSubjects.has(l.subject) ? 'no_room' : 'no_timeslot'
+        })),
+        suggestion: 'Check: 1) enough rooms/timeslots, 2) teacher availability, 3) teaching group config (minutes_per_week vs period_duration_minutes)',
+        problemSummary: problem ? {
+          timeslots: problem.timeslots?.length || 0,
+          rooms: problem.rooms?.length || 0,
+          teachers: problem.teachers?.length || 0,
+          totalLessons: problem.lessons?.length || 0,
+          periodDurationMinutes: problem.scheduleSettings?.periodDurationMinutes || 60
+        } : null
+      }, { status: 200 });
+    }
+    
+    // Step 5c: Map OptaPlanner solution back to Base44 ScheduleSlot entities (assigned + unscheduled)
+    const allowNullRoomSubjects = new Set(['STUDY','TOK','CAS','EE']);
     const periods_per_day = periodsPerDayComputed; // derived from schedule settings
     let lessonsWithoutTimeslot = 0;
     let missingRoomCount = 0;
@@ -632,7 +676,33 @@ Deno.serve(async (req) => {
     const slots = [];
     
     for (const lesson of solvedLessons) {
-      if (!lesson.timeslotId) { lessonsWithoutTimeslot++; continue; } // Skip if no timeslot assigned
+      const isAssigned = !!lesson.timeslotId;
+      
+      if (!isAssigned) {
+        lessonsWithoutTimeslot++;
+        // Create unscheduled slot for visibility in UI
+        const normalizedSubject = String(lesson.subject || lesson.subjectCode || '')
+          .toUpperCase().replace(/\s+/g, '_').replace(/[^A-Z0-9_]/g, '');
+        const subjectId = subjectIdByCode[normalizedSubject] || null;
+        const teacherId = lesson.teacherId ? numericToTeacherId[lesson.teacherId] : null;
+        const roomId = numericToRoomId[lesson.roomId] || null;
+        const tgIdFromGroup = (lesson.studentGroup && lesson.studentGroup.startsWith('TG_')) ? lesson.studentGroup.slice(3) : null;
+        
+        slots.push({
+          school_id: schoolId,
+          schedule_version: schedule_version_id,
+          teaching_group_id: tgIdFromGroup || null,
+          subject_id: subjectId || null,
+          teacher_id: teacherId,
+          room_id: roomId,
+          day: null,
+          period: null,
+          is_double_period: false,
+          status: 'unscheduled',
+          notes: `Unassigned: ${lesson.subject} - ${lesson.studentGroup}`
+        });
+        continue;
+      }
 
       const timeslot = problem.timeslots.find(ts => ts.id === lesson.timeslotId);
       if (!timeslot) continue;
@@ -667,7 +737,7 @@ Deno.serve(async (req) => {
         day: dayMapping[timeslot.dayOfWeek] || timeslot.dayOfWeek,
         period: period,
         is_double_period: false,
-        status: 'scheduled',
+        status: isAssigned ? 'scheduled' : 'unscheduled',
         notes: normalizedSubject === 'STUDY' ? 'Study / Free Period' : undefined
       });
     }
@@ -832,6 +902,7 @@ Deno.serve(async (req) => {
     // Step 8: Create conflict reports for unassigned lessons - BATCH CREATE
     console.log(`[callORToolScheduler] Creating ${unassignedLessons.length} conflict reports in batches`);
     if (unassignedLessons.length > 0) {
+      const allowNullRoomSubjects = new Set(['STUDY','TOK','CAS','EE']);
       const conflictReports = unassignedLessons.map(lesson => ({
         school_id: user.school_id,
         schedule_version_id,
@@ -1022,6 +1093,17 @@ Deno.serve(async (req) => {
         slots_created: slots.length,
         unassigned_lessons: unassignedLessons.length,
         score: solution.score || 0
+      },
+      unassignedSummary: {
+        count: unassignedLessons.length,
+        total: solvedLessons.length,
+        ratio: parseFloat((unassignedLessons.length / Math.max(1, solvedLessons.length) * 100).toFixed(1)),
+        bySubject: unassignedBySubject,
+        preview: unassignedLessons.slice(0, 20).map(l => ({
+          subject: l.subject,
+          studentGroup: l.studentGroup,
+          reason: !l.roomId && !allowNullRoomSubjects.has(l.subject) ? 'no_room' : 'no_timeslot'
+        }))
       },
       inputSummaryBySubject,
       coreTeachingGroupsDetected
