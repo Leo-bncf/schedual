@@ -86,13 +86,20 @@ Deno.serve(async (req) => {
     console.log(`[buildSchedulingProblem] ${stage}: school_id=${school_id}, schedule_version_id=${schedule_version_id}`);
     
     // Fetch school + resources (with null-safety)
-    const [school, roomsDb, teachersDb, subjectsDb, teachingGroupsDb] = await Promise.all([
+    // CRITICAL: Fetch ALL entities then filter locally (is_active: true excludes null/undefined)
+    const [school, allRooms, allTeachers, allSubjects, allTeachingGroups] = await Promise.all([
       base44.entities.School.filter({ id: school_id }).then(r => r?.[0] || null).catch(() => null),
-      base44.entities.Room.filter({ school_id, is_active: true }).catch(() => []),
-      base44.entities.Teacher.filter({ school_id, is_active: true }).catch(() => []),
-      base44.entities.Subject.filter({ school_id, is_active: true }).catch(() => []),
-      base44.entities.TeachingGroup.filter({ school_id, is_active: true }).catch(() => []),
+      base44.entities.Room.filter({ school_id }).catch(() => []),
+      base44.entities.Teacher.filter({ school_id }).catch(() => []),
+      base44.entities.Subject.filter({ school_id }).catch(() => []),
+      base44.entities.TeachingGroup.filter({ school_id }).catch(() => []),
     ]);
+    
+    // Filter locally: is_active !== false (includes null/undefined/true)
+    const roomsDb = (allRooms || []).filter(r => r?.is_active !== false);
+    const teachersDb = (allTeachers || []).filter(t => t?.is_active !== false);
+    const subjectsDb = (allSubjects || []).filter(s => s?.is_active !== false);
+    const teachingGroupsDb = (allTeachingGroups || []).filter(tg => tg?.is_active !== false);
 
     if (!school) {
       return Response.json({ ok: false, stage, error: 'School not found', meta: { schedule_version_id, school_id } }, { status: 404 });
@@ -324,10 +331,8 @@ Deno.serve(async (req) => {
 
     for (const tg of (teachingGroupsDb || [])) {
       if (!tg) continue;
-      if (!tg?.is_active) {
-        teachingGroupFilteredPush(tg, 'INACTIVE');
-        continue;
-      }
+      // CRITICAL: Already filtered locally, no need to re-check is_active here
+      // Remove the is_active check - we want to include null/undefined (active by default)
       const subjCode = (tg.subject_id && subjectIdToCode[tg.subject_id]) || null;
       if (!subjCode) {
         teachingGroupFilteredPush(tg, 'MISSING_SUBJECT');
@@ -465,10 +470,7 @@ Deno.serve(async (req) => {
       const normCode = normalizeCode(subjCode);
       const isCoreSubject = normCode && ['TOK', 'CAS', 'EE'].includes(normCode);
 
-      if (!tg?.is_active) {
-        if (isCoreSubject) console.warn(`[buildSchedulingProblem] ⚠️ Core TG ${tg.id} (${subjCode}) is INACTIVE, skipping`);
-        continue;
-      }
+      // CRITICAL: Already filtered locally, no need to re-check is_active here
 
       if (!subjCode || !normCode) {
         if (isCoreSubject) console.error(`[buildSchedulingProblem] ❌ Core TG ${tg.id} has NO SUBJECT CODE!`);
