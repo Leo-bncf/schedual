@@ -338,7 +338,7 @@ Deno.serve(async (req) => {
       const minutesOrig = typeof tg.minutes_per_week === 'number' ? tg.minutes_per_week : null;
       
       // CRITICAL: Core subjects (TOK/CAS/EE) MUST have minutes, force fallback BEFORE calculating weeklyCount
-      const isCoreSubject = subjCode && ['TOK', 'CAS', 'EE'].includes(subjCode);
+      const isCoreSubject = subjCode && ['TOK', 'CAS', 'EE', 'TEST'].includes(subjCode);
       if ((!minutesUsed || minutesUsed <= 0) && isCoreSubject) {
         minutesUsed = 60; // Force 60 min/week for core
         console.warn(`[buildSchedulingProblem] Core subject ${subjCode} TG ${tg.id} has 0/missing minutes, forcing 60 min/week`);
@@ -359,8 +359,28 @@ Deno.serve(async (req) => {
 
       const studentGroup = `TG_${tg.id}`;
       const cap = 20;
-      const teacherNumeric = (tg.teacher_id && teachersDb) ? (teachersDb.findIndex(t => t?.id === tg.teacher_id) + 1 || null) : null;
-      const roomNumeric = (tg.preferred_room_id && roomsDb) ? (roomsDb.findIndex(r => r?.id === tg.preferred_room_id) + 1 || null) : null;
+      
+      // CRITICAL: Fix teacher/room mapping - findIndex returns -1 if not found
+      const teacherIdx = (tg.teacher_id && teachersDb) ? teachersDb.findIndex(t => t?.id === tg.teacher_id) : -1;
+      const roomIdx = (tg.preferred_room_id && roomsDb) ? roomsDb.findIndex(r => r?.id === tg.preferred_room_id) : -1;
+      const teacherNumeric = teacherIdx >= 0 ? teacherIdx + 1 : null;
+      const roomNumeric = roomIdx >= 0 ? roomIdx + 1 : null;
+      
+      // DEBUG LOG for each TG
+      console.log(`[buildSchedulingProblem] TG ${tg.id} (${subjCode}):`, {
+        name: tg.name,
+        minutes_per_week_stored: tg.minutes_per_week,
+        periods_per_week_stored: tg.periods_per_week,
+        minutesUsed,
+        weeklyCount,
+        level: tg.level,
+        teacher_id: tg.teacher_id,
+        teacherIdx,
+        teacherNumeric,
+        preferred_room_id: tg.preferred_room_id,
+        roomIdx,
+        roomNumeric
+      });
 
       // Expected + created counters
       expectedLessonsBySubject[subjCode] = (expectedLessonsBySubject[subjCode] || 0) + weeklyCount;
@@ -464,7 +484,7 @@ Deno.serve(async (req) => {
         requiredPeriods = Math.ceil(minutesUsed / periodDurationMinutes);
       }
 
-      // RULE: Core subjects (TOK/CAS/EE) are MANDATORY and never skip
+      // RULE: Core subjects (TOK/CAS/EE/TEST) are MANDATORY and never skip
       // If no admin config, use fallback 60 min/week
       if ((!minutesUsed || minutesUsed <= 0) && !isCoreSubject) {
         // Skip non-core subjects with zero minutes
@@ -478,9 +498,12 @@ Deno.serve(async (req) => {
         console.log(`[buildSchedulingProblem] ✅ Core ${normCode} TG ${tg.id}: 0/missing config, forcing fallback 60 min/week (${requiredPeriods} periods)`);
       }
 
-      if (isCoreSubject) {
-        console.log(`[buildSchedulingProblem] ✅ Adding core requirement: ${normCode} (original: ${subjCode}, TG ${tg.id}), ${minutesUsed} min/week = ${requiredPeriods} periods`);
-      }
+      // DEBUG LOG for requirement
+      console.log(`[buildSchedulingProblem] Adding requirement TG ${tg.id} (${subjCode}):`, {
+        minutesPerWeek: minutesUsed,
+        requiredPeriods,
+        isCoreSubject
+      });
 
       // CRITICAL: Ensure lessons count matches requiredPeriods exactly
       // subjectRequirements MUST match lesson count for solver consistency
@@ -568,7 +591,10 @@ Deno.serve(async (req) => {
     console.log('[buildSchedulingProblem] Filtered for solver:', {
       subjects: { before: problem.subjects.length, after: problemSubjectsFiltered.length },
       lessons: { before: problem.lessons.length, after: problemLessonsFiltered.length },
-      requirements: { before: problem.subjectRequirements.length, after: problemRequirementsFiltered.length }
+      requirements: { before: problem.subjectRequirements.length, after: problemRequirementsFiltered.length },
+      excluded: Array.from(excludeFromSolver),
+      testIncluded: problemLessonsFiltered.some(l => l.subject === 'TEST'),
+      testLessonsCount: problemLessonsFiltered.filter(l => l.subject === 'TEST').length
     });
 
     const problemForSolver = {
@@ -578,6 +604,17 @@ Deno.serve(async (req) => {
       subjectRequirements: problemRequirementsFiltered
     };
 
+    // FINAL DEBUG: Log schedule settings and last timeslot
+    const lastTimeslotAvailable = timeslots[timeslots.length - 1];
+    console.log('[buildSchedulingProblem] Schedule Settings:', {
+      periodDurationMinutes,
+      dayStartTime,
+      dayEndTime,
+      daysOfWeek,
+      timeslotsCount: timeslots.length,
+      lastTimeslot: lastTimeslotAvailable ? { day: lastTimeslotAvailable.dayOfWeek, endTime: lastTimeslotAvailable.endTime } : null
+    });
+    
     console.log(`[buildSchedulingProblem] SUCCESS at stage="${stage}": returning problem with ${problemForSolver.lessons.length} lessons, ${problemForSolver.subjects.length} subjects, ${problemForSolver.subjectRequirements.length} requirements`);
 
     return Response.json({
