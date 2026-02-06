@@ -232,6 +232,35 @@ Deno.serve(async (req) => {
     stage = 'buildLessons';
     console.log(`[buildSchedulingProblem] ${stage}: processing ${teachingGroupsDb.length} teaching groups`);
     
+    // CRITICAL: Validate teacher mappings BEFORE creating lessons
+    const invalidTeacherMappings = [];
+    for (const tg of teachingGroupsDb) {
+      if (!tg?.teacher_id) continue; // null/undefined is OK
+      const teacherIdx = teachersDb.findIndex(t => t?.id === tg.teacher_id);
+      if (teacherIdx === -1) {
+        const subjCode = (tg.subject_id && subjectIdToCode[tg.subject_id]) || 'UNKNOWN';
+        invalidTeacherMappings.push({
+          tg_id: tg.id,
+          tg_name: tg.name,
+          subject_code: subjCode,
+          teacher_id: tg.teacher_id,
+          reason: 'Teacher ID not found in teachersDb'
+        });
+      }
+    }
+    
+    if (invalidTeacherMappings.length > 0) {
+      console.error('[buildSchedulingProblem] TEACHER_MAPPING_ERROR:', invalidTeacherMappings);
+      return Response.json({
+        ok: false,
+        stage: 'TEACHER_MAPPING_ERROR',
+        error: `${invalidTeacherMappings.length} teaching groups reference non-existent teachers`,
+        invalidTeacherMappings,
+        suggestion: 'Check: 1) Teacher exists and is active, 2) teacher_id is correct, 3) No orphaned references after teacher deletion',
+        meta: { schedule_version_id, school_id }
+      }, { status: 400 });
+    }
+    
     // Compute lessons from minutes/week
     const lessons = [];
     let lessonId = 1;
@@ -264,19 +293,25 @@ Deno.serve(async (req) => {
     const minutesForTG = (tg) => {
       if (!tg) return 0;
       
-      // Priority 1: Use admin-configured minutes_per_week on teaching group
+      // CRITICAL: Priority 1 - Use admin-configured minutes_per_week on teaching group
+      // This is the SOURCE OF TRUTH - never override with fallbacks if set
       if (typeof tg.minutes_per_week === 'number' && tg.minutes_per_week > 0) {
+        console.log(`[buildSchedulingProblem] TG ${tg.id}: using TG.minutes_per_week = ${tg.minutes_per_week} (SOURCE OF TRUTH)`);
         return tg.minutes_per_week;
       }
       
       // Priority 2: Use periods_per_week if set (convert to minutes)
       if (typeof tg.periods_per_week === 'number' && tg.periods_per_week > 0) {
-        return tg.periods_per_week * periodDurationMinutes;
+        const minutes = tg.periods_per_week * periodDurationMinutes;
+        console.log(`[buildSchedulingProblem] TG ${tg.id}: using TG.periods_per_week = ${tg.periods_per_week} → ${minutes} min (SOURCE OF TRUTH)`);
+        return minutes;
       }
       
       // Priority 3: Use hours_per_week (convert to minutes)
       if (typeof tg.hours_per_week === 'number' && tg.hours_per_week > 0) {
-        return Math.round(tg.hours_per_week * 60);
+        const minutes = Math.round(tg.hours_per_week * 60);
+        console.log(`[buildSchedulingProblem] TG ${tg.id}: using TG.hours_per_week = ${tg.hours_per_week}h → ${minutes} min (SOURCE OF TRUTH)`);
+        return minutes;
       }
       
       const subj = (tg.subject_id && subjectById[tg.subject_id]) || null;
@@ -619,13 +654,23 @@ Deno.serve(async (req) => {
 
     const lastTimeslot = timeslots[timeslots.length - 1] || null;
 
-    // Filter out STUDY from subjects/lessons/requirements for solver
-    // STUDY will be injected post-solver to fill empty slots
-    // Keep TEST in solver if we want it scheduled properly
+    // CRITICAL: Filter out STUDY from solver (injected post-solve to fill empty slots)
+    // TEST is now INCLUDED in solver for proper scheduling
     const excludeFromSolver = new Set(['STUDY']);
     const problemSubjectsFiltered = problem.subjects.filter(s => !excludeFromSolver.has(s.code));
     const problemLessonsFiltered = problem.lessons.filter(l => !excludeFromSolver.has(l.subject));
     const problemRequirementsFiltered = problem.subjectRequirements.filter(r => !excludeFromSolver.has(r.subject));
+    
+    // Validate TEST slots existence
+    const testLessonsCount = problemLessonsFiltered.filter(l => l.subject === 'TEST').length;
+    const testRequirementsCount = problemRequirementsFiltered.filter(r => normalizeCode(r.subject) === 'TEST').length;
+    
+    if (testLessonsCount === 0 || testRequirementsCount === 0) {
+      console.warn('[buildSchedulingProblem] WARNING: No TEST lessons/requirements found. TEST slots will not be scheduled.');
+      console.warn('[buildSchedulingProblem] To enable TEST scheduling: Create TEST TeachingGroups with minutes_per_week configured');
+    } else {
+      console.log(`[buildSchedulingProblem] TEST validation: ${testLessonsCount} lessons, ${testRequirementsCount} requirements`);
+    }
 
     console.log('[buildSchedulingProblem] Filtered for solver:', {
       subjects: { before: problem.subjects.length, after: problemSubjectsFiltered.length },
