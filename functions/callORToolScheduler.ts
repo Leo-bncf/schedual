@@ -830,15 +830,6 @@ Deno.serve(async (req) => {
     }
 
     // Step 8: Create conflict reports for unassigned lessons - BATCH CREATE
-    const unassignedLessons = solvedLessons.filter(l => {
-      const subj = String(l.subject || l.subjectCode || '')
-        .toUpperCase().replace(/\s+/g, '_').replace(/[^A-Z0-9_]/g, '');
-      const allowNullRoomSubjects = new Set(['STUDY','TOK','CAS','EE']);
-      const subjId = (problem.subjectIdByCode && problem.subjectIdByCode[subj]) || null;
-      const isCore = (subjId && subjects.some(s => s.id === subjId && s.is_core === true)) || allowNullRoomSubjects.has(subj);
-      return !l.timeslotId || (!l.roomId && !isCore);
-    });
-    
     console.log(`[callORToolScheduler] Creating ${unassignedLessons.length} conflict reports in batches`);
     if (unassignedLessons.length > 0) {
       const conflictReports = unassignedLessons.map(lesson => ({
