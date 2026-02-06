@@ -256,25 +256,34 @@ Deno.serve(async (req) => {
 
     const minutesForTG = (tg) => {
       if (!tg) return 0;
-      if (typeof tg.minutes_per_week === 'number' && tg.minutes_per_week > 0) return tg.minutes_per_week;
-      if (typeof tg.hours_per_week === 'number' && tg.hours_per_week > 0) return Math.round(tg.hours_per_week * 60);
+      
+      // Priority 1: Use admin-configured minutes_per_week on teaching group
+      if (typeof tg.minutes_per_week === 'number' && tg.minutes_per_week > 0) {
+        return tg.minutes_per_week;
+      }
+      
+      // Priority 2: Use periods_per_week if set (convert to minutes)
+      if (typeof tg.periods_per_week === 'number' && tg.periods_per_week > 0) {
+        return tg.periods_per_week * periodDurationMinutes;
+      }
+      
+      // Priority 3: Use hours_per_week (convert to minutes)
+      if (typeof tg.hours_per_week === 'number' && tg.hours_per_week > 0) {
+        return Math.round(tg.hours_per_week * 60);
+      }
       
       const subj = (tg.subject_id && subjectById[tg.subject_id]) || null;
       const subjCode = (tg.subject_id && subjectIdToCode[tg.subject_id]) || null;
       const normCode = normalizeCode(subjCode);
       
-      // CRITICAL: Core subjects (TOK/CAS/EE) default to 60 min/week
+      // Fallback 1: Core subjects (TOK/CAS/EE) default to 60 min/week
       if (normCode && ['TOK', 'CAS', 'EE'].includes(normCode)) {
         return 60;
       }
       
-      const level = String(tg.level || '').toUpperCase();
-      if (subj?.ib_level === 'DP') {
-        if (level === 'HL') return Number(subj.hl_minutes_per_week_default || 300);
-        if (level === 'SL') return Number(subj.sl_minutes_per_week_default || 180);
-        return Number(subj.sl_minutes_per_week_default || 180);
-      }
-      return Number(subj?.pyp_myp_minutes_per_week_default || 180);
+      // Fallback 2: Subject-level defaults (ONLY if no admin config exists)
+      // DO NOT use HL/SL defaults - use what admin configured
+      return 0; // If no admin config, require explicit configuration
     };
 
     const minutesToPeriods = (m) => Math.max(0, Math.ceil((m || 0) / periodDurationMinutes));
@@ -443,30 +452,43 @@ Deno.serve(async (req) => {
         continue;
       }
 
-      // Option A: Use teaching_group.minutes_per_week or fallback 60 for core
+      // Use admin-configured weekly load (minutes or periods)
       let minutesUsed = minutesForTG(tg);
+      
+      // Convert periods_per_week to minutes if that was the source
+      let requiredPeriods = 0;
+      if (typeof tg.periods_per_week === 'number' && tg.periods_per_week > 0) {
+        requiredPeriods = tg.periods_per_week;
+        minutesUsed = requiredPeriods * periodDurationMinutes;
+      } else if (minutesUsed > 0) {
+        requiredPeriods = Math.ceil(minutesUsed / periodDurationMinutes);
+      }
 
       // RULE: Core subjects (TOK/CAS/EE) are MANDATORY and never skip
-      // If minutes_per_week is missing/invalid, use fallback 60
+      // If no admin config, use fallback 60 min/week
       if ((!minutesUsed || minutesUsed <= 0) && !isCoreSubject) {
         // Skip non-core subjects with zero minutes
-        console.log(`[buildSchedulingProblem] Skipping non-core TG ${tg.id} (${subjCode}): 0 minutes`);
+        console.log(`[buildSchedulingProblem] Skipping non-core TG ${tg.id} (${subjCode}): 0 minutes/periods configured`);
         continue;
       }
       if ((!minutesUsed || minutesUsed <= 0) && isCoreSubject) {
         // Core subjects: force 60 min/week fallback
         minutesUsed = 60;
-        console.log(`[buildSchedulingProblem] ✅ Core ${normCode} TG ${tg.id}: 0/missing minutes, forcing fallback 60 min/week`);
+        requiredPeriods = Math.ceil(minutesUsed / periodDurationMinutes);
+        console.log(`[buildSchedulingProblem] ✅ Core ${normCode} TG ${tg.id}: 0/missing config, forcing fallback 60 min/week (${requiredPeriods} periods)`);
       }
 
       if (isCoreSubject) {
-        console.log(`[buildSchedulingProblem] ✅ Adding core requirement: ${normCode} (original: ${subjCode}, TG ${tg.id}), ${minutesUsed} min/week`);
+        console.log(`[buildSchedulingProblem] ✅ Adding core requirement: ${normCode} (original: ${subjCode}, TG ${tg.id}), ${minutesUsed} min/week = ${requiredPeriods} periods`);
       }
 
+      // CRITICAL: Ensure lessons count matches requiredPeriods exactly
+      // subjectRequirements MUST match lesson count for solver consistency
       subjectRequirements.push({
         studentGroup: `TG_${tg.id}`,
-        subject: subjCode, // Use original code, not normalized
-        minutesPerWeek: minutesUsed
+        subject: subjCode,
+        minutesPerWeek: minutesUsed,
+        requiredPeriods: requiredPeriods // Add explicit period count for solver
       });
     }
 
@@ -535,9 +557,10 @@ Deno.serve(async (req) => {
 
     const lastTimeslot = timeslots[timeslots.length - 1] || null;
 
-    // Filter out STUDY and TEST from subjects/lessons/requirements for solver
-    // These will be injected post-solver to fill empty slots
-    const excludeFromSolver = new Set(['STUDY', 'TEST']);
+    // Filter out STUDY from subjects/lessons/requirements for solver
+    // STUDY will be injected post-solver to fill empty slots
+    // Keep TEST in solver if we want it scheduled properly
+    const excludeFromSolver = new Set(['STUDY']);
     const problemSubjectsFiltered = problem.subjects.filter(s => !excludeFromSolver.has(s.code));
     const problemLessonsFiltered = problem.lessons.filter(l => !excludeFromSolver.has(l.subject));
     const problemRequirementsFiltered = problem.subjectRequirements.filter(r => !excludeFromSolver.has(r.subject));
