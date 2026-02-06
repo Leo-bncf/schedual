@@ -357,6 +357,7 @@ Deno.serve(async (req) => {
 
       teachingGroupsIncludedCount++;
 
+      // CRITICAL: Use consistent "TG_<id>" format for all groups
       const studentGroup = `TG_${tg.id}`;
       const cap = 20;
       
@@ -366,9 +367,10 @@ Deno.serve(async (req) => {
       const teacherNumeric = teacherIdx >= 0 ? teacherIdx + 1 : null;
       const roomNumeric = roomIdx >= 0 ? roomIdx + 1 : null;
       
-      // DEBUG LOG for each TG
+      // DEBUG LOG for each TG - verify TG_ format
       console.log(`[buildSchedulingProblem] TG ${tg.id} (${subjCode}):`, {
         name: tg.name,
+        studentGroup, // Should ALWAYS be "TG_<id>"
         minutes_per_week_stored: tg.minutes_per_week,
         periods_per_week_stored: tg.periods_per_week,
         minutesUsed,
@@ -379,7 +381,8 @@ Deno.serve(async (req) => {
         teacherNumeric,
         preferred_room_id: tg.preferred_room_id,
         roomIdx,
-        roomNumeric
+        roomNumeric,
+        student_count: (tg.student_ids || []).length
       });
 
       // Expected + created counters

@@ -712,7 +712,14 @@ Deno.serve(async (req) => {
       const subjectId = subjectIdByCode[normalizedSubject] || null;
       const teacherId = lesson.teacherId ? numericToTeacherId[lesson.teacherId] : null;
       const roomId = numericToRoomId[lesson.roomId] || null;
+      
+      // CRITICAL: Extract teaching_group_id from studentGroup (must be "TG_<id>" format)
       const tgIdFromGroup = (lesson.studentGroup && lesson.studentGroup.startsWith('TG_')) ? lesson.studentGroup.slice(3) : null;
+      
+      // WARN if solver returned non-standard format
+      if (lesson.studentGroup && !lesson.studentGroup.startsWith('TG_')) {
+        console.warn(`[callORToolScheduler] Non-standard studentGroup format: "${lesson.studentGroup}" - teaching_group_id will be null!`);
+      }
       
       // Allow null room for STUDY and any DP core subject (based on is_core or well-known codes)
       const allowNullRoomSubjects = new Set(['STUDY','TOK','CAS','EE']);
