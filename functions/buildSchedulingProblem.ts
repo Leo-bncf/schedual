@@ -288,9 +288,43 @@ Deno.serve(async (req) => {
         return 60;
       }
       
-      // Fallback 2: Subject-level defaults (ONLY if no admin config exists)
-      // DO NOT use HL/SL defaults - use what admin configured
-      return 0; // If no admin config, require explicit configuration
+      // Fallback 2: Subject-level defaults (HL/SL/PYP/MYP) based on admin config
+      if (!subj) return 0;
+      
+      const level = String(tg.level || '').toUpperCase();
+      const ibLevel = String(subj.ib_level || '').toUpperCase();
+      
+      // DP subjects: use HL/SL defaults
+      if (ibLevel === 'DP') {
+        if (level === 'HL' && typeof subj.hl_minutes_per_week_default === 'number' && subj.hl_minutes_per_week_default > 0) {
+          console.log(`[buildSchedulingProblem] TG ${tg.id} (${subjCode} HL): using Subject hl_minutes_per_week_default = ${subj.hl_minutes_per_week_default}`);
+          return subj.hl_minutes_per_week_default;
+        }
+        if (level === 'SL' && typeof subj.sl_minutes_per_week_default === 'number' && subj.sl_minutes_per_week_default > 0) {
+          console.log(`[buildSchedulingProblem] TG ${tg.id} (${subjCode} SL): using Subject sl_minutes_per_week_default = ${subj.sl_minutes_per_week_default}`);
+          return subj.sl_minutes_per_week_default;
+        }
+        // If level not specified or no default, try HL first then SL
+        if (typeof subj.hl_minutes_per_week_default === 'number' && subj.hl_minutes_per_week_default > 0) {
+          console.log(`[buildSchedulingProblem] TG ${tg.id} (${subjCode}): level unclear, using HL default = ${subj.hl_minutes_per_week_default}`);
+          return subj.hl_minutes_per_week_default;
+        }
+        if (typeof subj.sl_minutes_per_week_default === 'number' && subj.sl_minutes_per_week_default > 0) {
+          console.log(`[buildSchedulingProblem] TG ${tg.id} (${subjCode}): level unclear, using SL default = ${subj.sl_minutes_per_week_default}`);
+          return subj.sl_minutes_per_week_default;
+        }
+      }
+      
+      // PYP/MYP subjects: use pyp_myp_minutes_per_week_default
+      if (['PYP', 'MYP'].includes(ibLevel)) {
+        if (typeof subj.pyp_myp_minutes_per_week_default === 'number' && subj.pyp_myp_minutes_per_week_default > 0) {
+          console.log(`[buildSchedulingProblem] TG ${tg.id} (${subjCode} ${ibLevel}): using Subject pyp_myp_minutes_per_week_default = ${subj.pyp_myp_minutes_per_week_default}`);
+          return subj.pyp_myp_minutes_per_week_default;
+        }
+      }
+      
+      // No config found anywhere
+      return 0;
     };
 
     const minutesToPeriods = (m) => Math.max(0, Math.ceil((m || 0) / periodDurationMinutes));
