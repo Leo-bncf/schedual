@@ -290,53 +290,6 @@ Deno.serve(async (req) => {
       }, { status: 400 });
     }
     
-    // CRITICAL: Validate weekly load BEFORE creating lessons (Option A)
-    // Block generation if active TGs with students have no weekly load configured
-    const missingWeeklyLoad = [];
-    for (const tg of teachingGroupsDb) {
-      if (!tg) continue;
-      
-      // Skip if no students assigned
-      const hasStudents = Array.isArray(tg.student_ids) && tg.student_ids.length > 0;
-      if (!hasStudents) continue;
-      
-      // Check if any weekly load is configured
-      const hasMinutes = typeof tg.minutes_per_week === 'number' && tg.minutes_per_week > 0;
-      const hasPeriods = typeof tg.periods_per_week === 'number' && tg.periods_per_week > 0;
-      const hasHours = typeof tg.hours_per_week === 'number' && tg.hours_per_week > 0;
-      
-      // Core subjects (TOK/CAS/EE) have fallback, skip validation
-      const subjCode = (tg.subject_id && subjectIdToCode[tg.subject_id]) || null;
-      const normCode = normalizeCode(subjCode);
-      const isCoreWithFallback = normCode && ['TOK', 'CAS', 'EE'].includes(normCode);
-      
-      if (!hasMinutes && !hasPeriods && !hasHours && !isCoreWithFallback) {
-        missingWeeklyLoad.push({
-          tg_id: tg.id,
-          name: tg.name,
-          subject_code: subjCode || 'UNKNOWN',
-          year_group: tg.year_group || null,
-          level: tg.level || null,
-          minutes_per_week: tg.minutes_per_week || null,
-          periods_per_week: tg.periods_per_week || null,
-          hours_per_week: tg.hours_per_week || null,
-          student_count: tg.student_ids?.length || 0
-        });
-      }
-    }
-    
-    if (missingWeeklyLoad.length > 0) {
-      console.error('[buildSchedulingProblem] MISSING_WEEKLY_LOAD:', missingWeeklyLoad);
-      return Response.json({
-        ok: false,
-        stage: 'MISSING_WEEKLY_LOAD',
-        error: `${missingWeeklyLoad.length} active teaching groups with students have no weekly load configured (minutes_per_week / periods_per_week / hours_per_week)`,
-        missingWeeklyLoad,
-        suggestion: 'Configure weekly load for each teaching group: either minutes_per_week, periods_per_week, or hours_per_week must be set. Without this, the solver cannot create lessons.',
-        meta: { schedule_version_id, school_id }
-      }, { status: 400 });
-    }
-    
     // Compute lessons from minutes/week
     const lessons = [];
     let lessonId = 1;
@@ -523,10 +476,16 @@ Deno.serve(async (req) => {
 
       teachingGroupsIncludedCount++;
 
+      // Track minutes source for debug (before creating lessons)
+      if (!debugMinutesSourceByTG[tg.id]) {
+        // This should already be set by minutesForTG, but ensure it exists
+        debugMinutesSourceByTG[tg.id] = { source: 'UNKNOWN', value: minutesUsed };
+      }
+
       // CRITICAL: Use consistent "TG_<id>" format for all groups
       const studentGroup = `TG_${tg.id}`;
       const cap = 20;
-      
+
       // CRITICAL: Fix teacher/room mapping - findIndex returns -1 if not found
       const teacherIdx = (tg.teacher_id && teachersDb) ? teachersDb.findIndex(t => t?.id === tg.teacher_id) : -1;
       const roomIdx = (tg.preferred_room_id && roomsDb) ? roomsDb.findIndex(r => r?.id === tg.preferred_room_id) : -1;
@@ -809,12 +768,27 @@ Deno.serve(async (req) => {
     console.log(`[buildSchedulingProblem] SUCCESS at stage="${stage}": returning problem with ${problemForSolver.lessons.length} lessons, ${problemForSolver.subjects.length} subjects, ${problemForSolver.subjectRequirements.length} requirements`);
     console.log(`[buildSchedulingProblem] TEST validation: ${testLessonsCreated} lessons, ${testRequirementsCreated} requirements, ${testTeachingGroups.length} TGs`);
 
+    // Build problemSummary for debug (Option A)
+    const problemSummary = {
+      teachingGroupsTotal: teachingGroupsDb.length,
+      teachingGroupsIncluded: teachingGroupsIncludedCount,
+      teachingGroupsFilteredOut: teachingGroupsFilteredOut.length,
+      lessonsCreatedTotal: problemForSolver.lessons.length,
+      requirementsTotal: problemForSolver.subjectRequirements.length,
+      subjectsTotal: problemForSolver.subjects.length,
+      timeslotsTotal: problemForSolver.timeslots.length,
+      roomsTotal: problemForSolver.rooms.length,
+      teachersTotal: problemForSolver.teachers.length
+    };
+    console.log('[buildSchedulingProblem] problemSummary:', problemSummary);
+
     return Response.json({
       success: true,
       ok: true,
       problem: problemForSolver,
       subjectIdByCode,
       debugMinutesSourceByTG,
+      problemSummary,
       // Debug summary
       schoolIdUsed: school_id,
       scheduleVersionIdUsed: schedule_version_id,
