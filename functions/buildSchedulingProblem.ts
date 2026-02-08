@@ -261,6 +261,35 @@ Deno.serve(async (req) => {
       }, { status: 400 });
     }
     
+    // CRITICAL: Validate room mappings BEFORE creating lessons
+    const invalidRoomMappings = [];
+    for (const tg of teachingGroupsDb) {
+      if (!tg?.preferred_room_id) continue; // null/undefined is OK
+      const roomIdx = roomsDb.findIndex(r => r?.id === tg.preferred_room_id);
+      if (roomIdx === -1) {
+        const subjCode = (tg.subject_id && subjectIdToCode[tg.subject_id]) || 'UNKNOWN';
+        invalidRoomMappings.push({
+          tg_id: tg.id,
+          tg_name: tg.name,
+          subject_code: subjCode,
+          preferred_room_id: tg.preferred_room_id,
+          reason: 'Room ID not found in roomsDb'
+        });
+      }
+    }
+    
+    if (invalidRoomMappings.length > 0) {
+      console.error('[buildSchedulingProblem] ROOM_MAPPING_ERROR:', invalidRoomMappings);
+      return Response.json({
+        ok: false,
+        stage: 'ROOM_MAPPING_ERROR',
+        error: `${invalidRoomMappings.length} teaching groups reference non-existent rooms`,
+        invalidRoomMappings,
+        suggestion: 'Check: 1) Room exists and is active, 2) preferred_room_id is correct, 3) No orphaned references after room deletion',
+        meta: { schedule_version_id, school_id }
+      }, { status: 400 });
+    }
+    
     // Compute lessons from minutes/week
     const lessons = [];
     let lessonId = 1;
@@ -290,6 +319,9 @@ Deno.serve(async (req) => {
       });
     };
 
+    // Track minutes source for each TG (debug proof)
+    const debugMinutesSourceByTG = {};
+    
     const minutesForTG = (tg) => {
       if (!tg) return 0;
       
@@ -297,6 +329,7 @@ Deno.serve(async (req) => {
       // This is the SOURCE OF TRUTH - never override with fallbacks if set
       if (typeof tg.minutes_per_week === 'number' && tg.minutes_per_week > 0) {
         console.log(`[buildSchedulingProblem] TG ${tg.id}: using TG.minutes_per_week = ${tg.minutes_per_week} (SOURCE OF TRUTH)`);
+        debugMinutesSourceByTG[tg.id] = { source: 'TG_MINUTES', value: tg.minutes_per_week };
         return tg.minutes_per_week;
       }
       
@@ -304,6 +337,7 @@ Deno.serve(async (req) => {
       if (typeof tg.periods_per_week === 'number' && tg.periods_per_week > 0) {
         const minutes = tg.periods_per_week * periodDurationMinutes;
         console.log(`[buildSchedulingProblem] TG ${tg.id}: using TG.periods_per_week = ${tg.periods_per_week} → ${minutes} min (SOURCE OF TRUTH)`);
+        debugMinutesSourceByTG[tg.id] = { source: 'TG_PERIODS', value: minutes, periods: tg.periods_per_week };
         return minutes;
       }
       
@@ -311,6 +345,7 @@ Deno.serve(async (req) => {
       if (typeof tg.hours_per_week === 'number' && tg.hours_per_week > 0) {
         const minutes = Math.round(tg.hours_per_week * 60);
         console.log(`[buildSchedulingProblem] TG ${tg.id}: using TG.hours_per_week = ${tg.hours_per_week}h → ${minutes} min (SOURCE OF TRUTH)`);
+        debugMinutesSourceByTG[tg.id] = { source: 'TG_HOURS', value: minutes, hours: tg.hours_per_week };
         return minutes;
       }
       
@@ -320,11 +355,15 @@ Deno.serve(async (req) => {
       
       // Fallback 1: Core subjects (TOK/CAS/EE) default to 60 min/week
       if (normCode && ['TOK', 'CAS', 'EE'].includes(normCode)) {
+        debugMinutesSourceByTG[tg.id] = { source: 'CORE_FALLBACK', value: 60, subject: subjCode };
         return 60;
       }
       
       // Fallback 2: Subject-level defaults (HL/SL/PYP/MYP) based on admin config
-      if (!subj) return 0;
+      if (!subj) {
+        debugMinutesSourceByTG[tg.id] = { source: 'NONE', value: 0, reason: 'no_subject' };
+        return 0;
+      }
       
       const level = String(tg.level || '').toUpperCase();
       const ibLevel = String(subj.ib_level || '').toUpperCase();
@@ -333,19 +372,23 @@ Deno.serve(async (req) => {
       if (ibLevel === 'DP') {
         if (level === 'HL' && typeof subj.hl_minutes_per_week_default === 'number' && subj.hl_minutes_per_week_default > 0) {
           console.log(`[buildSchedulingProblem] TG ${tg.id} (${subjCode} HL): using Subject hl_minutes_per_week_default = ${subj.hl_minutes_per_week_default}`);
+          debugMinutesSourceByTG[tg.id] = { source: 'SUBJECT_DEFAULT_HL', value: subj.hl_minutes_per_week_default, subject: subjCode };
           return subj.hl_minutes_per_week_default;
         }
         if (level === 'SL' && typeof subj.sl_minutes_per_week_default === 'number' && subj.sl_minutes_per_week_default > 0) {
           console.log(`[buildSchedulingProblem] TG ${tg.id} (${subjCode} SL): using Subject sl_minutes_per_week_default = ${subj.sl_minutes_per_week_default}`);
+          debugMinutesSourceByTG[tg.id] = { source: 'SUBJECT_DEFAULT_SL', value: subj.sl_minutes_per_week_default, subject: subjCode };
           return subj.sl_minutes_per_week_default;
         }
         // If level not specified or no default, try HL first then SL
         if (typeof subj.hl_minutes_per_week_default === 'number' && subj.hl_minutes_per_week_default > 0) {
           console.log(`[buildSchedulingProblem] TG ${tg.id} (${subjCode}): level unclear, using HL default = ${subj.hl_minutes_per_week_default}`);
+          debugMinutesSourceByTG[tg.id] = { source: 'SUBJECT_DEFAULT_HL', value: subj.hl_minutes_per_week_default, subject: subjCode, note: 'level_unclear' };
           return subj.hl_minutes_per_week_default;
         }
         if (typeof subj.sl_minutes_per_week_default === 'number' && subj.sl_minutes_per_week_default > 0) {
           console.log(`[buildSchedulingProblem] TG ${tg.id} (${subjCode}): level unclear, using SL default = ${subj.sl_minutes_per_week_default}`);
+          debugMinutesSourceByTG[tg.id] = { source: 'SUBJECT_DEFAULT_SL', value: subj.sl_minutes_per_week_default, subject: subjCode, note: 'level_unclear' };
           return subj.sl_minutes_per_week_default;
         }
       }
@@ -354,11 +397,13 @@ Deno.serve(async (req) => {
       if (['PYP', 'MYP'].includes(ibLevel)) {
         if (typeof subj.pyp_myp_minutes_per_week_default === 'number' && subj.pyp_myp_minutes_per_week_default > 0) {
           console.log(`[buildSchedulingProblem] TG ${tg.id} (${subjCode} ${ibLevel}): using Subject pyp_myp_minutes_per_week_default = ${subj.pyp_myp_minutes_per_week_default}`);
+          debugMinutesSourceByTG[tg.id] = { source: 'SUBJECT_DEFAULT_PYP_MYP', value: subj.pyp_myp_minutes_per_week_default, subject: subjCode, ibLevel };
           return subj.pyp_myp_minutes_per_week_default;
         }
       }
       
       // No config found anywhere
+      debugMinutesSourceByTG[tg.id] = { source: 'NONE', value: 0, reason: 'no_config' };
       return 0;
     };
 
@@ -699,13 +744,30 @@ Deno.serve(async (req) => {
       lastTimeslot: lastTimeslotAvailable ? { day: lastTimeslotAvailable.dayOfWeek, endTime: lastTimeslotAvailable.endTime } : null
     });
     
+    // Count TEST lessons and requirements
+    const testLessonsCreated = problemForSolver.lessons.filter(l => normalizeCode(l.subject) === 'TEST').length;
+    const testRequirementsCreated = problemForSolver.subjectRequirements.filter(r => normalizeCode(r.subject) === 'TEST').length;
+    const testTeachingGroups = teachingGroupsDb.filter(tg => {
+      const code = tg.subject_id ? subjectIdToCode[tg.subject_id] : null;
+      return normalizeCode(code) === 'TEST';
+    }).map(tg => ({
+      id: tg.id,
+      name: tg.name,
+      minutes_per_week: tg.minutes_per_week,
+      periods_per_week: tg.periods_per_week,
+      teacher_id: tg.teacher_id,
+      minutesSource: debugMinutesSourceByTG[tg.id]
+    }));
+
     console.log(`[buildSchedulingProblem] SUCCESS at stage="${stage}": returning problem with ${problemForSolver.lessons.length} lessons, ${problemForSolver.subjects.length} subjects, ${problemForSolver.subjectRequirements.length} requirements`);
+    console.log(`[buildSchedulingProblem] TEST validation: ${testLessonsCreated} lessons, ${testRequirementsCreated} requirements, ${testTeachingGroups.length} TGs`);
 
     return Response.json({
       success: true,
       ok: true,
       problem: problemForSolver,
       subjectIdByCode,
+      debugMinutesSourceByTG,
       // Debug summary
       schoolIdUsed: school_id,
       scheduleVersionIdUsed: schedule_version_id,
@@ -750,7 +812,10 @@ Deno.serve(async (req) => {
           TOK: expectedLessonsBySubject['TOK'] || 0,
           CAS: expectedLessonsBySubject['CAS'] || 0,
           EE: expectedLessonsBySubject['EE'] || 0
-        }
+        },
+        testLessonsCreated,
+        testRequirementsCreated,
+        testTeachingGroups
       }
     });
   } catch (error) {
