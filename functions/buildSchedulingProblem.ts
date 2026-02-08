@@ -290,6 +290,53 @@ Deno.serve(async (req) => {
       }, { status: 400 });
     }
     
+    // CRITICAL: Validate weekly load BEFORE creating lessons (Option A)
+    // Block generation if active TGs with students have no weekly load configured
+    const missingWeeklyLoad = [];
+    for (const tg of teachingGroupsDb) {
+      if (!tg) continue;
+      
+      // Skip if no students assigned
+      const hasStudents = Array.isArray(tg.student_ids) && tg.student_ids.length > 0;
+      if (!hasStudents) continue;
+      
+      // Check if any weekly load is configured
+      const hasMinutes = typeof tg.minutes_per_week === 'number' && tg.minutes_per_week > 0;
+      const hasPeriods = typeof tg.periods_per_week === 'number' && tg.periods_per_week > 0;
+      const hasHours = typeof tg.hours_per_week === 'number' && tg.hours_per_week > 0;
+      
+      // Core subjects (TOK/CAS/EE) have fallback, skip validation
+      const subjCode = (tg.subject_id && subjectIdToCode[tg.subject_id]) || null;
+      const normCode = normalizeCode(subjCode);
+      const isCoreWithFallback = normCode && ['TOK', 'CAS', 'EE'].includes(normCode);
+      
+      if (!hasMinutes && !hasPeriods && !hasHours && !isCoreWithFallback) {
+        missingWeeklyLoad.push({
+          tg_id: tg.id,
+          name: tg.name,
+          subject_code: subjCode || 'UNKNOWN',
+          year_group: tg.year_group || null,
+          level: tg.level || null,
+          minutes_per_week: tg.minutes_per_week || null,
+          periods_per_week: tg.periods_per_week || null,
+          hours_per_week: tg.hours_per_week || null,
+          student_count: tg.student_ids?.length || 0
+        });
+      }
+    }
+    
+    if (missingWeeklyLoad.length > 0) {
+      console.error('[buildSchedulingProblem] MISSING_WEEKLY_LOAD:', missingWeeklyLoad);
+      return Response.json({
+        ok: false,
+        stage: 'MISSING_WEEKLY_LOAD',
+        error: `${missingWeeklyLoad.length} active teaching groups with students have no weekly load configured (minutes_per_week / periods_per_week / hours_per_week)`,
+        missingWeeklyLoad,
+        suggestion: 'Configure weekly load for each teaching group: either minutes_per_week, periods_per_week, or hours_per_week must be set. Without this, the solver cannot create lessons.',
+        meta: { schedule_version_id, school_id }
+      }, { status: 400 });
+    }
+    
     // Compute lessons from minutes/week
     const lessons = [];
     let lessonId = 1;
