@@ -186,6 +186,9 @@ Deno.serve(async (req) => {
     const breaks = Array.isArray(school.breaks) ? school.breaks : [];
     const minPeriodsPerDay = Number(school.min_periods_per_day || 10);
     const targetPeriodsPerDay = Number(school.target_periods_per_day || 10);
+    
+    console.log(`[buildSchedulingProblem] Breaks config from school:`, breaks);
+    console.log(`[buildSchedulingProblem] Breaks will be excluded from timeslots generation`);
 
     // Build timeslots across dayStart->dayEnd, step by periodDuration, skip break overlaps
     const timeToMin = (hhmm) => {
@@ -205,10 +208,16 @@ Deno.serve(async (req) => {
     const endMin = timeToMin(dayEndTime);
     const timeslots = [];
     let tsId = 1;
+    let timeslotsExcludedByBreaks = 0;
+    
     for (const day of daysOfWeek) {
       for (let cur = startMin; cur + periodDurationMinutes <= endMin; cur += periodDurationMinutes) {
         const s = cur, e = cur + periodDurationMinutes;
-        if (overlapsBreak(s, e)) continue;
+        if (overlapsBreak(s, e)) {
+          timeslotsExcludedByBreaks++;
+          console.log(`[buildSchedulingProblem] Excluding timeslot ${day} ${String(Math.floor(s/60)).padStart(2,'0')}:${String(s%60).padStart(2,'0')}-${String(Math.floor(e/60)).padStart(2,'0')}:${String(e%60).padStart(2,'0')} (overlaps break)`);
+          continue;
+        }
         const sh = String(Math.floor(s/60)).padStart(2,'0');
         const sm = String(s%60).padStart(2,'0');
         const eh = String(Math.floor(e/60)).padStart(2,'0');
@@ -216,6 +225,8 @@ Deno.serve(async (req) => {
         timeslots.push({ id: tsId++, dayOfWeek: day, startTime: `${sh}:${sm}`, endTime: `${eh}:${em}` });
       }
     }
+    
+    console.log(`[buildSchedulingProblem] Timeslots generated: ${timeslots.length} (excluded ${timeslotsExcludedByBreaks} due to breaks)`);
 
     // Rooms/Teachers numeric format & maps (null-safe)
     const rooms = (roomsDb || []).map((r, idx) => ({ id: idx + 1, name: r?.name || `Room ${idx+1}`, capacity: r?.capacity || 0 }));
