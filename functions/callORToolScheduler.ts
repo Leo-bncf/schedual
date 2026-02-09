@@ -744,7 +744,7 @@ Deno.serve(async (req) => {
         subject_id: subjectId || null,
         teacher_id: teacherId,
         room_id: roomId,
-        timeslot_id: lesson.timeslotId,
+        timeslot_id: Number(lesson.timeslotId),
         day: dayMapping[timeslot.dayOfWeek] || timeslot.dayOfWeek,
         period: period,
         is_double_period: false,
@@ -793,11 +793,13 @@ Deno.serve(async (req) => {
 
     // Step 6.5: Inject STUDY slots into empty timeslots (post-solver, ONLY if solver succeeded)
     // CRITICAL: STUDY/TEST only injected when orToolHttpStatus === 200
+    // Use timeslot_id as occupation key for break-awareness
     const allTimeslots = problem.timeslots || [];
     const occupiedSlots = new Set();
     slots.forEach(s => {
-      const key = `${s.day}_${s.period}`;
-      occupiedSlots.add(key);
+      if (s.timeslot_id) {
+        occupiedSlots.add(Number(s.timeslot_id));
+      }
     });
 
     const studySlots = [];
@@ -805,11 +807,12 @@ Deno.serve(async (req) => {
     if (studySubject && orToolHttpStatus === 200) {
       // Only inject STUDY if solver succeeded
       for (const ts of allTimeslots) {
-        const day = dayMapping[ts.dayOfWeek] || ts.dayOfWeek;
-        const period = timeslotIndexInDay[ts.id] || 1;
-        const key = `${day}_${period}`;
-
-        if (!occupiedSlots.has(key)) {
+        const tsId = Number(ts.id);
+        
+        if (!occupiedSlots.has(tsId)) {
+          const day = dayMapping[ts.dayOfWeek] || ts.dayOfWeek;
+          const period = timeslotIndexInDay[ts.id] || 1;
+          
           studySlots.push({
             school_id: schoolId,
             schedule_version: schedule_version_id,
@@ -817,7 +820,7 @@ Deno.serve(async (req) => {
             subject_id: studySubject.id,
             teacher_id: null,
             room_id: null,
-            timeslot_id: ts.id,
+            timeslot_id: tsId,
             day,
             period,
             is_double_period: false,
