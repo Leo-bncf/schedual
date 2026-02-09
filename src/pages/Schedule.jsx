@@ -258,8 +258,14 @@ export default function Schedule() {
 
   const periodsForGroup = (tg) => minutesToPeriods(getMinutesForGroup(tg));
 
-  // Build timeslots array from school config for UI mapping
+  // Use solver timeslots if available (source of truth), otherwise reconstruct from school config
   const timeslots = React.useMemo(() => {
+    // Priority 1: Use exact timeslots from OR-Tool solver (guarantees alignment)
+    if (orToolResult?.timeslots && Array.isArray(orToolResult.timeslots) && orToolResult.timeslots.length > 0) {
+      return orToolResult.timeslots;
+    }
+    
+    // Fallback: Reconstruct from school config (may cause misalignment if solver used different config)
     if (!school) return [];
     
     const dayStart = school.day_start_time || '08:00';
@@ -304,7 +310,7 @@ export default function Schedule() {
     });
     
     return slots;
-  }, [school]);
+  }, [school, orToolResult]);
 
   const { data: constraints = [], refetch: refetchConstraints } = useQuery({
     queryKey: ['constraints', schoolId],

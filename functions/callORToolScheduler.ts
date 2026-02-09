@@ -529,6 +529,12 @@ Deno.serve(async (req) => {
       arr.forEach((t, i) => { timeslotIndexInDay[t.id] = i + 1; });
     });
     const periodsPerDayComputed = Math.max(0, ...Object.values(timeslotsByDay).map(arr => arr.length));
+    
+    // Performance optimization: Build timeslot lookup index (O(1) access vs O(n) find)
+    const timeslotById = {};
+    (problem.timeslots || []).forEach(ts => {
+      timeslotById[ts.id] = ts;
+    });
 
     // Core assignments (TOK/CAS/EE) with timeslotId + mapped day/period
     const periodsPerDay = periodsPerDayComputed;
@@ -539,7 +545,7 @@ Deno.serve(async (req) => {
       if (!['TOK','CAS','EE'].includes(subj)) continue;
       let day = null, period = null;
       if (l.timeslotId) {
-        const ts = problem.timeslots.find(t => t.id === l.timeslotId) || null;
+        const ts = timeslotById[l.timeslotId] || null;
         if (ts) {
           day = dayMapping[ts.dayOfWeek] || ts.dayOfWeek;
           period = timeslotIndexInDay[ts.id] || 1;
@@ -561,7 +567,7 @@ Deno.serve(async (req) => {
     const periodsPerDayLocal = periodsPerDayComputed;
     for (const l of solvedLessons) {
       if (!l.timeslotId) continue;
-      const ts = problem.timeslots.find(t => t.id === l.timeslotId);
+      const ts = timeslotById[l.timeslotId];
       if (!ts) continue;
       const day = dayMapping[ts.dayOfWeek] || ts.dayOfWeek;
       const period = timeslotIndexInDay[ts.id] || 1;
@@ -612,7 +618,7 @@ Deno.serve(async (req) => {
     // Compute latest timeslot actually used and dominant cause for early stop
     const usedTimeslotIds = solvedLessons.filter(l => l.timeslotId).map(l => l.timeslotId);
     const maxUsedTimeslotId = usedTimeslotIds.length ? Math.max(...usedTimeslotIds) : null;
-    const latestUsedTimeslot = maxUsedTimeslotId ? (problem.timeslots.find(t => t.id === maxUsedTimeslotId) || null) : null;
+    const latestUsedTimeslot = maxUsedTimeslotId ? (timeslotById[maxUsedTimeslotId] || null) : null;
     const latestTimeslotAvailable = problem.timeslots[problem.timeslots.length - 1] || null;
     const periodsPerDayLocal2 = periodsPerDayComputed;
     const underfilled = !!(buildResponse?.data?.stats?.underfilled);
@@ -707,7 +713,7 @@ Deno.serve(async (req) => {
         continue;
       }
 
-      const timeslot = problem.timeslots.find(ts => ts.id === lesson.timeslotId);
+      const timeslot = timeslotById[lesson.timeslotId];
       if (!timeslot) continue;
 
       const normalizedSubject = String(lesson.subject || lesson.subjectCode || '')
@@ -1159,7 +1165,10 @@ Deno.serve(async (req) => {
         teachingGroupsDiagnostics,
         debugMinutesSourceByTG,
         problemSummary
-      }
+      },
+      timeslots: problem.timeslots || [],
+      dayMapping,
+      timeslotIndexInDay
       });
 
   } catch (error) {
