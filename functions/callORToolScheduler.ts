@@ -102,6 +102,9 @@ Deno.serve(async (req) => {
     const expectedLessonsBySubject = (buildResponse.data?.stats?.expectedLessonsBySubject) || {};
     const expectedMinutesBySubject = (buildResponse.data?.stats?.expectedMinutesBySubject) || null;
     const problemLessonsCreated = (buildResponse.data?.stats?.lessonsCreatedBySubject) || {};
+    const teachingGroupsDiagnostics = buildResponse.data?.teachingGroupsDiagnostics || [];
+    const debugMinutesSourceByTG = buildResponse.data?.debugMinutesSourceByTG || {};
+    const problemSummary = buildResponse.data?.problemSummary || null;
     
     // DIAGNOSTIC: Filter subjectRequirements for TOK/CAS/EE
     const coreCodesSet = new Set(['TOK', 'CAS', 'EE']);
@@ -1146,8 +1149,13 @@ Deno.serve(async (req) => {
         }))
       },
       inputSummaryBySubject,
-      coreTeachingGroupsDetected
-    });
+      coreTeachingGroupsDetected,
+      buildDiagnostics: {
+        teachingGroupsDiagnostics,
+        debugMinutesSourceByTG,
+        problemSummary
+      }
+      });
 
   } catch (error) {
     console.error(`[callORToolScheduler] ERROR at stage="${stage}":`, error);
