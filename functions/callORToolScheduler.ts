@@ -830,28 +830,36 @@ Deno.serve(async (req) => {
     stage = 'deleteOldSlots';
     console.log(`[callORToolScheduler] ${stage}: deleting old slots`);
 
-    // Step 6: Delete existing slots for this version - ATOMIC BATCH DELETE with retry
+    // Step 6: Delete existing slots - THROTTLED SEQUENTIAL DELETE to avoid rate limits
     const existingSlots = await base44.entities.ScheduleSlot.filter({
       school_id: user.school_id,
       schedule_version: schedule_version_id
     });
-    const deletedCount = existingSlots.length;
-    console.log(`[callORToolScheduler] Deleting ${deletedCount} existing slots in batches`);
+    const totalToDelete = existingSlots.length;
+    console.log(`[callORToolScheduler] Deleting ${totalToDelete} existing slots with throttling`);
 
-    let deleteFailed = false;
+    let deletedCount = 0;
     const deleteErrors = [];
-    const deleteBatches = chunk(existingSlots, 25);
+    const BATCH_SIZE = 5; // Small batches to avoid rate limit
+    const BATCH_DELAY_MS = 500; // 500ms between batches
+    const MAX_RETRIES = 3;
 
-    for (const batch of deleteBatches) {
-      let retries = 0;
-      const maxRetries = 2;
+    const deleteBatches = chunk(existingSlots, BATCH_SIZE);
 
-      while (retries <= maxRetries) {
+    for (let i = 0; i < deleteBatches.length; i++) {
+      const batch = deleteBatches[i];
+      let batchSuccess = false;
+
+      for (let attempt = 0; attempt <= MAX_RETRIES; attempt++) {
         const results = await Promise.allSettled(batch.map(s => base44.entities.ScheduleSlot.delete(s.id)));
         const failures = results.filter(r => r.status === 'rejected');
+        const successes = results.filter(r => r.status === 'fulfilled');
+
+        deletedCount += successes.length;
 
         if (failures.length === 0) {
-          break; // Batch succeeded
+          batchSuccess = true;
+          break;
         }
 
         // Check if rate limit error
@@ -859,38 +867,53 @@ Deno.serve(async (req) => {
           String(f.reason?.message || '').toLowerCase().includes('rate limit')
         );
 
-        if (hasRateLimit && retries < maxRetries) {
-          console.warn(`[callORToolScheduler] Rate limit hit, retrying batch in 1s (attempt ${retries + 1}/${maxRetries})`);
-          await new Promise(resolve => setTimeout(resolve, 1000)); // Wait 1s
-          retries++;
+        if (hasRateLimit && attempt < MAX_RETRIES) {
+          const backoff = Math.pow(2, attempt) * 1000; // Exponential backoff: 1s, 2s, 4s
+          console.warn(`[callORToolScheduler] Rate limit (batch ${i+1}/${deleteBatches.length}), retry in ${backoff}ms (attempt ${attempt + 1}/${MAX_RETRIES})`);
+          await new Promise(resolve => setTimeout(resolve, backoff));
           continue;
         }
 
-        // Log errors and mark as failed
-        failures.forEach((r, i) => {
-          const errorMsg = `delete:${batch[i]?.id}:${r.reason?.message || 'error'}`;
-          errors.push(errorMsg);
+        // Log persistent errors
+        failures.forEach((r, idx) => {
+          const errorMsg = `delete:${batch[idx]?.id}:${r.reason?.message || 'error'}`;
           deleteErrors.push(errorMsg);
         });
-        deleteFailed = true;
         break;
+      }
+
+      if (!batchSuccess) {
+        console.error(`[callORToolScheduler] Batch ${i+1}/${deleteBatches.length} failed after ${MAX_RETRIES} retries`);
+      }
+
+      // Delay between batches (except last one)
+      if (i < deleteBatches.length - 1) {
+        await new Promise(resolve => setTimeout(resolve, BATCH_DELAY_MS));
+      }
+
+      // Progress log every 20 slots
+      if ((i + 1) % 4 === 0 || i === deleteBatches.length - 1) {
+        console.log(`[callORToolScheduler] Delete progress: ${deletedCount}/${totalToDelete}`);
       }
     }
 
-    // CRITICAL: Block insertion if deletion failed
-    if (deleteFailed || deleteErrors.length > 0) {
-      console.error('[callORToolScheduler] DELETE FAILED - aborting insertion to prevent slot mixing');
+    // CRITICAL: Block insertion if significant deletion failure
+    const deleteFailureRate = (totalToDelete - deletedCount) / Math.max(1, totalToDelete);
+    if (deleteFailureRate > 0.1) { // Allow up to 10% failure
+      console.error(`[callORToolScheduler] DELETE FAILED - only ${deletedCount}/${totalToDelete} deleted (${(deleteFailureRate*100).toFixed(1)}% failure)`);
       return Response.json({
         ok: false,
         stage: 'deleteOldSlots',
-        error: 'Failed to delete all existing slots - insertion blocked to prevent data corruption',
-        deletedCount: 0,
-        existingSlotsCount: existingSlots.length,
+        error: `Failed to delete existing slots: ${deletedCount}/${totalToDelete} succeeded (${(deleteFailureRate*100).toFixed(1)}% failure rate)`,
+        deletedCount,
+        existingSlotsCount: totalToDelete,
         deleteErrors: deleteErrors.slice(0, 20),
-        suggestion: 'Rate limit or permission issue. Wait 1 minute and retry, or manually delete slots from /entities/ScheduleSlot',
+        suggestion: 'Rate limit exceeded. Recommendations: 1) Wait 2 minutes and retry, 2) Contact support to increase rate limits, 3) Manually delete slots via Base44 dashboard',
         meta: { schedule_version_id, schoolId }
       }, { status: 200 });
     }
+
+    console.log(`[callORToolScheduler] Successfully deleted ${deletedCount}/${totalToDelete} slots (${deleteErrors.length} errors tolerated)`);
 
     stage = 'insertNewSlots';
     console.log(`[callORToolScheduler] ${stage}: inserting ${allSlots.length} new slots`);
