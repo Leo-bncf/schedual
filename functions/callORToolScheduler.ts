@@ -829,23 +829,67 @@ Deno.serve(async (req) => {
 
     stage = 'deleteOldSlots';
     console.log(`[callORToolScheduler] ${stage}: deleting old slots`);
-    
-    // Step 6: Delete existing slots for this version (ONLY if solver succeeded) - BATCH DELETE
+
+    // Step 6: Delete existing slots for this version - ATOMIC BATCH DELETE with retry
     const existingSlots = await base44.entities.ScheduleSlot.filter({
       school_id: user.school_id,
       schedule_version: schedule_version_id
     });
     const deletedCount = existingSlots.length;
     console.log(`[callORToolScheduler] Deleting ${deletedCount} existing slots in batches`);
-    
+
+    let deleteFailed = false;
+    const deleteErrors = [];
     const deleteBatches = chunk(existingSlots, 25);
+
     for (const batch of deleteBatches) {
-      const results = await Promise.allSettled(batch.map(s => base44.entities.ScheduleSlot.delete(s.id)));
-      results.forEach((r, i) => {
-        if (r.status === 'rejected') {
-          errors.push(`delete:${batch[i]?.id}:${r.reason?.message || 'error'}`);
+      let retries = 0;
+      const maxRetries = 2;
+
+      while (retries <= maxRetries) {
+        const results = await Promise.allSettled(batch.map(s => base44.entities.ScheduleSlot.delete(s.id)));
+        const failures = results.filter(r => r.status === 'rejected');
+
+        if (failures.length === 0) {
+          break; // Batch succeeded
         }
-      });
+
+        // Check if rate limit error
+        const hasRateLimit = failures.some(f => 
+          String(f.reason?.message || '').toLowerCase().includes('rate limit')
+        );
+
+        if (hasRateLimit && retries < maxRetries) {
+          console.warn(`[callORToolScheduler] Rate limit hit, retrying batch in 1s (attempt ${retries + 1}/${maxRetries})`);
+          await new Promise(resolve => setTimeout(resolve, 1000)); // Wait 1s
+          retries++;
+          continue;
+        }
+
+        // Log errors and mark as failed
+        failures.forEach((r, i) => {
+          const errorMsg = `delete:${batch[i]?.id}:${r.reason?.message || 'error'}`;
+          errors.push(errorMsg);
+          deleteErrors.push(errorMsg);
+        });
+        deleteFailed = true;
+        break;
+      }
+    }
+
+    // CRITICAL: Block insertion if deletion failed
+    if (deleteFailed || deleteErrors.length > 0) {
+      console.error('[callORToolScheduler] DELETE FAILED - aborting insertion to prevent slot mixing');
+      return Response.json({
+        ok: false,
+        stage: 'deleteOldSlots',
+        error: 'Failed to delete all existing slots - insertion blocked to prevent data corruption',
+        deletedCount: 0,
+        existingSlotsCount: existingSlots.length,
+        deleteErrors: deleteErrors.slice(0, 20),
+        suggestion: 'Rate limit or permission issue. Wait 1 minute and retry, or manually delete slots from /entities/ScheduleSlot',
+        meta: { schedule_version_id, schoolId }
+      }, { status: 200 });
     }
 
     stage = 'insertNewSlots';
