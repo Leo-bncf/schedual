@@ -94,6 +94,7 @@ export default function Schedule() {
   const [scheduleTab, setScheduleTab] = useState('grid');
   const [showUpdateBanner, setShowUpdateBanner] = useState(false);
   const [showAdvanced, setShowAdvanced] = useState(false);
+  const [solverTimeslots, setSolverTimeslots] = useState(null); // Persist timeslots from OR-Tool
   const [formData, setFormData] = useState({
     name: '',
     academic_year: '2024-2025',
@@ -268,14 +269,19 @@ export default function Schedule() {
 
   // Use solver timeslots if available (source of truth), otherwise reconstruct from school config
   const timeslots = React.useMemo(() => {
-    // Priority 1: Use exact timeslots from OR-Tool solver (guarantees alignment)
+    // Priority 1: Use persisted solver timeslots (set once by OR-Tool, never overwritten)
+    if (solverTimeslots && Array.isArray(solverTimeslots) && solverTimeslots.length > 0) {
+      console.log('[Schedule] ✅ Using PERSISTED timeslots from OR-Tool solver:', solverTimeslots.length, 'slots');
+      return solverTimeslots;
+    }
+    
+    // Priority 2: Use current OR-Tool result timeslots (temporary until persisted)
     if (orToolResult?.timeslots && Array.isArray(orToolResult.timeslots) && orToolResult.timeslots.length > 0) {
-      console.log('[Schedule] Using timeslots from OR-Tool solver:', orToolResult.timeslots.length, 'slots');
-      console.log('[Schedule] Solver timeslots[0]:', orToolResult.timeslots[0]);
+      console.log('[Schedule] ⚠️ Using TEMPORARY timeslots from OR-Tool result:', orToolResult.timeslots.length, 'slots (not yet persisted)');
       return orToolResult.timeslots;
     }
     
-    console.log('[Schedule] Reconstructing timeslots from school config (fallback)');
+    console.log('[Schedule] 🔄 Reconstructing timeslots from school config (fallback - no solver data available)');
     
     // Fallback: Reconstruct from school config (may cause misalignment if solver used different config)
     if (!school) return [];
@@ -322,7 +328,7 @@ export default function Schedule() {
     });
     
     return slots;
-  }, [school, orToolResult]);
+  }, [school, orToolResult, solverTimeslots]);
 
   const { data: constraints = [], refetch: refetchConstraints } = useQuery({
     queryKey: ['constraints', schoolId],
@@ -533,6 +539,12 @@ Now process the user's input and return ONLY the JSON object.`,
         setOrToolError(`Stage: ${data.stage}\nError: ${data.errorMessage || data.error}\n\nStack:\n${data.errorStack || 'N/A'}`);
         toast.error(`OR-Tool failed at stage "${data.stage}": ${data.errorMessage || data.error}`);
       } else {
+        // Persist solver timeslots to prevent config reconstruction overwrite
+        if (data.timeslots && Array.isArray(data.timeslots) && data.timeslots.length > 0) {
+          console.log('[Schedule] 💾 PERSISTING solver timeslots (manual OR-Tool run):', data.timeslots.length, 'slots');
+          setSolverTimeslots(data.timeslots);
+        }
+        
         await queryClient.invalidateQueries({ queryKey: ['scheduleSlots'] });
         await queryClient.invalidateQueries({ queryKey: ['scheduleVersions'] });
         setScheduleTab('student');
@@ -1495,6 +1507,12 @@ Now process the user's input and return ONLY the JSON object.`,
               console.warn('coreSlotsInsertedCount missing in OR-Tool response');
             }
 
+            // CRITICAL: Persist solver timeslots as single source of truth (never overwritten by config reconstruction)
+            if (r.timeslots && Array.isArray(r.timeslots) && r.timeslots.length > 0) {
+              console.log('[Schedule] 💾 PERSISTING solver timeslots to prevent config overwrite:', r.timeslots.length, 'slots');
+              setSolverTimeslots(r.timeslots);
+            }
+
             await queryClient.invalidateQueries({ queryKey: ['scheduleSlots'] });
             await queryClient.invalidateQueries({ queryKey: ['scheduleVersions'] });
             await queryClient.invalidateQueries({ queryKey: ['students'] });
@@ -1553,6 +1571,14 @@ Now process the user's input and return ONLY the JSON object.`,
       }
     }
   }, [scheduleVersions, selectedVersion, publishedVersion, draftVersions, hasAutoSelected]);
+
+  // Clear solver timeslots when version changes (start fresh)
+  React.useEffect(() => {
+    if (selectedVersion) {
+      console.log('[Schedule] Version changed - clearing persisted solver timeslots');
+      setSolverTimeslots(null);
+    }
+  }, [selectedVersion?.id]);
 
   // Calculate stats for selected version
   const stats = React.useMemo(() => {
