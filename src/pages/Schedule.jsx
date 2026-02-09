@@ -893,7 +893,9 @@ Now process the user's input and return ONLY the JSON object.`,
           if (!Array.isArray(group.student_ids) || group.student_ids.length === 0) {
             const matching = students.filter(s => {
               if (s.is_active === false) return false;
-              if (s.year_group !== group.year_group) return false;
+              // Normalize year_group to support both "DP1,DP2" and "DP1+DP2" formats
+              const groupYears = String(group.year_group || '').split(/[,+]/).map(y => y.trim());
+              if (!groupYears.includes(s.year_group)) return false;
               const has = (s.subject_choices || []).some(c => c.subject_id === group.subject_id && (!group.level || c.level === group.level));
               return has;
             });
@@ -1430,6 +1432,7 @@ Now process the user's input and return ONLY the JSON object.`,
 
       // Auto-pipeline: Run OR-Tool + JSON + Persist + Refresh UI
       if (autoRunORTool && selectedVersion) {
+        console.log('[Schedule] 🔄 OR-Tool auto-run enabled - solver will purge local slots and regenerate optimized schedule');
         try {
           setGenerationProgress(prev => ({
             ...prev,

@@ -68,7 +68,9 @@ export default function StudentScheduleView({ students, slots, groups, subjects,
         ));
         
         if (isCoreSubject && student?.year_group && group?.year_group) {
-          return student.year_group === group.year_group;
+          // Normalize year_group to support both "DP1,DP2" and "DP1+DP2" formats
+          const groupYears = String(group.year_group).split(/[,+]/).map(y => y.trim());
+          return groupYears.includes(student.year_group);
         }
       }
       
