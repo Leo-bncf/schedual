@@ -744,7 +744,7 @@ Deno.serve(async (req) => {
         subject_id: subjectId || null,
         teacher_id: teacherId,
         room_id: roomId,
-        timeslot_id: Number(lesson.timeslotId),
+        timeslot_id: lesson.timeslotId,
         day: dayMapping[timeslot.dayOfWeek] || timeslot.dayOfWeek,
         period: period,
         is_double_period: false,
@@ -793,14 +793,11 @@ Deno.serve(async (req) => {
 
     // Step 6.5: Inject STUDY slots into empty timeslots (post-solver, ONLY if solver succeeded)
     // CRITICAL: STUDY/TEST only injected when orToolHttpStatus === 200
-    // Build timeslot index for O(1) lookup
-    const timeslotById = {};
-    problem.timeslots.forEach(t => { timeslotById[t.id] = t; });
-
     const allTimeslots = problem.timeslots || [];
-    const occupiedTimeslots = new Set();
+    const occupiedSlots = new Set();
     slots.forEach(s => {
-      if (s.timeslot_id) occupiedTimeslots.add(Number(s.timeslot_id));
+      const key = `${s.day}_${s.period}`;
+      occupiedSlots.add(key);
     });
 
     const studySlots = [];
@@ -808,12 +805,11 @@ Deno.serve(async (req) => {
     if (studySubject && orToolHttpStatus === 200) {
       // Only inject STUDY if solver succeeded
       for (const ts of allTimeslots) {
-        const tsId = Number(ts.id);
+        const day = dayMapping[ts.dayOfWeek] || ts.dayOfWeek;
+        const period = timeslotIndexInDay[ts.id] || 1;
+        const key = `${day}_${period}`;
 
-        if (!occupiedTimeslots.has(tsId)) {
-          const day = dayMapping[ts.dayOfWeek] || ts.dayOfWeek;
-          const period = timeslotIndexInDay[ts.id] || 1;
-
+        if (!occupiedSlots.has(key)) {
           studySlots.push({
             school_id: schoolId,
             schedule_version: schedule_version_id,
@@ -821,7 +817,7 @@ Deno.serve(async (req) => {
             subject_id: studySubject.id,
             teacher_id: null,
             room_id: null,
-            timeslot_id: Number(ts.id),
+            timeslot_id: ts.id,
             day,
             period,
             is_double_period: false,
