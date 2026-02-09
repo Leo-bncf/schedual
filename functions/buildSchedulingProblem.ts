@@ -856,6 +856,27 @@ Deno.serve(async (req) => {
 
     const lastTimeslot = timeslots[timeslots.length - 1] || null;
 
+    // FINAL VALIDATION: Ensure we have enough lessons to create a viable schedule
+    // Reject if too many DP groups were filtered (prevents "empty" schedules)
+    const dpGroupsTotal = teachingGroupsDb.filter(tg => String(tg.year_group || '').toUpperCase().includes('DP')).length;
+    const dpGroupsIncluded = teachingGroupsIncludedCount; // Count from loop above
+    const dpGroupsFiltered = teachingGroupsFilteredOut.filter(tg => String(tg.year_group || '').toUpperCase().includes('DP')).length;
+    
+    console.log('[buildSchedulingProblem] DP groups summary:', {
+      total: dpGroupsTotal,
+      included: dpGroupsIncluded,
+      filtered: dpGroupsFiltered,
+      percentage_included: dpGroupsTotal > 0 ? Math.round((dpGroupsIncluded / dpGroupsTotal) * 100) : 0
+    });
+    
+    // Warn if less than 50% of DP groups made it to the solver
+    if (dpGroupsTotal > 0 && (dpGroupsIncluded / dpGroupsTotal) < 0.5) {
+      const filteredDPGroups = teachingGroupsFilteredOut.filter(tg => String(tg.year_group || '').toUpperCase().includes('DP'));
+      console.warn('[buildSchedulingProblem] ⚠️ WARNING: Less than 50% of DP groups included in solver');
+      console.warn('[buildSchedulingProblem] This will produce an incomplete schedule');
+      console.warn('[buildSchedulingProblem] Filtered DP groups:', filteredDPGroups.map(g => `${g.name} (${g.reason})`));
+    }
+    
     // CRITICAL: Filter out STUDY from solver (injected post-solve to fill empty slots)
     // TEST is now INCLUDED in solver for proper scheduling
     const excludeFromSolver = new Set(['STUDY']);
