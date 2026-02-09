@@ -708,24 +708,24 @@ Now process the user's input and return ONLY the JSON object.`,
       const updatedGroups = await base44.entities.TeachingGroup.filter({ school_id: schoolId });
       console.log('Updated groups with teachers:', updatedGroups.filter(g => g.teacher_id).length);
 
-      // CRITICAL: If OR-Tool auto-run is enabled for DP, skip local scheduling entirely
-      // OR-Tool will purge old slots + generate complete optimized schedule
+      // CRITICAL: If OR-Tool auto-run is enabled for DP, skip ALL local scheduling
+      // OR-Tool becomes single source of truth (purge → optimize → persist)
       if (autoRunORTool && allowedProgrammes.includes('DP')) {
-        console.log('[Schedule] 🚀 OR-Tool auto-run enabled for DP - skipping local scheduling, jumping to OR-Tool');
+        console.log('[Schedule] 🚀 OR-Tool auto-run enabled - SKIPPING all local scheduling (DP/MYP/PYP)');
+        console.log('[Schedule] OR-Tool will purge existing slots + generate complete optimized schedule');
         
         setGenerationProgress(prev => ({
           ...prev,
-          stage: 'Skipping to OR-Tool',
-          percent: 25,
-          message: 'OR-Tool will handle complete schedule generation...',
-          completedSteps: ['teachers']
+          stage: 'Preparing OR-Tool',
+          percent: 30,
+          message: 'Skipping local scheduler - OR-Tool will handle everything...',
+          completedSteps: ['teachers', 'preparation']
         }));
         
-        // Jump directly to OR-Tool pipeline (no local slot generation)
-        // OR-Tool will call purgeScheduleSlots internally before inserting
+        // Skip directly to OR-Tool pipeline below (no local slot generation at all)
       } else {
         // Local scheduling for MYP/PYP or when OR-Tool disabled
-        console.log('[Schedule] 🔧 Using local scheduling algorithm');
+        console.log('[Schedule] 🔧 Using local scheduling algorithm (OR-Tool disabled or no DP)');
 
       // Delete existing slots for this version (batch to avoid rate limits)
       if (cancelGeneration) throw new Error('Cancelled by user');
@@ -1460,17 +1460,19 @@ Now process the user's input and return ONLY the JSON object.`,
         });
 
         console.log('=== LOCAL SCHEDULE GENERATION COMPLETE ===');
+        console.log(`Total local slots created: ${newSlots.length}`);
       } // End of local scheduling block
 
-      // OR-Tool pipeline: Generate optimized DP schedule
+      // OR-Tool pipeline: Generate optimized DP schedule (SINGLE SOURCE OF TRUTH)
       if (autoRunORTool && selectedVersion && allowedProgrammes.includes('DP')) {
-        console.log('[Schedule] 🔄 OR-Tool: generating complete DP schedule (purge + optimize + persist)');
+        console.log('[Schedule] 🔄 OR-Tool Pipeline Starting');
+        console.log('[Schedule] OR-Tool will: 1) Purge existing slots 2) Optimize schedule 3) Persist new slots');
         try {
           setGenerationProgress(prev => ({
             ...prev,
-            stage: 'Running OR-Tool',
-            percent: 98,
-            message: 'Optimizing DP Core (TOK/CAS/EE) and Tests, then persisting...'
+            stage: 'Running OR-Tool Scheduler',
+            percent: 90,
+            message: 'OR-Tool: Purging old slots + Optimizing DP Core/Tests + Persisting...'
           }));
           setOrToolLoading(true);
           setOrToolError(null);
@@ -1500,6 +1502,10 @@ Now process the user's input and return ONLY the JSON object.`,
           } else {
             // Success path
             const inserted = r.slotsInserted ?? r.insertedCount ?? 0;
+            const deleted = r.slotsDeleted ?? r.deletedCount ?? 0;
+            
+            console.log(`[Schedule] ✅ OR-Tool completed: deleted ${deleted} old slots, inserted ${inserted} new slots`);
+            
             if (!(r.performedDeletion === true && r.performedInsertion === true && inserted > 0)) {
               toast.warning('OR-Tool finished but did not report expected persistence flags.');
             }
@@ -1517,7 +1523,7 @@ Now process the user's input and return ONLY the JSON object.`,
             await queryClient.invalidateQueries({ queryKey: ['scheduleVersions'] });
             await queryClient.invalidateQueries({ queryKey: ['students'] });
             setScheduleTab('student');
-            toast.success('OR-Tool persisted; Student View refreshed');
+            toast.success(`✅ OR-Tool: ${deleted} deleted, ${inserted} optimized slots created`);
           }
         } catch (e) {
           console.error('Auto OR-Tool step failed:', e);
