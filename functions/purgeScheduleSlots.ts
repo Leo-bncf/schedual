@@ -50,35 +50,64 @@ Deno.serve(async (req) => {
       });
     }
 
-    // Delete in chunks using service role
-    const CHUNK_SIZE = 50;
+    // Delete with AGGRESSIVE rate limit handling
+    const CHUNK_SIZE = 10; // Smaller chunks to avoid rate limit
+    const DELAY_MS = 1000; // 1 second between chunks
+    const MAX_RETRIES = 5;
     let deletedCount = 0;
     const errors = [];
 
     for (let i = 0; i < slotsToDelete.length; i += CHUNK_SIZE) {
       const chunk = slotsToDelete.slice(i, i + CHUNK_SIZE);
+      let chunkSuccess = false;
       
-      const results = await Promise.allSettled(
-        chunk.map(slot => base44.asServiceRole.entities.ScheduleSlot.delete(slot.id))
-      );
+      // Retry logic for each chunk
+      for (let attempt = 0; attempt <= MAX_RETRIES; attempt++) {
+        const results = await Promise.allSettled(
+          chunk.map(slot => base44.asServiceRole.entities.ScheduleSlot.delete(slot.id))
+        );
 
-      const successes = results.filter(r => r.status === 'fulfilled').length;
-      const failures = results.filter(r => r.status === 'rejected');
+        const successes = results.filter(r => r.status === 'fulfilled').length;
+        const failures = results.filter(r => r.status === 'rejected');
 
-      deletedCount += successes;
+        deletedCount += successes;
 
-      failures.forEach((f, idx) => {
-        errors.push(`${chunk[idx]?.id}: ${f.reason?.message || 'unknown'}`);
-      });
+        if (failures.length === 0) {
+          chunkSuccess = true;
+          break;
+        }
+
+        // Check for rate limit errors
+        const hasRateLimit = failures.some(f => 
+          String(f.reason?.message || '').toLowerCase().includes('rate limit')
+        );
+
+        if (hasRateLimit && attempt < MAX_RETRIES) {
+          const backoff = Math.pow(2, attempt) * 2000; // 2s, 4s, 8s, 16s, 32s
+          console.warn(`[purgeScheduleSlots] Rate limit hit (chunk ${i+1}/${Math.ceil(totalCount/CHUNK_SIZE)}), retry in ${backoff}ms (attempt ${attempt + 1}/${MAX_RETRIES})`);
+          await new Promise(resolve => setTimeout(resolve, backoff));
+          continue;
+        }
+
+        // Log persistent errors
+        failures.forEach((f, idx) => {
+          errors.push(`${chunk[idx]?.id}: ${f.reason?.message || 'unknown'}`);
+        });
+        break;
+      }
+
+      if (!chunkSuccess) {
+        console.error(`[purgeScheduleSlots] Chunk ${i+1}/${Math.ceil(totalCount/CHUNK_SIZE)} failed after ${MAX_RETRIES} retries`);
+      }
 
       // Progress log
-      if ((i + CHUNK_SIZE) % 100 === 0 || i + CHUNK_SIZE >= totalCount) {
+      if ((i + CHUNK_SIZE) % 50 === 0 || i + CHUNK_SIZE >= totalCount) {
         console.log(`[purgeScheduleSlots] Progress: ${deletedCount}/${totalCount}`);
       }
 
-      // Small delay between chunks to be gentle on DB
+      // Delay between chunks (except last)
       if (i + CHUNK_SIZE < totalCount) {
-        await new Promise(resolve => setTimeout(resolve, 100));
+        await new Promise(resolve => setTimeout(resolve, DELAY_MS));
       }
     }
 
