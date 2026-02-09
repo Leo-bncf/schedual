@@ -60,6 +60,7 @@ import EmptyState from '../components/ui-custom/EmptyState';
 import GenerationProgress from '../components/schedule/GenerationProgress';
 import ScheduleUpdateBanner from '../components/schedule/ScheduleUpdateBanner';
 import UtilizationStats from '../components/schedule/UtilizationStats';
+import CohortIntegrityReport from '../components/schedule/CohortIntegrityReport';
 
 
 export default function Schedule() {
@@ -2440,6 +2441,11 @@ Now process the user's input and return ONLY the JSON object.`,
               {orToolResult && (
                 <>
                   <UnassignedBanner unassigned={orToolResult?.unassignedBySubjectCode} />
+                  
+                  {/* Cohort Integrity Validation */}
+                  {orToolResult?.cohortIntegrity && (
+                    <CohortIntegrityReport cohortData={orToolResult.cohortIntegrity} />
+                  )}
 
                   {/* CORE DIAGNOSTICS PANEL */}
                   <Card className="border-2 border-rose-300 bg-rose-50">

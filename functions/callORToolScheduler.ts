@@ -676,6 +676,90 @@ Deno.serve(async (req) => {
       }, { status: 200 });
     }
     
+    // CRITICAL VALIDATION: Cohort Integrity Check
+    // Ensures all lessons for the same studentGroup (section) are assigned to the SAME students
+    // Detects split sections: same course appearing at different times for different students
+    stage = 'validateCohortIntegrity';
+    console.log(`[callORToolScheduler] ${stage}: validating cohort/section integrity`);
+    
+    const sectionCoverageMap = {}; // { studentGroup: { subject, timeslots: [ids], lessons_total, lessons_assigned } }
+    
+    for (const lesson of solvedLessons) {
+      const sg = lesson.studentGroup;
+      if (!sg) continue;
+      
+      if (!sectionCoverageMap[sg]) {
+        sectionCoverageMap[sg] = {
+          studentGroup: sg,
+          subject: lesson.subject,
+          timeslots: [],
+          lessons_total: 0,
+          lessons_assigned: 0
+        };
+      }
+      
+      sectionCoverageMap[sg].lessons_total++;
+      
+      if (lesson.timeslotId) {
+        sectionCoverageMap[sg].lessons_assigned++;
+        sectionCoverageMap[sg].timeslots.push(lesson.timeslotId);
+      }
+    }
+    
+    // Check for duplicate timeslot assignments within same section (impossible - would mean split section)
+    const splitSections = [];
+    const sectionCoverage = [];
+    
+    for (const [sg, data] of Object.entries(sectionCoverageMap)) {
+      const uniqueTimeslots = new Set(data.timeslots);
+      const hasDuplicates = uniqueTimeslots.size !== data.timeslots.length;
+      
+      if (hasDuplicates) {
+        // CRITICAL: Same section scheduled multiple times at same timeslot = impossible
+        console.error(`[callORToolScheduler] ❌ SPLIT SECTION DETECTED: ${sg} has duplicate timeslot assignments`);
+        splitSections.push({
+          studentGroup: sg,
+          subject: data.subject,
+          timeslots_total: data.timeslots.length,
+          timeslots_unique: uniqueTimeslots.size,
+          timeslots_list: data.timeslots,
+          reason: 'Same timeslot assigned multiple times (physically impossible)'
+        });
+      }
+      
+      sectionCoverage.push({
+        studentGroup: sg,
+        subject: data.subject,
+        expected_periods: data.lessons_total,
+        assigned_periods: data.lessons_assigned,
+        unassigned_periods: data.lessons_total - data.lessons_assigned,
+        coverage_percent: data.lessons_total > 0 ? Math.round((data.lessons_assigned / data.lessons_total) * 100) : 0,
+        timeslots_assigned: Array.from(uniqueTimeslots)
+      });
+    }
+    
+    console.log('[callORToolScheduler] Section Coverage Report:', {
+      total_sections: sectionCoverage.length,
+      fully_scheduled: sectionCoverage.filter(s => s.coverage_percent === 100).length,
+      partially_scheduled: sectionCoverage.filter(s => s.coverage_percent > 0 && s.coverage_percent < 100).length,
+      not_scheduled: sectionCoverage.filter(s => s.coverage_percent === 0).length,
+      split_sections: splitSections.length
+    });
+    
+    if (splitSections.length > 0) {
+      console.error('[callORToolScheduler] ❌ COHORT INTEGRITY VIOLATION: Split sections detected');
+      console.error('[callORToolScheduler] Split sections:', splitSections);
+      
+      return Response.json({
+        ok: false,
+        stage: 'COHORT_INTEGRITY_VIOLATION',
+        error: `${splitSections.length} sections have duplicate timeslot assignments (same class scheduled multiple times at same time)`,
+        splitSections,
+        suggestion: 'This indicates a solver bug. Each section should have unique timeslots for each period.',
+        meta: { schedule_version_id, schoolId }
+      }, { status: 500 });
+    }
+    
     // Step 5c: Map OptaPlanner solution back to Base44 ScheduleSlot entities (assigned + unscheduled)
     const allowNullRoomSubjects = new Set(['STUDY','TOK','CAS','EE']);
     const periods_per_day = periodsPerDayComputed; // derived from schedule settings
@@ -1122,6 +1206,14 @@ Deno.serve(async (req) => {
         lessonsWithoutTimeslot,
         missingRoomCount,
         missingTeacherCount,
+      },
+      cohortIntegrity: {
+        total_sections: sectionCoverage.length,
+        fully_scheduled: sectionCoverage.filter(s => s.coverage_percent === 100).length,
+        partially_scheduled: sectionCoverage.filter(s => s.coverage_percent > 0 && s.coverage_percent < 100).length,
+        not_scheduled: sectionCoverage.filter(s => s.coverage_percent === 0).length,
+        split_sections: splitSections.length,
+        sectionCoverageReport: sectionCoverage.slice(0, 100)
       },
       buildMeta,
       problemLessonsCreated,
