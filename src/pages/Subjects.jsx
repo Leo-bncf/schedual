@@ -65,9 +65,9 @@ export default function Subjects() {
     ib_group: 1,
     ib_group_name: 'Language & Literature',
     available_levels: ['HL', 'SL'],
-    hl_hours_per_week: 6,
-    sl_hours_per_week: 4,
-    pyp_myp_hours_per_week: 4,
+    hl_hours_per_week: 5,
+    sl_hours_per_week: 3,
+    pyp_myp_hours_per_week: 3,
     requires_lab: false,
     requires_special_room: '',
     is_core: false,
@@ -164,9 +164,9 @@ export default function Subjects() {
       ib_group: 1,
       ib_group_name: 'Language & Literature',
       available_levels: ['HL', 'SL'],
-      hl_hours_per_week: 6,
-      sl_hours_per_week: 4,
-      pyp_myp_hours_per_week: 4,
+      hl_hours_per_week: 5,
+      sl_hours_per_week: 3,
+      pyp_myp_hours_per_week: 3,
       requires_lab: false,
       requires_special_room: '',
       is_core: false,
@@ -186,9 +186,9 @@ export default function Subjects() {
       ib_group: subject.ib_group || 1,
       ib_group_name: subject.ib_group_name || 'Language & Literature',
       available_levels: subject.available_levels || ['HL', 'SL'],
-      hl_hours_per_week: subject.hl_hours_per_week || 6,
-      sl_hours_per_week: subject.sl_hours_per_week || 4,
-      pyp_myp_hours_per_week: subject.pyp_myp_hours_per_week || 4,
+      hl_hours_per_week: subject.hl_minutes_per_week_default ? Math.round(subject.hl_minutes_per_week_default / 60) : 5,
+      sl_hours_per_week: subject.sl_minutes_per_week_default ? Math.round(subject.sl_minutes_per_week_default / 60) : 3,
+      pyp_myp_hours_per_week: subject.pyp_myp_minutes_per_week_default ? Math.round(subject.pyp_myp_minutes_per_week_default / 60) : 3,
       requires_lab: subject.requires_lab || false,
       requires_special_room: subject.requires_special_room || '',
       is_core: subject.is_core || false,
@@ -202,10 +202,16 @@ export default function Subjects() {
     e.preventDefault();
     const group = IB_GROUPS.find(g => g.id === formData.ib_group);
     const data = { 
-      ...formData, 
+      ...formData,
       ib_group: String(formData.ib_group),
-      ib_group_name: group?.name || '' 
+      ib_group_name: group?.name || '',
+      hl_minutes_per_week_default: formData.hl_hours_per_week * 60,
+      sl_minutes_per_week_default: formData.sl_hours_per_week * 60,
+      pyp_myp_minutes_per_week_default: formData.pyp_myp_hours_per_week * 60
     };
+    delete data.hl_hours_per_week;
+    delete data.sl_hours_per_week;
+    delete data.pyp_myp_hours_per_week;
     
     if (editingSubject) {
       updateMutation.mutate({ id: editingSubject.id, data });
@@ -310,19 +316,19 @@ ${trainingFeedback ? `LESSONS FROM ADMIN FEEDBACK:\n${trainingFeedback}\n\n` : '
         const group = IB_GROUPS.find(g => g.id === parseInt(ibGroupStr));
         
         await base44.entities.Subject.create({
-          school_id: schoolId,
-          name: subject.name,
-          code: subject.code,
-          ib_level: subject.ib_level,
-          ib_group: ibGroupStr,
-          ib_group_name: group?.name || 'Language & Literature',
-          available_levels: subject.available_levels || ['HL', 'SL'],
-          hl_hours_per_week: 6,
-          sl_hours_per_week: 4,
-          pyp_myp_hours_per_week: subject.pyp_myp_hours_per_week || 4,
-          requires_lab: false,
-          is_core: false,
-          is_active: true
+        school_id: schoolId,
+        name: subject.name,
+        code: subject.code,
+        ib_level: subject.ib_level,
+        ib_group: ibGroupStr,
+        ib_group_name: group?.name || 'Language & Literature',
+        available_levels: subject.available_levels || ['HL', 'SL'],
+        hl_minutes_per_week_default: 300,
+        sl_minutes_per_week_default: 180,
+        pyp_myp_minutes_per_week_default: (subject.pyp_myp_hours_per_week || 3) * 60,
+        requires_lab: false,
+        is_core: false,
+        is_active: true
         });
 
         created++;
