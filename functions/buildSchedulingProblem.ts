@@ -421,6 +421,23 @@ Deno.serve(async (req) => {
           debugMinutesSourceByTG[tg.id] = { source: 'SUBJECT_DEFAULT_SL', value: subj.sl_minutes_per_week_default, subject: subjCode, note: 'level_unclear' };
           return subj.sl_minutes_per_week_default;
         }
+        
+        // CRITICAL FALLBACK: If NO subject-level defaults exist, use IB standard defaults
+        // This ensures all DP teaching groups are included even without admin config
+        if (level === 'HL') {
+          console.log(`[buildSchedulingProblem] TG ${tg.id} (${subjCode} HL): no subject config, using IB standard HL fallback = 300 min/week`);
+          debugMinutesSourceByTG[tg.id] = { source: 'IB_STANDARD_HL_FALLBACK', value: 300, subject: subjCode };
+          return 300; // IB standard: HL = 5 hours/week
+        }
+        if (level === 'SL') {
+          console.log(`[buildSchedulingProblem] TG ${tg.id} (${subjCode} SL): no subject config, using IB standard SL fallback = 180 min/week`);
+          debugMinutesSourceByTG[tg.id] = { source: 'IB_STANDARD_SL_FALLBACK', value: 180, subject: subjCode };
+          return 180; // IB standard: SL = 3 hours/week
+        }
+        // Level unknown: assume SL (safer default)
+        console.log(`[buildSchedulingProblem] TG ${tg.id} (${subjCode}): level unknown, using IB standard SL fallback = 180 min/week`);
+        debugMinutesSourceByTG[tg.id] = { source: 'IB_STANDARD_SL_FALLBACK', value: 180, subject: subjCode, note: 'level_unknown' };
+        return 180;
       }
       
       // PYP/MYP subjects: use pyp_myp_minutes_per_week_default
