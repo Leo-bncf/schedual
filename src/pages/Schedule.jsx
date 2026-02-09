@@ -722,11 +722,19 @@ Now process the user's input and return ONLY the JSON object.`,
         await new Promise(resolve => setTimeout(resolve, 3000)); // Increased from 2000ms
       }
 
-      // Comprehensive scheduling algorithm for all students, teachers, and rooms
-      const days = ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday'];
-      const periodsPerDay = school?.periods_per_day || 8;
-      const periods = Array.from({ length: periodsPerDay }, (_, i) => i + 1);
-      const newSlots = [];
+      // CRITICAL: Skip local scheduling when OR-Tool auto-run is enabled
+      // OR-Tool will purge all local slots and regenerate the complete schedule
+      if (autoRunORTool) {
+        console.log('[Schedule] ⏭️ Skipping local scheduling algorithm - OR-Tool auto-run will handle complete schedule generation');
+        // Jump directly to OR-Tool pipeline below
+      } else {
+        console.log('[Schedule] 🔧 OR-Tool auto-run disabled - using local scheduling algorithm');
+      
+        // Comprehensive scheduling algorithm for all students, teachers, and rooms
+        const days = ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday'];
+        const periodsPerDay = school?.periods_per_day || 8;
+        const periods = Array.from({ length: periodsPerDay }, (_, i) => i + 1);
+        const newSlots = [];
 
       // Track availability for students, teachers, and rooms
       const studentSchedules = {};
@@ -1419,16 +1427,17 @@ Now process the user's input and return ONLY the JSON object.`,
       await queryClient.invalidateQueries({ queryKey: ['scheduleVersions'] });
       await queryClient.invalidateQueries({ queryKey: ['teachingGroups'] });
 
-      setGenerationProgress({
-        stage: 'Complete',
-        percent: 100,
-        message: `Successfully created ${newSlots.length} schedule slots!`,
-        currentStep: '',
-        completedSteps: ['teachers', 'dp', 'myp', 'pyp', 'slots', 'finalize'],
-        completed: true
-      });
+        setGenerationProgress({
+          stage: 'Complete',
+          percent: 100,
+          message: `Successfully created ${newSlots.length} schedule slots!`,
+          currentStep: '',
+          completedSteps: ['teachers', 'dp', 'myp', 'pyp', 'slots', 'finalize'],
+          completed: true
+        });
 
-      console.log('=== SCHEDULE GENERATION COMPLETE ===');
+        console.log('=== SCHEDULE GENERATION COMPLETE ===');
+      } // End of local scheduling block
 
       // Auto-pipeline: Run OR-Tool + JSON + Persist + Refresh UI
       if (autoRunORTool && selectedVersion) {
