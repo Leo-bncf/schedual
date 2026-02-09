@@ -43,16 +43,12 @@ export default function TimetableGrid({
   exportId = "timetable-grid",
   dayStartTime = '08:00',
   dayEndTime = '18:00',
-  periodDurationMinutes = 60
+  periodDurationMinutes = 60,
+  timeslots = []
 }) {
   const [selectedSlot, setSelectedSlot] = React.useState(null);
   
-  const periodTimes = React.useMemo(() => 
-    calculatePeriodTimes(dayStartTime, periodDurationMinutes, periodsPerDay),
-    [dayStartTime, periodDurationMinutes, periodsPerDay]
-  );
-
-  // Normalize incoming slot day/period formats (e.g., MONDAY -> Monday, "5" -> 5)
+  // Build timeslot index: timeslot_id → UI row position (chronological per day, includes breaks)
   const DAY_MAP = { MONDAY: 'Monday', TUESDAY: 'Tuesday', WEDNESDAY: 'Wednesday', THURSDAY: 'Thursday', FRIDAY: 'Friday' };
   const normalizeDay = (d) => {
     if (!d) return d;
@@ -60,14 +56,49 @@ export default function TimetableGrid({
     if (DAY_MAP[up]) return DAY_MAP[up];
     return String(d).charAt(0).toUpperCase() + String(d).slice(1).toLowerCase();
   };
+  
+  const timeslotToPosition = React.useMemo(() => {
+    const map = {};
+    const timeslotsByDay = {};
+    
+    // Group timeslots by day and sort chronologically
+    DAYS.forEach(day => {
+      const dayUpper = day.toUpperCase();
+      timeslotsByDay[day] = (timeslots || [])
+        .filter(t => t.dayOfWeek === dayUpper)
+        .sort((a, b) => String(a.startTime || '').localeCompare(String(b.startTime || '')));
+    });
+    
+    // Map each timeslot to its UI row position (1-based, chronological)
+    Object.values(timeslotsByDay).forEach(daySlots => {
+      daySlots.forEach((ts, idx) => {
+        map[ts.id] = idx + 1;
+      });
+    });
+    
+    return map;
+  }, [timeslots]);
+  
+  const periodTimes = React.useMemo(() => {
+    const times = {};
+    // Build from actual timeslots for accurate display
+    timeslots.forEach(ts => {
+      const position = timeslotToPosition[ts.id];
+      if (position && !times[position]) {
+        times[position] = ts.startTime || '';
+      }
+    });
+    return times;
+  }, [timeslots, timeslotToPosition]);
+
   const normalizedSlots = React.useMemo(() => (slots || []).map(s => ({
     ...s,
     day: normalizeDay(s.day),
-    period: typeof s.period === 'string' ? parseInt(s.period) : s.period,
-  })), [slots]);
+    uiRow: s.timeslot_id ? timeslotToPosition[s.timeslot_id] : s.period,
+  })), [slots, timeslotToPosition]);
 
-  const getSlotData = (day, period) => {
-    return normalizedSlots.filter(s => s.day === day && s.period === period);
+  const getSlotData = (day, uiRow) => {
+    return normalizedSlots.filter(s => s.day === day && s.uiRow === uiRow);
   };
 
   const getGroupInfo = (groupId) => {
@@ -186,20 +217,20 @@ export default function TimetableGrid({
             </div>
 
             {/* Period Rows */}
-            {activePeriods.map(period => (
-              <React.Fragment key={period}>
+            {activePeriods.map(uiRow => (
+              <React.Fragment key={uiRow}>
                 <div className="grid grid-cols-[100px_repeat(5,1fr)] border-b border-slate-300">
                   <div className="p-4 bg-slate-50 border-r border-slate-300 flex flex-col justify-center min-h-[120px]">
-                    <div className="text-sm font-semibold text-slate-700">Period {period}</div>
-                    <div className="text-sm text-slate-500 mt-1">{periodTimes[period]}</div>
+                    <div className="text-sm font-semibold text-slate-700">Period {uiRow}</div>
+                    <div className="text-sm text-slate-500 mt-1">{periodTimes[uiRow]}</div>
                   </div>
                 {DAYS.map(day => {
-                  const slotsInCell = getSlotData(day, period);
+                  const slotsInCell = getSlotData(day, uiRow);
                   
                   if (slotsInCell.length === 0) {
                     return (
                       <div 
-                        key={`${day}-${period}`} 
+                        key={`${day}-${uiRow}`} 
                         className="border-r border-slate-300 last:border-r-0 min-h-[120px] bg-slate-50/50"
                         onDragOver={(e) => e.preventDefault()}
                         onDrop={(e) => {
@@ -208,13 +239,13 @@ export default function TimetableGrid({
                           const sourceDay = e.dataTransfer.getData('sourceDay');
                           const sourcePeriod = parseInt(e.dataTransfer.getData('sourcePeriod'));
                           
-                          onSlotClick?.(day, period, { 
+                          onSlotClick?.(day, uiRow, { 
                             action: 'move', 
                             sourceSlotId, 
                             sourceDay,
                             sourcePeriod,
                             targetDay: day,
-                            targetPeriod: period
+                            targetPeriod: uiRow
                           });
                         }}
                       />
@@ -222,7 +253,7 @@ export default function TimetableGrid({
                   }
 
                   // Filter out slots that should be skipped due to spanning
-                  const visibleSlots = slotsInCell.filter(slot => !shouldSkipCell(day, period, slot.id));
+                  const visibleSlots = slotsInCell.filter(slot => !shouldSkipCell(day, uiRow, slot.id));
 
                   if (visibleSlots.length === 0) {
                     return null;
@@ -231,7 +262,7 @@ export default function TimetableGrid({
                   // Stack multiple slots vertically within the same cell
                   return (
                     <div 
-                      key={`${day}-${period}`} 
+                      key={`${day}-${uiRow}`} 
                       className="border-r border-slate-300 last:border-r-0 p-2 space-y-2"
                       onDragOver={(e) => e.preventDefault()}
                       onDrop={(e) => {
@@ -243,20 +274,20 @@ export default function TimetableGrid({
                         // Check if dropping on a slot or empty space
                         const targetSlot = visibleSlots[0];
                         if (sourceSlotId !== targetSlot?.id) {
-                          onSlotClick?.(day, period, { 
+                          onSlotClick?.(day, uiRow, { 
                             action: targetSlot ? 'swap' : 'move', 
                             sourceSlotId, 
                             targetSlotId: targetSlot?.id,
                             sourceDay,
                             sourcePeriod,
                             targetDay: day,
-                            targetPeriod: period
+                            targetPeriod: uiRow
                           });
                         }
                       }}
                     >
                       {visibleSlots.map(slot => {
-                        const span = getSlotSpan(day, period, slot.id);
+                        const span = getSlotSpan(day, uiRow, slot.id);
                         const room = getRoomInfo(slot.room_id);
                         
                         let subject = null;
@@ -298,7 +329,7 @@ export default function TimetableGrid({
                             onDragStart={(e) => {
                               e.dataTransfer.setData('slotId', slot.id);
                               e.dataTransfer.setData('sourceDay', day);
-                              e.dataTransfer.setData('sourcePeriod', String(period));
+                              e.dataTransfer.setData('sourcePeriod', String(uiRow));
                             }}
                             className="cursor-move hover:shadow-lg hover:scale-105 transition-all rounded-lg overflow-hidden group"
                             onClick={() => handleSlotClick(slot)}
@@ -374,14 +405,14 @@ export default function TimetableGrid({
                 </div>
                 
                 {/* Break Row */}
-                {breakPeriods.includes(period) && (
+                {breakPeriods.includes(uiRow) && (
                   <div className="grid grid-cols-[100px_repeat(5,1fr)] border-b-2 border-blue-300 bg-gradient-to-r from-blue-50 to-cyan-50">
                     <div className="p-3 bg-blue-100 border-r border-blue-300 flex flex-col justify-center">
                       <div className="text-sm font-bold text-blue-900">☕ Break</div>
                       <div className="text-xs text-blue-700 mt-1">15 min</div>
                     </div>
                     {DAYS.map(day => (
-                      <div key={`${day}-break-${period}`} className="p-3 border-r border-blue-200 last:border-r-0 flex items-center justify-center">
+                      <div key={`${day}-break-${uiRow}`} className="p-3 border-r border-blue-200 last:border-r-0 flex items-center justify-center">
                         <span className="text-blue-700 font-medium text-sm">Short Break</span>
                       </div>
                     ))}
@@ -389,7 +420,7 @@ export default function TimetableGrid({
                 )}
 
                 {/* Lunch Break Row */}
-                {period === lunchPeriod && (
+                {uiRow === lunchPeriod && (
                   <div className="grid grid-cols-[100px_repeat(5,1fr)] border-b-2 border-amber-300 bg-gradient-to-r from-amber-50 to-orange-50">
                     <div className="p-4 bg-amber-100 border-r border-amber-300 flex flex-col justify-center">
                       <div className="text-sm font-bold text-amber-900">🍽️ Lunch</div>
@@ -421,7 +452,7 @@ export default function TimetableGrid({
             <div className="flex items-start justify-between mb-6">
               <div className="flex-1">
                 <h3 className="text-3xl font-bold text-slate-900 mb-2">{selectedSlot.subject?.name || selectedSlot.slot.notes || 'Slot'}</h3>
-                <p className="text-slate-500 text-lg">{selectedSlot.slot.day}, Period {selectedSlot.slot.period}</p>
+                <p className="text-slate-500 text-lg">{selectedSlot.slot.day}, Period {selectedSlot.slot.uiRow || selectedSlot.slot.period}</p>
               </div>
               <button 
                 onClick={() => setSelectedSlot(null)}

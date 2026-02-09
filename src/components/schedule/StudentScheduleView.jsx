@@ -7,13 +7,40 @@ import { GraduationCap } from 'lucide-react';
 const DAYS = ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday'];
 const PERIODS = [1, 2, 3, 4, 5, 6, 'break', 'lunch', 7, 8, 9, 10, 11, 12];
 
-const periodTimes = {
-  1: '08:00', 2: '08:45', 3: '09:30', 4: '10:15', 5: '11:00', 6: '11:45',
-  break: '12:15', lunch: '12:30', 7: '13:00', 8: '13:45', 9: '14:30', 10: '15:15', 11: '16:00', 12: '16:45',
-};
-
-export default function StudentScheduleView({ students, slots, groups, subjects, teachers, rooms, selectedStudentId, onStudentChange, exportId = "student-schedule", unassignedBySubjectCode = {} }) {
+export default function StudentScheduleView({ students, slots, groups, subjects, teachers, rooms, selectedStudentId, onStudentChange, exportId = "student-schedule", unassignedBySubjectCode = {}, timeslots = [] }) {
   const selectedStudent = students.find(s => s.id === selectedStudentId);
+  
+  // Build timeslot mapping: timeslot_id → UI position + time
+  const DAY_MAP = { MONDAY: 'Monday', TUESDAY: 'Tuesday', WEDNESDAY: 'Wednesday', THURSDAY: 'Thursday', FRIDAY: 'Friday' };
+  const timeslotToPosition = React.useMemo(() => {
+    const map = {};
+    const timeslotsByDay = {};
+    
+    DAYS.forEach(day => {
+      const dayUpper = day.toUpperCase();
+      timeslotsByDay[day] = (timeslots || [])
+        .filter(t => t.dayOfWeek === dayUpper)
+        .sort((a, b) => String(a.startTime || '').localeCompare(String(b.startTime || '')));
+    });
+    
+    Object.values(timeslotsByDay).forEach(daySlots => {
+      daySlots.forEach((ts, idx) => {
+        map[ts.id] = { uiRow: idx + 1, startTime: ts.startTime };
+      });
+    });
+    
+    return map;
+  }, [timeslots]);
+  
+  const periodTimes = React.useMemo(() => {
+    const times = {};
+    Object.values(timeslotToPosition).forEach(({ uiRow, startTime }) => {
+      if (!times[uiRow]) times[uiRow] = startTime;
+    });
+    times.break = '12:15';
+    times.lunch = '12:30';
+    return times;
+  }, [timeslotToPosition]);
 
   const getStudentSlots = (studentId) => {
     const student = students.find(s => s.id === studentId);
@@ -67,8 +94,11 @@ export default function StudentScheduleView({ students, slots, groups, subjects,
 
   const studentSlots = selectedStudent ? getStudentSlots(selectedStudent.id) : [];
 
-  const getSlotForPeriod = (day, period) => {
-    return studentSlots.find(s => s.day === day && s.period === period);
+  const getSlotForPeriod = (day, uiRow) => {
+    return studentSlots.find(s => {
+      const slotUiRow = s.timeslot_id ? timeslotToPosition[s.timeslot_id]?.uiRow : s.period;
+      return s.day === day && slotUiRow === uiRow;
+    });
   };
 
   const subjectColors = {

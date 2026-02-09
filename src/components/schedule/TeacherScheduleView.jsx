@@ -7,13 +7,38 @@ import { User } from 'lucide-react';
 const DAYS = ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday'];
 const PERIODS = [1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12];
 
-const periodTimes = {
-  1: '08:00', 2: '08:45', 3: '09:30', 4: '10:15', 5: '11:00', 6: '11:45',
-  7: '13:00', 8: '13:45', 9: '14:30', 10: '15:15', 11: '16:00', 12: '16:45',
-};
-
-export default function TeacherScheduleView({ teachers, slots, groups, subjects, rooms, selectedTeacherId, onTeacherChange, exportId = "teacher-schedule" }) {
+export default function TeacherScheduleView({ teachers, slots, groups, subjects, rooms, selectedTeacherId, onTeacherChange, exportId = "teacher-schedule", timeslots = [] }) {
   const selectedTeacher = teachers.find(t => t.id === selectedTeacherId);
+  
+  // Build timeslot mapping
+  const DAY_MAP = { MONDAY: 'Monday', TUESDAY: 'Tuesday', WEDNESDAY: 'Wednesday', THURSDAY: 'Thursday', FRIDAY: 'Friday' };
+  const timeslotToPosition = React.useMemo(() => {
+    const map = {};
+    const timeslotsByDay = {};
+    
+    DAYS.forEach(day => {
+      const dayUpper = day.toUpperCase();
+      timeslotsByDay[day] = (timeslots || [])
+        .filter(t => t.dayOfWeek === dayUpper)
+        .sort((a, b) => String(a.startTime || '').localeCompare(String(b.startTime || '')));
+    });
+    
+    Object.values(timeslotsByDay).forEach(daySlots => {
+      daySlots.forEach((ts, idx) => {
+        map[ts.id] = { uiRow: idx + 1, startTime: ts.startTime };
+      });
+    });
+    
+    return map;
+  }, [timeslots]);
+  
+  const periodTimes = React.useMemo(() => {
+    const times = {};
+    Object.values(timeslotToPosition).forEach(({ uiRow, startTime }) => {
+      if (!times[uiRow]) times[uiRow] = startTime;
+    });
+    return times;
+  }, [timeslotToPosition]);
 
   const getTeacherSlots = (teacherId) => {
     return slots.filter(slot => {
@@ -29,8 +54,11 @@ export default function TeacherScheduleView({ teachers, slots, groups, subjects,
 
   const teacherSlots = selectedTeacher ? getTeacherSlots(selectedTeacher.id) : [];
 
-  const getSlotForPeriod = (day, period) => {
-    return teacherSlots.find(s => s.day === day && s.period === period);
+  const getSlotForPeriod = (day, uiRow) => {
+    return teacherSlots.find(s => {
+      const slotUiRow = s.timeslot_id ? timeslotToPosition[s.timeslot_id]?.uiRow : s.period;
+      return s.day === day && slotUiRow === uiRow;
+    });
   };
 
   const subjectColors = {
