@@ -1,4 +1,3 @@
-
 import React, { useState } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { base44 } from '@/api/base44Client';
@@ -258,6 +257,54 @@ export default function Schedule() {
   };
 
   const periodsForGroup = (tg) => minutesToPeriods(getMinutesForGroup(tg));
+
+  // Build timeslots array from school config for UI mapping
+  const timeslots = React.useMemo(() => {
+    if (!school) return [];
+    
+    const dayStart = school.day_start_time || '08:00';
+    const dayEnd = school.day_end_time || '18:00';
+    const periodDuration = school.period_duration_minutes || 60;
+    const daysOfWeek = school.days_of_week || ['MONDAY', 'TUESDAY', 'WEDNESDAY', 'THURSDAY', 'FRIDAY'];
+    const breaks = school.breaks || [];
+    
+    const slots = [];
+    let globalId = 1;
+    
+    daysOfWeek.forEach(day => {
+      const [startHour, startMin] = dayStart.split(':').map(Number);
+      const [endHour, endMin] = dayEnd.split(':').map(Number);
+      let currentMinutes = startHour * 60 + startMin;
+      const endMinutes = endHour * 60 + endMin;
+      
+      while (currentMinutes < endMinutes) {
+        const slotStart = `${String(Math.floor(currentMinutes / 60)).padStart(2, '0')}:${String(currentMinutes % 60).padStart(2, '0')}`;
+        const slotEnd = `${String(Math.floor((currentMinutes + periodDuration) / 60)).padStart(2, '0')}:${String((currentMinutes + periodDuration) % 60).padStart(2, '0')}`;
+        
+        // Check if this time overlaps with a break
+        const isBreak = breaks.some(b => {
+          const [bStartH, bStartM] = b.start.split(':').map(Number);
+          const [bEndH, bEndM] = b.end.split(':').map(Number);
+          const bStart = bStartH * 60 + bStartM;
+          const bEnd = bEndH * 60 + bEndM;
+          return currentMinutes < bEnd && (currentMinutes + periodDuration) > bStart;
+        });
+        
+        if (!isBreak) {
+          slots.push({
+            id: globalId++,
+            dayOfWeek: day,
+            startTime: slotStart,
+            endTime: slotEnd
+          });
+        }
+        
+        currentMinutes += periodDuration;
+      }
+    });
+    
+    return slots;
+  }, [school]);
 
   const { data: constraints = [], refetch: refetchConstraints } = useQuery({
     queryKey: ['constraints', schoolId],
@@ -1896,6 +1943,7 @@ Now process the user's input and return ONLY the JSON object.`,
                       dayStartTime={school?.day_start_time || schoolConfig.day_start_time}
                       dayEndTime={school?.day_end_time || schoolConfig.day_end_time}
                       periodDurationMinutes={school?.period_duration_minutes || schoolConfig.period_duration_minutes}
+                      timeslots={timeslots}
                       onSlotClick={(day, period, slot) => {
                         console.log('Clicked:', day, period, slot);
                       }}
@@ -1916,6 +1964,7 @@ Now process the user's input and return ONLY the JSON object.`,
                     onStudentChange={setSelectedStudentId}
                     exportId="student-schedule"
                     unassignedBySubjectCode={orToolResult?.unassignedBySubjectCode}
+                    timeslots={timeslots}
                   />
                 </TabsContent>
 
@@ -1929,6 +1978,7 @@ Now process the user's input and return ONLY the JSON object.`,
                     selectedTeacherId={selectedTeacherId}
                     onTeacherChange={setSelectedTeacherId}
                     exportId="teacher-schedule"
+                    timeslots={timeslots}
                   />
                 </TabsContent>
               </Tabs>
