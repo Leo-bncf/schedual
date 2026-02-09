@@ -299,11 +299,41 @@ Deno.serve(async (req) => {
     const teachingGroupsFilteredOut = [];
     let teachingGroupsIncludedCount = 0;
 
+    // DIAGNOSTIC: Track ALL teaching groups with full details
+    const teachingGroupsDiagnostics = [];
+
     const teachingGroupFilteredPush = (tg, reason) => {
       if (!tg) return;
       const subjCode = (tg.subject_id && subjectIdToCode[tg.subject_id]) || null;
       const has_students = Array.isArray(tg.student_ids) && tg.student_ids.length > 0;
+      const student_count = Array.isArray(tg.student_ids) ? tg.student_ids.length : 0;
       const subj = (tg.subject_id && subjectById[tg.subject_id]) || null;
+
+      const diagnostic = {
+        tg_id: tg.id || null,
+        name: tg.name || null,
+        subject_code: subjCode,
+        subject_id: tg.subject_id || null,
+        minutes_per_week: typeof tg.minutes_per_week === 'number' ? tg.minutes_per_week : null,
+        periods_per_week: typeof tg.periods_per_week === 'number' ? tg.periods_per_week : null,
+        hours_per_week: typeof tg.hours_per_week === 'number' ? tg.hours_per_week : null,
+        minutesSource: debugMinutesSourceByTG[tg.id] || null,
+        minutesUsed: minutesForTG(tg),
+        requiredPeriods: minutesToPeriods(minutesForTG(tg)),
+        ib_level: subj?.ib_level || null,
+        year_group: tg.year_group || null,
+        level: tg.level || null,
+        is_active: tg.is_active,
+        has_students,
+        student_count,
+        student_ids_raw: tg.student_ids,
+        teacher_id: tg.teacher_id || null,
+        room_id: tg.preferred_room_id || null,
+        reasonFiltered: reason,
+        included: false
+      };
+
+      teachingGroupsDiagnostics.push(diagnostic);
       teachingGroupsFilteredOut.push({
         tg_id: tg.id || null,
         name: tg.name || null,
@@ -482,6 +512,36 @@ Deno.serve(async (req) => {
         debugMinutesSourceByTG[tg.id] = { source: 'UNKNOWN', value: minutesUsed };
       }
 
+      // DIAGNOSTIC: Track included TG
+      const subjCodeForDiag = (tg.subject_id && subjectIdToCode[tg.subject_id]) || null;
+      const has_students = Array.isArray(tg.student_ids) && tg.student_ids.length > 0;
+      const student_count = Array.isArray(tg.student_ids) ? tg.student_ids.length : 0;
+      const subjForDiag = (tg.subject_id && subjectById[tg.subject_id]) || null;
+
+      teachingGroupsDiagnostics.push({
+        tg_id: tg.id || null,
+        name: tg.name || null,
+        subject_code: subjCodeForDiag,
+        subject_id: tg.subject_id || null,
+        minutes_per_week: typeof tg.minutes_per_week === 'number' ? tg.minutes_per_week : null,
+        periods_per_week: typeof tg.periods_per_week === 'number' ? tg.periods_per_week : null,
+        hours_per_week: typeof tg.hours_per_week === 'number' ? tg.hours_per_week : null,
+        minutesSource: debugMinutesSourceByTG[tg.id] || null,
+        minutesUsed: minutesUsed,
+        requiredPeriods: weeklyCount,
+        ib_level: subjForDiag?.ib_level || null,
+        year_group: tg.year_group || null,
+        level: tg.level || null,
+        is_active: tg.is_active,
+        has_students,
+        student_count,
+        student_ids_raw: tg.student_ids,
+        teacher_id: tg.teacher_id || null,
+        room_id: tg.preferred_room_id || null,
+        reasonFiltered: null,
+        included: true
+      });
+
       // CRITICAL: Use consistent "TG_<id>" format for all groups
       const studentGroup = `TG_${tg.id}`;
       const cap = 20;
@@ -647,6 +707,17 @@ Deno.serve(async (req) => {
     });
     console.log('[buildSchedulingProblem] Core requirements:', coreReqs.length, coreReqs.slice(0, 10));
 
+    // DIAGNOSTIC: Log summary
+    console.log('[buildSchedulingProblem] teachingGroupsDiagnostics:', {
+      total: teachingGroupsDiagnostics.length,
+      included: teachingGroupsDiagnostics.filter(d => d.included).length,
+      filtered: teachingGroupsDiagnostics.filter(d => !d.included).length,
+      byReason: teachingGroupsDiagnostics.filter(d => !d.included).reduce((acc, d) => {
+        acc[d.reasonFiltered] = (acc[d.reasonFiltered] || 0) + 1;
+        return acc;
+      }, {})
+    });
+
     // Diagnostic: Core Teaching Groups Detection & Requirements
     const coreSubjectsSet = new Set(['TOK', 'CAS', 'EE']);
     const coreTeachingGroupsDetected = teachingGroupsDb
@@ -788,6 +859,7 @@ Deno.serve(async (req) => {
       problem: problemForSolver,
       subjectIdByCode,
       debugMinutesSourceByTG,
+      teachingGroupsDiagnostics,
       problemSummary,
       // Debug summary
       schoolIdUsed: school_id,
