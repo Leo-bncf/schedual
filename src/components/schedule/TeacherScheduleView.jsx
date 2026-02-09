@@ -56,10 +56,21 @@ export default function TeacherScheduleView({ teachers, slots, groups, subjects,
 
   const getSlotForPeriod = (day, uiRow) => {
     return teacherSlots.find(s => {
-      const slotUiRow = s.timeslot_id ? timeslotToPosition[s.timeslot_id]?.uiRow : s.period;
+      const slotUiRow = s.timeslot_id ? timeslotToPosition[Number(s.timeslot_id)]?.uiRow : s.period;
       return s.day === day && slotUiRow === uiRow;
     });
   };
+  
+  // Debug logging
+  React.useEffect(() => {
+    if (selectedTeacher) {
+      console.log('[TeacherScheduleView] DEBUG - timeslots.length:', timeslots.length);
+      console.log('[TeacherScheduleView] DEBUG - timeslots[0]:', timeslots[0]);
+      console.log('[TeacherScheduleView] DEBUG - teacherSlots.length:', teacherSlots.length);
+      console.log('[TeacherScheduleView] DEBUG - teacherSlots[0] keys:', Object.keys(teacherSlots[0] || {}));
+      console.log('[TeacherScheduleView] DEBUG - timeslotToPosition sample:', Object.entries(timeslotToPosition).slice(0, 5));
+    }
+  }, [selectedTeacher, teacherSlots, timeslots, timeslotToPosition]);
 
   const subjectColors = {
     1: 'bg-blue-200/80 border-blue-400',

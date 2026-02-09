@@ -91,11 +91,20 @@ export default function TimetableGrid({
     return times;
   }, [timeslots, timeslotToPosition]);
 
-  const normalizedSlots = React.useMemo(() => (slots || []).map(s => ({
-    ...s,
-    day: normalizeDay(s.day),
-    uiRow: s.timeslot_id ? timeslotToPosition[s.timeslot_id] : s.period,
-  })), [slots, timeslotToPosition]);
+  const normalizedSlots = React.useMemo(() => {
+    console.log('[TimetableGrid] DEBUG - timeslots.length:', timeslots.length);
+    console.log('[TimetableGrid] DEBUG - timeslots[0]:', timeslots[0]);
+    console.log('[TimetableGrid] DEBUG - slots.length:', slots.length);
+    console.log('[TimetableGrid] DEBUG - slots[0] keys:', Object.keys(slots[0] || {}));
+    console.log('[TimetableGrid] DEBUG - slots[0]:', slots[0]);
+    console.log('[TimetableGrid] DEBUG - timeslotToPosition sample:', Object.entries(timeslotToPosition).slice(0, 5));
+    
+    return (slots || []).map(s => ({
+      ...s,
+      day: normalizeDay(s.day),
+      uiRow: s.timeslot_id ? timeslotToPosition[Number(s.timeslot_id)] : s.period,
+    }));
+  }, [slots, timeslotToPosition, timeslots]);
 
   const getSlotData = (day, uiRow) => {
     return normalizedSlots.filter(s => s.day === day && s.uiRow === uiRow);

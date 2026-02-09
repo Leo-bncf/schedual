@@ -191,7 +191,15 @@ export default function Schedule() {
       if (!selectedVersion) return [];
       const slots = await base44.entities.ScheduleSlot.filter({ schedule_version: selectedVersion.id });
       const inserted = (orToolResult?.persistedSlotsSample || []).map(s => ({ ...s, schedule_version: selectedVersion.id }));
-      return Array.isArray(inserted) && inserted.length > 0 ? [...slots, ...inserted] : slots;
+      const result = Array.isArray(inserted) && inserted.length > 0 ? [...slots, ...inserted] : slots;
+      
+      // Debug logging
+      console.log('[Schedule] DEBUG - scheduleSlots.length:', result.length);
+      console.log('[Schedule] DEBUG - scheduleSlots[0] keys:', Object.keys(result[0] || {}));
+      console.log('[Schedule] DEBUG - scheduleSlots[0]:', result[0]);
+      console.log('[Schedule] DEBUG - timeslots source:', orToolResult?.timeslots ? 'from orToolResult' : 'reconstructed from school config');
+      
+      return result;
     },
     enabled: !!selectedVersion,
   });
@@ -262,8 +270,12 @@ export default function Schedule() {
   const timeslots = React.useMemo(() => {
     // Priority 1: Use exact timeslots from OR-Tool solver (guarantees alignment)
     if (orToolResult?.timeslots && Array.isArray(orToolResult.timeslots) && orToolResult.timeslots.length > 0) {
+      console.log('[Schedule] Using timeslots from OR-Tool solver:', orToolResult.timeslots.length, 'slots');
+      console.log('[Schedule] Solver timeslots[0]:', orToolResult.timeslots[0]);
       return orToolResult.timeslots;
     }
+    
+    console.log('[Schedule] Reconstructing timeslots from school config (fallback)');
     
     // Fallback: Reconstruct from school config (may cause misalignment if solver used different config)
     if (!school) return [];
