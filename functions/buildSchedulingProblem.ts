@@ -240,6 +240,86 @@ Deno.serve(async (req) => {
     (roomsDb || []).forEach((r, idx) => { if (r) roomNumericIdToExternalRef[idx+1] = r.external_id || r.externalId || r.id; });
     (teachersDb || []).forEach((t, idx) => { if (t) teacherNumericIdToExternalRef[idx+1] = t.external_id || t.externalId || t.employee_id || t.id; });
 
+    stage = 'validateDPConfiguration';
+    console.log(`[buildSchedulingProblem] ${stage}: validating DP teaching groups have explicit minutes/periods config`);
+    
+    // CRITICAL VALIDATION: Fail EARLY if DP teaching groups lack configuration
+    // Check RAW data BEFORE any fallbacks - reject if zero explicit config exists
+    const dpGroupsMissingConfig = [];
+    
+    for (const tg of teachingGroupsDb) {
+      const yearGroupStr = String(tg.year_group || '').toUpperCase();
+      const isDPGroup = yearGroupStr.includes('DP');
+      if (!isDPGroup) continue; // Only validate DP groups
+      
+      // Build subject code for filtering
+      const subjRaw = tg.subject_id && subjectsDb.find(s => s.id === tg.subject_id);
+      const subjCode = subjRaw ? normalizeSubjectCode(subjRaw.code || subjRaw.name) : null;
+      const isCoreSubject = subjCode && ['TOK', 'CAS', 'EE', 'TEST'].includes(subjCode);
+      if (isCoreSubject) continue; // Skip core subjects (have 60min fallback)
+      
+      // Check if ANY explicit configuration exists (TG-level OR Subject-level defaults)
+      const hasTGConfig = (
+        (typeof tg.minutes_per_week === 'number' && tg.minutes_per_week > 0) ||
+        (typeof tg.periods_per_week === 'number' && tg.periods_per_week > 0) ||
+        (typeof tg.hours_per_week === 'number' && tg.hours_per_week > 0)
+      );
+      
+      const level = String(tg.level || '').toUpperCase();
+      const hasSubjectDefaults = subjRaw && (
+        (level === 'HL' && typeof subjRaw.hl_minutes_per_week_default === 'number' && subjRaw.hl_minutes_per_week_default > 0) ||
+        (level === 'SL' && typeof subjRaw.sl_minutes_per_week_default === 'number' && subjRaw.sl_minutes_per_week_default > 0) ||
+        (typeof subjRaw.hl_minutes_per_week_default === 'number' && subjRaw.hl_minutes_per_week_default > 0) ||
+        (typeof subjRaw.sl_minutes_per_week_default === 'number' && subjRaw.sl_minutes_per_week_default > 0)
+      );
+      
+      // REJECT if neither TG nor Subject has config
+      if (!hasTGConfig && !hasSubjectDefaults) {
+        dpGroupsMissingConfig.push({
+          tg_id: tg.id,
+          name: tg.name,
+          subject_code: subjCode,
+          subject_name: subjRaw?.name || subjCode,
+          year_group: tg.year_group,
+          level: tg.level,
+          student_count: Array.isArray(tg.student_ids) ? tg.student_ids.length : 0,
+          has_students: Array.isArray(tg.student_ids) && tg.student_ids.length > 0,
+          minutes_per_week: tg.minutes_per_week,
+          periods_per_week: tg.periods_per_week,
+          hours_per_week: tg.hours_per_week,
+          subject_has_defaults: hasSubjectDefaults,
+          reason: 'No TG-level config (minutes/periods/hours) AND no Subject-level defaults'
+        });
+      }
+    }
+    
+    // FAIL HARD if any DP groups missing config (prevents "empty" schedules)
+    if (dpGroupsMissingConfig.length > 0) {
+      console.error('[buildSchedulingProblem] ❌ VALIDATION FAILED: DP teaching groups missing configuration BEFORE fallbacks');
+      console.error('[buildSchedulingProblem] Missing config groups:', dpGroupsMissingConfig);
+      
+      const groupNames = dpGroupsMissingConfig.slice(0, 5).map(g => `${g.name} (${g.level || 'unknown level'})`).join(', ');
+      const moreText = dpGroupsMissingConfig.length > 5 ? ` and ${dpGroupsMissingConfig.length - 5} more` : '';
+      
+      return Response.json({
+        ok: false,
+        stage: 'VALIDATION_FAILED_MISSING_CONFIG',
+        error: `Cannot generate schedule: ${dpGroupsMissingConfig.length} DP teaching groups missing minutes/periods configuration`,
+        filteredDPGroups: dpGroupsMissingConfig,
+        errorSummary: `Missing config for: ${groupNames}${moreText}`,
+        suggestion: 'FIX: Go to Teaching Groups page → Configure minutes_per_week, periods_per_week, or hours_per_week for each DP group. OR configure hl_minutes_per_week_default/sl_minutes_per_week_default on Subject settings.',
+        actionRequired: 'Configure teaching group weekly hours before generating schedule',
+        meta: { 
+          schedule_version_id, 
+          school_id,
+          totalDPGroups: teachingGroupsDb.filter(tg => String(tg.year_group || '').toUpperCase().includes('DP')).length,
+          missingConfigCount: dpGroupsMissingConfig.length
+        }
+      }, { status: 400 });
+    }
+    
+    console.log('[buildSchedulingProblem] ✅ DP Configuration validation passed: All DP teaching groups have explicit config or Subject defaults');
+    
     stage = 'buildLessons';
     console.log(`[buildSchedulingProblem] ${stage}: processing ${teachingGroupsDb.length} teaching groups`);
     
