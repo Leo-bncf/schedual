@@ -144,11 +144,23 @@ Deno.serve(async (req) => {
       );
     }
 
-    // Create new groups (compute hours from subject settings)
+    // Create new groups (compute minutes, periods, and hours from subject settings)
     const newGroups = [];
     for (const [, groupData] of groupMap.entries()) {
       const subject = dpSubjects.find((s) => s.id === groupData.subject_id);
       if (!subject) continue;
+      
+      // CRITICAL: Use minutes as primary source (OR-Tool requires minutesPerWeek)
+      // Fallback chain: subject defaults (HL=300min, SL=180min) → legacy hours conversion
+      const minutesPerWeek = groupData.level === 'HL'
+        ? (subject.hl_minutes_per_week_default || 300)  // 5 hours default for HL
+        : (subject.sl_minutes_per_week_default || 180); // 3 hours default for SL
+      
+      // Compute periods assuming 60-min periods (override with school config if available)
+      const periodDurationMinutes = school?.period_duration_minutes || 60;
+      const periodsPerWeek = Math.ceil(minutesPerWeek / periodDurationMinutes);
+      
+      // Legacy hours field for backward compatibility
       const hoursPerWeek = groupData.level === 'HL'
         ? (subject.hl_hours_per_week || 6)
         : (subject.sl_hours_per_week || 4);
@@ -160,7 +172,9 @@ Deno.serve(async (req) => {
         level: groupData.level,
         year_group: groupData.year_group,
         student_ids: groupData.student_ids,
-        hours_per_week: hoursPerWeek,
+        minutes_per_week: minutesPerWeek,      // PRIMARY: OR-Tool requires this
+        periods_per_week: periodsPerWeek,      // SECONDARY: Computed from minutes
+        hours_per_week: hoursPerWeek,          // LEGACY: Kept for compatibility
         is_active: true,
       });
     }
