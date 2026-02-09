@@ -524,18 +524,11 @@ Deno.serve(async (req) => {
         .filter(t => t.dayOfWeek === d)
         .sort((a,b) => String(a.startTime||'').localeCompare(String(b.startTime||'')));
     });
-
-    // Calculate period based on timeslot ID directly (includes breaks)
-    // Timeslot IDs are sequential per day: 1-based index in original timeline (with break gaps)
     const timeslotIndexInDay = {};
-    const periodsPerDay = problem.scheduleSettings?.targetPeriodsPerDay || 10;
-    problem.timeslots.forEach(t => {
-      // Period = (timeslot.id - 1) mod periodsPerDay + 1
-      const dayIndex = cfgDays.indexOf(t.dayOfWeek);
-      const periodInDay = ((t.id - 1) % periodsPerDay) + 1;
-      timeslotIndexInDay[t.id] = periodInDay;
+    Object.values(timeslotsByDay).forEach(arr => {
+      arr.forEach((t, i) => { timeslotIndexInDay[t.id] = i + 1; });
     });
-    const periodsPerDayComputed = periodsPerDay;
+    const periodsPerDayComputed = Math.max(0, ...Object.values(timeslotsByDay).map(arr => arr.length));
 
     // Core assignments (TOK/CAS/EE) with timeslotId + mapped day/period
     const periodsPerDay = periodsPerDayComputed;
