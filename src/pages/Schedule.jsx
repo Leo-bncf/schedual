@@ -1473,8 +1473,18 @@ Now process the user's input and return ONLY the JSON object.`,
           // Check if function returned error
           if (r.ok === false) {
             console.error('❌ OR-Tool returned error:', r);
-            toast.error(`OR-Tool failed at stage "${r.stage}": ${r.errorMessage || r.error || 'Unknown error'}`);
-            setOrToolError(`Stage: ${r.stage}\nError: ${r.errorMessage || r.error}\n\nStack:\n${r.errorStack || 'N/A'}`);
+            
+            // Special handling for missing config validation
+            if (r.stage === 'VALIDATION_FAILED_MISSING_CONFIG') {
+              const count = r.filteredDPGroups?.length || 0;
+              const groupNames = (r.filteredDPGroups || []).slice(0, 5).map(g => g.name || g.tg_id).join(', ');
+              const moreText = count > 5 ? ` and ${count - 5} more...` : '';
+              toast.error(`❌ Cannot generate DP schedule: ${count} teaching groups missing minutes/periods config (${groupNames}${moreText}). Please configure on Teaching Groups page.`, { duration: 10000 });
+              setOrToolError(`Validation Failed: ${count} DP teaching groups missing configuration\n\nGroups: ${groupNames}${moreText}\n\n${r.suggestion}`);
+            } else {
+              toast.error(`OR-Tool failed at stage "${r.stage}": ${r.errorMessage || r.error || 'Unknown error'}`);
+              setOrToolError(`Stage: ${r.stage}\nError: ${r.errorMessage || r.error}\n\nStack:\n${r.errorStack || 'N/A'}`);
+            }
           } else {
             // Success path
             const inserted = r.slotsInserted ?? r.insertedCount ?? 0;

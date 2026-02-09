@@ -449,7 +449,18 @@ Deno.serve(async (req) => {
         }
       }
       
-      // No config found anywhere
+      // ULTRA-AGGRESSIVE FALLBACK: Detect DP from year_group even without subject metadata
+      // This ensures NO DP teaching group is filtered due to missing config
+      const yearGroupStr = String(tg.year_group || '').toUpperCase();
+      if (yearGroupStr.includes('DP')) {
+        const level = String(tg.level || '').toUpperCase();
+        const fallbackMinutes = level === 'HL' ? 300 : 180; // HL=5h, SL=3h
+        console.log(`[buildSchedulingProblem] TG ${tg.id} (${subjCode}): ULTRA-AGGRESSIVE DP FALLBACK via year_group="${tg.year_group}" → ${fallbackMinutes} min/week (${level || 'SL assumed'})`);
+        debugMinutesSourceByTG[tg.id] = { source: 'DP_YEAR_GROUP_FALLBACK', value: fallbackMinutes, year_group: tg.year_group, level: level || 'SL_ASSUMED' };
+        return fallbackMinutes;
+      }
+      
+      // No config found anywhere (PYP/MYP without defaults)
       debugMinutesSourceByTG[tg.id] = { source: 'NONE', value: 0, reason: 'no_config' };
       return 0;
     };
@@ -734,6 +745,47 @@ Deno.serve(async (req) => {
         return acc;
       }, {})
     });
+    
+    // CRITICAL VALIDATION: Fail hard if DP teaching groups are filtered out (excluding core subjects)
+    // This prevents OR-Tool from "succeeding" with incomplete data
+    const filteredDPNonCore = teachingGroupsFilteredOut.filter(tg => {
+      const yearGroupStr = String(tg.year_group || '').toUpperCase();
+      const isDPGroup = yearGroupStr.includes('DP');
+      const isCoreSubject = tg.subject_code && ['TOK', 'CAS', 'EE', 'TEST'].includes(tg.subject_code);
+      return isDPGroup && !isCoreSubject;
+    });
+    
+    if (filteredDPNonCore.length > 0) {
+      console.error('[buildSchedulingProblem] ❌ VALIDATION FAILED: DP teaching groups missing configuration');
+      console.error('[buildSchedulingProblem] Filtered DP groups:', filteredDPNonCore);
+      
+      return Response.json({
+        ok: false,
+        stage: 'VALIDATION_FAILED_MISSING_CONFIG',
+        error: `${filteredDPNonCore.length} DP teaching groups are missing minutes/periods configuration`,
+        filteredDPGroups: filteredDPNonCore.map(tg => ({
+          tg_id: tg.tg_id,
+          name: tg.name,
+          subject_code: tg.subject_code,
+          year_group: tg.year_group,
+          level: tg.level,
+          reason: tg.reason,
+          minutes_per_week: tg.minutes_per_week,
+          has_students: tg.has_students,
+          student_count: tg.student_count
+        })),
+        suggestion: 'Configure minutes_per_week, periods_per_week, or hours_per_week on each DP TeachingGroup, OR set hl_minutes_per_week_default/sl_minutes_per_week_default on Subject entities',
+        meta: { 
+          schedule_version_id, 
+          school_id,
+          totalDPGroups: teachingGroupsDb.filter(tg => String(tg.year_group || '').toUpperCase().includes('DP')).length,
+          filteredDPCount: filteredDPNonCore.length,
+          includedCount: teachingGroupsIncludedCount
+        }
+      }, { status: 400 });
+    }
+    
+    console.log('[buildSchedulingProblem] ✅ Validation passed: All DP teaching groups have configuration');
 
     // Diagnostic: Core Teaching Groups Detection & Requirements
     const coreSubjectsSet = new Set(['TOK', 'CAS', 'EE']);
