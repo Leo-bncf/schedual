@@ -696,6 +696,25 @@ Now process the user's input and return ONLY the JSON object.`,
       const updatedGroups = await base44.entities.TeachingGroup.filter({ school_id: schoolId });
       console.log('Updated groups with teachers:', updatedGroups.filter(g => g.teacher_id).length);
 
+      // CRITICAL: If OR-Tool auto-run is enabled for DP, skip local scheduling entirely
+      // OR-Tool will purge old slots + generate complete optimized schedule
+      if (autoRunORTool && allowedProgrammes.includes('DP')) {
+        console.log('[Schedule] 🚀 OR-Tool auto-run enabled for DP - skipping local scheduling, jumping to OR-Tool');
+        
+        setGenerationProgress(prev => ({
+          ...prev,
+          stage: 'Skipping to OR-Tool',
+          percent: 25,
+          message: 'OR-Tool will handle complete schedule generation...',
+          completedSteps: ['teachers']
+        }));
+        
+        // Jump directly to OR-Tool pipeline (no local slot generation)
+        // OR-Tool will call purgeScheduleSlots internally before inserting
+      } else {
+        // Local scheduling for MYP/PYP or when OR-Tool disabled
+        console.log('[Schedule] 🔧 Using local scheduling algorithm');
+
       // Delete existing slots for this version (batch to avoid rate limits)
       if (cancelGeneration) throw new Error('Cancelled by user');
 
@@ -721,14 +740,6 @@ Now process the user's input and return ONLY the JSON object.`,
         console.log('All slots deleted, waiting before creating new ones...');
         await new Promise(resolve => setTimeout(resolve, 3000)); // Increased from 2000ms
       }
-
-      // CRITICAL: Skip local scheduling when OR-Tool auto-run is enabled
-      // OR-Tool will purge all local slots and regenerate the complete schedule
-      if (autoRunORTool) {
-        console.log('[Schedule] ⏭️ Skipping local scheduling algorithm - OR-Tool auto-run will handle complete schedule generation');
-        // Jump directly to OR-Tool pipeline below
-      } else {
-        console.log('[Schedule] 🔧 OR-Tool auto-run disabled - using local scheduling algorithm');
       
         // Comprehensive scheduling algorithm for all students, teachers, and rooms
         const days = ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday'];
@@ -1436,12 +1447,12 @@ Now process the user's input and return ONLY the JSON object.`,
           completed: true
         });
 
-        console.log('=== SCHEDULE GENERATION COMPLETE ===');
+        console.log('=== LOCAL SCHEDULE GENERATION COMPLETE ===');
       } // End of local scheduling block
 
-      // Auto-pipeline: Run OR-Tool + JSON + Persist + Refresh UI
-      if (autoRunORTool && selectedVersion) {
-        console.log('[Schedule] 🔄 OR-Tool auto-run enabled - solver will purge local slots and regenerate optimized schedule');
+      // OR-Tool pipeline: Generate optimized DP schedule
+      if (autoRunORTool && selectedVersion && allowedProgrammes.includes('DP')) {
+        console.log('[Schedule] 🔄 OR-Tool: generating complete DP schedule (purge + optimize + persist)');
         try {
           setGenerationProgress(prev => ({
             ...prev,
