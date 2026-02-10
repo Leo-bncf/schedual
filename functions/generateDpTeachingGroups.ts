@@ -74,24 +74,37 @@ Deno.serve(async (req) => {
       async () => (await base44.entities.School.filter({ id: school_id }))[0]
     );
 
-    // Fetch DP students and DP subjects with retries (main source of timeouts)
+    // Fetch DP students with retries
     const studentsRaw = await withRetry(
       'fetch_dp_students',
       { entity: 'Student', filter: { school_id, ib_programme: 'DP' } },
       async () => await base44.entities.Student.filter({ school_id, ib_programme: 'DP' })
     );
 
-    const subjectsRaw = await withRetry(
-      'fetch_dp_subjects',
-      { entity: 'Subject', filter: { school_id, ib_level: 'DP' } },
-      async () => await base44.entities.Subject.filter({ school_id, ib_level: 'DP' })
+    const students = studentsRaw.filter((s) => s.is_active !== false);
+
+    // CRITICAL FIX: Don't rely on ib_level filter - many subjects may not have it set
+    // Instead, collect all subject_ids from DP students' subject_choices
+    const dpSubjectIds = new Set();
+    for (const student of students) {
+      const choices = student.subject_choices || [];
+      for (const choice of choices) {
+        if (choice.subject_id) dpSubjectIds.add(choice.subject_id);
+      }
+    }
+
+    // Fetch all school subjects, then filter to only those used by DP students
+    const allSubjectsRaw = await withRetry(
+      'fetch_all_subjects',
+      { entity: 'Subject', filter: { school_id } },
+      async () => await base44.entities.Subject.filter({ school_id })
     );
 
-    // Final client-side filter keeps semantics: exclude only when is_active === false
-    const students = studentsRaw.filter((s) => s.is_active !== false);
-    const dpSubjects = subjectsRaw.filter((s) => s.is_active !== false);
+    const dpSubjects = allSubjectsRaw
+      .filter((s) => s.is_active !== false)
+      .filter((s) => dpSubjectIds.has(s.id));
 
-    console.log(`[generateDpTeachingGroups] Found ${students.length} DP students and ${dpSubjects.length} DP subjects`);
+    console.log(`[generateDpTeachingGroups] Found ${students.length} DP students, ${dpSubjectIds.size} unique subject choices, ${dpSubjects.length} subjects matched`);
 
     if (students.length === 0) {
       return Response.json({
@@ -151,10 +164,29 @@ Deno.serve(async (req) => {
       if (!subject) continue;
       
       // CRITICAL: Use minutes as primary source (OR-Tool requires minutesPerWeek)
-      // Fallback chain: subject defaults (HL=300min, SL=180min) → legacy hours conversion
-      const minutesPerWeek = groupData.level === 'HL'
-        ? (subject.hl_minutes_per_week_default || 300)  // 5 hours default for HL
-        : (subject.sl_minutes_per_week_default || 180); // 3 hours default for SL
+      // Comprehensive fallback chain to ensure ALL groups get valid minutes
+      let minutesPerWeek = 0;
+      
+      if (groupData.level === 'HL') {
+        // HL priority: subject hl_minutes_per_week_default → subject hl_hours → IB standard (300min = 5h)
+        minutesPerWeek = subject.hl_minutes_per_week_default 
+          || (subject.hl_hours_per_week ? subject.hl_hours_per_week * 60 : 0)
+          || 300;
+      } else if (groupData.level === 'SL') {
+        // SL priority: subject sl_minutes_per_week_default → subject sl_hours → IB standard (180min = 3h)
+        minutesPerWeek = subject.sl_minutes_per_week_default 
+          || (subject.sl_hours_per_week ? subject.sl_hours_per_week * 60 : 0)
+          || 180;
+      } else {
+        // Fallback for unspecified level (shouldn't happen but defensive)
+        minutesPerWeek = subject.sl_minutes_per_week_default || 180;
+      }
+      
+      // FAIL-SAFE: Ensure non-zero minutes (should never happen with fallbacks above)
+      if (!minutesPerWeek || minutesPerWeek <= 0) {
+        console.warn(`[generateDpTeachingGroups] WARNING: Subject ${subject.id} (${subject.name}) has no valid minutes config, defaulting to ${groupData.level === 'HL' ? '300' : '180'} min`);
+        minutesPerWeek = groupData.level === 'HL' ? 300 : 180;
+      }
       
       // Compute periods assuming 60-min periods (override with school config if available)
       const periodDurationMinutes = school?.period_duration_minutes || 60;
