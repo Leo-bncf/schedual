@@ -1503,12 +1503,13 @@ Now process the user's input and return ONLY the JSON object.`,
             console.error(`❌ ${solverName} returned error:`, r);
             
             // Special handling for missing config validation
-            if (r.stage === 'VALIDATION_FAILED_MISSING_CONFIG') {
-              const count = r.filteredDPGroups?.length || 0;
-              const groupNames = (r.filteredDPGroups || []).slice(0, 5).map(g => g.name || g.tg_id).join(', ');
-              const moreText = count > 5 ? ` and ${count - 5} more...` : '';
-              toast.error(`❌ Cannot generate DP schedule: ${count} teaching groups missing minutes/periods config (${groupNames}${moreText}). Please configure on Teaching Groups page.`, { duration: 10000 });
-              setOrToolError(`Validation Failed: ${count} DP teaching groups missing configuration\n\nGroups: ${groupNames}${moreText}\n\n${r.suggestion}`);
+            if (r.error === 'MISSING_MINUTES_CONFIGURATION' || r.stage === 'VALIDATION_FAILED_MISSING_CONFIG') {
+              const missingGroups = r.missingGroups || r.filteredDPGroups || [];
+              const count = r.missingConfigurationCount || missingGroups.length;
+              const groupNames = missingGroups.slice(0, 5).map(g => `${g?.name || 'Unknown'} (${g?.subject || '?'})`).join(', ');
+              const moreText = count > 5 ? ` +${count - 5} more` : '';
+              toast.error(`❌ Cannot generate schedule: ${count} TeachingGroups missing minutes/periods configuration. See diagnostics.`, { duration: 10000 });
+              setOrToolError(`VALIDATION FAILED: ${count} TeachingGroups Missing Configuration\n\n${groupNames}${moreText}\n\n${r.suggestion || 'Configure minutes_per_week, periods_per_week, or hours_per_week for each TeachingGroup'}\n\nDetailed list:\n${JSON.stringify(missingGroups, null, 2)}`);
             } else {
               const solverName = r.solverIdentity?.engine || 'Solver';
               toast.error(`${solverName} failed at stage "${r.stage}": ${r.errorMessage || r.error || 'Unknown error'}`);
@@ -2591,6 +2592,36 @@ Now process the user's input and return ONLY the JSON object.`,
                                   <div className="font-bold mb-1">📤 subjectRequirements sent (first 10):</div>
                                   <pre className="bg-white rounded p-1.5 overflow-x-auto max-h-40">{JSON.stringify(orToolResult?.solverRequestPayloadSubjectRequirements || [], null, 2)}</pre>
                                 </div>
+                                {orToolResult?.builderDiagnostics && (
+                                  <div className="text-[10px] text-slate-600 mt-2">
+                                    <div className="font-bold mb-1">📊 Builder Validation Report:</div>
+                                    <div className="bg-white rounded p-2 space-y-2">
+                                      {orToolResult.builderDiagnostics.skipped?.length > 0 && (
+                                        <div>
+                                          <div className="font-semibold text-rose-700">⚠️ Excluded: {orToolResult.builderDiagnostics.skipped.length} TeachingGroups</div>
+                                          <div className="ml-2 text-rose-600 space-y-0.5">
+                                            {orToolResult.builderDiagnostics.skipped.slice(0, 10).map((s, i) => (
+                                              <div key={i}>• {s.name} ({s.subject_code}) - {s.reason}</div>
+                                            ))}
+                                            {orToolResult.builderDiagnostics.skipped.length > 10 && (
+                                              <div>... +{orToolResult.builderDiagnostics.skipped.length - 10} more</div>
+                                            )}
+                                          </div>
+                                        </div>
+                                      )}
+                                      {orToolResult.builderDiagnostics.adjustments?.length > 0 && (
+                                        <div>
+                                          <div className="font-semibold text-blue-700">ℹ️ Adjusted: {orToolResult.builderDiagnostics.adjustments.length} TeachingGroups</div>
+                                          <div className="ml-2 text-blue-600 space-y-0.5">
+                                            {orToolResult.builderDiagnostics.adjustments.slice(0, 5).map((a, i) => (
+                                              <div key={i}>• {a.name}: {a.adjustment}</div>
+                                            ))}
+                                          </div>
+                                        </div>
+                                      )}
+                                    </div>
+                                  </div>
+                                )}
                                 {(orToolResult?.subjectsInvalidIds || []).length > 0 && (
                                   <div className="text-[10px] text-rose-700">
                                     <div className="font-bold">❌ Invalid Subject IDs (not 24-char hex):</div>
