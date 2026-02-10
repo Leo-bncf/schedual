@@ -41,6 +41,35 @@ Deno.serve(async (req) => {
     let teachingGroupsUpdated = 0;
     const errors = [];
     
+    // Helper: normalize year group for matching (DP1+DP2, DP1,DP2, etc.)
+    const normalizeYearGroup = (raw) => {
+      if (!raw) return '';
+      return String(raw).toUpperCase().trim().replace(/\s+/g, '');
+    };
+    
+    // Helper: check if composite year group matches student year group
+    const yearGroupMatches = (tgYearGroup, studentYearGroup) => {
+      const tgNorm = normalizeYearGroup(tgYearGroup);
+      const studentNorm = normalizeYearGroup(studentYearGroup);
+      
+      // Exact match
+      if (tgNorm === studentNorm) return true;
+      
+      // Parse composite groups: DP1+DP2, DP1,DP2 → [DP1, DP2]
+      const tgTokens = tgNorm.split(/[+,]/).map(t => t.trim()).filter(Boolean);
+      
+      // If TG contains student's year group
+      if (tgTokens.includes(studentNorm)) return true;
+      
+      return false;
+    };
+    
+    // Helper: normalize level (HL/SL) to avoid "HL " vs "HL" issues
+    const normalizeLevel = (raw) => {
+      if (!raw) return '';
+      return String(raw).toUpperCase().trim();
+    };
+    
     for (const student of students) {
       try {
         const studentSubjectChoices = student.subject_choices || [];
@@ -54,15 +83,15 @@ Deno.serve(async (req) => {
           const tgSubject = subjectById[tg.subject_id];
           if (!tgSubject) continue;
           
-          // Match by year group and subject
-          const yearGroupMatch = tg.year_group === studentYearGroup;
+          // Match by year group (with composite support: DP1+DP2 matches DP1 and DP2)
+          const yearGroupMatch = yearGroupMatches(tg.year_group, studentYearGroup);
           
           // Check if student has chosen this subject
           const subjectMatch = studentSubjectChoices.some(choice => {
             if (choice.subject_id === tg.subject_id) {
-              // For DP subjects, also match level (HL/SL)
+              // For DP subjects, also match level (HL/SL) with normalization
               if (studentIbProgramme === 'DP' && tg.level) {
-                return choice.level === tg.level;
+                return normalizeLevel(choice.level) === normalizeLevel(tg.level);
               }
               return true;
             }
