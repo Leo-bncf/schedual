@@ -388,12 +388,18 @@ Deno.serve(async (req) => {
       expectedMinutesBySubject[subjCode] = (expectedMinutesBySubject[subjCode] || 0) + minutesUsed;
       
       // Create lessons for this section
+      // CRITICAL: Include studentIds for cohort integrity enforcement
+      const studentIds = Array.isArray(tg.student_ids) ? tg.student_ids : [];
+      const blockId = tg.block_id || null; // For elective concurrency (same blockId => same timeslot)
+      
       for (let i = 0; i < weeklyCount; i++) {
         lessons.push({
           id: lessonId++,
           subject: subjCode,
           studentGroup,
           sectionId, // Add explicit section identifier
+          studentIds, // SOLVER NEEDS THIS: prevent student overlaps
+          blockId, // SOLVER NEEDS THIS: enforce concurrent electives
           requiredCapacity: cap,
           timeslotId: null,
           roomId: roomNumeric || null,
@@ -412,6 +418,8 @@ Deno.serve(async (req) => {
             subject: 'STUDY',
             studentGroup,
             sectionId,
+            studentIds, // Include studentIds for study blocks too
+            blockId: null, // Study blocks don't have block constraints
             requiredCapacity: cap,
             timeslotId: null,
             roomId: null,
@@ -490,14 +498,44 @@ Deno.serve(async (req) => {
         minutesPerWeek: minutesForTG(tg),
         teacher_id: tg.teacher_id || null,
         room_id: tg.preferred_room_id || null,
-        ib_level: subjectById[tg.subject_id]?.ib_level || null
+        ib_level: subjectById[tg.subject_id]?.ib_level || null,
+        studentIds: Array.isArray(tg.student_ids) ? tg.student_ids : [],
+        blockId: tg.block_id || null
       }))
     };
 
+    // VALIDATION REPORT: Show admin what's excluded and why
+    const validationReport = {
+      totalTeachingGroups: teachingGroupsDb.length,
+      included: teachingGroupsIncludedCount,
+      excluded: teachingGroupsSkipped.length,
+      adjusted: teachingGroupsAdjusted.length,
+      exclusionReasons: {},
+      excludedGroups: teachingGroupsSkipped.map(s => ({
+        name: s.name,
+        subject: s.subject_code,
+        reason: s.reason,
+        studentCount: s.student_count,
+        ib_level: s.ib_level
+      })),
+      adjustedGroups: teachingGroupsAdjusted.map(a => ({
+        name: a.name,
+        subject: a.subject_code,
+        adjustment: a.adjustment,
+        applied: a.applied
+      }))
+    };
+    
+    // Count exclusion reasons
+    for (const skip of teachingGroupsSkipped) {
+      validationReport.exclusionReasons[skip.reason] = (validationReport.exclusionReasons[skip.reason] || 0) + 1;
+    }
+    
     return Response.json({
       success: true,
       ok: true,
       problem: problemForSolver,
+      validationReport, // NEW: Explicit report of what's excluded and why
       subjectIdByCode,
       debugMinutesSourceByTG,
       teachingGroupsDiagnostics,
