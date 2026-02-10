@@ -230,52 +230,69 @@ Deno.serve(async (req) => {
     };
     
     const getIBStandardFallback = (tg, subj) => {
-      const level = String(tg.level || '').toUpperCase();
+      const level = String(tg.level || '').toUpperCase().trim();
       const yearGroupStr = String(tg.year_group || '').toUpperCase();
+      const nameStr = String(tg.name || '').toUpperCase();
       const ibLevel = subj ? String(subj.ib_level || '').toUpperCase() : null;
-      
-      const isDPGroup = yearGroupStr.includes('DP') || ibLevel === 'DP';
-      
+
+      // ROBUST DP detection: check year_group, subject.ib_level, AND tg.name
+      const isDPGroup = yearGroupStr.includes('DP') || ibLevel === 'DP' || nameStr.includes('DP');
+
       if (isDPGroup) {
+        // CRITICAL: Never return 0 for DP groups - use IB standard minimums
         if (level === 'HL') return { minutes: 300, source: 'IB_STANDARD_HL' };
         if (level === 'SL') return { minutes: 180, source: 'IB_STANDARD_SL' };
-        return { minutes: 180, source: 'IB_STANDARD_SL', note: 'level_assumed' };
+        // FALLBACK: If level unclear, default to SL minimum (safer than 0)
+        return { minutes: 180, source: 'IB_STANDARD_SL_ASSUMED', note: 'level_unclear_defaulted_to_SL' };
       }
-      
+
       if (['PYP', 'MYP'].includes(ibLevel) || yearGroupStr.includes('MYP') || yearGroupStr.includes('PYP')) {
         return { minutes: 150, source: 'IB_STANDARD_PYP_MYP' };
       }
-      
-      return { minutes: 120, source: 'GENERIC_FALLBACK' };
+
+      // FINAL FALLBACK: Never return 0 - use minimum viable schedule
+      return { minutes: 120, source: 'GENERIC_FALLBACK_MINIMUM' };
     };
     
     const minutesForTG = (tg) => {
       if (!tg) return 0;
-      
+
+      // CRITICAL: Check if group is explicitly disabled
+      if (tg.is_active === false) {
+        debugMinutesSourceByTG[tg.id] = { source: 'DISABLED', value: 0, reason: 'is_active_false' };
+        return 0;
+      }
+
+      // CRITICAL: Check if explicitly configured as 0 (intentional skip)
+      if (tg.minutes_per_week === 0 || tg.periods_per_week === 0 || tg.hours_per_week === 0) {
+        debugMinutesSourceByTG[tg.id] = { source: 'EXPLICIT_ZERO', value: 0, reason: 'intentionally_disabled' };
+        return 0;
+      }
+
       const subj = (tg.subject_id && subjectById[tg.subject_id]) || null;
       const subjCode = (tg.subject_id && subjectIdToCode[tg.subject_id]) || null;
       const normCode = normalizeCode(subjCode);
-      
+
       // Priority 1: TG-level explicit config (SOURCE OF TRUTH)
       if (typeof tg.minutes_per_week === 'number' && tg.minutes_per_week > 0) {
         debugMinutesSourceByTG[tg.id] = { source: 'TG_MINUTES', value: tg.minutes_per_week };
         return tg.minutes_per_week;
       }
-      
+
       if (typeof tg.periods_per_week === 'number' && tg.periods_per_week > 0) {
         const minutes = tg.periods_per_week * periodDurationMinutes;
         debugMinutesSourceByTG[tg.id] = { source: 'TG_PERIODS', value: minutes, periods: tg.periods_per_week };
         recordAdjustment(tg, 'Converted periods_per_week to minutes', `${tg.periods_per_week} periods`, `${minutes} minutes`);
         return minutes;
       }
-      
+
       if (typeof tg.hours_per_week === 'number' && tg.hours_per_week > 0) {
         const minutes = Math.round(tg.hours_per_week * 60);
         debugMinutesSourceByTG[tg.id] = { source: 'TG_HOURS', value: minutes, hours: tg.hours_per_week };
         recordAdjustment(tg, 'Converted hours_per_week to minutes', `${tg.hours_per_week}h`, `${minutes} minutes`);
         return minutes;
       }
-      
+
       // Priority 2: Core subjects special handling
       if (normCode && ['TOK', 'CAS', 'EE', 'TEST'].includes(normCode)) {
         const coreDefault = 60;
@@ -283,25 +300,20 @@ Deno.serve(async (req) => {
         recordAdjustment(tg, `Applied core subject default (${normCode})`, 'missing', `${coreDefault} min/week`);
         return coreDefault;
       }
-      
+
       // Priority 3: Subject-level defaults (admin-configured)
       const subjDefaults = getSubjectDefaults(subj, tg.level);
-      if (subjDefaults) {
+      if (subjDefaults && subjDefaults.minutes > 0) {
         debugMinutesSourceByTG[tg.id] = { source: subjDefaults.source, value: subjDefaults.minutes, subject: subjCode, note: subjDefaults.note };
         recordAdjustment(tg, `Applied subject default (${subjDefaults.source})`, 'missing', `${subjDefaults.minutes} min/week`);
         return subjDefaults.minutes;
       }
-      
-      // Priority 4: IB standard fallbacks
+
+      // Priority 4: IB standard fallbacks (NEVER return 0)
       const ibFallback = getIBStandardFallback(tg, subj);
-      if (ibFallback.minutes > 0) {
-        debugMinutesSourceByTG[tg.id] = { source: ibFallback.source, value: ibFallback.minutes, subject: subjCode, note: ibFallback.note };
-        recordAdjustment(tg, `Applied IB standard fallback (${ibFallback.source})`, 'missing', `${ibFallback.minutes} min/week`);
-        return ibFallback.minutes;
-      }
-      
-      debugMinutesSourceByTG[tg.id] = { source: 'NONE', value: 0, reason: 'no_config_or_fallback' };
-      return 0;
+      debugMinutesSourceByTG[tg.id] = { source: ibFallback.source, value: ibFallback.minutes, subject: subjCode, note: ibFallback.note };
+      recordAdjustment(tg, `Applied IB standard fallback (${ibFallback.source})`, 'missing', `${ibFallback.minutes} min/week`);
+      return ibFallback.minutes;
     };
     
     const minutesToPeriods = (m) => Math.max(0, Math.ceil((m || 0) / periodDurationMinutes));
