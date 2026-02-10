@@ -340,12 +340,12 @@ Deno.serve(async (req) => {
         continue;
       }
       
-      // VALIDATION 3: Resolve duration - NEVER skip due to missing config
+      // VALIDATION 3: Resolve duration - FAIL HARD if minutes can't be resolved
       const minutesUsed = minutesForTG(tg);
       
       if (!minutesUsed || minutesUsed <= 0) {
-        recordSkipped(tg, 'DURATION_RESOLUTION_FAILED');
-        continue;
+        recordSkipped(tg, 'MISSING_MINUTES_CONFIG');
+        continue; // Will fail at end if any critical groups missing
       }
       
       const weeklyCount = minutesToPeriods(minutesUsed);
@@ -433,6 +433,38 @@ Deno.serve(async (req) => {
     
     recordLog(`Lessons created: ${lessons.length} total, ${teachingGroupsIncludedCount} sections included, ${teachingGroupsSkipped.length} skipped`);
     recordLog(`Adjustments made: ${teachingGroupsAdjusted.length}`);
+    
+    // HARD FAIL if critical groups are missing minutes configuration
+    const missingMinutesGroups = teachingGroupsSkipped.filter(s => s.reason === 'MISSING_MINUTES_CONFIG');
+    if (missingMinutesGroups.length > 0) {
+      const errorDetails = missingMinutesGroups.map(g => ({
+        id: g.tg_id,
+        name: g.name,
+        subject: g.subject_code,
+        year_group: g.year_group,
+        ib_level: g.ib_level,
+        student_count: g.student_count
+      }));
+      
+      recordLog(`❌ CRITICAL: ${missingMinutesGroups.length} TeachingGroups have no minutes/periods configuration`);
+      
+      return Response.json({
+        ok: false,
+        stage: 'buildLessons',
+        error: 'MISSING_MINUTES_CONFIGURATION',
+        errorMessage: `${missingMinutesGroups.length} TeachingGroups are missing minutes/periods configuration and cannot be scheduled`,
+        missingConfigurationCount: missingMinutesGroups.length,
+        missingGroups: errorDetails,
+        suggestion: 'Please configure minutes_per_week, periods_per_week, or hours_per_week for these TeachingGroups, OR set subject-level defaults (hl_minutes_per_week_default, sl_minutes_per_week_default, or pyp_myp_minutes_per_week_default)',
+        validationReport: {
+          totalTeachingGroups: teachingGroupsDb.length,
+          included: teachingGroupsIncludedCount,
+          excluded: teachingGroupsSkipped.length,
+          missingConfiguration: missingMinutesGroups.length,
+          excludedGroups: teachingGroupsSkipped
+        }
+      }, { status: 200 });
+    }
     
     const daysCount = daysOfWeek.length || 5;
     const periodsPerDay = Math.floor(timeslots.length / Math.max(1, daysCount));
