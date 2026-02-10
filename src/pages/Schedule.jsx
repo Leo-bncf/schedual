@@ -534,11 +534,17 @@ Now process the user's input and return ONLY the JSON object.`,
       const data = res.data;
       setOrToolResult(data);
 
+      // Log solver identity to console
+      if (data?.solverIdentity) {
+      console.log(`🔧 SOLVER: ${data.solverIdentity.engine} (${data.solverIdentity.implementation}) v${data.solverIdentity.version}`);
+      }
+
       // Check if function returned error
       if (data?.ok === false) {
-        console.error('❌ OR-Tool returned error:', data);
-        setOrToolError(`Stage: ${data.stage}\nError: ${data.errorMessage || data.error}\n\nStack:\n${data.errorStack || 'N/A'}`);
-        toast.error(`OR-Tool failed at stage "${data.stage}": ${data.errorMessage || data.error}`);
+      const solverName = data.solverIdentity?.engine || 'Solver';
+      console.error(`❌ ${solverName} returned error:`, data);
+      setOrToolError(`Stage: ${data.stage}\nError: ${data.errorMessage || data.error}\n\nStack:\n${data.errorStack || 'N/A'}`);
+      toast.error(`${solverName} failed at stage "${data.stage}": ${data.errorMessage || data.error}`);
       } else {
         // Persist solver timeslots to prevent config reconstruction overwrite
         if (data.timeslots && Array.isArray(data.timeslots) && data.timeslots.length > 0) {
@@ -555,10 +561,11 @@ Now process the user's input and return ONLY the JSON object.`,
       console.error('OR-Tool fetch failed:', e);
       const errorData = e?.response?.data;
       if (errorData) {
-        setOrToolResult(errorData);
-        if (errorData.ok === false) {
-          setOrToolError(`Stage: ${errorData.stage}\nError: ${errorData.errorMessage || errorData.error}\n\nStack:\n${errorData.errorStack || 'N/A'}`);
-          toast.error(`OR-Tool crashed at "${errorData.stage}": ${errorData.errorMessage || errorData.error}`);
+      setOrToolResult(errorData);
+      if (errorData.ok === false) {
+      const solverName = errorData.solverIdentity?.engine || 'Solver';
+      setOrToolError(`Stage: ${errorData.stage}\nError: ${errorData.errorMessage || errorData.error}\n\nStack:\n${errorData.errorStack || 'N/A'}`);
+      toast.error(`${solverName} crashed at "${errorData.stage}": ${errorData.errorMessage || errorData.error}`);
         } else {
           setOrToolError(e?.message || 'Failed to fetch OR-Tool response');
           toast.error('Failed to retrieve OR-Tool response');
@@ -1485,9 +1492,15 @@ Now process the user's input and return ONLY the JSON object.`,
           const r = res.data || {};
           setOrToolResult(r);
 
+          // Log solver identity to console
+          if (r?.solverIdentity) {
+            console.log(`🔧 SOLVER: ${r.solverIdentity.engine} (${r.solverIdentity.implementation}) v${r.solverIdentity.version}`);
+          }
+
           // Check if function returned error
           if (r.ok === false) {
-            console.error('❌ OR-Tool returned error:', r);
+            const solverName = r.solverIdentity?.engine || 'Solver';
+            console.error(`❌ ${solverName} returned error:`, r);
             
             // Special handling for missing config validation
             if (r.stage === 'VALIDATION_FAILED_MISSING_CONFIG') {
@@ -1497,7 +1510,8 @@ Now process the user's input and return ONLY the JSON object.`,
               toast.error(`❌ Cannot generate DP schedule: ${count} teaching groups missing minutes/periods config (${groupNames}${moreText}). Please configure on Teaching Groups page.`, { duration: 10000 });
               setOrToolError(`Validation Failed: ${count} DP teaching groups missing configuration\n\nGroups: ${groupNames}${moreText}\n\n${r.suggestion}`);
             } else {
-              toast.error(`OR-Tool failed at stage "${r.stage}": ${r.errorMessage || r.error || 'Unknown error'}`);
+              const solverName = r.solverIdentity?.engine || 'Solver';
+              toast.error(`${solverName} failed at stage "${r.stage}": ${r.errorMessage || r.error || 'Unknown error'}`);
               setOrToolError(`Stage: ${r.stage}\nError: ${r.errorMessage || r.error}\n\nStack:\n${r.errorStack || 'N/A'}`);
             }
           } else {
@@ -1524,18 +1538,20 @@ Now process the user's input and return ONLY the JSON object.`,
             await queryClient.invalidateQueries({ queryKey: ['scheduleVersions'] });
             await queryClient.invalidateQueries({ queryKey: ['students'] });
             setScheduleTab('student');
-            toast.success(`✅ OR-Tool: ${deleted} deleted, ${inserted} optimized slots created`);
+            const solverName = r.solverIdentity?.engine || 'Solver';
+            toast.success(`✅ ${solverName}: ${deleted} deleted, ${inserted} optimized slots created`);
           }
         } catch (e) {
           console.error('Auto OR-Tool step failed:', e);
           const errorData = e?.response?.data;
           if (errorData?.ok === false) {
+            const solverName = errorData.solverIdentity?.engine || 'Solver';
             setOrToolError(`Stage: ${errorData.stage}\nError: ${errorData.errorMessage || errorData.error}\n\nStack:\n${errorData.errorStack || 'N/A'}`);
             setOrToolResult(errorData);
-            toast.error(`OR-Tool crashed at "${errorData.stage}": ${errorData.errorMessage || errorData.error}`);
+            toast.error(`${solverName} crashed at "${errorData.stage}": ${errorData.errorMessage || errorData.error}`);
           } else {
-            setOrToolError(e?.message || 'OR-Tool failed');
-            toast.error('OR-Tool failed — keeping generated schedule (no rollback performed).');
+            setOrToolError(e?.message || 'Solver failed');
+            toast.error('Solver failed — keeping generated schedule (no rollback performed).');
           }
         } finally {
           setOrToolLoading(false);
@@ -2544,31 +2560,36 @@ Now process the user's input and return ONLY the JSON object.`,
                         {/* Quick verification panel */}
                         <div className="grid md:grid-cols-3 gap-3 text-xs">
                           <div className="p-3 rounded-lg bg-slate-100">
-                            <div className="font-semibold text-slate-900 mb-1">Endpoint</div>
-                            <div className="truncate">{String(orToolResult?.orToolEndpointUsed || orToolResult?.endpoint || '—')}</div>
-                            <div className="mt-1">HTTP: <strong className={orToolResult?.orToolHttpStatus === 200 ? 'text-green-600' : 'text-rose-600'}>{orToolResult?.orToolHttpStatus ?? '—'}</strong></div>
-                            <div className="mt-1">/health: <strong>{orToolResult?.orToolHealthStatus ?? '—'}</strong> {orToolResult?.orToolHealthOk === false ? '(down)' : ''}</div>
-                            <div className="mt-1">Headers: <code className="text-[10px]">{JSON.stringify(orToolResult?.orToolRequestHeadersSent || {})}</code></div>
-                            {orToolResult?.orToolErrorBody && (
-                              <div className="mt-1 font-semibold text-rose-700">Error: <span className="break-all">{(orToolResult?.orToolErrorBody || '').slice(0, 300)}</span></div>
-                            )}
-                            {orToolResult?.orToolHttpStatus && orToolResult?.orToolHttpStatus !== 200 && (
+                           <div className="font-semibold text-slate-900 mb-1">Solver Info</div>
+                           <div className="text-xs space-y-1">
+                             <div>Engine: <strong className="text-blue-700">{orToolResult?.solverIdentity?.engine || '—'}</strong></div>
+                             <div>Implementation: <strong className="text-blue-700">{orToolResult?.solverIdentity?.implementation || '—'}</strong></div>
+                             <div>Version: <strong>{orToolResult?.solverIdentity?.version || '—'}</strong></div>
+                           </div>
+                           <div className="mt-2 truncate text-xs">Endpoint: {String(orToolResult?.solverEndpointUsed || orToolResult?.endpoint || '—')}</div>
+                           <div className="mt-1">HTTP: <strong className={orToolResult?.solverHttpStatus === 200 ? 'text-green-600' : 'text-rose-600'}>{orToolResult?.solverHttpStatus ?? '—'}</strong></div>
+                           <div className="mt-1">/health: <strong>{orToolResult?.solverHealthStatus ?? '—'}</strong> {orToolResult?.solverHealthOk === false ? '(down)' : ''}</div>
+                           <div className="mt-1">Headers: <code className="text-[10px]">{JSON.stringify(orToolResult?.solverRequestHeadersSent || {})}</code></div>
+                           {orToolResult?.solverErrorBody && (
+                             <div className="mt-1 font-semibold text-rose-700">Error: <span className="break-all">{(orToolResult?.solverErrorBody || '').slice(0, 300)}</span></div>
+                           )}
+                           {orToolResult?.solverHttpStatus && orToolResult?.solverHttpStatus !== 200 && (
                               <div className="mt-3 space-y-2 border-t border-slate-300 pt-2">
                                 <div className="text-[10px] text-slate-600 bg-rose-50 p-2 rounded border border-rose-200">
-                                  <div className="font-bold text-rose-700 mb-1">🔴 OR-Tool Scheduler Failed (HTTP {orToolResult?.orToolHttpStatus})</div>
-                                  <div className="text-rose-700">{orToolResult?.orToolErrorBody}</div>
+                                  <div className="font-bold text-rose-700 mb-1">🔴 Solver Failed (HTTP {orToolResult?.solverHttpStatus})</div>
+                                  <div className="text-rose-700">{orToolResult?.solverErrorBody}</div>
                                 </div>
                               </div>
                             )}
-                            {orToolResult?.orToolHttpStatus === 200 && (
+                            {orToolResult?.solverHttpStatus === 200 && (
                               <div className="mt-3 space-y-2 border-t border-slate-300 pt-2">
                                 <div className="text-[10px] text-slate-600">
                                   <div className="font-bold mb-1">📤 subjects sent (first 5):</div>
-                                  <pre className="bg-white rounded p-1.5 overflow-x-auto max-h-40">{JSON.stringify(orToolResult?.orToolRequestPayloadSubjects || [], null, 2)}</pre>
+                                  <pre className="bg-white rounded p-1.5 overflow-x-auto max-h-40">{JSON.stringify(orToolResult?.solverRequestPayloadSubjects || [], null, 2)}</pre>
                                 </div>
                                 <div className="text-[10px] text-slate-600">
                                   <div className="font-bold mb-1">📤 subjectRequirements sent (first 10):</div>
-                                  <pre className="bg-white rounded p-1.5 overflow-x-auto max-h-40">{JSON.stringify(orToolResult?.orToolRequestPayloadSubjectRequirements || [], null, 2)}</pre>
+                                  <pre className="bg-white rounded p-1.5 overflow-x-auto max-h-40">{JSON.stringify(orToolResult?.solverRequestPayloadSubjectRequirements || [], null, 2)}</pre>
                                 </div>
                                 {(orToolResult?.subjectsInvalidIds || []).length > 0 && (
                                   <div className="text-[10px] text-rose-700">

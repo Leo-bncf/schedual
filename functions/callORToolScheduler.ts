@@ -231,54 +231,67 @@ Deno.serve(async (req) => {
       }, { status: 200 });
     }
 
-    stage = 'callORTool';
-    console.log(`[callORToolScheduler] ${stage}: preparing OR-Tool request`);
+    // Step 2.5: Fetch solver identity FIRST (log engine type before solving)
+    stage = 'fetchSolverInfo';
+    console.log(`[callORToolScheduler] ${stage}: identifying solver engine`);
     
-    // Step 3: Call OR-Tool service
-    const OR_TOOL_ENDPOINT = Deno.env.get('OR_TOOL_ENDPOINT');
-    const OR_TOOL_API_KEY = Deno.env.get('OR_TOOL_API_KEY');
+    let solverIdentity = { engine: 'unknown', implementation: 'unknown', version: 'unknown' };
+    try {
+      const solverInfoRes = await base44.functions.invoke('getSolverInfo');
+      if (solverInfoRes?.data?.success) {
+        solverIdentity = {
+          engine: solverInfoRes.data.engine || 'unknown',
+          implementation: solverInfoRes.data.implementation || 'unknown',
+          version: solverInfoRes.data.version || 'unknown',
+          build_sha: solverInfoRes.data.build_sha || null
+        };
+        console.log('[callORToolScheduler] ✅ SOLVER IDENTITY:', JSON.stringify(solverIdentity));
+        console.log(`[callORToolScheduler] 🔧 Engine: ${solverIdentity.engine}, Implementation: ${solverIdentity.implementation}`);
+      }
+    } catch (e) {
+      console.warn('[callORToolScheduler] Failed to fetch solver info:', e.message);
+    }
+    
+    stage = 'callSolver';
+    console.log(`[callORToolScheduler] ${stage}: preparing solver request (${solverIdentity.engine})`);
+    
+    // Step 3: Call solver service
+    const SOLVER_ENDPOINT = Deno.env.get('OR_TOOL_ENDPOINT') || Deno.env.get('SOLVER_ENDPOINT');
+    const SOLVER_API_KEY = Deno.env.get('OR_TOOL_API_KEY') || Deno.env.get('SOLVER_API_KEY');
 
-    if (!OR_TOOL_ENDPOINT) {
-      console.error('[callORToolScheduler] Missing OR_TOOL_ENDPOINT');
+    if (!SOLVER_ENDPOINT) {
+      console.error('[callORToolScheduler] Missing SOLVER_ENDPOINT');
       return Response.json({ 
-        error: 'OR-Tool endpoint missing: set OR_TOOL_ENDPOINT to http://87.106.27.27:8080/solve-and-push'
+        error: 'Solver endpoint missing: set OR_TOOL_ENDPOINT or SOLVER_ENDPOINT',
+        solverIdentity
       }, { status: 503 });
     }
-    if (!OR_TOOL_API_KEY) {
-      console.error('[callORToolScheduler] Missing OR_TOOL_API_KEY');
+    if (!SOLVER_API_KEY) {
+      console.error('[callORToolScheduler] Missing SOLVER_API_KEY');
       return Response.json({ 
-        error: 'OR-Tool API key missing: set OR_TOOL_API_KEY'
+        error: 'Solver API key missing: set OR_TOOL_API_KEY or SOLVER_API_KEY',
+        solverIdentity
       }, { status: 503 });
     }
 
-    const REQUIRED_OR_TOOL_ENDPOINT = 'http://87.106.27.27:8080/solve-and-push';
-    if (OR_TOOL_ENDPOINT !== REQUIRED_OR_TOOL_ENDPOINT) {
-      console.error('[callORToolScheduler] OR_TOOL_ENDPOINT mismatch', { configured: OR_TOOL_ENDPOINT, required: REQUIRED_OR_TOOL_ENDPOINT });
-      return Response.json({ 
-        error: 'OR-Tool endpoint misconfigured',
-        orToolEndpointConfigured: OR_TOOL_ENDPOINT,
-        required: REQUIRED_OR_TOOL_ENDPOINT
-      }, { status: 503 });
-    }
-
-    const orToolEndpointUsed = OR_TOOL_ENDPOINT;
-    console.log('[callORToolScheduler] Calling OR-Tool at', orToolEndpointUsed, 'schedule_version_id =', schedule_version_id);
+    const solverEndpointUsed = SOLVER_ENDPOINT;
+    console.log(`[callORToolScheduler] Calling solver (${solverIdentity.engine}) at`, solverEndpointUsed, 'schedule_version_id =', schedule_version_id);
 
     // Diagnostics defaults + /health check
-    let orToolHttpStatus = null;
-    let orToolRequestHeadersSent = { 'Content-Type': 'application/json', 'X-API-Key': '***' };
-    let orToolHealthStatus = null;
-    let orToolHealthOk = null;
+    let solverHttpStatus = null;
+    let solverRequestHeadersSent = { 'Content-Type': 'application/json', 'X-API-Key': '***' };
+    let solverHealthStatus = null;
+    let solverHealthOk = null;
     try {
-      const healthUrl = orToolEndpointUsed.replace('/solve-and-push', '/health');
+      const healthUrl = solverEndpointUsed.replace('/solve-and-push', '/health');
       const healthRes = await fetch(healthUrl, { method: 'GET' });
-      orToolHealthStatus = healthRes.status;
-      orToolHealthOk = healthRes.ok;
-      console.log('[callORToolScheduler] OR-Tool /health status =', orToolHealthStatus);
+      solverHealthStatus = healthRes.status;
+      solverHealthOk = healthRes.ok;
+      console.log(`[callORToolScheduler] Solver /health status = ${solverHealthStatus}`);
     } catch (e) {
-      console.warn('[callORToolScheduler] OR-Tool /health check failed:', String(e?.message || e));
-      orToolHealthStatus = null;
-      orToolHealthOk = false;
+      console.warn('[callORToolScheduler] Solver /health check failed:', String(e?.message || e));
+      solverHealthStatus = null;
+      solverHealthOk = false;
     }
 
     let solverResponse;
@@ -287,10 +300,10 @@ Deno.serve(async (req) => {
       const maskApiKey = (k) => (k && k.length >= 6) ? `${k.slice(0,3)}***${k.slice(-3)}` : '***';
       const requestHeaders = {
         'Content-Type': 'application/json',
-        'X-API-Key': OR_TOOL_API_KEY
+        'X-API-Key': SOLVER_API_KEY
       };
-      orToolRequestHeadersSent = { 'Content-Type': 'application/json', 'X-API-Key': maskApiKey(OR_TOOL_API_KEY) };
-      // OR-Tool expects top-level schoolId + scheduleVersionId + problem data
+      solverRequestHeadersSent = { 'Content-Type': 'application/json', 'X-API-Key': maskApiKey(SOLVER_API_KEY) };
+      // Solver expects top-level schoolId + scheduleVersionId + problem data
       // Spread problem first, then overwrite to prevent null/undefined from problem overwriting our values
       const orToolPayload = {
         ...problem,
@@ -312,8 +325,8 @@ Deno.serve(async (req) => {
         scheduleVersionId: schedule_version_id
       });
 
-      console.log('[callORToolScheduler] Sending to OR-Tool:', {
-        endpoint: orToolEndpointUsed,
+      console.log(`[callORToolScheduler] Sending to solver (${solverIdentity.engine}/${solverIdentity.implementation}):`, {
+        endpoint: solverEndpointUsed,
         schoolId: schoolId,
         scheduleVersionId: schedule_version_id,
         payloadSchoolId: orToolPayload.schoolId,
@@ -324,35 +337,36 @@ Deno.serve(async (req) => {
         timeslotsCount: problem?.timeslots?.length || 0
       });
 
-      console.log('[OR-Tool payload] schoolId=', orToolPayload.schoolId, 'scheduleVersionId=', orToolPayload.scheduleVersionId, 'keys=', Object.keys(orToolPayload).slice(0, 20));
-      console.log('[OR-Tool payload JSON preview]:', payloadJson.slice(0, 300));
+      console.log('[Solver payload] schoolId=', orToolPayload.schoolId, 'scheduleVersionId=', orToolPayload.scheduleVersionId, 'keys=', Object.keys(orToolPayload).slice(0, 20));
+      console.log('[Solver payload JSON preview]:', payloadJson.slice(0, 300));
 
-      solverResponse = await fetch(orToolEndpointUsed, {
+      solverResponse = await fetch(solverEndpointUsed, {
         method: 'POST',
         headers: requestHeaders,
         body: payloadJson
       });
-      orToolHttpStatus = solverResponse.status;
-      console.log('[callORToolScheduler] OR-Tool HTTP status =', orToolHttpStatus);
+      solverHttpStatus = solverResponse.status;
+      console.log('[callORToolScheduler] Solver HTTP status =', solverHttpStatus);
 
       // Read response body once
       solverResponseText = await solverResponse.text();
-      console.log('[callORToolScheduler] OR-Tool response preview:', solverResponseText?.slice(0, 500));
+      console.log('[callORToolScheduler] Solver response preview:', solverResponseText?.slice(0, 500));
     } catch (e) {
-      console.error('[callORToolScheduler] OR-Tool network/fetch error:', e);
+      console.error('[callORToolScheduler] Solver network/fetch error:', e);
       console.error('[callORToolScheduler] Error stack:', e?.stack);
       return Response.json({
         ok: false,
-        stage: 'callORTool',
-        error: 'Network error calling OR-Tool',
+        stage: 'callSolver',
+        error: 'Network error calling solver',
         errorMessage: String(e?.message || e),
         errorStack: String(e?.stack || ''),
-        orToolEndpointUsed,
-        orToolHttpStatus: null,
-        orToolErrorBody: String(e?.message || e),
-        orToolRequestHeadersSent,
-        orToolHealthStatus,
-        orToolHealthOk,
+        solverIdentity,
+        solverEndpointUsed,
+        solverHttpStatus: null,
+        solverErrorBody: String(e?.message || e),
+        solverRequestHeadersSent,
+        solverHealthStatus,
+        solverHealthOk,
         scheduleVersionIdInput: schedule_version_id,
         scheduleVersionIdUsed: schedule_version_id,
         schoolIdSent: schoolId,
@@ -372,8 +386,8 @@ Deno.serve(async (req) => {
     }
 
     if (!solverResponse.ok) {
-      console.error('[callORToolScheduler] OR-Tool returned error status:', orToolHttpStatus);
-      console.error('[callORToolScheduler] OR-Tool error body:', solverResponseText);
+      console.error(`[callORToolScheduler] Solver (${solverIdentity.engine}) returned error status:`, solverHttpStatus);
+      console.error('[callORToolScheduler] Solver error body:', solverResponseText);
 
       // Try to parse as JSON, fallback to text
       let parsedError = null;
@@ -383,19 +397,20 @@ Deno.serve(async (req) => {
         parsedError = { rawText: solverResponseText };
       }
 
-      // Return 200 with ok:false so UI can parse JSON and show real OR-Tool status
+      // Return 200 with ok:false so UI can parse JSON and show real solver status
       return Response.json({ 
         ok: false,
-        stage: 'callORTool',
-        error: 'OR-Tool rejected the request',
-        errorMessage: `OR-Tool returned HTTP ${orToolHttpStatus}`,
-        orToolEndpointUsed,
-        orToolHttpStatus,
-        orToolErrorBody: solverResponseText,
-        orToolErrorParsed: parsedError,
-        orToolRequestHeadersSent,
-        orToolHealthStatus,
-        orToolHealthOk,
+        stage: 'callSolver',
+        error: 'Solver rejected the request',
+        errorMessage: `Solver returned HTTP ${solverHttpStatus}`,
+        solverIdentity,
+        solverEndpointUsed,
+        solverHttpStatus,
+        solverErrorBody: solverResponseText,
+        solverErrorParsed: parsedError,
+        solverRequestHeadersSent,
+        solverHealthStatus,
+        solverHealthOk,
         scheduleVersionIdInput: schedule_version_id,
         scheduleVersionIdUsed: schedule_version_id,
         schoolIdSent: schoolId,
@@ -409,7 +424,7 @@ Deno.serve(async (req) => {
         performedInsertion: false,
         slotsDeleted: 0,
         slotsInserted: 0,
-        orToolRequestPayload: {
+        solverRequestPayload: {
           schoolId: schoolId,
           scheduleVersionId: schedule_version_id,
           scheduleSettings: scheduleSettingsSent,
@@ -431,15 +446,16 @@ Deno.serve(async (req) => {
     try {
       solution = JSON.parse(solverResponseText);
     } catch (parseError) {
-      console.error('[callORToolScheduler] Failed to parse OR-Tool response as JSON:', parseError);
+      console.error('[callORToolScheduler] Failed to parse solver response as JSON:', parseError);
       return Response.json({
         ok: false,
-        stage: 'parseORToolResponse',
-        error: 'Invalid JSON from OR-Tool',
+        stage: 'parseSolverResponse',
+        error: 'Invalid JSON from solver',
         errorMessage: String(parseError?.message || parseError),
         errorStack: String(parseError?.stack || ''),
-        orToolHttpStatus,
-        orToolErrorBody: solverResponseText?.slice(0, 1000),
+        solverIdentity,
+        solverHttpStatus,
+        solverErrorBody: solverResponseText?.slice(0, 1000),
         meta: { schedule_version_id, schoolId }
       }, { status: 200 });
     }
@@ -452,9 +468,10 @@ Deno.serve(async (req) => {
     if (!solvedLessons) {
       return Response.json({ 
         ok: false,
-        error: 'Invalid solution format from OR-Tool (expected lessons[] or assignments[])',
+        error: 'Invalid solution format from solver (expected lessons[] or assignments[])',
         solution,
-        orToolHttpStatus,
+        solverIdentity,
+        solverHttpStatus,
         meta: { schedule_version_id, schoolId }
       }, { status: 200 });
     }
@@ -1147,13 +1164,14 @@ Deno.serve(async (req) => {
       schedule_version_id,
       scheduleVersionIdInput: schedule_version_id,
       scheduleVersionIdUsed: schedule_version_id,
-      orToolEndpointUsed,
-      orToolHttpStatus,
-      orToolErrorBody: null,
-      orToolRequestHeadersSent,
-      orToolHealthStatus,
-      orToolHealthOk,
-      orToolRequestPayload: {
+      solverIdentity,
+      solverEndpointUsed,
+      solverHttpStatus,
+      solverErrorBody: null,
+      solverRequestHeadersSent,
+      solverHealthStatus,
+      solverHealthOk,
+      solverRequestPayload: {
         scheduleSettings: scheduleSettingsSent,
         subjects: (problem?.subjects || []).slice(0, 5),
         subjectRequirements: coreSubjectRequirements.length > 0 
@@ -1221,8 +1239,8 @@ Deno.serve(async (req) => {
       slotsPreparedForInsert: slotsPreparedBySubject,
       testSlotsInsertedCount,
       slotsInsertedBySubjectCode,
-      orToolRequestPayloadSubjects: (problem?.subjects || []).slice(0, 5),
-      orToolRequestPayloadSubjectRequirements: (problem?.subjectRequirements || []).slice(0, 10),
+      solverRequestPayloadSubjects: (problem?.subjects || []).slice(0, 5),
+      solverRequestPayloadSubjectRequirements: (problem?.subjectRequirements || []).slice(0, 10),
       subjectsInvalidIds: subjectsInvalidIds || [],
       requirementsUnknownSubjects: requirementsUnknownSubjects || [],
       requirementsInvalidMinutes: requirementsInvalidMinutes || [],
