@@ -108,14 +108,45 @@ Deno.serve(async (req) => {
     const daysOfWeek = Array.isArray(school.days_of_week) && school.days_of_week.length > 0
       ? school.days_of_week
       : ['MONDAY','TUESDAY','WEDNESDAY','THURSDAY','FRIDAY'];
-    const breaks = Array.isArray(school.breaks) ? school.breaks : [];
-    const minPeriodsPerDay = Number(school.min_periods_per_day || 10);
-    const targetPeriodsPerDay = Number(school.target_periods_per_day || 10);
-    
+
+    // Build breaks array from school settings (convert period numbers to time ranges)
+    const breaks = [];
+    const breakPeriods = Array.isArray(school.settings?.break_periods) ? school.settings.break_periods : [];
+    const lunchPeriod = school.settings?.lunch_period || null;
+    const breakDuration = Number(school.settings?.break_duration_minutes || 15);
+    const lunchDuration = Number(school.settings?.lunch_duration_minutes || 30);
+
     const timeToMin = (hhmm) => {
       const [h,m] = String(hhmm).split(':').map(Number);
       return (h||0) * 60 + (m||0);
     };
+    const minToTime = (min) => {
+      const h = Math.floor(min / 60);
+      const m = min % 60;
+      return `${String(h).padStart(2,'0')}:${String(m).padStart(2,'0')}`;
+    };
+
+    // Convert period numbers to time ranges
+    breakPeriods.forEach(period => {
+      const periodStart = timeToMin(dayStartTime) + ((period - 1) * periodDurationMinutes);
+      breaks.push({
+        start: minToTime(periodStart),
+        end: minToTime(periodStart + breakDuration)
+      });
+    });
+
+    if (lunchPeriod) {
+      const lunchStart = timeToMin(dayStartTime) + ((lunchPeriod - 1) * periodDurationMinutes);
+      breaks.push({
+        start: minToTime(lunchStart),
+        end: minToTime(lunchStart + lunchDuration)
+      });
+    }
+
+    recordLog(`Breaks configured: ${breaks.length} (${breakPeriods.length} short breaks + ${lunchPeriod ? 1 : 0} lunch)`);
+    const minPeriodsPerDay = Number(school.min_periods_per_day || 10);
+    const targetPeriodsPerDay = Number(school.target_periods_per_day || 10);
+
     const overlapsBreak = (start, end) => {
       for (const b of breaks) {
         if (!b?.start || !b?.end) continue;
