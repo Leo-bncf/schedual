@@ -349,7 +349,7 @@ Deno.serve(async (req) => {
     
     const minutesToPeriods = (m) => Math.max(0, Math.ceil((m || 0) / periodDurationMinutes));
 
-    // CREATE LESSONS: IB Cohort-Aware (HL/SL shared + HL-extra)
+    // CREATE LESSONS: One lesson per teaching group (solver handles HL/SL merging)
     const lessons = [];
     let lessonId = 1;
     const expectedLessonsBySubject = {};
@@ -358,225 +358,118 @@ Deno.serve(async (req) => {
     const dpMinEndTime = String(body?.dp_min_end_time || Deno.env.get('DP_MIN_END_TIME') || '14:30');
     const studentGroupSoftPreferences = {};
 
-    recordLog(`Creating lessons for ${teachingGroupsDb.length} TeachingGroups (IB cohort-aware)`);
+    recordLog(`Creating lessons for ${teachingGroupsDb.length} TeachingGroups (solver handles HL/SL merging)`);
 
-    // STEP 1: Build cohort index (group HL/SL by subject+year_group)
-    const cohortsBySubjectYear = {};
-    const processedTGs = new Set();
-
+    // Process all teaching groups individually - NO client-side HL/SL merging
     for (const tg of teachingGroupsDb) {
-      if (!tg || !tg.id) continue;
-      const subjCode = (tg.subject_id && subjectIdToCode[tg.subject_id]) || null;
-      const subj = (tg.subject_id && subjectById[tg.subject_id]) || null;
-      if (!subjCode || !subj) continue;
+      if (!tg) continue;
+const subjCode = (tg.subject_id && subjectIdToCode[tg.subject_id]) || null;
+const subj = (tg.subject_id && subjectById[tg.subject_id]) || null;
 
-      const isDPGroup = (String(tg.year_group || '').toUpperCase().includes('DP')) || (subj?.ib_level === 'DP');
-      if (!isDPGroup) continue;
+// VALIDATION 1: Subject must exist
+if (!subjCode || !subj) {
+  recordSkipped(tg, 'NO_VALID_SUBJECT');
+  continue;
+}
 
-      const cohortKey = `${tg.subject_id}__${tg.year_group}`;
-      if (!cohortsBySubjectYear[cohortKey]) {
-        cohortsBySubjectYear[cohortKey] = { HL: [], SL: [], subject: subj, year_group: tg.year_group };
-      }
+// VALIDATION 2: TG must have students (or be special course)
+const hasStudents = Array.isArray(tg.student_ids) && tg.student_ids.length > 0;
+const isSpecialCourse = ['STUDY', 'TOK', 'CAS', 'EE', 'TEST'].includes(subjCode);
 
-      const level = String(tg.level || '').toUpperCase().trim();
-      if (level === 'HL') {
-        cohortsBySubjectYear[cohortKey].HL.push(tg);
-      } else if (level === 'SL') {
-        cohortsBySubjectYear[cohortKey].SL.push(tg);
-      }
-    }
+if (!hasStudents && !isSpecialCourse) {
+  recordSkipped(tg, 'NO_STUDENTS_ENROLLED');
+  continue;
+}
 
-    recordLog(`Built ${Object.keys(cohortsBySubjectYear).length} DP cohorts (subject+year combos)`);
+// VALIDATION 3: Resolve duration - original requirements, no HL/SL adjustment
+const minutesUsed = minutesForTG(tg);
 
-    // STEP 2: Process DP cohorts (shared + HL-extra)
-    for (const [cohortKey, cohort] of Object.entries(cohortsBySubjectYear)) {
-      const { HL, SL, subject, year_group } = cohort;
-      const subjCode = subjectIdToCode[subject.id];
+if (!minutesUsed || minutesUsed <= 0) {
+  recordSkipped(tg, 'MISSING_MINUTES_CONFIG');
+  continue;
+}
 
-      if (HL.length === 0 && SL.length === 0) continue;
+const weeklyCount = minutesToPeriods(minutesUsed);
 
-      // Calculate shared and HL-extra periods
-      const slMinutes = SL.length > 0 ? minutesForTG(SL[0]) : 0;
-      const hlMinutes = HL.length > 0 ? minutesForTG(HL[0]) : 0;
-      const slPeriods = minutesToPeriods(slMinutes);
-      const hlPeriods = minutesToPeriods(hlMinutes);
-      const sharedPeriods = Math.min(slPeriods, hlPeriods);
-      const hlExtraPeriods = Math.max(0, hlPeriods - slPeriods);
+if (!weeklyCount || weeklyCount <= 0) {
+  recordSkipped(tg, 'INVALID_PERIOD_COUNT');
+  continue;
+}
 
-      recordLog(`Cohort ${cohortKey}: SL=${slPeriods}p, HL=${hlPeriods}p → shared=${sharedPeriods}p, HL-extra=${hlExtraPeriods}p`);
+// SUCCESS: Include this teaching group as-is
+teachingGroupsIncludedCount++;
 
-      // Collect all students from HL+SL groups
-      const allStudentIds = [...HL, ...SL].flatMap(tg => tg.student_ids || []);
-      const allGroups = [...HL, ...SL];
+const studentGroup = `TG_${tg.id}`;
+const cap = Math.max(1, (tg.student_ids || []).length);
 
-      // Check if same teacher across all groups
-      const teachers = new Set(allGroups.map(tg => tg.teacher_id).filter(Boolean));
-      const sameTeacher = teachers.size === 1;
-      const sharedTeacherId = sameTeacher ? Array.from(teachers)[0] : null;
+const teacherIdx = (tg.teacher_id && teachersDb) ? teachersDb.findIndex(t => t?.id === tg.teacher_id) : -1;
+const roomIdx = (tg.preferred_room_id && roomsDb) ? roomsDb.findIndex(r => r?.id === tg.preferred_room_id) : -1;
+const teacherNumeric = teacherIdx >= 0 ? teacherIdx + 1 : null;
+const roomNumeric = roomIdx >= 0 ? roomIdx + 1 : null;
 
-      // SHARED LESSONS: HL+SL together
-      if (sharedPeriods > 0 && allGroups.length > 0) {
-        const sharedBlockId = sameTeacher ? null : `SHARED_${cohortKey}`;
-        const teacherIdx = sharedTeacherId ? teachersDb.findIndex(t => t?.id === sharedTeacherId) : -1;
-        const teacherNumeric = teacherIdx >= 0 ? teacherIdx + 1 : null;
+// Track diagnostics
+teachingGroupsDiagnostics.push({
+  tg_id: tg.id,
+  name: tg.name,
+  subject_code: subjCode,
+  minutesSource: debugMinutesSourceByTG[tg.id],
+  minutesUsed,
+  requiredPeriods: weeklyCount,
+  ib_level: subj?.ib_level || null,
+  year_group: tg.year_group || null,
+  level: tg.level || null,
+  has_students: hasStudents,
+  student_count: (tg.student_ids || []).length,
+  teacher_id: tg.teacher_id || null,
+  room_id: tg.preferred_room_id || null,
+  included: true
+});
 
-        for (let i = 0; i < sharedPeriods; i++) {
-          lessons.push({
-            id: lessonId++,
-            subject: subjCode,
-            studentGroup: `COHORT_${cohortKey}`,
-            sectionId: allGroups[0].id, // Primary group ID
-            studentIds: allStudentIds,
-            blockId: sharedBlockId, // Enforce same timeslot if different teachers
-            requiredCapacity: allStudentIds.length,
-            timeslotId: null,
-            roomId: null,
-            teacherId: teacherNumeric,
-            cohortType: 'shared',
-            cohortGroups: allGroups.map(tg => tg.id)
-          });
-        }
+expectedLessonsBySubject[subjCode] = (expectedLessonsBySubject[subjCode] || 0) + weeklyCount;
+expectedMinutesBySubject[subjCode] = (expectedMinutesBySubject[subjCode] || 0) + minutesUsed;
 
-        expectedLessonsBySubject[subjCode] = (expectedLessonsBySubject[subjCode] || 0) + sharedPeriods;
-        expectedMinutesBySubject[subjCode] = (expectedMinutesBySubject[subjCode] || 0) + (sharedPeriods * periodDurationMinutes);
-        allGroups.forEach(tg => processedTGs.add(tg.id));
-      }
+// Create lessons for this teaching group (solver will handle HL/SL merging)
+const studentIds = Array.isArray(tg.student_ids) ? tg.student_ids : [];
+const blockId = tg.block_id || null;
 
-      // HL-EXTRA LESSONS: HL only
-      if (hlExtraPeriods > 0 && HL.length > 0) {
-        for (const hlGroup of HL) {
-          const hlStudentIds = hlGroup.student_ids || [];
-          const teacherIdx = hlGroup.teacher_id ? teachersDb.findIndex(t => t?.id === hlGroup.teacher_id) : -1;
-          const teacherNumeric = teacherIdx >= 0 ? teacherIdx + 1 : null;
+for (let i = 0; i < weeklyCount; i++) {
+  lessons.push({
+    id: lessonId++,
+    subject: subjCode,
+    studentGroup,
+    sectionId: tg.id,
+    studentIds, // Solver uses this for cohort detection
+    blockId, // Solver uses this for elective concurrency
+    requiredCapacity: cap,
+    timeslotId: null,
+    roomId: roomNumeric || null,
+    teacherId: teacherNumeric || null,
+  });
+}
 
-          for (let i = 0; i < hlExtraPeriods; i++) {
-            lessons.push({
-              id: lessonId++,
-              subject: subjCode,
-              studentGroup: `TG_${hlGroup.id}`,
-              sectionId: hlGroup.id,
-              studentIds: hlStudentIds,
-              blockId: null,
-              requiredCapacity: hlStudentIds.length,
-              timeslotId: null,
-              roomId: null,
-              teacherId: teacherNumeric,
-              cohortType: 'hl_extra',
-              cohortGroups: [hlGroup.id]
-            });
-          }
-
-          expectedLessonsBySubject[subjCode] = (expectedLessonsBySubject[subjCode] || 0) + hlExtraPeriods;
-          expectedMinutesBySubject[subjCode] = (expectedMinutesBySubject[subjCode] || 0) + (hlExtraPeriods * periodDurationMinutes);
-        }
-      }
-    }
-
-    // STEP 3: Process non-DP groups (PYP/MYP/electives) individually
-    for (const tg of teachingGroupsDb) {
-      if (!tg || processedTGs.has(tg.id)) continue;
-
-      const subjCode = (tg.subject_id && subjectIdToCode[tg.subject_id]) || null;
-      const subj = (tg.subject_id && subjectById[tg.subject_id]) || null;
-
-      if (!subjCode || !subj) {
-        recordSkipped(tg, 'NO_VALID_SUBJECT');
-        continue;
-      }
-
-      const hasStudents = Array.isArray(tg.student_ids) && tg.student_ids.length > 0;
-      const isSpecialCourse = ['STUDY', 'TOK', 'CAS', 'EE', 'TEST'].includes(subjCode);
-
-      if (!hasStudents && !isSpecialCourse) {
-        recordSkipped(tg, 'NO_STUDENTS_ENROLLED');
-        continue;
-      }
-
-      const minutesUsed = minutesForTG(tg);
-
-      if (!minutesUsed || minutesUsed <= 0) {
-        recordSkipped(tg, 'MISSING_MINUTES_CONFIG');
-        continue;
-      }
-
-      const weeklyCount = minutesToPeriods(minutesUsed);
-
-      if (!weeklyCount || weeklyCount <= 0) {
-        recordSkipped(tg, 'INVALID_PERIOD_COUNT');
-        continue;
-      }
-
-      teachingGroupsIncludedCount++;
-
-      const studentGroup = `TG_${tg.id}`;
-      const cap = Math.max(1, (tg.student_ids || []).length);
-
-      const teacherIdx = (tg.teacher_id && teachersDb) ? teachersDb.findIndex(t => t?.id === tg.teacher_id) : -1;
-      const roomIdx = (tg.preferred_room_id && roomsDb) ? roomsDb.findIndex(r => r?.id === tg.preferred_room_id) : -1;
-      const teacherNumeric = teacherIdx >= 0 ? teacherIdx + 1 : null;
-      const roomNumeric = roomIdx >= 0 ? roomIdx + 1 : null;
-
-      teachingGroupsDiagnostics.push({
-        tg_id: tg.id,
-        name: tg.name,
-        subject_code: subjCode,
-        minutesSource: debugMinutesSourceByTG[tg.id],
-        minutesUsed,
-        requiredPeriods: weeklyCount,
-        ib_level: subj?.ib_level || null,
-        year_group: tg.year_group || null,
-        level: tg.level || null,
-        has_students: hasStudents,
-        student_count: (tg.student_ids || []).length,
-        teacher_id: tg.teacher_id || null,
-        room_id: tg.preferred_room_id || null,
-        included: true
-      });
-
-      expectedLessonsBySubject[subjCode] = (expectedLessonsBySubject[subjCode] || 0) + weeklyCount;
-      expectedMinutesBySubject[subjCode] = (expectedMinutesBySubject[subjCode] || 0) + minutesUsed;
-
-      const studentIds = Array.isArray(tg.student_ids) ? tg.student_ids : [];
-      const blockId = tg.block_id || null;
-
-      for (let i = 0; i < weeklyCount; i++) {
-        lessons.push({
-          id: lessonId++,
-          subject: subjCode,
-          studentGroup,
-          sectionId: tg.id,
-          studentIds,
-          blockId,
-          requiredCapacity: cap,
-          timeslotId: null,
-          roomId: roomNumeric || null,
-          teacherId: teacherNumeric || null,
-        });
-      }
-
-      // DP: add study blocks + preferences (for non-cohort DP groups)
-      const isDP = (String(tg.year_group || '').toUpperCase().includes('DP')) || (subj?.ib_level === 'DP');
-      if (isDP) {
-        studentGroupSoftPreferences[studentGroup] = { minEndTime: dpMinEndTime, penalty: 5 };
-        const studyCount = Math.max(0, dpStudyWeekly - weeklyCount);
-        for (let s = 0; s < studyCount; s++) {
-          lessons.push({
-            id: lessonId++,
-            subject: 'STUDY',
-            studentGroup,
-            sectionId: tg.id,
-            studentIds,
-            blockId: null,
-            requiredCapacity: cap,
-            timeslotId: null,
-            roomId: null,
-            teacherId: null,
-            isStudy: true,
-            softConstraints: { maxConsecutive: 2, preferAfternoon: true }
-          });
-        }
-      }
-    }
+// DP: add study blocks + preferences
+const isDP = (String(tg.year_group || '').toUpperCase().includes('DP')) || (subj?.ib_level === 'DP');
+if (isDP) {
+  studentGroupSoftPreferences[studentGroup] = { minEndTime: dpMinEndTime, penalty: 5 };
+  const studyCount = Math.max(0, dpStudyWeekly - weeklyCount);
+  for (let s = 0; s < studyCount; s++) {
+    lessons.push({
+      id: lessonId++,
+      subject: 'STUDY',
+      studentGroup,
+      sectionId: tg.id,
+      studentIds,
+      blockId: null,
+      requiredCapacity: cap,
+      timeslotId: null,
+      roomId: null,
+      teacherId: null,
+      isStudy: true,
+      softConstraints: { maxConsecutive: 2, preferAfternoon: true }
+    });
+  }
+}
+}
     
     recordLog(`Lessons created: ${lessons.length} total, ${teachingGroupsIncludedCount} sections included, ${teachingGroupsSkipped.length} skipped`);
     recordLog(`Adjustments made: ${teachingGroupsAdjusted.length}`);
