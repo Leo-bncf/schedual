@@ -61,6 +61,7 @@ import GenerationProgress from '../components/schedule/GenerationProgress';
 import ScheduleUpdateBanner from '../components/schedule/ScheduleUpdateBanner';
 import UtilizationStats from '../components/schedule/UtilizationStats';
 import CohortIntegrityReport from '../components/schedule/CohortIntegrityReport';
+import PreSolveAuditReport from '../components/schedule/PreSolveAuditReport';
 
 
 export default function Schedule() {
@@ -96,6 +97,8 @@ export default function Schedule() {
   const [showUpdateBanner, setShowUpdateBanner] = useState(false);
   const [showAdvanced, setShowAdvanced] = useState(false);
   const [solverTimeslots, setSolverTimeslots] = useState(null); // Persist timeslots from OR-Tool
+  const [auditResult, setAuditResult] = useState(null);
+  const [showAuditReport, setShowAuditReport] = useState(false);
   const [formData, setFormData] = useState({
     name: '',
     academic_year: '2024-2025',
@@ -1474,16 +1477,60 @@ Now process the user's input and return ONLY the JSON object.`,
       // OR-Tool pipeline: Generate optimized DP schedule (SINGLE SOURCE OF TRUTH)
       if (autoRunORTool && selectedVersion && allowedProgrammes.includes('DP')) {
         console.log('[Schedule] 🔄 OR-Tool Pipeline Starting');
-        console.log('[Schedule] OR-Tool will: 1) Purge existing slots 2) Optimize schedule 3) Persist new slots');
+        console.log('[Schedule] Step 1: Running pre-solve audit...');
+        
         try {
+          // STEP 1: Run audit first (audit=true)
+          setGenerationProgress(prev => ({
+            ...prev,
+            stage: 'Running Pre-Solve Audit',
+            percent: 85,
+            message: 'Validating student assignments and teaching groups...'
+          }));
+          setOrToolLoading(true);
+          setOrToolError(null);
+          
+          const auditRes = await base44.functions.invoke('callORToolScheduler', {
+            schedule_version_id: selectedVersion.id,
+            dp_min_end_time: '16:00',
+            dp_study_weekly: 8,
+            audit: true
+          });
+          
+          const auditData = auditRes.data || {};
+          
+          console.log('[Schedule] 📋 Audit Result:', {
+            stage: auditData.stage,
+            ok: auditData.ok,
+            issueCount: Object.values(auditData.studentAuditIssueCounts || {}).reduce((sum, c) => sum + c, 0),
+            issues: auditData.studentAuditIssueCounts
+          });
+          
+          // STEP 2: If audit fails, show report and STOP
+          if (auditData.ok === false && auditData.stage === 'PRE_SOLVE_AUDIT') {
+            console.warn('[Schedule] ⚠️ Pre-solve audit detected issues - STOPPING before solver');
+            console.log('[Schedule] Issue types:', Object.keys(auditData.studentAuditIssueCounts || {}));
+            console.log('[Schedule] Issue counts:', auditData.studentAuditIssueCounts);
+            
+            setAuditResult(auditData);
+            setShowAuditReport(true);
+            setOrToolLoading(false);
+            setIsGenerating(false);
+            toast.error('Pre-solve audit found data issues. Fix them before generating schedule.');
+            return; // STOP - do not run solver
+          }
+          
+          // STEP 3: Audit passed - proceed with solver
+          console.log('[Schedule] ✅ Pre-solve audit passed - proceeding to optimization');
+          console.log('[Schedule] OR-Tool will: 1) Purge existing slots 2) Optimize schedule 3) Persist new slots');
+          
           setGenerationProgress(prev => ({
             ...prev,
             stage: 'Running OR-Tool Scheduler',
             percent: 90,
             message: 'OR-Tool: Purging old slots + Optimizing DP Core/Tests + Persisting...'
           }));
-          setOrToolLoading(true);
-          setOrToolError(null);
+          
           const res = await base44.functions.invoke('callORToolScheduler', {
             schedule_version_id: selectedVersion.id,
             dp_min_end_time: '16:00',
@@ -2066,6 +2113,7 @@ Now process the user's input and return ONLY the JSON object.`,
                     exportId="student-schedule"
                     unassignedBySubjectCode={orToolResult?.unassignedBySubjectCode}
                     timeslots={timeslots}
+                    scheduleSettings={orToolResult?.problem?.scheduleSettings || school}
                   />
                 </TabsContent>
 
@@ -3005,6 +3053,23 @@ Now process the user's input and return ONLY the JSON object.`,
           toast.info('Cancelling schedule generation...');
         }}
       />
+
+      {/* Pre-Solve Audit Report Modal */}
+      <Dialog open={showAuditReport} onOpenChange={setShowAuditReport}>
+        <DialogContent className="sm:max-w-4xl max-h-[90vh] overflow-y-auto">
+          <PreSolveAuditReport
+            auditResult={auditResult}
+            onProceed={() => {
+              setShowAuditReport(false);
+              // User can manually fix data and re-run generation
+            }}
+            onCancel={() => {
+              setShowAuditReport(false);
+              setAuditResult(null);
+            }}
+          />
+        </DialogContent>
+      </Dialog>
 
       <Dialog open={dpDiagOpen} onOpenChange={setDpDiagOpen}>
         <DialogContent className="sm:max-w-2xl">

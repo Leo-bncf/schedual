@@ -6,7 +6,7 @@ import { GraduationCap } from 'lucide-react';
 
 const DAYS = ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday'];
 
-export default function StudentScheduleView({ students, slots, groups, subjects, teachers, rooms, selectedStudentId, onStudentChange, exportId = "student-schedule", unassignedBySubjectCode = {}, timeslots = [], scheduleSettings = {} }) {
+export default function StudentScheduleView({ students, slots, groups, subjects, teachers, rooms, selectedStudentId, onStudentChange, exportId = "student-schedule", unassignedBySubjectCode = {}, timeslots = [], scheduleSettings }) {
   const selectedStudent = students.find(s => s.id === selectedStudentId);
   
   // DYNAMIC PERIOD CALCULATION: Derive from timeslots, not hardcoded
