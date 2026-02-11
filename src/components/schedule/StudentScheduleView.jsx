@@ -5,42 +5,56 @@ import { Badge } from "@/components/ui/badge";
 import { GraduationCap } from 'lucide-react';
 
 const DAYS = ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday'];
-const PERIODS = [1, 2, 3, 4, 5, 6, 'break', 'lunch', 7, 8, 9, 10, 11, 12];
 
-export default function StudentScheduleView({ students, slots, groups, subjects, teachers, rooms, selectedStudentId, onStudentChange, exportId = "student-schedule", unassignedBySubjectCode = {}, timeslots = [] }) {
+export default function StudentScheduleView({ students, slots, groups, subjects, teachers, rooms, selectedStudentId, onStudentChange, exportId = "student-schedule", unassignedBySubjectCode = {}, timeslots = [], scheduleSettings = {} }) {
   const selectedStudent = students.find(s => s.id === selectedStudentId);
   
-  // Build timeslot mapping: timeslot_id → UI position + time
+  // DYNAMIC PERIOD CALCULATION: Derive from timeslots, not hardcoded
   const DAY_MAP = { MONDAY: 'Monday', TUESDAY: 'Tuesday', WEDNESDAY: 'Wednesday', THURSDAY: 'Thursday', FRIDAY: 'Friday' };
-  const timeslotToPosition = React.useMemo(() => {
+  
+  const { timeslotToPosition, periodTimes, maxPeriodsPerDay, breakRows } = React.useMemo(() => {
     const map = {};
+    const times = {};
     const timeslotsByDay = {};
+    let maxPeriods = 0;
     
+    // Group timeslots by day and sort by start time
     DAYS.forEach(day => {
       const dayUpper = day.toUpperCase();
-      timeslotsByDay[day] = (timeslots || [])
+      const daySlots = (timeslots || [])
         .filter(t => t.dayOfWeek === dayUpper)
         .sort((a, b) => String(a.startTime || '').localeCompare(String(b.startTime || '')));
+      
+      timeslotsByDay[day] = daySlots;
+      maxPeriods = Math.max(maxPeriods, daySlots.length);
     });
     
+    // Build timeslot mapping
     Object.values(timeslotsByDay).forEach(daySlots => {
       daySlots.forEach((ts, idx) => {
-        map[ts.id] = { uiRow: idx + 1, startTime: ts.startTime };
+        const uiRow = idx + 1;
+        map[ts.id] = { uiRow, startTime: ts.startTime, endTime: ts.endTime };
+        if (!times[uiRow]) times[uiRow] = ts.startTime;
       });
     });
     
-    return map;
-  }, [timeslots]);
-  
-  const periodTimes = React.useMemo(() => {
-    const times = {};
-    Object.values(timeslotToPosition).forEach(({ uiRow, startTime }) => {
-      if (!times[uiRow]) times[uiRow] = startTime;
-    });
-    times.break = '12:15';
-    times.lunch = '12:30';
-    return times;
-  }, [timeslotToPosition]);
+    // Parse breaks from scheduleSettings
+    const breaks = Array.isArray(scheduleSettings?.breaks) ? scheduleSettings.breaks : [];
+    const breakRowsData = breaks.map((br, idx) => ({
+      id: `break-${idx}`,
+      label: idx === 0 ? 'Break' : 'Lunch',
+      emoji: idx === 0 ? '☕' : '🍽️',
+      startTime: br.start,
+      endTime: br.end,
+      colorFrom: idx === 0 ? 'from-sky-100' : 'from-amber-100',
+      colorTo: idx === 0 ? 'to-blue-100' : 'to-orange-100',
+      borderColor: idx === 0 ? 'border-sky-300' : 'border-amber-300',
+      bgColor: idx === 0 ? 'bg-sky-200' : 'bg-amber-200',
+      textColor: idx === 0 ? 'text-sky-900' : 'text-amber-900'
+    }));
+    
+    return { timeslotToPosition: map, periodTimes: times, maxPeriodsPerDay: maxPeriods, breakRows: breakRowsData };
+  }, [timeslots, scheduleSettings]);
 
   const getStudentSlots = (studentId) => {
     const student = students.find(s => s.id === studentId);
@@ -172,47 +186,8 @@ export default function StudentScheduleView({ students, slots, groups, subjects,
                 ))}
               </div>
 
-              {PERIODS.map(period => {
-                // Break row
-                if (period === 'break') {
-                  return (
-                    <div key="break" className="grid grid-cols-[80px_repeat(5,1fr)] border-b-2 border-sky-300 bg-gradient-to-r from-sky-100 to-blue-100" style={{ minHeight: '50px' }}>
-                      <div className="p-3 bg-sky-200 border-r-2 border-sky-300 flex items-center justify-center">
-                        <div className="text-sm font-bold text-sky-900">☕ Break</div>
-                      </div>
-                      {DAYS.map(day => (
-                        <div key={`${day}-break`} className="border-r-2 border-sky-300 last:border-r-0 flex items-center justify-center bg-sky-50">
-                          <div className="text-center">
-                            <div className="text-xs font-bold text-sky-900">BREAK</div>
-                            <div className="text-[10px] text-sky-700 mt-0.5">12:15 - 12:30</div>
-                          </div>
-                        </div>
-                      ))}
-                    </div>
-                  );
-                }
-
-                // Lunch break row
-                if (period === 'lunch') {
-                  return (
-                    <div key="lunch" className="grid grid-cols-[80px_repeat(5,1fr)] border-b-2 border-amber-300 bg-gradient-to-r from-amber-100 to-orange-100" style={{ minHeight: '55px' }}>
-                      <div className="p-3 bg-amber-200 border-r-2 border-amber-300 flex items-center justify-center">
-                        <div className="text-sm font-bold text-amber-900">🍽️ Lunch</div>
-                      </div>
-                      {DAYS.map(day => (
-                        <div key={`${day}-lunch`} className="border-r-2 border-amber-300 last:border-r-0 flex items-center justify-center bg-amber-50">
-                          <div className="text-center">
-                            <div className="text-xs font-bold text-amber-900">LUNCH BREAK</div>
-                            <div className="text-[10px] text-amber-700 mt-0.5">12:30 - 13:00</div>
-                          </div>
-                        </div>
-                      ))}
-                    </div>
-                  );
-                }
-
-                // Regular period row
-                return (
+              {/* Dynamic periods based on actual timeslots */}
+              {Array.from({ length: maxPeriodsPerDay }, (_, idx) => idx + 1).map(period => (
                   <div key={period} className="grid grid-cols-[80px_repeat(5,1fr)] border-b border-slate-200" style={{ minHeight: '60px' }}>
                     <div className="p-2 bg-slate-50 border-r border-slate-200 flex flex-col justify-center">
                       <div className="text-xs font-medium text-slate-700">{periodTimes[period]}</div>
@@ -271,6 +246,23 @@ export default function StudentScheduleView({ students, slots, groups, subjects,
                   </div>
                 );
               })}
+              
+              {/* Break rows from scheduleSettings.breaks */}
+              {breakRows.map(breakRow => (
+                <div key={breakRow.id} className={`grid grid-cols-[80px_repeat(5,1fr)] border-b-2 ${breakRow.borderColor} bg-gradient-to-r ${breakRow.colorFrom} ${breakRow.colorTo}`} style={{ minHeight: '50px' }}>
+                  <div className={`p-3 ${breakRow.bgColor} border-r-2 ${breakRow.borderColor} flex items-center justify-center`}>
+                    <div className={`text-sm font-bold ${breakRow.textColor}`}>{breakRow.emoji} {breakRow.label}</div>
+                  </div>
+                  {DAYS.map(day => (
+                    <div key={`${day}-${breakRow.id}`} className={`border-r-2 ${breakRow.borderColor} last:border-r-0 flex items-center justify-center bg-opacity-50`}>
+                      <div className="text-center">
+                        <div className={`text-xs font-bold ${breakRow.textColor}`}>{breakRow.label.toUpperCase()}</div>
+                        <div className="text-[10px] text-slate-700 mt-0.5">{breakRow.startTime} - {breakRow.endTime}</div>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              ))}
             </div>
           </div>
         </Card>
