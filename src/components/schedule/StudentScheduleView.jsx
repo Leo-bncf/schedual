@@ -58,6 +58,8 @@ export default function StudentScheduleView({ students, slots, groups, subjects,
 
   const getStudentSlots = (studentId) => {
     const student = students.find(s => s.id === studentId);
+    const assignedGroupIds = Array.isArray(student?.assigned_groups) ? student.assigned_groups : [];
+    
     const matchedSlots = slots.filter(slot => {
       // PYP/MYP: match by classgroup_id
       if (slot.classgroup_id && student?.classgroup_id) {
@@ -67,42 +69,29 @@ export default function StudentScheduleView({ students, slots, groups, subjects,
       if (slot?.notes?.includes('Test') && (slot?.notes?.includes('DP1') || slot?.notes?.includes('DP2'))) {
         return student?.year_group && slot.notes.includes(student.year_group);
       }
-      // DP: check membership in teaching group
+      // DP: Use student.assigned_groups instead of teachingGroup.student_ids
       if (slot.teaching_group_id) {
-        const group = groups.find(g => g.id === slot.teaching_group_id);
-        const inGroup = group?.student_ids?.includes(studentId);
-        if (inGroup) return true;
-        
-        // CRITICAL FIX: Include core subjects (TOK/CAS/EE) for same DP year
-        // Core TGs may not have student_ids populated, but should be included for all DP students in that year
-        const subject = subjects.find(s => s.id === group?.subject_id);
-        const coreSubjects = ['TOK', 'CAS', 'EE'];
-        const isCoreSubject = subject && (subject.is_core || coreSubjects.some(c => 
-          subject.code?.toUpperCase().includes(c) || subject.name?.toUpperCase().includes(c)
-        ));
-        
-        if (isCoreSubject && student?.year_group && group?.year_group) {
-          // Normalize year_group to support both "DP1,DP2" and "DP1+DP2" formats
-          const groupYears = String(group.year_group).split(/[,+]/).map(y => y.trim());
-          return groupYears.includes(student.year_group);
-        }
+        return assignedGroupIds.includes(slot.teaching_group_id);
       }
       
       return false;
     });
 
-    // Diagnostic 3: Log teaching group IDs used for this student
-    const tgIds = new Set(matchedSlots.filter(s => s.teaching_group_id).map(s => s.teaching_group_id));
+    // DEBUG: Count slots per subject
+    const slotsBySubject = {};
+    matchedSlots.forEach(s => {
+      const group = s.teaching_group_id ? groups.find(g => g.id === s.teaching_group_id) : null;
+      const subject = group ? subjects.find(sub => sub.id === group.subject_id) : 
+                      s.subject_id ? subjects.find(sub => sub.id === s.subject_id) : null;
+      const subjectCode = subject?.code || subject?.name || 'Unknown';
+      slotsBySubject[subjectCode] = (slotsBySubject[subjectCode] || 0) + 1;
+    });
+
     console.log(`[StudentScheduleView] Student ${student?.full_name} (${student?.year_group}):`, {
-      teaching_group_ids_matched: Array.from(tgIds),
-      total_slots: matchedSlots.length,
-      core_slots: matchedSlots.filter(s => {
-        const group = groups.find(g => g.id === s.teaching_group_id);
-        const subject = subjects.find(sub => sub.id === group?.subject_id);
-        return subject && (subject.is_core || ['TOK','CAS','EE'].some(c => 
-          subject.code?.toUpperCase().includes(c) || subject.name?.toUpperCase().includes(c)
-        ));
-      }).length
+      assigned_groups_count: assignedGroupIds.length,
+      assigned_groups: assignedGroupIds,
+      total_slots_displayed: matchedSlots.length,
+      slots_per_subject: slotsBySubject
     });
 
     return matchedSlots;
@@ -155,7 +144,12 @@ export default function StudentScheduleView({ students, slots, groups, subjects,
           </SelectContent>
         </Select>
         {selectedStudent && (
-          <Badge variant="outline">{studentSlots.length} periods per week</Badge>
+          <>
+            <Badge variant="outline">{studentSlots.length} periods per week</Badge>
+            <Badge variant="outline" className="bg-blue-50 text-blue-900">
+              {(selectedStudent.assigned_groups || []).length} groups assigned
+            </Badge>
+          </>
         )}
         {selectedStudent && (
           (() => {
