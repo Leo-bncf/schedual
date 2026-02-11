@@ -188,64 +188,63 @@ export default function StudentScheduleView({ students, slots, groups, subjects,
 
               {/* Dynamic periods based on actual timeslots */}
               {Array.from({ length: maxPeriodsPerDay }, (_, idx) => idx + 1).map(period => (
-                  <div key={period} className="grid grid-cols-[80px_repeat(5,1fr)] border-b border-slate-200" style={{ minHeight: '60px' }}>
-                    <div className="p-2 bg-slate-50 border-r border-slate-200 flex flex-col justify-center">
-                      <div className="text-xs font-medium text-slate-700">{periodTimes[period]}</div>
-                    </div>
-                    {DAYS.map(day => {
-                      const slot = getSlotForPeriod(day, period);
-                      let subject = null;
-                      let teacher = null;
-                      let level = null;
-                      
-                      if (slot) {
-                        // Check if this is a test slot (no subject_id, has notes)
-                        if (!slot.subject_id && slot.notes?.includes('Test')) {
-                          // Display as a test period
-                          subject = { name: 'Test/Assessment', ib_group: null };
-                          teacher = null;
-                          level = null;
-                        }
-                        // PYP/MYP: subject_id and teacher_id are directly on the slot
-                        else if (slot.subject_id) {
-                          subject = subjects.find(s => s.id === slot.subject_id);
-                          teacher = teachers.find(t => t.id === slot.teacher_id);
-                          level = selectedStudent?.ib_programme || '';
-                        } else {
-                          // DP: get from teaching group
-                          const group = groups.find(g => g.id === slot.teaching_group_id);
-                          if (group) {
-                            subject = subjects.find(s => s.id === group.subject_id);
-                            teacher = teachers.find(t => t.id === group.teacher_id);
-                            level = group.level;
-                          }
+                <div key={period} className="grid grid-cols-[80px_repeat(5,1fr)] border-b border-slate-200" style={{ minHeight: '60px' }}>
+                  <div className="p-2 bg-slate-50 border-r border-slate-200 flex flex-col justify-center">
+                    <div className="text-xs font-medium text-slate-700">{periodTimes[period]}</div>
+                  </div>
+                  {DAYS.map(day => {
+                    const slot = getSlotForPeriod(day, period);
+                    let subject = null;
+                    let teacher = null;
+                    let level = null;
+                    
+                    if (slot) {
+                      // Check if this is a test slot (no subject_id, has notes)
+                      if (!slot.subject_id && slot.notes?.includes('Test')) {
+                        // Display as a test period
+                        subject = { name: 'Test/Assessment', ib_group: null };
+                        teacher = null;
+                        level = null;
+                      }
+                      // PYP/MYP: subject_id and teacher_id are directly on the slot
+                      else if (slot.subject_id) {
+                        subject = subjects.find(s => s.id === slot.subject_id);
+                        teacher = teachers.find(t => t.id === slot.teacher_id);
+                        level = selectedStudent?.ib_programme || '';
+                      } else {
+                        // DP: get from teaching group
+                        const group = groups.find(g => g.id === slot.teaching_group_id);
+                        if (group) {
+                          subject = subjects.find(s => s.id === group.subject_id);
+                          teacher = teachers.find(t => t.id === group.teacher_id);
+                          level = group.level;
                         }
                       }
-                      
-                      const room = slot ? rooms.find(r => r.id === slot.room_id) : null;
-                      const isTestSlot = slot?.notes?.includes('Test');
-                      const colorClass = isTestSlot 
-                        ? 'bg-red-200/90 border-red-500' 
-                        : (subject ? subjectColors[subject.ib_group || 1] : '');
+                    }
+                    
+                    const room = slot ? rooms.find(r => r.id === slot.room_id) : null;
+                    const isTestSlot = slot?.notes?.includes('Test');
+                    const colorClass = isTestSlot 
+                      ? 'bg-red-200/90 border-red-500' 
+                      : (subject ? subjectColors[subject.ib_group || 1] : '');
 
-                      return (
-                        <div key={`${day}-${period}`} className="border-r border-slate-200 last:border-r-0 hover:bg-slate-50/50">
-                          {slot && subject && (
-                            <div className={`h-full p-2 border-l-4 ${colorClass}`}>
-                              <div className={`font-semibold text-xs leading-tight ${isTestSlot ? 'text-red-900' : 'text-slate-900'}`}>
-                                {subject.name}
-                              </div>
-                              {level && <div className="text-[10px] text-slate-700 leading-tight">{level}</div>}
-                              {teacher && <div className="text-[10px] text-slate-600 mt-0.5">{teacher.full_name}</div>}
-                              {room && <div className="text-[10px] text-slate-500">{room.name}</div>}
+                    return (
+                      <div key={`${day}-${period}`} className="border-r border-slate-200 last:border-r-0 hover:bg-slate-50/50">
+                        {slot && subject && (
+                          <div className={`h-full p-2 border-l-4 ${colorClass}`}>
+                            <div className={`font-semibold text-xs leading-tight ${isTestSlot ? 'text-red-900' : 'text-slate-900'}`}>
+                              {subject.name}
                             </div>
-                          )}
-                        </div>
-                      );
-                    })}
-                  </div>
-                );
-              })}
+                            {level && <div className="text-[10px] text-slate-700 leading-tight">{level}</div>}
+                            {teacher && <div className="text-[10px] text-slate-600 mt-0.5">{teacher.full_name}</div>}
+                            {room && <div className="text-[10px] text-slate-500">{room.name}</div>}
+                          </div>
+                        )}
+                      </div>
+                    );
+                  })}
+                </div>
+              ))}
               
               {/* Break rows from scheduleSettings.breaks */}
               {breakRows.map(breakRow => (
