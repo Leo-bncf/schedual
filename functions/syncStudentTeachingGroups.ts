@@ -41,6 +41,14 @@ Deno.serve(async (req) => {
     let teachingGroupsUpdated = 0;
     const errors = [];
     
+    // INTEGRITY AUDIT TRACKING
+    const integrityReport = {
+      duplicateAssignments: [], // Students assigned to multiple TGs for same subject/level
+      missingAssignments: [],    // Students with subject choices but no matching TG
+      orphanedTGs: [],           // TGs with 0 students
+      conflictDetails: []
+    };
+    
     // Helper: normalize year group for matching (DP1+DP2, DP1,DP2, etc.)
     const normalizeYearGroup = (raw) => {
       if (!raw) return '';
@@ -70,14 +78,19 @@ Deno.serve(async (req) => {
       return String(raw).toUpperCase().trim();
     };
     
+    // Helper: create unique key for subject choice (for deduplication)
+    const choiceKey = (subjectId, level, yearGroup) => {
+      return `${subjectId}|${normalizeLevel(level)}|${normalizeYearGroup(yearGroup)}`;
+    };
+    
     for (const student of students) {
       try {
         const studentSubjectChoices = student.subject_choices || [];
         const studentYearGroup = student.year_group || '';
         const studentIbProgramme = student.ib_programme || '';
         
-        // Find matching teaching groups for this student
-        const matchingTgIds = [];
+        // CRITICAL: Enforce uniqueness - one TG per (subject_id, level, year_group)
+        const assignmentsByChoice = {}; // key = choiceKey, value = [tg_ids]
         
         for (const tg of teachingGroups) {
           const tgSubject = subjectById[tg.subject_id];
@@ -87,7 +100,7 @@ Deno.serve(async (req) => {
           const yearGroupMatch = yearGroupMatches(tg.year_group, studentYearGroup);
           
           // Check if student has chosen this subject
-          const subjectMatch = studentSubjectChoices.some(choice => {
+          const matchingChoice = studentSubjectChoices.find(choice => {
             if (choice.subject_id === tg.subject_id) {
               // For DP subjects, also match level (HL/SL) with normalization
               if (studentIbProgramme === 'DP' && tg.level) {
@@ -98,10 +111,39 @@ Deno.serve(async (req) => {
             return false;
           });
           
-          if (yearGroupMatch && subjectMatch) {
-            matchingTgIds.push(tg.id);
-            
-            // Update TeachingGroup.student_ids if student not already included
+          if (yearGroupMatch && matchingChoice) {
+            const key = choiceKey(tg.subject_id, tg.level || matchingChoice.level, studentYearGroup);
+            if (!assignmentsByChoice[key]) assignmentsByChoice[key] = [];
+            assignmentsByChoice[key].push({
+              tg_id: tg.id,
+              tg_name: tg.name,
+              subject_name: tgSubject.name
+            });
+          }
+        }
+        
+        // INTEGRITY CHECK: Detect duplicate assignments
+        const finalTgIds = [];
+        for (const [key, matches] of Object.entries(assignmentsByChoice)) {
+          if (matches.length > 1) {
+            // DUPLICATE: Student assigned to multiple TGs for same subject/level
+            integrityReport.duplicateAssignments.push({
+              student_id: student.id,
+              student_name: student.full_name,
+              choice_key: key,
+              teaching_groups: matches,
+              resolution: 'assigned_to_first_match'
+            });
+            console.warn(`[DUPLICATE] Student ${student.full_name} has ${matches.length} TGs for ${key}`);
+          }
+          
+          // ENFORCE UNIQUENESS: Take first match only
+          const selectedTg = matches[0];
+          finalTgIds.push(selectedTg.tg_id);
+          
+          // Update TeachingGroup.student_ids
+          const tg = teachingGroups.find(t => t.id === selectedTg.tg_id);
+          if (tg) {
             const tgStudentIds = tg.student_ids || [];
             if (!tgStudentIds.includes(student.id)) {
               await base44.entities.TeachingGroup.update(tg.id, {
@@ -112,13 +154,33 @@ Deno.serve(async (req) => {
           }
         }
         
-        // Update Student.assigned_groups
-        if (matchingTgIds.length > 0) {
+        // INTEGRITY CHECK: Missing assignments
+        const expectedChoices = studentSubjectChoices.filter(c => c.subject_id);
+        const assignedChoices = Object.keys(assignmentsByChoice);
+        if (expectedChoices.length > assignedChoices.length) {
+          integrityReport.missingAssignments.push({
+            student_id: student.id,
+            student_name: student.full_name,
+            expected_count: expectedChoices.length,
+            assigned_count: assignedChoices.length,
+            missing_subjects: expectedChoices.filter(choice => {
+              const key = choiceKey(choice.subject_id, choice.level, studentYearGroup);
+              return !assignmentsByChoice[key];
+            }).map(c => ({
+              subject_id: c.subject_id,
+              subject_name: subjectById[c.subject_id]?.name || 'Unknown',
+              level: c.level
+            }))
+          });
+        }
+        
+        // Update Student.assigned_groups with deduplicated list
+        if (finalTgIds.length > 0) {
           await base44.entities.Student.update(student.id, {
-            assigned_groups: matchingTgIds
+            assigned_groups: finalTgIds
           });
           studentsUpdated++;
-          console.log(`[syncStudentTeachingGroups] Student ${student.full_name}: assigned to ${matchingTgIds.length} groups`);
+          console.log(`[syncStudentTeachingGroups] Student ${student.full_name}: assigned to ${finalTgIds.length} unique groups`);
         }
         
       } catch (e) {
@@ -127,10 +189,35 @@ Deno.serve(async (req) => {
       }
     }
     
+    // INTEGRITY CHECK: Find orphaned TGs (no students)
+    for (const tg of teachingGroups) {
+      const studentCount = (tg.student_ids || []).length;
+      if (studentCount === 0) {
+        const subj = subjectById[tg.subject_id];
+        integrityReport.orphanedTGs.push({
+          tg_id: tg.id,
+          tg_name: tg.name,
+          subject_name: subj?.name || 'Unknown',
+          year_group: tg.year_group,
+          level: tg.level
+        });
+      }
+    }
+    
+    // Generate summary statistics
+    const summary = {
+      totalDuplicates: integrityReport.duplicateAssignments.length,
+      totalMissingAssignments: integrityReport.missingAssignments.length,
+      totalOrphanedTGs: integrityReport.orphanedTGs.length,
+      studentsAffectedByDuplicates: new Set(integrityReport.duplicateAssignments.map(d => d.student_id)).size,
+      studentsWithMissingAssignments: integrityReport.missingAssignments.length
+    };
+    
     console.log('[syncStudentTeachingGroups] Sync complete:', {
       studentsUpdated,
       teachingGroupsUpdated,
-      errors: errors.length
+      errors: errors.length,
+      integrityIssues: summary
     });
     
     return Response.json({
@@ -139,7 +226,9 @@ Deno.serve(async (req) => {
       teachingGroupsUpdated,
       totalStudents: students.length,
       totalTeachingGroups: teachingGroups.length,
-      errors
+      errors,
+      integrityReport,
+      summary
     });
     
   } catch (error) {
