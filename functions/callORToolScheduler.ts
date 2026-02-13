@@ -15,16 +15,18 @@ const chunk = (arr, n) => {
   return out;
 };
 
-// DEPLOYMENT TIMESTAMP: 2026-02-13T11:05:00Z
+// DEPLOYMENT TIMESTAMP: 2026-02-13T11:10:00Z
 // WRAPPER for OR-Tool scheduler with audit gating
 
 Deno.serve(async (req) => {
-  const WRAPPER_BUILD_VERSION = '2026-02-13T11:05:00Z-TDZ-FIX-V3'; // Wrapper deployment marker
+  const RUNTIME_FINGERPRINT = "2026-02-13T11:10:00Z-FP1"; // HARD RUNTIME IDENTIFIER
+  const WRAPPER_BUILD_VERSION = '2026-02-13T11:10:00Z-FP1';
+  console.log("🔍 RUNTIME_FINGERPRINT", RUNTIME_FINGERPRINT);
+  console.log(`[callORToolScheduler] 🚀 WRAPPER BUILD VERSION: ${WRAPPER_BUILD_VERSION}`);
+  
   let stage = 'init';
   let schedule_version_id = null;
   let schoolId = null;
-  
-  console.log(`[callORToolScheduler] 🚀 WRAPPER BUILD VERSION: ${WRAPPER_BUILD_VERSION}`);
   
   try {
     stage = 'auth';
