@@ -1508,39 +1508,42 @@ Now process the user's input and return ONLY the JSON object.`,
             issues: auditData.studentAuditIssueCounts
           });
           
-          // CRITICAL: Treat missing ok/stage as audit failure
-          if (auditData.ok === undefined || auditData.stage === undefined) {
-            console.error('[Schedule] ❌ Audit returned invalid shape - treating as FAILED');
-            console.error('[Schedule] Expected: {ok, stage, audit:true} - Got:', Object.keys(auditData));
+          // CRITICAL: Check ok field FIRST - if not true, STOP immediately
+          if (auditData.ok !== true) {
+            console.error('[Schedule] ❌ AUDIT FAILED - ok !== true - BLOCKING generation');
+            console.error('[Schedule] Audit response:', auditData);
+            
+            // Build error message based on what we got
+            let errorMsg = 'Pre-solve audit failed';
+            let errorDetails = auditData;
+            
+            if (auditData.ok === undefined || auditData.stage === undefined) {
+              errorMsg = 'Pre-solve audit returned invalid response (missing ok/stage)';
+              console.error('[Schedule] Expected: {ok, stage} - Got:', Object.keys(auditData));
+            } else if (auditData.stage === 'PRE_SOLVE_AUDIT') {
+              errorMsg = 'Pre-solve audit found data quality issues';
+            } else {
+              errorMsg = `${auditData.stage || 'Unknown stage'}: ${auditData.errorMessage || auditData.error || 'Unknown error'}`;
+            }
+            
             setAuditResult({
               ok: false,
-              stage: 'AUDIT_INVALID_RESPONSE',
-              error: 'Pre-solve audit returned invalid response shape',
-              rawResponse: auditData
+              stage: auditData.stage || 'UNKNOWN',
+              error: auditData.error || 'Audit check failed',
+              errorMessage: auditData.errorMessage || errorMsg,
+              rawResponse: auditData,
+              studentAuditIssueCounts: auditData.studentAuditIssueCounts,
+              sampleAuditIssues: auditData.sampleAuditIssues
             });
             setShowAuditReport(true);
             setOrToolLoading(false);
             setIsGenerating(false);
-            toast.error('Pre-solve audit failed: invalid response format');
-            return;
+            toast.error(errorMsg);
+            return; // CRITICAL: STOP - do not proceed to solver
           }
           
-          // STEP 2: If audit fails, show report and STOP
-          if (auditData.ok === false && auditData.stage === 'PRE_SOLVE_AUDIT') {
-            console.warn('[Schedule] ⚠️ Pre-solve audit detected issues - STOPPING before solver');
-            console.log('[Schedule] Issue types:', Object.keys(auditData.studentAuditIssueCounts || {}));
-            console.log('[Schedule] Issue counts:', auditData.studentAuditIssueCounts);
-            
-            setAuditResult(auditData);
-            setShowAuditReport(true);
-            setOrToolLoading(false);
-            setIsGenerating(false);
-            toast.error('Pre-solve audit found data issues. Fix them before generating schedule.');
-            return; // STOP - do not run solver
-          }
-          
-          // STEP 3: Audit passed - proceed with solver
-          console.log('[Schedule] ✅ Pre-solve audit passed - proceeding to optimization');
+          // STEP 3: Audit passed (ok === true) - proceed with solver
+          console.log('[Schedule] ✅ Pre-solve audit passed (ok=true) - proceeding to optimization');
           console.log('[Schedule] OR-Tool will: 1) Purge existing slots 2) Optimize schedule 3) Persist new slots');
           
           setGenerationProgress(prev => ({
