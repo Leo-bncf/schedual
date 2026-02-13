@@ -303,9 +303,56 @@ Deno.serve(async (req) => {
       const subj = (tg.subject_id && subjectById[tg.subject_id]) || null;
       const subjCode = (tg.subject_id && subjectIdToCode[tg.subject_id]) || null;
       const normCode = normalizeCode(subjCode);
+      const level = String(tg.level || '').toUpperCase().trim();
+      const yearGroupStr = String(tg.year_group || '').toUpperCase();
+      const nameStr = String(tg.name || '').toUpperCase();
+      const ibLevel = subj ? String(subj.ib_level || '').toUpperCase() : null;
+      const isDPGroup = yearGroupStr.includes('DP') || ibLevel === 'DP' || nameStr.includes('DP');
 
-      // Priority 1: TG-level explicit config (SOURCE OF TRUTH)
+      // Priority 1: TG-level explicit config (SOURCE OF TRUTH) - WITH UNIT VALIDATION
       if (typeof tg.minutes_per_week === 'number' && tg.minutes_per_week > 0) {
+        // CRITICAL: Detect if minutes_per_week is actually stored as period count (common data entry error)
+        // If value is suspiciously low (≤30) for a DP group, treat as period count
+        const suspectLowValue = tg.minutes_per_week <= 30;
+        const isDPHL = isDPGroup && level === 'HL';
+        const isDPSL = isDPGroup && level === 'SL';
+
+        if (suspectLowValue && (isDPHL || isDPSL)) {
+          const periodsAsValue = tg.minutes_per_week;
+          const correctedMinutes = periodsAsValue * periodDurationMinutes;
+          debugMinutesSourceByTG[tg.id] = { 
+            source: 'TG_MINUTES_CORRECTED_FROM_PERIODS', 
+            value: correctedMinutes, 
+            originalValue: tg.minutes_per_week,
+            reason: `Detected period count (${periodsAsValue}) instead of minutes, converted to ${correctedMinutes}min`
+          };
+          recordAdjustment(tg, 'Corrected minutes_per_week (was period count)', `${tg.minutes_per_week} periods`, `${correctedMinutes} minutes`);
+          return correctedMinutes;
+        }
+
+        // CRITICAL: For DP groups, validate against IB standards (HL=300, SL=180)
+        if (isDPHL && tg.minutes_per_week < 240) {
+          debugMinutesSourceByTG[tg.id] = { 
+            source: 'TG_MINUTES_OVERRIDE_HL', 
+            value: 300, 
+            originalValue: tg.minutes_per_week,
+            reason: `DP HL below standard (${tg.minutes_per_week}min), forced to 300min`
+          };
+          recordAdjustment(tg, 'DP HL below IB standard', `${tg.minutes_per_week}min`, '300min (5 periods)');
+          return 300;
+        }
+
+        if (isDPSL && tg.minutes_per_week < 150) {
+          debugMinutesSourceByTG[tg.id] = { 
+            source: 'TG_MINUTES_OVERRIDE_SL', 
+            value: 180, 
+            originalValue: tg.minutes_per_week,
+            reason: `DP SL below standard (${tg.minutes_per_week}min), forced to 180min`
+          };
+          recordAdjustment(tg, 'DP SL below IB standard', `${tg.minutes_per_week}min`, '180min (3 periods)');
+          return 180;
+        }
+
         debugMinutesSourceByTG[tg.id] = { source: 'TG_MINUTES', value: tg.minutes_per_week };
         return tg.minutes_per_week;
       }
@@ -473,6 +520,46 @@ if (isDP) {
     
     recordLog(`Lessons created: ${lessons.length} total, ${teachingGroupsIncludedCount} sections included, ${teachingGroupsSkipped.length} skipped`);
     recordLog(`Adjustments made: ${teachingGroupsAdjusted.length}`);
+
+    // VALIDATION: Check for suspiciously low requiredPeriods in DP groups
+    const lowPeriodWarnings = [];
+    subjectRequirements.forEach(req => {
+      const tgId = String(req.studentGroup || '').replace('TG_', '');
+      const tg = teachingGroupsDb.find(g => g.id === tgId);
+      if (!tg) return;
+
+      const isDPHL = tg.level === 'HL' && (tg.year_group?.includes('DP') || subjectById[tg.subject_id]?.ib_level === 'DP');
+      const isDPSL = tg.level === 'SL' && (tg.year_group?.includes('DP') || subjectById[tg.subject_id]?.ib_level === 'DP');
+
+      if (isDPHL && req.requiredPeriods < 4) {
+        lowPeriodWarnings.push({
+          tg_id: tg.id,
+          name: tg.name,
+          level: 'HL',
+          requiredPeriods: req.requiredPeriods,
+          expected: 5,
+          reason: 'DP HL should have 5 periods/week minimum'
+        });
+      }
+
+      if (isDPSL && req.requiredPeriods < 2) {
+        lowPeriodWarnings.push({
+          tg_id: tg.id,
+          name: tg.name,
+          level: 'SL',
+          requiredPeriods: req.requiredPeriods,
+          expected: 3,
+          reason: 'DP SL should have 3 periods/week minimum'
+        });
+      }
+    });
+
+    if (lowPeriodWarnings.length > 0) {
+      recordLog(`⚠️ WARNING: ${lowPeriodWarnings.length} DP groups with suspiciously low requiredPeriods`);
+      lowPeriodWarnings.forEach(w => {
+        recordLog(`  - ${w.name} (${w.level}): ${w.requiredPeriods}p/week (expected ${w.expected}p/week)`);
+      });
+    }
     
     // HARD FAIL if critical groups are missing minutes configuration
     const missingMinutesGroups = teachingGroupsSkipped.filter(s => s.reason === 'MISSING_MINUTES_CONFIG');
@@ -615,7 +702,8 @@ if (isDP) {
       builderDiagnostics: {
         adjustments: teachingGroupsAdjusted,
         skipped: teachingGroupsSkipped,
-        diagnosticLog
+        diagnosticLog,
+        lowPeriodWarnings: lowPeriodWarnings || []
       },
       schoolIdUsed: school_id,
       scheduleVersionIdUsed: schedule_version_id,
