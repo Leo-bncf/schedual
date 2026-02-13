@@ -39,6 +39,7 @@ Deno.serve(async (req) => {
     stage = 'parseRequest';
     const body = await req.json();
     schedule_version_id = body?.schedule_version_id;
+    const auditOnly = body?.audit === true;
     const dpStudyWeekly = body?.dp_study_weekly ?? 6;
     const dpMinEndTime = body?.dp_min_end_time ?? '14:30';
     requestedSchoolId = body?.school_id || null;
@@ -250,6 +251,20 @@ Deno.serve(async (req) => {
       }
     } catch (e) {
       console.warn('[callORToolScheduler] Failed to fetch solver info:', e.message);
+    }
+    
+    // EARLY RETURN: If audit-only mode, return problem without calling solver
+    if (auditOnly) {
+      console.log('[callORToolScheduler] AUDIT MODE: Returning problem without solving');
+      return Response.json({
+        ok: true,
+        audit: true,
+        stage: 'audit_complete',
+        problem,
+        validationReport: buildResponse?.data?.validationReport || null,
+        stats: buildResponse?.data?.stats || {},
+        message: 'Audit passed - ready to solve'
+      });
     }
     
     stage = 'callSolver';

@@ -219,10 +219,26 @@ Deno.serve(async (req) => {
       );
     }
 
+    // After creating groups, sync student assignments
+    if (newGroups.length > 0) {
+      try {
+        console.log('[generateDpTeachingGroups] Syncing student teaching group assignments...');
+        const syncResult = await withRetry(
+          'sync_student_teaching_groups',
+          { function: 'syncStudentTeachingGroups' },
+          async () => await base44.functions.invoke('syncStudentTeachingGroups')
+        );
+        console.log('[generateDpTeachingGroups] Sync result:', syncResult?.data);
+      } catch (syncError) {
+        console.error('[generateDpTeachingGroups] Failed to sync student groups:', syncError);
+        // Don't fail the entire request - groups are created, sync can be retried
+      }
+    }
+
     return Response.json({
       success: true,
       groups_created: newGroups.length,
-      message: `Created ${newGroups.length} DP teaching groups`,
+      message: `Created ${newGroups.length} DP teaching groups and synced student assignments`,
       logs,
       total_duration_ms: Date.now() - startedAt,
     });

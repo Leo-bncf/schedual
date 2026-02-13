@@ -33,7 +33,17 @@ export default function DPGroupGenerator({ onComplete }) {
       setCreating(false);
       return;
     }
+    
+    // Sync student teaching groups after DP group generation
+    try {
+      const { data: syncData } = await base44.functions.invoke('syncStudentTeachingGroups');
+      console.log('Student groups synced:', syncData);
+    } catch (syncError) {
+      console.error('Failed to sync student groups:', syncError);
+    }
+    
     await qc.invalidateQueries({ queryKey: ['teachingGroups'] });
+    await qc.invalidateQueries({ queryKey: ['students'] });
     setCreating(false);
     if (onComplete) onComplete();
   };
@@ -136,12 +146,12 @@ export default function DPGroupGenerator({ onComplete }) {
                 {creating ? (
                   <>
                     <Loader2 className="w-4 h-4 mr-2 animate-spin" />
-                    Creating...
+                    Creating & Syncing...
                   </>
                 ) : (
                   <>
                     <CheckCircle className="w-4 h-4 mr-2" />
-                    Create {preview?.ready || 0} Groups
+                    Create {preview?.groups_created || preview?.ready || 0} Groups
                   </>
                 )}
               </Button>
