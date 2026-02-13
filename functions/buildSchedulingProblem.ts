@@ -12,6 +12,7 @@ REFACTORED: Cohort-Centered Schedule Builder (v2.1)
 */
 
 Deno.serve(async (req) => {
+  const BUILD_VERSION = '2026-02-13T10:45:00Z'; // Deployment marker
   let stage = 'init';
   let school_id = null;
   let schedule_version_id = null;
@@ -696,6 +697,7 @@ if (isDP) {
     return Response.json({
       success: true,
       ok: true,
+      buildVersion: BUILD_VERSION,
       problem: problemForSolver,
       validationReport, // NEW: Explicit report of what's excluded and why
       subjectIdByCode,
@@ -731,6 +733,7 @@ if (isDP) {
     
     return Response.json({ 
       ok: false,
+      buildVersion: BUILD_VERSION,
       stage,
       errorMessage: String(error?.message || error),
       errorStack: String(error?.stack || ''),
