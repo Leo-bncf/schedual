@@ -254,6 +254,76 @@ export default function StudentScheduleView({ students, slots, groups, subjects,
 
       {selectedStudent && (
         <>
+          {/* CRITICAL DEBUG: Slot Matching Analysis */}
+          {(() => {
+            const assignedGroupIds = Array.isArray(selectedStudent?.assigned_groups) ? selectedStudent.assigned_groups : [];
+            const allSlotTGIds = [...new Set(slots.filter(s => s.teaching_group_id).map(s => s.teaching_group_id))];
+            const matchedTGIds = allSlotTGIds.filter(id => assignedGroupIds.includes(id));
+            const unmatchedAssignedTGIds = assignedGroupIds.filter(id => !allSlotTGIds.includes(id));
+            const unmatchedSlotTGIds = allSlotTGIds.filter(id => !assignedGroupIds.includes(id));
+            
+            return (
+              <Card className="mb-4 border-purple-300 bg-purple-50">
+                <CardContent className="p-4">
+                  <div className="font-bold text-purple-900 mb-3">🔍 Slot Matching Debug: {selectedStudent.full_name}</div>
+                  <div className="grid md:grid-cols-3 gap-3 text-xs font-mono">
+                    <div className="p-3 bg-white rounded border border-purple-200">
+                      <div className="font-semibold text-purple-900 mb-2">Student Assigned TGs ({assignedGroupIds.length})</div>
+                      <div className="space-y-1 max-h-32 overflow-y-auto">
+                        {assignedGroupIds.slice(0, 10).map((id, i) => {
+                          const group = groups.find(g => g.id === id);
+                          const matched = matchedTGIds.includes(id);
+                          return (
+                            <div key={i} className={matched ? 'text-green-700' : 'text-rose-700'}>
+                              {matched ? '✓' : '✗'} {group?.name || id.slice(-8)}
+                            </div>
+                          );
+                        })}
+                      </div>
+                    </div>
+                    
+                    <div className="p-3 bg-white rounded border border-purple-200">
+                      <div className="font-semibold text-purple-900 mb-2">Available Slot TG IDs ({allSlotTGIds.length})</div>
+                      <div className="space-y-1 max-h-32 overflow-y-auto">
+                        {allSlotTGIds.slice(0, 10).map((id, i) => {
+                          const group = groups.find(g => g.id === id);
+                          const matched = matchedTGIds.includes(id);
+                          return (
+                            <div key={i} className={matched ? 'text-green-700' : 'text-amber-700'}>
+                              {matched ? '✓' : '○'} {group?.name || id.slice(-8)}
+                            </div>
+                          );
+                        })}
+                      </div>
+                    </div>
+                    
+                    <div className="p-3 bg-white rounded border border-purple-200">
+                      <div className="font-semibold text-purple-900 mb-2">Matching Status</div>
+                      <div className="space-y-1">
+                        <div className="text-green-700">✓ Matched: {matchedTGIds.length}</div>
+                        <div className="text-rose-700">✗ Student has, no slots: {unmatchedAssignedTGIds.length}</div>
+                        <div className="text-amber-700">○ Slots exist, student not assigned: {unmatchedSlotTGIds.length}</div>
+                        <div className="mt-2 text-slate-600">Filter field: <strong>teaching_group_id</strong></div>
+                      </div>
+                    </div>
+                  </div>
+                  
+                  {unmatchedAssignedTGIds.length > 0 && (
+                    <div className="mt-3 p-2 bg-rose-100 border border-rose-300 rounded text-xs">
+                      <div className="font-bold text-rose-800 mb-1">❌ Student assigned to TGs with no slots:</div>
+                      <div className="space-y-0.5 text-rose-700">
+                        {unmatchedAssignedTGIds.slice(0, 5).map((id, i) => {
+                          const group = groups.find(g => g.id === id);
+                          return <div key={i}>• {group?.name || id}</div>;
+                        })}
+                      </div>
+                    </div>
+                  )}
+                </CardContent>
+              </Card>
+            );
+          })()}
+          
           {/* Expected vs Actual Periods Debug Panel */}
           {(() => {
             const assignedGroupIds = Array.isArray(selectedStudent?.assigned_groups) ? selectedStudent.assigned_groups : [];
