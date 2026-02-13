@@ -77,22 +77,108 @@ export default function StudentScheduleView({ students, slots, groups, subjects,
       return false;
     });
 
-    // DEBUG: Count slots per subject
-    const slotsBySubject = {};
+    // ENHANCED DEBUG: Expected vs actual periods by teaching group and subject
+    const expectedByTG = {};
+    const actualByTG = {};
+    const expectedBySubject = {};
+    const actualBySubject = {};
+    
+    // Calculate expected periods from assigned teaching groups
+    assignedGroupIds.forEach(tgId => {
+      const group = groups.find(g => g.id === tgId);
+      if (!group) return;
+      
+      const subject = subjects.find(s => s.id === group.subject_id);
+      const subjectCode = subject?.code || subject?.name || 'Unknown';
+      
+      // Get expected periods for this TG
+      const periodDuration = scheduleSettings?.periodDurationMinutes || scheduleSettings?.period_duration_minutes || 60;
+      let expectedPeriods = 0;
+      
+      if (group.periods_per_week) {
+        expectedPeriods = group.periods_per_week;
+      } else if (group.minutes_per_week) {
+        expectedPeriods = Math.ceil(group.minutes_per_week / periodDuration);
+      } else if (group.hours_per_week) {
+        expectedPeriods = Math.ceil((group.hours_per_week * 60) / periodDuration);
+      } else {
+        // Fallback: HL=5, SL=3 (IB standard for 60min periods)
+        const level = String(group.level || '').toUpperCase();
+        expectedPeriods = level === 'HL' ? 5 : level === 'SL' ? 3 : 3;
+      }
+      
+      expectedByTG[tgId] = expectedPeriods;
+      expectedBySubject[subjectCode] = (expectedBySubject[subjectCode] || 0) + expectedPeriods;
+      actualByTG[tgId] = 0;
+    });
+    
+    // Count actual slots per TG and subject
     matchedSlots.forEach(s => {
       const group = s.teaching_group_id ? groups.find(g => g.id === s.teaching_group_id) : null;
       const subject = group ? subjects.find(sub => sub.id === group.subject_id) : 
                       s.subject_id ? subjects.find(sub => sub.id === s.subject_id) : null;
       const subjectCode = subject?.code || subject?.name || 'Unknown';
-      slotsBySubject[subjectCode] = (slotsBySubject[subjectCode] || 0) + 1;
+      
+      if (s.teaching_group_id) {
+        actualByTG[s.teaching_group_id] = (actualByTG[s.teaching_group_id] || 0) + 1;
+      }
+      actualBySubject[subjectCode] = (actualBySubject[subjectCode] || 0) + 1;
     });
 
-    console.log(`[StudentScheduleView] Student ${student?.full_name} (${student?.year_group}):`, {
+    // Build mismatch report
+    const mismatchesByTG = [];
+    const mismatchesBySubject = [];
+    
+    Object.keys(expectedByTG).forEach(tgId => {
+      const expected = expectedByTG[tgId];
+      const actual = actualByTG[tgId] || 0;
+      if (expected !== actual) {
+        const group = groups.find(g => g.id === tgId);
+        const subject = group ? subjects.find(s => s.id === group.subject_id) : null;
+        mismatchesByTG.push({
+          tg_id: tgId,
+          name: group?.name || 'Unknown',
+          subject_code: subject?.code || subject?.name || 'Unknown',
+          level: group?.level || null,
+          expected,
+          actual,
+          diff: actual - expected
+        });
+      }
+    });
+    
+    Object.keys(expectedBySubject).forEach(subjectCode => {
+      const expected = expectedBySubject[subjectCode];
+      const actual = actualBySubject[subjectCode] || 0;
+      if (expected !== actual) {
+        mismatchesBySubject.push({
+          subject_code: subjectCode,
+          expected,
+          actual,
+          diff: actual - expected
+        });
+      }
+    });
+
+    console.log(`[StudentScheduleView] 📊 Student ${student?.full_name} (${student?.year_group}):`, {
       assigned_groups_count: assignedGroupIds.length,
       assigned_groups: assignedGroupIds,
       total_slots_displayed: matchedSlots.length,
-      slots_per_subject: slotsBySubject
+      expectedByTG,
+      actualByTG,
+      expectedBySubject,
+      actualBySubject,
+      mismatchesByTG,
+      mismatchesBySubject
     });
+    
+    // Log critical mismatches prominently
+    if (mismatchesByTG.length > 0) {
+      console.warn(`⚠️ ${student?.full_name}: ${mismatchesByTG.length} teaching groups with hour mismatches:`, mismatchesByTG);
+    }
+    if (mismatchesBySubject.length > 0) {
+      console.warn(`⚠️ ${student?.full_name}: ${mismatchesBySubject.length} subjects with hour mismatches:`, mismatchesBySubject);
+    }
 
     return matchedSlots;
   };

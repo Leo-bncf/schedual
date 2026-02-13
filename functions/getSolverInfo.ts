@@ -25,15 +25,27 @@ Deno.serve(async (req) => {
       }, { status: 200 });
     }
 
-    // Call GET /solver-info
+    // Get API key
+    const SOLVER_API_KEY = Deno.env.get('OR_TOOL_API_KEY') || Deno.env.get('SOLVER_API_KEY');
+    
+    if (!SOLVER_API_KEY) {
+      return Response.json({ 
+        error: 'Solver API key not configured',
+        engine: 'unknown',
+        available: false
+      }, { status: 200 });
+    }
+
+    // Call GET /solver-info with API key
     const infoUrl = SOLVER_ENDPOINT.replace('/solve-and-push', '/solver-info');
     
-    console.log('[getSolverInfo] Fetching from:', infoUrl);
+    console.log('[getSolverInfo] Fetching from:', infoUrl, 'with API key');
     
     const response = await fetch(infoUrl, {
       method: 'GET',
       headers: {
-        'X-API-Key': Deno.env.get('OR_TOOL_API_KEY') || ''
+        'Content-Type': 'application/json',
+        'X-API-Key': SOLVER_API_KEY
       }
     });
 

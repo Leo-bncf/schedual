@@ -1499,12 +1499,31 @@ Now process the user's input and return ONLY the JSON object.`,
           
           const auditData = auditRes.data || {};
           
+          console.log('[Schedule] 📋 Raw Audit Response:', auditData);
           console.log('[Schedule] 📋 Audit Result:', {
             stage: auditData.stage,
             ok: auditData.ok,
+            audit: auditData.audit,
             issueCount: Object.values(auditData.studentAuditIssueCounts || {}).reduce((sum, c) => sum + c, 0),
             issues: auditData.studentAuditIssueCounts
           });
+          
+          // CRITICAL: Treat missing ok/stage as audit failure
+          if (auditData.ok === undefined || auditData.stage === undefined) {
+            console.error('[Schedule] ❌ Audit returned invalid shape - treating as FAILED');
+            console.error('[Schedule] Expected: {ok, stage, audit:true} - Got:', Object.keys(auditData));
+            setAuditResult({
+              ok: false,
+              stage: 'AUDIT_INVALID_RESPONSE',
+              error: 'Pre-solve audit returned invalid response shape',
+              rawResponse: auditData
+            });
+            setShowAuditReport(true);
+            setOrToolLoading(false);
+            setIsGenerating(false);
+            toast.error('Pre-solve audit failed: invalid response format');
+            return;
+          }
           
           // STEP 2: If audit fails, show report and STOP
           if (auditData.ok === false && auditData.stage === 'PRE_SOLVE_AUDIT') {
