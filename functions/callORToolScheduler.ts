@@ -16,6 +16,7 @@ const chunk = (arr, n) => {
 };
 
 Deno.serve(async (req) => {
+  const WRAPPER_BUILD_VERSION = '2026-02-13T10:55:00Z'; // Wrapper deployment marker
   let stage = 'init';
   let schedule_version_id = null;
   let schoolId = null;
@@ -256,10 +257,30 @@ Deno.serve(async (req) => {
     // EARLY RETURN: If audit-only mode, return problem without calling solver
     if (auditOnly) {
       console.log('[callORToolScheduler] AUDIT MODE: Returning problem without solving');
+      
+      // Check if buildSchedulingProblem succeeded
+      if (buildResponse?.data?.ok !== true) {
+        console.error('[callORToolScheduler] ❌ buildSchedulingProblem failed during audit');
+        return Response.json({
+          ok: false,
+          audit: true,
+          stage: buildResponse?.data?.stage || 'buildProblem',
+          error: buildResponse?.data?.error || 'buildSchedulingProblem failed',
+          errorMessage: buildResponse?.data?.errorMessage || 'Unknown error',
+          errorStack: buildResponse?.data?.errorStack || '',
+          buildVersion: buildResponse?.data?.buildVersion || null,
+          wrapperBuildVersion: WRAPPER_BUILD_VERSION,
+          buildError: buildResponse?.data || null,
+          meta: { schedule_version_id, schoolId }
+        });
+      }
+      
       return Response.json({
         ok: true,
         audit: true,
         stage: 'audit_complete',
+        buildVersion: buildResponse?.data?.buildVersion || null,
+        wrapperBuildVersion: WRAPPER_BUILD_VERSION,
         problem,
         validationReport: buildResponse?.data?.validationReport || null,
         stats: buildResponse?.data?.stats || {},
@@ -1213,6 +1234,9 @@ Deno.serve(async (req) => {
 
     return Response.json({
       success: true,
+      ok: true,
+      buildVersion: buildResponse?.data?.buildVersion || null,
+      wrapperBuildVersion: WRAPPER_BUILD_VERSION,
       school_id: user.school_id,
       schedule_version_id,
       scheduleVersionIdInput: schedule_version_id,
@@ -1350,6 +1374,7 @@ Deno.serve(async (req) => {
     
     return Response.json({ 
       ok: false,
+      wrapperBuildVersion: WRAPPER_BUILD_VERSION,
       stage,
       errorMessage: String(error?.message || error),
       errorStack: String(error?.stack || ''),
