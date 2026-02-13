@@ -2638,6 +2638,28 @@ Now process the user's input and return ONLY the JSON object.`,
                            <div className="mt-1">HTTP: <strong className={orToolResult?.solverHttpStatus === 200 ? 'text-green-600' : 'text-rose-600'}>{orToolResult?.solverHttpStatus ?? '—'}</strong></div>
                            <div className="mt-1">/health: <strong>{orToolResult?.solverHealthStatus ?? '—'}</strong> {orToolResult?.solverHealthOk === false ? '(down)' : ''}</div>
                            <div className="mt-1">Headers: <code className="text-[10px]">{JSON.stringify(orToolResult?.solverRequestHeadersSent || {})}</code></div>
+
+                           {/* Debug metrics from solver */}
+                           {orToolResult?.solverDebugMetrics && (
+                             <div className="mt-3 pt-2 border-t border-slate-300">
+                               <div className="font-bold text-xs mb-1">Debug Metrics</div>
+                               <div className="space-y-0.5 text-[11px]">
+                                 <div>Unknown TG IDs: <strong className={(orToolResult.solverDebugMetrics.unknownTeachingGroupIdsInOutput?.length || 0) > 0 ? 'text-rose-600' : 'text-green-600'}>
+                                   {orToolResult.solverDebugMetrics.unknownTeachingGroupIdsInOutput?.length || 0}
+                                 </strong></div>
+                                 <div>Unique TG IDs: <strong>{orToolResult.solverDebugMetrics.uniqueTeachingGroupIdsInOutput?.length || 0}</strong></div>
+                                 <div>Sections missing periods: <strong className={(orToolResult.solverDebugMetrics.sectionsMissingPeriods || 0) > 0 ? 'text-rose-600' : 'text-green-600'}>
+                                   {orToolResult.solverDebugMetrics.sectionsMissingPeriods || 0}
+                                 </strong></div>
+                               </div>
+                               {(orToolResult.solverDebugMetrics.unknownTeachingGroupIdsInOutput?.length || 0) > 0 && (
+                                 <div className="mt-2 p-2 bg-rose-100 border border-rose-300 rounded text-[10px] text-rose-800">
+                                   <div className="font-bold mb-1">❌ Unknown TG IDs in output:</div>
+                                   <pre className="whitespace-pre-wrap">{JSON.stringify(orToolResult.solverDebugMetrics.unknownTeachingGroupIdsInOutput, null, 2)}</pre>
+                                 </div>
+                               )}
+                             </div>
+                           )}
                            {orToolResult?.solverErrorBody && (
                              <div className="mt-1 font-semibold text-rose-700">Error: <span className="break-all">{(orToolResult?.solverErrorBody || '').slice(0, 300)}</span></div>
                            )}
@@ -2887,20 +2909,50 @@ Now process the user's input and return ONLY the JSON object.`,
                                 </div>
                               </div>
 
+                              {/* Solver Debug: Period Coverage by Section */}
+                              {orToolResult?.solverDebugMetrics?.periodCoverageBySection && (
+                               <div className="p-3 rounded-lg bg-blue-50 border-2 border-blue-300">
+                                 <div className="font-semibold text-blue-900 mb-2">🔍 Solver Debug: Period Coverage by Section</div>
+                                 <div className="space-y-2 max-h-64 overflow-y-auto">
+                                   {(Array.isArray(orToolResult.solverDebugMetrics.periodCoverageBySection) 
+                                     ? orToolResult.solverDebugMetrics.periodCoverageBySection 
+                                     : Object.values(orToolResult.solverDebugMetrics.periodCoverageBySection || {}))
+                                     .slice(0, 15).map((cov, idx) => {
+                                       const missing = cov.missingPeriods || 0;
+                                       return (
+                                         <div key={idx} className={`p-2 rounded text-xs ${missing > 0 ? 'bg-rose-100 border border-rose-300' : 'bg-white'}`}>
+                                           <div className="flex justify-between">
+                                             <span className="font-mono">{cov.studentGroup || cov.section || '?'}</span>
+                                             <span className={missing > 0 ? 'font-bold text-rose-700' : 'text-slate-600'}>
+                                               {cov.scheduledPeriods}/{cov.requiredPeriods} {missing > 0 && `(-${missing})`}
+                                             </span>
+                                           </div>
+                                         </div>
+                                       );
+                                     })}
+                                 </div>
+                                 {orToolResult.solverDebugMetrics.sectionsMissingPeriods > 0 && (
+                                   <div className="mt-2 p-2 bg-rose-100 border border-rose-300 rounded text-xs text-rose-800">
+                                     ⚠️ {orToolResult.solverDebugMetrics.sectionsMissingPeriods} sections ont des périodes manquantes
+                                   </div>
+                                 )}
+                               </div>
+                              )}
+
                               {/* All-subjects comparison */}
                               <div className="grid md:grid-cols-3 gap-3">
-                                <div className="p-3 rounded-lg bg-slate-100">
-                                  <div className="font-semibold text-slate-900 mb-1">expectedLessonsBySubject</div>
-                                  <pre className="bg-white rounded p-2 overflow-x-auto max-h-40">{JSON.stringify(exp, null, 2)}</pre>
-                                </div>
-                                <div className="p-3 rounded-lg bg-slate-100">
-                                  <div className="font-semibold text-slate-900 mb-1">assignmentsBySubjectCode</div>
-                                  <pre className="bg-white rounded p-2 overflow-x-auto max-h-40">{JSON.stringify(asg, null, 2)}</pre>
-                                </div>
-                                <div className="p-3 rounded-lg bg-slate-100">
-                                  <div className="font-semibold text-slate-900 mb-1">unassignedBySubjectCode</div>
-                                  <pre className="bg-white rounded p-2 overflow-x-auto max-h-40">{JSON.stringify(unasg, null, 2)}</pre>
-                                </div>
+                               <div className="p-3 rounded-lg bg-slate-100">
+                                 <div className="font-semibold text-slate-900 mb-1">expectedLessonsBySubject</div>
+                                 <pre className="bg-white rounded p-2 overflow-x-auto max-h-40">{JSON.stringify(exp, null, 2)}</pre>
+                               </div>
+                               <div className="p-3 rounded-lg bg-slate-100">
+                                 <div className="font-semibold text-slate-900 mb-1">assignmentsBySubjectCode</div>
+                                 <pre className="bg-white rounded p-2 overflow-x-auto max-h-40">{JSON.stringify(asg, null, 2)}</pre>
+                               </div>
+                               <div className="p-3 rounded-lg bg-slate-100">
+                                 <div className="font-semibold text-slate-900 mb-1">unassignedBySubjectCode</div>
+                                 <pre className="bg-white rounded p-2 overflow-x-auto max-h-40">{JSON.stringify(unasg, null, 2)}</pre>
+                               </div>
                               </div>
 
                               {/* Debug counters for TOK/CAS/EE/TEST across stages */}

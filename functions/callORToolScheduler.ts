@@ -323,7 +323,8 @@ Deno.serve(async (req) => {
       const orToolPayload = {
         ...problem,
         schoolId: schoolId,
-        scheduleVersionId: schedule_version_id
+        scheduleVersionId: schedule_version_id,
+        debug: true // Enable solver debug mode for detailed coverage metrics
       };
       // Double assurance: force overwrite even if problem contained null/undefined
       orToolPayload.schoolId = schoolId;
@@ -475,6 +476,43 @@ Deno.serve(async (req) => {
       }, { status: 200 });
     }
     console.log('[callORToolScheduler] solver score =', solution.score);
+    
+    // Log debug metrics if present
+    if (solution.unknownTeachingGroupIdsInOutput) {
+      console.log('[callORToolScheduler] 🔍 unknownTeachingGroupIdsInOutput:', solution.unknownTeachingGroupIdsInOutput);
+    }
+    if (solution.uniqueTeachingGroupIdsInOutput) {
+      console.log('[callORToolScheduler] 🔍 uniqueTeachingGroupIdsInOutput:', solution.uniqueTeachingGroupIdsInOutput);
+    }
+    if (solution.periodCoverageByStudentGroupOrSection) {
+      const coverage = solution.periodCoverageByStudentGroupOrSection;
+      const coverageArray = Array.isArray(coverage) ? coverage : Object.values(coverage);
+      console.log('[callORToolScheduler] 🔍 periodCoverage sample (first 10):', coverageArray.slice(0, 10));
+      
+      // Count sections with missing periods
+      const sectionsMissingPeriods = coverageArray.filter(c => (c.missingPeriods || 0) > 0);
+      console.log('[callORToolScheduler] ⚠️ Sections with missing periods:', sectionsMissingPeriods.length, '/', coverageArray.length);
+      if (sectionsMissingPeriods.length > 0) {
+        console.log('[callORToolScheduler] Missing periods sample:', sectionsMissingPeriods.slice(0, 5));
+      }
+    }
+    
+    // CRITICAL: Validate unknown teaching group IDs
+    const unknownTGIds = solution.unknownTeachingGroupIdsInOutput || [];
+    if (unknownTGIds.length > 0) {
+      console.error(`[callORToolScheduler] ❌ CRITICAL: Solver returned ${unknownTGIds.length} unknown teaching_group_ids`);
+      console.error('[callORToolScheduler] These IDs are in solver output but not in Base44:', unknownTGIds);
+      
+      return Response.json({
+        ok: false,
+        stage: 'UNKNOWN_TEACHING_GROUP_IDS',
+        error: `Solver created ${unknownTGIds.length} teaching groups not in Base44`,
+        errorMessage: 'Solver output contains teaching_group_ids that do not exist in Base44 database. This will cause student schedules to appear incomplete.',
+        unknownTeachingGroupIds: unknownTGIds,
+        suggestion: 'This indicates solver is creating new "shared" groups. Configure solver to use original teaching_group_ids for shared sessions, or ensure students are assigned to solver-created groups.',
+        meta: { schedule_version_id, schoolId }
+      }, { status: 200 });
+    }
 
     // Step 3: Validate solution format (support lessons or legacy assignments)
     const solvedLessons = Array.isArray(solution.lessons)
@@ -1186,6 +1224,14 @@ Deno.serve(async (req) => {
       solverRequestHeadersSent,
       solverHealthStatus,
       solverHealthOk,
+      solverDebugMetrics: {
+        unknownTeachingGroupIdsInOutput: solution.unknownTeachingGroupIdsInOutput || [],
+        uniqueTeachingGroupIdsInOutput: solution.uniqueTeachingGroupIdsInOutput || [],
+        periodCoverageBySection: solution.periodCoverageByStudentGroupOrSection || [],
+        sectionsMissingPeriods: Array.isArray(solution.periodCoverageByStudentGroupOrSection) 
+          ? solution.periodCoverageByStudentGroupOrSection.filter(c => (c.missingPeriods || 0) > 0).length
+          : 0
+      },
       solverRequestPayload: {
         scheduleSettings: scheduleSettingsSent,
         subjects: (problem?.subjects || []).slice(0, 5),

@@ -1,5 +1,5 @@
 import React from 'react';
-import { Card } from "@/components/ui/card";
+import { Card, CardContent } from "@/components/ui/card";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Badge } from "@/components/ui/badge";
 import { GraduationCap } from 'lucide-react';
@@ -253,8 +253,88 @@ export default function StudentScheduleView({ students, slots, groups, subjects,
       </div>
 
       {selectedStudent && (
-        <Card className="overflow-hidden border-blue-200 shadow-sm" id={exportId}>
-          <div className="h-1 bg-blue-500" />
+        <>
+          {/* Expected vs Actual Periods Debug Panel */}
+          {(() => {
+            const assignedGroupIds = Array.isArray(selectedStudent?.assigned_groups) ? selectedStudent.assigned_groups : [];
+            const periodDuration = scheduleSettings?.periodDurationMinutes || scheduleSettings?.period_duration_minutes || 60;
+            const tgReport = [];
+            
+            assignedGroupIds.forEach(tgId => {
+              const group = groups.find(g => g.id === tgId);
+              if (!group) return;
+              
+              const subject = subjects.find(s => s.id === group.subject_id);
+              const subjectCode = subject?.code || subject?.name || 'Unknown';
+              
+              let expectedPeriods = 0;
+              if (group.periods_per_week) {
+                expectedPeriods = group.periods_per_week;
+              } else if (group.minutes_per_week) {
+                expectedPeriods = Math.ceil(group.minutes_per_week / periodDuration);
+              } else {
+                const level = String(group.level || '').toUpperCase();
+                expectedPeriods = level === 'HL' ? 5 : level === 'SL' ? 3 : 3;
+              }
+              
+              const actualPeriods = studentSlots.filter(s => s.teaching_group_id === tgId).length;
+              const diff = actualPeriods - expectedPeriods;
+              
+              tgReport.push({
+                tgId,
+                name: group.name,
+                subject: subjectCode,
+                level: group.level,
+                expected: expectedPeriods,
+                actual: actualPeriods,
+                diff,
+                status: diff === 0 ? 'ok' : diff > 0 ? 'over' : 'under'
+              });
+            });
+            
+            const totalExpected = tgReport.reduce((sum, r) => sum + r.expected, 0);
+            const totalActual = tgReport.reduce((sum, r) => sum + r.actual, 0);
+            const hasMismatches = tgReport.some(r => r.diff !== 0);
+            
+            if (!hasMismatches && assignedGroupIds.length > 0) return null;
+            
+            return (
+              <Card className="mb-4 border-amber-300 bg-amber-50">
+                <CardContent className="p-4">
+                  <div className="flex items-center justify-between mb-3">
+                    <div className="font-semibold text-amber-900">📊 Expected vs Actual Periods</div>
+                    <Badge variant={hasMismatches ? 'destructive' : 'default'}>
+                      {totalActual}/{totalExpected} periods ({hasMismatches ? 'MISMATCH' : 'OK'})
+                    </Badge>
+                  </div>
+                  <div className="space-y-2 text-xs">
+                    {tgReport.map((r, idx) => (
+                      <div key={idx} className={`flex items-center justify-between p-2 rounded ${
+                        r.status === 'ok' ? 'bg-emerald-50 border border-emerald-200' :
+                        r.status === 'under' ? 'bg-rose-50 border border-rose-200' :
+                        'bg-blue-50 border border-blue-200'
+                      }`}>
+                        <div className="flex-1">
+                          <span className="font-medium">{r.subject}</span>
+                          {r.level && <Badge variant="outline" className="ml-2 text-[10px]">{r.level}</Badge>}
+                        </div>
+                        <div className={`font-mono font-semibold ${
+                          r.status === 'ok' ? 'text-emerald-700' :
+                          r.status === 'under' ? 'text-rose-700' :
+                          'text-blue-700'
+                        }`}>
+                          {r.actual}/{r.expected} {r.diff !== 0 && `(${r.diff > 0 ? '+' : ''}${r.diff})`}
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                </CardContent>
+              </Card>
+            );
+          })()}
+          
+          <Card className="overflow-hidden border-blue-200 shadow-sm" id={exportId}>
+            <div className="h-1 bg-blue-500" />
           <div className="overflow-x-auto">
             <div className="min-w-[900px]">
               <div className="grid grid-cols-[80px_repeat(5,1fr)] bg-white border-b-2 border-slate-300">
@@ -345,6 +425,7 @@ export default function StudentScheduleView({ students, slots, groups, subjects,
             </div>
           </div>
         </Card>
+        </>
       )}
     </div>
   );
