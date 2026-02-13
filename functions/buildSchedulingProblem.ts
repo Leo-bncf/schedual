@@ -12,11 +12,13 @@ REFACTORED: Cohort-Centered Schedule Builder (v2.1)
 */
 
 Deno.serve(async (req) => {
-  const BUILD_VERSION = '2026-02-13T10:45:00Z'; // Deployment marker
+  const BUILD_VERSION = '2026-02-13T11:00:00Z-FORCE-REDEPLOY'; // Deployment marker - UPDATED TO FORCE REDEPLOY
   let stage = 'init';
   let school_id = null;
   let schedule_version_id = null;
   let base44 = null;
+  
+  console.log(`[buildSchedulingProblem] 🚀 BUILD VERSION: ${BUILD_VERSION}`);
   
   // DIAGNOSTICS: Track all adjustments and warnings
   const diagnosticLog = [];

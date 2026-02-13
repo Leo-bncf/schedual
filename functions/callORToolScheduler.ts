@@ -16,10 +16,12 @@ const chunk = (arr, n) => {
 };
 
 Deno.serve(async (req) => {
-  const WRAPPER_BUILD_VERSION = '2026-02-13T10:55:00Z'; // Wrapper deployment marker
+  const WRAPPER_BUILD_VERSION = '2026-02-13T11:00:00Z-FORCE-REDEPLOY'; // Wrapper deployment marker - UPDATED
   let stage = 'init';
   let schedule_version_id = null;
   let schoolId = null;
+  
+  console.log(`[callORToolScheduler] 🚀 WRAPPER BUILD VERSION: ${WRAPPER_BUILD_VERSION}`);
   
   try {
     stage = 'auth';
