@@ -521,46 +521,6 @@ if (isDP) {
     recordLog(`Lessons created: ${lessons.length} total, ${teachingGroupsIncludedCount} sections included, ${teachingGroupsSkipped.length} skipped`);
     recordLog(`Adjustments made: ${teachingGroupsAdjusted.length}`);
 
-    // VALIDATION: Check for suspiciously low requiredPeriods in DP groups
-    const lowPeriodWarnings = [];
-    subjectRequirements.forEach(req => {
-      const tgId = String(req.studentGroup || '').replace('TG_', '');
-      const tg = teachingGroupsDb.find(g => g.id === tgId);
-      if (!tg) return;
-
-      const isDPHL = tg.level === 'HL' && (tg.year_group?.includes('DP') || subjectById[tg.subject_id]?.ib_level === 'DP');
-      const isDPSL = tg.level === 'SL' && (tg.year_group?.includes('DP') || subjectById[tg.subject_id]?.ib_level === 'DP');
-
-      if (isDPHL && req.requiredPeriods < 4) {
-        lowPeriodWarnings.push({
-          tg_id: tg.id,
-          name: tg.name,
-          level: 'HL',
-          requiredPeriods: req.requiredPeriods,
-          expected: 5,
-          reason: 'DP HL should have 5 periods/week minimum'
-        });
-      }
-
-      if (isDPSL && req.requiredPeriods < 2) {
-        lowPeriodWarnings.push({
-          tg_id: tg.id,
-          name: tg.name,
-          level: 'SL',
-          requiredPeriods: req.requiredPeriods,
-          expected: 3,
-          reason: 'DP SL should have 3 periods/week minimum'
-        });
-      }
-    });
-
-    if (lowPeriodWarnings.length > 0) {
-      recordLog(`⚠️ WARNING: ${lowPeriodWarnings.length} DP groups with suspiciously low requiredPeriods`);
-      lowPeriodWarnings.forEach(w => {
-        recordLog(`  - ${w.name} (${w.level}): ${w.requiredPeriods}p/week (expected ${w.expected}p/week)`);
-      });
-    }
-    
     // HARD FAIL if critical groups are missing minutes configuration
     const missingMinutesGroups = teachingGroupsSkipped.filter(s => s.reason === 'MISSING_MINUTES_CONFIG');
     if (missingMinutesGroups.length > 0) {
@@ -614,17 +574,57 @@ if (isDP) {
     for (const tg of teachingGroupsDb) {
       const subjCode = subjectIdToCode[tg.subject_id];
       if (!subjCode) continue;
-      
+
       const minutesUsed = minutesForTG(tg);
       if (!minutesUsed || minutesUsed <= 0) continue;
-      
+
       const requiredPeriods = minutesToPeriods(minutesUsed);
-      
+
       subjectRequirements.push({
         studentGroup: `TG_${tg.id}`,
         subject: subjCode,
         minutesPerWeek: minutesUsed,
         requiredPeriods
+      });
+    }
+
+    // VALIDATION: Check for suspiciously low requiredPeriods in DP groups
+    const lowPeriodWarnings = [];
+    subjectRequirements.forEach(req => {
+      const tgId = String(req.studentGroup || '').replace('TG_', '');
+      const tg = teachingGroupsDb.find(g => g.id === tgId);
+      if (!tg) return;
+
+      const isDPHL = tg.level === 'HL' && (tg.year_group?.includes('DP') || subjectById[tg.subject_id]?.ib_level === 'DP');
+      const isDPSL = tg.level === 'SL' && (tg.year_group?.includes('DP') || subjectById[tg.subject_id]?.ib_level === 'DP');
+
+      if (isDPHL && req.requiredPeriods < 4) {
+        lowPeriodWarnings.push({
+          tg_id: tg.id,
+          name: tg.name,
+          level: 'HL',
+          requiredPeriods: req.requiredPeriods,
+          expected: 5,
+          reason: 'DP HL should have 5 periods/week minimum'
+        });
+      }
+
+      if (isDPSL && req.requiredPeriods < 2) {
+        lowPeriodWarnings.push({
+          tg_id: tg.id,
+          name: tg.name,
+          level: 'SL',
+          requiredPeriods: req.requiredPeriods,
+          expected: 3,
+          reason: 'DP SL should have 3 periods/week minimum'
+        });
+      }
+    });
+
+    if (lowPeriodWarnings.length > 0) {
+      recordLog(`⚠️ WARNING: ${lowPeriodWarnings.length} DP groups with suspiciously low requiredPeriods`);
+      lowPeriodWarnings.forEach(w => {
+        recordLog(`  - ${w.name} (${w.level}): ${w.requiredPeriods}p/week (expected ${w.expected}p/week)`);
       });
     }
     
