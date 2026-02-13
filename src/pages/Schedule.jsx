@@ -2909,34 +2909,86 @@ Now process the user's input and return ONLY the JSON object.`,
                                 </div>
                               </div>
 
-                              {/* Solver Debug: Period Coverage by Section */}
+                              {/* Solver Debug: Period Coverage by Section - FULL LIST */}
                               {orToolResult?.solverDebugMetrics?.periodCoverageBySection && (
-                               <div className="p-3 rounded-lg bg-blue-50 border-2 border-blue-300">
-                                 <div className="font-semibold text-blue-900 mb-2">🔍 Solver Debug: Period Coverage by Section</div>
-                                 <div className="space-y-2 max-h-64 overflow-y-auto">
-                                   {(Array.isArray(orToolResult.solverDebugMetrics.periodCoverageBySection) 
-                                     ? orToolResult.solverDebugMetrics.periodCoverageBySection 
-                                     : Object.values(orToolResult.solverDebugMetrics.periodCoverageBySection || {}))
-                                     .slice(0, 15).map((cov, idx) => {
-                                       const missing = cov.missingPeriods || 0;
-                                       return (
-                                         <div key={idx} className={`p-2 rounded text-xs ${missing > 0 ? 'bg-rose-100 border border-rose-300' : 'bg-white'}`}>
-                                           <div className="flex justify-between">
-                                             <span className="font-mono">{cov.studentGroup || cov.section || '?'}</span>
-                                             <span className={missing > 0 ? 'font-bold text-rose-700' : 'text-slate-600'}>
-                                               {cov.scheduledPeriods}/{cov.requiredPeriods} {missing > 0 && `(-${missing})`}
-                                             </span>
-                                           </div>
-                                         </div>
-                                       );
-                                     })}
-                                 </div>
-                                 {orToolResult.solverDebugMetrics.sectionsMissingPeriods > 0 && (
-                                   <div className="mt-2 p-2 bg-rose-100 border border-rose-300 rounded text-xs text-rose-800">
-                                     ⚠️ {orToolResult.solverDebugMetrics.sectionsMissingPeriods} sections ont des périodes manquantes
-                                   </div>
-                                 )}
-                               </div>
+                                <div className="p-3 rounded-lg bg-blue-50 border-2 border-blue-300">
+                                  <div className="font-semibold text-blue-900 mb-2">🔍 Solver Debug: Period Coverage by Section (COMPLET)</div>
+                                  <div className="space-y-2 max-h-96 overflow-y-auto">
+                                    {(Array.isArray(orToolResult.solverDebugMetrics.periodCoverageBySection) 
+                                      ? orToolResult.solverDebugMetrics.periodCoverageBySection 
+                                      : Object.values(orToolResult.solverDebugMetrics.periodCoverageBySection || {}))
+                                      .map((cov, idx) => {
+                                        const missing = cov.missingPeriods || 0;
+                                        const tgId = String(cov.studentGroup || cov.section || '').replace('TG_', '');
+                                        const tg = teachingGroups.find(g => g.id === tgId);
+                                        const subj = tg ? subjects.find(s => s.id === tg.subject_id) : null;
+                                        return (
+                                          <div key={idx} className={`p-2 rounded text-xs ${missing > 0 ? 'bg-rose-100 border border-rose-300' : 'bg-white'}`}>
+                                            <div className="flex justify-between items-start">
+                                              <div className="flex-1">
+                                                <div className="font-mono text-[10px] text-slate-500">{cov.studentGroup || cov.section}</div>
+                                                {tg && <div className="font-semibold">{subj?.code || subj?.name || '?'} - {tg.name}</div>}
+                                                {tg && <div className="text-[10px] text-slate-600">Level: {tg.level || '?'} | Students: {tg.student_ids?.length || 0}</div>}
+                                              </div>
+                                              <div className="text-right">
+                                                <div className={missing > 0 ? 'font-bold text-rose-700' : 'text-slate-600'}>
+                                                  {cov.scheduledPeriods}/{cov.requiredPeriods}
+                                                </div>
+                                                {missing > 0 && <div className="text-rose-700 font-bold">-{missing} périodes</div>}
+                                              </div>
+                                            </div>
+                                          </div>
+                                        );
+                                      })}
+                                  </div>
+                                  {orToolResult.solverDebugMetrics.sectionsMissingPeriods > 0 && (
+                                    <div className="mt-2 p-2 bg-rose-100 border border-rose-300 rounded text-xs text-rose-800">
+                                      ⚠️ {orToolResult.solverDebugMetrics.sectionsMissingPeriods} sections ont des périodes manquantes
+                                    </div>
+                                  )}
+                                </div>
+                              )}
+
+                              {/* Subject Requirements Sent to Solver */}
+                              {orToolResult?.subjectRequirements && (
+                                <div className="p-3 rounded-lg bg-amber-50 border-2 border-amber-300">
+                                  <div className="font-semibold text-amber-900 mb-2">📋 Subject Requirements Envoyés au Solver</div>
+                                  <div className="space-y-2 max-h-96 overflow-y-auto">
+                                    {orToolResult.subjectRequirements.map((req, idx) => {
+                                      const tgId = String(req.studentGroup || '').replace('TG_', '');
+                                      const tg = teachingGroups.find(g => g.id === tgId);
+                                      const subj = tg ? subjects.find(s => s.id === tg.subject_id) : null;
+                                      const isDPHL = tg?.level === 'HL' && (subj?.ib_level === 'DP' || tg?.year_group?.includes('DP'));
+                                      const isDPSL = tg?.level === 'SL' && (subj?.ib_level === 'DP' || tg?.year_group?.includes('DP'));
+                                      const expectedIB = isDPHL ? 5 : isDPSL ? 3 : null;
+                                      const mismatch = expectedIB && req.requiredPeriods !== expectedIB;
+
+                                      return (
+                                        <div key={idx} className={`p-2 rounded text-xs ${mismatch ? 'bg-rose-100 border border-rose-300' : 'bg-white'}`}>
+                                          <div className="flex justify-between items-start">
+                                            <div className="flex-1">
+                                              <div className="font-semibold">{req.subject} - {tg?.name || req.studentGroup}</div>
+                                              <div className="text-[10px] text-slate-600">
+                                                Level: {tg?.level || '?'} | Year: {tg?.year_group || '?'} | IB Level: {subj?.ib_level || '?'}
+                                              </div>
+                                            </div>
+                                            <div className="text-right">
+                                              <div className={mismatch ? 'font-bold text-rose-700' : 'text-slate-600'}>
+                                                {req.requiredPeriods} périodes
+                                              </div>
+                                              <div className="text-[10px] text-slate-500">{req.minutesPerWeek}min/sem</div>
+                                              {mismatch && (
+                                                <div className="text-rose-700 font-bold text-[10px]">
+                                                  ⚠️ IB: {expectedIB}p/sem
+                                                </div>
+                                              )}
+                                            </div>
+                                          </div>
+                                        </div>
+                                      );
+                                    })}
+                                  </div>
+                                </div>
                               )}
 
                               {/* All-subjects comparison */}

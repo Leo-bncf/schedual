@@ -1232,6 +1232,7 @@ Deno.serve(async (req) => {
           ? solution.periodCoverageByStudentGroupOrSection.filter(c => (c.missingPeriods || 0) > 0).length
           : 0
       },
+      subjectRequirements: problem.subjectRequirements || [],
       solverRequestPayload: {
         scheduleSettings: scheduleSettingsSent,
         subjects: (problem?.subjects || []).slice(0, 5),
