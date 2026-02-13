@@ -1,10 +1,12 @@
 import { createClientFromRequest } from 'npm:@base44/sdk@0.8.6';
 
 /*
-REFACTORED: Cohort-Centered Schedule Builder
+REFACTORED: Cohort-Centered Schedule Builder (v2.1)
 - Each TeachingGroup = ONE canonical section/cohort (identified by teaching_group_id)
 - NO aggressive filtering - include all TGs unless completely invalid
 - Comprehensive fallback system ensures all TGs have duration (minutes_per_week)
+- Unit validation: detects period counts stored as minutes (≤30 for DP = period count)
+- IB standards enforcement: HL≥300min, SL≥180min
 - Detailed diagnostics log all adjustments, warnings, and skips
 - Stable, predictable solver input with complete subject coverage
 */
