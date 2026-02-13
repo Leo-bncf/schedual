@@ -11,8 +11,11 @@ REFACTORED: Cohort-Centered Schedule Builder (v2.1)
 - Stable, predictable solver input with complete subject coverage
 */
 
+// DEPLOYMENT TIMESTAMP: 2026-02-13T11:05:00Z
+// CRITICAL FIX: subjectRequirements TDZ resolved - declared before all usage
+
 Deno.serve(async (req) => {
-  const BUILD_VERSION = '2026-02-13T11:00:00Z-FORCE-REDEPLOY'; // Deployment marker - UPDATED TO FORCE REDEPLOY
+  const BUILD_VERSION = '2026-02-13T11:05:00Z-TDZ-FIX-V3'; // Deployment marker
   let stage = 'init';
   let school_id = null;
   let schedule_version_id = null;

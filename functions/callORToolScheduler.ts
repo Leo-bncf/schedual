@@ -15,8 +15,11 @@ const chunk = (arr, n) => {
   return out;
 };
 
+// DEPLOYMENT TIMESTAMP: 2026-02-13T11:05:00Z
+// WRAPPER for OR-Tool scheduler with audit gating
+
 Deno.serve(async (req) => {
-  const WRAPPER_BUILD_VERSION = '2026-02-13T11:00:00Z-FORCE-REDEPLOY'; // Wrapper deployment marker - UPDATED
+  const WRAPPER_BUILD_VERSION = '2026-02-13T11:05:00Z-TDZ-FIX-V3'; // Wrapper deployment marker
   let stage = 'init';
   let schedule_version_id = null;
   let schoolId = null;
