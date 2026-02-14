@@ -669,8 +669,9 @@ Now process the user's input and return ONLY the JSON object.`,
             max_group_size: 20
           });
           console.log('DP group generation result:', dpGroupResult);
-          console.log('DP groups created:', dpGroupResult?.created || 0);
-          console.log('DP group names:', dpGroupResult?.groups?.map(g => g.name) || []);
+          console.log('DP groups created:', dpGroupResult?.groups_created || dpGroupResult?.created || 0);
+          console.log('DP group IDs:', dpGroupResult?.created_group_ids || []);
+          console.log('DP groups returned:', dpGroupResult?.groups?.length || 0);
 
           if (dpGroupResult?.duplicate_subjects?.length > 0) {
             console.warn('⚠️ Students with duplicate subjects:', dpGroupResult.duplicate_subjects);
