@@ -62,7 +62,7 @@ import ScheduleUpdateBanner from '../components/schedule/ScheduleUpdateBanner';
 import UtilizationStats from '../components/schedule/UtilizationStats';
 import CohortIntegrityReport from '../components/schedule/CohortIntegrityReport';
 import PreSolveAuditReport from '../components/schedule/PreSolveAuditReport';
-import PeriodCoverageDebug from '../components/schedule/PeriodCoverageDebug';
+import GlobalPeriodCoverageReport from '../components/schedule/GlobalPeriodCoverageReport';
 
 
 export default function Schedule() {
@@ -2914,15 +2914,13 @@ Now process the user's input and return ONLY the JSON object.`,
                                 </div>
                               </div>
 
-                              {/* Solver Debug: Period Coverage - STUDENT-FILTERED VIEW */}
+                              {/* Solver Debug: Global Period Coverage Report */}
                               {orToolResult?.solverDebugMetrics?.periodCoverageBySection && (
-                                <PeriodCoverageDebug
+                                <GlobalPeriodCoverageReport
                                   periodCoverageData={orToolResult.solverDebugMetrics.periodCoverageBySection}
-                                  students={students.filter(s => s.is_active && s.ib_programme === 'DP')}
                                   teachingGroups={teachingGroups}
                                   subjects={subjects}
-                                  selectedStudentId={selectedStudentId}
-                                  onStudentChange={setSelectedStudentId}
+                                  periodDurationMinutes={school?.period_duration_minutes || 60}
                                 />
                               )}
 
