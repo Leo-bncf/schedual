@@ -1261,7 +1261,9 @@ Deno.serve(async (req) => {
         periodCoverageBySection: solution.periodCoverageByStudentGroupOrSection || [],
         sectionsMissingPeriods: Array.isArray(solution.periodCoverageByStudentGroupOrSection) 
           ? solution.periodCoverageByStudentGroupOrSection.filter(c => (c.missingPeriods || 0) > 0).length
-          : 0
+          : 0,
+        missingPeriodsByReason: solution.missingPeriodsByReason || {},
+        unmetRequirements: solution.unmetRequirements || []
       },
       subjectRequirements: problem.subjectRequirements || [],
       solverRequestPayload: {

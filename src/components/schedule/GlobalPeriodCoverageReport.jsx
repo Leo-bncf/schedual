@@ -15,7 +15,9 @@ export default function GlobalPeriodCoverageReport({
   periodCoverageData, 
   teachingGroups, 
   subjects,
-  periodDurationMinutes = 60
+  periodDurationMinutes = 60,
+  missingPeriodsByReason = {},
+  unmetRequirements = []
 }) {
   const coverageReport = React.useMemo(() => {
     if (!periodCoverageData) return null;
@@ -202,7 +204,7 @@ export default function GlobalPeriodCoverageReport({
 
         {/* SOLVER BLOCKED ALERTS */}
         {hasSolverErrors && !hasInputErrors && (
-          <div className="p-4 bg-rose-100 border-2 border-rose-400 rounded-lg space-y-2">
+          <div className="p-4 bg-rose-100 border-2 border-rose-400 rounded-lg space-y-3">
             <div className="flex items-center gap-2 text-rose-900 font-bold">
               <AlertTriangle className="w-5 h-5" />
               SOLVER BLOCKED: {solverBlockedSections.length} sections correctes mais partiellement schedulées
@@ -210,6 +212,48 @@ export default function GlobalPeriodCoverageReport({
             <div className="text-sm text-rose-900">
               requiredPeriods respecte les standards IB, mais le solver n'a pas pu placer toutes les périodes.
             </div>
+            
+            {/* Missing Periods Breakdown by Reason */}
+            {Object.keys(missingPeriodsByReason).length > 0 && (
+              <div className="p-3 bg-white rounded border border-rose-300">
+                <div className="font-bold text-rose-900 mb-2">📊 Missing Periods Breakdown by Reason:</div>
+                <div className="grid grid-cols-2 gap-2 text-xs">
+                  {Object.entries(missingPeriodsByReason)
+                    .sort((a, b) => b[1] - a[1])
+                    .map(([reason, count]) => (
+                      <div key={reason} className="flex justify-between items-center p-2 bg-rose-50 rounded">
+                        <span className="font-medium">{reason.replace(/_/g, ' ')}</span>
+                        <Badge variant="destructive" className="text-xs">{count}</Badge>
+                      </div>
+                    ))}
+                </div>
+              </div>
+            )}
+
+            {/* Unmet Requirements Details */}
+            {unmetRequirements.length > 0 && (
+              <div className="p-3 bg-white rounded border border-rose-300">
+                <div className="font-bold text-rose-900 mb-2">❌ Unmet Requirements ({unmetRequirements.length}):</div>
+                <div className="space-y-1 text-xs max-h-48 overflow-y-auto">
+                  {unmetRequirements.slice(0, 15).map((req, i) => (
+                    <div key={i} className="flex justify-between items-start p-2 bg-rose-50 rounded border border-rose-200">
+                      <div className="flex-1">
+                        <div className="font-semibold">{req.subject} - {req.section}</div>
+                        <div className="text-[10px] text-slate-600">
+                          Reason: <span className="font-medium text-rose-700">{req.reason || 'unknown'}</span>
+                        </div>
+                      </div>
+                      <div className="text-right font-mono text-rose-700 font-bold">
+                        -{req.missing || 0}p
+                      </div>
+                    </div>
+                  ))}
+                  {unmetRequirements.length > 15 && (
+                    <div className="text-slate-500 text-center">... +{unmetRequirements.length - 15} more</div>
+                  )}
+                </div>
+              </div>
+            )}
             
             <div className="mt-3 p-3 bg-white rounded border border-rose-300">
               <div className="font-bold text-rose-900 mb-2">Top {Math.min(20, solverBlockedSections.length)} sections bloquées:</div>
@@ -369,21 +413,24 @@ export default function GlobalPeriodCoverageReport({
         {sectionsWithMissing > 0 && (
           <div className="p-4 bg-slate-900 text-white rounded-lg">
             <div className="flex items-center gap-2 font-bold mb-2">
-              <AlertTriangle className="w-5 h-5" />
-              STRICT MODE WARNING
+              <XCircle className="w-5 h-5" />
+              ⛔ STRICT MODE: PUBLICATION BLOQUÉE
             </div>
             <div className="text-sm">
-              Schedule is incomplete ({percentIncomplete}% sections with missing periods).
+              Schedule incomplet ({percentIncomplete}% sections avec périodes manquantes).
               {hasInputErrors && (
-                <div className="mt-2 text-amber-300">
-                  → Fix input errors in buildSchedulingProblem first (minutesPerWeek / periodDurationMinutes)
+                <div className="mt-2 text-amber-300 font-semibold">
+                  → À corriger d'abord: buildSchedulingProblem (minutesPerWeek / periodDurationMinutes / DP1+DP2)
                 </div>
               )}
               {hasSolverErrors && !hasInputErrors && (
-                <div className="mt-2 text-rose-300">
-                  → Fix solver constraints or resource allocation (teachers/rooms)
+                <div className="mt-2 text-rose-300 font-semibold">
+                  → Résoudre: contraintes solveur ou allocation ressources (teachers/rooms)
                 </div>
               )}
+              <div className="mt-3 p-2 bg-white/10 rounded text-xs text-white">
+                Le bouton "Publish" sera désactivé tant que des périodes sont manquantes.
+              </div>
             </div>
           </div>
         )}

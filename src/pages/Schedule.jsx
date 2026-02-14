@@ -1847,7 +1847,19 @@ Now process the user's input and return ONLY the JSON object.`,
                   <Button
                     variant="outline"
                     className="border-blue-200 text-blue-900 hover:bg-blue-50"
-                    onClick={() => handlePublish(selectedVersion)}
+                    onClick={() => {
+                      const hasIncomplete = (orToolResult?.solverDebugMetrics?.sectionsMissingPeriods || 0) > 0;
+                      if (hasIncomplete) {
+                        const confirm = window.confirm(
+                          `⚠️ WARNING: ${orToolResult.solverDebugMetrics.sectionsMissingPeriods} sections have missing periods.\n\n` +
+                          `Publishing an incomplete schedule may cause issues.\n\n` +
+                          `Continue anyway?`
+                        );
+                        if (!confirm) return;
+                      }
+                      handlePublish(selectedVersion);
+                    }}
+                    disabled={!orToolResult || (orToolResult?.solverDebugMetrics?.sectionsMissingPeriods || 0) > 0}
                   >
                     <CheckCircle className="w-4 h-4 mr-2" />
                     Publish
@@ -2921,6 +2933,8 @@ Now process the user's input and return ONLY the JSON object.`,
                                   teachingGroups={teachingGroups}
                                   subjects={subjects}
                                   periodDurationMinutes={school?.period_duration_minutes || 60}
+                                  missingPeriodsByReason={orToolResult.solverDebugMetrics.missingPeriodsByReason || {}}
+                                  unmetRequirements={orToolResult.solverDebugMetrics.unmetRequirements || []}
                                 />
                               )}
 
