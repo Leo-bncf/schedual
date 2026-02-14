@@ -15,13 +15,17 @@ REFACTORED: Cohort-Centered Schedule Builder (v2.1)
 // CRITICAL FIX: subjectRequirements TDZ resolved - declared before all usage
 
 Deno.serve(async (req) => {
-  const BUILD_VERSION = '2026-02-13T11:10:00Z-FP1'; // Deployment marker
+  const BUILD_VERSION = '2026-02-13T11:15:00Z-TDZ-FIX'; // Deployment marker
   console.log(`[buildSchedulingProblem] 🚀 BUILD VERSION: ${BUILD_VERSION}`);
   
   let stage = 'init';
   let school_id = null;
   let schedule_version_id = null;
   let base44 = null;
+  
+  // CRITICAL: Declare ALL variables at top to prevent TDZ after Deno bundling
+  let subjectRequirements = [];
+  let lowPeriodWarnings = [];
   
   // DIAGNOSTICS: Track all adjustments and warnings
   const diagnosticLog = [];
@@ -577,8 +581,8 @@ if (isDP) {
       };
     });
     
-    // Build subjectRequirements (one per section)
-    const subjectRequirements = [];
+    // Build subjectRequirements (one per section) - ALREADY DECLARED AT TOP
+    subjectRequirements = []; // Reset array
     for (const tg of teachingGroupsDb) {
       const subjCode = subjectIdToCode[tg.subject_id];
       if (!subjCode) continue;
@@ -596,8 +600,8 @@ if (isDP) {
       });
     }
 
-    // VALIDATION: Check for suspiciously low requiredPeriods in DP groups
-    const lowPeriodWarnings = [];
+    // VALIDATION: Check for suspiciously low requiredPeriods in DP groups - ALREADY DECLARED AT TOP
+    lowPeriodWarnings = []; // Reset array
     subjectRequirements.forEach(req => {
       const tgId = String(req.studentGroup || '').replace('TG_', '');
       const tg = teachingGroupsDb.find(g => g.id === tgId);

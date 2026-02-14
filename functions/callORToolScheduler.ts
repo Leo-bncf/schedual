@@ -19,8 +19,8 @@ const chunk = (arr, n) => {
 // WRAPPER for OR-Tool scheduler with audit gating
 
 Deno.serve(async (req) => {
-  const RUNTIME_FINGERPRINT = "2026-02-13T11:10:00Z-FP1"; // HARD RUNTIME IDENTIFIER
-  const WRAPPER_BUILD_VERSION = '2026-02-13T11:10:00Z-FP1';
+  const RUNTIME_FINGERPRINT = "2026-02-13T11:15:00Z-TDZ-FIX"; // HARD RUNTIME IDENTIFIER
+  const WRAPPER_BUILD_VERSION = '2026-02-13T11:15:00Z-TDZ-FIX';
   console.log("🔍 RUNTIME_FINGERPRINT", RUNTIME_FINGERPRINT);
   console.log(`[callORToolScheduler] 🚀 WRAPPER BUILD VERSION: ${WRAPPER_BUILD_VERSION}`);
   
