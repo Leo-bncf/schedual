@@ -62,6 +62,7 @@ import ScheduleUpdateBanner from '../components/schedule/ScheduleUpdateBanner';
 import UtilizationStats from '../components/schedule/UtilizationStats';
 import CohortIntegrityReport from '../components/schedule/CohortIntegrityReport';
 import PreSolveAuditReport from '../components/schedule/PreSolveAuditReport';
+import PeriodCoverageDebug from '../components/schedule/PeriodCoverageDebug';
 
 
 export default function Schedule() {
@@ -2913,44 +2914,16 @@ Now process the user's input and return ONLY the JSON object.`,
                                 </div>
                               </div>
 
-                              {/* Solver Debug: Period Coverage by Section - FULL LIST */}
+                              {/* Solver Debug: Period Coverage - STUDENT-FILTERED VIEW */}
                               {orToolResult?.solverDebugMetrics?.periodCoverageBySection && (
-                                <div className="p-3 rounded-lg bg-blue-50 border-2 border-blue-300">
-                                  <div className="font-semibold text-blue-900 mb-2">🔍 Solver Debug: Period Coverage by Section (COMPLET)</div>
-                                  <div className="space-y-2 max-h-96 overflow-y-auto">
-                                    {(Array.isArray(orToolResult.solverDebugMetrics.periodCoverageBySection) 
-                                      ? orToolResult.solverDebugMetrics.periodCoverageBySection 
-                                      : Object.values(orToolResult.solverDebugMetrics.periodCoverageBySection || {}))
-                                      .map((cov, idx) => {
-                                        const missing = cov.missingPeriods || 0;
-                                        const tgId = String(cov.studentGroup || cov.section || '').replace('TG_', '');
-                                        const tg = teachingGroups.find(g => g.id === tgId);
-                                        const subj = tg ? subjects.find(s => s.id === tg.subject_id) : null;
-                                        return (
-                                          <div key={idx} className={`p-2 rounded text-xs ${missing > 0 ? 'bg-rose-100 border border-rose-300' : 'bg-white'}`}>
-                                            <div className="flex justify-between items-start">
-                                              <div className="flex-1">
-                                                <div className="font-mono text-[10px] text-slate-500">{cov.studentGroup || cov.section}</div>
-                                                {tg && <div className="font-semibold">{subj?.code || subj?.name || '?'} - {tg.name}</div>}
-                                                {tg && <div className="text-[10px] text-slate-600">Level: {tg.level || '?'} | Students: {tg.student_ids?.length || 0}</div>}
-                                              </div>
-                                              <div className="text-right">
-                                                <div className={missing > 0 ? 'font-bold text-rose-700' : 'text-slate-600'}>
-                                                  {cov.scheduledPeriods}/{cov.requiredPeriods}
-                                                </div>
-                                                {missing > 0 && <div className="text-rose-700 font-bold">-{missing} périodes</div>}
-                                              </div>
-                                            </div>
-                                          </div>
-                                        );
-                                      })}
-                                  </div>
-                                  {orToolResult.solverDebugMetrics.sectionsMissingPeriods > 0 && (
-                                    <div className="mt-2 p-2 bg-rose-100 border border-rose-300 rounded text-xs text-rose-800">
-                                      ⚠️ {orToolResult.solverDebugMetrics.sectionsMissingPeriods} sections ont des périodes manquantes
-                                    </div>
-                                  )}
-                                </div>
+                                <PeriodCoverageDebug
+                                  periodCoverageData={orToolResult.solverDebugMetrics.periodCoverageBySection}
+                                  students={students.filter(s => s.is_active && s.ib_programme === 'DP')}
+                                  teachingGroups={teachingGroups}
+                                  subjects={subjects}
+                                  selectedStudentId={selectedStudentId}
+                                  onStudentChange={setSelectedStudentId}
+                                />
                               )}
 
                               {/* Subject Requirements Sent to Solver */}
