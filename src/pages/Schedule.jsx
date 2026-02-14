@@ -681,6 +681,15 @@ Now process the user's input and return ONLY the JSON object.`,
           if (!dpGroupResult?.success) {
             console.error('❌ DP group generation failed:', dpGroupResult?.message || dpGroupResult?.error);
           }
+          
+          // CRITICAL: Sync student.assigned_groups after DP group creation
+          console.log('🔄 Syncing student assigned_groups...');
+          try {
+            const { data: syncResult } = await base44.functions.invoke('syncStudentTeachingGroups');
+            console.log('✅ Student sync result:', syncResult);
+          } catch (syncError) {
+            console.error('❌ Student sync failed:', syncError);
+          }
         } catch (dpError) {
           console.error('❌ DP group generation error:', dpError);
           console.error('Error details:', dpError.message, dpError.response?.data);

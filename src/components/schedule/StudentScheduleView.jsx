@@ -2,7 +2,8 @@ import React from 'react';
 import { Card, CardContent } from "@/components/ui/card";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Badge } from "@/components/ui/badge";
-import { GraduationCap } from 'lucide-react';
+import { Button } from "@/components/ui/button";
+import { GraduationCap, AlertCircle } from 'lucide-react';
 
 const DAYS = ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday'];
 
@@ -213,6 +214,19 @@ export default function StudentScheduleView({ students, slots, groups, subjects,
     6: 'bg-cyan-200/80 border-cyan-400',
   };
 
+  // Hard check: block render if student has no assigned_groups
+  const hasNoAssignedGroups = selectedStudent && (!selectedStudent.assigned_groups || selectedStudent.assigned_groups.length === 0);
+  
+  const handleResyncStudent = async () => {
+    try {
+      const { base44 } = await import('@/api/base44Client');
+      await base44.functions.invoke('syncStudentTeachingGroups');
+      window.location.reload();
+    } catch (e) {
+      alert('Sync failed: ' + e.message);
+    }
+  };
+
   return (
     <div className="space-y-4">
       <div className="flex items-center gap-4">
@@ -252,7 +266,36 @@ export default function StudentScheduleView({ students, slots, groups, subjects,
         )}
       </div>
 
-      {selectedStudent && (
+      {/* HARD CHECK: No assigned_groups = cannot render */}
+      {hasNoAssignedGroups && (
+        <Card className="border-2 border-rose-500 bg-rose-50">
+          <CardContent className="p-6 text-center space-y-4">
+            <div className="flex items-center justify-center gap-2 text-rose-900 font-bold text-lg">
+              <AlertCircle className="w-6 h-6" />
+              Student Has No Assigned Teaching Groups
+            </div>
+            <div className="text-sm text-rose-800">
+              <p className="mb-2">
+                <strong>{selectedStudent.full_name}</strong> ({selectedStudent.year_group}) has <strong>0 assigned_groups</strong>.
+              </p>
+              <p className="mb-3">
+                The schedule cannot be displayed without assigned teaching groups.
+              </p>
+              <p className="text-xs text-rose-700 bg-white p-2 rounded border border-rose-300">
+                This happens when DP groups are created/updated but student assignments aren't synced.
+              </p>
+            </div>
+            <Button 
+              onClick={handleResyncStudent}
+              className="bg-rose-600 hover:bg-rose-700"
+            >
+              Re-sync Student Assignments
+            </Button>
+          </CardContent>
+        </Card>
+      )}
+
+      {selectedStudent && !hasNoAssignedGroups && (
         <>
           {/* CRITICAL DEBUG: Slot Matching Analysis */}
           {(() => {
