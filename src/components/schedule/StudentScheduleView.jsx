@@ -9,8 +9,12 @@ import { cn } from "@/lib/utils";
 
 const DAYS = ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday'];
 
-export default function StudentScheduleView({ students, slots, groups, subjects, teachers, rooms, selectedStudentId, onStudentChange, exportId = "student-schedule", unassignedBySubjectCode = {}, timeslots = [], scheduleSettings }) {
+export default function StudentScheduleView({ students, slots, groups, subjects, teachers, rooms, selectedStudentId, onStudentChange, exportId = "student-schedule", unassignedBySubjectCode = {}, timeslots = [], scheduleSettings, scheduleVersionId }) {
   const selectedStudent = students.find(s => s.id === selectedStudentId);
+  const [serverSlots, setServerSlots] = React.useState(null);
+  const [diagnostics, setDiagnostics] = React.useState(null);
+  const [loadingServerSlots, setLoadingServerSlots] = React.useState(false);
+  const [useServerSlots, setUseServerSlots] = React.useState(true); // Default to server-side JOIN
   
   // DYNAMIC PERIOD CALCULATION: Derive from timeslots, not hardcoded
   const DAY_MAP = { MONDAY: 'Monday', TUESDAY: 'Tuesday', WEDNESDAY: 'Wednesday', THURSDAY: 'Thursday', FRIDAY: 'Friday' };
@@ -59,6 +63,53 @@ export default function StudentScheduleView({ students, slots, groups, subjects,
     return { timeslotToPosition: map, periodTimes: times, maxPeriodsPerDay: maxPeriods, breakRows: breakRowsData };
   }, [timeslots, scheduleSettings]);
 
+  // SERVER-SIDE JOIN: Load slots via backend API (SOURCE OF TRUTH)
+  React.useEffect(() => {
+    if (!selectedStudent || !scheduleVersionId || !useServerSlots) {
+      setServerSlots(null);
+      setDiagnostics(null);
+      return;
+    }
+    
+    const loadServerSlots = async () => {
+      setLoadingServerSlots(true);
+      console.log('[StudentScheduleView] 🔍 Loading slots via server-side API:', {
+        student_id: selectedStudent.id,
+        schedule_version_id: scheduleVersionId,
+        student_name: selectedStudent.full_name
+      });
+      
+      try {
+        const { base44 } = await import('@/api/base44Client');
+        const response = await base44.functions.invoke('getStudentScheduleSlots', {
+          student_id: selectedStudent.id,
+          schedule_version_id: scheduleVersionId
+        });
+        
+        console.log('[StudentScheduleView] ✅ Server response:', response.data);
+        
+        if (response.data?.ok) {
+          setServerSlots(response.data.slots);
+          setDiagnostics(response.data.diagnostics);
+          
+          console.log('[StudentScheduleView] 📊 Diagnostics:', {
+            total_slots: response.data.slots.length,
+            unique_tgs: response.data.diagnostics?.unique_teaching_groups,
+            missing_tgs: response.data.diagnostics?.missing_teaching_groups?.length || 0
+          });
+        } else {
+          console.error('[StudentScheduleView] ❌ Server error:', response.data);
+        }
+      } catch (error) {
+        console.error('[StudentScheduleView] ❌ Failed to load server slots:', error);
+      } finally {
+        setLoadingServerSlots(false);
+      }
+    };
+    
+    loadServerSlots();
+  }, [selectedStudent?.id, scheduleVersionId, useServerSlots]);
+  
   const getStudentSlots = (studentId) => {
     const student = students.find(s => s.id === studentId);
     const assignedGroupIds = Array.isArray(student?.assigned_groups) ? student.assigned_groups : [];
@@ -186,7 +237,9 @@ export default function StudentScheduleView({ students, slots, groups, subjects,
     return matchedSlots;
   };
 
-  const studentSlots = selectedStudent ? getStudentSlots(selectedStudent.id) : [];
+  // Use server-side slots if available, fallback to client-side join
+  const studentSlots = useServerSlots && serverSlots ? serverSlots : 
+                       selectedStudent ? getStudentSlots(selectedStudent.id) : [];
 
   const getSlotForPeriod = (day, uiRow) => {
     return studentSlots.find(s => {
@@ -231,6 +284,61 @@ export default function StudentScheduleView({ students, slots, groups, subjects,
 
   return (
     <div className="space-y-4">
+      {/* DEBUG PANEL */}
+      {selectedStudent && diagnostics && (
+        <Card className="border-blue-300 bg-blue-50">
+          <CardContent className="p-4">
+            <div className="flex items-center justify-between mb-2">
+              <div className="font-bold text-blue-900">🔍 Slot Loading Diagnostics</div>
+              <Button 
+                size="sm" 
+                variant="outline"
+                onClick={() => setUseServerSlots(!useServerSlots)}
+                className="text-xs"
+              >
+                {useServerSlots ? '🟢 Server-side JOIN' : '🔴 Client-side JOIN'}
+              </Button>
+            </div>
+            <div className="grid grid-cols-3 gap-4 text-sm">
+              <div>
+                <div className="text-blue-700 font-semibold">Slots Loaded</div>
+                <div className="text-2xl font-bold text-blue-900">{diagnostics.total_slots_loaded}</div>
+              </div>
+              <div>
+                <div className="text-blue-700 font-semibold">Unique Teaching Groups</div>
+                <div className="text-2xl font-bold text-blue-900">{diagnostics.unique_teaching_groups}</div>
+              </div>
+              <div>
+                <div className="text-blue-700 font-semibold">Missing TGs</div>
+                <div className={cn("text-2xl font-bold", 
+                  diagnostics.missing_teaching_groups?.length > 0 ? "text-red-600" : "text-green-600")}>
+                  {diagnostics.missing_teaching_groups?.length || 0}
+                </div>
+              </div>
+            </div>
+            
+            {diagnostics.missing_teaching_groups?.length > 0 && (
+              <div className="mt-3 p-2 bg-red-100 border border-red-300 rounded text-xs">
+                <div className="font-bold text-red-800 mb-1">❌ Teaching Groups with NO SLOTS:</div>
+                <div className="space-y-1">
+                  {diagnostics.missing_teaching_groups.slice(0, 5).map((tg, i) => (
+                    <div key={i} className="text-red-700">
+                      • {tg.subject_name} ({tg.level || 'N/A'}) - {tg.periods_per_week}p/week expected
+                    </div>
+                  ))}
+                </div>
+              </div>
+            )}
+            
+            <div className="mt-3 text-xs text-blue-700">
+              <div><strong>Schedule Version:</strong> {scheduleVersionId}</div>
+              <div><strong>Assigned Groups:</strong> {diagnostics.assigned_groups_count}</div>
+              <div><strong>Loading Method:</strong> {useServerSlots ? 'Server-side API (getStudentScheduleSlots)' : 'Client-side JOIN'}</div>
+            </div>
+          </CardContent>
+        </Card>
+      )}
+      
       <div className="flex items-center gap-4">
         <GraduationCap className="w-5 h-5 text-indigo-600" />
         <Select value={selectedStudentId || ''} onValueChange={onStudentChange}>
@@ -251,6 +359,7 @@ export default function StudentScheduleView({ students, slots, groups, subjects,
             <Badge variant="outline" className="bg-blue-50 text-blue-900">
               {(selectedStudent.assigned_groups || []).length} groups assigned
             </Badge>
+            {loadingServerSlots && <Badge variant="outline">Loading server slots...</Badge>}
           </>
         )}
         {selectedStudent && (
