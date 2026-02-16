@@ -385,20 +385,38 @@ Deno.serve(async (req) => {
       solverRequestHeadersSent = { 'Content-Type': 'application/json', 'X-API-Key': maskApiKey(SOLVER_API_KEY) };
       // Solver expects top-level schoolId + scheduleVersionId + problem data + demandByTG
       // Spread problem first, then overwrite to prevent null/undefined from problem overwriting our values
+      // CRITICAL: Build demandByTG AGAIN (redundant but explicit for solver)
+      const demandByTGForPayload = {};
+      for (const tg of teachingGroupsFresh) {
+        if (tg.periods_per_week && tg.periods_per_week > 0) {
+          demandByTGForPayload[tg.id] = tg.periods_per_week;
+        }
+      }
+
+      console.log('[callORToolScheduler] 🔒 HARD CONSTRAINT: demandByTG for payload:', {
+        total_groups: Object.keys(demandByTGForPayload).length,
+        total_periods_demanded: Object.values(demandByTGForPayload).reduce((sum, v) => sum + v, 0),
+        sample: Object.entries(demandByTGForPayload).slice(0, 5)
+      });
+
       const orToolPayload = {
         ...problem,
         schoolId: schoolId,
         scheduleVersionId: schedule_version_id,
-        demandByTG: demandByTG, // CRITICAL: Explicit period demand per teaching group (SOURCE OF TRUTH)
+        demandByTG: demandByTGForPayload, // CRITICAL: Explicit period demand per teaching group (SOURCE OF TRUTH)
         teachingGroupsMetadata: teachingGroupsFresh.map(tg => ({
           id: tg.id,
           name: tg.name,
           subject_id: tg.subject_id,
+          level: tg.level || null,
+          hours_per_week: tg.hours_per_week || null,
+          minutes_per_week: tg.minutes_per_week || null,
           periods_per_week: tg.periods_per_week || 0,
           teacher_id: tg.teacher_id || null,
           preferred_room_id: tg.preferred_room_id || null
         })),
-        debug: true // Enable solver debug mode for detailed coverage metrics
+        debug: true, // Enable solver debug mode for detailed coverage metrics
+        strictDemand: true // FLAG: Solver MUST respect demandByTG exactly
       };
       // Double assurance: force overwrite even if problem contained null/undefined
       orToolPayload.schoolId = schoolId;
