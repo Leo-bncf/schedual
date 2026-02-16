@@ -57,10 +57,14 @@ export default function GlobalPeriodCoverageReport({
       const yearGroup = tg?.year_group || '?';
       const isDPHL = level === 'HL' && (subj?.ib_level === 'DP' || yearGroup?.includes('DP'));
       const isDPSL = level === 'SL' && (subj?.ib_level === 'DP' || yearGroup?.includes('DP'));
-      const expectedIB = isDPHL ? 5 : isDPSL ? 3 : null;
-      const inputBad = expectedIB && cov.requiredPeriods < expectedIB;
+      
+      // SOURCE OF TRUTH for Expected: TeachingGroup.periods_per_week (not constraints)
+      const expectedPeriods = tg?.periods_per_week || cov.requiredPeriods || 0;
+      
+      const expectedIB = isDPHL ? 6 : isDPSL ? 4 : null; // IB 2026 standards: HL=6, SL=4
+      const inputBad = expectedIB && expectedPeriods < expectedIB;
       const missing = cov.missingPeriods || 0;
-      const solverBlocked = !inputBad && expectedIB && cov.requiredPeriods >= expectedIB && missing > 0;
+      const solverBlocked = !inputBad && expectedIB && expectedPeriods >= expectedIB && missing > 0;
       
       return {
         ...cov,
@@ -71,6 +75,7 @@ export default function GlobalPeriodCoverageReport({
         yearGroup,
         isDPHL,
         isDPSL,
+        expectedPeriods, // OVERRIDE: Use TG.periods_per_week as source of truth
         expectedIB,
         inputBad,
         solverBlocked,
@@ -169,24 +174,24 @@ export default function GlobalPeriodCoverageReport({
               INPUT ERROR: requiredPeriods trop bas (IB standards non respectés)
             </div>
             <div className="text-sm text-amber-900">
-              <div className="font-semibold mb-1">Règle IB (si period=60min):</div>
-              <ul className="list-disc ml-5 space-y-0.5">
-                <li>HL = 300min/semaine → <strong>5 périodes/semaine minimum</strong></li>
-                <li>SL = 180min/semaine → <strong>3 périodes/semaine minimum</strong></li>
-              </ul>
+            <div className="font-semibold mb-1">Règle IB 2026 (si period=60min):</div>
+            <ul className="list-disc ml-5 space-y-0.5">
+              <li>HL = 360min/semaine (6h) → <strong>6 périodes/semaine minimum</strong></li>
+              <li>SL = 240min/semaine (4h) → <strong>4 périodes/semaine minimum</strong></li>
+            </ul>
             </div>
             
             {inputBadHL.length > 0 && (
               <div className="mt-3 p-3 bg-white rounded border border-amber-300">
                 <div className="font-bold text-amber-900 mb-2">
-                  ❌ {inputBadHL.length} sections HL avec requiredPeriods {'<'} 5:
+                  ❌ {inputBadHL.length} sections HL avec expectedPeriods {'<'} 6:
                 </div>
                 <div className="space-y-1 text-xs max-h-32 overflow-y-auto">
                   {inputBadHL.slice(0, 10).map((c, i) => (
                     <div key={i} className="flex justify-between">
                       <span>{c.subjectCode} - {c.tgName}</span>
                       <span className="font-mono font-bold text-rose-700">
-                        {c.requiredPeriods}/5 ({c.minutesPerWeek || '?'}min)
+                        {c.expectedPeriods}/6 ({c.minutesPerWeek || '?'}min)
                       </span>
                     </div>
                   ))}
@@ -200,14 +205,14 @@ export default function GlobalPeriodCoverageReport({
             {inputBadSL.length > 0 && (
               <div className="mt-3 p-3 bg-white rounded border border-amber-300">
                 <div className="font-bold text-amber-900 mb-2">
-                  ❌ {inputBadSL.length} sections SL avec requiredPeriods {'<'} 3:
+                  ❌ {inputBadSL.length} sections SL avec expectedPeriods {'<'} 4:
                 </div>
                 <div className="space-y-1 text-xs max-h-32 overflow-y-auto">
                   {inputBadSL.slice(0, 10).map((c, i) => (
                     <div key={i} className="flex justify-between">
                       <span>{c.subjectCode} - {c.tgName}</span>
                       <span className="font-mono font-bold text-rose-700">
-                        {c.requiredPeriods}/3 ({c.minutesPerWeek || '?'}min)
+                        {c.expectedPeriods}/4 ({c.minutesPerWeek || '?'}min)
                       </span>
                     </div>
                   ))}
@@ -349,24 +354,24 @@ export default function GlobalPeriodCoverageReport({
 
         {/* DIAGNOSTIC LEGEND */}
         <div className="p-3 bg-slate-100 rounded border border-slate-300 text-xs space-y-2">
-          <div className="font-bold text-slate-900">📋 Interprétation des statuts:</div>
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-2">
-            <div className="flex items-start gap-2">
-              <Badge className="bg-amber-200 text-amber-900 text-[10px] mt-0.5">INPUT_BAD</Badge>
-              <span className="text-[10px]">
-                requiredPeriods &lt; 5 (HL) ou &lt; 3 (SL) → Bug buildSchedulingProblem (minutesPerWeek/periodDuration)
-              </span>
-            </div>
+        <div className="font-bold text-slate-900">📋 Interprétation des statuts:</div>
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-2">
+          <div className="flex items-start gap-2">
+            <Badge className="bg-amber-200 text-amber-900 text-[10px] mt-0.5">INPUT_BAD</Badge>
+            <span className="text-[10px]">
+              expectedPeriods &lt; 6 (HL) ou &lt; 4 (SL) → Bug TeachingGroup config ou buildSchedulingProblem
+            </span>
+          </div>
             <div className="flex items-start gap-2">
               <Badge className="bg-rose-200 text-rose-900 text-[10px] mt-0.5">SOLVER_BLOCKED</Badge>
               <span className="text-[10px]">
-                requiredPeriods OK mais missingPeriods &gt; 0 → Conflits prof/salle/bloc
+                expectedPeriods OK mais missingPeriods &gt; 0 → Conflits prof/salle/bloc
               </span>
             </div>
             <div className="flex items-start gap-2">
               <Badge className="bg-blue-200 text-blue-900 text-[10px] mt-0.5">UI_MAP</Badge>
               <span className="text-[10px]">
-                scheduledPeriods == requiredPeriods mais pas visible → Bug TimetableGrid mapping
+                scheduledPeriods == expectedPeriods mais pas visible → Bug TimetableGrid mapping
               </span>
             </div>
           </div>
@@ -393,7 +398,7 @@ export default function GlobalPeriodCoverageReport({
                 {enriched.map((cov, idx) => {
                   const missing = cov.missingPeriods || 0;
                   const isError = cov.inputBad || cov.solverBlocked;
-                  const hasUIBug = cov.scheduledPeriods === cov.requiredPeriods && missing === 0 && unmappableSlots.details.some(d => d.section === (cov.studentGroup || cov.section));
+                  const hasUIBug = cov.scheduledPeriods === cov.expectedPeriods && missing === 0 && unmappableSlots.details.some(d => d.section === (cov.studentGroup || cov.section));
                   
                   return (
                     <TableRow 
@@ -426,7 +431,7 @@ export default function GlobalPeriodCoverageReport({
                       </TableCell>
                       <TableCell className="text-right font-mono font-semibold">
                         <div className={cov.inputBad ? 'text-amber-700' : 'text-slate-900'}>
-                          {cov.requiredPeriods}
+                          {cov.expectedPeriods}
                         </div>
                         {cov.inputBad && cov.expectedIB && (
                           <div className="text-[9px] text-amber-600">IB: {cov.expectedIB}</div>
@@ -473,8 +478,8 @@ export default function GlobalPeriodCoverageReport({
             <div className="p-3 rounded-lg bg-amber-100 border border-amber-300">
               <div className="font-semibold text-amber-900 mb-1">Input Errors</div>
               <div className="space-y-1">
-                <div>HL sections {'<'} 5 periods: <strong className="text-amber-800">{inputBadHL.length}</strong></div>
-                <div>SL sections {'<'} 3 periods: <strong className="text-amber-800">{inputBadSL.length}</strong></div>
+                <div>HL sections {'<'} 6 periods: <strong className="text-amber-800">{inputBadHL.length}</strong></div>
+                <div>SL sections {'<'} 4 periods: <strong className="text-amber-800">{inputBadSL.length}</strong></div>
               </div>
             </div>
           )}
