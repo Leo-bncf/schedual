@@ -75,8 +75,7 @@ Deno.serve(async (req) => {
     const teachingGroupsFresh = await base44.entities.TeachingGroup.filter({ school_id: schoolId });
     console.log(`[callORToolScheduler] Fetched ${teachingGroupsFresh.length} teaching groups (post-generation/sync)`);
     
-    // BUILD SOLVER DEMAND FROM TEACHING GROUPS (SOURCE OF TRUTH)
-    // Each teaching group explicitly stores periods_per_week - use this as the solver's constraint
+    // CRITICAL: BUILD demandByTG FIRST (before buildProblem call) - TDZ FIX
     stage = 'buildDemandByTG';
     const demandByTG = {};
     for (const tg of teachingGroupsFresh) {
@@ -85,11 +84,11 @@ Deno.serve(async (req) => {
         console.log(`[callORToolScheduler] Skipping TG ${tg.id} (${tg.name}): periods_per_week=${tg.periods_per_week}`);
         continue;
       }
-      
+
       demandByTG[tg.id] = tg.periods_per_week;
     }
-    
-    console.log(`[callORToolScheduler] demandByTG constructed: ${Object.keys(demandByTG).length} teaching groups with explicit demand`);
+
+    console.log(`[callORToolScheduler] ✅ demandByTG constructed BEFORE buildProblem: ${Object.keys(demandByTG).length} teaching groups with explicit demand`);
     console.log(`[callORToolScheduler] demandByTG sample (first 10):`, Object.entries(demandByTG).slice(0, 10));
     
     // Diagnostic: Show groups without periods_per_week
@@ -345,6 +344,8 @@ Deno.serve(async (req) => {
     console.log('  OR_TOOL_API_KEY =', Deno.env.get('OR_TOOL_API_KEY') ? '***SET***' : 'NOT_SET');
     console.log('  SOLVER_API_KEY =', Deno.env.get('SOLVER_API_KEY') ? '***SET***' : 'NOT_SET');
     console.log('  FINAL ENDPOINT USED:', SOLVER_ENDPOINT);
+    console.log('[OR] endpointUsed =', SOLVER_ENDPOINT);
+    console.log('[OR] healthUrl =', SOLVER_ENDPOINT?.replace('/solve-and-push', '/health'));
 
     if (!SOLVER_ENDPOINT) {
       console.error('[callORToolScheduler] ❌ Missing SOLVER_ENDPOINT');
@@ -368,17 +369,20 @@ Deno.serve(async (req) => {
     const solverEndpointUsed = SOLVER_ENDPOINT;
     console.log(`[callORToolScheduler] ✅ Calling solver (${solverIdentity.engine}) at`, solverEndpointUsed, 'schedule_version_id =', schedule_version_id);
 
-    // Diagnostics defaults + /health check
+    // Diagnostics defaults + /health check (VPS returns text/plain "OK")
     let solverHttpStatus = null;
     let solverRequestHeadersSent = { 'Content-Type': 'application/json', 'X-API-Key': '***' };
     let solverHealthStatus = null;
     let solverHealthOk = null;
     try {
       const healthUrl = solverEndpointUsed.replace('/solve-and-push', '/health');
+      console.log('[callORToolScheduler] Testing solver /health at:', healthUrl);
       const healthRes = await fetch(healthUrl, { method: 'GET' });
       solverHealthStatus = healthRes.status;
       solverHealthOk = healthRes.ok;
-      console.log(`[callORToolScheduler] Solver /health status = ${solverHealthStatus}`);
+      // VPS returns text/plain "OK", not JSON
+      const healthBody = await healthRes.text();
+      console.log(`[callORToolScheduler] Solver /health status = ${solverHealthStatus}, body = "${healthBody}"`);
     } catch (e) {
       console.warn('[callORToolScheduler] Solver /health check failed:', String(e?.message || e));
       solverHealthStatus = null;
@@ -394,27 +398,19 @@ Deno.serve(async (req) => {
         'X-API-Key': SOLVER_API_KEY
       };
       solverRequestHeadersSent = { 'Content-Type': 'application/json', 'X-API-Key': maskApiKey(SOLVER_API_KEY) };
-      // Solver expects top-level schoolId + scheduleVersionId + problem data + demandByTG
-      // Spread problem first, then overwrite to prevent null/undefined from problem overwriting our values
-      // CRITICAL: Build demandByTG AGAIN (redundant but explicit for solver)
-      const demandByTGForPayload = {};
-      for (const tg of teachingGroupsFresh) {
-        if (tg.periods_per_week && tg.periods_per_week > 0) {
-          demandByTGForPayload[tg.id] = tg.periods_per_week;
-        }
-      }
 
-      console.log('[callORToolScheduler] 🔒 HARD CONSTRAINT: demandByTG for payload:', {
-        total_groups: Object.keys(demandByTGForPayload).length,
-        total_periods_demanded: Object.values(demandByTGForPayload).reduce((sum, v) => sum + v, 0),
-        sample: Object.entries(demandByTGForPayload).slice(0, 5)
+      // CRITICAL: Use demandByTG already constructed earlier (TDZ FIX - NO REDECLARATION)
+      console.log('[callORToolScheduler] 🔒 HARD CONSTRAINT: using demandByTG from earlier:', {
+        total_groups: Object.keys(demandByTG).length,
+        total_periods_demanded: Object.values(demandByTG).reduce((sum, v) => sum + v, 0),
+        sample: Object.entries(demandByTG).slice(0, 5)
       });
 
       const orToolPayload = {
         ...problem,
         schoolId: schoolId,
         scheduleVersionId: schedule_version_id,
-        demandByTG: demandByTGForPayload, // CRITICAL: Explicit period demand per teaching group (SOURCE OF TRUTH)
+        demandByTG: demandByTG, // CRITICAL: Explicit period demand per teaching group (SOURCE OF TRUTH)
         teachingGroupsMetadata: teachingGroupsFresh.map(tg => ({
           id: tg.id,
           name: tg.name,
