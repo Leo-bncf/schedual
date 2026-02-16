@@ -194,12 +194,12 @@ Deno.serve(async (req) => {
         minutesPerWeek = 0;
         console.log(`[generateDpTeachingGroups] EE detected: ${subject.name} → 0 periods/week (not timetabled)`);
       } else {
-        // STANDARD DP SUBJECTS: HL = 5 periods, SL = 3 periods
+        // STANDARD DP SUBJECTS: HL = 6 periods, SL = 3 periods
         if (groupData.level === 'HL') {
-          periodsPerWeek = 5;
+          periodsPerWeek = 6;
           minutesPerWeek = subject.hl_minutes_per_week_default 
             || (subject.hl_hours_per_week ? subject.hl_hours_per_week * 60 : 0)
-            || 300;
+            || 360;
         } else if (groupData.level === 'SL') {
           periodsPerWeek = 3;
           minutesPerWeek = subject.sl_minutes_per_week_default 
