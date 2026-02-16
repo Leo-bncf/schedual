@@ -44,7 +44,8 @@ import {
   Shield,
   Info,
   Settings,
-  FileText
+  FileText,
+  Calculator
 } from 'lucide-react';
 import PageHeader from '../components/ui-custom/PageHeader';
 import TimetableGrid from '../components/schedule/TimetableGrid';
@@ -590,16 +591,46 @@ Now process the user's input and return ONLY the JSON object.`,
     }
   };
 
+  // Auto-calculate periods_per_day from time range + duration
+  const calculatePeriodsPerDay = (config) => {
+    const dayStart = config.day_start_time || config.school_start_time || '08:00';
+    const dayEnd = config.day_end_time || '18:00';
+    const periodDuration = config.period_duration_minutes || 60;
+    const breaks = config.breaks || [];
+    
+    const [startHour, startMin] = dayStart.split(':').map(Number);
+    const [endHour, endMin] = dayEnd.split(':').map(Number);
+    const totalMinutes = (endHour * 60 + endMin) - (startHour * 60 + startMin);
+    const breakMinutes = breaks.reduce((sum, b) => {
+      const [bStartH, bStartM] = b.start.split(':').map(Number);
+      const [bEndH, bEndM] = b.end.split(':').map(Number);
+      return sum + ((bEndH * 60 + bEndM) - (bStartH * 60 + bStartM));
+    }, 0);
+    
+    const availableMinutes = totalMinutes - breakMinutes;
+    return Math.floor(availableMinutes / periodDuration);
+  };
+
+  const handleRecalculatePeriodsPerDay = () => {
+    const calculated = calculatePeriodsPerDay(schoolConfig);
+    setSchoolConfig({ ...schoolConfig, periods_per_day: calculated });
+    toast.success(`Recalculated: ${calculated} periods/day`);
+  };
+
   const handleSaveConfig = async () => {
     if (!school) return;
     setIsSavingConfig(true);
     try {
+      // Auto-calculate periods_per_day before saving
+      const calculatedPeriods = calculatePeriodsPerDay(schoolConfig);
+      
       await updateSchoolMutation.mutateAsync({
         id: school.id,
         data: {
           days_per_week: schoolConfig.days_per_week,
           school_start_time: schoolConfig.school_start_time,
           period_duration_minutes: schoolConfig.period_duration_minutes,
+          periods_per_day: calculatedPeriods, // Force calculated value
           day_start_time: schoolConfig.day_start_time,
           day_end_time: schoolConfig.day_end_time,
           days_of_week: schoolConfig.days_of_week,
@@ -622,7 +653,7 @@ Now process the user's input and return ONLY the JSON object.`,
       // Sync test subjects to Subject entity
       await base44.functions.invoke('syncTestSubjects');
 
-      toast.success('Configuration saved successfully');
+      toast.success(`Configuration saved (${calculatedPeriods} periods/day calculated)`);
     } catch (error) {
       console.error('Failed to save configuration:', error);
       toast.error('Failed to save configuration');
@@ -2367,7 +2398,47 @@ Now process the user's input and return ONLY the JSON object.`,
 
           {/* Settings Tab */}
           <TabsContent value="settings" className="space-y-6">
-            <div className="flex justify-end">
+            {/* Validation Banner */}
+            {(() => {
+              const calculated = calculatePeriodsPerDay(schoolConfig);
+              const mismatch = calculated !== schoolConfig.periods_per_day;
+              
+              if (mismatch) {
+                return (
+                  <Card className="border-2 border-rose-500 bg-rose-50">
+                    <CardContent className="p-4">
+                      <div className="flex items-start gap-3">
+                        <AlertTriangle className="w-5 h-5 text-rose-700 flex-shrink-0 mt-0.5" />
+                        <div className="flex-1">
+                          <div className="font-bold text-rose-900 mb-1">⚠️ Invalid Configuration Detected</div>
+                          <div className="text-sm text-rose-800 mb-3">
+                            Config says <strong>{schoolConfig.periods_per_day} periods/day</strong>, but time range {schoolConfig.day_start_time}→{schoolConfig.day_end_time} with {schoolConfig.period_duration_minutes}min periods = <strong>{calculated} periods/day</strong> (actual).
+                          </div>
+                          <Button
+                            size="sm"
+                            onClick={handleRecalculatePeriodsPerDay}
+                            className="bg-rose-700 hover:bg-rose-800 text-white"
+                          >
+                            Recalculate to {calculated} periods/day
+                          </Button>
+                        </div>
+                      </div>
+                    </CardContent>
+                  </Card>
+                );
+              }
+              return null;
+            })()}
+            
+            <div className="flex justify-end gap-2">
+              <Button
+                variant="outline"
+                onClick={handleRecalculatePeriodsPerDay}
+                className="border-blue-200"
+              >
+                <Calculator className="w-4 h-4 mr-2" />
+                Recalculate Periods/Day
+              </Button>
               <Button
                 onClick={handleSaveConfig}
                 disabled={isSavingConfig}
