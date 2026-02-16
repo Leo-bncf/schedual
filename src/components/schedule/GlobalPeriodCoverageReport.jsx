@@ -455,7 +455,9 @@ export default function GlobalPeriodCoverageReport({
                         </span>
                       </TableCell>
                       <TableCell>
-                        {hasUIBug ? (
+                        {cov.expectedPeriods === null || cov.expectedPeriods === undefined ? (
+                          <Badge className="bg-slate-200 text-slate-700 text-[10px]">UNKNOWN</Badge>
+                        ) : hasUIBug ? (
                           <Badge className="bg-blue-200 text-blue-900 text-[10px]">UI_MAP</Badge>
                         ) : cov.inputBad ? (
                           <Badge className="bg-amber-200 text-amber-900 text-[10px]">INPUT_BAD</Badge>

@@ -200,11 +200,19 @@ export default function Schedule() {
       const inserted = (orToolResult?.persistedSlotsSample || []).map(s => ({ ...s, schedule_version: selectedVersion.id }));
       const result = Array.isArray(inserted) && inserted.length > 0 ? [...slots, ...inserted] : slots;
       
+      // Determine actual timeslots source (must match useMemo logic)
+      const timeslotsSource = solverTimeslots && solverTimeslots.length > 0 
+        ? 'persisted from solver (stable)' 
+        : orToolResult?.timeslots && orToolResult.timeslots.length > 0
+          ? 'from solver result (temporary)'
+          : result.length > 0 && orToolResult?.scheduleSettingsSent
+            ? 'reconstructed from solver scheduleSettings'
+            : 'fallback - school config';
+      
       // Debug logging
       console.log('[Schedule] DEBUG - scheduleSlots.length:', result.length);
-      console.log('[Schedule] DEBUG - scheduleSlots[0] keys:', Object.keys(result[0] || {}));
-      console.log('[Schedule] DEBUG - scheduleSlots[0]:', result[0]);
-      console.log('[Schedule] DEBUG - timeslots source:', orToolResult?.timeslots ? 'from orToolResult' : 'reconstructed from school config');
+      console.log('[Schedule] DEBUG - timeslots source:', timeslotsSource);
+      console.log('[Schedule] DEBUG - solverTimeslots:', solverTimeslots?.length || 0, 'slots');
       
       return result;
     },
