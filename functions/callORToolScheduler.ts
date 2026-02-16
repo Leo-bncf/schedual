@@ -48,11 +48,12 @@ Deno.serve(async (req) => {
     const body = await req.json();
     schedule_version_id = body?.schedule_version_id;
     const auditOnly = body?.audit === true;
+    const smokeTest = body?.smoke_test === true;
     const dpStudyWeekly = body?.dp_study_weekly ?? 6;
     const dpMinEndTime = body?.dp_min_end_time ?? '14:30';
     requestedSchoolId = body?.school_id || null;
     schoolId = requestedSchoolId || user.school_id;
-    console.log(`[callORToolScheduler] ${stage}: schedule_version_id=${schedule_version_id}, school_id=${schoolId}`);
+    console.log(`[callORToolScheduler] ${stage}: schedule_version_id=${schedule_version_id}, school_id=${schoolId}, smoke_test=${smokeTest}`);
     try {
       if (schedule_version_id) {
         const sv = await base44.entities.ScheduleVersion.filter({ id: schedule_version_id });
@@ -295,6 +296,108 @@ Deno.serve(async (req) => {
       }
     } catch (e) {
       console.warn('[callORToolScheduler] Failed to fetch solver info:', e.message);
+    }
+    
+    // SMOKE TEST MODE: Minimal payload to validate VPS connectivity (EARLY EXIT)
+    if (smokeTest) {
+      console.log('[callORToolScheduler] 🧪 SMOKE TEST MODE: Sending minimal payload to validate solver');
+      
+      // Skip to solver call stage
+      stage = 'callSolver';
+      const SOLVER_ENDPOINT = Deno.env.get('OR_TOOL_ENDPOINT') || Deno.env.get('SOLVER_ENDPOINT');
+      const SOLVER_API_KEY = Deno.env.get('OR_TOOL_API_KEY') || Deno.env.get('SOLVER_API_KEY');
+      
+      if (!SOLVER_ENDPOINT || !SOLVER_API_KEY) {
+        return Response.json({
+          ok: false,
+          smokeTest: true,
+          error: 'Missing solver endpoint or API key',
+          envCheck: {
+            OR_TOOL_ENDPOINT: Deno.env.get('OR_TOOL_ENDPOINT') || null,
+            SOLVER_ENDPOINT: Deno.env.get('SOLVER_ENDPOINT') || null,
+            hasApiKey: !!(Deno.env.get('OR_TOOL_API_KEY') || Deno.env.get('SOLVER_API_KEY'))
+          }
+        }, { status: 200 });
+      }
+      
+      const smokePayload = {
+        schoolId: school_id,
+        scheduleVersionId: schedule_version_id,
+        rooms: [{ id: 1, name: "Room A", capacity: 30 }],
+        teachers: [{ id: 1, name: "Teacher X" }],
+        subjects: [{ id: "000000000000000000000001", code: "MATH", name: "Mathematics" }],
+        lessons: [
+          { id: 1, subject: "MATH", studentGroup: "TG_smoke1", requiredCapacity: 20, timeslotId: null, roomId: 1, teacherId: 1 },
+          { id: 2, subject: "MATH", studentGroup: "TG_smoke1", requiredCapacity: 20, timeslotId: null, roomId: 1, teacherId: 1 },
+          { id: 3, subject: "MATH", studentGroup: "TG_smoke1", requiredCapacity: 20, timeslotId: null, roomId: 1, teacherId: 1 },
+          { id: 4, subject: "MATH", studentGroup: "TG_smoke1", requiredCapacity: 20, timeslotId: null, roomId: 1, teacherId: 1 },
+          { id: 5, subject: "MATH", studentGroup: "TG_smoke1", requiredCapacity: 20, timeslotId: null, roomId: 1, teacherId: 1 }
+        ],
+        timeslots: [
+          { id: 1, dayOfWeek: "MONDAY", startTime: "08:00", endTime: "09:00" },
+          { id: 2, dayOfWeek: "MONDAY", startTime: "09:00", endTime: "10:00" },
+          { id: 3, dayOfWeek: "MONDAY", startTime: "10:00", endTime: "11:00" },
+          { id: 4, dayOfWeek: "MONDAY", startTime: "11:00", endTime: "12:00" },
+          { id: 5, dayOfWeek: "MONDAY", startTime: "14:00", endTime: "15:00" }
+        ],
+        subjectRequirements: [
+          { studentGroup: "TG_smoke1", subject: "MATH", minutesPerWeek: 300, requiredPeriods: 5 }
+        ],
+        demandByTG: { "smoke1": 5 },
+        scheduleSettings: {
+          periodDurationMinutes: 60,
+          dayStartTime: "08:00",
+          dayEndTime: "17:00",
+          daysOfWeek: ["MONDAY", "TUESDAY", "WEDNESDAY", "THURSDAY", "FRIDAY"],
+          breaks: [],
+          minPeriodsPerDay: 5,
+          targetPeriodsPerDay: 8
+        },
+        debug: true,
+        strictDemand: true
+      };
+      
+      console.log('[callORToolScheduler] 🧪 Smoke payload preview:', JSON.stringify(smokePayload).slice(0, 500));
+      
+      try {
+        const smokeResponse = await fetch(SOLVER_ENDPOINT, {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            'X-API-Key': SOLVER_API_KEY
+          },
+          body: JSON.stringify(smokePayload)
+        });
+        
+        const smokeText = await smokeResponse.text();
+        console.log('[callORToolScheduler] 🧪 Smoke response:', { status: smokeResponse.status, ok: smokeResponse.ok, preview: smokeText.slice(0, 500) });
+        
+        let smokeResult;
+        try {
+          smokeResult = JSON.parse(smokeText);
+        } catch {
+          smokeResult = { rawText: smokeText };
+        }
+        
+        return Response.json({
+          ok: smokeResponse.ok,
+          smokeTest: true,
+          solverHttpStatus: smokeResponse.status,
+          solverResponse: smokeResult,
+          endpointUsed: SOLVER_ENDPOINT,
+          message: smokeResponse.ok ? '✅ Smoke test passed - solver is reachable' : '❌ Smoke test failed - check solver logs'
+        });
+      } catch (smokeError) {
+        console.error('[callORToolScheduler] 🧪 Smoke test error:', smokeError);
+        return Response.json({
+          ok: false,
+          smokeTest: true,
+          error: String(smokeError.message || smokeError),
+          errorStack: String(smokeError.stack || ''),
+          endpointUsed: SOLVER_ENDPOINT,
+          message: '❌ Smoke test failed - network/connection error'
+        }, { status: 200 });
+      }
     }
     
     // EARLY RETURN: If audit-only mode, return problem without calling solver
