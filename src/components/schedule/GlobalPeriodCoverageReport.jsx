@@ -17,7 +17,8 @@ export default function GlobalPeriodCoverageReport({
   subjects,
   periodDurationMinutes = 60,
   missingPeriodsByReason = {},
-  unmetRequirements = []
+  unmetRequirements = [],
+  subjectRequirements = [] // SOURCE OF TRUTH for requiredPeriods by section
 }) {
   // Detect unmappable timeslot_ids in slots
   const unmappableSlots = React.useMemo(() => {
@@ -58,13 +59,15 @@ export default function GlobalPeriodCoverageReport({
       const isDPHL = level === 'HL' && (subj?.ib_level === 'DP' || yearGroup?.includes('DP'));
       const isDPSL = level === 'SL' && (subj?.ib_level === 'DP' || yearGroup?.includes('DP'));
       
-      // SOURCE OF TRUTH for Expected: TeachingGroup.periods_per_week (not constraints)
-      const expectedPeriods = tg?.periods_per_week || cov.requiredPeriods || 0;
+      // SOURCE OF TRUTH for Expected: 1) TG.periods_per_week 2) subjectRequirements.requiredPeriods 3) cov.requiredPeriods
+      const studentGroupKey = cov.studentGroup || cov.section;
+      const reqFromSubjectReqs = subjectRequirements.find(r => r.studentGroup === studentGroupKey);
+      const expectedPeriods = tg?.periods_per_week || reqFromSubjectReqs?.requiredPeriods || cov.requiredPeriods || null;
       
       const expectedIB = isDPHL ? 6 : isDPSL ? 4 : null; // IB 2026 standards: HL=6, SL=4
-      const inputBad = expectedIB && expectedPeriods < expectedIB;
+      const inputBad = expectedIB && expectedPeriods && expectedPeriods < expectedIB;
       const missing = cov.missingPeriods || 0;
-      const solverBlocked = !inputBad && expectedIB && expectedPeriods >= expectedIB && missing > 0;
+      const solverBlocked = !inputBad && expectedIB && expectedPeriods && expectedPeriods >= expectedIB && missing > 0;
       
       return {
         ...cov,
@@ -430,11 +433,17 @@ export default function GlobalPeriodCoverageReport({
                         {cov.minutesPerWeek || '?'}
                       </TableCell>
                       <TableCell className="text-right font-mono font-semibold">
-                        <div className={cov.inputBad ? 'text-amber-700' : 'text-slate-900'}>
-                          {cov.expectedPeriods}
-                        </div>
-                        {cov.inputBad && cov.expectedIB && (
-                          <div className="text-[9px] text-amber-600">IB: {cov.expectedIB}</div>
+                        {cov.expectedPeriods !== null && cov.expectedPeriods !== undefined ? (
+                          <>
+                            <div className={cov.inputBad ? 'text-amber-700' : 'text-slate-900'}>
+                              {cov.expectedPeriods}
+                            </div>
+                            {cov.inputBad && cov.expectedIB && (
+                              <div className="text-[9px] text-amber-600">IB: {cov.expectedIB}</div>
+                            )}
+                          </>
+                        ) : (
+                          <span className="text-slate-400">—</span>
                         )}
                       </TableCell>
                       <TableCell className="text-right font-mono font-semibold text-slate-900">

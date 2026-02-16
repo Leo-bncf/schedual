@@ -3201,6 +3201,7 @@ Now process the user's input and return ONLY the JSON object.`,
                                   periodDurationMinutes={school?.period_duration_minutes || 60}
                                   missingPeriodsByReason={orToolResult.solverDebugMetrics.missingPeriodsByReason || {}}
                                   unmetRequirements={orToolResult.solverDebugMetrics.unmetRequirements || []}
+                                  subjectRequirements={orToolResult.subjectRequirements || []}
                                 />
                               )}
 
