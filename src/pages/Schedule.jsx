@@ -108,7 +108,7 @@ export default function Schedule() {
     status: 'draft'
   });
   const [schoolConfig, setSchoolConfig] = useState({
-    periods_per_day: 8,
+    periods_per_day: 10, // Auto-calculated: 08:00-18:00 with 60min periods = 10 periods/day
     period_duration_minutes: 60,
     days_per_week: 5,
     school_start_time: '08:00',
@@ -160,7 +160,7 @@ export default function Schedule() {
   React.useEffect(() => {
     if (school) {
       setSchoolConfig({
-        periods_per_day: school.periods_per_day || 8,
+        periods_per_day: school.periods_per_day || 10,
         period_duration_minutes: school.period_duration_minutes || 60,
         days_per_week: school.days_per_week || 5,
         school_start_time: school.school_start_time || '08:00',
