@@ -255,6 +255,30 @@ export default function GlobalPeriodCoverageReport({
               </div>
             )}
             
+            {/* Unmappable Timeslots Warning */}
+            {unmappableSlots.count > 0 && (
+              <div className="p-3 bg-amber-100 border border-amber-400 rounded">
+                <div className="font-bold text-amber-900 mb-2">
+                  ⚠️ UI Mapping Bug: {unmappableSlots.count} slots non rendus (timeslot_id non mappable)
+                </div>
+                <div className="text-xs text-amber-900 space-y-1">
+                  <p>Ces slots existent dans la DB mais ne s'affichent pas car timeslot_id invalide.</p>
+                  <div className="max-h-32 overflow-y-auto mt-2 space-y-1">
+                    {unmappableSlots.details.slice(0, 10).map((item, i) => (
+                      <div key={i} className="bg-white p-2 rounded border border-amber-300">
+                        <span className="font-semibold">{item.section}</span>: {item.count} slots
+                        {item.timeslotIds.length > 0 && (
+                          <span className="text-[10px] text-slate-600 ml-2">
+                            (IDs: {item.timeslotIds.join(', ')})
+                          </span>
+                        )}
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              </div>
+            )}
+            
             <div className="mt-3 p-3 bg-white rounded border border-rose-300">
               <div className="font-bold text-rose-900 mb-2">Top {Math.min(20, solverBlockedSections.length)} sections bloquées:</div>
               <div className="space-y-1 text-xs max-h-48 overflow-y-auto">
