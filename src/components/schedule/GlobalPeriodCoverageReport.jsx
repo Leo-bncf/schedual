@@ -19,6 +19,28 @@ export default function GlobalPeriodCoverageReport({
   missingPeriodsByReason = {},
   unmetRequirements = []
 }) {
+  // Detect unmappable timeslot_ids in slots
+  const unmappableSlots = React.useMemo(() => {
+    if (!periodCoverageData || !Array.isArray(periodCoverageData)) return { count: 0, details: [] };
+    
+    const unmappable = [];
+    periodCoverageData.forEach(section => {
+      // Check if section has slots that couldn't be mapped to UI
+      if (section.unmappableTimeslotCount && section.unmappableTimeslotCount > 0) {
+        unmappable.push({
+          section: section.studentGroup || section.section,
+          count: section.unmappableTimeslotCount,
+          timeslotIds: section.unmappableTimeslotIds || []
+        });
+      }
+    });
+    
+    return {
+      count: unmappable.reduce((sum, item) => sum + item.count, 0),
+      details: unmappable
+    };
+  }, [periodCoverageData]);
+
   const coverageReport = React.useMemo(() => {
     if (!periodCoverageData) return null;
     
@@ -325,6 +347,31 @@ export default function GlobalPeriodCoverageReport({
           </div>
         )}
 
+        {/* DIAGNOSTIC LEGEND */}
+        <div className="p-3 bg-slate-100 rounded border border-slate-300 text-xs space-y-2">
+          <div className="font-bold text-slate-900">📋 Interprétation des statuts:</div>
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-2">
+            <div className="flex items-start gap-2">
+              <Badge className="bg-amber-200 text-amber-900 text-[10px] mt-0.5">INPUT_BAD</Badge>
+              <span className="text-[10px]">
+                requiredPeriods &lt; 5 (HL) ou &lt; 3 (SL) → Bug buildSchedulingProblem (minutesPerWeek/periodDuration)
+              </span>
+            </div>
+            <div className="flex items-start gap-2">
+              <Badge className="bg-rose-200 text-rose-900 text-[10px] mt-0.5">SOLVER_BLOCKED</Badge>
+              <span className="text-[10px]">
+                requiredPeriods OK mais missingPeriods &gt; 0 → Conflits prof/salle/bloc
+              </span>
+            </div>
+            <div className="flex items-start gap-2">
+              <Badge className="bg-blue-200 text-blue-900 text-[10px] mt-0.5">UI_MAP</Badge>
+              <span className="text-[10px]">
+                scheduledPeriods == requiredPeriods mais pas visible → Bug TimetableGrid mapping
+              </span>
+            </div>
+          </div>
+        </div>
+
         {/* FULL TABLE */}
         <div className="rounded-lg border-2 border-slate-300 overflow-hidden">
           <div className="max-h-[600px] overflow-y-auto">
@@ -335,16 +382,18 @@ export default function GlobalPeriodCoverageReport({
                   <TableHead className="w-[120px]">Subject</TableHead>
                   <TableHead className="w-[60px]">Level</TableHead>
                   <TableHead className="w-[80px]">Year</TableHead>
-                  <TableHead className="text-right w-[80px]">Required</TableHead>
-                  <TableHead className="text-right w-[80px]">Scheduled</TableHead>
-                  <TableHead className="text-right w-[80px]">Missing</TableHead>
-                  <TableHead className="w-[100px]">Status</TableHead>
+                  <TableHead className="text-right w-[70px]">Min/Wk</TableHead>
+                  <TableHead className="text-right w-[70px]">Required</TableHead>
+                  <TableHead className="text-right w-[70px]">Scheduled</TableHead>
+                  <TableHead className="text-right w-[70px]">Missing</TableHead>
+                  <TableHead className="w-[100px]">Diagnostic</TableHead>
                 </TableRow>
               </TableHeader>
               <TableBody>
                 {enriched.map((cov, idx) => {
                   const missing = cov.missingPeriods || 0;
                   const isError = cov.inputBad || cov.solverBlocked;
+                  const hasUIBug = cov.scheduledPeriods === cov.requiredPeriods && missing === 0 && unmappableSlots.details.some(d => d.section === (cov.studentGroup || cov.section));
                   
                   return (
                     <TableRow 
@@ -352,6 +401,7 @@ export default function GlobalPeriodCoverageReport({
                       className={
                         cov.inputBad ? 'bg-amber-100 hover:bg-amber-200' :
                         cov.solverBlocked ? 'bg-rose-100 hover:bg-rose-200' :
+                        hasUIBug ? 'bg-blue-100 hover:bg-blue-200' :
                         missing > 0 ? 'bg-blue-50 hover:bg-blue-100' :
                         'hover:bg-slate-50'
                       }
@@ -371,6 +421,9 @@ export default function GlobalPeriodCoverageReport({
                         </Badge>
                       </TableCell>
                       <TableCell className="text-xs text-slate-600">{cov.yearGroup}</TableCell>
+                      <TableCell className="text-right text-xs text-slate-600">
+                        {cov.minutesPerWeek || '?'}
+                      </TableCell>
                       <TableCell className="text-right font-mono font-semibold">
                         <div className={cov.inputBad ? 'text-amber-700' : 'text-slate-900'}>
                           {cov.requiredPeriods}
@@ -388,7 +441,9 @@ export default function GlobalPeriodCoverageReport({
                         </span>
                       </TableCell>
                       <TableCell>
-                        {cov.inputBad ? (
+                        {hasUIBug ? (
+                          <Badge className="bg-blue-200 text-blue-900 text-[10px]">UI_MAP</Badge>
+                        ) : cov.inputBad ? (
                           <Badge className="bg-amber-200 text-amber-900 text-[10px]">INPUT_BAD</Badge>
                         ) : cov.solverBlocked ? (
                           <Badge className="bg-rose-200 text-rose-900 text-[10px]">SOLVER_BLOCKED</Badge>
