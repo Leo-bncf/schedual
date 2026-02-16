@@ -352,11 +352,13 @@ Deno.serve(async (req) => {
         ...problem,
         schoolId: schoolId,
         scheduleVersionId: schedule_version_id,
+        demandByTG: demandByTG, // CRITICAL: Pass explicit demand from teaching groups
         debug: true // Enable solver debug mode for detailed coverage metrics
       };
       // Double assurance: force overwrite even if problem contained null/undefined
       orToolPayload.schoolId = schoolId;
       orToolPayload.scheduleVersionId = schedule_version_id;
+      orToolPayload.demandByTG = demandByTG;
       const payloadJson = JSON.stringify(orToolPayload);
 
       console.log('[callORToolScheduler] PRE-SEND VALIDATION:', {
@@ -594,6 +596,33 @@ Deno.serve(async (req) => {
       base44.entities.Room.filter({ school_id: schoolId }),
       base44.entities.Teacher.filter({ school_id: schoolId })
     ]);
+
+    // BUILD SOLVER DEMAND FROM TEACHING GROUPS (NOT constraints array)
+    // Each teaching group explicitly stores periods_per_week - use this as the solver's demand
+    const demandByTG = {};
+    for (const tg of teachingGroups) {
+      // Only schedule groups that should appear in timetable
+      if (!tg.periods_per_week || tg.periods_per_week <= 0) {
+        console.log(`[OR] Skipping TG ${tg.id} (${tg.name}): periods_per_week=${tg.periods_per_week}`);
+        continue;
+      }
+      
+      demandByTG[tg.id] = tg.periods_per_week;
+    }
+    
+    console.log('[OR] demandByTG:', demandByTG);
+    console.log('[OR] Teaching groups with demand:', Object.keys(demandByTG).length, '/', teachingGroups.length);
+    
+    // Diagnostic: Show groups without periods_per_week
+    const groupsWithoutDemand = teachingGroups.filter(tg => !tg.periods_per_week || tg.periods_per_week <= 0);
+    if (groupsWithoutDemand.length > 0) {
+      console.warn('[OR] ⚠️ Teaching groups WITHOUT periods_per_week:', groupsWithoutDemand.map(tg => ({
+        id: tg.id,
+        name: tg.name,
+        periods_per_week: tg.periods_per_week,
+        minutes_per_week: tg.minutes_per_week
+      })));
+    }
 
     // Use mappings provided by the problem payload (no DB index ordering)
     const subjectIdByCode = problem.subjectIdByCode || {};
