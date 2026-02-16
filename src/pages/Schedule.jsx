@@ -335,6 +335,33 @@ export default function Schedule() {
     return slots;
   }, [school, orToolResult, solverTimeslots]);
 
+  // DYNAMIC periodsPerDay: Detect max period from actual slots to avoid hiding period=9/10
+  const dynamicPeriodsPerDay = React.useMemo(() => {
+    const configPeriods = orToolResult?.buildMeta?.periodsPerDay || school?.periods_per_day || 8;
+    
+    // Calculate max period actually used in slots
+    const maxPeriodInSlots = scheduleSlots.reduce((max, slot) => {
+      const p = slot.period || slot.uiRow || 0;
+      return Math.max(max, p);
+    }, 0);
+    
+    // Use whichever is higher (prevents hiding period=9/10 when config says 8)
+    const finalPeriods = Math.max(configPeriods, maxPeriodInSlots);
+    
+    if (maxPeriodInSlots > configPeriods) {
+      console.warn(`[Schedule] ⚠️ PERIOD OVERFLOW: Config periodsPerDay=${configPeriods} but slots use period=${maxPeriodInSlots}. Using ${finalPeriods} to prevent hiding slots.`);
+    }
+    
+    console.log('[Schedule] 📊 PERIODS DIAGNOSTIC:', {
+      configPeriodsPerDay: configPeriods,
+      maxPeriodInSlots,
+      finalPeriodsUsed: finalPeriods,
+      overflow: maxPeriodInSlots > configPeriods
+    });
+    
+    return finalPeriods;
+  }, [orToolResult, school, scheduleSlots]);
+
   const { data: constraints = [], refetch: refetchConstraints } = useQuery({
     queryKey: ['constraints', schoolId],
     queryFn: async () => {
@@ -776,7 +803,14 @@ Now process the user's input and return ONLY the JSON object.`,
       }
       
         // Comprehensive scheduling algorithm for all students, teachers, and rooms
-        const days = ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday'];
+        // NORMALIZE days to match UI expectations (capitalize first letter only)
+        const normalizeDay = (d) => {
+          if (!d) return d;
+          const up = String(d).toUpperCase();
+          const dayMap = { MONDAY: 'Monday', TUESDAY: 'Tuesday', WEDNESDAY: 'Wednesday', THURSDAY: 'Thursday', FRIDAY: 'Friday' };
+          return dayMap[up] || String(d).charAt(0).toUpperCase() + String(d).slice(1).toLowerCase();
+        };
+        const days = (school?.days_of_week || ['MONDAY', 'TUESDAY', 'WEDNESDAY', 'THURSDAY', 'FRIDAY']).map(normalizeDay);
         const periodsPerDay = school?.periods_per_day || 8;
         const periods = Array.from({ length: periodsPerDay }, (_, i) => i + 1);
         const newSlots = [];
@@ -2130,7 +2164,7 @@ Now process the user's input and return ONLY the JSON object.`,
                       subjects={subjects}
                       teachers={teachers}
                       classGroups={classGroups}
-                      periodsPerDay={orToolResult?.buildMeta?.periodsPerDay || school?.periods_per_day || 8}
+                      periodsPerDay={dynamicPeriodsPerDay}
                       breakPeriods={school?.settings?.break_periods || []}
                       lunchPeriod={school?.settings?.lunch_period || 4}
                       dayStartTime={school?.day_start_time || schoolConfig.day_start_time}
