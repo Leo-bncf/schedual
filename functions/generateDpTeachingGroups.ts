@@ -126,10 +126,15 @@ Deno.serve(async (req) => {
         if (!subject) continue;
         const shouldCombine = subject?.combine_dp1_dp2 === true;
         const yearGroup = shouldCombine ? 'DP1+DP2' : student.year_group;
+        
+        // STABLE KEY: Include subject code for better stability
+        const subjectCode = String(subject.code || subject.name || '').toUpperCase().replace(/\s+/g, '_');
         const key = `${choice.subject_id}_${choice.level}_${yearGroup}`;
+        
         if (!groupMap.has(key)) {
           groupMap.set(key, {
             subject_id: choice.subject_id,
+            subject_code: subjectCode,
             level: choice.level,
             year_group: yearGroup,
             student_ids: [],
@@ -163,39 +168,58 @@ Deno.serve(async (req) => {
       const subject = dpSubjects.find((s) => s.id === groupData.subject_id);
       if (!subject) continue;
       
-      // CRITICAL: Use minutes as primary source (OR-Tool requires minutesPerWeek)
-      // Comprehensive fallback chain to ensure ALL groups get valid minutes
+      const subjectCode = groupData.subject_code || String(subject.code || subject.name || '').toUpperCase().replace(/\s+/g, '_');
+      
+      // EXPLICIT PERIODS FOR TOK/CAS/EE
+      const isTOK = subjectCode === 'TOK' || subject.is_core === true && subject.name?.includes('TOK');
+      const isCAS = subjectCode === 'CAS' || subject.is_core === true && subject.name?.includes('CAS');
+      const isEE = subjectCode === 'EE' || subject.is_core === true && subject.name?.includes('EE');
+      
       let minutesPerWeek = 0;
+      let periodsPerWeek = 0;
       
-      if (groupData.level === 'HL') {
-        // HL priority: subject hl_minutes_per_week_default → subject hl_hours → IB standard (300min = 5h)
-        minutesPerWeek = subject.hl_minutes_per_week_default 
-          || (subject.hl_hours_per_week ? subject.hl_hours_per_week * 60 : 0)
-          || 300;
-      } else if (groupData.level === 'SL') {
-        // SL priority: subject sl_minutes_per_week_default → subject sl_hours → IB standard (180min = 3h)
-        minutesPerWeek = subject.sl_minutes_per_week_default 
-          || (subject.sl_hours_per_week ? subject.sl_hours_per_week * 60 : 0)
-          || 180;
+      if (isTOK) {
+        // TOK: 2 periods/week (120 minutes)
+        periodsPerWeek = 2;
+        minutesPerWeek = 120;
+        console.log(`[generateDpTeachingGroups] TOK detected: ${subject.name} → 2 periods/week (120 min)`);
+      } else if (isCAS) {
+        // CAS: 1 period/week or unscheduled (60 minutes)
+        periodsPerWeek = 1;
+        minutesPerWeek = 60;
+        console.log(`[generateDpTeachingGroups] CAS detected: ${subject.name} → 1 period/week (60 min)`);
+      } else if (isEE) {
+        // EE: Usually not timetabled (0 periods)
+        periodsPerWeek = 0;
+        minutesPerWeek = 0;
+        console.log(`[generateDpTeachingGroups] EE detected: ${subject.name} → 0 periods/week (not timetabled)`);
       } else {
-        // Fallback for unspecified level (shouldn't happen but defensive)
-        minutesPerWeek = subject.sl_minutes_per_week_default || 180;
+        // STANDARD DP SUBJECTS: HL = 5 periods, SL = 3 periods
+        if (groupData.level === 'HL') {
+          periodsPerWeek = 5;
+          minutesPerWeek = subject.hl_minutes_per_week_default 
+            || (subject.hl_hours_per_week ? subject.hl_hours_per_week * 60 : 0)
+            || 300;
+        } else if (groupData.level === 'SL') {
+          periodsPerWeek = 3;
+          minutesPerWeek = subject.sl_minutes_per_week_default 
+            || (subject.sl_hours_per_week ? subject.sl_hours_per_week * 60 : 0)
+            || 180;
+        } else {
+          // Fallback for unspecified level
+          periodsPerWeek = 3;
+          minutesPerWeek = subject.sl_minutes_per_week_default || 180;
+        }
       }
       
-      // FAIL-SAFE: Ensure non-zero minutes (should never happen with fallbacks above)
-      if (!minutesPerWeek || minutesPerWeek <= 0) {
-        console.warn(`[generateDpTeachingGroups] WARNING: Subject ${subject.id} (${subject.name}) has no valid minutes config, defaulting to ${groupData.level === 'HL' ? '300' : '180'} min`);
-        minutesPerWeek = groupData.level === 'HL' ? 300 : 180;
+      // FAIL-SAFE: Skip EE groups (no timetabling needed)
+      if (isEE && periodsPerWeek === 0) {
+        console.log(`[generateDpTeachingGroups] Skipping EE group (not timetabled): ${subject.name}`);
+        continue;
       }
-      
-      // Compute periods assuming 60-min periods (override with school config if available)
-      const periodDurationMinutes = school?.period_duration_minutes || 60;
-      const periodsPerWeek = Math.ceil(minutesPerWeek / periodDurationMinutes);
       
       // Legacy hours field for backward compatibility
-      const hoursPerWeek = groupData.level === 'HL'
-        ? (subject.hl_hours_per_week || 6)
-        : (subject.sl_hours_per_week || 4);
+      const hoursPerWeek = minutesPerWeek / 60;
 
       newGroups.push({
         school_id,
@@ -205,8 +229,9 @@ Deno.serve(async (req) => {
         year_group: groupData.year_group,
         student_ids: groupData.student_ids,
         minutes_per_week: minutesPerWeek,      // PRIMARY: OR-Tool requires this
-        periods_per_week: periodsPerWeek,      // SECONDARY: Computed from minutes
+        periods_per_week: periodsPerWeek,      // EXPLICIT: 5 for HL, 3 for SL, 2 for TOK, 1 for CAS
         hours_per_week: hoursPerWeek,          // LEGACY: Kept for compatibility
+        course_code: subjectCode,              // STABLE: For debugging and matching
         is_active: true,
       });
     }
