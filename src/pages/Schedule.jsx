@@ -2190,6 +2190,7 @@ Now process the user's input and return ONLY the JSON object.`,
                     selectedStudentId={selectedStudentId}
                     onStudentChange={setSelectedStudentId}
                     exportId="student-schedule"
+                    scheduleVersionId={selectedVersion?.id}
                     unassignedBySubjectCode={orToolResult?.unassignedBySubjectCode}
                     timeslots={timeslots}
                     scheduleSettings={orToolResult?.problem?.scheduleSettings || school}
