@@ -229,15 +229,23 @@ Deno.serve(async (req) => {
       });
     }
 
+    // STEP 4: Create teaching groups + CAPTURE IDs
+    let createdGroupIds = [];
     if (newGroups.length > 0) {
-      await withRetry(
+      const createdRecords = await withRetry(
         'bulk_create_teaching_groups',
         { entity: 'TeachingGroup.bulkCreate', count: newGroups.length },
         async () => await base44.asServiceRole.entities.TeachingGroup.bulkCreate(newGroups)
       );
+      
+      // Extract IDs from created records
+      if (Array.isArray(createdRecords)) {
+        createdGroupIds = createdRecords.map(r => r?.id).filter(Boolean);
+        console.log(`[generateDpTeachingGroups] ✅ Created ${createdGroupIds.length} teaching groups, IDs captured`);
+      }
     }
 
-    // After creating groups, sync student assignments
+    // STEP 5: Sync student assignments
     if (newGroups.length > 0) {
       try {
         console.log('[generateDpTeachingGroups] Syncing student teaching group assignments...');
@@ -252,10 +260,43 @@ Deno.serve(async (req) => {
         // Don't fail the entire request - groups are created, sync can be retried
       }
     }
+    
+    // STEP 6: FRESH FETCH of created groups (post-sync, stable state)
+    console.log(`[generateDpTeachingGroups] Fresh fetching ${createdGroupIds.length} created groups...`);
+    const createdGroups = [];
+    
+    if (createdGroupIds.length > 0) {
+      try {
+        const fetched = await withRetry(
+          'fetch_created_groups',
+          { entity: 'TeachingGroup', ids: createdGroupIds.slice(0, 10) },
+          async () => {
+            // Fetch all created groups by school_id + active filter
+            // NOTE: Base44 filter may not support $in for IDs, so filter client-side
+            const allGroups = await base44.entities.TeachingGroup.filter({ 
+              school_id, 
+              is_active: true 
+            });
+            
+            // Filter to only created IDs
+            const createdSet = new Set(createdGroupIds);
+            return allGroups.filter(g => createdSet.has(g.id));
+          }
+        );
+        
+        createdGroups.push(...fetched);
+        console.log(`[generateDpTeachingGroups] ✅ Fetched ${createdGroups.length}/${createdGroupIds.length} created groups`);
+      } catch (fetchError) {
+        console.error('[generateDpTeachingGroups] Failed to fetch created groups:', fetchError);
+        // Continue anyway - IDs are captured
+      }
+    }
 
     return Response.json({
       success: true,
       groups_created: newGroups.length,
+      created_group_ids: createdGroupIds, // EXPLICIT: IDs of created groups
+      created_groups: createdGroups, // EXPLICIT: Full group objects (fresh fetch)
       message: `Created ${newGroups.length} DP teaching groups and synced student assignments`,
       logs,
       total_duration_ms: Date.now() - startedAt,
