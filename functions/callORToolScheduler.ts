@@ -910,25 +910,46 @@ Deno.serve(async (req) => {
     
     // FIX C: POST-SOLVE DEMAND VALIDATION (prevent under/over-scheduling)
     stage = 'validateDemandFulfillment';
-    console.log(`[callORToolScheduler] ${stage}: auditing solver output against demand`);
-    
+    console.log(`[callORToolScheduler] ${stage}: HARD GATE - auditing solver output against demand`);
+    console.log(`[callORToolScheduler] demandByTG keys:`, Object.keys(demandByTG).length);
+    console.log(`[callORToolScheduler] demandByTG sample:`, Object.entries(demandByTG).slice(0, 5));
+
     const actualByTG = {};
+    const debugActual = []; // Track first 10 lessons for debug
+
     for (const lesson of solvedLessons) {
       if (!lesson.timeslotId) continue; // Only count assigned lessons
-      
+
       // Extract teaching_group_id from studentGroup (format: "TG_<id>")
       const tgId = (lesson.studentGroup && lesson.studentGroup.startsWith('TG_')) 
         ? lesson.studentGroup.slice(3) 
         : null;
-      
+
       if (!tgId) {
         console.warn(`[callORToolScheduler] ⚠️ Lesson without valid teaching_group_id: ${lesson.studentGroup}`);
         continue;
       }
-      
-      const periodsToAdd = lesson.is_double_period ? 2 : 1;
+
+      // CRITICAL: Support both snake_case and camelCase for double period detection
+      const isDouble = lesson.is_double_period === true || lesson.isDoublePeriod === true;
+      const periodsToAdd = isDouble ? 2 : 1;
       actualByTG[tgId] = (actualByTG[tgId] || 0) + periodsToAdd;
+
+      // Debug tracking
+      if (debugActual.length < 10) {
+        debugActual.push({
+          tgId,
+          studentGroup: lesson.studentGroup,
+          subject: lesson.subject,
+          timeslotId: lesson.timeslotId,
+          isDouble,
+          periodsAdded: periodsToAdd
+        });
+      }
     }
+
+    console.log('[callORToolScheduler] actualByTG constructed:', Object.keys(actualByTG).length, 'teaching groups');
+    console.log('[callORToolScheduler] actualByTG debug sample:', debugActual);
     
     console.log('[callORToolScheduler] actualByTG:', actualByTG);
     console.log('[callORToolScheduler] demandByTG:', demandByTG);
@@ -953,22 +974,45 @@ Deno.serve(async (req) => {
     }
     
     if (demandProblems.length > 0) {
-      console.error('[callORToolScheduler] ❌ DEMAND MISMATCH: Solver output does not match required lesson counts');
-      console.error('[callORToolScheduler] Demand problems:', demandProblems);
-      
+      console.error('[callORToolScheduler] ❌❌❌ CRITICAL: DEMAND VALIDATION FAILURE - BLOCKING DB WRITE');
+      console.error('[callORToolScheduler] Demand problems (showing all):', demandProblems);
+      console.error('[callORToolScheduler] This schedule will NOT be written to database (protection against Film HL=2 bug)');
+
+      // Enhanced diagnostics: show Film specifically if it's in the problems
+      const filmProblems = demandProblems.filter(p => 
+        p.name?.toLowerCase().includes('film') || 
+        (teachingGroups.find(g => g.id === p.tgId)?.name?.toLowerCase().includes('film'))
+      );
+      if (filmProblems.length > 0) {
+        console.error('[callORToolScheduler] 🎬 FILM SUBJECT DETECTED IN PROBLEMS:', filmProblems);
+      }
+
       return Response.json({
         ok: false,
         stage: 'DEMAND_VALIDATION_FAILURE',
-        error: `Solver output does not match required lesson counts for ${demandProblems.length} teaching groups`,
-        errorMessage: 'The solver scheduled a different number of periods than required. This will cause incomplete student schedules.',
-        demandProblems,
+        error: `❌ HARD GATE: Solver output does not match required periods for ${demandProblems.length}/${Object.keys(demandByTG).length} teaching groups`,
+        errorMessage: '🚫 The solver scheduled incorrect period counts. Database write BLOCKED to prevent corrupt schedules (e.g., Film HL with only 2 periods instead of 6).',
+        demandProblems: demandProblems.sort((a, b) => Math.abs(b.diff) - Math.abs(a.diff)), // Worst first
         demandSummary: {
           total_teaching_groups: Object.keys(demandByTG).length,
           mismatched: demandProblems.length,
           under_scheduled: demandProblems.filter(p => p.status === 'under-scheduled').length,
-          over_scheduled: demandProblems.filter(p => p.status === 'over-scheduled').length
+          over_scheduled: demandProblems.filter(p => p.status === 'over-scheduled').length,
+          worst_deficit: demandProblems.reduce((min, p) => Math.min(min, p.diff), 0),
+          worst_excess: demandProblems.reduce((max, p) => Math.max(max, p.diff), 0)
         },
-        suggestion: 'This indicates the solver is not respecting the demandByTG constraint. Verify solver implements: model.Add(sum(x[tg, ts]) == demandByTG[tg]) for each teaching group.',
+        filmSpecificIssues: filmProblems.length > 0 ? filmProblems : null,
+        debugInfo: {
+          demandByTG_sample: Object.entries(demandByTG).slice(0, 10),
+          actualByTG_sample: Object.entries(actualByTG).slice(0, 10),
+          demandByTG_total: Object.values(demandByTG).reduce((sum, v) => sum + v, 0),
+          actualByTG_total: Object.values(actualByTG).reduce((sum, v) => sum + v, 0)
+        },
+        suggestion: '🔧 Solver constraint bug detected. Required: model.Add(sum(x[tg, ts] for ts in timeslots) == demandByTG[tg]) for ALL teaching groups. Check solver logs for constraint violations.',
+        performedDeletion: false,
+        performedInsertion: false,
+        slotsDeleted: 0,
+        slotsInserted: 0,
         meta: { schedule_version_id, schoolId }
       }, { status: 200 });
     }
