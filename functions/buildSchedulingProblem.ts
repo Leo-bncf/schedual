@@ -467,20 +467,37 @@ if (!hasStudents && !isSpecialCourse) {
   continue;
 }
 
-// VALIDATION 3: Resolve duration - original requirements, no HL/SL adjustment
-const minutesUsed = minutesForTG(tg);
+// VALIDATION 3: Resolve lesson count - SOURCE OF TRUTH: periods_per_week
+// CRITICAL: Use periods_per_week directly if set, otherwise derive from minutes
+let weeklyCount = 0;
 
-if (!minutesUsed || minutesUsed <= 0) {
-  recordSkipped(tg, 'MISSING_MINUTES_CONFIG');
-  continue;
+if (typeof tg.periods_per_week === 'number' && tg.periods_per_week > 0) {
+  // SOURCE OF TRUTH: periods_per_week (from generateDpTeachingGroups)
+  weeklyCount = tg.periods_per_week;
+  debugMinutesSourceByTG[tg.id] = { 
+    source: 'PERIODS_PER_WEEK_EXPLICIT', 
+    value: weeklyCount * periodDurationMinutes, 
+    periods: weeklyCount,
+    reason: 'Using periods_per_week as source of truth'
+  };
+} else {
+  // FALLBACK: Calculate from minutes_per_week
+  const minutesUsed = minutesForTG(tg);
+  
+  if (!minutesUsed || minutesUsed <= 0) {
+    recordSkipped(tg, 'MISSING_PERIODS_AND_MINUTES_CONFIG');
+    continue;
+  }
+  
+  weeklyCount = minutesToPeriods(minutesUsed);
 }
-
-const weeklyCount = minutesToPeriods(minutesUsed);
 
 if (!weeklyCount || weeklyCount <= 0) {
   recordSkipped(tg, 'INVALID_PERIOD_COUNT');
   continue;
 }
+
+const minutesUsed = weeklyCount * periodDurationMinutes; // Recalculate for consistency
 
 // SUCCESS: Include this teaching group as-is
 teachingGroupsIncludedCount++;
@@ -514,7 +531,8 @@ teachingGroupsDiagnostics.push({
 expectedLessonsBySubject[subjCode] = (expectedLessonsBySubject[subjCode] || 0) + weeklyCount;
 expectedMinutesBySubject[subjCode] = (expectedMinutesBySubject[subjCode] || 0) + minutesUsed;
 
-// Create lessons for this teaching group (solver will handle HL/SL merging)
+// Create EXACTLY periods_per_week lessons for this teaching group
+// CRITICAL: studentGroup MUST be "TG_<teaching_group_id>" for persistence
 const studentIds = Array.isArray(tg.student_ids) ? tg.student_ids : [];
 const blockId = tg.block_id || null;
 
@@ -522,8 +540,8 @@ for (let i = 0; i < weeklyCount; i++) {
   lessons.push({
     id: lessonId++,
     subject: subjCode,
-    studentGroup,
-    sectionId: tg.id,
+    studentGroup: `TG_${tg.id}`, // CRITICAL: Format required for callORToolScheduler persistence
+    sectionId: tg.id, // Redundant but kept for clarity
     studentIds, // Solver uses this for cohort detection
     blockId, // Solver uses this for elective concurrency
     requiredCapacity: cap,
