@@ -1907,17 +1907,36 @@ Deno.serve(async (req) => {
       });
 
   } catch (error) {
-    console.error(`[callORToolScheduler] ERROR at stage="${stage}":`, error);
+    console.error(`[callORToolScheduler] ❌ ERROR at stage="${stage}":`, error);
     console.error(`[callORToolScheduler] Error message:`, error?.message);
     console.error(`[callORToolScheduler] Error stack:`, error?.stack);
+    console.error(`[callORToolScheduler] Context:`, {
+      schedule_version_id,
+      schoolId,
+      stage
+    });
+    
+    // Map internal stages to user-friendly stages
+    const publicStage = (() => {
+      if (stage.includes('audit') || stage.includes('validate')) return 'pre_solve_audit';
+      if (stage.includes('build') || stage.includes('Problem')) return 'build_problem';
+      if (stage.includes('Solver') || stage.includes('call')) return 'solver_call';
+      if (stage.includes('insert') || stage.includes('delete') || stage.includes('Slots')) return 'insert_slots';
+      return stage; // Keep original if not mapped
+    })();
     
     return Response.json({ 
+      success: false,
       ok: false,
-      wrapperBuildVersion: WRAPPER_BUILD_VERSION,
-      stage,
-      errorMessage: String(error?.message || error),
-      errorStack: String(error?.stack || ''),
-      meta: { schedule_version_id, schoolId }
-    }, { status: 200 }); // Return 200 so UI can always parse JSON
+      stage: publicStage,
+      internalStage: stage,
+      error: String(error?.message || error),
+      details: {
+        errorStack: String(error?.stack || ''),
+        schedule_version_id,
+        schoolId,
+        wrapperBuildVersion: WRAPPER_BUILD_VERSION
+      }
+    }, { status: 200 }); // Return 200 with success:false for UI parsing
   }
 });

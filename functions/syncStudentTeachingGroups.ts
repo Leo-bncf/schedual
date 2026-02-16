@@ -12,31 +12,55 @@ import { createClientFromRequest } from 'npm:@base44/sdk@0.8.6';
  */
 
 Deno.serve(async (req) => {
+  const startTime = Date.now();
+  let school_id = null;
+  let stage = 'init';
+  
   try {
+    stage = 'auth';
     const base44 = createClientFromRequest(req);
     const user = await base44.auth.me();
     
     if (!user?.school_id) {
-      return Response.json({ error: 'Unauthorized' }, { status: 403 });
+      return Response.json({ 
+        success: false,
+        error: 'Unauthorized',
+        stage: 'auth',
+        details: 'User not authenticated or missing school_id'
+      }, { status: 401 });
     }
 
-    const school_id = user.school_id;
+    school_id = user.school_id;
     
-    console.log('[syncStudentTeachingGroups] Fetching students and teaching groups...');
+    stage = 'fetch_data';
+    console.log(`[syncStudentTeachingGroups] Starting sync for school_id=${school_id}`);
     
     // Fetch all active students and teaching groups
-    const [students, teachingGroups, subjects] = await Promise.all([
-      base44.entities.Student.filter({ school_id, is_active: true }),
-      base44.entities.TeachingGroup.filter({ school_id, is_active: true }),
-      base44.entities.Subject.filter({ school_id, is_active: true })
-    ]);
+    let students, teachingGroups, subjects;
+    try {
+      [students, teachingGroups, subjects] = await Promise.all([
+        base44.entities.Student.filter({ school_id, is_active: true }),
+        base44.entities.TeachingGroup.filter({ school_id, is_active: true }),
+        base44.entities.Subject.filter({ school_id, is_active: true })
+      ]);
+    } catch (fetchError) {
+      console.error('[syncStudentTeachingGroups] Data fetch error:', fetchError);
+      return Response.json({
+        success: false,
+        error: 'Failed to fetch data',
+        stage: 'fetch_data',
+        details: String(fetchError?.message || fetchError),
+        school_id
+      }, { status: 200 });
+    }
     
-    console.log(`[syncStudentTeachingGroups] Found ${students.length} students, ${teachingGroups.length} teaching groups`);
+    console.log(`[syncStudentTeachingGroups] Fetched data: ${students.length} students, ${teachingGroups.length} teaching groups, ${subjects.length} subjects`);
     
     // Build subject lookup
     const subjectById = {};
     subjects.forEach(s => { subjectById[s.id] = s; });
     
+    stage = 'process_students';
     let studentsUpdated = 0;
     let teachingGroupsUpdated = 0;
     const errors = [];
@@ -213,29 +237,54 @@ Deno.serve(async (req) => {
       studentsWithMissingAssignments: integrityReport.missingAssignments.length
     };
     
-    console.log('[syncStudentTeachingGroups] Sync complete:', {
-      studentsUpdated,
-      teachingGroupsUpdated,
-      errors: errors.length,
-      integrityIssues: summary
+    const durationMs = Date.now() - startTime;
+    
+    console.log('[syncStudentTeachingGroups] ✅ Sync complete:', {
+      school_id,
+      duration_ms: durationMs,
+      students_count: students.length,
+      students_updated: studentsUpdated,
+      teaching_groups_updated: teachingGroupsUpdated,
+      errors_count: errors.length,
+      integrity_issues: summary
     });
     
     return Response.json({
       success: true,
+      stage: 'complete',
+      school_id,
+      duration_ms: durationMs,
       studentsUpdated,
       teachingGroupsUpdated,
       totalStudents: students.length,
       totalTeachingGroups: teachingGroups.length,
+      assigned_groups_count: students.filter(s => s.assigned_groups?.length > 0).length,
       errors,
       integrityReport,
       summary
     });
     
   } catch (error) {
-    console.error('[syncStudentTeachingGroups] Error:', error);
+    const durationMs = Date.now() - startTime;
+    
+    console.error('[syncStudentTeachingGroups] ❌ ERROR at stage:', stage);
+    console.error('[syncStudentTeachingGroups] Error message:', error?.message);
+    console.error('[syncStudentTeachingGroups] Error stack:', error?.stack);
+    console.error('[syncStudentTeachingGroups] Context:', {
+      school_id,
+      stage,
+      duration_ms: durationMs
+    });
+    
     return Response.json({
       success: false,
-      error: error.message
-    }, { status: 500 });
+      error: String(error?.message || error),
+      stage,
+      details: {
+        errorStack: String(error?.stack || ''),
+        school_id,
+        duration_ms: durationMs
+      }
+    }, { status: 200 }); // Return 200 with success:false for UI parsing
   }
 });
