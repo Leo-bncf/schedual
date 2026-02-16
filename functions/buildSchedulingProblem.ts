@@ -67,12 +67,20 @@ Deno.serve(async (req) => {
     stage = 'loadSchool';
     recordLog(`${stage}: school_id=${school_id}, schedule_version_id=${schedule_version_id}`);
     
+    // CRITICAL: Accept teaching groups from caller (post-generation/sync) OR fetch from DB
+    const teachingGroupsFromCaller = body?.teachingGroups || null;
+    const useCallerTGs = Array.isArray(teachingGroupsFromCaller) && teachingGroupsFromCaller.length > 0;
+    
+    if (useCallerTGs) {
+      recordLog(`Using ${teachingGroupsFromCaller.length} teaching groups from caller (post-generation/sync)`);
+    }
+    
     const [school, allRooms, allTeachers, allSubjects, allTeachingGroups] = await Promise.all([
       base44.entities.School.filter({ id: school_id }).then(r => r?.[0] || null).catch(() => null),
       base44.entities.Room.filter({ school_id }).catch(() => []),
       base44.entities.Teacher.filter({ school_id }).catch(() => []),
       base44.entities.Subject.filter({ school_id }).catch(() => []),
-      base44.entities.TeachingGroup.filter({ school_id }).catch(() => []),
+      useCallerTGs ? Promise.resolve(teachingGroupsFromCaller) : base44.entities.TeachingGroup.filter({ school_id }).catch(() => []),
     ]);
     
     const roomsDb = (allRooms || []).filter(r => r?.is_active !== false);

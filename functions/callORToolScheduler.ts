@@ -68,17 +68,25 @@ Deno.serve(async (req) => {
     }
     const errors = [];
 
-    stage = 'buildProblem';
-    console.log(`[callORToolScheduler] ${stage}: calling buildSchedulingProblem`);
+    // CRITICAL: Fetch teaching groups FIRST (post-generation/sync) for stable IDs
+    stage = 'fetchFreshTeachingGroups';
+    console.log(`[callORToolScheduler] ${stage}: fetching fresh teaching groups for stable solver input`);
     
-    // Step 1: Build scheduling problem
+    const teachingGroupsFresh = await base44.entities.TeachingGroup.filter({ school_id: schoolId });
+    console.log(`[callORToolScheduler] Fetched ${teachingGroupsFresh.length} teaching groups (post-generation/sync)`);
+    
+    stage = 'buildProblem';
+    console.log(`[callORToolScheduler] ${stage}: calling buildSchedulingProblem with fresh TGs`);
+    
+    // Step 1: Build scheduling problem with FRESH teaching groups
     let buildResponse;
     try {
       buildResponse = await base44.functions.invoke('buildSchedulingProblem', {
         schedule_version_id,
         school_id: schoolId,
         dp_study_weekly: dpStudyWeekly,
-        dp_min_end_time: dpMinEndTime
+        dp_min_end_time: dpMinEndTime,
+        teachingGroups: teachingGroupsFresh // CRITICAL: Pass fresh TGs to prevent stale data
       });
     } catch (buildError) {
       console.error(`[callORToolScheduler] buildSchedulingProblem invocation error:`, buildError);
@@ -590,12 +598,14 @@ Deno.serve(async (req) => {
     console.log('[callORToolScheduler] coreAssignmentSummary =', coreAssignmentSummary);
 
     // Step 4: Get Base44 entities to reverse-map IDs
-    const [subjects, teachingGroups, rooms, teachers] = await Promise.all([
+    // CRITICAL: Reuse teachingGroupsFresh from earlier fetch (same IDs as used in buildSchedulingProblem)
+    const [subjects, rooms, teachers] = await Promise.all([
       base44.entities.Subject.filter({ school_id: schoolId }),
-      base44.entities.TeachingGroup.filter({ school_id: schoolId }),
       base44.entities.Room.filter({ school_id: schoolId }),
       base44.entities.Teacher.filter({ school_id: schoolId })
     ]);
+    
+    const teachingGroups = teachingGroupsFresh; // Reuse fresh TGs for consistency
 
     // BUILD SOLVER DEMAND FROM TEACHING GROUPS (NOT constraints array)
     // Each teaching group explicitly stores periods_per_week - use this as the solver's demand
