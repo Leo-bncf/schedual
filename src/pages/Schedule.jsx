@@ -272,7 +272,7 @@ export default function Schedule() {
 
   const periodsForGroup = (tg) => minutesToPeriods(getMinutesForGroup(tg));
 
-  // Use solver timeslots if available (source of truth), otherwise reconstruct from school config
+  // SOURCE OF TRUTH: Use solver timeslots OR reconstruct from scheduleSettings (NOT school config)
   const timeslots = React.useMemo(() => {
     // Priority 1: Use persisted solver timeslots (set once by OR-Tool, never overwritten)
     if (solverTimeslots && Array.isArray(solverTimeslots) && solverTimeslots.length > 0) {
@@ -286,9 +286,67 @@ export default function Schedule() {
       return orToolResult.timeslots;
     }
     
+    // Priority 3: If we have slots but no timeslots, reconstruct from scheduleSettings (solver config)
+    if (scheduleSlots.length > 0 && orToolResult?.scheduleSettingsSent) {
+      console.log('[Schedule] 🔄 Reconstructing timeslots from SOLVER scheduleSettings (source of truth)');
+      const settings = orToolResult.scheduleSettingsSent;
+      const dayStart = settings.day_start_time || '08:00';
+      const dayEnd = settings.day_end_time || '18:00';
+      const periodDuration = settings.period_duration_minutes || 60;
+      const daysOfWeek = settings.days_of_week || ['MONDAY', 'TUESDAY', 'WEDNESDAY', 'THURSDAY', 'FRIDAY'];
+      const breaks = settings.breaks || [];
+      
+      const slots = [];
+      let globalId = 1;
+      
+      daysOfWeek.forEach(day => {
+        const [startHour, startMin] = dayStart.split(':').map(Number);
+        const [endHour, endMin] = dayEnd.split(':').map(Number);
+        let currentMinutes = startHour * 60 + startMin;
+        const endMinutes = endHour * 60 + endMin;
+        
+        while (currentMinutes < endMinutes) {
+          const slotStart = `${String(Math.floor(currentMinutes / 60)).padStart(2, '0')}:${String(currentMinutes % 60).padStart(2, '0')}`;
+          const slotEnd = `${String(Math.floor((currentMinutes + periodDuration) / 60)).padStart(2, '0')}:${String((currentMinutes + periodDuration) % 60).padStart(2, '0')}`;
+          
+          // Check if this time overlaps with a break
+          const isBreak = breaks.some(b => {
+            const [bStartH, bStartM] = b.start.split(':').map(Number);
+            const [bEndH, bEndM] = b.end.split(':').map(Number);
+            const bStart = bStartH * 60 + bStartM;
+            const bEnd = bEndH * 60 + bEndM;
+            return currentMinutes < bEnd && (currentMinutes + periodDuration) > bStart;
+          });
+          
+          if (!isBreak) {
+            slots.push({
+              id: globalId++,
+              dayOfWeek: day,
+              startTime: slotStart,
+              endTime: slotEnd
+            });
+          }
+          
+          currentMinutes += periodDuration;
+        }
+      });
+      
+      const calculatedPeriodsPerDay = Math.ceil(slots.length / Math.max(1, daysOfWeek.length));
+      console.log('[Schedule] ✅ Reconstructed from solver settings:', {
+        timeslots: slots.length,
+        periodsPerDay: calculatedPeriodsPerDay,
+        dayStart,
+        dayEnd,
+        periodDuration,
+        breaks: breaks.length
+      });
+      
+      return slots;
+    }
+    
+    // Fallback: Reconstruct from school config (only if no slots exist yet)
     console.log('[Schedule] 🔄 Reconstructing timeslots from school config (fallback - no solver data available)');
     
-    // Fallback: Reconstruct from school config (may cause misalignment if solver used different config)
     if (!school) return [];
     
     const dayStart = school.day_start_time || '08:00';
@@ -333,34 +391,66 @@ export default function Schedule() {
     });
     
     return slots;
-  }, [school, orToolResult, solverTimeslots]);
+  }, [school, orToolResult, solverTimeslots, scheduleSlots.length]);
 
-  // DYNAMIC periodsPerDay: Detect max period from actual slots to avoid hiding period=9/10
+  // SOURCE OF TRUTH: Calculate periodsPerDay from actual timeslots/scheduleSettings
   const dynamicPeriodsPerDay = React.useMemo(() => {
-    const configPeriods = orToolResult?.buildMeta?.periodsPerDay || school?.periods_per_day || 8;
-    
-    // Calculate max period actually used in slots
-    const maxPeriodInSlots = scheduleSlots.reduce((max, slot) => {
-      const p = slot.period || slot.uiRow || 0;
-      return Math.max(max, p);
-    }, 0);
-    
-    // Use whichever is higher (prevents hiding period=9/10 when config says 8)
-    const finalPeriods = Math.max(configPeriods, maxPeriodInSlots);
-    
-    if (maxPeriodInSlots > configPeriods) {
-      console.warn(`[Schedule] ⚠️ PERIOD OVERFLOW: Config periodsPerDay=${configPeriods} but slots use period=${maxPeriodInSlots}. Using ${finalPeriods} to prevent hiding slots.`);
+    // Priority 1: Derive from timeslots (actual solver output)
+    if (timeslots.length > 0) {
+      const daysOfWeek = orToolResult?.scheduleSettingsSent?.days_of_week || school?.days_of_week || ['MONDAY', 'TUESDAY', 'WEDNESDAY', 'THURSDAY', 'FRIDAY'];
+      const periodsPerDay = Math.ceil(timeslots.length / Math.max(1, daysOfWeek.length));
+      
+      console.log('[Schedule] ✅ periodsPerDay calculated from timeslots:', {
+        timeslots: timeslots.length,
+        daysOfWeek: daysOfWeek.length,
+        periodsPerDay
+      });
+      
+      return periodsPerDay;
     }
     
-    console.log('[Schedule] 📊 PERIODS DIAGNOSTIC:', {
-      configPeriodsPerDay: configPeriods,
-      maxPeriodInSlots,
-      finalPeriodsUsed: finalPeriods,
-      overflow: maxPeriodInSlots > configPeriods
-    });
+    // Priority 2: Calculate from scheduleSettings (day_start/end + duration)
+    const settings = orToolResult?.scheduleSettingsSent || school;
+    if (settings) {
+      const dayStart = settings.day_start_time || settings.school_start_time || '08:00';
+      const dayEnd = settings.day_end_time || '18:00';
+      const periodDuration = settings.period_duration_minutes || settings.period_duration_minutes || 60;
+      const breaks = settings.breaks || [];
+      
+      const [startHour, startMin] = dayStart.split(':').map(Number);
+      const [endHour, endMin] = dayEnd.split(':').map(Number);
+      const startMinutes = startHour * 60 + startMin;
+      const endMinutes = endHour * 60 + endMin;
+      
+      // Calculate total time minus breaks
+      const totalMinutes = endMinutes - startMinutes;
+      const breakMinutes = breaks.reduce((sum, b) => {
+        const [bStartH, bStartM] = b.start.split(':').map(Number);
+        const [bEndH, bEndM] = b.end.split(':').map(Number);
+        return sum + ((bEndH * 60 + bEndM) - (bStartH * 60 + bStartM));
+      }, 0);
+      
+      const availableMinutes = totalMinutes - breakMinutes;
+      const calculatedPeriods = Math.floor(availableMinutes / periodDuration);
+      
+      console.log('[Schedule] 📊 periodsPerDay calculated from time range:', {
+        dayStart,
+        dayEnd,
+        periodDuration,
+        totalMinutes,
+        breakMinutes,
+        availableMinutes,
+        calculatedPeriods
+      });
+      
+      return calculatedPeriods;
+    }
     
-    return finalPeriods;
-  }, [orToolResult, school, scheduleSlots]);
+    // Fallback: Use config value
+    const fallbackPeriods = school?.periods_per_day || 8;
+    console.warn('[Schedule] ⚠️ Using fallback periodsPerDay from school.periods_per_day:', fallbackPeriods);
+    return fallbackPeriods;
+  }, [timeslots, orToolResult, school]);
 
   const { data: constraints = [], refetch: refetchConstraints } = useQuery({
     queryKey: ['constraints', schoolId],
@@ -1818,6 +1908,67 @@ Now process the user's input and return ONLY the JSON object.`,
           </p>
         </div>
       )}
+      
+      {/* Config Mismatch Warning */}
+      {school && scheduleSlots.length > 0 && (() => {
+        const dayStart = school.day_start_time || '08:00';
+        const dayEnd = school.day_end_time || '18:00';
+        const periodDuration = school.period_duration_minutes || 60;
+        const breaks = school.breaks || [];
+        
+        const [startHour, startMin] = dayStart.split(':').map(Number);
+        const [endHour, endMin] = dayEnd.split(':').map(Number);
+        const totalMinutes = (endHour * 60 + endMin) - (startHour * 60 + startMin);
+        const breakMinutes = breaks.reduce((sum, b) => {
+          const [bStartH, bStartM] = b.start.split(':').map(Number);
+          const [bEndH, bEndM] = b.end.split(':').map(Number);
+          return sum + ((bEndH * 60 + bEndM) - (bStartH * 60 + bStartM));
+        }, 0);
+        const availableMinutes = totalMinutes - breakMinutes;
+        const calculatedPeriods = Math.floor(availableMinutes / periodDuration);
+        
+        const configPeriods = school.periods_per_day || 8;
+        const mismatch = calculatedPeriods !== configPeriods;
+        
+        if (mismatch) {
+          return (
+            <Card className="border-2 border-amber-500 bg-amber-50">
+              <CardContent className="p-4">
+                <div className="flex items-start gap-3">
+                  <AlertTriangle className="w-5 h-5 text-amber-700 flex-shrink-0 mt-0.5" />
+                  <div className="flex-1">
+                    <div className="font-bold text-amber-900 mb-1">⚠️ Configuration Mismatch Detected</div>
+                    <div className="text-sm text-amber-800 mb-3">
+                      School config says <strong>{configPeriods} periods/day</strong>, but time range {dayStart}→{dayEnd} with {periodDuration}min periods = <strong>{calculatedPeriods} periods/day</strong> (actual).
+                    </div>
+                    <div className="flex gap-2">
+                      <Button
+                        size="sm"
+                        onClick={async () => {
+                          if (confirm(`Update school config to ${calculatedPeriods} periods/day?`)) {
+                            await updateSchoolMutation.mutateAsync({
+                              id: school.id,
+                              data: { periods_per_day: calculatedPeriods }
+                            });
+                            toast.success('School config updated to match actual schedule');
+                          }
+                        }}
+                        className="bg-amber-700 hover:bg-amber-800 text-white"
+                      >
+                        Fix: Update to {calculatedPeriods} periods/day
+                      </Button>
+                      <div className="text-xs text-amber-700 flex items-center">
+                        Calculation: ({totalMinutes}min - {breakMinutes}min breaks) ÷ {periodDuration}min = {calculatedPeriods} periods
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              </CardContent>
+            </Card>
+          );
+        }
+        return null;
+      })()}
 
       {/* Version Selector & Controls */}
       <Card className="border-blue-200 bg-white shadow-sm">
