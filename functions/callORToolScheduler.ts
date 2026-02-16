@@ -1691,14 +1691,52 @@ Deno.serve(async (req) => {
       },
       subjectRequirements: problem.subjectRequirements || [],
       solverRequestPayload: {
+        schoolId: schoolId,
+        scheduleVersionId: schedule_version_id,
         scheduleSettings: scheduleSettingsSent,
-        subjects: (problem?.subjects || []).slice(0, 5),
-        subjectRequirements: coreSubjectRequirements.length > 0 
-          ? coreSubjectRequirements 
-          : (problem?.subjectRequirements || []).slice(0, 10),
-        lessonsCount: solvedLessons ? solvedLessons.length : null,
-        timeslotsCount: problem.timeslots ? problem.timeslots.length : null,
-        coreRequirementsFound: coreSubjectRequirements.length
+        timeslots: {
+          total: problem.timeslots?.length || 0,
+          sample: (problem.timeslots || []).slice(0, 3)
+        },
+        rooms: {
+          total: problem.rooms?.length || 0,
+          sample: (problem.rooms || []).slice(0, 3)
+        },
+        teachers: {
+          total: problem.teachers?.length || 0,
+          sample: (problem.teachers || []).slice(0, 3)
+        },
+        subjects: {
+          total: (problem?.subjects || []).length,
+          all_codes: (problem?.subjects || []).map(s => s.code),
+          sample: (problem?.subjects || []).slice(0, 10)
+        },
+        lessons: {
+          total: problem.lessons?.length || 0,
+          sample: (problem.lessons || []).slice(0, 10)
+        },
+        subjectRequirements: {
+          total: (problem?.subjectRequirements || []).length,
+          all: problem?.subjectRequirements || [],
+          core_only: coreSubjectRequirements
+        },
+        demandByTG: {
+          total_groups: Object.keys(demandByTG || {}).length,
+          total_periods: Object.values(demandByTG || {}).reduce((sum, v) => sum + v, 0),
+          sample: Object.entries(demandByTG || {}).slice(0, 10)
+        },
+        teachingGroupsMetadata: {
+          total: teachingGroupsFresh?.length || 0,
+          sample: (teachingGroupsFresh || []).slice(0, 5).map(tg => ({
+            id: tg.id,
+            name: tg.name,
+            periods_per_week: tg.periods_per_week
+          }))
+        },
+        flags: {
+          debug: true,
+          strictDemand: true
+        }
       },
       expectedLessonsBySubject,
       assignedBySubjectCode,
