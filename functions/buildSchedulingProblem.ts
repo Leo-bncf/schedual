@@ -318,55 +318,74 @@ Deno.serve(async (req) => {
       const level = String(tg.level || '').toUpperCase().trim();
       const yearGroupStr = String(tg.year_group || '').toUpperCase();
       const nameStr = String(tg.name || '').toUpperCase();
-      const ibLevel = subj ? String(subj.ib_level || '').toUpperCase() : null;
-      const isDPGroup = yearGroupStr.includes('DP') || ibLevel === 'DP' || nameStr.includes('DP');
+      
+      // CRITICAL: Detect DP HL/SL from tg.level AND tg.name (e.g., "Physics HL - Group A")
+      const isDPHL = level === 'HL' || nameStr.includes(' HL') || nameStr.includes('_HL');
+      const isDPSL = level === 'SL' || nameStr.includes(' SL') || nameStr.includes('_SL');
+      const isDPGroup = yearGroupStr.includes('DP') || isDPHL || isDPSL;
 
-      // Priority 1: TG-level explicit config (SOURCE OF TRUTH) - WITH UNIT VALIDATION
-      if (typeof tg.minutes_per_week === 'number' && tg.minutes_per_week > 0) {
-        // CRITICAL: Detect if minutes_per_week is actually stored as period count (common data entry error)
-        // If value is suspiciously low (≤30) for a DP group, treat as period count
-        const suspectLowValue = tg.minutes_per_week <= 30;
-        const isDPHL = isDPGroup && level === 'HL';
-        const isDPSL = isDPGroup && level === 'SL';
-
-        if (suspectLowValue && (isDPHL || isDPSL)) {
-          const periodsAsValue = tg.minutes_per_week;
-          const correctedMinutes = periodsAsValue * periodDurationMinutes;
+      // Priority 1: TG-level explicit config (SOURCE OF TRUTH) - WITH ROBUST PARSING
+      if (tg.minutes_per_week != null && tg.minutes_per_week !== '') {
+        // ROBUST PARSER: handle "5h", "3h", "180min", "300", "5,5", etc.
+        const raw = String(tg.minutes_per_week).toLowerCase().trim();
+        let parsedValue = parseFloat(raw.replace(',', '.').replace(/[^0-9.]/g, ''));
+        
+        // If NaN, trigger fallback immediately
+        if (!isFinite(parsedValue) || parsedValue <= 0) {
+          recordLog(`⚠️ TG ${tg.id} (${tg.name}): minutes_per_week = "${raw}" → NaN, applying IB fallback`);
+          const ibFallback = getIBStandardFallback(tg, subj);
           debugMinutesSourceByTG[tg.id] = { 
-            source: 'TG_MINUTES_CORRECTED_FROM_PERIODS', 
-            value: correctedMinutes, 
-            originalValue: tg.minutes_per_week,
-            reason: `Detected period count (${periodsAsValue}) instead of minutes, converted to ${correctedMinutes}min`
+            source: ibFallback.source + '_AFTER_NAN', 
+            value: ibFallback.minutes, 
+            originalValue: raw,
+            reason: `Parsed as NaN, applied ${ibFallback.source}`
           };
-          recordAdjustment(tg, 'Corrected minutes_per_week (was period count)', `${tg.minutes_per_week} periods`, `${correctedMinutes} minutes`);
+          recordAdjustment(tg, 'NaN detected in minutes_per_week', raw, `${ibFallback.minutes} min (IB fallback)`);
+          return ibFallback.minutes;
+        }
+        
+        // UNIT DETECTION: If value <= 30, treat as "hours" and convert to minutes
+        if (parsedValue <= 30) {
+          const hoursAsValue = parsedValue;
+          parsedValue = hoursAsValue * 60;
+          debugMinutesSourceByTG[tg.id] = { 
+            source: 'TG_MINUTES_CONVERTED_FROM_HOURS', 
+            value: parsedValue, 
+            originalValue: raw,
+            reason: `Detected hours (${hoursAsValue}h) instead of minutes, converted to ${parsedValue}min`
+          };
+          recordAdjustment(tg, 'Converted hours to minutes', `${raw} (${hoursAsValue}h)`, `${parsedValue} minutes`);
+        }
+        
+        const minutes = parsedValue;
+        // CRITICAL: For DP groups, validate against IB standards (HL=300, SL=180)
+        // Use tg.level / tg.name for HL/SL detection (subject.ib_level often empty)
+        if (isDPHL && minutes < 240) {
+          const correctedMinutes = 300;
+          debugMinutesSourceByTG[tg.id] = { 
+            source: 'TG_MINUTES_OVERRIDE_HL', 
+            value: correctedMinutes, 
+            originalValue: raw,
+            reason: `DP HL below standard (${minutes}min from "${raw}"), forced to 300min`
+          };
+          recordAdjustment(tg, 'DP HL below IB standard', `${raw} (${minutes}min)`, '300min (5 periods)');
           return correctedMinutes;
         }
 
-        // CRITICAL: For DP groups, validate against IB standards (HL=300, SL=180)
-        if (isDPHL && tg.minutes_per_week < 240) {
-          debugMinutesSourceByTG[tg.id] = { 
-            source: 'TG_MINUTES_OVERRIDE_HL', 
-            value: 300, 
-            originalValue: tg.minutes_per_week,
-            reason: `DP HL below standard (${tg.minutes_per_week}min), forced to 300min`
-          };
-          recordAdjustment(tg, 'DP HL below IB standard', `${tg.minutes_per_week}min`, '300min (5 periods)');
-          return 300;
-        }
-
-        if (isDPSL && tg.minutes_per_week < 150) {
+        if (isDPSL && minutes < 150) {
+          const correctedMinutes = 180;
           debugMinutesSourceByTG[tg.id] = { 
             source: 'TG_MINUTES_OVERRIDE_SL', 
-            value: 180, 
-            originalValue: tg.minutes_per_week,
-            reason: `DP SL below standard (${tg.minutes_per_week}min), forced to 180min`
+            value: correctedMinutes, 
+            originalValue: raw,
+            reason: `DP SL below standard (${minutes}min from "${raw}"), forced to 180min`
           };
-          recordAdjustment(tg, 'DP SL below IB standard', `${tg.minutes_per_week}min`, '180min (3 periods)');
-          return 180;
+          recordAdjustment(tg, 'DP SL below IB standard', `${raw} (${minutes}min)`, '180min (3 periods)');
+          return correctedMinutes;
         }
 
-        debugMinutesSourceByTG[tg.id] = { source: 'TG_MINUTES', value: tg.minutes_per_week };
-        return tg.minutes_per_week;
+        debugMinutesSourceByTG[tg.id] = { source: 'TG_MINUTES', value: minutes, originalValue: raw };
+        return minutes;
       }
 
       if (typeof tg.periods_per_week === 'number' && tg.periods_per_week > 0) {
