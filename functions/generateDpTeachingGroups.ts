@@ -67,12 +67,15 @@ Deno.serve(async (req) => {
     const school_id = user.school_id;
     logs.school_id = school_id;
 
-    // Fetch school (for settings if needed later)
+    // Fetch school (for period duration calculation)
     const school = await withRetry(
       'fetch_school',
       { entity: 'School', filter: { id: school_id } },
       async () => (await base44.entities.School.filter({ id: school_id }))[0]
     );
+    
+    const periodDurationMinutes = school?.period_duration_minutes || 60;
+    console.log(`[generateDpTeachingGroups] School period_duration_minutes: ${periodDurationMinutes}`);
 
     // Fetch DP students with retries
     const studentsRaw = await withRetry(
@@ -175,42 +178,30 @@ Deno.serve(async (req) => {
       const isCAS = subjectCode === 'CAS' || subject.is_core === true && subject.name?.includes('CAS');
       const isEE = subjectCode === 'EE' || subject.is_core === true && subject.name?.includes('EE');
       
-      let minutesPerWeek = 0;
-      let periodsPerWeek = 0;
+      // STEP 1: Define hours_per_week as source of truth (IB standards)
+      let hoursPerWeek = 0;
       
       if (isTOK) {
-        // TOK: 2 periods/week (120 minutes)
-        periodsPerWeek = 2;
-        minutesPerWeek = 120;
-        console.log(`[generateDpTeachingGroups] TOK detected: ${subject.name} → 2 periods/week (120 min)`);
+        hoursPerWeek = 2; // TOK: 2 hours/week
       } else if (isCAS) {
-        // CAS: 1 period/week or unscheduled (60 minutes)
-        periodsPerWeek = 1;
-        minutesPerWeek = 60;
-        console.log(`[generateDpTeachingGroups] CAS detected: ${subject.name} → 1 period/week (60 min)`);
+        hoursPerWeek = 1; // CAS: 1 hour/week (if timetabled)
       } else if (isEE) {
-        // EE: Usually not timetabled (0 periods)
-        periodsPerWeek = 0;
-        minutesPerWeek = 0;
-        console.log(`[generateDpTeachingGroups] EE detected: ${subject.name} → 0 periods/week (not timetabled)`);
+        hoursPerWeek = 0; // EE: Not timetabled
+      } else if (groupData.level === 'HL') {
+        hoursPerWeek = 6; // HL: 6 hours/week
+      } else if (groupData.level === 'SL') {
+        hoursPerWeek = 4; // SL: 4 hours/week
       } else {
-        // STANDARD DP SUBJECTS: HL = 6 periods, SL = 4 periods
-        if (groupData.level === 'HL') {
-          periodsPerWeek = 6;
-          minutesPerWeek = subject.hl_minutes_per_week_default 
-            || (subject.hl_hours_per_week ? subject.hl_hours_per_week * 60 : 0)
-            || 360;
-        } else if (groupData.level === 'SL') {
-          periodsPerWeek = 4;
-          minutesPerWeek = subject.sl_minutes_per_week_default 
-            || (subject.sl_hours_per_week ? subject.sl_hours_per_week * 60 : 0)
-            || 240;
-        } else {
-          // Fallback for unspecified level
-          periodsPerWeek = 4;
-          minutesPerWeek = subject.sl_minutes_per_week_default || 240;
-        }
+        hoursPerWeek = 4; // Fallback: assume SL
       }
+      
+      // STEP 2: Calculate minutes_per_week
+      const minutesPerWeek = hoursPerWeek * 60;
+      
+      // STEP 3: Calculate periods_per_week dynamically based on period duration
+      const periodsPerWeek = Math.ceil(minutesPerWeek / periodDurationMinutes);
+      
+      console.log(`[generateDpTeachingGroups] ${subject.name} ${groupData.level || 'core'}: ${hoursPerWeek}h/week → ${minutesPerWeek}min → ${periodsPerWeek} periods (${periodDurationMinutes}min each)`);
       
       // FAIL-SAFE: Skip EE groups (no timetabling needed)
       if (isEE && periodsPerWeek === 0) {
@@ -218,8 +209,10 @@ Deno.serve(async (req) => {
         continue;
       }
       
-      // Legacy hours field for backward compatibility
-      const hoursPerWeek = minutesPerWeek / 60;
+      // Generate stable course_code with level and cohort
+      const levelSuffix = groupData.level ? `_${groupData.level}` : '';
+      const cohortSuffix = groupData.year_group ? `_${groupData.year_group.replace(/\+/g, '_')}` : '';
+      const stableCourseCode = `${subjectCode}${levelSuffix}${cohortSuffix}`;
 
       newGroups.push({
         school_id,
@@ -228,10 +221,10 @@ Deno.serve(async (req) => {
         level: groupData.level,
         year_group: groupData.year_group,
         student_ids: groupData.student_ids,
-        minutes_per_week: minutesPerWeek,      // PRIMARY: OR-Tool requires this
-        periods_per_week: periodsPerWeek,      // EXPLICIT: 5 for HL, 3 for SL, 2 for TOK, 1 for CAS
-        hours_per_week: hoursPerWeek,          // LEGACY: Kept for compatibility
-        course_code: subjectCode,              // STABLE: For debugging and matching
+        hours_per_week: hoursPerWeek,         // SOURCE OF TRUTH: 6 for HL, 4 for SL, 2 for TOK
+        minutes_per_week: minutesPerWeek,     // DERIVED: hours * 60
+        periods_per_week: periodsPerWeek,     // DERIVED: ceil(minutes / period_duration)
+        course_code: stableCourseCode,        // STABLE: FILM_HL_DP2 format
         is_active: true,
       });
     }
