@@ -897,6 +897,73 @@ Deno.serve(async (req) => {
       }, { status: 500 });
     }
     
+    // FIX C: POST-SOLVE DEMAND VALIDATION (prevent under/over-scheduling)
+    stage = 'validateDemandFulfillment';
+    console.log(`[callORToolScheduler] ${stage}: auditing solver output against demand`);
+    
+    const actualByTG = {};
+    for (const lesson of solvedLessons) {
+      if (!lesson.timeslotId) continue; // Only count assigned lessons
+      
+      // Extract teaching_group_id from studentGroup (format: "TG_<id>")
+      const tgId = (lesson.studentGroup && lesson.studentGroup.startsWith('TG_')) 
+        ? lesson.studentGroup.slice(3) 
+        : null;
+      
+      if (!tgId) {
+        console.warn(`[callORToolScheduler] ⚠️ Lesson without valid teaching_group_id: ${lesson.studentGroup}`);
+        continue;
+      }
+      
+      const periodsToAdd = lesson.is_double_period ? 2 : 1;
+      actualByTG[tgId] = (actualByTG[tgId] || 0) + periodsToAdd;
+    }
+    
+    console.log('[callORToolScheduler] actualByTG:', actualByTG);
+    console.log('[callORToolScheduler] demandByTG:', demandByTG);
+    
+    const demandProblems = [];
+    for (const tgId of Object.keys(demandByTG)) {
+      const want = demandByTG[tgId];
+      const got = actualByTG[tgId] || 0;
+      
+      if (got !== want) {
+        const tg = teachingGroups.find(g => g.id === tgId);
+        demandProblems.push({
+          tgId,
+          name: tg?.name || tgId,
+          subject_id: tg?.subject_id || null,
+          want,
+          got,
+          diff: got - want,
+          status: got < want ? 'under-scheduled' : 'over-scheduled'
+        });
+      }
+    }
+    
+    if (demandProblems.length > 0) {
+      console.error('[callORToolScheduler] ❌ DEMAND MISMATCH: Solver output does not match required lesson counts');
+      console.error('[callORToolScheduler] Demand problems:', demandProblems);
+      
+      return Response.json({
+        ok: false,
+        stage: 'DEMAND_VALIDATION_FAILURE',
+        error: `Solver output does not match required lesson counts for ${demandProblems.length} teaching groups`,
+        errorMessage: 'The solver scheduled a different number of periods than required. This will cause incomplete student schedules.',
+        demandProblems,
+        demandSummary: {
+          total_teaching_groups: Object.keys(demandByTG).length,
+          mismatched: demandProblems.length,
+          under_scheduled: demandProblems.filter(p => p.status === 'under-scheduled').length,
+          over_scheduled: demandProblems.filter(p => p.status === 'over-scheduled').length
+        },
+        suggestion: 'This indicates the solver is not respecting the demandByTG constraint. Verify solver implements: model.Add(sum(x[tg, ts]) == demandByTG[tg]) for each teaching group.',
+        meta: { schedule_version_id, schoolId }
+      }, { status: 200 });
+    }
+    
+    console.log('[callORToolScheduler] ✅ Demand validation passed - all teaching groups scheduled correctly');
+    
     // Step 5c: Map OptaPlanner solution back to Base44 ScheduleSlot entities (assigned + unscheduled)
     const allowNullRoomSubjects = new Set(['STUDY','TOK','CAS','EE']);
     const periods_per_day = periodsPerDayComputed; // derived from schedule settings
