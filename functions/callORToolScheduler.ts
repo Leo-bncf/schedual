@@ -529,6 +529,26 @@ Deno.serve(async (req) => {
         sample: Object.entries(demandByTG).slice(0, 5)
       });
 
+      // SOFT CONSTRAINTS: Enable default pack if no constraints configured
+      stage = 'fetchConstraints';
+      console.log(`[callORToolScheduler] ${stage}: checking for configured constraints`);
+      
+      let constraints = [];
+      let useDefaultSoftConstraints = false;
+      
+      try {
+        constraints = await base44.entities.Constraint.filter({ school_id: schoolId, is_active: true });
+        console.log(`[callORToolScheduler] Found ${constraints.length} active constraints`);
+        
+        if (constraints.length === 0) {
+          useDefaultSoftConstraints = true;
+          console.log('[callORToolScheduler] 🎯 No constraints configured → enabling default soft constraints pack');
+        }
+      } catch (constraintError) {
+        console.warn('[callORToolScheduler] Failed to fetch constraints:', constraintError);
+        useDefaultSoftConstraints = true; // Fallback to defaults if fetch fails
+      }
+      
       const orToolPayload = {
         ...problem,
         schoolId: schoolId,
@@ -545,6 +565,15 @@ Deno.serve(async (req) => {
           teacher_id: tg.teacher_id || null,
           preferred_room_id: tg.preferred_room_id || null
         })),
+        constraints: constraints.map(c => ({
+          id: c.id,
+          name: c.name,
+          type: c.type, // hard/soft
+          category: c.category,
+          weight: c.weight || 1,
+          rule: c.rule
+        })),
+        useDefaultSoftConstraints, // FLAG: Solver should apply default soft constraints if true
         debug: true, // Enable solver debug mode for detailed coverage metrics
         strictDemand: true // FLAG: Solver MUST respect demandByTG exactly
       };
@@ -552,6 +581,15 @@ Deno.serve(async (req) => {
       orToolPayload.schoolId = schoolId;
       orToolPayload.scheduleVersionId = schedule_version_id;
       orToolPayload.demandByTG = demandByTG;
+      orToolPayload.useDefaultSoftConstraints = useDefaultSoftConstraints;
+      
+      console.log('[callORToolScheduler] Constraint configuration:', {
+        active_constraints: constraints.length,
+        useDefaultSoftConstraints,
+        message: useDefaultSoftConstraints 
+          ? '🎯 Using default soft constraints pack (variety, no repetitive patterns)' 
+          : `✅ Using ${constraints.length} custom constraints`
+      });
 
       // CRITICAL: Validate payload completeness BEFORE sending to solver
       console.log("[OR] payload counts", {
