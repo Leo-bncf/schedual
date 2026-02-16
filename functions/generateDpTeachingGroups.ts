@@ -178,7 +178,8 @@ Deno.serve(async (req) => {
       const isCAS = subjectCode === 'CAS' || subject.is_core === true && subject.name?.includes('CAS');
       const isEE = subjectCode === 'EE' || subject.is_core === true && subject.name?.includes('EE');
       
-      // STEP 1: Define hours_per_week as source of truth (IB standards)
+      // STEP 1: Define hours_per_week as source of truth (IB standards 2026)
+      // CRITICAL BUSINESS RULE: HL=6h/week, SL=4h/week (updated from 5h/3h)
       let hoursPerWeek = 0;
       
       if (isTOK) {
@@ -188,12 +189,14 @@ Deno.serve(async (req) => {
       } else if (isEE) {
         hoursPerWeek = 0; // EE: Not timetabled
       } else if (groupData.level === 'HL') {
-        hoursPerWeek = 6; // HL: 6 hours/week
+        hoursPerWeek = 6; // HL: 6 hours/week (NEW STANDARD)
       } else if (groupData.level === 'SL') {
-        hoursPerWeek = 4; // SL: 4 hours/week
+        hoursPerWeek = 4; // SL: 4 hours/week (NEW STANDARD)
       } else {
-        hoursPerWeek = 4; // Fallback: assume SL
+        hoursPerWeek = 4; // Fallback: assume SL (4h/week)
       }
+      
+      console.log(`[generateDpTeachingGroups] 📊 ${subject.name} ${groupData.level || 'core'}: hours_per_week=${hoursPerWeek} (HL=6h, SL=4h, TOK=2h, CAS=1h, EE=0h)`);
       
       // STEP 2: Calculate minutes_per_week
       const minutesPerWeek = hoursPerWeek * 60;

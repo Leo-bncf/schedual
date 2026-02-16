@@ -334,20 +334,31 @@ Deno.serve(async (req) => {
     
     stage = 'callSolver';
     console.log(`[callORToolScheduler] ${stage}: preparing solver request (${solverIdentity.engine})`);
-    
-    // Step 3: Call solver service
+
+    // Step 3: Call solver service - CRITICAL DIAGNOSTICS
     const SOLVER_ENDPOINT = Deno.env.get('OR_TOOL_ENDPOINT') || Deno.env.get('SOLVER_ENDPOINT');
     const SOLVER_API_KEY = Deno.env.get('OR_TOOL_API_KEY') || Deno.env.get('SOLVER_API_KEY');
 
+    console.log('🔍 CRITICAL ENV CHECK:');
+    console.log('  OR_TOOL_ENDPOINT =', Deno.env.get('OR_TOOL_ENDPOINT') || 'NOT_SET');
+    console.log('  SOLVER_ENDPOINT =', Deno.env.get('SOLVER_ENDPOINT') || 'NOT_SET');
+    console.log('  OR_TOOL_API_KEY =', Deno.env.get('OR_TOOL_API_KEY') ? '***SET***' : 'NOT_SET');
+    console.log('  SOLVER_API_KEY =', Deno.env.get('SOLVER_API_KEY') ? '***SET***' : 'NOT_SET');
+    console.log('  FINAL ENDPOINT USED:', SOLVER_ENDPOINT);
+
     if (!SOLVER_ENDPOINT) {
-      console.error('[callORToolScheduler] Missing SOLVER_ENDPOINT');
+      console.error('[callORToolScheduler] ❌ Missing SOLVER_ENDPOINT');
       return Response.json({ 
         error: 'Solver endpoint missing: set OR_TOOL_ENDPOINT or SOLVER_ENDPOINT',
+        envCheck: {
+          OR_TOOL_ENDPOINT: Deno.env.get('OR_TOOL_ENDPOINT') || null,
+          SOLVER_ENDPOINT: Deno.env.get('SOLVER_ENDPOINT') || null
+        },
         solverIdentity
       }, { status: 503 });
     }
     if (!SOLVER_API_KEY) {
-      console.error('[callORToolScheduler] Missing SOLVER_API_KEY');
+      console.error('[callORToolScheduler] ❌ Missing SOLVER_API_KEY');
       return Response.json({ 
         error: 'Solver API key missing: set OR_TOOL_API_KEY or SOLVER_API_KEY',
         solverIdentity
@@ -355,7 +366,7 @@ Deno.serve(async (req) => {
     }
 
     const solverEndpointUsed = SOLVER_ENDPOINT;
-    console.log(`[callORToolScheduler] Calling solver (${solverIdentity.engine}) at`, solverEndpointUsed, 'schedule_version_id =', schedule_version_id);
+    console.log(`[callORToolScheduler] ✅ Calling solver (${solverIdentity.engine}) at`, solverEndpointUsed, 'schedule_version_id =', schedule_version_id);
 
     // Diagnostics defaults + /health check
     let solverHttpStatus = null;

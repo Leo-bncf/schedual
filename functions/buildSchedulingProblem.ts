@@ -290,11 +290,11 @@ Deno.serve(async (req) => {
       const isDPGroup = yearGroupStr.includes('DP') || ibLevel === 'DP' || nameStr.includes('DP');
 
       if (isDPGroup) {
-        // CRITICAL: Never return 0 for DP groups - use IB standard minimums
-        if (level === 'HL') return { minutes: 300, source: 'IB_STANDARD_HL' };
-        if (level === 'SL') return { minutes: 180, source: 'IB_STANDARD_SL' };
-        // FALLBACK: If level unclear, default to SL minimum (safer than 0)
-        return { minutes: 180, source: 'IB_STANDARD_SL_ASSUMED', note: 'level_unclear_defaulted_to_SL' };
+        // CRITICAL: IB STANDARD 2026 - HL=6h (360min), SL=4h (240min)
+        if (level === 'HL') return { minutes: 360, source: 'IB_STANDARD_HL_2026' }; // 6 hours/week
+        if (level === 'SL') return { minutes: 240, source: 'IB_STANDARD_SL_2026' }; // 4 hours/week
+        // FALLBACK: If level unclear, default to SL minimum
+        return { minutes: 240, source: 'IB_STANDARD_SL_ASSUMED_2026', note: 'level_unclear_defaulted_to_SL_4h' };
       }
 
       if (['PYP', 'MYP'].includes(ibLevel) || yearGroupStr.includes('MYP') || yearGroupStr.includes('PYP')) {
@@ -366,29 +366,29 @@ Deno.serve(async (req) => {
         }
         
         const minutes = parsedValue;
-        // CRITICAL: For DP groups, validate against IB standards (HL=300, SL=180)
+        // CRITICAL: For DP groups, validate against IB STANDARD 2026 (HL=360min, SL=240min)
         // Use tg.level / tg.name for HL/SL detection (subject.ib_level often empty)
-        if (isDPHL && minutes < 240) {
-          const correctedMinutes = 300;
+        if (isDPHL && minutes < 320) {
+          const correctedMinutes = 360; // 6 hours/week
           debugMinutesSourceByTG[tg.id] = { 
-            source: 'TG_MINUTES_OVERRIDE_HL', 
+            source: 'TG_MINUTES_OVERRIDE_HL_2026', 
             value: correctedMinutes, 
             originalValue: raw,
-            reason: `DP HL below standard (${minutes}min from "${raw}"), forced to 300min`
+            reason: `DP HL below IB 2026 standard (${minutes}min from "${raw}"), forced to 360min (6h)`
           };
-          recordAdjustment(tg, 'DP HL below IB standard', `${raw} (${minutes}min)`, '300min (5 periods)');
+          recordAdjustment(tg, 'DP HL below IB 2026 standard', `${raw} (${minutes}min)`, '360min (6h/week = 6 periods@60min)');
           return correctedMinutes;
         }
 
-        if (isDPSL && minutes < 150) {
-          const correctedMinutes = 180;
+        if (isDPSL && minutes < 200) {
+          const correctedMinutes = 240; // 4 hours/week
           debugMinutesSourceByTG[tg.id] = { 
-            source: 'TG_MINUTES_OVERRIDE_SL', 
+            source: 'TG_MINUTES_OVERRIDE_SL_2026', 
             value: correctedMinutes, 
             originalValue: raw,
-            reason: `DP SL below standard (${minutes}min from "${raw}"), forced to 180min`
+            reason: `DP SL below IB 2026 standard (${minutes}min from "${raw}"), forced to 240min (4h)`
           };
-          recordAdjustment(tg, 'DP SL below IB standard', `${raw} (${minutes}min)`, '180min (3 periods)');
+          recordAdjustment(tg, 'DP SL below IB 2026 standard', `${raw} (${minutes}min)`, '240min (4h/week = 4 periods@60min)');
           return correctedMinutes;
         }
 
