@@ -70,9 +70,10 @@ export default function TimetableGrid({
     });
     
     // Map each timeslot to its UI row position (1-based, chronological)
+    // CRITICAL: Use String(ts.id) as key to avoid NaN when timeslot_id is UUID/string
     Object.values(timeslotsByDay).forEach(daySlots => {
       daySlots.forEach((ts, idx) => {
-        map[ts.id] = idx + 1;
+        map[String(ts.id)] = idx + 1;
       });
     });
     
@@ -106,11 +107,12 @@ export default function TimetableGrid({
     
     const normalized = (slots || []).map(s => {
       let day = normalizeDay(s.day || s.day_of_week || s.dayOfWeek);
-      let uiRow = s.timeslot_id ? timeslotToPosition[Number(s.timeslot_id)] : s.period;
+      // FIX BUG #1: Use String(s.timeslot_id) instead of Number() to avoid NaN
+      let uiRow = s.timeslot_id ? timeslotToPosition[String(s.timeslot_id)] : s.period;
       
       // FALLBACK 1: Derive day from timeslot if missing
       if (!day && s.timeslot_id) {
-        const ts = timeslots.find(t => t.id === Number(s.timeslot_id));
+        const ts = timeslots.find(t => String(t.id) === String(s.timeslot_id));
         if (ts?.dayOfWeek) {
           day = normalizeDay(ts.dayOfWeek);
           console.log(`[TimetableGrid] FALLBACK: Derived day="${day}" from timeslot_id=${s.timeslot_id}`);
@@ -119,18 +121,18 @@ export default function TimetableGrid({
       
       // FALLBACK 2: Derive uiRow from timeslot position if undefined
       if (!uiRow && s.timeslot_id) {
-        const tsId = Number(s.timeslot_id);
+        const tsId = String(s.timeslot_id);
         if (timeslotToPosition[tsId]) {
           uiRow = timeslotToPosition[tsId];
           console.log(`[TimetableGrid] FALLBACK: Derived uiRow=${uiRow} from timeslot_id=${s.timeslot_id}`);
         } else {
           invalidTimeslotIdCount++;
-          console.warn(`[TimetableGrid] ❌ Invalid timeslot_id=${s.timeslot_id} not in timeslotToPosition map`);
+          console.warn(`[TimetableGrid] ❌ Invalid timeslot_id=${s.timeslot_id} (type: ${typeof s.timeslot_id}) not in timeslotToPosition map`);
         }
       }
       
-      // FALLBACK 3: Use period as uiRow if still undefined and period <= periodsPerDay
-      if (!uiRow && s.period && s.period <= periodsPerDay) {
+      // FALLBACK 3: Use period as uiRow if still undefined (no upper limit check - let it render)
+      if (!uiRow && s.period) {
         uiRow = s.period;
         console.log(`[TimetableGrid] FALLBACK: Using period=${s.period} as uiRow`);
       }
@@ -163,7 +165,7 @@ export default function TimetableGrid({
     });
     
     return normalized;
-  }, [slots, timeslotToPosition, timeslots, periodsPerDay]);
+  }, [slots, timeslotToPosition, timeslots]);
 
   const getSlotData = (day, uiRow) => {
     return normalizedSlots.filter(s => s.day === day && s.uiRow === uiRow);
@@ -185,7 +187,40 @@ export default function TimetableGrid({
     return teachers.find(t => t.id === teacherId);
   };
 
-  const activePeriods = Array.from({ length: periodsPerDay }, (_, i) => i + 1);
+  // FIX BUG #2: Calculate actual periods needed based on timeslots per day (not just config)
+  const computedPeriodsPerDay = React.useMemo(() => {
+    if (!timeslots || timeslots.length === 0) return periodsPerDay;
+    
+    // Count timeslots per day
+    const countsPerDay = {};
+    DAYS.forEach(day => {
+      const dayUpper = day.toUpperCase();
+      countsPerDay[day] = timeslots.filter(t => t.dayOfWeek === dayUpper).length;
+    });
+    
+    const maxTimeslotsPerDay = Math.max(...Object.values(countsPerDay), 0);
+    
+    // Also check max period in normalized slots
+    const maxPeriodInSlots = normalizedSlots.reduce((max, s) => Math.max(max, s.uiRow || 0), 0);
+    
+    const computed = Math.max(periodsPerDay, maxTimeslotsPerDay, maxPeriodInSlots);
+    
+    if (computed > periodsPerDay) {
+      console.warn(`[TimetableGrid] ⚠️ GRID EXPANSION: periodsPerDay=${periodsPerDay} but timeslots/slots require ${computed} rows. Expanding grid to prevent hiding slots.`);
+    }
+    
+    console.log('[TimetableGrid] 📊 GRID SIZE DIAGNOSTIC:', {
+      configPeriodsPerDay: periodsPerDay,
+      maxTimeslotsPerDay,
+      maxPeriodInSlots,
+      computedPeriodsPerDay: computed,
+      countsPerDay
+    });
+    
+    return computed;
+  }, [timeslots, periodsPerDay, normalizedSlots]);
+
+  const activePeriods = Array.from({ length: computedPeriodsPerDay }, (_, i) => i + 1);
 
   const getSlotSpan = (day, period, slotId) => {
     const currentSlots = getSlotData(day, period);
@@ -195,7 +230,8 @@ export default function TimetableGrid({
     let span = 1;
     let checkPeriod = period + 1;
     
-    while (checkPeriod <= periodsPerDay) {
+    // Use computedPeriodsPerDay instead of periodsPerDay to allow spans beyond config limit
+    while (checkPeriod <= computedPeriodsPerDay) {
       const nextSlots = getSlotData(day, checkPeriod);
       if (nextSlots.some(s => s.teaching_group_id === currentSlot.teaching_group_id)) {
         span++;
