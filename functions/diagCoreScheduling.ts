@@ -25,7 +25,7 @@ Deno.serve(async (req) => {
 
     console.log('[diagCoreScheduling] input params', { inputSchoolId, bypass_service, run_solver });
 
-    const school_id = inputSchoolId;
+    let school_id = inputSchoolId; // FIX: Changed from const to let (can be reassigned in fallback)
     if (!school_id) {
       return Response.json({ error: 'school_id required in payload' }, { status: 400 });
     }
@@ -171,7 +171,7 @@ Deno.serve(async (req) => {
         const subj = subjectById[tg.subject_id];
         if (!subj) continue;
         const code = codeOf(subj);
-        const weekly = Number(tg.hours_per_week || 0);
+        const weekly = Number(tg.periods_per_week ?? tg.hours_per_week ?? 0); // FIX: Use periods_per_week (migration from hours)
         const teacherNum = tg.teacher_id ? (teacherIdToNumeric[tg.teacher_id] || null) : null;
         const roomNum = tg.preferred_room_id ? (roomIdToNumeric[tg.preferred_room_id] || null) : null;
         for (let k = 0; k < weekly; k++) {
@@ -270,7 +270,7 @@ Deno.serve(async (req) => {
         const subj = subjectById[tg.subject_id];
         if (!subj) continue;
         const code = codeOf(subj);
-        const weekly = Number(tg.hours_per_week || 0);
+        const weekly = Number(tg.periods_per_week ?? tg.hours_per_week ?? 0); // FIX: Use periods_per_week (migration from hours)
         const teacherNum = tg.teacher_id ? (teacherIdToNumeric[tg.teacher_id] || null) : null;
         const roomNum = tg.preferred_room_id ? (roomIdToNumeric[tg.preferred_room_id] || null) : null;
         for (let k = 0; k < weekly; k++) {
@@ -317,7 +317,7 @@ Deno.serve(async (req) => {
         const subj = subjectById[tg.subject_id];
         if (!subj) continue;
         const code = codeOf(subj);
-        const weekly = Number(tg.hours_per_week || 0);
+        const weekly = Number(tg.periods_per_week ?? tg.hours_per_week ?? 0); // FIX: Use periods_per_week (migration from hours)
         acc[code] = (acc[code] || 0) + weekly;
       }
       expectedLessonsBySubject = acc;
@@ -367,7 +367,7 @@ Deno.serve(async (req) => {
     }, 0);
 
     // Sample core lessons from problem (pre-solver)
-    const coreSamples = { TOK: [], CAS: [], EE: [] };
+    let coreSamples = { TOK: [], CAS: [], EE: [] }; // FIX: Changed from const to let (can be reassigned after solver)
     for (const l of (problem?.lessons || [])) {
       const code = norm(l.subject || '');
       if (coreSamples[code] && coreSamples[code].length < 5) {
@@ -386,7 +386,7 @@ Deno.serve(async (req) => {
     // Optionally run solver and then compute inserted counts per subject
     let insertedCountBySubject = null;
     if (run_solver) {
-      await base44.functions.invoke('callORToolScheduler', { schedule_version_id });
+      await base44.asServiceRole.functions.invoke('callORToolScheduler', { schedule_version_id, school_id }); // FIX: Use service role + pass school_id
       const allSlots = await client.entities.ScheduleSlot.filter({ school_id, schedule_version: schedule_version_id });
       const codeBySubjectId = {};
       Object.entries(subjectIdByCode).forEach(([code, id]) => { codeBySubjectId[id] = code; });
