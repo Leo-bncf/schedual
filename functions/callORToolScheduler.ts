@@ -429,6 +429,39 @@ Deno.serve(async (req) => {
       orToolPayload.schoolId = schoolId;
       orToolPayload.scheduleVersionId = schedule_version_id;
       orToolPayload.demandByTG = demandByTG;
+
+      // CRITICAL: Validate payload completeness BEFORE sending to solver
+      console.log("[OR] payload counts", {
+        rooms: orToolPayload.rooms?.length,
+        teachers: orToolPayload.teachers?.length,
+        lessons: orToolPayload.lessons?.length,
+        subjects: orToolPayload.subjects?.length,
+        subjectRequirements: Array.isArray(orToolPayload.subjectRequirements) ? orToolPayload.subjectRequirements.length : null,
+        scheduleSettings: !!orToolPayload.scheduleSettings,
+        demandByTG_count: Object.keys(orToolPayload.demandByTG || {}).length
+      });
+
+      if (!orToolPayload.scheduleSettings) {
+        throw new Error("payload missing scheduleSettings");
+      }
+      if (!Array.isArray(orToolPayload.rooms) || orToolPayload.rooms.length === 0) {
+        throw new Error("payload missing rooms[]");
+      }
+      if (!Array.isArray(orToolPayload.teachers) || orToolPayload.teachers.length === 0) {
+        throw new Error("payload missing teachers[]");
+      }
+      if (!Array.isArray(orToolPayload.lessons) || orToolPayload.lessons.length === 0) {
+        throw new Error("payload missing lessons[]");
+      }
+      if (!Array.isArray(orToolPayload.subjects) || orToolPayload.subjects.length === 0) {
+        throw new Error("payload missing subjects[]");
+      }
+      if (!Array.isArray(orToolPayload.subjectRequirements)) {
+        throw new Error("payload subjectRequirements must be [] not null");
+      }
+
+      console.log("[OR] ✅ Payload validation passed - ready to send to solver");
+
       const payloadJson = JSON.stringify(orToolPayload);
 
       console.log('[callORToolScheduler] PRE-SEND VALIDATION:', {
