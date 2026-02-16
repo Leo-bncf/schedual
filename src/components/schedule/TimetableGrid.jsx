@@ -99,12 +99,71 @@ export default function TimetableGrid({
     console.log('[TimetableGrid] DEBUG - slots[0]:', slots[0]);
     console.log('[TimetableGrid] DEBUG - timeslotToPosition sample:', Object.entries(timeslotToPosition).slice(0, 5));
     
-    return (slots || []).map(s => ({
-      ...s,
-      day: normalizeDay(s.day),
-      uiRow: s.timeslot_id ? timeslotToPosition[Number(s.timeslot_id)] : s.period,
-    }));
-  }, [slots, timeslotToPosition, timeslots]);
+    // DEBUG COUNTERS: Track mapping failures
+    let invalidTimeslotIdCount = 0;
+    let missingDayCount = 0;
+    let successfullyMappedCount = 0;
+    
+    const normalized = (slots || []).map(s => {
+      let day = normalizeDay(s.day || s.day_of_week || s.dayOfWeek);
+      let uiRow = s.timeslot_id ? timeslotToPosition[Number(s.timeslot_id)] : s.period;
+      
+      // FALLBACK 1: Derive day from timeslot if missing
+      if (!day && s.timeslot_id) {
+        const ts = timeslots.find(t => t.id === Number(s.timeslot_id));
+        if (ts?.dayOfWeek) {
+          day = normalizeDay(ts.dayOfWeek);
+          console.log(`[TimetableGrid] FALLBACK: Derived day="${day}" from timeslot_id=${s.timeslot_id}`);
+        }
+      }
+      
+      // FALLBACK 2: Derive uiRow from timeslot position if undefined
+      if (!uiRow && s.timeslot_id) {
+        const tsId = Number(s.timeslot_id);
+        if (timeslotToPosition[tsId]) {
+          uiRow = timeslotToPosition[tsId];
+          console.log(`[TimetableGrid] FALLBACK: Derived uiRow=${uiRow} from timeslot_id=${s.timeslot_id}`);
+        } else {
+          invalidTimeslotIdCount++;
+          console.warn(`[TimetableGrid] ❌ Invalid timeslot_id=${s.timeslot_id} not in timeslotToPosition map`);
+        }
+      }
+      
+      // FALLBACK 3: Use period as uiRow if still undefined and period <= periodsPerDay
+      if (!uiRow && s.period && s.period <= periodsPerDay) {
+        uiRow = s.period;
+        console.log(`[TimetableGrid] FALLBACK: Using period=${s.period} as uiRow`);
+      }
+      
+      // COUNT FAILURES
+      if (!day) {
+        missingDayCount++;
+        console.warn(`[TimetableGrid] ❌ Missing day for slot:`, s);
+      }
+      if (!uiRow) {
+        console.warn(`[TimetableGrid] ❌ Missing uiRow for slot (timeslot_id=${s.timeslot_id}, period=${s.period}):`, s);
+      }
+      if (day && uiRow) {
+        successfullyMappedCount++;
+      }
+      
+      return {
+        ...s,
+        day,
+        uiRow,
+      };
+    });
+    
+    console.log('[TimetableGrid] 📊 MAPPING DIAGNOSTICS:', {
+      totalSlots: slots.length,
+      successfullyMapped: successfullyMappedCount,
+      invalidTimeslotId: invalidTimeslotIdCount,
+      missingDay: missingDayCount,
+      unmappable: slots.length - successfullyMappedCount
+    });
+    
+    return normalized;
+  }, [slots, timeslotToPosition, timeslots, periodsPerDay]);
 
   const getSlotData = (day, uiRow) => {
     return normalizedSlots.filter(s => s.day === day && s.uiRow === uiRow);
@@ -196,20 +255,79 @@ export default function TimetableGrid({
     setSelectedSlot({ slot, group, room, subject, teacher });
   };
 
+  // Calculate mapping diagnostics for display
+  const mappingDiagnostics = React.useMemo(() => {
+    const invalidTimeslotId = normalizedSlots.filter(s => 
+      s.timeslot_id && !timeslotToPosition[Number(s.timeslot_id)]
+    ).length;
+    
+    const missingDay = normalizedSlots.filter(s => !s.day).length;
+    
+    const unmappable = normalizedSlots.filter(s => !s.day || !s.uiRow).length;
+    
+    return {
+      totalSlots: slots.length,
+      rendered: normalizedSlots.filter(s => s.day && s.uiRow).length,
+      invalidTimeslotId,
+      missingDay,
+      unmappable
+    };
+  }, [normalizedSlots, timeslotToPosition, slots.length]);
+
   return (
     <>
-      <div className="mb-3 p-3 bg-blue-50 border border-blue-200 rounded-lg text-xs text-blue-900">
-        <div className="grid grid-cols-3 gap-4 font-mono">
-          <div>
-            <span className="font-bold">dayStartTime:</span> {dayStartTime}
-          </div>
-          <div>
-            <span className="font-bold">periodDurationMinutes:</span> {periodDurationMinutes}
-          </div>
-          <div>
-            <span className="font-bold">dayEndTime:</span> {dayEndTime}
+      <div className="mb-3 space-y-2">
+        <div className="p-3 bg-blue-50 border border-blue-200 rounded-lg text-xs text-blue-900">
+          <div className="grid grid-cols-3 gap-4 font-mono">
+            <div>
+              <span className="font-bold">dayStartTime:</span> {dayStartTime}
+            </div>
+            <div>
+              <span className="font-bold">periodDurationMinutes:</span> {periodDurationMinutes}
+            </div>
+            <div>
+              <span className="font-bold">dayEndTime:</span> {dayEndTime}
+            </div>
           </div>
         </div>
+        
+        {/* MAPPING DIAGNOSTICS */}
+        {mappingDiagnostics.unmappable > 0 && (
+          <div className="p-3 bg-rose-100 border-2 border-rose-400 rounded-lg text-xs space-y-2">
+            <div className="font-bold text-rose-900 flex items-center gap-2">
+              <span>⚠️ UI MAPPING FAILURE:</span>
+              <Badge variant="destructive">{mappingDiagnostics.unmappable} slots non rendus</Badge>
+            </div>
+            <div className="grid grid-cols-3 gap-2 text-rose-900">
+              <div>
+                <span className="font-semibold">Total slots:</span> {mappingDiagnostics.totalSlots}
+              </div>
+              <div>
+                <span className="font-semibold">Rendered:</span> {mappingDiagnostics.rendered}
+              </div>
+              <div>
+                <span className="font-semibold">Unmappable:</span> {mappingDiagnostics.unmappable}
+              </div>
+            </div>
+            <div className="grid grid-cols-2 gap-2 mt-2">
+              <div className="p-2 bg-white rounded border border-rose-300">
+                <span className="font-semibold">Invalid timeslot_id:</span> {mappingDiagnostics.invalidTimeslotId}
+              </div>
+              <div className="p-2 bg-white rounded border border-rose-300">
+                <span className="font-semibold">Missing day:</span> {mappingDiagnostics.missingDay}
+              </div>
+            </div>
+            <div className="text-[10px] text-rose-800 bg-white p-2 rounded border border-rose-300 mt-2">
+              Ces slots existent dans ScheduleSlot mais ne peuvent pas être affichés. Vérifier: timeslot_id valide, day présent.
+            </div>
+          </div>
+        )}
+        
+        {mappingDiagnostics.unmappable === 0 && mappingDiagnostics.totalSlots > 0 && (
+          <div className="p-2 bg-green-100 border border-green-300 rounded-lg text-xs text-green-900">
+            <span className="font-semibold">✅ All {mappingDiagnostics.totalSlots} slots successfully mapped and rendered</span>
+          </div>
+        )}
       </div>
       
       <Card className="overflow-hidden border-0 shadow-sm" id={exportId}>
