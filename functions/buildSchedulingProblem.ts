@@ -540,8 +540,11 @@ const blockId = tg.block_id || null;
 
 recordLog(`Creating ${weeklyCount} lessons for TG ${tg.id} (${tg.name}, ${subjCode})`);
 
+// DIAGNOSTIC: Log French/English/Anglais lesson creation
+const isFrenchOrEnglish = subjCode.includes('FRENCH') || subjCode.includes('ENGLISH') || subjCode.includes('ANGLAIS');
+
 for (let i = 0; i < weeklyCount; i++) {
-  lessons.push({
+  const lesson = {
     id: lessonId++,
     subject: subjCode,
     studentGroup: `TG_${tg.id}`, // CRITICAL: Format required for callORToolScheduler persistence
@@ -553,7 +556,14 @@ for (let i = 0; i < weeklyCount; i++) {
     timeslotId: null,
     roomId: roomNumeric || null,
     teacherId: teacherNumeric || null,
-  });
+  };
+
+  // Log first French/English lesson for verification
+  if (isFrenchOrEnglish && i === 0) {
+    recordLog(`📝 French/English lesson created: ${subjCode}, TG_${tg.id}, teachingGroupId=${tg.id}, studentCount=${studentIds.length}`);
+  }
+
+  lessons.push(lesson);
 }
 
 // DP: add study blocks + preferences
@@ -582,6 +592,24 @@ if (isDP) {
     
     recordLog(`Lessons created: ${lessons.length} total, ${teachingGroupsIncludedCount} sections included, ${teachingGroupsSkipped.length} skipped`);
     recordLog(`Adjustments made: ${teachingGroupsAdjusted.length}`);
+
+    // DIAGNOSTIC: Verify French/English lessons format
+    const frenchEnglishLessons = lessons.filter(l => 
+      l.subject.includes('FRENCH') || l.subject.includes('ENGLISH') || l.subject.includes('ANGLAIS')
+    );
+
+    if (frenchEnglishLessons.length > 0) {
+      recordLog(`📊 French/English lessons: ${frenchEnglishLessons.length} total`);
+      recordLog(`Sample French/English lesson: ${JSON.stringify(frenchEnglishLessons[0], null, 2)}`);
+
+      // Verify ALL have teachingGroupId
+      const missingTGId = frenchEnglishLessons.filter(l => !l.teachingGroupId);
+      if (missingTGId.length > 0) {
+        recordLog(`⚠️ WARNING: ${missingTGId.length} French/English lessons missing teachingGroupId`);
+      }
+    } else {
+      recordLog(`⚠️ WARNING: No French/English lessons created - check subject codes`);
+    }
 
     // HARD FAIL if critical groups are missing minutes configuration
     const missingMinutesGroups = teachingGroupsSkipped.filter(s => s.reason === 'MISSING_MINUTES_CONFIG');

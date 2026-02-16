@@ -448,7 +448,26 @@ Deno.serve(async (req) => {
     console.log('  SOLVER_API_KEY =', Deno.env.get('SOLVER_API_KEY') ? '***SET***' : 'NOT_SET');
     console.log('  FINAL ENDPOINT USED:', SOLVER_ENDPOINT);
     console.log('[OR] endpointUsed =', SOLVER_ENDPOINT);
-    console.log('[OR] healthUrl =', SOLVER_ENDPOINT?.replace('/solve-and-push', '/health'));
+    const healthUrlForLog = SOLVER_ENDPOINT?.replace('/solve-and-push', '/health');
+    console.log('[OR] healthUrl =', healthUrlForLog);
+
+    // DIAGNOSTIC: Log timeslots distribution by day
+    const timeslotsByDayCount = {};
+    (problem?.timeslots || []).forEach(ts => {
+      const day = ts.dayOfWeek || 'UNKNOWN';
+      timeslotsByDayCount[day] = (timeslotsByDayCount[day] || 0) + 1;
+    });
+
+    const firstTimeslot = problem?.timeslots?.[0];
+    const lastTimeslot = problem?.timeslots?.[problem?.timeslots?.length - 1];
+
+    console.log('[OR] timeslots distribution:', {
+      total: problem?.timeslots?.length || 0,
+      byDay: timeslotsByDayCount,
+      minStart: firstTimeslot?.startTime,
+      maxEnd: lastTimeslot?.endTime,
+      breaks: problem?.scheduleSettings?.breaks?.length || 0
+    });
 
     if (!SOLVER_ENDPOINT) {
       console.error('[callORToolScheduler] ❌ Missing SOLVER_ENDPOINT');
@@ -1182,12 +1201,50 @@ Deno.serve(async (req) => {
     console.log('[callORToolScheduler] ✅ Demand validation passed - all teaching groups scheduled correctly');
     
     // Step 5c: Map OptaPlanner solution back to Base44 ScheduleSlot entities (assigned + unscheduled)
+    // CRITICAL VALIDATION: Verify all lessons have valid TG_ format BEFORE mapping
+    stage = 'validateStudentGroupFormat';
+    console.log(`[callORToolScheduler] ${stage}: validating studentGroup format in solver output`);
+    
+    const invalidFormatLessons = solvedLessons.filter(l => {
+      if (!l.timeslotId) return false; // Skip unassigned
+      return l.studentGroup && !l.studentGroup.startsWith('TG_');
+    });
+    
+    if (invalidFormatLessons.length > 0) {
+      console.error(`[callORToolScheduler] ❌ INVALID STUDENTGROUP FORMAT: ${invalidFormatLessons.length} lessons have non-TG_ format`);
+      console.error('[callORToolScheduler] Invalid format samples:', invalidFormatLessons.slice(0, 10).map(l => ({
+        subject: l.subject,
+        studentGroup: l.studentGroup,
+        timeslotId: l.timeslotId
+      })));
+      
+      return Response.json({
+        ok: false,
+        stage: 'INVALID_STUDENTGROUP_FORMAT',
+        error: `${invalidFormatLessons.length} lessons have invalid studentGroup format (not TG_*)`,
+        errorMessage: 'Solver returned lessons with studentGroup that do not match "TG_<teaching_group_id>" format. This will cause teaching_group_id to be NULL and students will lose their classes.',
+        invalidSamples: invalidFormatLessons.slice(0, 20).map(l => ({
+          subject: l.subject,
+          studentGroup: l.studentGroup,
+          timeslotId: l.timeslotId,
+          expected_format: 'TG_<teaching_group_id>'
+        })),
+        suggestion: 'Configure solver to preserve original studentGroup format from input lessons. DO NOT create new studentGroup identifiers.',
+        meta: { schedule_version_id, schoolId }
+      }, { status: 200 });
+    }
+    
+    console.log('[callORToolScheduler] ✅ All assigned lessons have valid TG_ format');
+    
     const allowNullRoomSubjects = new Set(['STUDY','TOK','CAS','EE']);
     const periods_per_day = periodsPerDayComputed; // derived from schedule settings
     let lessonsWithoutTimeslot = 0;
     let missingRoomCount = 0;
     let missingTeacherCount = 0;
     const slots = [];
+    
+    // DIAGNOSTIC: Track TG ID extraction for French/English
+    const tgIdExtractionLog = [];
     
     for (const lesson of solvedLessons) {
       const isAssigned = !!lesson.timeslotId;
@@ -1230,9 +1287,16 @@ Deno.serve(async (req) => {
       // CRITICAL: Extract teaching_group_id from studentGroup (must be "TG_<id>" format)
       const tgIdFromGroup = (lesson.studentGroup && lesson.studentGroup.startsWith('TG_')) ? lesson.studentGroup.slice(3) : null;
       
-      // WARN if solver returned non-standard format
-      if (lesson.studentGroup && !lesson.studentGroup.startsWith('TG_')) {
-        console.warn(`[callORToolScheduler] Non-standard studentGroup format: "${lesson.studentGroup}" - teaching_group_id will be null!`);
+      // DIAGNOSTIC: Track French/English TG extraction
+      if (normalizedSubject.includes('FRENCH') || normalizedSubject.includes('ENGLISH') || normalizedSubject.includes('ANGLAIS')) {
+        tgIdExtractionLog.push({
+          subject: normalizedSubject,
+          studentGroup: lesson.studentGroup,
+          extracted_tg_id: tgIdFromGroup,
+          timeslotId: lesson.timeslotId,
+          day: dayMapping[timeslot.dayOfWeek],
+          period: timeslotIndexInDay[timeslot.id]
+        });
       }
       
       // Allow null room for STUDY and any DP core subject (based on is_core or well-known codes)
@@ -1272,6 +1336,43 @@ Deno.serve(async (req) => {
       slotsPreparedBySubject[code] = (slotsPreparedBySubject[code] || 0) + 1;
     }
     console.log('[callORToolScheduler] slotsPreparedBySubject =', slotsPreparedBySubject);
+    
+    // DIAGNOSTIC: Log French/English TG extraction
+    if (tgIdExtractionLog.length > 0) {
+      console.log('[callORToolScheduler] 🔍 French/English TG extraction log:', tgIdExtractionLog);
+    } else {
+      console.warn('[callORToolScheduler] ⚠️ No French/English lessons found in solver output');
+    }
+    
+    // DIAGNOSTIC: Analyze TG ID distribution in prepared slots
+    const slotsByTGId = {};
+    const slotsWithNullTG = slots.filter(s => !s.teaching_group_id);
+    
+    for (const slot of slots) {
+      if (slot.teaching_group_id) {
+        slotsByTGId[slot.teaching_group_id] = (slotsByTGId[slot.teaching_group_id] || 0) + 1;
+      }
+    }
+    
+    console.log('[callORToolScheduler] 🔍 TG ID distribution:', {
+      unique_tg_ids: Object.keys(slotsByTGId).length,
+      slots_with_null_tg: slotsWithNullTG.length,
+      tg_id_counts_sample: Object.entries(slotsByTGId).slice(0, 10)
+    });
+    
+    // DIAGNOSTIC: Check for unknown TG IDs (not in teachingGroupsFresh)
+    const knownTGIds = new Set(teachingGroupsFresh.map(tg => tg.id));
+    const slotsWithUnknownTG = slots.filter(s => s.teaching_group_id && !knownTGIds.has(s.teaching_group_id));
+    
+    if (slotsWithUnknownTG.length > 0) {
+      console.error('[callORToolScheduler] ❌ Slots with unknown TG IDs:', slotsWithUnknownTG.length);
+      console.error('[callORToolScheduler] Unknown TG ID samples:', slotsWithUnknownTG.slice(0, 5).map(s => ({
+        teaching_group_id: s.teaching_group_id,
+        subject_id: s.subject_id,
+        day: s.day,
+        period: s.period
+      })));
+    }
 
     // Test slots counters (solver-based). DP breakdown unavailable in solver payload; provide totals.
     const testSlotsInsertedCount = {
@@ -1650,6 +1751,13 @@ Deno.serve(async (req) => {
         not_scheduled: sectionCoverage.filter(s => s.coverage_percent === 0).length,
         split_sections: splitSections.length,
         sectionCoverageReport: sectionCoverage.slice(0, 100)
+      },
+      tgMappingDiagnostics: {
+        unique_tg_ids_in_slots: Object.keys(slotsByTGId || {}).length,
+        slots_with_null_tg: slotsWithNullTG?.length || 0,
+        slots_with_unknown_tg: slotsWithUnknownTG?.length || 0,
+        french_english_extraction: tgIdExtractionLog || [],
+        tg_id_distribution_sample: Object.entries(slotsByTGId || {}).slice(0, 20)
       },
       buildMeta,
       problemLessonsCreated,
