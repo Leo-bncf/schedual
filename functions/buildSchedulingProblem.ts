@@ -518,6 +518,7 @@ teachingGroupsDiagnostics.push({
   minutesSource: debugMinutesSourceByTG[tg.id],
   minutesUsed,
   requiredPeriods: weeklyCount,
+  lessons_created: weeklyCount, // CRITICAL: Proof that we create exact number
   ib_level: subj?.ib_level || null,
   year_group: tg.year_group || null,
   level: tg.level || null,
@@ -533,14 +534,18 @@ expectedMinutesBySubject[subjCode] = (expectedMinutesBySubject[subjCode] || 0) +
 
 // Create EXACTLY periods_per_week lessons for this teaching group
 // CRITICAL: studentGroup MUST be "TG_<teaching_group_id>" for persistence
+// E.g., Film HL with 360min (6h) → periods_per_week=6 → CREATE 6 LESSONS
 const studentIds = Array.isArray(tg.student_ids) ? tg.student_ids : [];
 const blockId = tg.block_id || null;
+
+recordLog(`Creating ${weeklyCount} lessons for TG ${tg.id} (${tg.name}, ${subjCode})`);
 
 for (let i = 0; i < weeklyCount; i++) {
   lessons.push({
     id: lessonId++,
     subject: subjCode,
     studentGroup: `TG_${tg.id}`, // CRITICAL: Format required for callORToolScheduler persistence
+    teachingGroupId: tg.id, // EXPLICIT: Link to Base44 TeachingGroup
     sectionId: tg.id, // Redundant but kept for clarity
     studentIds, // Solver uses this for cohort detection
     blockId, // Solver uses this for elective concurrency

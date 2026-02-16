@@ -382,9 +382,10 @@ Deno.serve(async (req) => {
       solverHealthOk = healthRes.ok;
       // VPS returns text/plain "OK", not JSON
       const healthBody = await healthRes.text();
-      console.log(`[callORToolScheduler] Solver /health status = ${solverHealthStatus}, body = "${healthBody}"`);
+      console.log('[OR] health', { status: solverHealthStatus, ok: solverHealthOk, body: healthBody.slice(0, 50) });
     } catch (e) {
       console.warn('[callORToolScheduler] Solver /health check failed:', String(e?.message || e));
+      console.error('[OR] health', { status: null, ok: false, error: String(e?.message || e) });
       solverHealthStatus = null;
       solverHealthOk = false;
     }
