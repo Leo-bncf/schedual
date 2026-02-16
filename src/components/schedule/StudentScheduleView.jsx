@@ -3,7 +3,9 @@ import { Card, CardContent } from "@/components/ui/card";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
+import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { GraduationCap, AlertCircle } from 'lucide-react';
+import { cn } from "@/lib/utils";
 
 const DAYS = ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday'];
 
@@ -367,82 +369,158 @@ export default function StudentScheduleView({ students, slots, groups, subjects,
             );
           })()}
           
-          {/* Expected vs Actual Periods Debug Panel */}
+          {/* PERIOD COVERAGE REPORT - SOURCE OF TRUTH: periods_per_week */}
           {(() => {
             const assignedGroupIds = Array.isArray(selectedStudent?.assigned_groups) ? selectedStudent.assigned_groups : [];
-            const periodDuration = scheduleSettings?.periodDurationMinutes || scheduleSettings?.period_duration_minutes || 60;
-            const tgReport = [];
+            const tgCoverage = [];
             
             assignedGroupIds.forEach(tgId => {
               const group = groups.find(g => g.id === tgId);
               if (!group) return;
               
               const subject = subjects.find(s => s.id === group.subject_id);
-              const subjectCode = subject?.code || subject?.name || 'Unknown';
               
-              let expectedPeriods = 0;
-              if (group.periods_per_week) {
-                expectedPeriods = group.periods_per_week;
-              } else if (group.minutes_per_week) {
-                expectedPeriods = Math.ceil(group.minutes_per_week / periodDuration);
-              } else {
-                const level = String(group.level || '').toUpperCase();
-                expectedPeriods = level === 'HL' ? 5 : level === 'SL' ? 3 : 3;
-              }
+              // SOURCE OF TRUTH: periods_per_week
+              const expectedPeriods = group.periods_per_week || 0;
               
-              const actualPeriods = studentSlots.filter(s => s.teaching_group_id === tgId).length;
-              const diff = actualPeriods - expectedPeriods;
+              // Count actual SCHEDULED slots (status='scheduled' + timeslot_id exists)
+              const scheduledSlots = studentSlots.filter(s => 
+                s.teaching_group_id === tgId && 
+                s.status === 'scheduled' &&
+                s.timeslot_id
+              );
+              const actualPeriods = scheduledSlots.reduce((sum, s) => sum + (s.is_double_period ? 2 : 1), 0);
               
-              tgReport.push({
+              // Count unscheduled slots
+              const unscheduledSlots = studentSlots.filter(s =>
+                s.teaching_group_id === tgId &&
+                s.status === 'unscheduled'
+              );
+              
+              tgCoverage.push({
                 tgId,
                 name: group.name,
-                subject: subjectCode,
-                level: group.level,
-                expected: expectedPeriods,
-                actual: actualPeriods,
-                diff,
-                status: diff === 0 ? 'ok' : diff > 0 ? 'over' : 'under'
+                subject_name: subject?.name || 'Unknown',
+                subject_code: subject?.code || 'Unknown',
+                level: group.level || null,
+                expectedPeriods,
+                actualPeriods,
+                missingPeriods: Math.max(0, expectedPeriods - actualPeriods),
+                unscheduledCount: unscheduledSlots.length,
+                isComplete: actualPeriods >= expectedPeriods,
+                scheduledSlots,
+                unscheduledSlots
               });
             });
             
-            const totalExpected = tgReport.reduce((sum, r) => sum + r.expected, 0);
-            const totalActual = tgReport.reduce((sum, r) => sum + r.actual, 0);
-            const hasMismatches = tgReport.some(r => r.diff !== 0);
-            
-            if (!hasMismatches && assignedGroupIds.length > 0) return null;
+            const hasMissingPeriods = tgCoverage.some(c => c.missingPeriods > 0);
+            const hasUnscheduled = tgCoverage.some(c => c.unscheduledCount > 0);
             
             return (
-              <Card className="mb-4 border-amber-300 bg-amber-50">
-                <CardContent className="p-4">
-                  <div className="flex items-center justify-between mb-3">
-                    <div className="font-semibold text-amber-900">📊 Expected vs Actual Periods</div>
-                    <Badge variant={hasMismatches ? 'destructive' : 'default'}>
-                      {totalActual}/{totalExpected} periods ({hasMismatches ? 'MISMATCH' : 'OK'})
-                    </Badge>
-                  </div>
-                  <div className="space-y-2 text-xs">
-                    {tgReport.map((r, idx) => (
-                      <div key={idx} className={`flex items-center justify-between p-2 rounded ${
-                        r.status === 'ok' ? 'bg-emerald-50 border border-emerald-200' :
-                        r.status === 'under' ? 'bg-rose-50 border border-rose-200' :
-                        'bg-blue-50 border border-blue-200'
-                      }`}>
-                        <div className="flex-1">
-                          <span className="font-medium">{r.subject}</span>
-                          {r.level && <Badge variant="outline" className="ml-2 text-[10px]">{r.level}</Badge>}
-                        </div>
-                        <div className={`font-mono font-semibold ${
-                          r.status === 'ok' ? 'text-emerald-700' :
-                          r.status === 'under' ? 'text-rose-700' :
-                          'text-blue-700'
-                        }`}>
-                          {r.actual}/{r.expected} {r.diff !== 0 && `(${r.diff > 0 ? '+' : ''}${r.diff})`}
-                        </div>
+              <>
+                {/* Alert for incomplete schedules */}
+                {hasMissingPeriods && (
+                  <Alert variant="destructive" className="mb-4">
+                    <AlertCircle className="h-4 w-4" />
+                    <AlertTitle>Incomplete Schedule Detected</AlertTitle>
+                    <AlertDescription>
+                      Some teaching groups have fewer periods scheduled than required (HL=6, SL=4). See details below.
+                    </AlertDescription>
+                  </Alert>
+                )}
+                
+                {/* Period Coverage Table */}
+                {tgCoverage.length > 0 && (
+                  <Card className="mb-4">
+                    <CardContent className="p-4">
+                      <div className="flex items-center justify-between mb-3">
+                        <div className="font-semibold text-slate-900">📊 Period Coverage by Teaching Group</div>
+                        <Badge variant={hasMissingPeriods ? "destructive" : "default"}>
+                          {tgCoverage.filter(c => c.isComplete).length}/{tgCoverage.length} complete
+                        </Badge>
                       </div>
-                    ))}
-                  </div>
-                </CardContent>
-              </Card>
+                      <div className="border rounded-lg overflow-hidden">
+                        <table className="w-full text-sm">
+                          <thead className="bg-slate-50 border-b">
+                            <tr>
+                              <th className="text-left p-3">Subject</th>
+                              <th className="text-left p-3">Level</th>
+                              <th className="text-center p-3">Expected</th>
+                              <th className="text-center p-3">Actual</th>
+                              <th className="text-center p-3">Status</th>
+                            </tr>
+                          </thead>
+                          <tbody>
+                            {tgCoverage.map(coverage => (
+                              <tr 
+                                key={coverage.tgId} 
+                                className={cn(
+                                  "border-b",
+                                  !coverage.isComplete && "bg-red-50"
+                                )}
+                              >
+                                <td className="p-3 font-medium">{coverage.subject_name}</td>
+                                <td className="p-3">
+                                  {coverage.level && (
+                                    <Badge variant="outline" className="text-xs">
+                                      {coverage.level}
+                                    </Badge>
+                                  )}
+                                </td>
+                                <td className="p-3 text-center font-mono">{coverage.expectedPeriods}</td>
+                                <td className="p-3 text-center font-mono">{coverage.actualPeriods}</td>
+                                <td className="p-3 text-center">
+                                  {coverage.isComplete ? (
+                                    <Badge variant="default" className="text-xs bg-green-600">Complete</Badge>
+                                  ) : (
+                                    <Badge variant="destructive" className="text-xs">
+                                      Missing {coverage.missingPeriods}
+                                    </Badge>
+                                  )}
+                                </td>
+                              </tr>
+                            ))}
+                          </tbody>
+                        </table>
+                      </div>
+                    </CardContent>
+                  </Card>
+                )}
+                
+                {/* Unscheduled Lessons Section */}
+                {hasUnscheduled && (
+                  <Card className="mb-4 border-red-300 bg-red-50">
+                    <CardContent className="p-4">
+                      <div className="font-semibold text-red-900 mb-3">⚠️ Unscheduled Lessons</div>
+                      <Alert variant="destructive" className="mb-3">
+                        <AlertCircle className="h-4 w-4" />
+                        <AlertDescription>
+                          Some lessons could not be scheduled. Contact your schedule coordinator.
+                        </AlertDescription>
+                      </Alert>
+                      <div className="space-y-2">
+                        {tgCoverage
+                          .filter(c => c.unscheduledCount > 0)
+                          .map(coverage => (
+                            <div key={coverage.tgId} className="border border-red-200 rounded-lg p-3 bg-white">
+                              <div className="flex items-center justify-between mb-1">
+                                <div className="font-medium text-slate-900">
+                                  {coverage.subject_name} {coverage.level && `(${coverage.level})`}
+                                </div>
+                                <Badge variant="destructive" className="text-xs">
+                                  {coverage.unscheduledCount} unscheduled
+                                </Badge>
+                              </div>
+                              <div className="text-xs text-slate-600">
+                                Teaching Group: {coverage.name}
+                              </div>
+                            </div>
+                          ))}
+                      </div>
+                    </CardContent>
+                  </Card>
+                )}
+              </>
             );
           })()}
           
