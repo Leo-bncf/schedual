@@ -75,6 +75,35 @@ Deno.serve(async (req) => {
     const teachingGroupsFresh = await base44.entities.TeachingGroup.filter({ school_id: schoolId });
     console.log(`[callORToolScheduler] Fetched ${teachingGroupsFresh.length} teaching groups (post-generation/sync)`);
     
+    // BUILD SOLVER DEMAND FROM TEACHING GROUPS (SOURCE OF TRUTH)
+    // Each teaching group explicitly stores periods_per_week - use this as the solver's constraint
+    stage = 'buildDemandByTG';
+    const demandByTG = {};
+    for (const tg of teachingGroupsFresh) {
+      // Only schedule groups that should appear in timetable
+      if (!tg.periods_per_week || tg.periods_per_week <= 0) {
+        console.log(`[callORToolScheduler] Skipping TG ${tg.id} (${tg.name}): periods_per_week=${tg.periods_per_week}`);
+        continue;
+      }
+      
+      demandByTG[tg.id] = tg.periods_per_week;
+    }
+    
+    console.log(`[callORToolScheduler] demandByTG constructed: ${Object.keys(demandByTG).length} teaching groups with explicit demand`);
+    console.log(`[callORToolScheduler] demandByTG sample (first 10):`, Object.entries(demandByTG).slice(0, 10));
+    
+    // Diagnostic: Show groups without periods_per_week
+    const groupsWithoutDemand = teachingGroupsFresh.filter(tg => !tg.periods_per_week || tg.periods_per_week <= 0);
+    if (groupsWithoutDemand.length > 0) {
+      console.warn(`[callORToolScheduler] ⚠️ Teaching groups WITHOUT periods_per_week: ${groupsWithoutDemand.length}/${teachingGroupsFresh.length}`);
+      console.warn('[callORToolScheduler] Groups without demand (first 10):', groupsWithoutDemand.slice(0, 10).map(tg => ({
+        id: tg.id,
+        name: tg.name,
+        periods_per_week: tg.periods_per_week,
+        minutes_per_week: tg.minutes_per_week
+      })));
+    }
+    
     stage = 'buildProblem';
     console.log(`[callORToolScheduler] ${stage}: calling buildSchedulingProblem with fresh TGs`);
     
@@ -354,13 +383,21 @@ Deno.serve(async (req) => {
         'X-API-Key': SOLVER_API_KEY
       };
       solverRequestHeadersSent = { 'Content-Type': 'application/json', 'X-API-Key': maskApiKey(SOLVER_API_KEY) };
-      // Solver expects top-level schoolId + scheduleVersionId + problem data
+      // Solver expects top-level schoolId + scheduleVersionId + problem data + demandByTG
       // Spread problem first, then overwrite to prevent null/undefined from problem overwriting our values
       const orToolPayload = {
         ...problem,
         schoolId: schoolId,
         scheduleVersionId: schedule_version_id,
-        demandByTG: demandByTG, // CRITICAL: Pass explicit demand from teaching groups
+        demandByTG: demandByTG, // CRITICAL: Explicit period demand per teaching group (SOURCE OF TRUTH)
+        teachingGroupsMetadata: teachingGroupsFresh.map(tg => ({
+          id: tg.id,
+          name: tg.name,
+          subject_id: tg.subject_id,
+          periods_per_week: tg.periods_per_week || 0,
+          teacher_id: tg.teacher_id || null,
+          preferred_room_id: tg.preferred_room_id || null
+        })),
         debug: true // Enable solver debug mode for detailed coverage metrics
       };
       // Double assurance: force overwrite even if problem contained null/undefined
@@ -598,41 +635,15 @@ Deno.serve(async (req) => {
     console.log('[callORToolScheduler] coreAssignmentSummary =', coreAssignmentSummary);
 
     // Step 4: Get Base44 entities to reverse-map IDs
-    // CRITICAL: Reuse teachingGroupsFresh from earlier fetch (same IDs as used in buildSchedulingProblem)
+    // CRITICAL: Reuse teachingGroupsFresh and demandByTG from earlier (consistency)
     const [subjects, rooms, teachers] = await Promise.all([
       base44.entities.Subject.filter({ school_id: schoolId }),
       base44.entities.Room.filter({ school_id: schoolId }),
       base44.entities.Teacher.filter({ school_id: schoolId })
     ]);
-    
-    const teachingGroups = teachingGroupsFresh; // Reuse fresh TGs for consistency
 
-    // BUILD SOLVER DEMAND FROM TEACHING GROUPS (NOT constraints array)
-    // Each teaching group explicitly stores periods_per_week - use this as the solver's demand
-    const demandByTG = {};
-    for (const tg of teachingGroups) {
-      // Only schedule groups that should appear in timetable
-      if (!tg.periods_per_week || tg.periods_per_week <= 0) {
-        console.log(`[OR] Skipping TG ${tg.id} (${tg.name}): periods_per_week=${tg.periods_per_week}`);
-        continue;
-      }
-      
-      demandByTG[tg.id] = tg.periods_per_week;
-    }
-    
-    console.log('[OR] demandByTG:', demandByTG);
-    console.log('[OR] Teaching groups with demand:', Object.keys(demandByTG).length, '/', teachingGroups.length);
-    
-    // Diagnostic: Show groups without periods_per_week
-    const groupsWithoutDemand = teachingGroups.filter(tg => !tg.periods_per_week || tg.periods_per_week <= 0);
-    if (groupsWithoutDemand.length > 0) {
-      console.warn('[OR] ⚠️ Teaching groups WITHOUT periods_per_week:', groupsWithoutDemand.map(tg => ({
-        id: tg.id,
-        name: tg.name,
-        periods_per_week: tg.periods_per_week,
-        minutes_per_week: tg.minutes_per_week
-      })));
-    }
+    const teachingGroups = teachingGroupsFresh; // Reuse fresh TGs for consistency
+    // NOTE: demandByTG was already constructed before solver call and sent in payload
 
     // Use mappings provided by the problem payload (no DB index ordering)
     const subjectIdByCode = problem.subjectIdByCode || {};
