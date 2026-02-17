@@ -751,16 +751,26 @@ if (isDP) {
         minPeriodsPerDay,
         targetPeriodsPerDay
       },
-      teachingGroups: teachingGroupsDb.map((tg) => ({
-        id: tg.id,
-        subject_id: tg.subject_id,
-        minutesPerWeek: minutesForTG(tg),
-        teacher_id: tg.teacher_id || null,
-        room_id: tg.preferred_room_id || null,
-        ib_level: subjectById[tg.subject_id]?.ib_level || null,
-        studentIds: Array.isArray(tg.student_ids) ? tg.student_ids : [],
-        blockId: tg.block_id || null
-      }))
+      teachingGroups: teachingGroupsDb.map((tg) => {
+        const minutes = minutesForTG(tg);
+        const subj = subjectById[tg.subject_id] || null;
+        const subjCode = subjectIdToCode[tg.subject_id] || null;
+        const requiredPeriods = minutesToPeriods(minutes);
+        
+        return {
+          id: tg.id,
+          subject_id: tg.subject_id,
+          subjectCode: subjCode,
+          level: tg.level || null,
+          minutesPerWeek: minutes,
+          requiredPeriodsPerWeek: requiredPeriods,
+          teacher_id: tg.teacher_id || null,
+          room_id: tg.preferred_room_id || null,
+          ib_level: subj?.ib_level || null,
+          studentIds: Array.isArray(tg.student_ids) ? tg.student_ids : [],
+          blockId: tg.block_id || null
+        };
+      })
     };
 
     // VALIDATION REPORT: Show admin what's excluded and why
