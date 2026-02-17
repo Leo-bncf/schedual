@@ -422,11 +422,14 @@ export default function TimetableGrid({
                     return null;
                   }
 
-                  // Stack multiple slots vertically within the same cell
+                  // MULTI-LESSON DISPLAY: Show all visible slots in this cell
+                  const displayCount = Math.min(visibleSlots.length, 2); // Show max 2 cards
+                  const remainingCount = visibleSlots.length - displayCount;
+
                   return (
                     <div 
                       key={`${day}-${uiRow}`} 
-                      className="border-r border-slate-300 last:border-r-0 p-2 space-y-2"
+                      className="border-r border-slate-300 last:border-r-0 p-2 space-y-1 relative"
                       onDragOver={(e) => e.preventDefault()}
                       onDrop={(e) => {
                         e.preventDefault();
@@ -449,7 +452,8 @@ export default function TimetableGrid({
                         }
                       }}
                     >
-                      {visibleSlots.map(slot => {
+                      {/* Show first N lessons as cards */}
+                      {visibleSlots.slice(0, displayCount).map(slot => {
                         const span = getSlotSpan(day, uiRow, slot.id);
                         const room = getRoomInfo(slot.room_id);
                         
@@ -562,6 +566,47 @@ export default function TimetableGrid({
                           </div>
                         );
                       })}
+                      
+                      {/* "+N more" badge if there are remaining lessons */}
+                      {remainingCount > 0 && (
+                        <button
+                          onClick={() => {
+                            // Show all lessons in this cell
+                            const allLessons = visibleSlots.map(slot => {
+                              let subject = null;
+                              let teacher = null;
+                              let level = '';
+                              
+                              if (slot.teaching_group_id) {
+                                const group = getGroupInfo(slot.teaching_group_id);
+                                if (group) {
+                                  subject = getSubjectInfo(group.subject_id);
+                                  teacher = getTeacherInfo(group.teacher_id);
+                                  level = group.level;
+                                }
+                              } else if (slot.subject_id) {
+                                subject = getSubjectInfo(slot.subject_id);
+                                teacher = slot.teacher_id ? getTeacherInfo(slot.teacher_id) : null;
+                                const classGroup = classGroups.find(cg => cg.id === slot.classgroup_id);
+                                level = classGroup?.year_group || '';
+                              }
+                              
+                              const room = getRoomInfo(slot.room_id);
+                              return { slot, subject, teacher, level, room };
+                            });
+                            
+                            setSelectedSlot({ 
+                              multiple: true, 
+                              lessons: allLessons, 
+                              day, 
+                              period: uiRow 
+                            });
+                          }}
+                          className="w-full px-2 py-1 bg-slate-200 hover:bg-slate-300 rounded text-xs font-semibold text-slate-700 transition-colors"
+                        >
+                          +{remainingCount} more
+                        </button>
+                      )}
                     </div>
                   );
                 })}
@@ -602,75 +647,139 @@ export default function TimetableGrid({
         </div>
       </Card>
 
-      {/* Slot Details Modal */}
+      {/* Slot Details Modal - supports single or multiple lessons */}
       {selectedSlot && (
         <div 
           className="fixed inset-0 bg-black/60 flex items-center justify-center z-50 p-4 backdrop-blur-sm"
           onClick={() => setSelectedSlot(null)}
         >
           <div 
-            className="bg-white rounded-2xl shadow-2xl max-w-lg w-full p-8 transform transition-all"
+            className="bg-white rounded-2xl shadow-2xl max-w-2xl w-full max-h-[90vh] overflow-y-auto p-8 transform transition-all"
             onClick={(e) => e.stopPropagation()}
           >
-            <div className="flex items-start justify-between mb-6">
-              <div className="flex-1">
-                <h3 className="text-3xl font-bold text-slate-900 mb-2">{selectedSlot.subject?.name || selectedSlot.slot.notes || 'Slot'}</h3>
-                <p className="text-slate-500 text-lg">{selectedSlot.slot.day}, Period {selectedSlot.slot.uiRow || selectedSlot.slot.period}</p>
-              </div>
-              <button 
-                onClick={() => setSelectedSlot(null)}
-                className="text-slate-400 hover:text-slate-600 transition-colors p-1"
-              >
-                <svg className="w-7 h-7" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
-                </svg>
-              </button>
-            </div>
-
-            <div className="space-y-4">
-              <div className="bg-gradient-to-br from-slate-50 to-slate-100 rounded-xl p-5 border border-slate-200">
-                <div className="text-sm font-semibold text-slate-600 mb-2">Level</div>
-                <div className="text-xl font-bold text-slate-900">{selectedSlot.group?.level}</div>
-              </div>
-
-              <div className="bg-gradient-to-br from-blue-50 to-blue-100 rounded-xl p-5 border border-blue-200">
-                <div className="text-sm font-semibold text-blue-600 mb-2">Teacher</div>
-                <div className="text-xl font-bold text-blue-900">
-                  {selectedSlot.teacher?.full_name || 'Not assigned'}
+            {selectedSlot.multiple ? (
+              // MULTIPLE LESSONS VIEW
+              <>
+                <div className="flex items-start justify-between mb-6">
+                  <div className="flex-1">
+                    <h3 className="text-3xl font-bold text-slate-900 mb-2">
+                      Parallel Lessons ({selectedSlot.lessons.length})
+                    </h3>
+                    <p className="text-slate-500 text-lg">
+                      {selectedSlot.day}, Period {selectedSlot.period}
+                    </p>
+                  </div>
+                  <button 
+                    onClick={() => setSelectedSlot(null)}
+                    className="text-slate-400 hover:text-slate-600 transition-colors p-1"
+                  >
+                    <svg className="w-7 h-7" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                    </svg>
+                  </button>
                 </div>
-                {selectedSlot.teacher?.email && (
-                  <div className="text-sm text-blue-700 mt-2">{selectedSlot.teacher.email}</div>
-                )}
-              </div>
 
-              <div className="bg-gradient-to-br from-emerald-50 to-emerald-100 rounded-xl p-5 border border-emerald-200">
-                <div className="text-sm font-semibold text-emerald-600 mb-2">Room</div>
-                <div className="text-xl font-bold text-emerald-900">
-                  {selectedSlot.room?.name || 'Not assigned'}
+                <div className="space-y-4">
+                  {selectedSlot.lessons.map((lesson, idx) => {
+                    const colorScheme = lesson.subject && subjectGroupColors[lesson.subject.ib_group] 
+                      ? subjectGroupColors[lesson.subject.ib_group] 
+                      : { bg: 'bg-slate-50', border: 'border-l-slate-400', text: 'text-slate-900' };
+
+                    return (
+                      <div 
+                        key={idx}
+                        className={`p-4 rounded-lg border-l-4 ${colorScheme.bg} ${colorScheme.border} border border-slate-200`}
+                      >
+                        <div className="font-bold text-lg text-slate-900 mb-2">
+                          {lesson.subject?.name || lesson.slot.notes || 'Unassigned'}
+                        </div>
+                        <div className="grid grid-cols-3 gap-3 text-sm">
+                          <div>
+                            <div className="text-slate-500 font-medium">Level</div>
+                            <div className="font-semibold text-slate-900">{lesson.level || 'N/A'}</div>
+                          </div>
+                          <div>
+                            <div className="text-slate-500 font-medium">Teacher</div>
+                            <div className="font-semibold text-slate-900">{lesson.teacher?.full_name || 'Unassigned'}</div>
+                          </div>
+                          <div>
+                            <div className="text-slate-500 font-medium">Room</div>
+                            <div className="font-semibold text-slate-900">{lesson.room?.name || 'TBD'}</div>
+                          </div>
+                        </div>
+                      </div>
+                    );
+                  })}
                 </div>
-                {selectedSlot.room?.building && (
-                  <div className="text-sm text-emerald-700 mt-2">
-                    Building {selectedSlot.room.building}
-                    {selectedSlot.room.floor && `, Floor ${selectedSlot.room.floor}`}
+              </>
+            ) : (
+              // SINGLE LESSON VIEW
+              <>
+                <div className="flex items-start justify-between mb-6">
+                  <div className="flex-1">
+                    <h3 className="text-3xl font-bold text-slate-900 mb-2">
+                      {selectedSlot.subject?.name || selectedSlot.slot?.notes || 'Slot'}
+                    </h3>
+                    <p className="text-slate-500 text-lg">
+                      {selectedSlot.slot?.day}, Period {selectedSlot.slot?.uiRow || selectedSlot.slot?.period}
+                    </p>
                   </div>
-                )}
-                {selectedSlot.room?.capacity && (
-                  <div className="text-sm text-emerald-700 mt-1">
-                    Capacity: {selectedSlot.room.capacity} students
-                  </div>
-                )}
-              </div>
+                  <button 
+                    onClick={() => setSelectedSlot(null)}
+                    className="text-slate-400 hover:text-slate-600 transition-colors p-1"
+                  >
+                    <svg className="w-7 h-7" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                    </svg>
+                  </button>
+                </div>
 
-              <div className="bg-gradient-to-br from-violet-50 to-violet-100 rounded-xl p-5 border border-violet-200">
-                <div className="text-sm font-semibold text-violet-600 mb-2">Group Details</div>
-                <div className="text-lg font-bold text-violet-900">{selectedSlot.group?.name}</div>
-                {selectedSlot.group?.student_ids?.length > 0 && (
-                  <div className="text-sm text-violet-700 mt-2">
-                    {selectedSlot.group.student_ids.length} students enrolled
+                <div className="space-y-4">
+                  <div className="bg-gradient-to-br from-slate-50 to-slate-100 rounded-xl p-5 border border-slate-200">
+                    <div className="text-sm font-semibold text-slate-600 mb-2">Level</div>
+                    <div className="text-xl font-bold text-slate-900">{selectedSlot.group?.level}</div>
                   </div>
-                )}
-              </div>
-            </div>
+
+                  <div className="bg-gradient-to-br from-blue-50 to-blue-100 rounded-xl p-5 border border-blue-200">
+                    <div className="text-sm font-semibold text-blue-600 mb-2">Teacher</div>
+                    <div className="text-xl font-bold text-blue-900">
+                      {selectedSlot.teacher?.full_name || 'Not assigned'}
+                    </div>
+                    {selectedSlot.teacher?.email && (
+                      <div className="text-sm text-blue-700 mt-2">{selectedSlot.teacher.email}</div>
+                    )}
+                  </div>
+
+                  <div className="bg-gradient-to-br from-emerald-50 to-emerald-100 rounded-xl p-5 border border-emerald-200">
+                    <div className="text-sm font-semibold text-emerald-600 mb-2">Room</div>
+                    <div className="text-xl font-bold text-emerald-900">
+                      {selectedSlot.room?.name || 'Not assigned'}
+                    </div>
+                    {selectedSlot.room?.building && (
+                      <div className="text-sm text-emerald-700 mt-2">
+                        Building {selectedSlot.room.building}
+                        {selectedSlot.room.floor && `, Floor ${selectedSlot.room.floor}`}
+                      </div>
+                    )}
+                    {selectedSlot.room?.capacity && (
+                      <div className="text-sm text-emerald-700 mt-1">
+                        Capacity: {selectedSlot.room.capacity} students
+                      </div>
+                    )}
+                  </div>
+
+                  <div className="bg-gradient-to-br from-violet-50 to-violet-100 rounded-xl p-5 border border-violet-200">
+                    <div className="text-sm font-semibold text-violet-600 mb-2">Group Details</div>
+                    <div className="text-lg font-bold text-violet-900">{selectedSlot.group?.name}</div>
+                    {selectedSlot.group?.student_ids?.length > 0 && (
+                      <div className="text-sm text-violet-700 mt-2">
+                        {selectedSlot.group.student_ids.length} students enrolled
+                      </div>
+                    )}
+                  </div>
+                </div>
+              </>
+            )}
 
             <button
               onClick={() => setSelectedSlot(null)}
