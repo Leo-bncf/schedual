@@ -1755,6 +1755,12 @@ Now process the user's input and return ONLY the JSON object.`,
             dp_study_weekly: 8
           });
           const r = res.data || {};
+          
+          // CRITICAL: Log full response for 500 debugging
+          console.log('[Schedule] 📦 FULL OptaPlanner Response:', r);
+          console.log('[Schedule] Response keys:', Object.keys(r));
+          console.log('[Schedule] HTTP Status from axios:', res.status);
+          console.log('[Schedule] Response headers:', res.headers);
           setOptaPlannerResult(r);
 
           // Log solver identity to console
@@ -1808,19 +1814,47 @@ Now process the user's input and return ONLY the JSON object.`,
             toast.success(`✅ ${solverName}: ${deleted} deleted, ${inserted} optimized slots created`);
           }
         } catch (e) {
-          console.error('Auto OptaPlanner step failed:', e);
-          const errorData = e?.response?.data;
-          if (errorData?.ok === false) {
-            const solverName = errorData.solverIdentity?.engine || 'Solver';
-            setOptaPlannerError(`Stage: ${errorData.stage}\nError: ${errorData.errorMessage || errorData.error}\n\nStack:\n${errorData.errorStack || 'N/A'}`);
-            setOptaPlannerResult(errorData);
-            toast.error(`${solverName} crashed at "${errorData.stage}": ${errorData.errorMessage || errorData.error}`);
-          } else {
-            setOptaPlannerError(e?.message || 'Solver failed');
-            toast.error('Solver failed — keeping generated schedule (no rollback performed).');
-          }
+        console.error('❌❌❌ Auto OptaPlanner step CRASHED:', e);
+        console.error('Error message:', e?.message);
+        console.error('Error stack:', e?.stack);
+        console.error('Axios response:', e?.response);
+        console.error('Response status:', e?.response?.status);
+        console.error('Response data:', e?.response?.data);
+        console.error('Response headers:', e?.response?.headers);
+
+        const errorData = e?.response?.data;
+        const statusCode = e?.response?.status;
+
+        // Enhanced error logging for 500 errors
+        if (statusCode === 500 || statusCode === 502) {
+          console.error(`🔴 BACKEND ERROR ${statusCode}:`, {
+            url: e?.config?.url,
+            method: e?.config?.method,
+            payload: e?.config?.data,
+            responseData: errorData,
+            responseText: typeof errorData === 'string' ? errorData : JSON.stringify(errorData),
+            cfRay: e?.response?.headers?.['cf-ray'],
+            rndrId: e?.response?.headers?.['rndr-id']
+          });
+        }
+
+        if (errorData?.ok === false) {
+          const solverName = errorData.solverIdentity?.engine || 'OptaPlanner';
+          const errorMsg = `Stage: ${errorData.stage}\nError: ${errorData.errorMessage || errorData.error}\n\nStack:\n${errorData.errorStack || 'N/A'}`;
+          setOptaPlannerError(errorMsg);
+          setOptaPlannerResult(errorData);
+          toast.error(`${solverName} crashed at "${errorData.stage}": ${errorData.errorMessage || errorData.error}`, { duration: 10000 });
+        } else if (statusCode === 500) {
+          // Backend 500 error (not solver logic error)
+          const errorMsg = `Backend function crashed (HTTP 500)\n\n${typeof errorData === 'string' ? errorData : JSON.stringify(errorData, null, 2)}\n\nCheck function logs for details.`;
+          setOptaPlannerError(errorMsg);
+          toast.error('❌ callORToolScheduler function crashed (500). Check function logs.', { duration: 10000 });
+        } else {
+          setOptaPlannerError(e?.message || 'Solver failed');
+          toast.error('Solver failed — keeping generated schedule (no rollback performed).');
+        }
         } finally {
-          setOptaPlannerLoading(false);
+        setOptaPlannerLoading(false);
         }
       }
     } catch (error) {
