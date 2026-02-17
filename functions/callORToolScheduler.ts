@@ -19,8 +19,8 @@ const chunk = (arr, n) => {
 // WRAPPER for OptaPlanner scheduler with audit gating and enhanced error logging
 
 Deno.serve(async (req) => {
-  const RUNTIME_FINGERPRINT = "2026-02-17T18:00:00Z-ALL-LOGS-OPTAPLANNER"; // HARD RUNTIME IDENTIFIER
-  const WRAPPER_BUILD_VERSION = '2026-02-17T18:00:00Z-ALL-LOGS-OPTAPLANNER';
+  const RUNTIME_FINGERPRINT = "2026-02-17T18:30:00Z-HTTP-422-FOR-BUSINESS-ERRORS"; // HARD RUNTIME IDENTIFIER
+  const WRAPPER_BUILD_VERSION = '2026-02-17T18:30:00Z-HTTP-422-FOR-BUSINESS-ERRORS';
   console.log("🔍 RUNTIME_FINGERPRINT", RUNTIME_FINGERPRINT);
   console.log(`[callOptaPlannerScheduler] 🚀 WRAPPER BUILD VERSION: ${WRAPPER_BUILD_VERSION}`);
   
@@ -142,7 +142,7 @@ Deno.serve(async (req) => {
         meta: { schedule_version_id, schoolId },
         counts: buildResponse?.data?.counts || null,
         samples: buildResponse?.data?.samples || null
-      }, { status: 200 }); // Return 200 so UI can parse
+        }, { status: 422, headers: { 'Content-Type': 'application/json' } });
     }
 
     const problem = buildResponse.data.problem;
@@ -158,7 +158,7 @@ Deno.serve(async (req) => {
         suggestion: 'Check Settings tab: ensure day_start_time < day_end_time and period_duration_minutes < (day_end_time - day_start_time)',
         meta: { schedule_version_id, schoolId },
         scheduleSettings: problem?.scheduleSettings || null
-      }, { status: 200 });
+      }, { status: 422 });
     }
 
     console.log(`[OptaPlanner] ✅ Timeslots validation passed: ${problem.timeslots.length} timeslots generated`);
@@ -188,7 +188,7 @@ Deno.serve(async (req) => {
         duplicates: duplicates.slice(0, 10),
         suggestion: 'This is a bug in buildSchedulingProblem. Timeslot IDs must be sequential and unique.',
         meta: { schedule_version_id, schoolId }
-      }, { status: 200 });
+      }, { status: 422 });
     }
 
     console.log(`[OptaPlanner] ✅ Timeslot uniqueness validated: ${uniqueTimeslotIds.size} unique IDs`);
@@ -321,7 +321,7 @@ Deno.serve(async (req) => {
         requirementsInvalidMinutes: requirementsInvalidMinutes || [],
         normalizedSubjectsIndex: normalizedSubjectsIndex || {},
         normalizedRequirementsSubjects: normalizedRequirementsSubjects || []
-      }, { status: 200 });
+        }, { status: 422, headers: { 'Content-Type': 'application/json' } });
     }
 
     // Step 2.5: Fetch solver identity FIRST (log engine type before solving)
@@ -934,7 +934,7 @@ Deno.serve(async (req) => {
         subjectsInvalidIds: subjectsInvalidIds || [],
         requirementsUnknownSubjects: requirementsUnknownSubjects || [],
         requirementsInvalidMinutes: requirementsInvalidMinutes || []
-      }, { status: 200 }); // Always 200 so UI can parse, check ok:false + orToolHttpStatus
+        }, { status: 422, headers: { 'Content-Type': 'application/json' } });
     }
 
     // Parse solution from response text
@@ -953,7 +953,7 @@ Deno.serve(async (req) => {
         solverHttpStatus,
         solverErrorBody: solverResponseText?.slice(0, 1000),
         meta: { schedule_version_id, schoolId }
-      }, { status: 200 });
+        }, { status: 422, headers: { 'Content-Type': 'application/json' } });
     }
     console.log('[OptaPlanner] solver score =', solution.score);
     
@@ -990,7 +990,7 @@ Deno.serve(async (req) => {
         unknownTeachingGroupIds: unknownTGIds,
         suggestion: 'This indicates solver is creating new "shared" groups. Configure solver to use original teaching_group_ids for shared sessions, or ensure students are assigned to solver-created groups.',
         meta: { schedule_version_id, schoolId }
-      }, { status: 200 });
+        }, { status: 422, headers: { 'Content-Type': 'application/json' } });
     }
 
     // Step 3: Validate solution format (support lessons or legacy assignments)
@@ -1225,7 +1225,7 @@ Deno.serve(async (req) => {
           totalLessons: problem.lessons?.length || 0,
           periodDurationMinutes: problem.scheduleSettings?.periodDurationMinutes || 60
         } : null
-      }, { status: 200 });
+        }, { status: 422, headers: { 'Content-Type': 'application/json' } });
     }
     
     // CRITICAL VALIDATION: Cohort Integrity Check
@@ -1418,7 +1418,7 @@ Deno.serve(async (req) => {
         slotsDeleted: 0,
         slotsInserted: 0,
         meta: { schedule_version_id, schoolId }
-      }, { status: 200 });
+        }, { status: 422, headers: { 'Content-Type': 'application/json' } });
     }
     
     console.log('[OptaPlanner] ✅ Demand validation passed - all teaching groups scheduled correctly');
@@ -1492,7 +1492,7 @@ Deno.serve(async (req) => {
         },
         suggestion: 'Solver bug: hard constraint violated. Check solver logs for constraint enforcement issues.',
         meta: { schedule_version_id, schoolId }
-      }, { status: 200 });
+        }, { status: 422, headers: { 'Content-Type': 'application/json' } });
     }
     
     console.log('[OptaPlanner] ✅ Double booking validation passed - no conflicts detected');
@@ -1528,7 +1528,7 @@ Deno.serve(async (req) => {
         })),
         suggestion: 'Configure solver to preserve original studentGroup format from input lessons. DO NOT create new studentGroup identifiers.',
         meta: { schedule_version_id, schoolId }
-      }, { status: 200 });
+        }, { status: 422, headers: { 'Content-Type': 'application/json' } });
     }
     
     console.log('[OptaPlanner] ✅ All assigned lessons have valid TG_ format');
@@ -1783,7 +1783,7 @@ Deno.serve(async (req) => {
             purgeErrors: purgeResponse.data.errors,
             suggestion: 'Most slots failed to delete. Wait 1 minute and retry.',
             meta: { schedule_version_id, schoolId }
-          }, { status: 200 });
+            }, { status: 422, headers: { 'Content-Type': 'application/json' } });
         }
       }
     } catch (purgeError) {
@@ -1795,7 +1795,7 @@ Deno.serve(async (req) => {
         errorMessage: purgeError.message || 'Unknown error',
         suggestion: 'Check that purgeScheduleSlots function exists and is deployed.',
         meta: { schedule_version_id, schoolId }
-      }, { status: 200 });
+        }, { status: 500, headers: { 'Content-Type': 'application/json' } });
     }
 
     stage = 'insertNewSlots';
@@ -2171,7 +2171,7 @@ Deno.serve(async (req) => {
         schoolId,
         wrapperBuildVersion: WRAPPER_BUILD_VERSION,
         timestamp: new Date().toISOString()
-      }
-    }, { status: 200 }); // Return 200 with success:false for UI parsing
+        }
+        }, { status: 500, headers: { 'Content-Type': 'application/json' } });
   }
 });

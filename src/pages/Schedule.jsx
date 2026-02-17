@@ -1883,9 +1883,11 @@ Now process the user's input and return ONLY the JSON object.`,
           }
 
           // CRITICAL: Check if errorData is JSON with ok:false (solver business error, not crash)
+          // Status 422 = business/validation error, 500 = technical crash
           if (errorData && typeof errorData === 'object' && errorData.ok === false) {
             const solverName = errorData.solverIdentity?.engine || 'OptaPlanner';
-            console.log('[Schedule] 📋 Solver returned business error (not crash):', errorData.stage);
+            const isBusinessError = statusCode === 422 || statusCode === 400;
+            console.log(`[Schedule] 📋 ${isBusinessError ? 'Business error (422)' : 'Solver error'}:`, errorData.stage);
 
             // Special handling for COHORT_INTEGRITY_VIOLATION
             if (errorData.stage === 'COHORT_INTEGRITY_VIOLATION') {
