@@ -47,6 +47,7 @@ import {
   FileText,
   Calculator
 } from 'lucide-react';
+import { createPageUrl } from '../utils';
 import PageHeader from '../components/ui-custom/PageHeader';
 import TimetableGrid from '../components/schedule/TimetableGrid';
 import HoursSummary from '../components/schedule/HoursSummary';
@@ -2362,6 +2363,171 @@ Now process the user's input and return ONLY the JSON object.`,
             </CardContent>
           </Card>
         </div>
+      )}
+
+      {/* OptaPlanner Error Panel (shown BEFORE main content) */}
+      {selectedVersion && optaPlannerResult?.ok === false && (
+        <Card className="border-2 border-rose-500 shadow-xl bg-gradient-to-br from-rose-50 to-rose-100">
+          <CardHeader className="bg-rose-600 text-white">
+            <CardTitle className="flex items-center gap-2">
+              <AlertTriangle className="w-6 h-6" />
+              {optaPlannerResult.stage === 'COHORT_INTEGRITY_VIOLATION' 
+                ? 'Solver Integrity Violation' 
+                : `OptaPlanner Failed: ${optaPlannerResult.stage || 'Unknown Stage'}`}
+            </CardTitle>
+            <CardDescription className="text-rose-50">
+              Schedule generation stopped. Fix the issue below and retry.
+            </CardDescription>
+          </CardHeader>
+          <CardContent className="p-6 space-y-4">
+            {/* Error Message */}
+            <div className="bg-white p-4 rounded-lg border border-rose-300">
+              <div className="font-semibold text-rose-900 mb-2">Error Details:</div>
+              <p className="text-sm text-rose-800 whitespace-pre-wrap">
+                {optaPlannerResult.errorMessage || optaPlannerResult.error || 'Unknown error'}
+              </p>
+            </div>
+
+            {/* Suggestion */}
+            {optaPlannerResult.suggestion && (
+              <div className="bg-amber-50 p-4 rounded-lg border border-amber-300">
+                <div className="font-semibold text-amber-900 mb-2">💡 Suggested Fix:</div>
+                <p className="text-sm text-amber-800">{optaPlannerResult.suggestion}</p>
+              </div>
+            )}
+
+            {/* COHORT_INTEGRITY_VIOLATION: Show affected sections */}
+            {optaPlannerResult.stage === 'COHORT_INTEGRITY_VIOLATION' && optaPlannerResult.splitSections && (
+              <div className="space-y-2">
+                <div className="font-semibold text-rose-900">Affected Sections ({optaPlannerResult.splitSections.length}):</div>
+                {optaPlannerResult.splitSections.slice(0, 5).map((section, idx) => (
+                  <div key={idx} className="bg-white p-3 rounded-lg border-l-4 border-rose-500">
+                    <div className="font-semibold text-rose-900">
+                      {section.subject} - {section.studentGroup}
+                    </div>
+                    <div className="text-xs text-rose-700 mt-1">
+                      Timeslots: {JSON.stringify(section.timeslots_list)} 
+                      <span className="ml-2 font-semibold">({section.timeslots_unique} unique, {section.timeslots_total - section.timeslots_unique} duplicates)</span>
+                    </div>
+                    <div className="text-xs text-rose-600 mt-1 italic">{section.reason}</div>
+                  </div>
+                ))}
+                {optaPlannerResult.splitSections.length > 5 && (
+                  <div className="text-xs text-rose-600">... and {optaPlannerResult.splitSections.length - 5} more sections</div>
+                )}
+              </div>
+            )}
+
+            {/* Missing HL/SL Hours: Show affected subjects */}
+            {(optaPlannerResult.stage === 'VALIDATION_FAILED_MISSING_HL_SL_HOURS' || optaPlannerResult.error === 'MISSING_HL_SL_HOURS_CONFIG') && optaPlannerResult.missingSubjects && (
+              <div className="space-y-2">
+                <div className="font-semibold text-rose-900">Subjects Missing Configuration ({optaPlannerResult.missingSubjects.length}):</div>
+                {optaPlannerResult.missingSubjects.slice(0, 10).map((subj, idx) => (
+                  <div key={idx} className="bg-white p-3 rounded-lg border-l-4 border-rose-500">
+                    <div className="font-semibold text-rose-900">{subj.name || subj.code}</div>
+                    <div className="text-xs text-rose-700 mt-1">
+                      Missing: <span className="font-semibold">{subj.missing === 'both' ? 'HL and SL hours' : `${subj.missing} hours`}</span>
+                    </div>
+                    <div className="text-xs text-rose-600 mt-1">
+                      Current: HL={subj.hoursPerWeekHL || 'not set'}, SL={subj.hoursPerWeekSL || 'not set'}
+                    </div>
+                  </div>
+                ))}
+              </div>
+            )}
+
+            {/* Action Buttons */}
+            <div className="flex flex-wrap gap-2 pt-2">
+              <Button
+                size="sm"
+                onClick={() => {
+                  setShowAdvanced(true);
+                  const diagTab = document.querySelector('[value="diagnostics"]');
+                  if (diagTab) {
+                    diagTab.click();
+                    setTimeout(() => {
+                      diagTab.scrollIntoView({ behavior: 'smooth', block: 'start' });
+                    }, 100);
+                  }
+                }}
+                className="bg-blue-900 hover:bg-blue-800 text-white"
+              >
+                <Eye className="w-4 h-4 mr-2" />
+                View Full Diagnostics
+              </Button>
+              
+              <Button
+                size="sm"
+                variant="outline"
+                onClick={handleGenerateSchedule}
+                disabled={isGenerating}
+                className="border-rose-300 text-rose-700 hover:bg-rose-100"
+              >
+                <Play className="w-4 h-4 mr-2" />
+                Retry Generation
+              </Button>
+
+              <Button
+                size="sm"
+                variant="outline"
+                onClick={() => {
+                  const debugData = {
+                    timestamp: new Date().toISOString(),
+                    stage: optaPlannerResult.stage,
+                    error: optaPlannerResult.error,
+                    errorMessage: optaPlannerResult.errorMessage,
+                    suggestion: optaPlannerResult.suggestion,
+                    meta: optaPlannerResult.meta,
+                    splitSections: optaPlannerResult.splitSections,
+                    missingSubjects: optaPlannerResult.missingSubjects,
+                    solverIdentity: optaPlannerResult.solverIdentity,
+                    solverHttpStatus: optaPlannerResult.solverHttpStatus,
+                    solverEndpointUsed: optaPlannerResult.solverEndpointUsed,
+                    buildVersion: optaPlannerResult.buildVersion,
+                    wrapperBuildVersion: optaPlannerResult.wrapperBuildVersion
+                  };
+                  const blob = new Blob([JSON.stringify(debugData, null, 2)], { type: 'application/json' });
+                  const url = URL.createObjectURL(blob);
+                  const a = document.createElement('a');
+                  a.href = url;
+                  a.download = `optaplanner-error-${optaPlannerResult.stage}-${new Date().toISOString().split('T')[0]}.json`;
+                  a.click();
+                  URL.revokeObjectURL(url);
+                }}
+                className="border-slate-300 text-slate-700 hover:bg-slate-100"
+              >
+                <Download className="w-4 h-4 mr-2" />
+                Export Debug Report
+              </Button>
+
+              {/* Quick fix actions based on error type */}
+              {optaPlannerResult.stage === 'VALIDATION_FAILED_MISSING_HL_SL_HOURS' && (
+                <Button
+                  size="sm"
+                  onClick={() => {
+                    window.location.href = createPageUrl('Subjects');
+                  }}
+                  className="bg-rose-700 hover:bg-rose-800 text-white"
+                >
+                  Go to Subjects Page
+                </Button>
+              )}
+              
+              {optaPlannerResult.stage === 'VALIDATION_TIMESLOTS_EMPTY' && (
+                <Button
+                  size="sm"
+                  onClick={() => {
+                    const settingsTab = document.querySelector('[value="settings"]');
+                    if (settingsTab) settingsTab.click();
+                  }}
+                  className="bg-rose-700 hover:bg-rose-800 text-white"
+                >
+                  Go to Settings Tab
+                </Button>
+              )}
+            </div>
+          </CardContent>
+        </Card>
       )}
 
       {/* Main Content Tabs */}
