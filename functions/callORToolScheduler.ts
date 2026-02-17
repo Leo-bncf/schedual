@@ -109,6 +109,8 @@ Deno.serve(async (req) => {
 
     // Step 1: Build scheduling problem with FRESH teaching groups
     let buildResponse;
+    let buildData = null;
+
     try {
       buildResponse = await base44.functions.invoke('buildSchedulingProblem', {
         schedule_version_id,
@@ -117,35 +119,77 @@ Deno.serve(async (req) => {
         dp_min_end_time: dpMinEndTime,
         teachingGroups: teachingGroupsFresh // CRITICAL: Pass fresh TGs to prevent stale data
       });
+      buildData = buildResponse?.data;
     } catch (buildError) {
-      console.error(`[OptaPlanner] ❌ buildSchedulingProblem invocation error:`, buildError);
-      console.error('[OptaPlanner] Error stack:', buildError?.stack);
+      // CRITICAL: Axios throws on 4xx/5xx - extract structured error from response.data
+      console.error(`[OptaPlanner] ❌ buildSchedulingProblem threw error (HTTP ${buildError?.response?.status}):`, buildError);
+      console.error('[OptaPlanner] Error message:', buildError?.message);
+      console.error('[OptaPlanner] Response data:', buildError?.response?.data);
+
+      const errorData = buildError?.response?.data || {};
+      const httpStatus = buildError?.response?.status;
+
+      // If 422/400 with structured error, propagate it
+      if ((httpStatus === 422 || httpStatus === 400) && typeof errorData === 'object') {
+        console.log('[OptaPlanner] 📋 Propagating structured 422 error from buildSchedulingProblem');
+
+        return Response.json({ 
+          ok: false,
+          stage: errorData.stage || 'buildProblem',
+          code: errorData.code || errorData.error || 'BUILD_PROBLEM_FAILED',
+          error: errorData.error || 'buildSchedulingProblem validation failed',
+          errorMessage: errorData.errorMessage || errorData.error || String(buildError?.message || 'Unknown error'),
+          errorStack: errorData.errorStack || String(buildError?.stack || ''),
+          suggestion: errorData.suggestion || 'Check validation report for missing configuration',
+          details: errorData.missingGroups || errorData.missingSubjects || errorData.excludedGroups || [],
+          meta: errorData.meta || { schedule_version_id, schoolId },
+          validationReport: errorData.validationReport || null,
+          requiredAction: errorData.requiredAction || null,
+          missingSubjects: errorData.missingSubjects || [],
+          missingGroups: errorData.missingGroups || [],
+          buildVersion: errorData.buildVersion || null,
+          wrapperBuildVersion: WRAPPER_BUILD_VERSION
+        }, { status: 422, headers: { 'Content-Type': 'application/json' } });
+      }
+
+      // Generic error (network/timeout)
       return Response.json({ 
         ok: false,
         stage: 'buildProblem',
+        code: 'BUILD_INVOCATION_ERROR',
         error: 'Failed to invoke buildSchedulingProblem',
         errorMessage: String(buildError?.message || buildError),
         errorStack: String(buildError?.stack || ''),
-        meta: { schedule_version_id, schoolId }
-      }, { status: 200 });
+        httpStatus: httpStatus || null,
+        meta: { schedule_version_id, schoolId },
+        wrapperBuildVersion: WRAPPER_BUILD_VERSION
+      }, { status: 500, headers: { 'Content-Type': 'application/json' } });
     }
 
-    if (!buildResponse?.data?.success || buildResponse?.data?.ok === false) {
-      console.error(`[OptaPlanner] ❌ buildProblem failed:`, buildResponse?.data);
+    // SUCCESS PATH: Check if buildSchedulingProblem succeeded
+    if (!buildData?.success || buildData?.ok === false) {
+      console.error(`[OptaPlanner] ❌ buildProblem returned ok:false:`, buildData);
+
       return Response.json({ 
         ok: false,
-        stage: buildResponse?.data?.stage || 'buildProblem',
-        error: 'buildSchedulingProblem failed',
-        errorMessage: buildResponse?.data?.errorMessage || buildResponse?.data?.error || 'Unknown error',
-        errorStack: buildResponse?.data?.errorStack || '',
-        buildError: buildResponse?.data || null,
-        meta: { schedule_version_id, schoolId },
-        counts: buildResponse?.data?.counts || null,
-        samples: buildResponse?.data?.samples || null
-        }, { status: 422, headers: { 'Content-Type': 'application/json' } });
+        stage: buildData?.stage || 'buildProblem',
+        code: buildData?.code || buildData?.error || 'BUILD_PROBLEM_FAILED',
+        error: buildData?.error || 'buildSchedulingProblem failed',
+        errorMessage: buildData?.errorMessage || buildData?.error || 'Unknown error',
+        errorStack: buildData?.errorStack || '',
+        suggestion: buildData?.suggestion || null,
+        details: buildData?.missingGroups || buildData?.missingSubjects || buildData?.excludedGroups || [],
+        meta: buildData?.meta || { schedule_version_id, schoolId },
+        validationReport: buildData?.validationReport || null,
+        requiredAction: buildData?.requiredAction || null,
+        missingSubjects: buildData?.missingSubjects || [],
+        missingGroups: buildData?.missingGroups || [],
+        buildVersion: buildData?.buildVersion || null,
+        wrapperBuildVersion: WRAPPER_BUILD_VERSION
+      }, { status: 422, headers: { 'Content-Type': 'application/json' } });
     }
 
-    const problem = buildResponse.data.problem;
+    const problem = buildData.problem;
 
     // CRITICAL VALIDATION 1: Block if timeslots empty
     if (!Array.isArray(problem?.timeslots) || problem.timeslots.length === 0) {
@@ -192,12 +236,12 @@ Deno.serve(async (req) => {
     }
 
     console.log(`[OptaPlanner] ✅ Timeslot uniqueness validated: ${uniqueTimeslotIds.size} unique IDs`);
-    const expectedLessonsBySubject = (buildResponse.data?.stats?.expectedLessonsBySubject) || {};
-    const expectedMinutesBySubject = (buildResponse.data?.stats?.expectedMinutesBySubject) || null;
-    const problemLessonsCreated = (buildResponse.data?.stats?.lessonsCreatedBySubject) || {};
-    const teachingGroupsDiagnostics = buildResponse.data?.teachingGroupsDiagnostics || [];
-    const debugMinutesSourceByTG = buildResponse.data?.debugMinutesSourceByTG || {};
-    const problemSummary = buildResponse.data?.problemSummary || null;
+    const expectedLessonsBySubject = (buildData?.stats?.expectedLessonsBySubject) || {};
+    const expectedMinutesBySubject = (buildData?.stats?.expectedMinutesBySubject) || null;
+    const problemLessonsCreated = (buildData?.stats?.lessonsCreatedBySubject) || {};
+    const teachingGroupsDiagnostics = buildData?.teachingGroupsDiagnostics || [];
+    const debugMinutesSourceByTG = buildData?.debugMinutesSourceByTG || {};
+    const problemSummary = buildData?.problemSummary || null;
     
     // DIAGNOSTIC: Filter subjectRequirements for TOK/CAS/EE
     const coreCodesSet = new Set(['TOK', 'CAS', 'EE']);
@@ -220,7 +264,7 @@ Deno.serve(async (req) => {
       days_of_week: problem?.scheduleSettings?.daysOfWeek || null,
       breaks: problem?.scheduleSettings?.breaks || [],
       min_periods_per_day: problem?.scheduleSettings?.minPeriodsPerDay || null,
-      target_periods_per_day: problem?.scheduleSettings?.targetPeriodsPerDay || (buildResponse?.data?.stats?.dp_target_periods_per_day || null),
+      target_periods_per_day: problem?.scheduleSettings?.targetPeriodsPerDay || (buildData?.stats?.dp_target_periods_per_day || null),
     };
 
     stage = 'validateProblem';
@@ -1173,9 +1217,9 @@ Deno.serve(async (req) => {
     const latestUsedTimeslot = maxUsedTimeslotId ? (timeslotById[maxUsedTimeslotId] || null) : null;
     const latestTimeslotAvailable = problem.timeslots[problem.timeslots.length - 1] || null;
     const periodsPerDayLocal2 = periodsPerDayComputed;
-    const underfilled = !!(buildResponse?.data?.stats?.underfilled);
+    const underfilled = !!(buildData?.stats?.underfilled);
     const maxUsedPeriod = Math.max(...Object.values(maxPeriodUsedByDay || { Monday:0, Tuesday:0, Wednesday:0, Thursday:0, Friday:0 }));
-    const dpTarget = (buildResponse?.data?.stats?.dp_target_periods_per_day) || null;
+    const dpTarget = (buildData?.stats?.dp_target_periods_per_day) || null;
     let earlyStopCause = 'CONSTRAINT_PUSHING_EARLY';
     if (underfilled) {
       earlyStopCause = 'NOT_ENOUGH_LESSONS';
@@ -1953,11 +1997,11 @@ Deno.serve(async (req) => {
     const isUnderfilled = totalAssignedLessons < totalTimeslots;
 
     return Response.json({
-      success: true,
-      ok: true,
-      buildVersion: buildResponse?.data?.buildVersion || null,
-      wrapperBuildVersion: WRAPPER_BUILD_VERSION,
-      school_id: user.school_id,
+    success: true,
+    ok: true,
+    buildVersion: buildData?.buildVersion || null,
+    wrapperBuildVersion: WRAPPER_BUILD_VERSION,
+    school_id: user.school_id,
       schedule_version_id,
       scheduleVersionIdInput: schedule_version_id,
       scheduleVersionIdUsed: schedule_version_id,

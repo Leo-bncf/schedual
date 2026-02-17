@@ -1708,7 +1708,19 @@ Now process the user's input and return ONLY the JSON object.`,
             audit: true
           });
           
-          const auditData = auditRes.data || {};
+          // CRITICAL: Parse response if it's a string (double-stringify bug)
+          let auditData = auditRes.data || {};
+          
+          if (typeof auditData === 'string') {
+            console.warn('[Schedule] ⚠️ Audit response is STRING (should be object) - attempting parse');
+            try {
+              auditData = JSON.parse(auditData);
+              console.log('[Schedule] ✅ Successfully parsed stringified response');
+            } catch (parseErr) {
+              console.error('[Schedule] ❌ Failed to parse stringified response:', parseErr);
+              auditData = { ok: false, stage: 'PARSE_ERROR', error: 'Response is malformed string', rawString: auditData };
+            }
+          }
           
           console.log('[Schedule] 📋 RAW AUDIT RESPONSE (FULL):', JSON.stringify(auditData, null, 2));
           console.log('[Schedule] 📋 Audit Function Call:', {
