@@ -629,6 +629,61 @@ Deno.serve(async (req) => {
       orToolPayload.scheduleVersionId = schedule_version_id;
       orToolPayload.demandByTG = demandByTG;
       orToolPayload.useDefaultSoftConstraints = useDefaultSoftConstraints;
+
+      // CRITICAL: Log payload summary for debugging (verify HL/SL hours included)
+      const hlSlHoursPresent = orToolPayload.subjects?.some(s => 
+        s.hoursPerWeekByLevel && (s.hoursPerWeekByLevel.HL || s.hoursPerWeekByLevel.SL)
+      );
+      const hlSlOnTeachingGroups = orToolPayload.teachingGroups?.some(tg =>
+        tg.hoursPerWeekHL || tg.hoursPerWeekSL
+      );
+
+      console.log('[callOptaPlannerScheduler] 📤 PAYLOAD SUMMARY (pre-solver):', {
+        schoolId: schoolId,
+        scheduleVersionId: schedule_version_id,
+        subjects_count: orToolPayload.subjects?.length || 0,
+        teachingGroups_count: orToolPayload.teachingGroups?.length || 0,
+        lessons_count: orToolPayload.lessons?.length || 0,
+        timeslots_count: orToolPayload.timeslots?.length || 0,
+        rooms_count: orToolPayload.rooms?.length || 0,
+        teachers_count: orToolPayload.teachers?.length || 0,
+        subjectRequirements_count: orToolPayload.subjectRequirements?.length || 0,
+        demandByTG_groups: Object.keys(demandByTG || {}).length,
+        demandByTG_total_periods: Object.values(demandByTG || {}).reduce((sum, v) => sum + v, 0),
+        constraints_count: orToolPayload.constraints?.length || 0,
+        hlSlHoursPresent_on_subjects: hlSlHoursPresent,
+        hlSlHoursPresent_on_teachingGroups: hlSlOnTeachingGroups,
+        useDefaultSoftConstraints,
+        strictDemand: true,
+        debug: true
+      });
+
+      // Log sample subject with HL/SL hours to verify
+      const sampleSubjectWithHours = orToolPayload.subjects?.find(s => s.hoursPerWeekByLevel);
+      if (sampleSubjectWithHours) {
+        console.log('[callOptaPlannerScheduler] 📋 Sample subject with HL/SL hours:', {
+          code: sampleSubjectWithHours.code,
+          name: sampleSubjectWithHours.name,
+          hoursPerWeekByLevel: sampleSubjectWithHours.hoursPerWeekByLevel
+        });
+      } else {
+        console.warn('[callOptaPlannerScheduler] ⚠️ No subjects with hoursPerWeekByLevel found in payload');
+      }
+
+      // Log sample teaching group with HL/SL hours
+      const sampleTGWithHours = orToolPayload.teachingGroups?.find(tg => tg.hoursPerWeekHL || tg.hoursPerWeekSL);
+      if (sampleTGWithHours) {
+        console.log('[callOptaPlannerScheduler] 📋 Sample TG with HL/SL hours:', {
+          id: sampleTGWithHours.id,
+          subjectCode: sampleTGWithHours.subjectCode,
+          level: sampleTGWithHours.level,
+          hoursPerWeekHL: sampleTGWithHours.hoursPerWeekHL,
+          hoursPerWeekSL: sampleTGWithHours.hoursPerWeekSL,
+          minutesPerWeek: sampleTGWithHours.minutesPerWeek
+        });
+      } else {
+        console.warn('[callOptaPlannerScheduler] ⚠️ No teaching groups with hoursPerWeekHL/SL found in payload');
+      }
       
       console.log('[callOptaPlannerScheduler] Constraint configuration:', {
         active_constraints: constraints.length,
@@ -637,6 +692,33 @@ Deno.serve(async (req) => {
           ? '🎯 Using default soft constraints pack (variety, no repetitive patterns)' 
           : `✅ Using ${constraints.length} custom constraints`
       });
+
+      // CRITICAL DIAGNOSTIC: Verify HL/SL hours are included in payload
+      console.log('[callOptaPlannerScheduler] 🔍 HL/SL Hours Configuration Check:');
+      const subjectsWithHours = (orToolPayload.subjects || []).filter(s => s.hoursPerWeekByLevel);
+      const tgsWithHours = (orToolPayload.teachingGroups || []).filter(tg => tg.hoursPerWeekHL || tg.hoursPerWeekSL);
+
+      console.log('[callOptaPlannerScheduler]   - Subjects with hoursPerWeekByLevel:', subjectsWithHours.length, '/', orToolPayload.subjects?.length || 0);
+      console.log('[callOptaPlannerScheduler]   - TeachingGroups with HL/SL hours:', tgsWithHours.length, '/', orToolPayload.teachingGroups?.length || 0);
+
+      if (subjectsWithHours.length > 0) {
+        console.log('[callOptaPlannerScheduler]   ✅ Sample subject hours:', {
+          code: subjectsWithHours[0].code,
+          hoursPerWeekByLevel: subjectsWithHours[0].hoursPerWeekByLevel
+        });
+      } else {
+        console.warn('[callOptaPlannerScheduler]   ⚠️ NO subjects have hoursPerWeekByLevel configured - solver will use defaults');
+      }
+
+      if (tgsWithHours.length > 0) {
+        console.log('[callOptaPlannerScheduler]   ✅ Sample TG hours:', {
+          id: tgsWithHours[0].id,
+          subjectCode: tgsWithHours[0].subjectCode,
+          level: tgsWithHours[0].level,
+          hoursPerWeekHL: tgsWithHours[0].hoursPerWeekHL,
+          hoursPerWeekSL: tgsWithHours[0].hoursPerWeekSL
+        });
+      }
 
       // CRITICAL: Validate payload completeness BEFORE sending to solver
       console.log("[OR] payload counts", {

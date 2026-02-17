@@ -196,10 +196,17 @@ export default function Schedule() {
     queryKey: ['scheduleSlots', selectedVersion?.id],
     queryFn: async () => {
       if (!selectedVersion) return [];
+
+      // CRITICAL: If OptaPlanner failed, don't try to reconstruct - return empty
+      if (optaPlannerResult?.ok === false) {
+        console.log('[Schedule] ⚠️ OptaPlanner failed - returning empty slots (no fallback)');
+        return [];
+      }
+
       const slots = await base44.entities.ScheduleSlot.filter({ schedule_version: selectedVersion.id });
       const inserted = (optaPlannerResult?.persistedSlotsSample || []).map(s => ({ ...s, schedule_version: selectedVersion.id }));
       const result = Array.isArray(inserted) && inserted.length > 0 ? [...slots, ...inserted] : slots;
-      
+
       // Determine actual timeslots source (must match useMemo logic)
       const timeslotsSource = solverTimeslots && solverTimeslots.length > 0 
         ? 'persisted from solver (stable)' 
@@ -208,12 +215,13 @@ export default function Schedule() {
           : result.length > 0 && optaPlannerResult?.scheduleSettingsSent
             ? 'reconstructed from solver scheduleSettings'
             : 'fallback - school config';
-      
+
       // Debug logging
       console.log('[Schedule] DEBUG - scheduleSlots.length:', result.length);
       console.log('[Schedule] DEBUG - timeslots source:', timeslotsSource);
       console.log('[Schedule] DEBUG - solverTimeslots:', solverTimeslots?.length || 0, 'slots');
-      
+      console.log('[Schedule] DEBUG - optaPlannerResult.ok:', optaPlannerResult?.ok);
+
       return result;
     },
     enabled: !!selectedVersion,
@@ -283,6 +291,12 @@ export default function Schedule() {
 
   // SOURCE OF TRUTH: Use solver timeslots OR reconstruct from scheduleSettings (NOT school config)
   const timeslots = React.useMemo(() => {
+    // CRITICAL: If OptaPlanner failed, do NOT reconstruct - return empty to show error state
+    if (optaPlannerResult?.ok === false) {
+      console.log('[Schedule] ❌ OptaPlanner failed - returning empty timeslots (error state)');
+      return [];
+    }
+    
     // Priority 1: Use persisted solver timeslots (set once by OptaPlanner, never overwritten)
     if (solverTimeslots && Array.isArray(solverTimeslots) && solverTimeslots.length > 0) {
       console.log('[Schedule] ✅ Using PERSISTED timeslots from OptaPlanner solver:', solverTimeslots.length, 'slots');
@@ -1835,47 +1849,70 @@ Now process the user's input and return ONLY the JSON object.`,
             toast.success(`✅ ${solverName}: ${deleted} deleted, ${inserted} optimized slots created`);
           }
         } catch (e) {
-        console.error('❌❌❌ Auto OptaPlanner step CRASHED:', e);
-        console.error('Error message:', e?.message);
-        console.error('Error stack:', e?.stack);
-        console.error('Axios response:', e?.response);
-        console.error('Response status:', e?.response?.status);
-        console.error('Response data:', e?.response?.data);
-        console.error('Response headers:', e?.response?.headers);
+          console.error('❌❌❌ Auto OptaPlanner step CRASHED:', e);
+          console.error('Error message:', e?.message);
+          console.error('Error stack:', e?.stack);
+          console.error('Axios response:', e?.response);
+          console.error('Response status:', e?.response?.status);
+          console.error('Response data (FULL):', JSON.stringify(e?.response?.data, null, 2));
+          console.error('Response headers:', e?.response?.headers);
 
-        const errorData = e?.response?.data;
-        const statusCode = e?.response?.status;
+          const errorData = e?.response?.data;
+          const statusCode = e?.response?.status;
 
-        // Enhanced error logging for 500 errors
-        if (statusCode === 500 || statusCode === 502) {
-          console.error(`🔴 BACKEND ERROR ${statusCode}:`, {
-            url: e?.config?.url,
-            method: e?.config?.method,
-            payload: e?.config?.data,
-            responseData: errorData,
-            responseText: typeof errorData === 'string' ? errorData : JSON.stringify(errorData),
-            cfRay: e?.response?.headers?.['cf-ray'],
-            rndrId: e?.response?.headers?.['rndr-id']
-          });
-        }
+          // Enhanced error logging for 500 errors
+          if (statusCode === 500 || statusCode === 502) {
+            console.error(`🔴 BACKEND ERROR ${statusCode}:`, {
+              url: e?.config?.url,
+              method: e?.config?.method,
+              payload: JSON.parse(e?.config?.data || '{}'),
+              responseData: errorData,
+              responseText: typeof errorData === 'string' ? errorData : JSON.stringify(errorData),
+              cfRay: e?.response?.headers?.['cf-ray'],
+              rndrId: e?.response?.headers?.['rndr-id']
+            });
+          }
 
-        if (errorData?.ok === false) {
-          const solverName = errorData.solverIdentity?.engine || 'OptaPlanner';
-          const errorMsg = `Stage: ${errorData.stage}\nError: ${errorData.errorMessage || errorData.error}\n\nStack:\n${errorData.errorStack || 'N/A'}`;
-          setOptaPlannerError(errorMsg);
-          setOptaPlannerResult(errorData);
-          toast.error(`${solverName} crashed at "${errorData.stage}": ${errorData.errorMessage || errorData.error}`, { duration: 10000 });
-        } else if (statusCode === 500) {
-          // Backend 500 error (not solver logic error)
-          const errorMsg = `Backend function crashed (HTTP 500)\n\n${typeof errorData === 'string' ? errorData : JSON.stringify(errorData, null, 2)}\n\nCheck function logs for details.`;
-          setOptaPlannerError(errorMsg);
-          toast.error('❌ callORToolScheduler function crashed (500). Check function logs.', { duration: 10000 });
-        } else {
-          setOptaPlannerError(e?.message || 'Solver failed');
-          toast.error('Solver failed — keeping generated schedule (no rollback performed).');
-        }
+          // CRITICAL: Check if errorData is JSON with ok:false (solver business error, not crash)
+          if (errorData && typeof errorData === 'object' && errorData.ok === false) {
+            const solverName = errorData.solverIdentity?.engine || 'OptaPlanner';
+            console.log('[Schedule] 📋 Solver returned business error (not crash):', errorData.stage);
+
+            // Special handling for COHORT_INTEGRITY_VIOLATION
+            if (errorData.stage === 'COHORT_INTEGRITY_VIOLATION') {
+              const splitSections = errorData.splitSections || [];
+              const errorMsg = `❌ SOLVER INTEGRITY VIOLATION\n\n` +
+                `${errorData.error || errorData.errorMessage}\n\n` +
+                `Affected sections: ${splitSections.length}\n\n` +
+                `Example: ${splitSections[0]?.subject} - ${splitSections[0]?.studentGroup}\n` +
+                `Duplicate timeslots: ${JSON.stringify(splitSections[0]?.timeslots_list)}\n\n` +
+                `${errorData.suggestion || 'Solver bug: same class scheduled multiple times at same time'}`;
+
+              setOptaPlannerError(errorMsg);
+              setOptaPlannerResult(errorData);
+              toast.error(`Solver integrity violation: ${splitSections.length} sections with duplicate timeslots`, { duration: 10000 });
+            }
+            // Other solver business errors
+            else {
+              const errorMsg = `Stage: ${errorData.stage}\nError: ${errorData.errorMessage || errorData.error}\n\nStack:\n${errorData.errorStack || 'N/A'}`;
+              setOptaPlannerError(errorMsg);
+              setOptaPlannerResult(errorData);
+              toast.error(`${solverName} error at "${errorData.stage}": ${errorData.errorMessage || errorData.error}`, { duration: 10000 });
+            }
+          } 
+          // HTTP 500 with no JSON body (actual crash)
+          else if (statusCode === 500) {
+            const errorMsg = `Backend function crashed (HTTP 500)\n\n${typeof errorData === 'string' ? errorData : JSON.stringify(errorData, null, 2)}\n\nCheck function logs for details.`;
+            setOptaPlannerError(errorMsg);
+            toast.error('❌ callORToolScheduler function crashed (500). Check function logs.', { duration: 10000 });
+          } 
+          // Other errors
+          else {
+            setOptaPlannerError(e?.message || 'Solver failed');
+            toast.error('Solver failed — keeping generated schedule (no rollback performed).');
+          }
         } finally {
-        setOptaPlannerLoading(false);
+          setOptaPlannerLoading(false);
         }
       }
     } catch (error) {
