@@ -65,8 +65,8 @@ export default function Subjects() {
     ib_group: 1,
     ib_group_name: 'Language & Literature',
     available_levels: ['HL', 'SL'],
-    hl_hours_per_week: 5,
-    sl_hours_per_week: 3,
+    hoursPerWeekHL: 6,
+    hoursPerWeekSL: 4,
     pyp_myp_hours_per_week: 3,
     requires_lab: false,
     requires_special_room: '',
@@ -164,8 +164,8 @@ export default function Subjects() {
       ib_group: 1,
       ib_group_name: 'Language & Literature',
       available_levels: ['HL', 'SL'],
-      hl_hours_per_week: 5,
-      sl_hours_per_week: 3,
+      hoursPerWeekHL: 6,
+      hoursPerWeekSL: 4,
       pyp_myp_hours_per_week: 3,
       requires_lab: false,
       requires_special_room: '',
@@ -186,8 +186,8 @@ export default function Subjects() {
       ib_group: subject.ib_group || 1,
       ib_group_name: subject.ib_group_name || 'Language & Literature',
       available_levels: subject.available_levels || ['HL', 'SL'],
-      hl_hours_per_week: subject.hl_minutes_per_week_default ? Math.round(subject.hl_minutes_per_week_default / 60) : 5,
-      sl_hours_per_week: subject.sl_minutes_per_week_default ? Math.round(subject.sl_minutes_per_week_default / 60) : 3,
+      hoursPerWeekHL: subject.hoursPerWeekHL || (subject.hl_minutes_per_week_default ? Math.round(subject.hl_minutes_per_week_default / 60) : 6),
+      hoursPerWeekSL: subject.hoursPerWeekSL || (subject.sl_minutes_per_week_default ? Math.round(subject.sl_minutes_per_week_default / 60) : 4),
       pyp_myp_hours_per_week: subject.pyp_myp_minutes_per_week_default ? Math.round(subject.pyp_myp_minutes_per_week_default / 60) : 3,
       requires_lab: subject.requires_lab || false,
       requires_special_room: subject.requires_special_room || '',
@@ -205,12 +205,12 @@ export default function Subjects() {
       ...formData,
       ib_group: String(formData.ib_group),
       ib_group_name: group?.name || '',
-      hl_minutes_per_week_default: formData.hl_hours_per_week * 60,
-      sl_minutes_per_week_default: formData.sl_hours_per_week * 60,
+      hoursPerWeekHL: formData.hoursPerWeekHL,
+      hoursPerWeekSL: formData.hoursPerWeekSL,
+      hl_minutes_per_week_default: formData.hoursPerWeekHL * 60,
+      sl_minutes_per_week_default: formData.hoursPerWeekSL * 60,
       pyp_myp_minutes_per_week_default: formData.pyp_myp_hours_per_week * 60
     };
-    delete data.hl_hours_per_week;
-    delete data.sl_hours_per_week;
     delete data.pyp_myp_hours_per_week;
     
     if (editingSubject) {
@@ -763,12 +763,12 @@ ${trainingFeedback ? `LESSONS FROM ADMIN FEEDBACK:\n${trainingFeedback}\n\n` : '
                         <div className="flex flex-wrap gap-2">
                           {subject.available_levels?.includes('HL') && (
                             <Badge className="bg-rose-100 text-rose-700 border-0">
-                              HL {subject.hl_hours_per_week}h
+                              HL {subject.hoursPerWeekHL || Math.round((subject.hl_minutes_per_week_default || 360) / 60)}h
                             </Badge>
                           )}
                           {subject.available_levels?.includes('SL') && (
                             <Badge className="bg-amber-100 text-amber-700 border-0">
-                              SL {subject.sl_hours_per_week}h
+                              SL {subject.hoursPerWeekSL || Math.round((subject.sl_minutes_per_week_default || 240) / 60)}h
                             </Badge>
                           )}
                           {subject.requires_lab && (
@@ -938,26 +938,34 @@ ${trainingFeedback ? `LESSONS FROM ADMIN FEEDBACK:\n${trainingFeedback}\n\n` : '
             {formData.ib_level === 'DP' && !formData.is_core ? (
               <div className="grid grid-cols-2 gap-4">
                 <div className="space-y-2">
-                  <Label htmlFor="hl_hours">HL Hours/Week</Label>
+                  <Label htmlFor="hl_hours">HL Hours/Week *</Label>
                   <Input 
                     id="hl_hours"
                     type="number"
+                    step="0.5"
                     min="1"
-                    max="10"
-                    value={formData.hl_hours_per_week}
-                    onChange={(e) => setFormData({ ...formData, hl_hours_per_week: parseInt(e.target.value) || 6 })}
+                    max="12"
+                    value={formData.hoursPerWeekHL}
+                    onChange={(e) => setFormData({ ...formData, hoursPerWeekHL: parseFloat(e.target.value) || 6 })}
                   />
+                  <p className="text-xs text-slate-500">
+                    IB standard: 6 hours/week (360 min)
+                  </p>
                 </div>
                 <div className="space-y-2">
-                  <Label htmlFor="sl_hours">SL Hours/Week</Label>
+                  <Label htmlFor="sl_hours">SL Hours/Week *</Label>
                   <Input 
                     id="sl_hours"
                     type="number"
+                    step="0.5"
                     min="1"
                     max="10"
-                    value={formData.sl_hours_per_week}
-                    onChange={(e) => setFormData({ ...formData, sl_hours_per_week: parseInt(e.target.value) || 4 })}
+                    value={formData.hoursPerWeekSL}
+                    onChange={(e) => setFormData({ ...formData, hoursPerWeekSL: parseFloat(e.target.value) || 4 })}
                   />
+                  <p className="text-xs text-slate-500">
+                    IB standard: 4 hours/week (240 min)
+                  </p>
                 </div>
               </div>
             ) : (
