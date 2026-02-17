@@ -256,24 +256,27 @@ Deno.serve(async (req) => {
       recordLog(`SKIPPED: TG ${tg.id} (${tg.name}, ${subjCode}): ${reason}`);
     };
     
-    // COMPREHENSIVE FALLBACK SYSTEM
+    // SUBJECT-CONFIGURED DEFAULTS (NO HARDCODED FALLBACKS)
     const getSubjectDefaults = (subj, tgLevel) => {
       if (!subj) return null;
       const level = String(tgLevel || '').toUpperCase();
       const ibLevel = String(subj.ib_level || '').toUpperCase();
       
       if (ibLevel === 'DP') {
+        // PRIORITY: Use new hoursPerWeekHL/SL fields
+        if (level === 'HL' && typeof subj.hoursPerWeekHL === 'number' && subj.hoursPerWeekHL > 0) {
+          return { minutes: subj.hoursPerWeekHL * 60, source: 'SUBJECT_HOURS_HL' };
+        }
+        if (level === 'SL' && typeof subj.hoursPerWeekSL === 'number' && subj.hoursPerWeekSL > 0) {
+          return { minutes: subj.hoursPerWeekSL * 60, source: 'SUBJECT_HOURS_SL' };
+        }
+        
+        // FALLBACK: Old minutes_per_week_default fields
         if (level === 'HL' && typeof subj.hl_minutes_per_week_default === 'number' && subj.hl_minutes_per_week_default > 0) {
-          return { minutes: subj.hl_minutes_per_week_default, source: 'SUBJECT_HL_DEFAULT' };
+          return { minutes: subj.hl_minutes_per_week_default, source: 'SUBJECT_HL_DEFAULT_DEPRECATED' };
         }
         if (level === 'SL' && typeof subj.sl_minutes_per_week_default === 'number' && subj.sl_minutes_per_week_default > 0) {
-          return { minutes: subj.sl_minutes_per_week_default, source: 'SUBJECT_SL_DEFAULT' };
-        }
-        if (typeof subj.hl_minutes_per_week_default === 'number' && subj.hl_minutes_per_week_default > 0) {
-          return { minutes: subj.hl_minutes_per_week_default, source: 'SUBJECT_HL_DEFAULT', note: 'level_unclear' };
-        }
-        if (typeof subj.sl_minutes_per_week_default === 'number' && subj.sl_minutes_per_week_default > 0) {
-          return { minutes: subj.sl_minutes_per_week_default, source: 'SUBJECT_SL_DEFAULT', note: 'level_unclear' };
+          return { minutes: subj.sl_minutes_per_week_default, source: 'SUBJECT_SL_DEFAULT_DEPRECATED' };
         }
       }
       
@@ -284,31 +287,6 @@ Deno.serve(async (req) => {
       }
       
       return null;
-    };
-    
-    const getIBStandardFallback = (tg, subj) => {
-      const level = String(tg.level || '').toUpperCase().trim();
-      const yearGroupStr = String(tg.year_group || '').toUpperCase();
-      const nameStr = String(tg.name || '').toUpperCase();
-      const ibLevel = subj ? String(subj.ib_level || '').toUpperCase() : null;
-
-      // ROBUST DP detection: check year_group, subject.ib_level, AND tg.name
-      const isDPGroup = yearGroupStr.includes('DP') || ibLevel === 'DP' || nameStr.includes('DP');
-
-      if (isDPGroup) {
-        // CRITICAL: IB STANDARD 2026 - HL=6h (360min), SL=4h (240min)
-        if (level === 'HL') return { minutes: 360, source: 'IB_STANDARD_HL_2026' }; // 6 hours/week
-        if (level === 'SL') return { minutes: 240, source: 'IB_STANDARD_SL_2026' }; // 4 hours/week
-        // FALLBACK: If level unclear, default to SL minimum
-        return { minutes: 240, source: 'IB_STANDARD_SL_ASSUMED_2026', note: 'level_unclear_defaulted_to_SL_4h' };
-      }
-
-      if (['PYP', 'MYP'].includes(ibLevel) || yearGroupStr.includes('MYP') || yearGroupStr.includes('PYP')) {
-        return { minutes: 150, source: 'IB_STANDARD_PYP_MYP' };
-      }
-
-      // FINAL FALLBACK: Never return 0 - use minimum viable schedule
-      return { minutes: 120, source: 'GENERIC_FALLBACK_MINIMUM' };
     };
     
     const minutesForTG = (tg) => {
@@ -372,31 +350,8 @@ Deno.serve(async (req) => {
         }
         
         const minutes = parsedValue;
-        // CRITICAL: For DP groups, validate against IB STANDARD 2026 (HL=360min, SL=240min)
-        // Use tg.level / tg.name for HL/SL detection (subject.ib_level often empty)
-        if (isDPHL && minutes < 320) {
-          const correctedMinutes = 360; // 6 hours/week
-          debugMinutesSourceByTG[tg.id] = { 
-            source: 'TG_MINUTES_OVERRIDE_HL_2026', 
-            value: correctedMinutes, 
-            originalValue: raw,
-            reason: `DP HL below IB 2026 standard (${minutes}min from "${raw}"), forced to 360min (6h)`
-          };
-          recordAdjustment(tg, 'DP HL below IB 2026 standard', `${raw} (${minutes}min)`, '360min (6h/week = 6 periods@60min)');
-          return correctedMinutes;
-        }
-
-        if (isDPSL && minutes < 200) {
-          const correctedMinutes = 240; // 4 hours/week
-          debugMinutesSourceByTG[tg.id] = { 
-            source: 'TG_MINUTES_OVERRIDE_SL_2026', 
-            value: correctedMinutes, 
-            originalValue: raw,
-            reason: `DP SL below IB 2026 standard (${minutes}min from "${raw}"), forced to 240min (4h)`
-          };
-          recordAdjustment(tg, 'DP SL below IB 2026 standard', `${raw} (${minutes}min)`, '240min (4h/week = 4 periods@60min)');
-          return correctedMinutes;
-        }
+        // NO AUTO-CORRECTION: Use configured value as-is
+        // Admin is responsible for setting correct hours on Subject entity
 
         debugMinutesSourceByTG[tg.id] = { source: 'TG_MINUTES', value: minutes, originalValue: raw };
         return minutes;
@@ -432,11 +387,9 @@ Deno.serve(async (req) => {
         return subjDefaults.minutes;
       }
 
-      // Priority 4: IB standard fallbacks (NEVER return 0)
-      const ibFallback = getIBStandardFallback(tg, subj);
-      debugMinutesSourceByTG[tg.id] = { source: ibFallback.source, value: ibFallback.minutes, subject: subjCode, note: ibFallback.note };
-      recordAdjustment(tg, `Applied IB standard fallback (${ibFallback.source})`, 'missing', `${ibFallback.minutes} min/week`);
-      return ibFallback.minutes;
+      // NO FALLBACK: Return 0 if subject config missing (will be blocked later)
+      debugMinutesSourceByTG[tg.id] = { source: 'MISSING_CONFIG', value: 0, subject: subjCode, reason: 'No hours configured on Subject' };
+      return 0;
     };
     
     const minutesToPeriods = (m) => Math.max(0, Math.ceil((m || 0) / periodDurationMinutes));
@@ -617,36 +570,48 @@ if (isDP) {
       recordLog(`⚠️ WARNING: No French/English lessons created - check subject codes`);
     }
 
-    // HARD FAIL if critical groups are missing minutes configuration
-    const missingMinutesGroups = teachingGroupsSkipped.filter(s => s.reason === 'MISSING_MINUTES_CONFIG');
-    if (missingMinutesGroups.length > 0) {
-      const errorDetails = missingMinutesGroups.map(g => ({
-        id: g.tg_id,
-        name: g.name,
-        subject: g.subject_code,
-        year_group: g.year_group,
-        ib_level: g.ib_level,
-        student_count: g.student_count
-      }));
-      
-      recordLog(`❌ CRITICAL: ${missingMinutesGroups.length} TeachingGroups have no minutes/periods configuration`);
+    // HARD FAIL if groups are missing subject hour configuration
+    const missingHoursConfig = teachingGroupsSkipped.filter(s => 
+      s.reason === 'MISSING_PERIODS_AND_MINUTES_CONFIG' || 
+      s.reason === 'INVALID_PERIOD_COUNT'
+    );
+    
+    // Also check for groups that got 0 minutes from MISSING_CONFIG
+    const missingSubjectConfig = Object.entries(debugMinutesSourceByTG)
+      .filter(([_, info]) => info.source === 'MISSING_CONFIG' && info.value === 0)
+      .map(([tgId, info]) => {
+        const tg = teachingGroupsDb.find(g => g.id === tgId);
+        const subj = tg?.subject_id ? subjectById[tg.subject_id] : null;
+        return {
+          tg_id: tgId,
+          name: tg?.name || 'Unknown',
+          subject_code: info.subject,
+          level: tg?.level || 'Unknown',
+          year_group: tg?.year_group,
+          student_count: tg?.student_ids?.length || 0,
+          error: `Subject ${info.subject} missing hoursPerWeek${tg?.level || 'HL/SL'} configuration`
+        };
+      });
+    
+    if (missingSubjectConfig.length > 0) {
+      recordLog(`❌ CRITICAL: ${missingSubjectConfig.length} TeachingGroups blocked - subjects missing hour configuration`);
       
       return Response.json({
         ok: false,
         stage: 'buildLessons',
-        error: 'MISSING_MINUTES_CONFIGURATION',
-        errorMessage: `${missingMinutesGroups.length} TeachingGroups are missing minutes/periods configuration and cannot be scheduled`,
-        missingConfigurationCount: missingMinutesGroups.length,
-        missingGroups: errorDetails,
-        suggestion: 'Please configure minutes_per_week, periods_per_week, or hours_per_week for these TeachingGroups, OR set subject-level defaults (hl_minutes_per_week_default, sl_minutes_per_week_default, or pyp_myp_minutes_per_week_default)',
+        error: 'MISSING_SUBJECT_HOURS_CONFIG',
+        errorMessage: `${missingSubjectConfig.length} subjects are missing HL/SL hours configuration. Please configure hoursPerWeekHL and hoursPerWeekSL on the Subjects page.`,
+        missingConfigurationCount: missingSubjectConfig.length,
+        missingGroups: missingSubjectConfig,
+        suggestion: 'Go to Subjects page and set hoursPerWeekHL and hoursPerWeekSL for all DP subjects',
         validationReport: {
           totalTeachingGroups: teachingGroupsDb.length,
           included: teachingGroupsIncludedCount,
           excluded: teachingGroupsSkipped.length,
-          missingConfiguration: missingMinutesGroups.length,
+          missingSubjectHoursConfig: missingSubjectConfig.length,
           excludedGroups: teachingGroupsSkipped
         }
-      }, { status: 200 });
+      }, { status: 400 });
     }
     
     const daysCount = daysOfWeek.length || 5;
