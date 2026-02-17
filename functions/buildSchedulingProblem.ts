@@ -627,11 +627,20 @@ if (isDP) {
       // Transform hoursPerWeekHL/SL into hoursPerWeekByLevel object
       const hoursPerWeekByLevel = {};
       if (subj?.ib_level === 'DP') {
+        // PRIORITY 1: Use admin-configured hoursPerWeekHL/SL (set on Subjects page)
         if (typeof subj.hoursPerWeekHL === 'number' && subj.hoursPerWeekHL > 0) {
           hoursPerWeekByLevel.HL = subj.hoursPerWeekHL;
         }
         if (typeof subj.hoursPerWeekSL === 'number' && subj.hoursPerWeekSL > 0) {
           hoursPerWeekByLevel.SL = subj.hoursPerWeekSL;
+        }
+        
+        // PRIORITY 2: Fallback to deprecated fields if new ones not set
+        if (!hoursPerWeekByLevel.HL && typeof subj.hl_minutes_per_week_default === 'number' && subj.hl_minutes_per_week_default > 0) {
+          hoursPerWeekByLevel.HL = Math.round(subj.hl_minutes_per_week_default / 60);
+        }
+        if (!hoursPerWeekByLevel.SL && typeof subj.sl_minutes_per_week_default === 'number' && subj.sl_minutes_per_week_default > 0) {
+          hoursPerWeekByLevel.SL = Math.round(subj.sl_minutes_per_week_default / 60);
         }
       }
       
@@ -744,7 +753,10 @@ if (isDP) {
           room_id: tg.preferred_room_id || null,
           ib_level: subj?.ib_level || null,
           studentIds: Array.isArray(tg.student_ids) ? tg.student_ids : [],
-          blockId: tg.block_id || null
+          blockId: tg.block_id || null,
+          // CRITICAL: Propagate subject hours for solver visibility
+          hoursPerWeekHL: subj?.hoursPerWeekHL || null,
+          hoursPerWeekSL: subj?.hoursPerWeekSL || null
         };
       })
     };
