@@ -1723,12 +1723,22 @@ Now process the user's input and return ONLY the JSON object.`,
           }
           
           console.log('[Schedule] 📋 RAW AUDIT RESPONSE (FULL):', JSON.stringify(auditData, null, 2));
-          console.log('[Schedule] 📋 Audit Function Call:', {
-            function: 'callORToolScheduler',
-            payload: { schedule_version_id: selectedVersion.id, dp_min_end_time: '16:00', dp_study_weekly: 8, audit: true },
+          console.log('[Schedule] 📋 OptaPlanner Audit Call:', {
+            function: 'callORToolScheduler', // Internal: OptaPlanner wrapper
+            payload: { 
+              schedule_version_id: selectedVersion.id, 
+              school_id: user.school_id,
+              dp_min_end_time: '16:00', 
+              dp_study_weekly: 8, 
+              audit: true 
+            },
+            response_type: typeof auditData,
             response_keys: Object.keys(auditData),
             response_ok: auditData.ok,
-            response_stage: auditData.stage
+            response_stage: auditData.stage,
+            response_buildVersion: auditData.buildVersion,
+            response_wrapperVersion: auditData.wrapperBuildVersion,
+            solver_engine: 'OptaPlanner' // IMPORTANT: Using OptaPlanner solver
           });
           
           // CRITICAL: Check ok field FIRST - if not true, STOP immediately
@@ -1744,7 +1754,14 @@ Now process the user's input and return ONLY the JSON object.`,
               errorValue: auditData.error,
               hasErrorMessage: 'errorMessage' in auditData,
               errorMessageValue: auditData.errorMessage,
-              hasIssues: 'studentAuditIssueCounts' in auditData,
+              hasDetails: 'details' in auditData,
+              detailsLength: Array.isArray(auditData.details) ? auditData.details.length : null,
+              hasMissingSubjects: 'missingSubjects' in auditData,
+              missingSubjectsCount: Array.isArray(auditData.missingSubjects) ? auditData.missingSubjects.length : null,
+              hasMissingGroups: 'missingGroups' in auditData,
+              missingGroupsCount: Array.isArray(auditData.missingGroups) ? auditData.missingGroups.length : null,
+              buildVersion: auditData.buildVersion || 'NOT_PROVIDED',
+              wrapperVersion: auditData.wrapperBuildVersion || 'NOT_PROVIDED',
               allKeys: Object.keys(auditData)
             });
             
@@ -1759,7 +1776,11 @@ Now process the user's input and return ONLY the JSON object.`,
               code: errorCode,
               message: errorMessage,
               hasDetails: !!errorDetails,
-              detailsCount: Array.isArray(errorDetails) ? errorDetails.length : null
+              detailsCount: Array.isArray(errorDetails) ? errorDetails.length : null,
+              detailsSample: Array.isArray(errorDetails) ? errorDetails.slice(0, 3) : errorDetails,
+              buildVersion: auditData.buildVersion || 'unknown',
+              wrapperVersion: auditData.wrapperBuildVersion || 'unknown',
+              solverEngine: 'OptaPlanner'
             });
             
             // Structured audit result for UI display
@@ -1790,12 +1811,22 @@ Now process the user's input and return ONLY the JSON object.`,
             
             // Enhanced toast message
             const toastMsg = errorStage === 'buildProblem' 
-              ? `❌ Audit failed: ${errorMessage} (check missing HL/SL hours or subject configuration)`
+              ? `❌ OptaPlanner Audit Failed: ${errorMessage} (check Subjects page for HL/SL hours)`
               : `❌ ${errorStage}: ${errorMessage}`;
             
             toast.error(toastMsg, { duration: 10000 });
             return; // CRITICAL: STOP - do not proceed to solver
           }
+          
+          // SUCCESS: Log audit pass details
+          console.log('[Schedule] ✅ OptaPlanner Audit Passed:', {
+            stage: auditData.stage,
+            buildVersion: auditData.buildVersion || 'unknown',
+            wrapperVersion: auditData.wrapperBuildVersion || 'unknown',
+            validationReport: auditData.validationReport || null,
+            stats: auditData.stats || null,
+            message: 'Ready to proceed with OptaPlanner optimization'
+          });
           
           // STEP 3: Audit passed (ok === true) - proceed with solver
           console.log('[Schedule] ✅ Pre-solve audit passed (ok=true) - proceeding to optimization');

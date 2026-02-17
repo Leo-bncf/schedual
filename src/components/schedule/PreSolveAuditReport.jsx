@@ -120,13 +120,24 @@ export default function PreSolveAuditReport({ auditResult, onProceed, onCancel }
             <div className="bg-slate-100 p-3 rounded-lg text-xs">
               <div className="font-bold text-slate-700 mb-2">🔍 Debug Info:</div>
               <div className="space-y-1 text-slate-600">
-                <div>Function: <code>callORToolScheduler</code></div>
+                <div>Solver Engine: <strong className="text-blue-600">OptaPlanner</strong></div>
+                <div>Function: <code>callORToolScheduler</code> (internal wrapper)</div>
                 <div>Response ok: <strong className={auditResult.ok === true ? 'text-green-600' : 'text-rose-600'}>{String(auditResult.ok)}</strong></div>
                 <div>Response stage: <strong>{auditResult.stage || 'undefined'}</strong></div>
-                <div>Build version: {auditResult.buildVersion || 'unknown'}</div>
-                <div>Wrapper version: {auditResult.wrapperBuildVersion || 'unknown'}</div>
+                <div>Build version: <strong className={auditResult.buildVersion ? 'text-blue-600' : 'text-rose-600'}>{auditResult.buildVersion || '❌ NOT PROVIDED'}</strong></div>
+                <div>Wrapper version: <strong className={auditResult.wrapperBuildVersion ? 'text-blue-600' : 'text-rose-600'}>{auditResult.wrapperBuildVersion || '❌ NOT PROVIDED'}</strong></div>
                 {auditResult.meta && (
                   <div>Meta: <code className="text-[10px]">{JSON.stringify(auditResult.meta)}</code></div>
+                )}
+                {auditResult.details && Array.isArray(auditResult.details) && auditResult.details.length > 0 && (
+                  <div className="mt-2 p-2 bg-rose-50 rounded border border-rose-200">
+                    <div className="font-semibold text-rose-900 mb-1">Validation Errors ({auditResult.details.length}):</div>
+                    <div className="text-[10px] space-y-1">
+                      {auditResult.details.slice(0, 5).map((d, i) => (
+                        <div key={i}>• {d.name || d.code || d.field || JSON.stringify(d)}</div>
+                      ))}
+                    </div>
+                  </div>
                 )}
               </div>
             </div>

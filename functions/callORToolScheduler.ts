@@ -15,14 +15,14 @@ const chunk = (arr, n) => {
   return out;
 };
 
-// DEPLOYMENT TIMESTAMP: 2026-02-17T17:00:00Z
+// DEPLOYMENT TIMESTAMP: 2026-02-17T19:00:00Z
 // WRAPPER for OptaPlanner scheduler with audit gating and enhanced error logging
 
 Deno.serve(async (req) => {
-  const RUNTIME_FINGERPRINT = "2026-02-17T18:30:00Z-HTTP-422-FOR-BUSINESS-ERRORS"; // HARD RUNTIME IDENTIFIER
-  const WRAPPER_BUILD_VERSION = '2026-02-17T18:30:00Z-HTTP-422-FOR-BUSINESS-ERRORS';
-  console.log("🔍 RUNTIME_FINGERPRINT", RUNTIME_FINGERPRINT);
-  console.log(`[callOptaPlannerScheduler] 🚀 WRAPPER BUILD VERSION: ${WRAPPER_BUILD_VERSION}`);
+  const RUNTIME_FINGERPRINT = "2026-02-17T19:00:00Z-AUDIT-422-DETAILS-PROPAGATION"; // HARD RUNTIME IDENTIFIER
+  const WRAPPER_BUILD_VERSION = '2026-02-17T19:00:00Z-AUDIT-422-DETAILS-PROPAGATION';
+  console.log("🔍 OptaPlanner Wrapper - RUNTIME_FINGERPRINT:", RUNTIME_FINGERPRINT);
+  console.log(`[OptaPlanner] 🚀 WRAPPER BUILD VERSION: ${WRAPPER_BUILD_VERSION}`);
   
   let stage = 'init';
   let schedule_version_id = null;
@@ -53,7 +53,15 @@ Deno.serve(async (req) => {
     const dpMinEndTime = body?.dp_min_end_time ?? '14:30';
     requestedSchoolId = body?.school_id || null;
     schoolId = requestedSchoolId || user.school_id;
-    console.log(`[OptaPlanner] ${stage}: schedule_version_id=${schedule_version_id}, school_id=${schoolId}, smoke_test=${smokeTest}`);
+    console.log(`[OptaPlanner] ${stage}: PAYLOAD RECEIVED:`, {
+      schedule_version_id,
+      school_id: schoolId,
+      audit: auditOnly,
+      smoke_test: smokeTest,
+      dp_study_weekly: dpStudyWeekly,
+      dp_min_end_time: dpMinEndTime,
+      note: 'HL/SL hours will be fetched from Subjects entity during buildSchedulingProblem'
+    });
     try {
       if (schedule_version_id) {
         const sv = await base44.entities.ScheduleVersion.filter({ id: schedule_version_id });
@@ -106,6 +114,19 @@ Deno.serve(async (req) => {
     
     stage = 'buildProblem';
     console.log(`[OptaPlanner] ${stage}: calling buildSchedulingProblem with fresh TGs`);
+    console.log(`[OptaPlanner] 📤 buildSchedulingProblem payload:`, {
+      schedule_version_id,
+      school_id: schoolId,
+      dp_study_weekly: dpStudyWeekly,
+      dp_min_end_time: dpMinEndTime,
+      teachingGroups_count: teachingGroupsFresh?.length || 0,
+      teachingGroups_sample: teachingGroupsFresh?.slice(0, 3).map(tg => ({
+        id: tg.id,
+        name: tg.name,
+        subject_id: tg.subject_id,
+        periods_per_week: tg.periods_per_week
+      })) || []
+    });
 
     // Step 1: Build scheduling problem with FRESH teaching groups
     let buildResponse;
@@ -120,11 +141,23 @@ Deno.serve(async (req) => {
         teachingGroups: teachingGroupsFresh // CRITICAL: Pass fresh TGs to prevent stale data
       });
       buildData = buildResponse?.data;
+
+      // Log buildSchedulingProblem response summary
+      console.log(`[OptaPlanner] 📥 buildSchedulingProblem response:`, {
+        ok: buildData?.ok,
+        success: buildData?.success,
+        stage: buildData?.stage,
+        buildVersion: buildData?.buildVersion || 'NOT_PROVIDED',
+        has_problem: !!buildData?.problem,
+        has_validationReport: !!buildData?.validationReport,
+        has_missingSubjects: Array.isArray(buildData?.missingSubjects),
+        missingSubjects_count: buildData?.missingSubjects?.length || 0
+      });
     } catch (buildError) {
       // CRITICAL: Axios throws on 4xx/5xx - extract structured error from response.data
-      console.error(`[OptaPlanner] ❌ buildSchedulingProblem threw error (HTTP ${buildError?.response?.status}):`, buildError);
+      console.error(`[OptaPlanner] ❌ buildSchedulingProblem threw error (HTTP ${buildError?.response?.status})`);
       console.error('[OptaPlanner] Error message:', buildError?.message);
-      console.error('[OptaPlanner] Response data:', buildError?.response?.data);
+      console.error('[OptaPlanner] Response data (full):', JSON.stringify(buildError?.response?.data, null, 2));
 
       const errorData = buildError?.response?.data || {};
       const httpStatus = buildError?.response?.status;
