@@ -108,6 +108,18 @@ Deno.serve(async (req) => {
       subjects: allSubjects.length
     });
 
+    // GUARD: No teachers available
+    if (!allTeachers || allTeachers.length === 0) {
+      console.log('[assignTeachers] ⚠️ No active teachers found - skipping assignment');
+      return Response.json({
+        success: true,
+        message: 'No active teachers available for assignment',
+        teachersAssigned: 0,
+        groupsProcessed: 0,
+        elapsedMs: Date.now() - startTime
+      }, { status: 200, headers: { 'Content-Type': 'application/json' } });
+    }
+
     // Build subject index for fast lookups
     const subjectById = {};
     allSubjects.forEach(s => { if (s?.id) subjectById[s.id] = s; });
@@ -130,13 +142,14 @@ Deno.serve(async (req) => {
     }
 
     if (teachingGroups.length === 0) {
+      console.log('[assignTeachers] ⚠️ No teaching groups to process after filtering');
       return Response.json({ 
         success: true, 
         message: 'No teaching groups to assign (after filtering)',
         teachersAssigned: 0,
         groupsProcessed: 0,
         elapsedMs: Date.now() - startTime
-      });
+      }, { status: 200, headers: { 'Content-Type': 'application/json' } });
     }
 
     // ASSIGNMENT LOGIC: Optimized with teacher workload tracking
@@ -149,6 +162,19 @@ Deno.serve(async (req) => {
     const assignmentLog = [];
 
     for (const group of teachingGroups) {
+      // GUARD: Skip groups without subject_id
+      if (!group.subject_id) {
+        console.warn(`[assignTeachers] ⚠️ Group ${group.id} (${group.name}) missing subject_id - skipping`);
+        assignmentLog.push({
+          group_id: group.id,
+          group_name: group.name,
+          subject: 'MISSING_SUBJECT_ID',
+          status: 'skipped_invalid'
+        });
+        skippedCount++;
+        continue;
+      }
+
       // Skip if already assigned
       if (group.teacher_id) {
         skippedCount++;
@@ -158,8 +184,14 @@ Deno.serve(async (req) => {
       // Find qualified teachers for this subject
       const subject = subjectById[group.subject_id];
       const qualifiedTeachers = allTeachers.filter(t => {
-        // Check if teacher's subjects array includes this subject_id
-        if (t.subjects && t.subjects.includes(group.subject_id)) return true;
+        // GUARD: Validate teacher.subjects is array
+        if (!Array.isArray(t.subjects)) {
+          if (t.subjects) {
+            console.warn(`[assignTeachers] ⚠️ Teacher ${t.id} (${t.full_name}) has non-array subjects field - skipping this check`);
+          }
+        } else if (t.subjects.includes(group.subject_id)) {
+          return true;
+        }
         
         // Check qualifications for ib_level match
         if (t.qualifications && subject) {
@@ -229,20 +261,30 @@ Deno.serve(async (req) => {
       
       console.log(`[assignTeachers] Updating ${updates.length} groups in ${batches.length} batches`);
       
+      let batchErrors = 0;
       for (let i = 0; i < batches.length; i++) {
         const batch = batches[i];
         console.log(`[assignTeachers] Processing batch ${i + 1}/${batches.length} (${batch.length} groups)`);
         
-        await Promise.all(
-          batch.map(update => 
-            base44.asServiceRole.entities.TeachingGroup.update(update.id, {
-              teacher_id: update.teacher_id
-            })
-          )
-        );
+        try {
+          await Promise.all(
+            batch.map(update => 
+              base44.asServiceRole.entities.TeachingGroup.update(update.id, {
+                teacher_id: update.teacher_id
+              }).catch(err => {
+                console.error(`[assignTeachers] ❌ Failed to update group ${update.id}:`, err.message);
+                batchErrors++;
+                throw err;
+              })
+            )
+          );
+        } catch (batchError) {
+          console.error(`[assignTeachers] ❌ Batch ${i + 1} failed:`, batchError.message);
+          // Continue with remaining batches
+        }
       }
       
-      console.log(`[assignTeachers] ✅ Batch updates completed in ${Date.now() - updateStart}ms`);
+      console.log(`[assignTeachers] ✅ Batch updates completed in ${Date.now() - updateStart}ms (${batchErrors} errors)`);
     }
 
     const totalElapsed = Date.now() - startTime;
@@ -262,23 +304,35 @@ Deno.serve(async (req) => {
       assignmentLog: assignmentLog.slice(0, 50), // First 50 for debugging
       teacherWorkload,
       elapsedMs: totalElapsed,
-      message: `Assigned teachers to ${assignedCount} teaching groups`
-    });
+      message: `Assigned teachers to ${assignedCount} teaching groups`,
+      timing: {
+        fetch: fetchStart ? Date.now() - fetchStart : 0,
+        assignment: assignStart ? Date.now() - assignStart : 0,
+        updates: updateStart ? Date.now() - updateStart : 0,
+        total: totalElapsed
+      }
+    }, { status: 200, headers: { 'Content-Type': 'application/json' } });
 
   } catch (error) {
+    const elapsed = Date.now() - startTime;
     console.error('[assignTeachers] ❌ FATAL ERROR at stage:', stage);
     console.error('[assignTeachers] Error message:', error?.message);
+    console.error('[assignTeachers] Error name:', error?.name);
     console.error('[assignTeachers] Error stack:', error?.stack);
+    console.error('[assignTeachers] Elapsed before crash:', elapsed, 'ms');
     
     return Response.json({ 
       success: false,
       error: 'INTERNAL_ERROR',
       message: error?.message || 'Failed to assign teachers',
       stage,
+      elapsedMs: elapsed,
       details: {
         errorType: error?.name,
-        errorStack: error?.stack?.split('\n').slice(0, 5).join('\n') // First 5 lines of stack
+        errorMessage: error?.message,
+        errorStack: error?.stack?.split('\n').slice(0, 5).join('\n'), // First 5 lines of stack
+        timestamp: new Date().toISOString()
       }
-    }, { status: 500 });
+    }, { status: 500, headers: { 'Content-Type': 'application/json' } });
   }
 });
