@@ -1299,7 +1299,81 @@ Deno.serve(async (req) => {
     
     console.log('[callORToolScheduler] ✅ Demand validation passed - all teaching groups scheduled correctly');
     
-    // Step 5c: Map OptaPlanner solution back to Base44 ScheduleSlot entities (assigned + unscheduled)
+    // Step 5c: POST-SOLVE DOUBLE BOOKING VALIDATION (guardrail against solver regressions)
+    stage = 'validateDoubleBooking';
+    console.log(`[callORToolScheduler] ${stage}: checking for student double-booking conflicts`);
+    
+    const doubleBookings = [];
+    const slotsByStudent = {}; // { studentId: { "day_period": [slots] } }
+    
+    for (const lesson of solvedLessons) {
+      if (!lesson.timeslotId) continue; // Skip unassigned
+      
+      const timeslot = timeslotById[lesson.timeslotId];
+      if (!timeslot) continue;
+      
+      const day = dayMapping[timeslot.dayOfWeek] || timeslot.dayOfWeek;
+      const period = timeslotIndexInDay[timeslot.id] || 1;
+      const cellKey = `${day}_${period}`;
+      
+      // Get students from this lesson
+      const studentIds = Array.isArray(lesson.studentIds) ? lesson.studentIds : [];
+      
+      for (const studentId of studentIds) {
+        if (!slotsByStudent[studentId]) slotsByStudent[studentId] = {};
+        if (!slotsByStudent[studentId][cellKey]) slotsByStudent[studentId][cellKey] = [];
+        
+        slotsByStudent[studentId][cellKey].push({
+          subject: lesson.subject,
+          studentGroup: lesson.studentGroup,
+          timeslotId: lesson.timeslotId,
+          teacherId: lesson.teacherId,
+          roomId: lesson.roomId
+        });
+      }
+    }
+    
+    // Find conflicts (students with multiple lessons at same time)
+    for (const [studentId, schedule] of Object.entries(slotsByStudent)) {
+      for (const [cellKey, lessons] of Object.entries(schedule)) {
+        if (lessons.length > 1) {
+          doubleBookings.push({
+            studentId,
+            cellKey,
+            count: lessons.length,
+            lessons: lessons.map(l => ({
+              subject: l.subject,
+              studentGroup: l.studentGroup
+            }))
+          });
+        }
+      }
+    }
+    
+    if (doubleBookings.length > 0) {
+      console.error(`[callORToolScheduler] ❌ DOUBLE BOOKING DETECTED: ${doubleBookings.length} conflicts`);
+      console.error('[callORToolScheduler] Double bookings:', doubleBookings.slice(0, 10));
+      
+      return Response.json({
+        ok: false,
+        stage: 'DOUBLE_BOOKING_VIOLATION',
+        error: `${doubleBookings.length} students have multiple courses scheduled at the same time`,
+        errorMessage: 'Solver created double bookings. This schedule cannot be saved.',
+        doubleBookings: doubleBookings.slice(0, 50),
+        summary: {
+          total_conflicts: doubleBookings.length,
+          affected_students: Object.keys(slotsByStudent).filter(sid => 
+            Object.values(slotsByStudent[sid]).some(lessons => lessons.length > 1)
+          ).length
+        },
+        suggestion: 'Solver bug: hard constraint violated. Check solver logs for constraint enforcement issues.',
+        meta: { schedule_version_id, schoolId }
+      }, { status: 200 });
+    }
+    
+    console.log('[callORToolScheduler] ✅ Double booking validation passed - no conflicts detected');
+    
+    // Step 5d: Map OptaPlanner solution back to Base44 ScheduleSlot entities (assigned + unscheduled)
     // CRITICAL VALIDATION: Verify all lessons have valid TG_ format BEFORE mapping
     stage = 'validateStudentGroupFormat';
     console.log(`[callORToolScheduler] ${stage}: validating studentGroup format in solver output`);
