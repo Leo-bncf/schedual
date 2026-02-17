@@ -1710,46 +1710,78 @@ Now process the user's input and return ONLY the JSON object.`,
           
           const auditData = auditRes.data || {};
           
-          console.log('[Schedule] 📋 Raw Audit Response:', auditData);
-          console.log('[Schedule] 📋 Audit Result:', {
-            stage: auditData.stage,
-            ok: auditData.ok,
-            audit: auditData.audit,
-            issueCount: Object.values(auditData.studentAuditIssueCounts || {}).reduce((sum, c) => sum + c, 0),
-            issues: auditData.studentAuditIssueCounts
+          console.log('[Schedule] 📋 RAW AUDIT RESPONSE (FULL):', JSON.stringify(auditData, null, 2));
+          console.log('[Schedule] 📋 Audit Function Call:', {
+            function: 'callORToolScheduler',
+            payload: { schedule_version_id: selectedVersion.id, dp_min_end_time: '16:00', dp_study_weekly: 8, audit: true },
+            response_keys: Object.keys(auditData),
+            response_ok: auditData.ok,
+            response_stage: auditData.stage
           });
           
           // CRITICAL: Check ok field FIRST - if not true, STOP immediately
           if (auditData.ok !== true) {
             console.error('[Schedule] ❌ AUDIT FAILED - ok !== true - BLOCKING generation');
-            console.error('[Schedule] Audit response:', auditData);
+            console.error('[Schedule] 📦 Full audit response:', JSON.stringify(auditData, null, 2));
+            console.error('[Schedule] 📊 Response structure:', {
+              hasOk: 'ok' in auditData,
+              okValue: auditData.ok,
+              hasStage: 'stage' in auditData,
+              stageValue: auditData.stage,
+              hasError: 'error' in auditData,
+              errorValue: auditData.error,
+              hasErrorMessage: 'errorMessage' in auditData,
+              errorMessageValue: auditData.errorMessage,
+              hasIssues: 'studentAuditIssueCounts' in auditData,
+              allKeys: Object.keys(auditData)
+            });
             
-            // Build error message based on what we got
-            let errorMsg = 'Pre-solve audit failed';
-            let errorDetails = auditData;
+            // Build structured error display
+            const errorStage = auditData.stage || 'UNKNOWN_STAGE';
+            const errorCode = auditData.error || auditData.code || 'AUDIT_FAILED';
+            const errorMessage = auditData.errorMessage || auditData.error || 'Pre-solve audit failed';
+            const errorDetails = auditData.details || auditData.missingSubjects || auditData.missingGroups || null;
             
-            if (auditData.ok === undefined || auditData.stage === undefined) {
-              errorMsg = 'Pre-solve audit returned invalid response (missing ok/stage)';
-              console.error('[Schedule] Expected: {ok, stage} - Got:', Object.keys(auditData));
-            } else if (auditData.stage === 'PRE_SOLVE_AUDIT') {
-              errorMsg = 'Pre-solve audit found data quality issues';
-            } else {
-              errorMsg = `${auditData.stage || 'Unknown stage'}: ${auditData.errorMessage || auditData.error || 'Unknown error'}`;
-            }
+            console.error('[Schedule] 📋 Parsed error:', {
+              stage: errorStage,
+              code: errorCode,
+              message: errorMessage,
+              hasDetails: !!errorDetails,
+              detailsCount: Array.isArray(errorDetails) ? errorDetails.length : null
+            });
             
+            // Structured audit result for UI display
             setAuditResult({
               ok: false,
-              stage: auditData.stage || 'UNKNOWN',
-              error: auditData.error || 'Audit check failed',
-              errorMessage: auditData.errorMessage || errorMsg,
+              stage: errorStage,
+              error: errorCode,
+              errorMessage: errorMessage,
+              suggestion: auditData.suggestion || null,
+              meta: auditData.meta || null,
               rawResponse: auditData,
-              studentAuditIssueCounts: auditData.studentAuditIssueCounts,
-              sampleAuditIssues: auditData.sampleAuditIssues
+              // Legacy fields (preserved for backward compatibility)
+              studentAuditIssueCounts: auditData.studentAuditIssueCounts || {},
+              sampleAuditIssues: auditData.sampleAuditIssues || [],
+              // Enhanced error details
+              details: errorDetails,
+              missingSubjects: auditData.missingSubjects || [],
+              missingGroups: auditData.missingGroups || [],
+              splitSections: auditData.splitSections || [],
+              solverIdentity: auditData.solverIdentity || null,
+              buildVersion: auditData.buildVersion || null,
+              wrapperBuildVersion: auditData.wrapperBuildVersion || null
             });
+            
             setShowAuditReport(true);
             setOptaPlannerLoading(false);
             setIsGenerating(false);
-            toast.error(errorMsg);
+            
+            // Enhanced toast message
+            const toastMsg = errorStage === 'buildProblem' 
+              ? `❌ Audit failed: ${errorMessage} (check missing HL/SL hours or subject configuration)`
+              : `❌ ${errorStage}: ${errorMessage}`;
+            
+            toast.error(toastMsg, { duration: 10000 });
             return; // CRITICAL: STOP - do not proceed to solver
           }
           
@@ -3814,6 +3846,20 @@ Now process the user's input and return ONLY the JSON object.`,
       {/* Pre-Solve Audit Report Modal */}
       <Dialog open={showAuditReport} onOpenChange={setShowAuditReport}>
         <DialogContent className="sm:max-w-4xl max-h-[90vh] overflow-y-auto">
+          <DialogHeader>
+            <DialogTitle>
+              {auditResult?.stage === 'buildProblem' 
+                ? '❌ Pre-Solve Validation Failed' 
+                : auditResult?.stage === 'PRE_SOLVE_AUDIT'
+                  ? '⚠️ Data Quality Issues Detected'
+                  : '❌ Audit Failed'}
+            </DialogTitle>
+            <DialogDescription>
+              {auditResult?.stage === 'buildProblem'
+                ? 'Cannot generate schedule - fix configuration issues below and retry'
+                : 'Review issues before proceeding with schedule generation'}
+            </DialogDescription>
+          </DialogHeader>
           <PreSolveAuditReport
             auditResult={auditResult}
             onProceed={() => {
