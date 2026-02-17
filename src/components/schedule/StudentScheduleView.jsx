@@ -241,49 +241,88 @@ export default function StudentScheduleView({ students, slots, groups, subjects,
   const studentSlots = useServerSlots && serverSlots ? serverSlots : 
                        selectedStudent ? getStudentSlots(selectedStudent.id) : [];
 
-  // DETECT OVERLAPS: Group slots by timeslot position
-  const { slotsByPosition, overlaps } = React.useMemo(() => {
-    const grouped = {};
+  // NORMALIZE EVENTS: Group by timeslot_id, create conflict-groups for overlaps
+  const { normalizedEvents, overlaps } = React.useMemo(() => {
+    // Group by timeslot_id (or day+period fallback)
+    const byTimeslot = new Map();
     studentSlots.forEach(slot => {
       const slotUiRow = slot.timeslot_id ? timeslotToPosition[Number(slot.timeslot_id)]?.uiRow : slot.period;
-      const key = `${slot.day}_${slotUiRow}`;
-      if (!grouped[key]) grouped[key] = [];
-      grouped[key].push(slot);
+      const key = String(slot.timeslot_id || `${slot.day}|${slotUiRow}`);
+      if (!byTimeslot.has(key)) byTimeslot.set(key, []);
+      byTimeslot.get(key).push({ ...slot, uiRow: slotUiRow });
     });
     
-    // Find overlaps (multiple slots at same position)
-    const overlaps = Object.entries(grouped)
-      .filter(([_, slots]) => slots.length > 1)
-      .map(([key, slots]) => {
-        const [day, uiRow] = key.split('_');
-        return {
-          day,
-          period: parseInt(uiRow),
-          count: slots.length,
-          slots: slots.map(s => {
-            const subj = subjects.find(sub => sub.id === s.subject_id);
-            const room = rooms.find(r => r.id === s.room_id);
-            return {
-              id: s.id,
-              subject: subj?.name || 'Unknown',
-              room: room?.name || 'TBD',
-              timeslot_id: s.timeslot_id
-            };
-          })
-        };
-      });
+    // Create normalized events: single slots OR conflict-groups
+    const events = new Map(); // key: "day_period"
+    const conflicts = [];
     
-    if (overlaps.length > 0) {
-      console.warn(`[StudentScheduleView] ⚠️ DOUBLE BOOKING: ${overlaps.length} periods with multiple courses`);
-      console.warn('[StudentScheduleView] Overlap details:', overlaps);
+    byTimeslot.forEach((slots, timeslotKey) => {
+      const firstSlot = slots[0];
+      const cellKey = `${firstSlot.day}_${firstSlot.uiRow}`;
+      
+      if (slots.length === 1) {
+        // Single slot: normal event
+        events.set(cellKey, { type: 'single', slot: firstSlot });
+      } else {
+        // Multiple slots: conflict-group
+        const conflictDetails = slots.map(s => {
+          let subj = null;
+          let teacher = null;
+          let level = null;
+          
+          if (s.subject_id) {
+            subj = subjects.find(sub => sub.id === s.subject_id);
+            teacher = teachers.find(t => t.id === s.teacher_id);
+            level = selectedStudent?.ib_programme || '';
+          } else {
+            const group = groups.find(g => g.id === s.teaching_group_id);
+            if (group) {
+              subj = subjects.find(sub => sub.id === group.subject_id);
+              teacher = teachers.find(t => t.id === group.teacher_id);
+              level = group.level;
+            }
+          }
+          
+          const room = rooms.find(r => r.id === s.room_id);
+          
+          return {
+            id: s.id,
+            subject: subj?.name || 'Unknown',
+            subjectCode: subj?.code || null,
+            teacher: teacher?.full_name || 'Unassigned',
+            room: room?.name || 'TBD',
+            level: level || null
+          };
+        });
+        
+        events.set(cellKey, {
+          type: 'conflict',
+          count: slots.length,
+          day: firstSlot.day,
+          period: firstSlot.uiRow,
+          details: conflictDetails
+        });
+        
+        conflicts.push({
+          day: firstSlot.day,
+          period: firstSlot.uiRow,
+          count: slots.length,
+          details: conflictDetails
+        });
+      }
+    });
+    
+    if (conflicts.length > 0) {
+      console.warn(`[StudentScheduleView] ⚠️ DOUBLE BOOKING: ${conflicts.length} periods with multiple courses`);
+      console.warn('[StudentScheduleView] Conflict details:', conflicts);
     }
     
-    return { slotsByPosition: grouped, overlaps };
-  }, [studentSlots, timeslotToPosition, subjects, rooms]);
+    return { normalizedEvents: events, overlaps: conflicts };
+  }, [studentSlots, timeslotToPosition, subjects, teachers, rooms, groups, selectedStudent]);
 
-  const getSlotsForPeriod = (day, uiRow) => {
+  const getEventForPeriod = (day, uiRow) => {
     const key = `${day}_${uiRow}`;
-    return slotsByPosition[key] || [];
+    return normalizedEvents.get(key) || null;
   };
   
   // Debug logging
@@ -329,23 +368,28 @@ export default function StudentScheduleView({ students, slots, groups, subjects,
           <AlertTitle>⚠️ Double Booking Detected</AlertTitle>
           <AlertDescription>
             <div className="mt-2">
-              <p className="font-semibold">{overlaps.length} periods have multiple courses scheduled simultaneously:</p>
+              <p className="font-semibold">{overlaps.length} timeslots have multiple courses scheduled:</p>
               <div className="mt-3 space-y-2 max-h-40 overflow-y-auto">
-                {overlaps.map((overlap, idx) => (
+                {overlaps.slice(0, 5).map((overlap, idx) => (
                   <div key={idx} className="bg-white/50 p-2 rounded text-xs">
                     <div className="font-bold text-red-900">
-                      {overlap.day} Period {overlap.period} - {overlap.count} courses overlapping:
+                      {overlap.day} Period {overlap.period} - {overlap.count} courses:
                     </div>
                     <ul className="ml-4 mt-1 space-y-1">
-                      {overlap.slots.map((s, i) => (
-                        <li key={i}>• {s.subject} in {s.room}</li>
+                      {overlap.details.map((d, i) => (
+                        <li key={i}>• {d.subject} ({d.level || 'N/A'}) - {d.teacher} in {d.room}</li>
                       ))}
                     </ul>
                   </div>
                 ))}
+                {overlaps.length > 5 && (
+                  <div className="text-xs text-red-800 font-semibold">
+                    ...and {overlaps.length - 5} more conflicts
+                  </div>
+                )}
               </div>
               <p className="mt-3 text-xs">
-                This is a solver bug. The student cannot attend multiple courses at the same time.
+                This is a solver bug. The student cannot attend multiple courses at the same time. Contact support.
               </p>
             </div>
           </AlertDescription>
@@ -721,97 +765,87 @@ export default function StudentScheduleView({ students, slots, groups, subjects,
                     <div className="text-xs font-medium text-slate-700">{periodTimes[period]}</div>
                   </div>
                   {DAYS.map(day => {
-                    const cellSlots = getSlotsForPeriod(day, period);
+                    const event = getEventForPeriod(day, period);
                     
-                    if (cellSlots.length === 0) {
+                    if (!event) {
                       return (
                         <div key={`${day}-${period}`} className="border-r border-slate-200 last:border-r-0 hover:bg-slate-50/50" />
                       );
                     }
                     
-                    // HANDLE MULTIPLE SLOTS (double booking)
-                    if (cellSlots.length > 1) {
+                    // CONFLICT EVENT: Single block showing "Conflict (n)" with tooltip
+                    if (event.type === 'conflict') {
                       return (
-                        <div key={`${day}-${period}`} className="border-r border-slate-200 last:border-r-0 p-1">
-                          <div className="space-y-1">
-                            {cellSlots.slice(0, 2).map((slot, idx) => {
-                              let subject = null;
-                              let room = null;
-                              
-                              if (slot.subject_id) {
-                                subject = subjects.find(s => s.id === slot.subject_id);
-                                room = rooms.find(r => r.id === slot.room_id);
-                              } else {
-                                const group = groups.find(g => g.id === slot.teaching_group_id);
-                                if (group) {
-                                  subject = subjects.find(s => s.id === group.subject_id);
-                                  room = rooms.find(r => r.id === slot.room_id);
-                                }
-                              }
-                              
-                              const colorClass = subject ? subjectColors[subject.ib_group || 1] : 'bg-slate-100 border-slate-400';
-                              
-                              return (
-                                <div key={idx} className={`p-1.5 rounded border-l-4 ${colorClass}`}>
-                                  <div className="font-semibold text-[10px] leading-tight text-slate-900">
-                                    {subject?.name || 'Unknown'}
-                                  </div>
-                                  <div className="text-[9px] text-slate-600">{room?.name || 'TBD'}</div>
-                                </div>
-                              );
-                            })}
-                            {cellSlots.length > 2 && (
-                              <div className="px-1.5 py-0.5 bg-red-100 border border-red-300 rounded text-[9px] font-semibold text-red-900 text-center">
-                                +{cellSlots.length - 2} more
+                        <div 
+                          key={`${day}-${period}`} 
+                          className="border-r border-slate-200 last:border-r-0 p-2 group relative cursor-help"
+                          title={`${event.count} courses scheduled at the same time`}
+                        >
+                          <div className="h-full bg-red-100 border-l-4 border-red-600 rounded p-2 hover:bg-red-200 transition-colors">
+                            <div className="flex items-center justify-between mb-1">
+                              <div className="font-bold text-xs text-red-900">⚠️ Conflict</div>
+                              <div className="px-1.5 py-0.5 bg-red-600 text-white text-[9px] font-bold rounded">
+                                {event.count}
                               </div>
-                            )}
+                            </div>
+                            <div className="text-[10px] text-red-700">Multiple courses</div>
                           </div>
-                          <div className="mt-1 px-1 py-0.5 bg-red-500 text-white text-[8px] font-bold rounded text-center">
-                            ⚠️ CONFLICT
+                          
+                          {/* Tooltip with conflict details */}
+                          <div className="absolute left-0 top-full mt-1 z-50 hidden group-hover:block bg-white border-2 border-red-500 rounded-lg shadow-xl p-3 min-w-[250px]">
+                            <div className="font-bold text-xs text-red-900 mb-2">
+                              {event.count} courses at {event.day} Period {event.period}:
+                            </div>
+                            <div className="space-y-2">
+                              {event.details.map((d, idx) => (
+                                <div key={idx} className="text-[10px] text-slate-900 bg-slate-50 p-2 rounded">
+                                  <div className="font-semibold">{d.subject} {d.level && `(${d.level})`}</div>
+                                  <div className="text-slate-600">👤 {d.teacher}</div>
+                                  <div className="text-slate-600">📍 {d.room}</div>
+                                </div>
+                              ))}
+                            </div>
                           </div>
                         </div>
                       );
                     }
                     
-                    // SINGLE SLOT (normal case)
-                    const slot = cellSlots[0];
+                    // SINGLE EVENT (normal case)
+                    const slot = event.slot;
                     let subject = null;
                     let teacher = null;
                     let level = null;
                     
-                    if (slot) {
-                      // Check if this is a test slot (no subject_id, has notes)
-                      if (!slot.subject_id && slot.notes?.includes('Test')) {
-                        // Display as a test period
-                        subject = { name: 'Test/Assessment', ib_group: null };
-                        teacher = null;
-                        level = null;
-                      }
-                      // PYP/MYP: subject_id and teacher_id are directly on the slot
-                      else if (slot.subject_id) {
-                        subject = subjects.find(s => s.id === slot.subject_id);
-                        teacher = teachers.find(t => t.id === slot.teacher_id);
-                        level = selectedStudent?.ib_programme || '';
-                      } else {
-                        // DP: get from teaching group
-                        const group = groups.find(g => g.id === slot.teaching_group_id);
-                        if (group) {
-                          subject = subjects.find(s => s.id === group.subject_id);
-                          teacher = teachers.find(t => t.id === group.teacher_id);
-                          level = group.level;
-                        }
+                    // Check if this is a test slot (no subject_id, has notes)
+                    if (!slot.subject_id && slot.notes?.includes('Test')) {
+                      subject = { name: 'Test/Assessment', ib_group: null };
+                      teacher = null;
+                      level = null;
+                    }
+                    // PYP/MYP: subject_id and teacher_id are directly on the slot
+                    else if (slot.subject_id) {
+                      subject = subjects.find(s => s.id === slot.subject_id);
+                      teacher = teachers.find(t => t.id === slot.teacher_id);
+                      level = selectedStudent?.ib_programme || '';
+                    } else {
+                      // DP: get from teaching group
+                      const group = groups.find(g => g.id === slot.teaching_group_id);
+                      if (group) {
+                        subject = subjects.find(s => s.id === group.subject_id);
+                        teacher = teachers.find(t => t.id === group.teacher_id);
+                        level = group.level;
                       }
                     }
                     
-                    const room = slot ? rooms.find(r => r.id === slot.room_id) : null;
-                    const isTestSlot = slot?.notes?.includes('Test');
+                    const room = rooms.find(r => r.id === slot.room_id);
+                    const isTestSlot = slot.notes?.includes('Test');
                     const colorClass = isTestSlot 
                       ? 'bg-red-200/90 border-red-500' 
                       : (subject ? subjectColors[subject.ib_group || 1] : '');
 
                     return (
                       <div key={`${day}-${period}`} className="border-r border-slate-200 last:border-r-0 hover:bg-slate-50/50">
-                        {slot && subject && (
+                        {subject && (
                           <div className={`h-full p-2 border-l-4 ${colorClass}`}>
                             <div className={`font-semibold text-xs leading-tight ${isTestSlot ? 'text-red-900' : 'text-slate-900'}`}>
                               {subject.name}
