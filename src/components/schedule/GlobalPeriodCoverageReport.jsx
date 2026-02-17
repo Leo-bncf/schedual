@@ -59,9 +59,17 @@ export default function GlobalPeriodCoverageReport({
       const isDPHL = level === 'HL' && (subj?.ib_level === 'DP' || yearGroup?.includes('DP'));
       const isDPSL = level === 'SL' && (subj?.ib_level === 'DP' || yearGroup?.includes('DP'));
       
-      // SOURCE OF TRUTH for Expected: 1) TG.periods_per_week 2) subjectRequirements.requiredPeriods 3) cov.requiredPeriods
+      // SOURCE OF TRUTH for Expected: Match subjectRequirements by BOTH studentGroup AND subject code
       const studentGroupKey = cov.studentGroup || cov.section;
-      const reqFromSubjectReqs = subjectRequirements.find(r => r.studentGroup === studentGroupKey);
+      const subjectCode = subj?.code || null;
+      
+      // Find matching requirement: studentGroup="TG_<id>" + subject="MATH"/"PHYSICS"/etc
+      const reqFromSubjectReqs = subjectRequirements.find(r => 
+        r.studentGroup === studentGroupKey && 
+        r.subject === subjectCode
+      );
+      
+      // PRIORITY: 1) TG.periods_per_week 2) subjectRequirements.requiredPeriods 3) cov.requiredPeriods 4) null
       const expectedPeriods = tg?.periods_per_week || reqFromSubjectReqs?.requiredPeriods || cov.requiredPeriods || null;
       
       const expectedIB = isDPHL ? 6 : isDPSL ? 4 : null; // IB 2026 standards: HL=6, SL=4
