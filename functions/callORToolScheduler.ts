@@ -147,7 +147,7 @@ Deno.serve(async (req) => {
 
     const problem = buildResponse.data.problem;
 
-    // CRITICAL VALIDATION: Block if timeslots empty
+    // CRITICAL VALIDATION 1: Block if timeslots empty
     if (!Array.isArray(problem?.timeslots) || problem.timeslots.length === 0) {
       console.error('[callOptaPlannerScheduler] ❌ CRITICAL: buildSchedulingProblem returned ZERO timeslots');
       return Response.json({
@@ -162,6 +162,36 @@ Deno.serve(async (req) => {
     }
 
     console.log(`[callOptaPlannerScheduler] ✅ Timeslots validation passed: ${problem.timeslots.length} timeslots generated`);
+
+    // CRITICAL VALIDATION 2: Check for duplicate timeslot IDs
+    const timeslotIds = problem.timeslots.map(ts => ts.id);
+    const uniqueTimeslotIds = new Set(timeslotIds);
+
+    if (uniqueTimeslotIds.size !== timeslotIds.length) {
+      console.error('[callOptaPlannerScheduler] ❌ CRITICAL: Duplicate timeslot IDs detected in problem payload');
+
+      const duplicates = [];
+      const seen = {};
+      timeslotIds.forEach((id, idx) => {
+        if (seen[id] === undefined) {
+          seen[id] = idx;
+        } else {
+          duplicates.push({ id, firstIndex: seen[id], duplicateIndex: idx });
+        }
+      });
+
+      return Response.json({
+        ok: false,
+        stage: 'VALIDATION_DUPLICATE_TIMESLOTS',
+        error: 'Duplicate timeslot IDs in problem payload',
+        errorMessage: `Found ${duplicates.length} duplicate timeslot ID(s). Each timeslot must have a unique ID.`,
+        duplicates: duplicates.slice(0, 10),
+        suggestion: 'This is a bug in buildSchedulingProblem. Timeslot IDs must be sequential and unique.',
+        meta: { schedule_version_id, schoolId }
+      }, { status: 200 });
+    }
+
+    console.log(`[callOptaPlannerScheduler] ✅ Timeslot uniqueness validated: ${uniqueTimeslotIds.size} unique IDs`);
     const expectedLessonsBySubject = (buildResponse.data?.stats?.expectedLessonsBySubject) || {};
     const expectedMinutesBySubject = (buildResponse.data?.stats?.expectedMinutesBySubject) || null;
     const problemLessonsCreated = (buildResponse.data?.stats?.lessonsCreatedBySubject) || {};

@@ -1770,19 +1770,40 @@ Now process the user's input and return ONLY the JSON object.`,
 
           // Check if function returned error
           if (r.ok === false) {
-            const solverName = r.solverIdentity?.engine || 'Solver';
+            const solverName = r.solverIdentity?.engine || 'OptaPlanner';
             console.error(`❌ ${solverName} returned error:`, r);
             
+            // Special handling for cohort integrity violation
+            if (r.stage === 'COHORT_INTEGRITY_VIOLATION') {
+              const splitSections = r.splitSections || [];
+              const count = splitSections.length;
+              const firstSection = splitSections[0] || {};
+              
+              const errorMsg = `❌ SOLVER BUG: ${count} section(s) have duplicate timeslot assignments\n\n` +
+                `Example: ${firstSection.subject || 'Unknown'} - ${firstSection.studentGroup}\n` +
+                `Timeslots: ${JSON.stringify(firstSection.timeslots_list)}\n` +
+                `Reason: ${firstSection.reason}\n\n` +
+                `${r.suggestion || 'This is a solver constraint violation - same class cannot be scheduled multiple times at the same time.'}`;
+              
+              setOptaPlannerError(errorMsg);
+              toast.error(`Solver integrity violation: ${count} sections with duplicate timeslots. Check diagnostics.`, { duration: 10000 });
+            }
             // Special handling for missing config validation
-            if (r.error === 'MISSING_MINUTES_CONFIGURATION' || r.stage === 'VALIDATION_FAILED_MISSING_CONFIG') {
+            else if (r.error === 'MISSING_MINUTES_CONFIGURATION' || r.stage === 'VALIDATION_FAILED_MISSING_CONFIG') {
               const missingGroups = r.missingGroups || r.filteredDPGroups || [];
               const count = r.missingConfigurationCount || missingGroups.length;
               const groupNames = missingGroups.slice(0, 5).map(g => `${g?.name || 'Unknown'} (${g?.subject || '?'})`).join(', ');
               const moreText = count > 5 ? ` +${count - 5} more` : '';
               toast.error(`❌ Cannot generate schedule: ${count} TeachingGroups missing minutes/periods configuration. See diagnostics.`, { duration: 10000 });
               setOptaPlannerError(`VALIDATION FAILED: ${count} TeachingGroups Missing Configuration\n\n${groupNames}${moreText}\n\n${r.suggestion || 'Configure minutes_per_week, periods_per_week, or hours_per_week for each TeachingGroup'}\n\nDetailed list:\n${JSON.stringify(missingGroups, null, 2)}`);
-            } else {
-              const solverName = r.solverIdentity?.engine || 'Solver';
+            }
+            // Special handling for timeslots validation
+            else if (r.stage === 'VALIDATION_TIMESLOTS_EMPTY') {
+              toast.error('❌ Cannot run OptaPlanner: No timeslots generated. Fix school settings (day_start_time/day_end_time/period_duration).', { duration: 10000 });
+              setOptaPlannerError(`${r.errorMessage}\n\n${r.suggestion || ''}`);
+            }
+            // Generic solver error
+            else {
               toast.error(`${solverName} failed at stage "${r.stage}": ${r.errorMessage || r.error || 'Unknown error'}`);
               setOptaPlannerError(`Stage: ${r.stage}\nError: ${r.errorMessage || r.error}\n\nStack:\n${r.errorStack || 'N/A'}`);
             }
@@ -1865,14 +1886,32 @@ Now process the user's input and return ONLY the JSON object.`,
 
       const wasCancelled = error.message === 'Cancelled by user' || cancelGeneration;
 
-      setGenerationProgress({
-        stage: wasCancelled ? 'Cancelled' : 'Error',
-        percent: 0,
-        message: wasCancelled ? 'Schedule generation was cancelled' : `Generation failed: ${error.message}`,
-        currentStep: '',
-        completedSteps: [],
-        completed: true
-      });
+      // Check if error is from OptaPlanner response
+      const isPlannerError = error?.response?.data?.ok === false || error?.response?.data?.stage;
+      
+      if (isPlannerError && !wasCancelled) {
+        const errorData = error.response.data;
+        setOptaPlannerResult(errorData);
+        setOptaPlannerError(`Stage: ${errorData.stage}\nError: ${errorData.errorMessage || errorData.error}\n\nStack:\n${errorData.errorStack || 'N/A'}`);
+        
+        setGenerationProgress({
+          stage: 'Error',
+          percent: 0,
+          message: `OptaPlanner failed at "${errorData.stage}": ${errorData.errorMessage || errorData.error}`,
+          currentStep: '',
+          completedSteps: [],
+          completed: true
+        });
+      } else {
+        setGenerationProgress({
+          stage: wasCancelled ? 'Cancelled' : 'Error',
+          percent: 0,
+          message: wasCancelled ? 'Schedule generation was cancelled' : `Generation failed: ${error.message}`,
+          currentStep: '',
+          completedSteps: [],
+          completed: true
+        });
+      }
     }
 
     setTimeout(() => {
@@ -2861,11 +2900,72 @@ Now process the user's input and return ONLY the JSON object.`,
                   <CardHeader className="bg-rose-100 pb-3">
                     <CardTitle className="text-rose-900 flex items-center gap-2">
                       <AlertTriangle className="w-5 h-5" />
-                      Schedule Generation Error
+                      {optaPlannerResult?.stage === 'COHORT_INTEGRITY_VIOLATION' 
+                        ? 'Solver Integrity Violation' 
+                        : 'Schedule Generation Error'}
                     </CardTitle>
                   </CardHeader>
-                  <CardContent className="p-4">
+                  <CardContent className="p-4 space-y-3">
                     <pre className="text-xs text-rose-900 whitespace-pre-wrap bg-white p-3 rounded border border-rose-200 overflow-x-auto">{optaPlannerError}</pre>
+                    
+                    {optaPlannerResult?.stage === 'COHORT_INTEGRITY_VIOLATION' && optaPlannerResult?.splitSections && (
+                      <div className="space-y-2">
+                        <div className="font-bold text-rose-900">Affected Sections:</div>
+                        {optaPlannerResult.splitSections.slice(0, 10).map((section, idx) => (
+                          <div key={idx} className="bg-white p-3 rounded border border-rose-300">
+                            <div className="text-sm font-semibold text-rose-900">
+                              {section.subject} - {section.studentGroup}
+                            </div>
+                            <div className="text-xs text-rose-700 mt-1">
+                              Timeslots: {JSON.stringify(section.timeslots_list)}
+                            </div>
+                            <div className="text-xs text-rose-600 mt-1">
+                              {section.timeslots_total} total, {section.timeslots_unique} unique (duplicates detected)
+                            </div>
+                          </div>
+                        ))}
+                        <div className="flex gap-2 mt-3">
+                          <Button
+                            size="sm"
+                            variant="outline"
+                            onClick={() => {
+                              const payload = {
+                                stage: optaPlannerResult.stage,
+                                splitSections: optaPlannerResult.splitSections,
+                                suggestion: optaPlannerResult.suggestion,
+                                meta: optaPlannerResult.meta
+                              };
+                              const blob = new Blob([JSON.stringify(payload, null, 2)], { type: 'application/json' });
+                              const url = URL.createObjectURL(blob);
+                              const a = document.createElement('a');
+                              a.href = url;
+                              a.download = `cohort-integrity-violation-${new Date().toISOString()}.json`;
+                              a.click();
+                              URL.revokeObjectURL(url);
+                            }}
+                            className="border-rose-300 text-rose-700 hover:bg-rose-100"
+                          >
+                            <Download className="w-4 h-4 mr-2" />
+                            Download Error Report
+                          </Button>
+                        </div>
+                      </div>
+                    )}
+                    
+                    {optaPlannerResult?.stage === 'VALIDATION_TIMESLOTS_EMPTY' && (
+                      <div className="mt-3">
+                        <Button
+                          size="sm"
+                          onClick={() => {
+                            const settingsTab = document.querySelector('[data-state="inactive"][value="settings"]');
+                            if (settingsTab) settingsTab.click();
+                          }}
+                          className="bg-rose-700 hover:bg-rose-800 text-white"
+                        >
+                          Go to Settings
+                        </Button>
+                      </div>
+                    )}
                   </CardContent>
                 </Card>
               )}
