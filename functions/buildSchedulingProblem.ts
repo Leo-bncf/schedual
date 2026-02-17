@@ -551,6 +551,43 @@ if (isDP) {
     
     recordLog(`Lessons created: ${lessons.length} total, ${teachingGroupsIncludedCount} sections included, ${teachingGroupsSkipped.length} skipped`);
     recordLog(`Adjustments made: ${teachingGroupsAdjusted.length}`);
+    
+    // CRITICAL: Validate DP subjects have HL/SL hours configured
+    const dpSubjectsWithoutHours = [];
+    for (const subj of subjectsDb) {
+      if (subj.ib_level === 'DP') {
+        const hasHL = typeof subj.hoursPerWeekHL === 'number' && subj.hoursPerWeekHL > 0;
+        const hasSL = typeof subj.hoursPerWeekSL === 'number' && subj.hoursPerWeekSL > 0;
+        
+        if (!hasHL || !hasSL) {
+          dpSubjectsWithoutHours.push({
+            subject_id: subj.id,
+            code: subj.code || subj.name,
+            name: subj.name,
+            hoursPerWeekHL: subj.hoursPerWeekHL || null,
+            hoursPerWeekSL: subj.hoursPerWeekSL || null,
+            missing: !hasHL && !hasSL ? 'both' : !hasHL ? 'HL' : 'SL'
+          });
+        }
+      }
+    }
+    
+    if (dpSubjectsWithoutHours.length > 0) {
+      recordLog(`❌ BLOCKING: ${dpSubjectsWithoutHours.length} DP subjects missing HL/SL hours configuration`);
+      
+      return Response.json({
+        ok: false,
+        stage: 'VALIDATION_FAILED_MISSING_HL_SL_HOURS',
+        error: 'MISSING_HL_SL_HOURS_CONFIG',
+        errorMessage: `❌ Cannot run OptaPlanner: ${dpSubjectsWithoutHours.length} DP subjects are missing HL/SL hours configuration.\n\nOptaPlanner requires explicit hoursPerWeekHL and hoursPerWeekSL for all DP subjects to generate accurate schedules.\n\nPlease configure these values on the Subjects page before generating schedule.`,
+        missingSubjects: dpSubjectsWithoutHours,
+        suggestion: '🔧 Go to Subjects page → Edit each DP subject → Set "Hours per week (HL)" and "Hours per week (SL)" fields (e.g., HL=6, SL=4)',
+        requiredAction: 'Configure hoursPerWeekHL and hoursPerWeekSL for all DP subjects',
+        meta: { schedule_version_id, school_id }
+      }, { status: 422 });
+    }
+    
+    recordLog(`✅ HL/SL hours validation passed: ${dpSubjectsWithoutHours.length === 0 ? 'All DP subjects configured' : 'No DP subjects found'}`);
 
     // DIAGNOSTIC: Verify French/English lessons format
     const frenchEnglishLessons = lessons.filter(l => 
@@ -594,24 +631,25 @@ if (isDP) {
       });
     
     if (missingSubjectConfig.length > 0) {
-      recordLog(`❌ CRITICAL: ${missingSubjectConfig.length} TeachingGroups blocked - subjects missing hour configuration`);
+      recordLog(`❌ CRITICAL: ${missingSubjectConfig.length} TeachingGroups blocked - subjects missing HL/SL hour configuration`);
       
       return Response.json({
         ok: false,
-        stage: 'buildLessons',
-        error: 'MISSING_SUBJECT_HOURS_CONFIG',
-        errorMessage: `${missingSubjectConfig.length} subjects are missing HL/SL hours configuration. Please configure hoursPerWeekHL and hoursPerWeekSL on the Subjects page.`,
+        stage: 'VALIDATION_FAILED_MISSING_HL_SL_HOURS',
+        error: 'MISSING_HL_SL_HOURS_CONFIG',
+        errorMessage: `❌ Cannot generate schedule: ${missingSubjectConfig.length} DP subjects are missing HL/SL hours configuration.\n\nPlease configure hoursPerWeekHL and hoursPerWeekSL on the Subjects page before running OptaPlanner.`,
         missingConfigurationCount: missingSubjectConfig.length,
         missingGroups: missingSubjectConfig,
-        suggestion: 'Go to Subjects page and set hoursPerWeekHL and hoursPerWeekSL for all DP subjects',
+        suggestion: '🔧 Go to Subjects page → Edit each DP subject → Set "Hours per week (HL)" and "Hours per week (SL)" fields',
         validationReport: {
           totalTeachingGroups: teachingGroupsDb.length,
           included: teachingGroupsIncludedCount,
           excluded: teachingGroupsSkipped.length,
           missingSubjectHoursConfig: missingSubjectConfig.length,
           excludedGroups: teachingGroupsSkipped
-        }
-      }, { status: 400 });
+        },
+        requiredAction: 'Configure hoursPerWeekHL and hoursPerWeekSL for all DP subjects in Subjects page'
+      }, { status: 422 });
     }
     
     const daysCount = daysOfWeek.length || 5;
@@ -648,8 +686,12 @@ if (isDP) {
         id: validId,
         code: code,
         name: subj?.name || code,
-        hoursPerWeekByLevel: Object.keys(hoursPerWeekByLevel).length > 0 ? hoursPerWeekByLevel : undefined,
-        is_core: subj?.is_core || false
+        hoursPerWeekByLevel: Object.keys(hoursPerWeekByLevel).length > 0 ? hoursPerWeekByLevel : undefined, // ✅ HL/SL hours sent to solver
+        is_core: subj?.is_core || false,
+        ib_level: subj?.ib_level || null,
+        // DIAGNOSTIC: Include raw hours for validation
+        _debug_hoursHL: subj?.hoursPerWeekHL || null,
+        _debug_hoursSL: subj?.hoursPerWeekSL || null
       };
     });
     

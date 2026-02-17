@@ -1802,7 +1802,16 @@ Now process the user's input and return ONLY the JSON object.`,
               setOptaPlannerError(errorMsg);
               toast.error(`Solver integrity violation: ${count} sections with duplicate timeslots. Check diagnostics.`, { duration: 10000 });
             }
-            // Special handling for missing config validation
+            // Special handling for missing HL/SL hours validation
+            else if (r.stage === 'VALIDATION_FAILED_MISSING_HL_SL_HOURS' || r.error === 'MISSING_HL_SL_HOURS_CONFIG') {
+              const missingSubjects = r.missingSubjects || r.missingGroups || [];
+              const count = missingSubjects.length;
+              const subjectNames = missingSubjects.slice(0, 5).map(s => `${s?.name || s?.code || 'Unknown'} (missing: ${s?.missing || '?'})`).join(', ');
+              const moreText = count > 5 ? ` +${count - 5} more` : '';
+              toast.error(`❌ Cannot run OptaPlanner: ${count} DP subjects missing HL/SL hours. Configure on Subjects page.`, { duration: 12000 });
+              setOptaPlannerError(`VALIDATION FAILED: Missing HL/SL Hours Configuration\n\n${count} DP subjects need hoursPerWeekHL and hoursPerWeekSL configured:\n\n${subjectNames}${moreText}\n\n${r.suggestion || 'Go to Subjects page and set HL/SL hours for each DP subject'}\n\n${r.requiredAction || ''}\n\nDetailed list:\n${JSON.stringify(missingSubjects, null, 2)}`);
+            }
+            // Special handling for missing config validation (legacy)
             else if (r.error === 'MISSING_MINUTES_CONFIGURATION' || r.stage === 'VALIDATION_FAILED_MISSING_CONFIG') {
               const missingGroups = r.missingGroups || r.filteredDPGroups || [];
               const count = r.missingConfigurationCount || missingGroups.length;
