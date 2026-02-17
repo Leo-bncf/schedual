@@ -19,8 +19,8 @@ const chunk = (arr, n) => {
 // WRAPPER for OptaPlanner scheduler with audit gating and enhanced error logging
 
 Deno.serve(async (req) => {
-  const RUNTIME_FINGERPRINT = "2026-02-17T17:00:00Z-OPTAPLANNER-RENAME"; // HARD RUNTIME IDENTIFIER
-  const WRAPPER_BUILD_VERSION = '2026-02-17T17:00:00Z-OPTAPLANNER-RENAME';
+  const RUNTIME_FINGERPRINT = "2026-02-17T18:00:00Z-ALL-LOGS-OPTAPLANNER"; // HARD RUNTIME IDENTIFIER
+  const WRAPPER_BUILD_VERSION = '2026-02-17T18:00:00Z-ALL-LOGS-OPTAPLANNER';
   console.log("🔍 RUNTIME_FINGERPRINT", RUNTIME_FINGERPRINT);
   console.log(`[callOptaPlannerScheduler] 🚀 WRAPPER BUILD VERSION: ${WRAPPER_BUILD_VERSION}`);
   
@@ -53,7 +53,7 @@ Deno.serve(async (req) => {
     const dpMinEndTime = body?.dp_min_end_time ?? '14:30';
     requestedSchoolId = body?.school_id || null;
     schoolId = requestedSchoolId || user.school_id;
-    console.log(`[callOptaPlannerScheduler] ${stage}: schedule_version_id=${schedule_version_id}, school_id=${schoolId}, smoke_test=${smokeTest}`);
+    console.log(`[OptaPlanner] ${stage}: schedule_version_id=${schedule_version_id}, school_id=${schoolId}, smoke_test=${smokeTest}`);
     try {
       if (schedule_version_id) {
         const sv = await base44.entities.ScheduleVersion.filter({ id: schedule_version_id });
@@ -74,7 +74,7 @@ Deno.serve(async (req) => {
     console.log(`[callOptaPlannerScheduler] ${stage}: fetching fresh teaching groups for stable solver input`);
     
     const teachingGroupsFresh = await base44.entities.TeachingGroup.filter({ school_id: schoolId });
-    console.log(`[callOptaPlannerScheduler] Fetched ${teachingGroupsFresh.length} teaching groups (post-generation/sync)`);
+    console.log(`[OptaPlanner] Fetched ${teachingGroupsFresh.length} teaching groups (post-generation/sync)`);
     
     // CRITICAL: BUILD demandByTG FIRST (before buildProblem call) - TDZ FIX
     stage = 'buildDemandByTG';
@@ -82,21 +82,21 @@ Deno.serve(async (req) => {
     for (const tg of teachingGroupsFresh) {
       // Only schedule groups that should appear in timetable
       if (!tg.periods_per_week || tg.periods_per_week <= 0) {
-        console.log(`[callOptaPlannerScheduler] Skipping TG ${tg.id} (${tg.name}): periods_per_week=${tg.periods_per_week}`);
+        console.log(`[OptaPlanner] Skipping TG ${tg.id} (${tg.name}): periods_per_week=${tg.periods_per_week}`);
         continue;
       }
 
       demandByTG[tg.id] = tg.periods_per_week;
     }
 
-    console.log(`[callOptaPlannerScheduler] ✅ demandByTG constructed BEFORE buildProblem: ${Object.keys(demandByTG).length} teaching groups with explicit demand`);
-    console.log(`[callOptaPlannerScheduler] demandByTG sample (first 10):`, Object.entries(demandByTG).slice(0, 10));
+    console.log(`[OptaPlanner] ✅ demandByTG constructed BEFORE buildProblem: ${Object.keys(demandByTG).length} teaching groups with explicit demand`);
+    console.log(`[OptaPlanner] demandByTG sample (first 10):`, Object.entries(demandByTG).slice(0, 10));
     
     // Diagnostic: Show groups without periods_per_week
     const groupsWithoutDemand = teachingGroupsFresh.filter(tg => !tg.periods_per_week || tg.periods_per_week <= 0);
     if (groupsWithoutDemand.length > 0) {
-      console.warn(`[callOptaPlannerScheduler] ⚠️ Teaching groups WITHOUT periods_per_week: ${groupsWithoutDemand.length}/${teachingGroupsFresh.length}`);
-      console.warn('[callOptaPlannerScheduler] Groups without demand (first 10):', groupsWithoutDemand.slice(0, 10).map(tg => ({
+      console.warn(`[OptaPlanner] ⚠️ Teaching groups WITHOUT periods_per_week: ${groupsWithoutDemand.length}/${teachingGroupsFresh.length}`);
+      console.warn('[OptaPlanner] Groups without demand (first 10):', groupsWithoutDemand.slice(0, 10).map(tg => ({
         id: tg.id,
         name: tg.name,
         periods_per_week: tg.periods_per_week,
@@ -105,7 +105,7 @@ Deno.serve(async (req) => {
     }
     
     stage = 'buildProblem';
-    console.log(`[callOptaPlannerScheduler] ${stage}: calling buildSchedulingProblem with fresh TGs`);
+    console.log(`[OptaPlanner] ${stage}: calling buildSchedulingProblem with fresh TGs`);
 
     // Step 1: Build scheduling problem with FRESH teaching groups
     let buildResponse;
@@ -118,8 +118,8 @@ Deno.serve(async (req) => {
         teachingGroups: teachingGroupsFresh // CRITICAL: Pass fresh TGs to prevent stale data
       });
     } catch (buildError) {
-      console.error(`[callOptaPlannerScheduler] ❌ buildSchedulingProblem invocation error:`, buildError);
-      console.error('[callOptaPlannerScheduler] Error stack:', buildError?.stack);
+      console.error(`[OptaPlanner] ❌ buildSchedulingProblem invocation error:`, buildError);
+      console.error('[OptaPlanner] Error stack:', buildError?.stack);
       return Response.json({ 
         ok: false,
         stage: 'buildProblem',
@@ -131,7 +131,7 @@ Deno.serve(async (req) => {
     }
 
     if (!buildResponse?.data?.success || buildResponse?.data?.ok === false) {
-      console.error(`[callOptaPlannerScheduler] ❌ buildProblem failed:`, buildResponse?.data);
+      console.error(`[OptaPlanner] ❌ buildProblem failed:`, buildResponse?.data);
       return Response.json({ 
         ok: false,
         stage: buildResponse?.data?.stage || 'buildProblem',
@@ -149,7 +149,7 @@ Deno.serve(async (req) => {
 
     // CRITICAL VALIDATION 1: Block if timeslots empty
     if (!Array.isArray(problem?.timeslots) || problem.timeslots.length === 0) {
-      console.error('[callOptaPlannerScheduler] ❌ CRITICAL: buildSchedulingProblem returned ZERO timeslots');
+      console.error('[OptaPlanner] ❌ CRITICAL: buildSchedulingProblem returned ZERO timeslots');
       return Response.json({
         ok: false,
         stage: 'VALIDATION_TIMESLOTS_EMPTY',
@@ -161,14 +161,14 @@ Deno.serve(async (req) => {
       }, { status: 200 });
     }
 
-    console.log(`[callOptaPlannerScheduler] ✅ Timeslots validation passed: ${problem.timeslots.length} timeslots generated`);
+    console.log(`[OptaPlanner] ✅ Timeslots validation passed: ${problem.timeslots.length} timeslots generated`);
 
     // CRITICAL VALIDATION 2: Check for duplicate timeslot IDs
     const timeslotIds = problem.timeslots.map(ts => ts.id);
     const uniqueTimeslotIds = new Set(timeslotIds);
 
     if (uniqueTimeslotIds.size !== timeslotIds.length) {
-      console.error('[callOptaPlannerScheduler] ❌ CRITICAL: Duplicate timeslot IDs detected in problem payload');
+      console.error('[OptaPlanner] ❌ CRITICAL: Duplicate timeslot IDs detected in problem payload');
 
       const duplicates = [];
       const seen = {};
@@ -191,7 +191,7 @@ Deno.serve(async (req) => {
       }, { status: 200 });
     }
 
-    console.log(`[callOptaPlannerScheduler] ✅ Timeslot uniqueness validated: ${uniqueTimeslotIds.size} unique IDs`);
+    console.log(`[OptaPlanner] ✅ Timeslot uniqueness validated: ${uniqueTimeslotIds.size} unique IDs`);
     const expectedLessonsBySubject = (buildResponse.data?.stats?.expectedLessonsBySubject) || {};
     const expectedMinutesBySubject = (buildResponse.data?.stats?.expectedMinutesBySubject) || null;
     const problemLessonsCreated = (buildResponse.data?.stats?.lessonsCreatedBySubject) || {};
@@ -209,7 +209,7 @@ Deno.serve(async (req) => {
       })
       .slice(0, 20); // First 20 for logging
     
-    console.log('[callOptaPlannerScheduler] Core subject requirements (TOK/CAS/EE):', {
+    console.log('[OptaPlanner] Core subject requirements (TOK/CAS/EE):', {
       count: coreSubjectRequirements.length,
       sample: coreSubjectRequirements.slice(0, 10)
     });
@@ -224,7 +224,7 @@ Deno.serve(async (req) => {
     };
 
     stage = 'validateProblem';
-    console.log(`[callOptaPlannerScheduler] ${stage}: validating solver inputs`);
+    console.log(`[OptaPlanner] ${stage}: validating solver inputs`);
     
     // Step 2: Validate problem before calling OR-Tool
     const subjectsForSolver = Array.isArray(problem?.subjects) ? problem.subjects : [];
@@ -276,28 +276,28 @@ Deno.serve(async (req) => {
       .slice(0, 20)
       .map(r => ({ original: r?.subject, normalized: normalizeKey(r?.subject) }));
 
-    console.log('[callOptaPlannerScheduler] subjects validation:', {
+    console.log('[OptaPlanner] subjects validation:', {
       isArray: Array.isArray(subjectsForSolver),
       type: typeof subjectsForSolver,
       length: subjectsForSolver.length,
       first5: subjectsForSolver.slice(0, 5),
       invalidIds: subjectsInvalidIds
     });
-    console.log('[callOptaPlannerScheduler] subjectRequirements validation:', {
+    console.log('[OptaPlanner] subjectRequirements validation:', {
       isArray: Array.isArray(subjectRequirementsForSolver),
       length: subjectRequirementsForSolver.length,
       first10: subjectRequirementsForSolver.slice(0, 10),
       unknownSubjects: requirementsUnknownSubjects,
       invalidMinutes: requirementsInvalidMinutes
     });
-    console.log('[callOptaPlannerScheduler] normalization:', {
+    console.log('[OptaPlanner] normalization:', {
       normalizedSubjectsIndex,
       normalizedRequirementsSubjects
     });
 
     if (subjectsForSolver.length === 0 || subjectRequirementsForSolver.length === 0) {
       const reason = subjectsForSolver.length === 0 ? 'subjects[] is empty' : 'subjectRequirements[] is empty';
-      console.error('[callOptaPlannerScheduler] INVALID_INPUT:', reason);
+      console.error('[OptaPlanner] INVALID_INPUT:', reason);
       return Response.json({
         ok: false,
         error: 'INVALID_INPUT',
@@ -326,7 +326,7 @@ Deno.serve(async (req) => {
 
     // Step 2.5: Fetch solver identity FIRST (log engine type before solving)
     stage = 'fetchSolverInfo';
-    console.log(`[callOptaPlannerScheduler] ${stage}: identifying solver engine`);
+    console.log(`[OptaPlanner] ${stage}: identifying solver engine`);
 
     let solverIdentity = { engine: 'OptaPlanner', implementation: 'unknown', version: 'unknown' };
     try {
@@ -338,16 +338,16 @@ Deno.serve(async (req) => {
           version: solverInfoRes.data.version || 'unknown',
           build_sha: solverInfoRes.data.build_sha || null
         };
-        console.log('[callOptaPlannerScheduler] ✅ SOLVER IDENTITY:', JSON.stringify(solverIdentity));
-        console.log(`[callOptaPlannerScheduler] 🔧 Engine: ${solverIdentity.engine}, Implementation: ${solverIdentity.implementation}`);
+        console.log('[OptaPlanner] ✅ SOLVER IDENTITY:', JSON.stringify(solverIdentity));
+        console.log(`[OptaPlanner] 🔧 Engine: ${solverIdentity.engine}, Implementation: ${solverIdentity.implementation}`);
       }
     } catch (e) {
-      console.warn('[callOptaPlannerScheduler] Failed to fetch solver info:', e.message);
+      console.warn('[OptaPlanner] Failed to fetch solver info:', e.message);
     }
     
     // SMOKE TEST MODE: Minimal payload to validate VPS connectivity (EARLY EXIT)
     if (smokeTest) {
-      console.log('[callOptaPlannerScheduler] 🧪 SMOKE TEST MODE: Sending minimal payload to validate solver');
+      console.log('[OptaPlanner] 🧪 SMOKE TEST MODE: Sending minimal payload to validate solver');
       
       // Skip to solver call stage
       stage = 'callSolver';
@@ -404,7 +404,7 @@ Deno.serve(async (req) => {
         strictDemand: true
       };
       
-      console.log('[callOptaPlannerScheduler] 🧪 Smoke payload preview:', JSON.stringify(smokePayload).slice(0, 500));
+      console.log('[OptaPlanner] 🧪 Smoke payload preview:', JSON.stringify(smokePayload).slice(0, 500));
       
       try {
         const smokeResponse = await fetch(SOLVER_ENDPOINT, {
@@ -417,7 +417,7 @@ Deno.serve(async (req) => {
         });
         
         const smokeText = await smokeResponse.text();
-        console.log('[callOptaPlannerScheduler] 🧪 Smoke response:', { status: smokeResponse.status, ok: smokeResponse.ok, preview: smokeText.slice(0, 500) });
+        console.log('[OptaPlanner] 🧪 Smoke response:', { status: smokeResponse.status, ok: smokeResponse.ok, preview: smokeText.slice(0, 500) });
         
         let smokeResult;
         try {
@@ -435,7 +435,7 @@ Deno.serve(async (req) => {
           message: smokeResponse.ok ? '✅ Smoke test passed - solver is reachable' : '❌ Smoke test failed - check solver logs'
         });
       } catch (smokeError) {
-        console.error('[callOptaPlannerScheduler] 🧪 Smoke test error:', smokeError);
+        console.error('[OptaPlanner] 🧪 Smoke test error:', smokeError);
         return Response.json({
           ok: false,
           smokeTest: true,
@@ -449,11 +449,11 @@ Deno.serve(async (req) => {
     
     // EARLY RETURN: If audit-only mode, return problem without calling solver
     if (auditOnly) {
-      console.log('[callOptaPlannerScheduler] AUDIT MODE: Returning problem without solving');
+      console.log('[OptaPlanner] AUDIT MODE: Returning problem without solving');
       
       // Check if buildSchedulingProblem succeeded
       if (buildResponse?.data?.ok !== true) {
-        console.error('[callOptaPlannerScheduler] ❌ buildSchedulingProblem failed during audit');
+        console.error('[OptaPlanner] ❌ buildSchedulingProblem failed during audit');
         return Response.json({
           ok: false,
           audit: true,
@@ -482,7 +482,7 @@ Deno.serve(async (req) => {
     }
     
     stage = 'callSolver';
-    console.log(`[callOptaPlannerScheduler] ${stage}: preparing solver request (${solverIdentity.engine})`);
+    console.log(`[OptaPlanner] ${stage}: preparing solver request (${solverIdentity.engine})`);
 
     // Step 3: Call solver service - CRITICAL DIAGNOSTICS
     const SOLVER_ENDPOINT = Deno.env.get('OR_TOOL_ENDPOINT') || Deno.env.get('SOLVER_ENDPOINT');
@@ -494,9 +494,9 @@ Deno.serve(async (req) => {
     console.log('  OR_TOOL_API_KEY =', Deno.env.get('OR_TOOL_API_KEY') ? '***SET***' : 'NOT_SET');
     console.log('  SOLVER_API_KEY =', Deno.env.get('SOLVER_API_KEY') ? '***SET***' : 'NOT_SET');
     console.log('  FINAL ENDPOINT USED:', SOLVER_ENDPOINT);
-    console.log('[OR] endpointUsed =', SOLVER_ENDPOINT);
+    console.log('[OptaPlanner] endpointUsed =', SOLVER_ENDPOINT);
     const healthUrlForLog = SOLVER_ENDPOINT?.replace('/solve-and-push', '/health');
-    console.log('[OR] healthUrl =', healthUrlForLog);
+    console.log('[OptaPlanner] healthUrl =', healthUrlForLog);
 
     // DIAGNOSTIC: Log timeslots distribution by day
     const timeslotsByDayCount = {};
@@ -508,7 +508,7 @@ Deno.serve(async (req) => {
     const firstTimeslot = problem?.timeslots?.[0];
     const lastTimeslot = problem?.timeslots?.[problem?.timeslots?.length - 1];
 
-    console.log('[OR] timeslots distribution:', {
+    console.log('[OptaPlanner] timeslots distribution:', {
       total: problem?.timeslots?.length || 0,
       byDay: timeslotsByDayCount,
       minStart: firstTimeslot?.startTime,
@@ -517,7 +517,7 @@ Deno.serve(async (req) => {
     });
 
     if (!SOLVER_ENDPOINT) {
-      console.error('[callOptaPlannerScheduler] ❌ Missing SOLVER_ENDPOINT');
+      console.error('[OptaPlanner] ❌ Missing SOLVER_ENDPOINT');
       return Response.json({ 
         error: 'Solver endpoint missing: set OR_TOOL_ENDPOINT or SOLVER_ENDPOINT',
         envCheck: {
@@ -528,7 +528,7 @@ Deno.serve(async (req) => {
       }, { status: 503 });
     }
     if (!SOLVER_API_KEY) {
-      console.error('[callOptaPlannerScheduler] ❌ Missing SOLVER_API_KEY');
+      console.error('[OptaPlanner] ❌ Missing SOLVER_API_KEY');
       return Response.json({ 
         error: 'Solver API key missing: set OR_TOOL_API_KEY or SOLVER_API_KEY',
         solverIdentity
@@ -536,7 +536,7 @@ Deno.serve(async (req) => {
     }
 
     const solverEndpointUsed = SOLVER_ENDPOINT;
-    console.log(`[callOptaPlannerScheduler] ✅ Calling solver (${solverIdentity.engine}) at`, solverEndpointUsed, 'schedule_version_id =', schedule_version_id);
+    console.log(`[OptaPlanner] ✅ Calling solver (${solverIdentity.engine}) at`, solverEndpointUsed, 'schedule_version_id =', schedule_version_id);
 
     // Diagnostics defaults + /health check (VPS returns text/plain "OK")
     let solverHttpStatus = null;
@@ -545,16 +545,12 @@ Deno.serve(async (req) => {
     let solverHealthOk = null;
     try {
       const healthUrl = solverEndpointUsed.replace('/solve-and-push', '/health');
-      console.log('[callOptaPlannerScheduler] Testing solver /health at:', healthUrl);
-      const healthRes = await fetch(healthUrl, { method: 'GET' });
-      solverHealthStatus = healthRes.status;
-      solverHealthOk = healthRes.ok;
-      // VPS returns text/plain "OK", not JSON
-      const healthBody = await healthRes.text();
-      console.log('[OR] health', { status: solverHealthStatus, ok: solverHealthOk, body: healthBody.slice(0, 50) });
+      console.log('[OptaPlanner] Testing solver /health at:', healthUrl);
+      ...
+      console.log('[OptaPlanner] health', { status: solverHealthStatus, ok: solverHealthOk, body: healthBody.slice(0, 50) });
     } catch (e) {
-      console.warn('[callOptaPlannerScheduler] Solver /health check failed:', String(e?.message || e));
-      console.error('[OR] health', { status: null, ok: false, error: String(e?.message || e) });
+      console.warn('[OptaPlanner] Solver /health check failed:', String(e?.message || e));
+      console.error('[OptaPlanner] health', { status: null, ok: false, error: String(e?.message || e) });
       solverHealthStatus = null;
       solverHealthOk = false;
     }
@@ -570,7 +566,7 @@ Deno.serve(async (req) => {
       solverRequestHeadersSent = { 'Content-Type': 'application/json', 'X-API-Key': maskApiKey(SOLVER_API_KEY) };
 
       // CRITICAL: Use demandByTG already constructed earlier (TDZ FIX - NO REDECLARATION)
-      console.log('[callOptaPlannerScheduler] 🔒 HARD CONSTRAINT: using demandByTG from earlier:', {
+      console.log('[OptaPlanner] 🔒 HARD CONSTRAINT: using demandByTG from earlier:', {
         total_groups: Object.keys(demandByTG).length,
         total_periods_demanded: Object.values(demandByTG).reduce((sum, v) => sum + v, 0),
         sample: Object.entries(demandByTG).slice(0, 5)
@@ -578,21 +574,21 @@ Deno.serve(async (req) => {
 
       // SOFT CONSTRAINTS: Enable default pack if no constraints configured
       stage = 'fetchConstraints';
-      console.log(`[callOptaPlannerScheduler] ${stage}: checking for configured constraints`);
+      console.log(`[OptaPlanner] ${stage}: checking for configured constraints`);
       
       let constraints = [];
       let useDefaultSoftConstraints = false;
       
       try {
         constraints = await base44.entities.Constraint.filter({ school_id: schoolId, is_active: true });
-        console.log(`[callOptaPlannerScheduler] Found ${constraints.length} active constraints`);
+        console.log(`[OptaPlanner] Found ${constraints.length} active constraints`);
         
         if (constraints.length === 0) {
           useDefaultSoftConstraints = true;
-          console.log('[callOptaPlannerScheduler] 🎯 No constraints configured → enabling default soft constraints pack');
+          console.log('[OptaPlanner] 🎯 No constraints configured → enabling default soft constraints pack');
         }
       } catch (constraintError) {
-        console.warn('[callOptaPlannerScheduler] Failed to fetch constraints:', constraintError);
+        console.warn('[OptaPlanner] Failed to fetch constraints:', constraintError);
         useDefaultSoftConstraints = true; // Fallback to defaults if fetch fails
       }
       
@@ -685,7 +681,7 @@ Deno.serve(async (req) => {
         console.warn('[callOptaPlannerScheduler] ⚠️ No teaching groups with hoursPerWeekHL/SL found in payload');
       }
       
-      console.log('[callOptaPlannerScheduler] Constraint configuration:', {
+      console.log('[OptaPlanner] Constraint configuration:', {
         active_constraints: constraints.length,
         useDefaultSoftConstraints,
         message: useDefaultSoftConstraints 
@@ -694,24 +690,24 @@ Deno.serve(async (req) => {
       });
 
       // CRITICAL DIAGNOSTIC: Verify HL/SL hours are included in payload
-      console.log('[callOptaPlannerScheduler] 🔍 HL/SL Hours Configuration Check:');
+      console.log('[OptaPlanner] 🔍 HL/SL Hours Configuration Check:');
       const subjectsWithHours = (orToolPayload.subjects || []).filter(s => s.hoursPerWeekByLevel);
       const tgsWithHours = (orToolPayload.teachingGroups || []).filter(tg => tg.hoursPerWeekHL || tg.hoursPerWeekSL);
 
-      console.log('[callOptaPlannerScheduler]   - Subjects with hoursPerWeekByLevel:', subjectsWithHours.length, '/', orToolPayload.subjects?.length || 0);
-      console.log('[callOptaPlannerScheduler]   - TeachingGroups with HL/SL hours:', tgsWithHours.length, '/', orToolPayload.teachingGroups?.length || 0);
+      console.log('[OptaPlanner]   - Subjects with hoursPerWeekByLevel:', subjectsWithHours.length, '/', orToolPayload.subjects?.length || 0);
+      console.log('[OptaPlanner]   - TeachingGroups with HL/SL hours:', tgsWithHours.length, '/', orToolPayload.teachingGroups?.length || 0);
 
       if (subjectsWithHours.length > 0) {
-        console.log('[callOptaPlannerScheduler]   ✅ Sample subject hours:', {
+        console.log('[OptaPlanner]   ✅ Sample subject hours:', {
           code: subjectsWithHours[0].code,
           hoursPerWeekByLevel: subjectsWithHours[0].hoursPerWeekByLevel
         });
       } else {
-        console.warn('[callOptaPlannerScheduler]   ⚠️ NO subjects have hoursPerWeekByLevel configured - solver will use defaults');
+        console.warn('[OptaPlanner]   ⚠️ NO subjects have hoursPerWeekByLevel configured - solver will use defaults');
       }
 
       if (tgsWithHours.length > 0) {
-        console.log('[callOptaPlannerScheduler]   ✅ Sample TG hours:', {
+        console.log('[OptaPlanner]   ✅ Sample TG hours:', {
           id: tgsWithHours[0].id,
           subjectCode: tgsWithHours[0].subjectCode,
           level: tgsWithHours[0].level,
@@ -721,7 +717,7 @@ Deno.serve(async (req) => {
       }
 
       // CRITICAL: Validate payload completeness BEFORE sending to solver
-      console.log("[OR] payload counts", {
+      console.log("[OptaPlanner] payload counts", {
         rooms: orToolPayload.rooms?.length,
         teachers: orToolPayload.teachers?.length,
         lessons: orToolPayload.lessons?.length,
@@ -750,11 +746,11 @@ Deno.serve(async (req) => {
         throw new Error("payload subjectRequirements must be [] not null");
       }
 
-      console.log("[OR] ✅ Payload validation passed - ready to send to solver");
+      console.log("[OptaPlanner] ✅ Payload validation passed - ready to send to solver");
 
       const payloadJson = JSON.stringify(orToolPayload);
 
-      console.log('[callOptaPlannerScheduler] PRE-SEND VALIDATION:', {
+      console.log('[OptaPlanner] PRE-SEND VALIDATION:', {
         schoolId_var: schoolId,
         schoolId_type: typeof schoolId,
         schoolId_exists: !!schoolId,
@@ -764,7 +760,7 @@ Deno.serve(async (req) => {
         scheduleVersionId: schedule_version_id
       });
 
-      console.log(`[callOptaPlannerScheduler] Sending to solver (${solverIdentity.engine}/${solverIdentity.implementation}):`, {
+      console.log(`[OptaPlanner] Sending to solver (${solverIdentity.engine}/${solverIdentity.implementation}):`, {
         endpoint: solverEndpointUsed,
         schoolId: schoolId,
         scheduleVersionId: schedule_version_id,
@@ -776,8 +772,8 @@ Deno.serve(async (req) => {
         timeslotsCount: problem?.timeslots?.length || 0
       });
 
-      console.log('[Solver payload] schoolId=', orToolPayload.schoolId, 'scheduleVersionId=', orToolPayload.scheduleVersionId, 'keys=', Object.keys(orToolPayload).slice(0, 20));
-      console.log('[Solver payload JSON preview]:', payloadJson.slice(0, 300));
+      console.log('[OptaPlanner Payload] schoolId=', orToolPayload.schoolId, 'scheduleVersionId=', orToolPayload.scheduleVersionId, 'keys=', Object.keys(orToolPayload).slice(0, 20));
+      console.log('[OptaPlanner Payload JSON preview]:', payloadJson.slice(0, 300));
 
       solverResponse = await fetch(solverEndpointUsed, {
         method: 'POST',
@@ -785,14 +781,14 @@ Deno.serve(async (req) => {
         body: payloadJson
       });
       solverHttpStatus = solverResponse.status;
-      console.log('[callOptaPlannerScheduler] Solver HTTP status =', solverHttpStatus);
+      console.log('[OptaPlanner] Solver HTTP status =', solverHttpStatus);
 
       // Read response body once
       solverResponseText = await solverResponse.text();
-      console.log('[callOptaPlannerScheduler] Solver response preview:', solverResponseText?.slice(0, 500));
+      console.log('[OptaPlanner] Solver response preview:', solverResponseText?.slice(0, 500));
     } catch (e) {
-      console.error('[callOptaPlannerScheduler] Solver network/fetch error:', e);
-      console.error('[callOptaPlannerScheduler] Error stack:', e?.stack);
+      console.error('[OptaPlanner] Solver network/fetch error:', e);
+      console.error('[OptaPlanner] Error stack:', e?.stack);
       return Response.json({
         ok: false,
         stage: 'callSolver',
@@ -857,8 +853,8 @@ Deno.serve(async (req) => {
     }
 
     if (!solverResponse.ok) {
-      console.error(`[callOptaPlannerScheduler] Solver (${solverIdentity.engine}) returned error status:`, solverHttpStatus);
-      console.error('[callOptaPlannerScheduler] Solver error body:', solverResponseText);
+      console.error(`[OptaPlanner] Solver (${solverIdentity.engine}) returned error status:`, solverHttpStatus);
+      console.error('[OptaPlanner] Solver error body:', solverResponseText);
 
       // Try to parse as JSON, fallback to text
       let parsedError = null;
@@ -946,7 +942,7 @@ Deno.serve(async (req) => {
     try {
       solution = JSON.parse(solverResponseText);
     } catch (parseError) {
-      console.error('[callOptaPlannerScheduler] Failed to parse solver response as JSON:', parseError);
+      console.error('[OptaPlanner] Failed to parse solver response as JSON:', parseError);
       return Response.json({
         ok: false,
         stage: 'parseSolverResponse',
@@ -959,33 +955,32 @@ Deno.serve(async (req) => {
         meta: { schedule_version_id, schoolId }
       }, { status: 200 });
     }
-    console.log('[callOptaPlannerScheduler] solver score =', solution.score);
+    console.log('[OptaPlanner] solver score =', solution.score);
     
     // Log debug metrics if present
     if (solution.unknownTeachingGroupIdsInOutput) {
-      console.log('[callOptaPlannerScheduler] 🔍 unknownTeachingGroupIdsInOutput:', solution.unknownTeachingGroupIdsInOutput);
-    }
-    if (solution.uniqueTeachingGroupIdsInOutput) {
-      console.log('[callOptaPlannerScheduler] 🔍 uniqueTeachingGroupIdsInOutput:', solution.uniqueTeachingGroupIdsInOutput);
+      console.log('[OptaPlanner] 🔍 unknownTeachingGroupIdsInOutput:', solution.unknownTeachingGroupIdsInOutput);
+      ...
+      console.log('[OptaPlanner] 🔍 uniqueTeachingGroupIdsInOutput:', solution.uniqueTeachingGroupIdsInOutput);
     }
     if (solution.periodCoverageByStudentGroupOrSection) {
       const coverage = solution.periodCoverageByStudentGroupOrSection;
       const coverageArray = Array.isArray(coverage) ? coverage : Object.values(coverage);
-      console.log('[callOptaPlannerScheduler] 🔍 periodCoverage sample (first 10):', coverageArray.slice(0, 10));
+      console.log('[OptaPlanner] 🔍 periodCoverage sample (first 10):', coverageArray.slice(0, 10));
       
       // Count sections with missing periods
       const sectionsMissingPeriods = coverageArray.filter(c => (c.missingPeriods || 0) > 0);
-      console.log('[callOptaPlannerScheduler] ⚠️ Sections with missing periods:', sectionsMissingPeriods.length, '/', coverageArray.length);
-      if (sectionsMissingPeriods.length > 0) {
-        console.log('[callOptaPlannerScheduler] Missing periods sample:', sectionsMissingPeriods.slice(0, 5));
+      console.log('[OptaPlanner] ⚠️ Sections with missing periods:', sectionsMissingPeriods.length, '/', coverageArray.length);
+      ...
+        console.log('[OptaPlanner] Missing periods sample:', sectionsMissingPeriods.slice(0, 5));
       }
     }
     
     // CRITICAL: Validate unknown teaching group IDs
     const unknownTGIds = solution.unknownTeachingGroupIdsInOutput || [];
     if (unknownTGIds.length > 0) {
-      console.error(`[callOptaPlannerScheduler] ❌ CRITICAL: Solver returned ${unknownTGIds.length} unknown teaching_group_ids`);
-      console.error('[callOptaPlannerScheduler] These IDs are in solver output but not in Base44:', unknownTGIds);
+      console.error(`[OptaPlanner] ❌ CRITICAL: Solver returned ${unknownTGIds.length} unknown teaching_group_ids`);
+      console.error('[OptaPlanner] These IDs are in solver output but not in Base44:', unknownTGIds);
       
       return Response.json({
         ok: false,
@@ -1018,7 +1013,7 @@ Deno.serve(async (req) => {
         .toUpperCase().replace(/\s+/g, '_').replace(/[^A-Z0-9_]/g, '');
       assignmentsReturnedBySubject[subj] = (assignmentsReturnedBySubject[subj] || 0) + 1;
     }
-    console.log('[callOptaPlannerScheduler] assignmentsReturnedBySubject =', assignmentsReturnedBySubject);
+    console.log('[OptaPlanner] assignmentsReturnedBySubject =', assignmentsReturnedBySubject);
     const assignedBySubjectCode = {};
     const unassignedBySubjectCode = {};
     for (const l of solvedLessons) {
@@ -1030,8 +1025,8 @@ Deno.serve(async (req) => {
         unassignedBySubjectCode[subj] = (unassignedBySubjectCode[subj] || 0) + 1;
       }
     }
-    console.log('[callOptaPlannerScheduler] assignedBySubjectCode =', assignedBySubjectCode);
-    console.log('[callOptaPlannerScheduler] unassignedBySubjectCode =', unassignedBySubjectCode);
+    console.log('[OptaPlanner] assignedBySubjectCode =', assignedBySubjectCode);
+    console.log('[OptaPlanner] unassignedBySubjectCode =', unassignedBySubjectCode);
     const coreKeys = ['TOK','CAS','EE'];
     const coreAssignmentSummary = {};
     for (const k of coreKeys) {
@@ -1041,7 +1036,7 @@ Deno.serve(async (req) => {
         total: (assignedBySubjectCode[k] || 0) + (unassignedBySubjectCode[k] || 0)
       };
     }
-    console.log('[callOptaPlannerScheduler] coreAssignmentSummary =', coreAssignmentSummary);
+    console.log('[OptaPlanner] coreAssignmentSummary =', coreAssignmentSummary);
 
     // Step 4: Get Base44 entities to reverse-map IDs
     // CRITICAL: Reuse teachingGroupsFresh and demandByTG from earlier (consistency)
@@ -1199,15 +1194,15 @@ Deno.serve(async (req) => {
       unassignedBySubject[code].push({ studentGroup: ul.studentGroup, requiredCapacity: ul.requiredCapacity });
     }
     
-    console.log(`[callOptaPlannerScheduler] Unassigned lessons: ${unassignedLessons.length} / ${solvedLessons.length}`);
-    console.log(`[callOptaPlannerScheduler] Unassigned by subject:`, Object.keys(unassignedBySubject).map(k => `${k}: ${unassignedBySubject[k].length}`).join(', '));
+    console.log(`[OptaPlanner] Unassigned lessons: ${unassignedLessons.length} / ${solvedLessons.length}`);
+    console.log(`[OptaPlanner] Unassigned by subject:`, Object.keys(unassignedBySubject).map(k => `${k}: ${unassignedBySubject[k].length}`).join(', '));
     
     // Step 5b: GUARD - if too many unassigned, abort without overwriting
     const unassignedThreshold = 0.3; // 30% unassigned = fail
     const unassignedRatio = unassignedLessons.length / Math.max(1, solvedLessons.length);
     
     if (unassignedRatio > unassignedThreshold) {
-      console.error(`[callOptaPlannerScheduler] ABORT: ${(unassignedRatio*100).toFixed(1)}% lessons unassigned (threshold: ${(unassignedThreshold*100).toFixed(0)}%)`);
+      console.error(`[OptaPlanner] ABORT: ${(unassignedRatio*100).toFixed(1)}% lessons unassigned (threshold: ${(unassignedThreshold*100).toFixed(0)}%)`);
       const allowNullRoomSubjects = new Set(['STUDY','TOK','CAS','EE']);
       return Response.json({
         ok: false,
@@ -1237,7 +1232,7 @@ Deno.serve(async (req) => {
     // Ensures all lessons for the same studentGroup (section) are assigned to the SAME students
     // Detects split sections: same course appearing at different times for different students
     stage = 'validateCohortIntegrity';
-    console.log(`[callOptaPlannerScheduler] ${stage}: validating cohort/section integrity`);
+    console.log(`[OptaPlanner] ${stage}: validating cohort/section integrity`);
     
     const sectionCoverageMap = {}; // { studentGroup: { subject, timeslots: [ids], lessons_total, lessons_assigned } }
     
@@ -1273,7 +1268,7 @@ Deno.serve(async (req) => {
       
       if (hasDuplicates) {
         // CRITICAL: Same section scheduled multiple times at same timeslot = impossible
-        console.error(`[callOptaPlannerScheduler] ❌ SPLIT SECTION DETECTED: ${sg} has duplicate timeslot assignments`);
+        console.error(`[OptaPlanner] ❌ SPLIT SECTION DETECTED: ${sg} has duplicate timeslot assignments`);
         splitSections.push({
           studentGroup: sg,
           subject: data.subject,
@@ -1295,7 +1290,7 @@ Deno.serve(async (req) => {
       });
     }
     
-    console.log('[callOptaPlannerScheduler] Section Coverage Report:', {
+    console.log('[OptaPlanner] Section Coverage Report:', {
       total_sections: sectionCoverage.length,
       fully_scheduled: sectionCoverage.filter(s => s.coverage_percent === 100).length,
       partially_scheduled: sectionCoverage.filter(s => s.coverage_percent > 0 && s.coverage_percent < 100).length,
@@ -1304,8 +1299,8 @@ Deno.serve(async (req) => {
     });
     
     if (splitSections.length > 0) {
-      console.error('[callOptaPlannerScheduler] ❌ COHORT INTEGRITY VIOLATION: Split sections detected');
-      console.error('[callOptaPlannerScheduler] Split sections:', splitSections);
+      console.error('[OptaPlanner] ❌ COHORT INTEGRITY VIOLATION: Split sections detected');
+      console.error('[OptaPlanner] Split sections:', splitSections);
       
       return Response.json({
         ok: false,
@@ -1319,9 +1314,9 @@ Deno.serve(async (req) => {
     
     // FIX C: POST-SOLVE DEMAND VALIDATION (prevent under/over-scheduling)
     stage = 'validateDemandFulfillment';
-    console.log(`[callOptaPlannerScheduler] ${stage}: HARD GATE - auditing solver output against demand`);
-    console.log(`[callOptaPlannerScheduler] demandByTG keys:`, Object.keys(demandByTG).length);
-    console.log(`[callOptaPlannerScheduler] demandByTG sample:`, Object.entries(demandByTG).slice(0, 5));
+    console.log(`[OptaPlanner] ${stage}: HARD GATE - auditing solver output against demand`);
+    console.log(`[OptaPlanner] demandByTG keys:`, Object.keys(demandByTG).length);
+    console.log(`[OptaPlanner] demandByTG sample:`, Object.entries(demandByTG).slice(0, 5));
 
     const actualByTG = {};
     const debugActual = []; // Track first 10 lessons for debug
@@ -1335,7 +1330,7 @@ Deno.serve(async (req) => {
         : null;
 
       if (!tgId) {
-        console.warn(`[callOptaPlannerScheduler] ⚠️ Lesson without valid teaching_group_id: ${lesson.studentGroup}`);
+        console.warn(`[OptaPlanner] ⚠️ Lesson without valid teaching_group_id: ${lesson.studentGroup}`);
         continue;
       }
 
@@ -1357,11 +1352,11 @@ Deno.serve(async (req) => {
       }
     }
 
-    console.log('[callOptaPlannerScheduler] actualByTG constructed:', Object.keys(actualByTG).length, 'teaching groups');
-    console.log('[callOptaPlannerScheduler] actualByTG debug sample:', debugActual);
+    console.log('[OptaPlanner] actualByTG constructed:', Object.keys(actualByTG).length, 'teaching groups');
+    console.log('[OptaPlanner] actualByTG debug sample:', debugActual);
     
-    console.log('[callOptaPlannerScheduler] actualByTG:', actualByTG);
-    console.log('[callOptaPlannerScheduler] demandByTG:', demandByTG);
+    console.log('[OptaPlanner] actualByTG:', actualByTG);
+    console.log('[OptaPlanner] demandByTG:', demandByTG);
     
     const demandProblems = [];
     for (const tgId of Object.keys(demandByTG)) {
@@ -1383,9 +1378,9 @@ Deno.serve(async (req) => {
     }
     
     if (demandProblems.length > 0) {
-      console.error('[callOptaPlannerScheduler] ❌❌❌ CRITICAL: DEMAND VALIDATION FAILURE - BLOCKING DB WRITE');
-      console.error('[callOptaPlannerScheduler] Demand problems (showing all):', demandProblems);
-      console.error('[callOptaPlannerScheduler] This schedule will NOT be written to database (protection against Film HL=2 bug)');
+      console.error('[OptaPlanner] ❌❌❌ CRITICAL: DEMAND VALIDATION FAILURE - BLOCKING DB WRITE');
+      console.error('[OptaPlanner] Demand problems (showing all):', demandProblems);
+      console.error('[OptaPlanner] This schedule will NOT be written to database (protection against Film HL=2 bug)');
 
       // Enhanced diagnostics: show Film specifically if it's in the problems
       const filmProblems = demandProblems.filter(p => 
@@ -1393,7 +1388,7 @@ Deno.serve(async (req) => {
         (teachingGroups.find(g => g.id === p.tgId)?.name?.toLowerCase().includes('film'))
       );
       if (filmProblems.length > 0) {
-        console.error('[callOptaPlannerScheduler] 🎬 FILM SUBJECT DETECTED IN PROBLEMS:', filmProblems);
+        console.error('[OptaPlanner] 🎬 FILM SUBJECT DETECTED IN PROBLEMS:', filmProblems);
       }
 
       return Response.json({
@@ -1426,11 +1421,11 @@ Deno.serve(async (req) => {
       }, { status: 200 });
     }
     
-    console.log('[callOptaPlannerScheduler] ✅ Demand validation passed - all teaching groups scheduled correctly');
+    console.log('[OptaPlanner] ✅ Demand validation passed - all teaching groups scheduled correctly');
     
     // Step 5c: POST-SOLVE DOUBLE BOOKING VALIDATION (guardrail against solver regressions)
     stage = 'validateDoubleBooking';
-    console.log(`[callOptaPlannerScheduler] ${stage}: checking for student double-booking conflicts`);
+    console.log(`[OptaPlanner] ${stage}: checking for student double-booking conflicts`);
     
     const doubleBookings = [];
     const slotsByStudent = {}; // { studentId: { "day_period": [slots] } }
@@ -1480,8 +1475,8 @@ Deno.serve(async (req) => {
     }
     
     if (doubleBookings.length > 0) {
-      console.error(`[callOptaPlannerScheduler] ❌ DOUBLE BOOKING DETECTED: ${doubleBookings.length} conflicts`);
-      console.error('[callOptaPlannerScheduler] Double bookings:', doubleBookings.slice(0, 10));
+      console.error(`[OptaPlanner] ❌ DOUBLE BOOKING DETECTED: ${doubleBookings.length} conflicts`);
+      console.error('[OptaPlanner] Double bookings:', doubleBookings.slice(0, 10));
       
       return Response.json({
         ok: false,
@@ -1500,12 +1495,12 @@ Deno.serve(async (req) => {
       }, { status: 200 });
     }
     
-    console.log('[callOptaPlannerScheduler] ✅ Double booking validation passed - no conflicts detected');
+    console.log('[OptaPlanner] ✅ Double booking validation passed - no conflicts detected');
     
     // Step 5d: Map OptaPlanner solution back to Base44 ScheduleSlot entities (assigned + unscheduled)
     // CRITICAL VALIDATION: Verify all lessons have valid TG_ format BEFORE mapping
     stage = 'validateStudentGroupFormat';
-    console.log(`[callOptaPlannerScheduler] ${stage}: validating studentGroup format in solver output`);
+    console.log(`[OptaPlanner] ${stage}: validating studentGroup format in solver output`);
     
     const invalidFormatLessons = solvedLessons.filter(l => {
       if (!l.timeslotId) return false; // Skip unassigned
@@ -1513,8 +1508,8 @@ Deno.serve(async (req) => {
     });
     
     if (invalidFormatLessons.length > 0) {
-      console.error(`[callOptaPlannerScheduler] ❌ INVALID STUDENTGROUP FORMAT: ${invalidFormatLessons.length} lessons have non-TG_ format`);
-      console.error('[callOptaPlannerScheduler] Invalid format samples:', invalidFormatLessons.slice(0, 10).map(l => ({
+      console.error(`[OptaPlanner] ❌ INVALID STUDENTGROUP FORMAT: ${invalidFormatLessons.length} lessons have non-TG_ format`);
+      console.error('[OptaPlanner] Invalid format samples:', invalidFormatLessons.slice(0, 10).map(l => ({
         subject: l.subject,
         studentGroup: l.studentGroup,
         timeslotId: l.timeslotId
@@ -1536,7 +1531,7 @@ Deno.serve(async (req) => {
       }, { status: 200 });
     }
     
-    console.log('[callOptaPlannerScheduler] ✅ All assigned lessons have valid TG_ format');
+    console.log('[OptaPlanner] ✅ All assigned lessons have valid TG_ format');
     
     const allowNullRoomSubjects = new Set(['STUDY','TOK','CAS','EE']);
     const periods_per_day = periodsPerDayComputed; // derived from schedule settings
@@ -1637,13 +1632,13 @@ Deno.serve(async (req) => {
       const code = s.subject_id ? (codeBySubjectId[s.subject_id] || 'UNKNOWN') : (s.notes?.includes('Study') ? 'STUDY' : 'UNKNOWN');
       slotsPreparedBySubject[code] = (slotsPreparedBySubject[code] || 0) + 1;
     }
-    console.log('[callOptaPlannerScheduler] slotsPreparedBySubject =', slotsPreparedBySubject);
+    console.log('[OptaPlanner] slotsPreparedBySubject =', slotsPreparedBySubject);
     
     // DIAGNOSTIC: Log French/English TG extraction
     if (tgIdExtractionLog.length > 0) {
-      console.log('[callOptaPlannerScheduler] 🔍 French/English TG extraction log:', tgIdExtractionLog);
+      console.log('[OptaPlanner] 🔍 French/English TG extraction log:', tgIdExtractionLog);
     } else {
-      console.warn('[callOptaPlannerScheduler] ⚠️ No French/English lessons found in solver output');
+      console.warn('[OptaPlanner] ⚠️ No French/English lessons found in solver output');
     }
     
     // DIAGNOSTIC: Analyze TG ID distribution in prepared slots
@@ -1656,7 +1651,7 @@ Deno.serve(async (req) => {
       }
     }
     
-    console.log('[callOptaPlannerScheduler] 🔍 TG ID distribution:', {
+    console.log('[OptaPlanner] 🔍 TG ID distribution:', {
       unique_tg_ids: Object.keys(slotsByTGId).length,
       slots_with_null_tg: slotsWithNullTG.length,
       tg_id_counts_sample: Object.entries(slotsByTGId).slice(0, 10)
@@ -1667,8 +1662,8 @@ Deno.serve(async (req) => {
     const slotsWithUnknownTG = slots.filter(s => s.teaching_group_id && !knownTGIds.has(s.teaching_group_id));
     
     if (slotsWithUnknownTG.length > 0) {
-      console.error('[callOptaPlannerScheduler] ❌ Slots with unknown TG IDs:', slotsWithUnknownTG.length);
-      console.error('[callOptaPlannerScheduler] Unknown TG ID samples:', slotsWithUnknownTG.slice(0, 5).map(s => ({
+      console.error('[OptaPlanner] ❌ Slots with unknown TG IDs:', slotsWithUnknownTG.length);
+      console.error('[OptaPlanner] Unknown TG ID samples:', slotsWithUnknownTG.slice(0, 5).map(s => ({
         teaching_group_id: s.teaching_group_id,
         subject_id: s.subject_id,
         day: s.day,
@@ -1690,20 +1685,20 @@ Deno.serve(async (req) => {
       const key = s.subject_id || 'null';
       slotsToInsertBySubjectId[key] = (slotsToInsertBySubjectId[key] || 0) + 1;
     }
-    console.log('[callOptaPlannerScheduler] slotsToInsertBySubjectId =', slotsToInsertBySubjectId);
+    console.log('[OptaPlanner] slotsToInsertBySubjectId =', slotsToInsertBySubjectId);
 
     // Full JSON samples for TOK/CAS/EE
     const sampleTok = slots.find(s => s.subject_id && codeBySubjectId[s.subject_id] === 'TOK') || null;
     const sampleCas = slots.find(s => s.subject_id && codeBySubjectId[s.subject_id] === 'CAS') || null;
     const sampleEe  = slots.find(s => s.subject_id && codeBySubjectId[s.subject_id] === 'EE')  || null;
     const sampleTest  = slots.find(s => s.subject_id && codeBySubjectId[s.subject_id] === 'TEST')  || null;
-    console.log('[callOptaPlannerScheduler] sampleSlot.TOK =', sampleTok);
-    console.log('[callOptaPlannerScheduler] sampleSlot.CAS =', sampleCas);
-    console.log('[callOptaPlannerScheduler] sampleSlot.EE  =', sampleEe);
+    console.log('[OptaPlanner] sampleSlot.TOK =', sampleTok);
+    console.log('[OptaPlanner] sampleSlot.CAS =', sampleCas);
+    console.log('[OptaPlanner] sampleSlot.EE  =', sampleEe);
     // Prepare core verification helpers
     let coreSlotsInsertedCount = { TOK: 0, CAS: 0, EE: 0 };
     let sampleCoreSlot = sampleTok || sampleCas || sampleEe || null;
-    console.log('[callOptaPlannerScheduler] coreSlotsInsertedCount (init) =', coreSlotsInsertedCount, 'sampleCoreSlot =', sampleCoreSlot);
+    console.log('[OptaPlanner] coreSlotsInsertedCount (init) =', coreSlotsInsertedCount, 'sampleCoreSlot =', sampleCoreSlot);
 
     // Step 6.5: Inject STUDY slots into empty timeslots (post-solver, ONLY if solver succeeded)
     // CRITICAL: STUDY/TEST only injected when orToolHttpStatus === 200
@@ -1743,14 +1738,14 @@ Deno.serve(async (req) => {
           });
         }
       }
-      console.log('[callOptaPlannerScheduler] Injected STUDY slots:', studySlots.length);
+      console.log('[OptaPlanner] Injected STUDY slots:', studySlots.length);
     }
 
     // Combine solver slots + STUDY slots
     const allSlots = [...slots, ...studySlots];
 
     stage = 'deleteOldSlots';
-    console.log(`[callOptaPlannerScheduler] ${stage}: calling purgeScheduleSlots`);
+    console.log(`[OptaPlanner] ${stage}: calling purgeScheduleSlots`);
 
     // Step 6: Delete existing slots using dedicated purge function (server-side, bypasses rate limits)
     let deletedCount = 0;
@@ -1760,7 +1755,7 @@ Deno.serve(async (req) => {
       });
 
       if (!purgeResponse?.data?.ok) {
-        console.error('[callOptaPlannerScheduler] Purge failed:', purgeResponse?.data);
+        console.error('[OptaPlanner] Purge failed:', purgeResponse?.data);
         return Response.json({
           ok: false,
           stage: 'deleteOldSlots',
@@ -1774,10 +1769,10 @@ Deno.serve(async (req) => {
       deletedCount = purgeResponse.data.deletedCount || 0;
       const totalCount = purgeResponse.data.totalCount || 0;
 
-      console.log(`[callOptaPlannerScheduler] Purge completed: ${deletedCount}/${totalCount} slots deleted`);
+      console.log(`[OptaPlanner] Purge completed: ${deletedCount}/${totalCount} slots deleted`);
 
       if (!purgeResponse.data.success) {
-        console.warn('[callOptaPlannerScheduler] Partial purge success:', purgeResponse.data);
+        console.warn('[OptaPlanner] Partial purge success:', purgeResponse.data);
         // Continue anyway if most slots deleted (90%+)
         const successRate = deletedCount / Math.max(1, totalCount);
         if (successRate < 0.9) {
@@ -1792,7 +1787,7 @@ Deno.serve(async (req) => {
         }
       }
     } catch (purgeError) {
-      console.error('[callOptaPlannerScheduler] Purge invocation error:', purgeError);
+      console.error('[OptaPlanner] Purge invocation error:', purgeError);
       return Response.json({
         ok: false,
         stage: 'deleteOldSlots',
@@ -1804,7 +1799,7 @@ Deno.serve(async (req) => {
     }
 
     stage = 'insertNewSlots';
-    console.log(`[callOptaPlannerScheduler] ${stage}: inserting ${allSlots.length} new slots`);
+    console.log(`[OptaPlanner] ${stage}: inserting ${allSlots.length} new slots`);
     
     // Step 7: Create new slots
     let insertedCount = 0;
@@ -1824,11 +1819,11 @@ Deno.serve(async (req) => {
         }
       }
       
-      console.log('[callOptaPlannerScheduler] insertedCount =', insertedCount);
-      console.log('[callOptaPlannerScheduler] slotsInsertedBySubjectCode =', slotsInsertedBySubjectCode);
-      console.log('[callOptaPlannerScheduler] insertedCountBySubject =', slotsPreparedBySubject);
+      console.log('[OptaPlanner] insertedCount =', insertedCount);
+      console.log('[OptaPlanner] slotsInsertedBySubjectCode =', slotsInsertedBySubjectCode);
+      console.log('[OptaPlanner] insertedCountBySubject =', slotsPreparedBySubject);
       if (createdIds) {
-        console.log('[callOptaPlannerScheduler] createdIds (first 20) =', createdIds.slice(0, 20));
+        console.log('[OptaPlanner] createdIds (first 20) =', createdIds.slice(0, 20));
       }
       // Build sampleSlotsInserted (5 max, ensure one core if exists)
       if (Array.isArray(inserted)) {
@@ -1849,7 +1844,7 @@ Deno.serve(async (req) => {
           if (k) coreSlotsInsertedCount[k]++;
         });
         sampleCoreSlot = sampleTok || sampleCas || sampleEe || null;
-        console.log('[callOptaPlannerScheduler] coreSlotsInsertedCount =', coreSlotsInsertedCount, 'sampleCoreSlot =', sampleCoreSlot);
+        console.log('[OptaPlanner] coreSlotsInsertedCount =', coreSlotsInsertedCount, 'sampleCoreSlot =', sampleCoreSlot);
       } else {
         coreSlotsInsertedCount = {
           TOK: slotsPreparedBySubject['TOK'] || 0,
@@ -1857,12 +1852,12 @@ Deno.serve(async (req) => {
           EE: slotsPreparedBySubject['EE'] || 0,
         };
         sampleCoreSlot = sampleTok || sampleCas || sampleEe || null;
-        console.log('[callOptaPlannerScheduler] coreSlotsInsertedCount (from prepared) =', coreSlotsInsertedCount, 'sampleCoreSlot =', sampleCoreSlot);
+        console.log('[OptaPlanner] coreSlotsInsertedCount (from prepared) =', coreSlotsInsertedCount, 'sampleCoreSlot =', sampleCoreSlot);
       }
     }
 
     // Step 8: Create conflict reports for unassigned lessons - BATCH CREATE
-    console.log(`[callOptaPlannerScheduler] Creating ${unassignedLessons.length} conflict reports in batches`);
+    console.log(`[OptaPlanner] Creating ${unassignedLessons.length} conflict reports in batches`);
     if (unassignedLessons.length > 0) {
       const allowNullRoomSubjects = new Set(['STUDY','TOK','CAS','EE']);
       const conflictReports = unassignedLessons.map(lesson => ({
@@ -1897,7 +1892,7 @@ Deno.serve(async (req) => {
                 offByOneIssues[code] = { expected: exp, assigned: got, diff: got - exp };
               }
             }
-            console.log('[callOptaPlannerScheduler] offByOneIssues =', offByOneIssues);
+            console.log('[OptaPlanner] offByOneIssues =', offByOneIssues);
             let warningsCount = Object.keys(offByOneIssues).length;
             
             // Create warning conflict reports in batch
@@ -1936,21 +1931,13 @@ Deno.serve(async (req) => {
                 warnings_count: Number(warningsCount || 0),
               });
             } catch (e) {
-              console.error('[callOptaPlannerScheduler] ScheduleVersion.update failed:', e?.message || e);
+              console.error('[OptaPlanner] ScheduleVersion.update failed:', e?.message || e);
               errors.push(`scheduleVersionUpdate:${e?.message || e}`);
             }
 
-    console.log('[callOptaPlannerScheduler] persistence diagnostics', { lessonsWithoutTimeslot, missingRoomCount, missingTeacherCount });
-    const buildMeta = {
-      schoolIdInput: requestedSchoolId,
-      schoolIdUsed: schoolId,
-      timeslotsCount: problem.timeslots.length,
-      periodsPerDay: periodsPerDayComputed,
-      lastTimeslot: problem.timeslots[problem.timeslots.length - 1] || null,
-      dpTargetPeriodsPerDay: (buildResponse?.data?.stats?.dp_target_periods_per_day) || null,
-      periodDurationMinutes: (problem?.scheduleSettings?.periodDurationMinutes) || null,
-    };
-    console.log('[callOptaPlannerScheduler] buildMeta =', buildMeta);
+    console.log('[OptaPlanner] persistence diagnostics', { lessonsWithoutTimeslot, missingRoomCount, missingTeacherCount });
+    ...
+    console.log('[OptaPlanner] buildMeta =', buildMeta);
 
     const totalExpectedLessons = Object.values(expectedLessonsBySubject || {}).reduce((a,b)=>a+(b||0),0);
     const totalAssignedLessons = Object.values(assignedBySubjectCode || {}).reduce((a,b)=>a+(b||0),0);
@@ -2148,11 +2135,11 @@ Deno.serve(async (req) => {
       });
 
   } catch (error) {
-    console.error(`[callOptaPlannerScheduler] ❌❌❌ FATAL ERROR at stage="${stage}":`, error);
-    console.error(`[callOptaPlannerScheduler] Error message:`, error?.message);
-    console.error(`[callOptaPlannerScheduler] Error name:`, error?.name);
-    console.error(`[callOptaPlannerScheduler] Error stack (FULL):`, error?.stack);
-    console.error(`[callOptaPlannerScheduler] Context:`, {
+    console.error(`[OptaPlanner] ❌❌❌ FATAL ERROR at stage="${stage}":`, error);
+    console.error(`[OptaPlanner] Error message:`, error?.message);
+    console.error(`[OptaPlanner] Error name:`, error?.name);
+    console.error(`[OptaPlanner] Error stack (FULL):`, error?.stack);
+    console.error(`[OptaPlanner] Context:`, {
       schedule_version_id,
       schoolId,
       stage,
