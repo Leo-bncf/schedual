@@ -623,12 +623,23 @@ if (isDP) {
       const subjId = subjectIdByCode[code] || null;
       const subj = subjId ? subjectById[subjId] : null;
       const validId = subjId && isValidMongoId(subjId) ? subjId : '000000000000000000000000';
+      
+      // Transform hoursPerWeekHL/SL into hoursPerWeekByLevel object
+      const hoursPerWeekByLevel = {};
+      if (subj?.ib_level === 'DP') {
+        if (typeof subj.hoursPerWeekHL === 'number' && subj.hoursPerWeekHL > 0) {
+          hoursPerWeekByLevel.HL = subj.hoursPerWeekHL;
+        }
+        if (typeof subj.hoursPerWeekSL === 'number' && subj.hoursPerWeekSL > 0) {
+          hoursPerWeekByLevel.SL = subj.hoursPerWeekSL;
+        }
+      }
+      
       return {
         id: validId,
         code: code,
         name: subj?.name || code,
-        hoursPerWeekHL: subj?.hoursPerWeekHL || 6,
-        hoursPerWeekSL: subj?.hoursPerWeekSL || 4,
+        hoursPerWeekByLevel: Object.keys(hoursPerWeekByLevel).length > 0 ? hoursPerWeekByLevel : undefined,
         is_core: subj?.is_core || false
       };
     });
