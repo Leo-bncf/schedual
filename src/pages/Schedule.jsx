@@ -90,15 +90,15 @@ export default function Schedule() {
   const [dpDiagData, setDpDiagData] = useState(null);
   const [dpDiagLoading, setDpDiagLoading] = useState(false);
   const [constraintType, setConstraintType] = useState('hard');
-  // OR-Tool response state
-  const [orToolResult, setOrToolResult] = useState(null);
-  const [orToolLoading, setOrToolLoading] = useState(false);
-  const [orToolError, setOrToolError] = useState(null);
-  const [autoRunORTool, setAutoRunORTool] = useState(true);
+  // OptaPlanner response state
+  const [optaPlannerResult, setOptaPlannerResult] = useState(null);
+  const [optaPlannerLoading, setOptaPlannerLoading] = useState(false);
+  const [optaPlannerError, setOptaPlannerError] = useState(null);
+  const [autoRunOptaPlanner, setAutoRunOptaPlanner] = useState(true);
   const [scheduleTab, setScheduleTab] = useState('grid');
   const [showUpdateBanner, setShowUpdateBanner] = useState(false);
   const [showAdvanced, setShowAdvanced] = useState(false);
-  const [solverTimeslots, setSolverTimeslots] = useState(null); // Persist timeslots from OR-Tool
+  const [solverTimeslots, setSolverTimeslots] = useState(null); // Persist timeslots from OptaPlanner
   const [auditResult, setAuditResult] = useState(null);
   const [showAuditReport, setShowAuditReport] = useState(false);
   const [formData, setFormData] = useState({
@@ -197,15 +197,15 @@ export default function Schedule() {
     queryFn: async () => {
       if (!selectedVersion) return [];
       const slots = await base44.entities.ScheduleSlot.filter({ schedule_version: selectedVersion.id });
-      const inserted = (orToolResult?.persistedSlotsSample || []).map(s => ({ ...s, schedule_version: selectedVersion.id }));
+      const inserted = (optaPlannerResult?.persistedSlotsSample || []).map(s => ({ ...s, schedule_version: selectedVersion.id }));
       const result = Array.isArray(inserted) && inserted.length > 0 ? [...slots, ...inserted] : slots;
       
       // Determine actual timeslots source (must match useMemo logic)
       const timeslotsSource = solverTimeslots && solverTimeslots.length > 0 
         ? 'persisted from solver (stable)' 
-        : orToolResult?.timeslots && orToolResult.timeslots.length > 0
+        : optaPlannerResult?.timeslots && optaPlannerResult.timeslots.length > 0
           ? 'from solver result (temporary)'
-          : result.length > 0 && orToolResult?.scheduleSettingsSent
+          : result.length > 0 && optaPlannerResult?.scheduleSettingsSent
             ? 'reconstructed from solver scheduleSettings'
             : 'fallback - school config';
       
@@ -283,22 +283,22 @@ export default function Schedule() {
 
   // SOURCE OF TRUTH: Use solver timeslots OR reconstruct from scheduleSettings (NOT school config)
   const timeslots = React.useMemo(() => {
-    // Priority 1: Use persisted solver timeslots (set once by OR-Tool, never overwritten)
+    // Priority 1: Use persisted solver timeslots (set once by OptaPlanner, never overwritten)
     if (solverTimeslots && Array.isArray(solverTimeslots) && solverTimeslots.length > 0) {
-      console.log('[Schedule] ✅ Using PERSISTED timeslots from OR-Tool solver:', solverTimeslots.length, 'slots');
+      console.log('[Schedule] ✅ Using PERSISTED timeslots from OptaPlanner solver:', solverTimeslots.length, 'slots');
       return solverTimeslots;
     }
     
-    // Priority 2: Use current OR-Tool result timeslots (temporary until persisted)
-    if (orToolResult?.timeslots && Array.isArray(orToolResult.timeslots) && orToolResult.timeslots.length > 0) {
-      console.log('[Schedule] ⚠️ Using TEMPORARY timeslots from OR-Tool result:', orToolResult.timeslots.length, 'slots (not yet persisted)');
-      return orToolResult.timeslots;
+    // Priority 2: Use current OptaPlanner result timeslots (temporary until persisted)
+    if (optaPlannerResult?.timeslots && Array.isArray(optaPlannerResult.timeslots) && optaPlannerResult.timeslots.length > 0) {
+      console.log('[Schedule] ⚠️ Using TEMPORARY timeslots from OptaPlanner result:', optaPlannerResult.timeslots.length, 'slots (not yet persisted)');
+      return optaPlannerResult.timeslots;
     }
     
     // Priority 3: If we have slots but no timeslots, reconstruct from scheduleSettings (solver config)
-    if (scheduleSlots.length > 0 && orToolResult?.scheduleSettingsSent) {
+    if (scheduleSlots.length > 0 && optaPlannerResult?.scheduleSettingsSent) {
       console.log('[Schedule] 🔄 Reconstructing timeslots from SOLVER scheduleSettings (source of truth)');
-      const settings = orToolResult.scheduleSettingsSent;
+      const settings = optaPlannerResult.scheduleSettingsSent;
       const dayStart = settings.day_start_time || '08:00';
       const dayEnd = settings.day_end_time || '18:00';
       const periodDuration = settings.period_duration_minutes || 60;
@@ -400,13 +400,13 @@ export default function Schedule() {
     });
     
     return slots;
-  }, [school, orToolResult, solverTimeslots, scheduleSlots.length]);
+  }, [school, optaPlannerResult, solverTimeslots, scheduleSlots.length]);
 
   // SOURCE OF TRUTH: Calculate periodsPerDay from actual timeslots/scheduleSettings
   const dynamicPeriodsPerDay = React.useMemo(() => {
     // Priority 1: Derive from timeslots (actual solver output)
     if (timeslots.length > 0) {
-      const daysOfWeek = orToolResult?.scheduleSettingsSent?.days_of_week || school?.days_of_week || ['MONDAY', 'TUESDAY', 'WEDNESDAY', 'THURSDAY', 'FRIDAY'];
+      const daysOfWeek = optaPlannerResult?.scheduleSettingsSent?.days_of_week || school?.days_of_week || ['MONDAY', 'TUESDAY', 'WEDNESDAY', 'THURSDAY', 'FRIDAY'];
       const periodsPerDay = Math.ceil(timeslots.length / Math.max(1, daysOfWeek.length));
       
       console.log('[Schedule] ✅ periodsPerDay calculated from timeslots:', {
@@ -419,7 +419,7 @@ export default function Schedule() {
     }
     
     // Priority 2: Calculate from scheduleSettings (day_start/end + duration)
-    const settings = orToolResult?.scheduleSettingsSent || school;
+    const settings = optaPlannerResult?.scheduleSettingsSent || school;
     if (settings) {
       const dayStart = settings.day_start_time || settings.school_start_time || '08:00';
       const dayEnd = settings.day_end_time || '18:00';
@@ -459,7 +459,7 @@ export default function Schedule() {
     const fallbackPeriods = school?.periods_per_day || 8;
     console.warn('[Schedule] ⚠️ Using fallback periodsPerDay from school.periods_per_day:', fallbackPeriods);
     return fallbackPeriods;
-  }, [timeslots, orToolResult, school]);
+  }, [timeslots, optaPlannerResult, school]);
 
   const { data: constraints = [], refetch: refetchConstraints } = useQuery({
     queryKey: ['constraints', schoolId],
@@ -684,15 +684,15 @@ Now process the user's input and return ONLY the JSON object.`,
     }
   };
 
-  // Fetch full OR-Tool scheduler JSON response and display it
+  // Fetch full OptaPlanner scheduler JSON response and display it
   const handleFetchORTool = async () => {
     if (!selectedVersion) return;
-    setOrToolLoading(true);
-    setOrToolError(null);
+    setOptaPlannerLoading(true);
+    setOptaPlannerError(null);
     try {
       const res = await base44.functions.invoke('callORToolScheduler', { schedule_version_id: selectedVersion.id, dp_min_end_time: '16:00', dp_study_weekly: 8 });
       const data = res.data;
-      setOrToolResult(data);
+      setOptaPlannerResult(data);
 
       // Log solver identity to console
       if (data?.solverIdentity) {
@@ -703,39 +703,39 @@ Now process the user's input and return ONLY the JSON object.`,
       if (data?.ok === false) {
       const solverName = data.solverIdentity?.engine || 'Solver';
       console.error(`❌ ${solverName} returned error:`, data);
-      setOrToolError(`Stage: ${data.stage}\nError: ${data.errorMessage || data.error}\n\nStack:\n${data.errorStack || 'N/A'}`);
+      setOptaPlannerError(`Stage: ${data.stage}\nError: ${data.errorMessage || data.error}\n\nStack:\n${data.errorStack || 'N/A'}`);
       toast.error(`${solverName} failed at stage "${data.stage}": ${data.errorMessage || data.error}`);
       } else {
         // Persist solver timeslots to prevent config reconstruction overwrite
         if (data.timeslots && Array.isArray(data.timeslots) && data.timeslots.length > 0) {
-          console.log('[Schedule] 💾 PERSISTING solver timeslots (manual OR-Tool run):', data.timeslots.length, 'slots');
+          console.log('[Schedule] 💾 PERSISTING solver timeslots (manual OptaPlanner run):', data.timeslots.length, 'slots');
           setSolverTimeslots(data.timeslots);
         }
         
         await queryClient.invalidateQueries({ queryKey: ['scheduleSlots'] });
         await queryClient.invalidateQueries({ queryKey: ['scheduleVersions'] });
         setScheduleTab('student');
-        toast.success('OR-Tool response retrieved');
+        toast.success('OptaPlanner response retrieved');
       }
     } catch (e) {
-      console.error('OR-Tool fetch failed:', e);
+      console.error('OptaPlanner fetch failed:', e);
       const errorData = e?.response?.data;
       if (errorData) {
-      setOrToolResult(errorData);
+      setOptaPlannerResult(errorData);
       if (errorData.ok === false) {
       const solverName = errorData.solverIdentity?.engine || 'Solver';
-      setOrToolError(`Stage: ${errorData.stage}\nError: ${errorData.errorMessage || errorData.error}\n\nStack:\n${errorData.errorStack || 'N/A'}`);
+      setOptaPlannerError(`Stage: ${errorData.stage}\nError: ${errorData.errorMessage || errorData.error}\n\nStack:\n${errorData.errorStack || 'N/A'}`);
       toast.error(`${solverName} crashed at "${errorData.stage}": ${errorData.errorMessage || errorData.error}`);
         } else {
-          setOrToolError(e?.message || 'Failed to fetch OR-Tool response');
-          toast.error('Failed to retrieve OR-Tool response');
+          setOptaPlannerError(e?.message || 'Failed to fetch OptaPlanner response');
+          toast.error('Failed to retrieve OptaPlanner response');
         }
       } else {
-        setOrToolError(e?.message || 'Failed to fetch OR-Tool response');
-        toast.error('Failed to retrieve OR-Tool response');
+        setOptaPlannerError(e?.message || 'Failed to fetch OptaPlanner response');
+        toast.error('Failed to retrieve OptaPlanner response');
       }
     } finally {
-      setOrToolLoading(false);
+      setOptaPlannerLoading(false);
     }
   };
 
@@ -757,6 +757,26 @@ Now process the user's input and return ONLY the JSON object.`,
 
   const handleGenerateSchedule = async () => {
     if (!selectedVersion) return;
+
+    // VALIDATION: Block if no valid timeslots can be generated
+    if (!school) {
+      toast.error('School configuration missing - cannot generate schedule');
+      return;
+    }
+    
+    const dayStart = school.day_start_time || '08:00';
+    const dayEnd = school.day_end_time || '18:00';
+    const periodDuration = school.period_duration_minutes || 60;
+    
+    // Quick check: can we generate at least 1 timeslot?
+    const [startHour, startMin] = dayStart.split(':').map(Number);
+    const [endHour, endMin] = dayEnd.split(':').map(Number);
+    const totalMinutes = (endHour * 60 + endMin) - (startHour * 60 + startMin);
+    
+    if (totalMinutes < periodDuration) {
+      toast.error(`Invalid school configuration: day range ${dayStart}→${dayEnd} is too short for ${periodDuration}min periods. Configure timeslots in Settings.`, { duration: 8000 });
+      return;
+    }
 
     setIsGenerating(true);
     setCancelGeneration(false);
@@ -886,24 +906,24 @@ Now process the user's input and return ONLY the JSON object.`,
       const updatedGroups = await base44.entities.TeachingGroup.filter({ school_id: schoolId });
       console.log('Updated groups with teachers:', updatedGroups.filter(g => g.teacher_id).length);
 
-      // CRITICAL: If OR-Tool auto-run is enabled for DP, skip ALL local scheduling
-      // OR-Tool becomes single source of truth (purge → optimize → persist)
-      if (autoRunORTool && allowedProgrammes.includes('DP')) {
-        console.log('[Schedule] 🚀 OR-Tool auto-run enabled - SKIPPING all local scheduling (DP/MYP/PYP)');
-        console.log('[Schedule] OR-Tool will purge existing slots + generate complete optimized schedule');
+      // CRITICAL: If OptaPlanner auto-run is enabled for DP, skip ALL local scheduling
+      // OptaPlanner becomes single source of truth (purge → optimize → persist)
+      if (autoRunOptaPlanner && allowedProgrammes.includes('DP')) {
+        console.log('[Schedule] 🚀 OptaPlanner auto-run enabled - SKIPPING all local scheduling (DP/MYP/PYP)');
+        console.log('[Schedule] OptaPlanner will purge existing slots + generate complete optimized schedule');
         
         setGenerationProgress(prev => ({
           ...prev,
-          stage: 'Preparing OR-Tool',
+          stage: 'Preparing OptaPlanner',
           percent: 30,
-          message: 'Skipping local scheduler - OR-Tool will handle everything...',
+          message: 'Skipping local scheduler - OptaPlanner will handle everything...',
           completedSteps: ['teachers', 'preparation']
         }));
         
-        // Skip directly to OR-Tool pipeline below (no local slot generation at all)
+        // Skip directly to OptaPlanner pipeline below (no local slot generation at all)
       } else {
-        // Local scheduling for MYP/PYP or when OR-Tool disabled
-        console.log('[Schedule] 🔧 Using local scheduling algorithm (OR-Tool disabled or no DP)');
+        // Local scheduling for MYP/PYP or when OptaPlanner disabled
+        console.log('[Schedule] 🔧 Using local scheduling algorithm (OptaPlanner disabled or no DP)');
 
       // Delete existing slots for this version (batch to avoid rate limits)
       if (cancelGeneration) throw new Error('Cancelled by user');
@@ -1648,9 +1668,9 @@ Now process the user's input and return ONLY the JSON object.`,
         console.log(`Total local slots created: ${newSlots.length}`);
       } // End of local scheduling block
 
-      // OR-Tool pipeline: Generate optimized DP schedule (SINGLE SOURCE OF TRUTH)
-      if (autoRunORTool && selectedVersion && allowedProgrammes.includes('DP')) {
-        console.log('[Schedule] 🔄 OR-Tool Pipeline Starting');
+      // OptaPlanner pipeline: Generate optimized DP schedule (SINGLE SOURCE OF TRUTH)
+      if (autoRunOptaPlanner && selectedVersion && allowedProgrammes.includes('DP')) {
+        console.log('[Schedule] 🔄 OptaPlanner Pipeline Starting');
         console.log('[Schedule] Step 1: Running pre-solve audit...');
         
         try {
@@ -1661,8 +1681,8 @@ Now process the user's input and return ONLY the JSON object.`,
             percent: 85,
             message: 'Validating student assignments and teaching groups...'
           }));
-          setOrToolLoading(true);
-          setOrToolError(null);
+          setOptaPlannerLoading(true);
+          setOptaPlannerError(null);
           
           const auditRes = await base44.functions.invoke('callORToolScheduler', {
             schedule_version_id: selectedVersion.id,
@@ -1710,7 +1730,7 @@ Now process the user's input and return ONLY the JSON object.`,
               sampleAuditIssues: auditData.sampleAuditIssues
             });
             setShowAuditReport(true);
-            setOrToolLoading(false);
+            setOptaPlannerLoading(false);
             setIsGenerating(false);
             toast.error(errorMsg);
             return; // CRITICAL: STOP - do not proceed to solver
@@ -1718,13 +1738,13 @@ Now process the user's input and return ONLY the JSON object.`,
           
           // STEP 3: Audit passed (ok === true) - proceed with solver
           console.log('[Schedule] ✅ Pre-solve audit passed (ok=true) - proceeding to optimization');
-          console.log('[Schedule] OR-Tool will: 1) Purge existing slots 2) Optimize schedule 3) Persist new slots');
+          console.log('[Schedule] OptaPlanner will: 1) Purge existing slots 2) Optimize schedule 3) Persist new slots');
           
           setGenerationProgress(prev => ({
             ...prev,
-            stage: 'Running OR-Tool Scheduler',
+            stage: 'Running OptaPlanner Scheduler',
             percent: 90,
-            message: 'OR-Tool: Purging old slots + Optimizing DP Core/Tests + Persisting...'
+            message: 'OptaPlanner: Purging old slots + Optimizing DP Core/Tests + Persisting...'
           }));
           
           const res = await base44.functions.invoke('callORToolScheduler', {
@@ -1733,7 +1753,7 @@ Now process the user's input and return ONLY the JSON object.`,
             dp_study_weekly: 8
           });
           const r = res.data || {};
-          setOrToolResult(r);
+          setOptaPlannerResult(r);
 
           // Log solver identity to console
           if (r?.solverIdentity) {
@@ -1752,24 +1772,24 @@ Now process the user's input and return ONLY the JSON object.`,
               const groupNames = missingGroups.slice(0, 5).map(g => `${g?.name || 'Unknown'} (${g?.subject || '?'})`).join(', ');
               const moreText = count > 5 ? ` +${count - 5} more` : '';
               toast.error(`❌ Cannot generate schedule: ${count} TeachingGroups missing minutes/periods configuration. See diagnostics.`, { duration: 10000 });
-              setOrToolError(`VALIDATION FAILED: ${count} TeachingGroups Missing Configuration\n\n${groupNames}${moreText}\n\n${r.suggestion || 'Configure minutes_per_week, periods_per_week, or hours_per_week for each TeachingGroup'}\n\nDetailed list:\n${JSON.stringify(missingGroups, null, 2)}`);
+              setOptaPlannerError(`VALIDATION FAILED: ${count} TeachingGroups Missing Configuration\n\n${groupNames}${moreText}\n\n${r.suggestion || 'Configure minutes_per_week, periods_per_week, or hours_per_week for each TeachingGroup'}\n\nDetailed list:\n${JSON.stringify(missingGroups, null, 2)}`);
             } else {
               const solverName = r.solverIdentity?.engine || 'Solver';
               toast.error(`${solverName} failed at stage "${r.stage}": ${r.errorMessage || r.error || 'Unknown error'}`);
-              setOrToolError(`Stage: ${r.stage}\nError: ${r.errorMessage || r.error}\n\nStack:\n${r.errorStack || 'N/A'}`);
+              setOptaPlannerError(`Stage: ${r.stage}\nError: ${r.errorMessage || r.error}\n\nStack:\n${r.errorStack || 'N/A'}`);
             }
           } else {
             // Success path
             const inserted = r.slotsInserted ?? r.insertedCount ?? 0;
             const deleted = r.slotsDeleted ?? r.deletedCount ?? 0;
             
-            console.log(`[Schedule] ✅ OR-Tool completed: deleted ${deleted} old slots, inserted ${inserted} new slots`);
+            console.log(`[Schedule] ✅ OptaPlanner completed: deleted ${deleted} old slots, inserted ${inserted} new slots`);
             
             if (!(r.performedDeletion === true && r.performedInsertion === true && inserted > 0)) {
-              toast.warning('OR-Tool finished but did not report expected persistence flags.');
+              toast.warning('OptaPlanner finished but did not report expected persistence flags.');
             }
             if (!r.coreSlotsInsertedCount) {
-              console.warn('coreSlotsInsertedCount missing in OR-Tool response');
+              console.warn('coreSlotsInsertedCount missing in OptaPlanner response');
             }
 
             // CRITICAL: Persist solver timeslots as single source of truth (never overwritten by config reconstruction)
@@ -1786,19 +1806,19 @@ Now process the user's input and return ONLY the JSON object.`,
             toast.success(`✅ ${solverName}: ${deleted} deleted, ${inserted} optimized slots created`);
           }
         } catch (e) {
-          console.error('Auto OR-Tool step failed:', e);
+          console.error('Auto OptaPlanner step failed:', e);
           const errorData = e?.response?.data;
           if (errorData?.ok === false) {
             const solverName = errorData.solverIdentity?.engine || 'Solver';
-            setOrToolError(`Stage: ${errorData.stage}\nError: ${errorData.errorMessage || errorData.error}\n\nStack:\n${errorData.errorStack || 'N/A'}`);
-            setOrToolResult(errorData);
+            setOptaPlannerError(`Stage: ${errorData.stage}\nError: ${errorData.errorMessage || errorData.error}\n\nStack:\n${errorData.errorStack || 'N/A'}`);
+            setOptaPlannerResult(errorData);
             toast.error(`${solverName} crashed at "${errorData.stage}": ${errorData.errorMessage || errorData.error}`);
           } else {
-            setOrToolError(e?.message || 'Solver failed');
+            setOptaPlannerError(e?.message || 'Solver failed');
             toast.error('Solver failed — keeping generated schedule (no rollback performed).');
           }
         } finally {
-          setOrToolLoading(false);
+          setOptaPlannerLoading(false);
         }
       }
     } catch (error) {
@@ -2081,10 +2101,10 @@ Now process the user's input and return ONLY the JSON object.`,
                     variant="outline"
                     className="border-blue-200 text-blue-900 hover:bg-blue-50"
                     onClick={() => {
-                      const hasIncomplete = (orToolResult?.solverDebugMetrics?.sectionsMissingPeriods || 0) > 0;
+                      const hasIncomplete = (optaPlannerResult?.solverDebugMetrics?.sectionsMissingPeriods || 0) > 0;
                       if (hasIncomplete) {
                         const confirm = window.confirm(
-                          `⚠️ WARNING: ${orToolResult.solverDebugMetrics.sectionsMissingPeriods} sections have missing periods.\n\n` +
+                          `⚠️ WARNING: ${optaPlannerResult.solverDebugMetrics.sectionsMissingPeriods} sections have missing periods.\n\n` +
                           `Publishing an incomplete schedule may cause issues.\n\n` +
                           `Continue anyway?`
                         );
@@ -2092,7 +2112,7 @@ Now process the user's input and return ONLY the JSON object.`,
                       }
                       handlePublish(selectedVersion);
                     }}
-                    disabled={!orToolResult || (orToolResult?.solverDebugMetrics?.sectionsMissingPeriods || 0) > 0}
+                    disabled={!optaPlannerResult || (optaPlannerResult?.solverDebugMetrics?.sectionsMissingPeriods || 0) > 0}
                   >
                     <CheckCircle className="w-4 h-4 mr-2" />
                     Publish
@@ -2105,8 +2125,8 @@ Now process the user's input and return ONLY the JSON object.`,
           {selectedVersion && (
             <div className="mt-4 pt-4 border-t border-slate-100 flex flex-wrap items-center gap-4">
               <div className="flex items-center gap-2 text-sm">
-                <Switch checked={autoRunORTool} onCheckedChange={setAutoRunORTool} />
-                <Label className="text-slate-600 cursor-pointer" onClick={() => setAutoRunORTool(!autoRunORTool)}>
+                <Switch checked={autoRunOptaPlanner} onCheckedChange={setAutoRunOptaPlanner} />
+                <Label className="text-slate-600 cursor-pointer" onClick={() => setAutoRunOptaPlanner(!autoRunOptaPlanner)}>
                   Auto-run optimizer
                 </Label>
               </div>
@@ -2114,10 +2134,10 @@ Now process the user's input and return ONLY the JSON object.`,
                 variant="outline"
                 size="sm"
                 onClick={handleFetchORTool}
-                disabled={!selectedVersion || orToolLoading}
+                disabled={!selectedVersion || optaPlannerLoading}
                 className="border-slate-200"
               >
-                {orToolLoading ? (
+                {optaPlannerLoading ? (
                   <>
                     <Loader2 className="w-4 h-4 mr-2 animate-spin" />
                     Running...
@@ -2125,7 +2145,7 @@ Now process the user's input and return ONLY the JSON object.`,
                 ) : (
                   <>
                     <Hash className="w-4 h-4 mr-2" />
-                    Run OR-Tool
+                    Run OptaPlanner
                   </>
                 )}
               </Button>
@@ -2381,9 +2401,9 @@ Now process the user's input and return ONLY the JSON object.`,
                     onStudentChange={setSelectedStudentId}
                     exportId="student-schedule"
                     scheduleVersionId={selectedVersion?.id}
-                    unassignedBySubjectCode={orToolResult?.unassignedBySubjectCode}
+                    unassignedBySubjectCode={optaPlannerResult?.unassignedBySubjectCode}
                     timeslots={timeslots}
-                    scheduleSettings={orToolResult?.problem?.scheduleSettings || school}
+                    scheduleSettings={optaPlannerResult?.problem?.scheduleSettings || school}
                   />
                 </TabsContent>
 
@@ -2800,7 +2820,7 @@ Now process the user's input and return ONLY the JSON object.`,
           {/* Diagnostics Tab */}
           {showAdvanced && (
             <TabsContent value="diagnostics" className="space-y-4">
-              {orToolError && (
+              {optaPlannerError && (
                 <Card className="border-2 border-rose-500 shadow-lg bg-rose-50">
                   <CardHeader className="bg-rose-100 pb-3">
                     <CardTitle className="text-rose-900 flex items-center gap-2">
@@ -2809,17 +2829,17 @@ Now process the user's input and return ONLY the JSON object.`,
                     </CardTitle>
                   </CardHeader>
                   <CardContent className="p-4">
-                    <pre className="text-xs text-rose-900 whitespace-pre-wrap bg-white p-3 rounded border border-rose-200 overflow-x-auto">{orToolError}</pre>
+                    <pre className="text-xs text-rose-900 whitespace-pre-wrap bg-white p-3 rounded border border-rose-200 overflow-x-auto">{optaPlannerError}</pre>
                   </CardContent>
                 </Card>
               )}
-              {orToolResult && (
+              {optaPlannerResult && (
                 <>
-                  <UnassignedBanner unassigned={orToolResult?.unassignedBySubjectCode} />
+                  <UnassignedBanner unassigned={optaPlannerResult?.unassignedBySubjectCode} />
                   
                   {/* Cohort Integrity Validation */}
-                  {orToolResult?.cohortIntegrity && (
-                    <CohortIntegrityReport cohortData={orToolResult.cohortIntegrity} />
+                  {optaPlannerResult?.cohortIntegrity && (
+                    <CohortIntegrityReport cohortData={optaPlannerResult.cohortIntegrity} />
                   )}
 
                   {/* CORE DIAGNOSTICS PANEL */}
@@ -2828,19 +2848,19 @@ Now process the user's input and return ONLY the JSON object.`,
                       <div className="font-bold text-rose-900 mb-3">🔍 TOK/CAS/EE Diagnostic</div>
 
                       {/* Show error if present */}
-                      {(orToolResult?.ok === false || orToolResult?.error) && (
+                      {(optaPlannerResult?.ok === false || optaPlannerResult?.error) && (
                         <div className="mb-4 p-4 bg-rose-100 border-2 border-rose-400 rounded-lg">
-                          <div className="font-bold text-rose-900 mb-2">❌ Error at Stage: {orToolResult?.stage || 'unknown'}</div>
-                          <div className="text-sm text-rose-800 mb-2">{orToolResult?.errorMessage || orToolResult?.error}</div>
-                          {orToolResult?.errorStack && (
+                          <div className="font-bold text-rose-900 mb-2">❌ Error at Stage: {optaPlannerResult?.stage || 'unknown'}</div>
+                          <div className="text-sm text-rose-800 mb-2">{optaPlannerResult?.errorMessage || optaPlannerResult?.error}</div>
+                          {optaPlannerResult?.errorStack && (
                             <details className="mt-2">
                               <summary className="cursor-pointer text-xs font-semibold text-rose-700">Stack Trace</summary>
-                              <pre className="mt-2 text-xs text-rose-700 bg-white p-2 rounded overflow-x-auto max-h-48">{orToolResult.errorStack}</pre>
+                              <pre className="mt-2 text-xs text-rose-700 bg-white p-2 rounded overflow-x-auto max-h-48">{optaPlannerResult.errorStack}</pre>
                             </details>
                           )}
-                          {orToolResult?.meta && (
+                          {optaPlannerResult?.meta && (
                             <div className="mt-2 text-xs text-rose-700">
-                              Meta: {JSON.stringify(orToolResult.meta)}
+                              Meta: {JSON.stringify(optaPlannerResult.meta)}
                             </div>
                           )}
                         </div>
@@ -2851,8 +2871,8 @@ Now process the user's input and return ONLY the JSON object.`,
                         <div className="bg-white p-3 rounded border border-rose-200">
                           <div className="font-bold text-rose-700 mb-2">📤 Input (buildSchedulingProblem)</div>
                           <div className="space-y-1 text-slate-700">
-                            <div>coreRequirementsFound: <strong className={orToolResult?.orToolRequestPayload?.coreRequirementsFound > 0 ? 'text-green-600' : 'text-rose-600'}>{orToolResult?.orToolRequestPayload?.coreRequirementsFound || 0}</strong></div>
-                            {(orToolResult?.coreSubjectRequirementsSample || []).slice(0, 5).map((req, i) => (
+                            <div>coreRequirementsFound: <strong className={optaPlannerResult?.orToolRequestPayload?.coreRequirementsFound > 0 ? 'text-green-600' : 'text-rose-600'}>{optaPlannerResult?.orToolRequestPayload?.coreRequirementsFound || 0}</strong></div>
+                            {(optaPlannerResult?.coreSubjectRequirementsSample || []).slice(0, 5).map((req, i) => (
                               <div key={i} className="text-[11px] text-slate-600 truncate">
                                 {req.subject}: {req.minutesPerWeek}min/week ({req.studentGroup})
                               </div>
@@ -2862,11 +2882,11 @@ Now process the user's input and return ONLY the JSON object.`,
 
                         {/* Output: What solver returned */}
                         <div className="bg-white p-3 rounded border border-rose-200">
-                          <div className="font-bold text-rose-700 mb-2">📥 Output (OR-Tool solver)</div>
+                          <div className="font-bold text-rose-700 mb-2">📥 Output (OptaPlanner solver)</div>
                           <div className="space-y-1 text-slate-700">
-                            <div>TOK assigned: <strong className={orToolResult?.assignedBySubjectCode?.TOK > 0 ? 'text-green-600' : 'text-rose-600'}>{orToolResult?.assignedBySubjectCode?.TOK || 0}</strong></div>
-                            <div>CAS assigned: <strong className={orToolResult?.assignedBySubjectCode?.CAS > 0 ? 'text-green-600' : 'text-rose-600'}>{orToolResult?.assignedBySubjectCode?.CAS || 0}</strong></div>
-                            <div>EE assigned: <strong className={orToolResult?.assignedBySubjectCode?.EE > 0 ? 'text-green-600' : 'text-rose-600'}>{orToolResult?.assignedBySubjectCode?.EE || 0}</strong></div>
+                            <div>TOK assigned: <strong className={optaPlannerResult?.assignedBySubjectCode?.TOK > 0 ? 'text-green-600' : 'text-rose-600'}>{optaPlannerResult?.assignedBySubjectCode?.TOK || 0}</strong></div>
+                            <div>CAS assigned: <strong className={optaPlannerResult?.assignedBySubjectCode?.CAS > 0 ? 'text-green-600' : 'text-rose-600'}>{optaPlannerResult?.assignedBySubjectCode?.CAS || 0}</strong></div>
+                            <div>EE assigned: <strong className={optaPlannerResult?.assignedBySubjectCode?.EE > 0 ? 'text-green-600' : 'text-rose-600'}>{optaPlannerResult?.assignedBySubjectCode?.EE || 0}</strong></div>
                           </div>
                         </div>
 
@@ -2874,9 +2894,9 @@ Now process the user's input and return ONLY the JSON object.`,
                         <div className="bg-white p-3 rounded border border-rose-200">
                           <div className="font-bold text-rose-700 mb-2">💾 DB Insertion</div>
                           <div className="space-y-1 text-slate-700">
-                            <div>TOK inserted: <strong className={orToolResult?.slotsInsertedBySubjectCode?.TOK > 0 ? 'text-green-600' : 'text-rose-600'}>{orToolResult?.slotsInsertedBySubjectCode?.TOK || 0}</strong></div>
-                            <div>CAS inserted: <strong className={orToolResult?.slotsInsertedBySubjectCode?.CAS > 0 ? 'text-green-600' : 'text-rose-600'}>{orToolResult?.slotsInsertedBySubjectCode?.CAS || 0}</strong></div>
-                            <div>EE inserted: <strong className={orToolResult?.slotsInsertedBySubjectCode?.EE > 0 ? 'text-green-600' : 'text-rose-600'}>{orToolResult?.slotsInsertedBySubjectCode?.EE || 0}</strong></div>
+                            <div>TOK inserted: <strong className={optaPlannerResult?.slotsInsertedBySubjectCode?.TOK > 0 ? 'text-green-600' : 'text-rose-600'}>{optaPlannerResult?.slotsInsertedBySubjectCode?.TOK || 0}</strong></div>
+                            <div>CAS inserted: <strong className={optaPlannerResult?.slotsInsertedBySubjectCode?.CAS > 0 ? 'text-green-600' : 'text-rose-600'}>{optaPlannerResult?.slotsInsertedBySubjectCode?.CAS || 0}</strong></div>
+                            <div>EE inserted: <strong className={optaPlannerResult?.slotsInsertedBySubjectCode?.EE > 0 ? 'text-green-600' : 'text-rose-600'}>{optaPlannerResult?.slotsInsertedBySubjectCode?.EE || 0}</strong></div>
                           </div>
                         </div>
 
@@ -2884,12 +2904,12 @@ Now process the user's input and return ONLY the JSON object.`,
                         <div className="bg-white p-3 rounded border border-rose-200">
                           <div className="font-bold text-rose-700 mb-2">⚠️ Status</div>
                           <div className="space-y-1 text-slate-700">
-                            <div>Stage: <strong>{orToolResult?.stage || '—'}</strong></div>
-                            <div>HTTP Status: <strong className={orToolResult?.orToolHttpStatus === 200 ? 'text-green-600' : 'text-rose-600'}>{orToolResult?.orToolHttpStatus || '—'}</strong></div>
-                            <div className="text-[10px]">Total inserted: {orToolResult?.slotsInserted || 0}</div>
-                            {orToolResult?.orToolErrorBody && (
+                            <div>Stage: <strong>{optaPlannerResult?.stage || '—'}</strong></div>
+                            <div>HTTP Status: <strong className={optaPlannerResult?.orToolHttpStatus === 200 ? 'text-green-600' : 'text-rose-600'}>{optaPlannerResult?.orToolHttpStatus || '—'}</strong></div>
+                            <div className="text-[10px]">Total inserted: {optaPlannerResult?.slotsInserted || 0}</div>
+                            {optaPlannerResult?.optaPlannerErrorBody && (
                               <div className="mt-2 text-rose-700 bg-rose-100 p-1 rounded text-[10px]">
-                                {(orToolResult.orToolErrorBody || '').slice(0, 150)}
+                                {(optaPlannerResult.optaPlannerErrorBody || '').slice(0, 150)}
                               </div>
                             )}
                           </div>
@@ -2897,21 +2917,21 @@ Now process the user's input and return ONLY the JSON object.`,
                       </div>
 
                       {/* Force refresh hint: show current slot counts */}
-                      <div className="text-xs text-slate-500 mt-4">Persisted slots: {scheduleSlots.length} • Inserted this run: {orToolResult?.slotsInserted ?? orToolResult?.insertedCount ?? 0}</div>
+                      <div className="text-xs text-slate-500 mt-4">Persisted slots: {scheduleSlots.length} • Inserted this run: {optaPlannerResult?.slotsInserted ?? optaPlannerResult?.insertedCount ?? 0}</div>
                       <div className="p-4 space-y-3">
                         <div className="flex items-center justify-between">
                           <div className="text-sm text-slate-700">
-                            <div className="font-semibold text-slate-900 mb-1">OR-Tool Response</div>
+                            <div className="font-semibold text-slate-900 mb-1">OptaPlanner Response</div>
                             <div className="flex gap-3">
-                              <span>Assigned TOK: <strong>{orToolResult?.coreSlotsInsertedCount?.TOK || 0}</strong></span>
-                              <span>CAS: <strong>{orToolResult?.coreSlotsInsertedCount?.CAS || 0}</strong></span>
-                              <span>EE: <strong>{orToolResult?.coreSlotsInsertedCount?.EE || 0}</strong></span>
+                              <span>Assigned TOK: <strong>{optaPlannerResult?.coreSlotsInsertedCount?.TOK || 0}</strong></span>
+                              <span>CAS: <strong>{optaPlannerResult?.coreSlotsInsertedCount?.CAS || 0}</strong></span>
+                              <span>EE: <strong>{optaPlannerResult?.coreSlotsInsertedCount?.EE || 0}</strong></span>
                             </div>
                           </div>
-                          {orToolResult?.sampleCoreSlot && (
+                          {optaPlannerResult?.sampleCoreSlot && (
                             <div className="text-xs text-slate-600">
                               <div className="font-medium text-slate-800">Sample Core Slot</div>
-                              <div>{orToolResult.sampleCoreSlot.day} • Period {orToolResult.sampleCoreSlot.period}</div>
+                              <div>{optaPlannerResult.sampleCoreSlot.day} • Period {optaPlannerResult.sampleCoreSlot.period}</div>
                             </div>
                           )}
                         </div>
@@ -2921,79 +2941,79 @@ Now process the user's input and return ONLY the JSON object.`,
                           <div className="p-3 rounded-lg bg-slate-100">
                            <div className="font-semibold text-slate-900 mb-1">Solver Info</div>
                            <div className="text-xs space-y-1">
-                             <div>Engine: <strong className="text-blue-700">{orToolResult?.solverIdentity?.engine || '—'}</strong></div>
-                             <div>Implementation: <strong className="text-blue-700">{orToolResult?.solverIdentity?.implementation || '—'}</strong></div>
-                             <div>Version: <strong>{orToolResult?.solverIdentity?.version || '—'}</strong></div>
+                             <div>Engine: <strong className="text-blue-700">{optaPlannerResult?.solverIdentity?.engine || '—'}</strong></div>
+                             <div>Implementation: <strong className="text-blue-700">{optaPlannerResult?.solverIdentity?.implementation || '—'}</strong></div>
+                             <div>Version: <strong>{optaPlannerResult?.solverIdentity?.version || '—'}</strong></div>
                            </div>
-                           <div className="mt-2 truncate text-xs">Endpoint: {String(orToolResult?.solverEndpointUsed || orToolResult?.endpoint || '—')}</div>
-                           <div className="mt-1">HTTP: <strong className={orToolResult?.solverHttpStatus === 200 ? 'text-green-600' : 'text-rose-600'}>{orToolResult?.solverHttpStatus ?? '—'}</strong></div>
-                           <div className="mt-1">/health: <strong>{orToolResult?.solverHealthStatus ?? '—'}</strong> {orToolResult?.solverHealthOk === false ? '(down)' : ''}</div>
-                           <div className="mt-1">Headers: <code className="text-[10px]">{JSON.stringify(orToolResult?.solverRequestHeadersSent || {})}</code></div>
+                           <div className="mt-2 truncate text-xs">Endpoint: {String(optaPlannerResult?.solverEndpointUsed || optaPlannerResult?.endpoint || '—')}</div>
+                           <div className="mt-1">HTTP: <strong className={optaPlannerResult?.solverHttpStatus === 200 ? 'text-green-600' : 'text-rose-600'}>{optaPlannerResult?.solverHttpStatus ?? '—'}</strong></div>
+                           <div className="mt-1">/health: <strong>{optaPlannerResult?.solverHealthStatus ?? '—'}</strong> {optaPlannerResult?.solverHealthOk === false ? '(down)' : ''}</div>
+                           <div className="mt-1">Headers: <code className="text-[10px]">{JSON.stringify(optaPlannerResult?.solverRequestHeadersSent || {})}</code></div>
 
                            {/* Debug metrics from solver */}
-                           {orToolResult?.solverDebugMetrics && (
+                           {optaPlannerResult?.solverDebugMetrics && (
                              <div className="mt-3 pt-2 border-t border-slate-300">
                                <div className="font-bold text-xs mb-1">Debug Metrics</div>
                                <div className="space-y-0.5 text-[11px]">
-                                 <div>Unknown TG IDs: <strong className={(orToolResult.solverDebugMetrics.unknownTeachingGroupIdsInOutput?.length || 0) > 0 ? 'text-rose-600' : 'text-green-600'}>
-                                   {orToolResult.solverDebugMetrics.unknownTeachingGroupIdsInOutput?.length || 0}
+                                 <div>Unknown TG IDs: <strong className={(optaPlannerResult.solverDebugMetrics.unknownTeachingGroupIdsInOutput?.length || 0) > 0 ? 'text-rose-600' : 'text-green-600'}>
+                                   {optaPlannerResult.solverDebugMetrics.unknownTeachingGroupIdsInOutput?.length || 0}
                                  </strong></div>
-                                 <div>Unique TG IDs: <strong>{orToolResult.solverDebugMetrics.uniqueTeachingGroupIdsInOutput?.length || 0}</strong></div>
-                                 <div>Sections missing periods: <strong className={(orToolResult.solverDebugMetrics.sectionsMissingPeriods || 0) > 0 ? 'text-rose-600' : 'text-green-600'}>
-                                   {orToolResult.solverDebugMetrics.sectionsMissingPeriods || 0}
+                                 <div>Unique TG IDs: <strong>{optaPlannerResult.solverDebugMetrics.uniqueTeachingGroupIdsInOutput?.length || 0}</strong></div>
+                                 <div>Sections missing periods: <strong className={(optaPlannerResult.solverDebugMetrics.sectionsMissingPeriods || 0) > 0 ? 'text-rose-600' : 'text-green-600'}>
+                                   {optaPlannerResult.solverDebugMetrics.sectionsMissingPeriods || 0}
                                  </strong></div>
                                </div>
-                               {(orToolResult.solverDebugMetrics.unknownTeachingGroupIdsInOutput?.length || 0) > 0 && (
+                               {(optaPlannerResult.solverDebugMetrics.unknownTeachingGroupIdsInOutput?.length || 0) > 0 && (
                                  <div className="mt-2 p-2 bg-rose-100 border border-rose-300 rounded text-[10px] text-rose-800">
                                    <div className="font-bold mb-1">❌ Unknown TG IDs in output:</div>
-                                   <pre className="whitespace-pre-wrap">{JSON.stringify(orToolResult.solverDebugMetrics.unknownTeachingGroupIdsInOutput, null, 2)}</pre>
+                                   <pre className="whitespace-pre-wrap">{JSON.stringify(optaPlannerResult.solverDebugMetrics.unknownTeachingGroupIdsInOutput, null, 2)}</pre>
                                  </div>
                                )}
                              </div>
                            )}
-                           {orToolResult?.solverErrorBody && (
-                             <div className="mt-1 font-semibold text-rose-700">Error: <span className="break-all">{(orToolResult?.solverErrorBody || '').slice(0, 300)}</span></div>
+                           {optaPlannerResult?.solverErrorBody && (
+                             <div className="mt-1 font-semibold text-rose-700">Error: <span className="break-all">{(optaPlannerResult?.solverErrorBody || '').slice(0, 300)}</span></div>
                            )}
-                           {orToolResult?.solverHttpStatus && orToolResult?.solverHttpStatus !== 200 && (
+                           {optaPlannerResult?.solverHttpStatus && optaPlannerResult?.solverHttpStatus !== 200 && (
                               <div className="mt-3 space-y-2 border-t border-slate-300 pt-2">
                                 <div className="text-[10px] text-slate-600 bg-rose-50 p-2 rounded border border-rose-200">
-                                  <div className="font-bold text-rose-700 mb-1">🔴 Solver Failed (HTTP {orToolResult?.solverHttpStatus})</div>
-                                  <div className="text-rose-700">{orToolResult?.solverErrorBody}</div>
+                                  <div className="font-bold text-rose-700 mb-1">🔴 Solver Failed (HTTP {optaPlannerResult?.solverHttpStatus})</div>
+                                  <div className="text-rose-700">{optaPlannerResult?.solverErrorBody}</div>
                                 </div>
                               </div>
                             )}
-                            {orToolResult?.solverHttpStatus === 200 && (
+                            {optaPlannerResult?.solverHttpStatus === 200 && (
                               <div className="mt-3 space-y-2 border-t border-slate-300 pt-2">
                                 <div className="text-[10px] text-slate-600">
                                   <div className="font-bold mb-1">📤 subjects sent (first 5):</div>
-                                  <pre className="bg-white rounded p-1.5 overflow-x-auto max-h-40">{JSON.stringify(orToolResult?.solverRequestPayloadSubjects || [], null, 2)}</pre>
+                                  <pre className="bg-white rounded p-1.5 overflow-x-auto max-h-40">{JSON.stringify(optaPlannerResult?.solverRequestPayloadSubjects || [], null, 2)}</pre>
                                 </div>
                                 <div className="text-[10px] text-slate-600">
                                   <div className="font-bold mb-1">📤 subjectRequirements sent (first 10):</div>
-                                  <pre className="bg-white rounded p-1.5 overflow-x-auto max-h-40">{JSON.stringify(orToolResult?.solverRequestPayloadSubjectRequirements || [], null, 2)}</pre>
+                                  <pre className="bg-white rounded p-1.5 overflow-x-auto max-h-40">{JSON.stringify(optaPlannerResult?.solverRequestPayloadSubjectRequirements || [], null, 2)}</pre>
                                 </div>
-                                {orToolResult?.builderDiagnostics && (
+                                {optaPlannerResult?.builderDiagnostics && (
                                   <div className="text-[10px] text-slate-600 mt-2">
                                     <div className="font-bold mb-1">📊 Builder Validation Report:</div>
                                     <div className="bg-white rounded p-2 space-y-2">
-                                      {orToolResult.builderDiagnostics.skipped?.length > 0 && (
+                                      {optaPlannerResult.builderDiagnostics.skipped?.length > 0 && (
                                         <div>
-                                          <div className="font-semibold text-rose-700">⚠️ Excluded: {orToolResult.builderDiagnostics.skipped.length} TeachingGroups</div>
+                                          <div className="font-semibold text-rose-700">⚠️ Excluded: {optaPlannerResult.builderDiagnostics.skipped.length} TeachingGroups</div>
                                           <div className="ml-2 text-rose-600 space-y-0.5">
-                                            {orToolResult.builderDiagnostics.skipped.slice(0, 10).map((s, i) => (
+                                            {optaPlannerResult.builderDiagnostics.skipped.slice(0, 10).map((s, i) => (
                                               <div key={i}>• {s.name} ({s.subject_code}) - {s.reason}</div>
                                             ))}
-                                            {orToolResult.builderDiagnostics.skipped.length > 10 && (
-                                              <div>... +{orToolResult.builderDiagnostics.skipped.length - 10} more</div>
+                                            {optaPlannerResult.builderDiagnostics.skipped.length > 10 && (
+                                              <div>... +{optaPlannerResult.builderDiagnostics.skipped.length - 10} more</div>
                                             )}
                                           </div>
                                         </div>
                                       )}
-                                      {orToolResult.builderDiagnostics.adjustments?.length > 0 && (
+                                      {optaPlannerResult.builderDiagnostics.adjustments?.length > 0 && (
                                         <div>
-                                          <div className="font-semibold text-blue-700">ℹ️ Adjusted: {orToolResult.builderDiagnostics.adjustments.length} TeachingGroups</div>
+                                          <div className="font-semibold text-blue-700">ℹ️ Adjusted: {optaPlannerResult.builderDiagnostics.adjustments.length} TeachingGroups</div>
                                           <div className="ml-2 text-blue-600 space-y-0.5">
-                                            {orToolResult.builderDiagnostics.adjustments.slice(0, 5).map((a, i) => (
+                                            {optaPlannerResult.builderDiagnostics.adjustments.slice(0, 5).map((a, i) => (
                                               <div key={i}>• {a.name}: {a.adjustment}</div>
                                             ))}
                                           </div>
@@ -3002,34 +3022,34 @@ Now process the user's input and return ONLY the JSON object.`,
                                     </div>
                                   </div>
                                 )}
-                                {(orToolResult?.subjectsInvalidIds || []).length > 0 && (
+                                {(optaPlannerResult?.subjectsInvalidIds || []).length > 0 && (
                                   <div className="text-[10px] text-rose-700">
                                     <div className="font-bold">❌ Invalid Subject IDs (not 24-char hex):</div>
-                                    <pre className="bg-rose-50 rounded p-1.5">{JSON.stringify(orToolResult.subjectsInvalidIds, null, 2)}</pre>
+                                    <pre className="bg-rose-50 rounded p-1.5">{JSON.stringify(optaPlannerResult.subjectsInvalidIds, null, 2)}</pre>
                                   </div>
                                 )}
-                                {(orToolResult?.requirementsUnknownSubjects || []).length > 0 && (
+                                {(optaPlannerResult?.requirementsUnknownSubjects || []).length > 0 && (
                                   <div className="text-[10px] text-rose-700">
                                     <div className="font-bold">❌ Unknown Subjects in Requirements:</div>
-                                    <pre className="bg-rose-50 rounded p-1.5">{JSON.stringify(orToolResult.requirementsUnknownSubjects, null, 2)}</pre>
+                                    <pre className="bg-rose-50 rounded p-1.5">{JSON.stringify(optaPlannerResult.requirementsUnknownSubjects, null, 2)}</pre>
                                   </div>
                                 )}
-                                {(orToolResult?.requirementsInvalidMinutes || []).length > 0 && (
+                                {(optaPlannerResult?.requirementsInvalidMinutes || []).length > 0 && (
                                   <div className="text-[10px] text-rose-700">
                                     <div className="font-bold">❌ Invalid minutesPerWeek:</div>
-                                    <pre className="bg-rose-50 rounded p-1.5">{JSON.stringify(orToolResult.requirementsInvalidMinutes, null, 2)}</pre>
+                                    <pre className="bg-rose-50 rounded p-1.5">{JSON.stringify(optaPlannerResult.requirementsInvalidMinutes, null, 2)}</pre>
                                   </div>
                                 )}
-                                {orToolResult?.normalizedSubjectsIndex && (
+                                {optaPlannerResult?.normalizedSubjectsIndex && (
                                   <div className="text-[10px] text-slate-600">
                                     <div className="font-bold mb-1">🔍 Normalized Subjects Index:</div>
-                                    <pre className="bg-white rounded p-1.5 overflow-x-auto max-h-32">{JSON.stringify(orToolResult.normalizedSubjectsIndex, null, 2)}</pre>
+                                    <pre className="bg-white rounded p-1.5 overflow-x-auto max-h-32">{JSON.stringify(optaPlannerResult.normalizedSubjectsIndex, null, 2)}</pre>
                                   </div>
                                 )}
-                                {orToolResult?.normalizedRequirementsSubjects && (
+                                {optaPlannerResult?.normalizedRequirementsSubjects && (
                                   <div className="text-[10px] text-slate-600">
                                     <div className="font-bold mb-1">🔍 Normalized Requirements (first 20):</div>
-                                    <pre className="bg-white rounded p-1.5 overflow-x-auto max-h-32">{JSON.stringify(orToolResult.normalizedRequirementsSubjects, null, 2)}</pre>
+                                    <pre className="bg-white rounded p-1.5 overflow-x-auto max-h-32">{JSON.stringify(optaPlannerResult.normalizedRequirementsSubjects, null, 2)}</pre>
                                   </div>
                                 )}
                               </div>
@@ -3037,28 +3057,28 @@ Now process the user's input and return ONLY the JSON object.`,
                           </div>
                           <div className="p-3 rounded-lg bg-slate-100">
                             <div className="font-semibold text-slate-900 mb-1">Persistence</div>
-                            <div>schedule_version_id: <strong>{orToolResult?.schedule_version_id || '—'}</strong></div>
-                            <div>scheduleVersionIdInput: <strong>{orToolResult?.scheduleVersionIdInput ?? '—'}</strong></div>
-                            <div>scheduleVersionIdUsed: <strong>{orToolResult?.scheduleVersionIdUsed ?? '—'}</strong></div>
-                            <div>performedDeletion: <strong>{String(orToolResult?.performedDeletion ?? false)}</strong></div>
-                            <div>performedInsertion: <strong>{String(orToolResult?.performedInsertion ?? false)}</strong></div>
-                            <div>slotsDeleted: <strong>{orToolResult?.slotsDeleted ?? orToolResult?.deletedCount ?? 0}</strong></div>
-                            <div>slotsInserted: <strong>{orToolResult?.slotsInserted ?? orToolResult?.insertedCount ?? 0}</strong></div>
+                            <div>schedule_version_id: <strong>{optaPlannerResult?.schedule_version_id || '—'}</strong></div>
+                            <div>scheduleVersionIdInput: <strong>{optaPlannerResult?.scheduleVersionIdInput ?? '—'}</strong></div>
+                            <div>scheduleVersionIdUsed: <strong>{optaPlannerResult?.scheduleVersionIdUsed ?? '—'}</strong></div>
+                            <div>performedDeletion: <strong>{String(optaPlannerResult?.performedDeletion ?? false)}</strong></div>
+                            <div>performedInsertion: <strong>{String(optaPlannerResult?.performedInsertion ?? false)}</strong></div>
+                            <div>slotsDeleted: <strong>{optaPlannerResult?.slotsDeleted ?? optaPlannerResult?.deletedCount ?? 0}</strong></div>
+                            <div>slotsInserted: <strong>{optaPlannerResult?.slotsInserted ?? optaPlannerResult?.insertedCount ?? 0}</strong></div>
                           </div>
                           <div className="p-3 rounded-lg bg-slate-100">
                             <div className="font-semibold text-slate-900 mb-1">Timeslots</div>
-                            <div>timeslotsCount: <strong>{orToolResult?.timeslotsCount ?? orToolResult?.buildMeta?.timeslotsCount ?? '—'}</strong></div>
-                            <div>endTimeUsedByDay: <code>{JSON.stringify(orToolResult?.endTimeUsedByDay || {})}</code></div>
+                            <div>timeslotsCount: <strong>{optaPlannerResult?.timeslotsCount ?? optaPlannerResult?.buildMeta?.timeslotsCount ?? '—'}</strong></div>
+                            <div>endTimeUsedByDay: <code>{JSON.stringify(optaPlannerResult?.endTimeUsedByDay || {})}</code></div>
                           </div>
                         </div>
 
-                        {orToolResult?.guardFailureCode && (
+                        {optaPlannerResult?.guardFailureCode && (
                           <div className="p-3 rounded-lg bg-rose-50 border border-rose-200 text-rose-800 text-xs">
-                            <div className="font-semibold mb-1">Guard Failure: {orToolResult.guardFailureCode}</div>
+                            <div className="font-semibold mb-1">Guard Failure: {optaPlannerResult.guardFailureCode}</div>
                             <div className="grid md:grid-cols-3 gap-2">
-                              <div>requestedSchoolId: <strong>{String(orToolResult.requestedSchoolId ?? 'null')}</strong></div>
-                              <div>scheduleVersion.school_id: <strong>{String(orToolResult.scheduleVersionSchoolId ?? 'null')}</strong></div>
-                              <div>whoami: <code>{JSON.stringify(orToolResult.whoami || orToolResult.user || null)}</code></div>
+                              <div>requestedSchoolId: <strong>{String(optaPlannerResult.requestedSchoolId ?? 'null')}</strong></div>
+                              <div>scheduleVersion.school_id: <strong>{String(optaPlannerResult.scheduleVersionSchoolId ?? 'null')}</strong></div>
+                              <div>whoami: <code>{JSON.stringify(optaPlannerResult.whoami || optaPlannerResult.user || null)}</code></div>
                             </div>
                           </div>
                         )}
@@ -3066,16 +3086,16 @@ Now process the user's input and return ONLY the JSON object.`,
                         {/* All-subjects comparison and stage counters will follow */}
                         {/* Requested recap fields */}
                         {(() => {
-                          const exp = orToolResult?.expectedLessonsBySubject || {};
-                          const expMin = orToolResult?.expectedMinutesBySubject || {};
-                          const asg = orToolResult?.assignedLessonsBySubject || orToolResult?.assignmentsBySubjectCode || {};
-                          const unasg = orToolResult?.unassignedLessonsBySubject || orToolResult?.unassignedBySubjectCode || {};
-                          const core = orToolResult?.coreAssignments || {};
-                          const meta = orToolResult?.buildMeta || {};
-                          const maxP = orToolResult?.maxPeriodUsedByDay || {};
-                          const slotsToInsert = orToolResult?.slotsToInsertBySubjectId || {};
-                          const coreIns = orToolResult?.coreSlotsInsertedCount || {};
-                          const sampleCores = orToolResult?.sampleCoreSlots || null;
+                          const exp = optaPlannerResult?.expectedLessonsBySubject || {};
+                          const expMin = optaPlannerResult?.expectedMinutesBySubject || {};
+                          const asg = optaPlannerResult?.assignedLessonsBySubject || optaPlannerResult?.assignmentsBySubjectCode || {};
+                          const unasg = optaPlannerResult?.unassignedLessonsBySubject || optaPlannerResult?.unassignedBySubjectCode || {};
+                          const core = optaPlannerResult?.coreAssignments || {};
+                          const meta = optaPlannerResult?.buildMeta || {};
+                          const maxP = optaPlannerResult?.maxPeriodUsedByDay || {};
+                          const slotsToInsert = optaPlannerResult?.slotsToInsertBySubjectId || {};
+                          const coreIns = optaPlannerResult?.coreSlotsInsertedCount || {};
+                          const sampleCores = optaPlannerResult?.sampleCoreSlots || null;
                           const sampleLine = (arr) => {
                             const s = Array.isArray(arr) && arr[0];
                             return s && (s.day && s.period) ? `${s.day} • P${s.period}` : '—';
@@ -3108,7 +3128,7 @@ Now process the user's input and return ONLY the JSON object.`,
                                     <div>maxPeriodUsedByDay: <code>{JSON.stringify(maxP)}</code></div>
                                     <div>timeslotsCount: <strong>{meta?.timeslotsCount ?? '—'}</strong></div>
                                     <div>periodDurationMinutes: <strong>{meta?.periodDurationMinutes ?? '—'}</strong></div>
-                                    <div>endTimeUsedByDay: <code>{JSON.stringify(orToolResult?.endTimeUsedByDay || {})}</code></div>
+                                    <div>endTimeUsedByDay: <code>{JSON.stringify(optaPlannerResult?.endTimeUsedByDay || {})}</code></div>
                                     <div>lastTimeslot: <strong>{(meta?.lastTimeslot?.dayOfWeek || '—')} {meta?.lastTimeslot?.endTime ? `• ${meta?.lastTimeslot?.endTime}` : ''}</strong></div>
                                     <div>dpTargetPeriodsPerDay: <strong>{meta?.dpTargetPeriodsPerDay ?? '—'}</strong></div>
                                   </div>
@@ -3127,8 +3147,8 @@ Now process the user's input and return ONLY the JSON object.`,
                                 <div className="p-3 rounded-lg bg-slate-100">
                                   <div className="font-semibold text-slate-900 mb-1">coreSlotsInsertedCount</div>
                                   <pre className="bg-white rounded p-2 overflow-x-auto">{JSON.stringify(coreIns, null, 2)}</pre>
-                                  {orToolResult?.testSlotsInsertedCount && (
-                                    <div className="mt-2 text-xs">testSlotsInsertedCount: <code>{JSON.stringify(orToolResult.testSlotsInsertedCount)}</code></div>
+                                  {optaPlannerResult?.testSlotsInsertedCount && (
+                                    <div className="mt-2 text-xs">testSlotsInsertedCount: <code>{JSON.stringify(optaPlannerResult.testSlotsInsertedCount)}</code></div>
                                   )}
                                 </div>
                                 <div className="p-3 rounded-lg bg-slate-100">
@@ -3143,32 +3163,32 @@ Now process the user's input and return ONLY the JSON object.`,
                                   <div className="font-semibold text-slate-900 mb-1">Schedule Settings Sent</div>
                                   <div className="grid grid-cols-2 gap-x-3 gap-y-1">
                                     <div className="text-slate-500">start</div>
-                                    <div className="font-medium">{orToolResult?.scheduleSettingsSent?.day_start_time || '—'}</div>
+                                    <div className="font-medium">{optaPlannerResult?.scheduleSettingsSent?.day_start_time || '—'}</div>
                                     <div className="text-slate-500">end</div>
-                                    <div className="font-medium">{orToolResult?.scheduleSettingsSent?.day_end_time || '—'}</div>
+                                    <div className="font-medium">{optaPlannerResult?.scheduleSettingsSent?.day_end_time || '—'}</div>
                                     <div className="text-slate-500">period</div>
-                                    <div className="font-medium">{orToolResult?.scheduleSettingsSent?.period_duration_minutes ?? '—'} min</div>
+                                    <div className="font-medium">{optaPlannerResult?.scheduleSettingsSent?.period_duration_minutes ?? '—'} min</div>
                                     <div className="text-slate-500">days</div>
-                                    <div className="font-medium">{(orToolResult?.scheduleSettingsSent?.days_of_week || []).join(', ') || '—'}</div>
+                                    <div className="font-medium">{(optaPlannerResult?.scheduleSettingsSent?.days_of_week || []).join(', ') || '—'}</div>
                                     <div className="text-slate-500">min/target</div>
-                                    <div className="font-medium">{orToolResult?.scheduleSettingsSent?.min_periods_per_day ?? '—'} / {orToolResult?.scheduleSettingsSent?.target_periods_per_day ?? '—'}</div>
+                                    <div className="font-medium">{optaPlannerResult?.scheduleSettingsSent?.min_periods_per_day ?? '—'} / {optaPlannerResult?.scheduleSettingsSent?.target_periods_per_day ?? '—'}</div>
                                     <div className="text-slate-500">breaks</div>
-                                    <div className="font-medium">{(orToolResult?.scheduleSettingsSent?.breaks || []).map(b => `${b.start}-${b.end}`).join(', ') || '—'}</div>
+                                    <div className="font-medium">{(optaPlannerResult?.scheduleSettingsSent?.breaks || []).map(b => `${b.start}-${b.end}`).join(', ') || '—'}</div>
                                   </div>
                                 </div>
                                 <div className="p-3 rounded-lg bg-slate-100">
                                   <div className="font-semibold text-slate-900 mb-1">Timeslots & Usage</div>
                                   <div className="space-y-1">
-                                    <div>timeslotsCount: <strong>{orToolResult?.timeslotsCount ?? meta?.timeslotsCount ?? '—'}</strong></div>
-                                    <div>lastTimeslotUsed: <strong>{orToolResult?.lastTimeslotUsed ? `${orToolResult.lastTimeslotUsed.dayOfWeek} • ${orToolResult.lastTimeslotUsed.endTime}` : '—'}</strong></div>
+                                    <div>timeslotsCount: <strong>{optaPlannerResult?.timeslotsCount ?? meta?.timeslotsCount ?? '—'}</strong></div>
+                                    <div>lastTimeslotUsed: <strong>{optaPlannerResult?.lastTimeslotUsed ? `${optaPlannerResult.lastTimeslotUsed.dayOfWeek} • ${optaPlannerResult.lastTimeslotUsed.endTime}` : '—'}</strong></div>
                                   </div>
                                 </div>
                                 <div className="p-3 rounded-lg bg-slate-100">
                                   <div className="font-semibold text-slate-900 mb-1">Underfill</div>
                                   <div className="space-y-1">
-                                    <div>underfilled: <strong>{String(orToolResult?.underfill?.underfilled ?? false)}</strong></div>
-                                    <div>reason: <strong>{orToolResult?.underfill?.reason || '—'}</strong></div>
-                                    <div>STUDY created: <strong>{orToolResult?.underfill?.study?.assigned_in_solver || 0}</strong> / returned: <strong>{orToolResult?.underfill?.study?.total_from_solver || 0}</strong> • prepared: <strong>{orToolResult?.underfill?.study?.prepared_for_insert || 0}</strong></div>
+                                    <div>underfilled: <strong>{String(optaPlannerResult?.underfill?.underfilled ?? false)}</strong></div>
+                                    <div>reason: <strong>{optaPlannerResult?.underfill?.reason || '—'}</strong></div>
+                                    <div>STUDY created: <strong>{optaPlannerResult?.underfill?.study?.assigned_in_solver || 0}</strong> / returned: <strong>{optaPlannerResult?.underfill?.study?.total_from_solver || 0}</strong> • prepared: <strong>{optaPlannerResult?.underfill?.study?.prepared_for_insert || 0}</strong></div>
                                   </div>
                                 </div>
                               </div>
@@ -3192,33 +3212,33 @@ Now process the user's input and return ONLY the JSON object.`,
                               <div className="grid md:grid-cols-2 gap-3">
                                 <div className="p-3 rounded-lg bg-slate-100">
                                   <div className="font-semibold text-slate-900 mb-1">Input Summary (minutes → periods)</div>
-                                  <pre className="bg-white rounded p-2 overflow-x-auto max-h-40">{JSON.stringify(orToolResult?.inputSummaryBySubject || {}, null, 2)}</pre>
+                                  <pre className="bg-white rounded p-2 overflow-x-auto max-h-40">{JSON.stringify(optaPlannerResult?.inputSummaryBySubject || {}, null, 2)}</pre>
                                 </div>
                                 <div className="p-3 rounded-lg bg-slate-100">
                                   <div className="font-semibold text-slate-900 mb-1">Core TG Detected</div>
-                                  <pre className="bg-white rounded p-2 overflow-x-auto max-h-40">{JSON.stringify(orToolResult?.coreTeachingGroupsDetected || [], null, 2)}</pre>
+                                  <pre className="bg-white rounded p-2 overflow-x-auto max-h-40">{JSON.stringify(optaPlannerResult?.coreTeachingGroupsDetected || [], null, 2)}</pre>
                                 </div>
                               </div>
 
                               {/* Solver Debug: Global Period Coverage Report */}
-                              {orToolResult?.solverDebugMetrics?.periodCoverageBySection && (
+                              {optaPlannerResult?.solverDebugMetrics?.periodCoverageBySection && (
                                 <GlobalPeriodCoverageReport
-                                  periodCoverageData={orToolResult.solverDebugMetrics.periodCoverageBySection}
+                                  periodCoverageData={optaPlannerResult.solverDebugMetrics.periodCoverageBySection}
                                   teachingGroups={teachingGroups}
                                   subjects={subjects}
                                   periodDurationMinutes={school?.period_duration_minutes || 60}
-                                  missingPeriodsByReason={orToolResult.solverDebugMetrics.missingPeriodsByReason || {}}
-                                  unmetRequirements={orToolResult.solverDebugMetrics.unmetRequirements || []}
-                                  subjectRequirements={orToolResult.subjectRequirements || []}
+                                  missingPeriodsByReason={optaPlannerResult.solverDebugMetrics.missingPeriodsByReason || {}}
+                                  unmetRequirements={optaPlannerResult.solverDebugMetrics.unmetRequirements || []}
+                                  subjectRequirements={optaPlannerResult.subjectRequirements || []}
                                 />
                               )}
 
                               {/* Subject Requirements Sent to Solver */}
-                              {orToolResult?.subjectRequirements && (
+                              {optaPlannerResult?.subjectRequirements && (
                                 <div className="p-3 rounded-lg bg-amber-50 border-2 border-amber-300">
                                   <div className="font-semibold text-amber-900 mb-2">📋 Subject Requirements Envoyés au Solver</div>
                                   <div className="space-y-2 max-h-96 overflow-y-auto">
-                                    {orToolResult.subjectRequirements.map((req, idx) => {
+                                    {optaPlannerResult.subjectRequirements.map((req, idx) => {
                                       const tgId = String(req.studentGroup || '').replace('TG_', '');
                                       const tg = teachingGroups.find(g => g.id === tgId);
                                       const subj = tg ? subjects.find(s => s.id === tg.subject_id) : null;
@@ -3276,9 +3296,9 @@ Now process the user's input and return ONLY the JSON object.`,
                                 <div className="font-semibold text-slate-900 mb-2">Stage Counters (TOK/CAS/EE/TEST)</div>
                                 <div className="grid md:grid-cols-4 gap-2 text-xs">
                                   {['TOK', 'CAS', 'EE', 'TEST'].map(k => {
-                                    const plc = orToolResult?.problemLessonsCreated || {};
-                                    const sar = orToolResult?.solutionAssignmentsReturned || {};
-                                    const spi = orToolResult?.slotsPreparedForInsert || {};
+                                    const plc = optaPlannerResult?.problemLessonsCreated || {};
+                                    const sar = optaPlannerResult?.solutionAssignmentsReturned || {};
+                                    const spi = optaPlannerResult?.slotsPreparedForInsert || {};
                                     return (
                                       <div key={k} className="p-2 rounded border bg-white">
                                         <div className="font-medium mb-1">{k}</div>
@@ -3329,7 +3349,7 @@ Now process the user's input and return ONLY the JSON object.`,
                             </div>
                           );
                         })()}
-                        <pre className="text-xs bg-slate-900 text-slate-100 p-3 rounded-lg overflow-x-auto max-h-72">{JSON.stringify(orToolResult, null, 2)}</pre>
+                        <pre className="text-xs bg-slate-900 text-slate-100 p-3 rounded-lg overflow-x-auto max-h-72">{JSON.stringify(optaPlannerResult, null, 2)}</pre>
                       </div>
                     </CardContent>
                   </Card>
