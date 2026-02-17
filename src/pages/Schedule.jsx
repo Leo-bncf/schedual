@@ -888,7 +888,9 @@ Now process the user's input and return ONLY the JSON object.`,
         message: 'Matching teachers to teaching groups based on qualifications...'
       }));
       console.log('Assigning teachers to teaching groups...');
-      const { data: assignmentResult } = await base44.functions.invoke('assignTeachers');
+      const { data: assignmentResult } = await base44.functions.invoke('assignTeachers', {
+        school_id: schoolId
+      });
       console.log('Teacher assignments:', assignmentResult);
 
       // Refresh teaching groups to get updated teacher assignments
