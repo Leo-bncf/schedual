@@ -241,11 +241,49 @@ export default function StudentScheduleView({ students, slots, groups, subjects,
   const studentSlots = useServerSlots && serverSlots ? serverSlots : 
                        selectedStudent ? getStudentSlots(selectedStudent.id) : [];
 
-  const getSlotForPeriod = (day, uiRow) => {
-    return studentSlots.find(s => {
-      const slotUiRow = s.timeslot_id ? timeslotToPosition[Number(s.timeslot_id)]?.uiRow : s.period;
-      return s.day === day && slotUiRow === uiRow;
+  // DETECT OVERLAPS: Group slots by timeslot position
+  const { slotsByPosition, overlaps } = React.useMemo(() => {
+    const grouped = {};
+    studentSlots.forEach(slot => {
+      const slotUiRow = slot.timeslot_id ? timeslotToPosition[Number(slot.timeslot_id)]?.uiRow : slot.period;
+      const key = `${slot.day}_${slotUiRow}`;
+      if (!grouped[key]) grouped[key] = [];
+      grouped[key].push(slot);
     });
+    
+    // Find overlaps (multiple slots at same position)
+    const overlaps = Object.entries(grouped)
+      .filter(([_, slots]) => slots.length > 1)
+      .map(([key, slots]) => {
+        const [day, uiRow] = key.split('_');
+        return {
+          day,
+          period: parseInt(uiRow),
+          count: slots.length,
+          slots: slots.map(s => {
+            const subj = subjects.find(sub => sub.id === s.subject_id);
+            const room = rooms.find(r => r.id === s.room_id);
+            return {
+              id: s.id,
+              subject: subj?.name || 'Unknown',
+              room: room?.name || 'TBD',
+              timeslot_id: s.timeslot_id
+            };
+          })
+        };
+      });
+    
+    if (overlaps.length > 0) {
+      console.warn(`[StudentScheduleView] ⚠️ DOUBLE BOOKING: ${overlaps.length} periods with multiple courses`);
+      console.warn('[StudentScheduleView] Overlap details:', overlaps);
+    }
+    
+    return { slotsByPosition: grouped, overlaps };
+  }, [studentSlots, timeslotToPosition, subjects, rooms]);
+
+  const getSlotsForPeriod = (day, uiRow) => {
+    const key = `${day}_${uiRow}`;
+    return slotsByPosition[key] || [];
   };
   
   // Debug logging
@@ -284,6 +322,36 @@ export default function StudentScheduleView({ students, slots, groups, subjects,
 
   return (
     <div className="space-y-4">
+      {/* OVERLAP ALERT */}
+      {overlaps.length > 0 && (
+        <Alert variant="destructive" className="mb-4">
+          <AlertCircle className="h-4 w-4" />
+          <AlertTitle>⚠️ Double Booking Detected</AlertTitle>
+          <AlertDescription>
+            <div className="mt-2">
+              <p className="font-semibold">{overlaps.length} periods have multiple courses scheduled simultaneously:</p>
+              <div className="mt-3 space-y-2 max-h-40 overflow-y-auto">
+                {overlaps.map((overlap, idx) => (
+                  <div key={idx} className="bg-white/50 p-2 rounded text-xs">
+                    <div className="font-bold text-red-900">
+                      {overlap.day} Period {overlap.period} - {overlap.count} courses overlapping:
+                    </div>
+                    <ul className="ml-4 mt-1 space-y-1">
+                      {overlap.slots.map((s, i) => (
+                        <li key={i}>• {s.subject} in {s.room}</li>
+                      ))}
+                    </ul>
+                  </div>
+                ))}
+              </div>
+              <p className="mt-3 text-xs">
+                This is a solver bug. The student cannot attend multiple courses at the same time.
+              </p>
+            </div>
+          </AlertDescription>
+        </Alert>
+      )}
+
       {/* DEBUG PANEL */}
       {selectedStudent && diagnostics && (
         <Card className="border-blue-300 bg-blue-50">
@@ -653,7 +721,60 @@ export default function StudentScheduleView({ students, slots, groups, subjects,
                     <div className="text-xs font-medium text-slate-700">{periodTimes[period]}</div>
                   </div>
                   {DAYS.map(day => {
-                    const slot = getSlotForPeriod(day, period);
+                    const cellSlots = getSlotsForPeriod(day, period);
+                    
+                    if (cellSlots.length === 0) {
+                      return (
+                        <div key={`${day}-${period}`} className="border-r border-slate-200 last:border-r-0 hover:bg-slate-50/50" />
+                      );
+                    }
+                    
+                    // HANDLE MULTIPLE SLOTS (double booking)
+                    if (cellSlots.length > 1) {
+                      return (
+                        <div key={`${day}-${period}`} className="border-r border-slate-200 last:border-r-0 p-1">
+                          <div className="space-y-1">
+                            {cellSlots.slice(0, 2).map((slot, idx) => {
+                              let subject = null;
+                              let room = null;
+                              
+                              if (slot.subject_id) {
+                                subject = subjects.find(s => s.id === slot.subject_id);
+                                room = rooms.find(r => r.id === slot.room_id);
+                              } else {
+                                const group = groups.find(g => g.id === slot.teaching_group_id);
+                                if (group) {
+                                  subject = subjects.find(s => s.id === group.subject_id);
+                                  room = rooms.find(r => r.id === slot.room_id);
+                                }
+                              }
+                              
+                              const colorClass = subject ? subjectColors[subject.ib_group || 1] : 'bg-slate-100 border-slate-400';
+                              
+                              return (
+                                <div key={idx} className={`p-1.5 rounded border-l-4 ${colorClass}`}>
+                                  <div className="font-semibold text-[10px] leading-tight text-slate-900">
+                                    {subject?.name || 'Unknown'}
+                                  </div>
+                                  <div className="text-[9px] text-slate-600">{room?.name || 'TBD'}</div>
+                                </div>
+                              );
+                            })}
+                            {cellSlots.length > 2 && (
+                              <div className="px-1.5 py-0.5 bg-red-100 border border-red-300 rounded text-[9px] font-semibold text-red-900 text-center">
+                                +{cellSlots.length - 2} more
+                              </div>
+                            )}
+                          </div>
+                          <div className="mt-1 px-1 py-0.5 bg-red-500 text-white text-[8px] font-bold rounded text-center">
+                            ⚠️ CONFLICT
+                          </div>
+                        </div>
+                      );
+                    }
+                    
+                    // SINGLE SLOT (normal case)
+                    const slot = cellSlots[0];
                     let subject = null;
                     let teacher = null;
                     let level = null;
