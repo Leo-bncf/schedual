@@ -113,7 +113,13 @@ Deno.serve(async (req) => {
     const subjectById = {};
     for (const subj of (subjectsDb || [])) {
       if (!subj?.id) continue;
-      subjectById[subj.id] = subj;
+      // Enrich subject with hour settings (from new hoursPerWeekHL/SL fields)
+      const enrichedSubject = {
+        ...subj,
+        hoursPerWeekHL: subj.hoursPerWeekHL || Math.round((subj.hl_minutes_per_week_default || 360) / 60),
+        hoursPerWeekSL: subj.hoursPerWeekSL || Math.round((subj.sl_minutes_per_week_default || 240) / 60)
+      };
+      subjectById[subj.id] = enrichedSubject;
       const raw = String(subj.code || subj.name || subj.id || '').trim();
       const norm = normalizeSubjectCode(raw);
       if (norm) subjectIdToCode[subj.id] = norm;
@@ -655,7 +661,10 @@ if (isDP) {
       return {
         id: validId,
         code: code,
-        name: subj?.name || code
+        name: subj?.name || code,
+        hoursPerWeekHL: subj?.hoursPerWeekHL || 6,
+        hoursPerWeekSL: subj?.hoursPerWeekSL || 4,
+        is_core: subj?.is_core || false
       };
     });
     
