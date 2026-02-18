@@ -4,6 +4,7 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { AlertTriangle, CheckCircle, XCircle, Users, AlertCircle, Ban } from 'lucide-react';
 import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from "@/components/ui/accordion";
+import { toast } from 'sonner';
 
 export default function PreSolveAuditReport({ auditResult, onProceed, onCancel }) {
   if (!auditResult) return null;
@@ -141,7 +142,6 @@ export default function PreSolveAuditReport({ auditResult, onProceed, onCancel }
                     <button
                       onClick={() => {
                         navigator.clipboard.writeText(auditResult.requestId);
-                        const { toast } = await import('sonner');
                         toast.success('Request ID copied to clipboard');
                       }}
                       className="mt-1 text-xs text-blue-700 hover:underline"
