@@ -1963,6 +1963,17 @@ Now process the user's input and return ONLY the JSON object.`,
 
           const errorData = e?.response?.data;
           const statusCode = e?.response?.status;
+          
+          // CRITICAL: Log Codex 422 fields (requestId, validationErrors, details)
+          if (errorData?.requestId) {
+            console.error('[Schedule] 🔍 Codex requestId:', errorData.requestId);
+          }
+          if (Array.isArray(errorData?.validationErrors) && errorData.validationErrors.length > 0) {
+            console.error('[Schedule] ❌ Codex validationErrors:', errorData.validationErrors);
+          }
+          if (Array.isArray(errorData?.details) && errorData.details.length > 0) {
+            console.error('[Schedule] 📋 Codex details:', errorData.details);
+          }
 
           // Enhanced error logging for 500 errors
           if (statusCode === 500 || statusCode === 502) {
