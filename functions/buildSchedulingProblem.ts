@@ -644,12 +644,18 @@ if (isDP) {
     recordLog(`Adjustments made: ${teachingGroupsAdjusted.length}`);
     
     // CRITICAL: Validate DP subjects have HL/SL hours configured (CODEX requirement)
-    // SMART VALIDATION: Only enforce HL/SL if subject has HL/SL teaching groups
+    // SMART VALIDATION: Only enforce HL/SL if subject has HL/SL teaching groups AND is NOT a core subject
     const dpSubjectsWithoutHours = [];
     const dpTeachingGroupsAffected = [];
     
     for (const subj of subjectsDb) {
       if (subj.ib_level === 'DP') {
+        // SKIP VALIDATION FOR CORE SUBJECTS (TOK/CAS/EE)
+        if (subj.is_core === true) {
+          recordLog(`✓ DP core subject ${subj.code} (is_core=true) - skipping HL/SL hours validation`);
+          continue;
+        }
+        
         // Check if this subject has any HL/SL teaching groups
         const subjectTGs = teachingGroupsDb.filter(tg => tg.subject_id === subj.id);
         const hasHLGroup = subjectTGs.some(tg => String(tg.level || '').toUpperCase() === 'HL');
@@ -660,7 +666,7 @@ if (isDP) {
         const needsSL = hasSLGroup;
         
         if (!needsHL && !needsSL) {
-          // Subject has no HL/SL groups (e.g., TOK/CAS/EE with "Standard" or "All DP" groups)
+          // Subject has no HL/SL groups (e.g., "Standard" or "All DP" level groups)
           // Skip validation - required_minutes_per_week will be used
           recordLog(`✓ DP subject ${subj.code} has no HL/SL groups - skipping HL/SL hours validation`);
           continue;
