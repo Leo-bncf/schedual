@@ -258,13 +258,13 @@ Deno.serve(async (req) => {
     
     recordLog(`Timeslots generated: ${timeslots.length}`);
     
-    // CRITICAL: Block if zero timeslots generated
+    // CRITICAL: PRE_SOLVE_VALIDATION - Block if zero timeslots generated
     if (timeslots.length === 0) {
-      recordLog(`❌ CRITICAL: ZERO timeslots generated - cannot run solver`);
+      recordLog(`❌ PRE_SOLVE_VALIDATION FAILED: ZERO timeslots generated - cannot run solver`);
       const errorBody = {
         ok: false,
-        stage: 'ZERO_TIMESLOTS_GENERATED',
-        code: 'NO_TIMESLOTS',
+        stage: 'PRE_SOLVE_VALIDATION',
+        code: 'TIMESLOTS_MISSING',
         error: 'Zero timeslots generated',
         errorMessage: `❌ Cannot run OptaPlanner: ZERO timeslots were generated.\n\nThis usually means:\n• day_start_time >= day_end_time\n• period_duration_minutes too large for day duration\n• Breaks cover all available time\n\nPlease fix school timing configuration in Settings page.`,
         details: [{
@@ -274,7 +274,7 @@ Deno.serve(async (req) => {
           hint: 'Check Settings → School Configuration: ensure valid timing (e.g., 08:00-18:00, 60min periods, breaks <10h total)'
         }],
         suggestion: '🔧 Go to Settings → School Configuration → Verify:\n• day_start_time < day_end_time\n• period_duration_minutes reasonable (45-60 min)\n• Breaks don\'t cover entire day',
-        requiredAction: 'Fix school timing to generate timeslots',
+        requiredAction: 'Fix school timing configuration to generate valid timeslots',
         buildVersion: BUILD_VERSION,
         schoolConfig: {
           day_start_time: dayStartTime,
