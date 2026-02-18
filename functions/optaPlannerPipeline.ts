@@ -79,7 +79,124 @@ Deno.serve(async (req) => {
     }
     
     // ========================================
-    // STAGE 2: Build Problem
+    // STAGE 2: Fetch School Data & Pre-Validate
+    // ========================================
+    stage = 'loadData';
+    
+    const teachingGroups = await base44.entities.TeachingGroup.filter({ school_id: schoolId });
+    const subjects = await base44.entities.Subject.filter({ school_id: schoolId });
+    
+    console.log(`[OptaPlannerPipeline] Loaded: ${teachingGroups.length} teaching groups, ${subjects.length} subjects`);
+    
+    // ========================================
+    // STAGE 3: DTO Mapping & Pre-Validation
+    // ========================================
+    stage = 'validateAndNormalize';
+    
+    const validationErrors = [];
+    const details = [];
+    const subjectIndex = {};
+    subjects.forEach(s => { subjectIndex[s.id] = s; });
+    
+    const normalizedGroups = [];
+    
+    for (const tg of teachingGroups) {
+      if (!tg.is_active) continue;
+      
+      const subject = subjectIndex[tg.subject_id];
+      if (!subject) {
+        details.push({
+          entity: 'TeachingGroup',
+          field: 'subject_id',
+          reason: `TeachingGroup "${tg.name}" references unknown subject ID: ${tg.subject_id}`,
+          hint: 'Remove or fix this teaching group'
+        });
+        continue;
+      }
+      
+      // Normalize minutes (float → int)
+      let minutesPerWeek = null;
+      if (typeof tg.minutes_per_week === 'number' && tg.minutes_per_week > 0) {
+        minutesPerWeek = Math.round(tg.minutes_per_week);
+      } else if (typeof tg.hours_per_week === 'number' && tg.hours_per_week > 0) {
+        minutesPerWeek = Math.round(tg.hours_per_week * 60);
+      } else {
+        // Fallback to subject defaults
+        const level = String(tg.level || '').toUpperCase();
+        if (subject.ib_level === 'DP') {
+          if (level === 'HL') {
+            if (!subject.hoursPerWeekHL || subject.hoursPerWeekHL <= 0) {
+              details.push({
+                entity: 'Subject',
+                field: 'hoursPerWeekHL',
+                reason: `Subject "${subject.name}" missing hoursPerWeekHL (required for HL teaching groups)`,
+                hint: 'Configure on Subjects page'
+              });
+              continue;
+            }
+            minutesPerWeek = Math.round(subject.hoursPerWeekHL * 60);
+          } else if (level === 'SL') {
+            if (!subject.hoursPerWeekSL || subject.hoursPerWeekSL <= 0) {
+              details.push({
+                entity: 'Subject',
+                field: 'hoursPerWeekSL',
+                reason: `Subject "${subject.name}" missing hoursPerWeekSL (required for SL teaching groups)`,
+                hint: 'Configure on Subjects page'
+              });
+              continue;
+            }
+            minutesPerWeek = Math.round(subject.hoursPerWeekSL * 60);
+          }
+        } else {
+          minutesPerWeek = subject.pyp_myp_minutes_per_week_default || 180;
+        }
+      }
+      
+      // Validate required_minutes_per_week > 0
+      if (!minutesPerWeek || minutesPerWeek <= 0) {
+        details.push({
+          entity: 'TeachingGroup',
+          field: 'required_minutes_per_week',
+          reason: `TeachingGroup "${tg.name}" has invalid minutes_per_week: ${minutesPerWeek}`,
+          hint: 'Configure minutes_per_week or hours_per_week on teaching group, or HL/SL hours on subject'
+        });
+        continue;
+      }
+      
+      // DTO Whitelist Mapping
+      const normalized = {
+        id: String(tg.id),
+        student_group: String(tg.name || tg.id), // Non-empty stable identifier
+        subject_id: String(tg.subject_id),
+        level: tg.level || null,
+        required_minutes_per_week: minutesPerWeek,
+        section_id: tg.section_id || null
+      };
+      
+      normalizedGroups.push(normalized);
+    }
+    
+    // Block if validation errors
+    if (details.length > 0) {
+      console.error(`[OptaPlannerPipeline] ❌ Pre-validation failed: ${details.length} issues`);
+      console.error('[OptaPlannerPipeline] Details:', JSON.stringify(details, null, 2));
+      
+      return Response.json({
+        ok: false,
+        stage: 'validateAndNormalize',
+        errorCode: 'PRE_VALIDATION_FAILED',
+        message: `${details.length} validation issues detected (HL/SL hours, invalid minutes, etc.)`,
+        requestId: null,
+        validationErrors: details.map(d => `${d.entity}.${d.field}: ${d.reason}`),
+        details,
+        meta: { schoolId, schedule_version_id, teachingGroupsTotal: teachingGroups.length, validCount: normalizedGroups.length }
+      }, { status: 200 });
+    }
+    
+    console.log(`[OptaPlannerPipeline] ✅ Normalized ${normalizedGroups.length} teaching groups`);
+    
+    // ========================================
+    // STAGE 4: Build Problem
     // ========================================
     stage = 'buildProblem';
     console.log(`[OptaPlannerPipeline] ${stage}: calling buildSchedulingProblem`);
@@ -88,14 +205,21 @@ Deno.serve(async (req) => {
     try {
       buildResponse = await base44.functions.invoke('buildSchedulingProblem', {
         schedule_version_id,
-        school_id: schoolId
+        school_id: schoolId,
+        teaching_groups_override: normalizedGroups // Pass normalized groups
       });
     } catch (buildError) {
-      // CRITICAL: Extract full error from response.data (Axios throws on 4xx/5xx)
       console.error(`[OptaPlannerPipeline] ❌ buildSchedulingProblem failed (HTTP ${buildError?.response?.status})`);
-      console.error('[OptaPlannerPipeline] Full error data:', JSON.stringify(buildError?.response?.data, null, 2));
       
       const errorData = buildError?.response?.data || {};
+      console.error('[OptaPlannerPipeline] requestId:', errorData?.requestId || 'N/A');
+      console.error('[OptaPlannerPipeline] validationErrors:', errorData?.validationErrors || []);
+      console.error('[OptaPlannerPipeline] details:', errorData?.details || []);
+      
+      // Propagate error response directly (don't wrap)
+      if (errorData.ok === false || errorData.requestId) {
+        return Response.json(errorData, { status: 200 });
+      }
       
       return Response.json({
         ok: false,
@@ -114,7 +238,9 @@ Deno.serve(async (req) => {
     // Check build success
     if (!buildData?.success || buildData?.ok === false) {
       console.error('[OptaPlannerPipeline] ❌ buildProblem returned failure');
-      console.error('[OptaPlannerPipeline] Build data:', JSON.stringify(buildData, null, 2));
+      console.error('[OptaPlannerPipeline] requestId:', buildData?.requestId || 'N/A');
+      console.error('[OptaPlannerPipeline] validationErrors:', buildData?.validationErrors || []);
+      console.error('[OptaPlannerPipeline] details:', buildData?.details || []);
       
       return Response.json({
         ok: false,
@@ -157,9 +283,9 @@ Deno.serve(async (req) => {
     }
     
     // ========================================
-    // STAGE 3: Call Solver (Codex)
+    // STAGE 5: Call Solver (Codex)
     // ========================================
-    stage = 'callSolver';
+    stage = 'solve';
     const SOLVER_ENDPOINT = Deno.env.get('OR_TOOL_ENDPOINT') || Deno.env.get('SOLVER_ENDPOINT');
     const SOLVER_API_KEY = Deno.env.get('OR_TOOL_API_KEY') || Deno.env.get('SOLVER_API_KEY');
     
@@ -210,14 +336,17 @@ Deno.serve(async (req) => {
       });
     } catch (fetchError) {
       console.error('[OptaPlannerPipeline] ❌ Solver network error:', fetchError);
+      console.error('[OptaPlannerPipeline] requestId: N/A (network error)');
+      console.error('[OptaPlannerPipeline] validationErrors:', [String(fetchError?.message || fetchError)]);
+      
       return Response.json({
         ok: false,
-        stage: 'callSolver',
+        stage: 'solve',
         errorCode: 'SOLVER_NETWORK_ERROR',
         message: 'Network error calling solver',
         requestId: null,
         validationErrors: [String(fetchError?.message || fetchError)],
-        details: [],
+        details: [{ entity: 'solver', field: 'network', reason: String(fetchError?.message || fetchError), hint: 'Check solver endpoint availability' }],
         meta: { schoolId, schedule_version_id }
       }, { status: 200 });
     }
@@ -233,6 +362,16 @@ Deno.serve(async (req) => {
         parsedError = JSON.parse(solverText);
       } catch {
         parsedError = { rawText: solverText };
+      }
+      
+      // CRITICAL: Propagate solver error directly (don't wrap)
+      console.error('[OptaPlannerPipeline] requestId:', parsedError?.requestId || 'N/A');
+      console.error('[OptaPlannerPipeline] validationErrors:', parsedError?.validationErrors || []);
+      console.error('[OptaPlannerPipeline] details:', parsedError?.details || []);
+      
+      // If Codex returned structured error, propagate it directly
+      if (parsedError.ok === false || parsedError.requestId) {
+        return Response.json(parsedError, { status: 200 });
       }
       
       return Response.json({
@@ -268,10 +407,15 @@ Deno.serve(async (req) => {
       }, { status: 200 });
     }
     
-    console.log('[OptaPlannerPipeline] ✅ Solver completed, score:', solution.score);
+    console.log('[OptaPlannerPipeline] ✅ Solver completed');
+    console.log('[OptaPlannerPipeline] Result:', {
+      score: solution.score,
+      lessonsReturned: solution.lessons?.length || 0,
+      requestId: solution.requestId || 'N/A'
+    });
     
     // ========================================
-    // STAGE 4: Persist to Database
+    // STAGE 6: Persist to Database
     // ========================================
     stage = 'persist';
     console.log(`[OptaPlannerPipeline] ${stage}: saving ${solution.lessons?.length || 0} lessons to DB`);
@@ -324,8 +468,15 @@ Deno.serve(async (req) => {
     }
     
     // ========================================
-    // STAGE 5: Return Success
+    // STAGE 7: Return Success
     // ========================================
+    console.log('[OptaPlannerPipeline] ✅ SUCCESS - Pipeline complete');
+    console.log('[OptaPlannerPipeline] Final counts:', {
+      deletedCount,
+      insertedCount,
+      requestId: solution.requestId || 'N/A'
+    });
+    
     return Response.json({
       ok: true,
       stage: 'complete',
@@ -341,14 +492,18 @@ Deno.serve(async (req) => {
       meta: { 
         schoolId, 
         schedule_version_id,
-        buildVersion: buildData.buildVersion,
-        pipelineVersion: PIPELINE_VERSION
+        buildVersion: buildData?.buildVersion || 'unknown',
+        pipelineVersion: PIPELINE_VERSION,
+        requestId: solution.requestId || null
       }
     });
     
   } catch (error) {
     console.error(`[OptaPlannerPipeline] ❌ FATAL ERROR at stage=${stage}:`, error);
     console.error('[OptaPlannerPipeline] Stack:', error?.stack);
+    console.error('[OptaPlannerPipeline] requestId: N/A (pipeline crash)');
+    console.error('[OptaPlannerPipeline] validationErrors: []');
+    console.error('[OptaPlannerPipeline] details:', [{ entity: 'pipeline', field: 'execution', reason: String(error?.message || error) }]);
     
     return Response.json({
       ok: false,
