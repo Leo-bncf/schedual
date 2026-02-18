@@ -1888,30 +1888,36 @@ Now process the user's input and return ONLY the JSON object.`,
           const res = await base44.functions.invoke('optaPlannerPipeline', {
             schedule_version_id: selectedVersion.id
           });
-          const r = res.data || {};
           
-          // CRITICAL: Log full response for 500 debugging
-          console.log('[Schedule] 📦 FULL OptaPlanner Response:', r);
-          console.log('[Schedule] Response keys:', Object.keys(r));
+          // CRITICAL: Store full response (res.data), NOT res.data.result
+          // This ensures optaPlannerResult.ok, optaPlannerResult.stage are accessible
+          const fullResponse = res.data || {};
+          
+          // CRITICAL: Log full response for debugging
+          console.log('[Schedule] 📦 FULL OptaPlanner Response:', fullResponse);
+          console.log('[Schedule] Response keys:', Object.keys(fullResponse));
+          console.log('[Schedule] Response.ok:', fullResponse.ok);
+          console.log('[Schedule] Response.stage:', fullResponse.stage);
+          console.log('[Schedule] Response.result:', fullResponse.result);
           console.log('[Schedule] HTTP Status from axios:', res.status);
-          console.log('[Schedule] Response headers:', res.headers);
-          setOptaPlannerResult(r);
+          
+          setOptaPlannerResult(fullResponse);
 
           // Log solver identity to console
-          if (r?.solverIdentity) {
-            console.log(`🔧 SOLVER: ${r.solverIdentity.engine} (${r.solverIdentity.implementation}) v${r.solverIdentity.version}`);
+          if (fullResponse?.solverIdentity) {
+            console.log(`🔧 SOLVER: ${fullResponse.solverIdentity.engine} (${fullResponse.solverIdentity.implementation}) v${fullResponse.solverIdentity.version}`);
           }
 
           // Check if function returned error
-          if (r.ok === false) {
-            console.error(`❌ Codex returned error:`, r);
-            console.error('[Schedule] requestId:', r.requestId || 'N/A');
-            console.error('[Schedule] validationErrors:', r.validationErrors || []);
-            console.error('[Schedule] details:', r.details || []);
+          if (fullResponse.ok === false) {
+            console.error(`❌ Codex returned error:`, fullResponse);
+            console.error('[Schedule] requestId:', fullResponse.requestId || 'N/A');
+            console.error('[Schedule] validationErrors:', fullResponse.validationErrors || []);
+            console.error('[Schedule] details:', fullResponse.details || []);
             
             // Special handling for cohort integrity violation
-            if (r.stage === 'COHORT_INTEGRITY_VIOLATION') {
-              const splitSections = r.splitSections || [];
+            if (fullResponse.stage === 'COHORT_INTEGRITY_VIOLATION') {
+              const splitSections = fullResponse.splitSections || [];
               const count = splitSections.length;
               const firstSection = splitSections[0] || {};
               
@@ -1919,64 +1925,79 @@ Now process the user's input and return ONLY the JSON object.`,
                 `Example: ${firstSection.subject || 'Unknown'} - ${firstSection.studentGroup}\n` +
                 `Timeslots: ${JSON.stringify(firstSection.timeslots_list)}\n` +
                 `Reason: ${firstSection.reason}\n\n` +
-                `${r.suggestion || 'This is a solver constraint violation - same class cannot be scheduled multiple times at the same time.'}`;
+                `${fullResponse.suggestion || 'This is a solver constraint violation - same class cannot be scheduled multiple times at the same time.'}`;
               
               setOptaPlannerError(errorMsg);
               toast.error(`Solver integrity violation: ${count} sections with duplicate timeslots. Check diagnostics.`, { duration: 10000 });
             }
             // Special handling for missing HL/SL hours validation
-            else if (r.stage === 'VALIDATION_FAILED_MISSING_HL_SL_HOURS' || r.error === 'MISSING_HL_SL_HOURS_CONFIG') {
-              const missingSubjects = r.missingSubjects || r.missingGroups || [];
+            else if (fullResponse.stage === 'VALIDATION_FAILED_MISSING_HL_SL_HOURS' || fullResponse.error === 'MISSING_HL_SL_HOURS_CONFIG') {
+              const missingSubjects = fullResponse.missingSubjects || fullResponse.missingGroups || [];
               const count = missingSubjects.length;
               const subjectNames = missingSubjects.slice(0, 5).map(s => `${s?.name || s?.code || 'Unknown'} (missing: ${s?.missing || '?'})`).join(', ');
               const moreText = count > 5 ? ` +${count - 5} more` : '';
               toast.error(`❌ Cannot run OptaPlanner: ${count} DP subjects missing HL/SL hours. Configure on Subjects page.`, { duration: 12000 });
-              setOptaPlannerError(`VALIDATION FAILED: Missing HL/SL Hours Configuration\n\n${count} DP subjects need hoursPerWeekHL and hoursPerWeekSL configured:\n\n${subjectNames}${moreText}\n\n${r.suggestion || 'Go to Subjects page and set HL/SL hours for each DP subject'}\n\n${r.requiredAction || ''}\n\nDetailed list:\n${JSON.stringify(missingSubjects, null, 2)}`);
+              setOptaPlannerError(`VALIDATION FAILED: Missing HL/SL Hours Configuration\n\n${count} DP subjects need hoursPerWeekHL and hoursPerWeekSL configured:\n\n${subjectNames}${moreText}\n\n${fullResponse.suggestion || 'Go to Subjects page and set HL/SL hours for each DP subject'}\n\n${fullResponse.requiredAction || ''}\n\nDetailed list:\n${JSON.stringify(missingSubjects, null, 2)}`);
             }
             // Special handling for missing config validation (legacy)
-            else if (r.error === 'MISSING_MINUTES_CONFIGURATION' || r.stage === 'VALIDATION_FAILED_MISSING_CONFIG') {
-              const missingGroups = r.missingGroups || r.filteredDPGroups || [];
-              const count = r.missingConfigurationCount || missingGroups.length;
+            else if (fullResponse.error === 'MISSING_MINUTES_CONFIGURATION' || fullResponse.stage === 'VALIDATION_FAILED_MISSING_CONFIG') {
+              const missingGroups = fullResponse.missingGroups || fullResponse.filteredDPGroups || [];
+              const count = fullResponse.missingConfigurationCount || missingGroups.length;
               const groupNames = missingGroups.slice(0, 5).map(g => `${g?.name || 'Unknown'} (${g?.subject || '?'})`).join(', ');
               const moreText = count > 5 ? ` +${count - 5} more` : '';
               toast.error(`❌ Cannot generate schedule: ${count} TeachingGroups missing minutes/periods configuration. See diagnostics.`, { duration: 10000 });
-              setOptaPlannerError(`VALIDATION FAILED: ${count} TeachingGroups Missing Configuration\n\n${groupNames}${moreText}\n\n${r.suggestion || 'Configure minutes_per_week, periods_per_week, or hours_per_week for each TeachingGroup'}\n\nDetailed list:\n${JSON.stringify(missingGroups, null, 2)}`);
+              setOptaPlannerError(`VALIDATION FAILED: ${count} TeachingGroups Missing Configuration\n\n${groupNames}${moreText}\n\n${fullResponse.suggestion || 'Configure minutes_per_week, periods_per_week, or hours_per_week for each TeachingGroup'}\n\nDetailed list:\n${JSON.stringify(missingGroups, null, 2)}`);
             }
             // Special handling for timeslots validation
-            else if (r.stage === 'VALIDATION_TIMESLOTS_EMPTY') {
+            else if (fullResponse.stage === 'VALIDATION_TIMESLOTS_EMPTY') {
               toast.error('❌ Cannot run OptaPlanner: No timeslots generated. Fix school settings (day_start_time/day_end_time/period_duration).', { duration: 10000 });
-              setOptaPlannerError(`${r.errorMessage}\n\n${r.suggestion || ''}`);
+              setOptaPlannerError(`${fullResponse.errorMessage}\n\n${fullResponse.suggestion || ''}`);
+            }
+            // CRITICAL: Special handling for SOLUTION_INFEASIBLE (hardScore < 0)
+            else if (fullResponse.stage === 'SOLUTION_INFEASIBLE') {
+              toast.error(`❌ OptaPlanner: Hard constraints violated (hardScore=${fullResponse.meta?.hardScore || 'N/A'}). Existing schedule preserved.`, { duration: 12000 });
+              setOptaPlannerError(`${fullResponse.errorMessage}\n\n${fullResponse.suggestion || ''}`);
+            }
+            // CRITICAL: Special handling for PERSISTENCE_BLOCKED (0 slots inserted)
+            else if (fullResponse.stage === 'PERSISTENCE_BLOCKED') {
+              toast.error(`❌ OptaPlanner: Zero slots generated. Existing schedule preserved.`, { duration: 12000 });
+              setOptaPlannerError(`${fullResponse.errorMessage}\n\n${fullResponse.suggestion || ''}`);
             }
             // Generic solver error
             else {
-              toast.error(`${solverName} failed at stage "${r.stage}": ${r.errorMessage || r.error || 'Unknown error'}`);
-              setOptaPlannerError(`Stage: ${r.stage}\nError: ${r.errorMessage || r.error}\n\nStack:\n${r.errorStack || 'N/A'}`);
+              const solverName = fullResponse.solverIdentity?.engine || 'Solver';
+              toast.error(`${solverName} failed at stage "${fullResponse.stage}": ${fullResponse.errorMessage || fullResponse.error || 'Unknown error'}`);
+              setOptaPlannerError(`Stage: ${fullResponse.stage}\nError: ${fullResponse.errorMessage || fullResponse.error}\n\nStack:\n${fullResponse.errorStack || 'N/A'}`);
             }
           } else {
-            // Success path
-            const inserted = r.slotsInserted ?? r.insertedCount ?? 0;
-            const deleted = r.slotsDeleted ?? r.deletedCount ?? 0;
+            // Success path - read from response.result object
+            const result = fullResponse.result || {};
+            const inserted = result.slotsInserted ?? 0;
+            const deleted = result.slotsDeleted ?? 0;
             
             console.log(`[Schedule] ✅ OptaPlanner completed: deleted ${deleted} old slots, inserted ${inserted} new slots`);
+            console.log(`[Schedule] Full result object:`, result);
             
-            if (!(r.performedDeletion === true && r.performedInsertion === true && inserted > 0)) {
-              toast.warning('OptaPlanner finished but did not report expected persistence flags.');
-            }
-            if (!r.coreSlotsInsertedCount) {
-              console.warn('coreSlotsInsertedCount missing in OptaPlanner response');
+            // CRITICAL VALIDATION: Block success toast if slotsInserted === 0
+            if (inserted === 0) {
+              console.error('[Schedule] ❌ BLOCKING: slotsInserted=0 despite ok=true (backend validation bug?)');
+              toast.error('❌ OptaPlanner returned 0 slots. Schedule may be empty. Check diagnostics.', { duration: 12000 });
+              setOptaPlannerError(`OptaPlanner reported success but inserted 0 slots.\n\nDeleted: ${deleted}\nInserted: ${inserted}\n\nThis may indicate a solver validation bug or infeasible schedule.`);
+            } else {
+              // Success: slots were inserted
+              toast.success(`✅ Codex: ${deleted} deleted, ${inserted} optimized slots created`);
             }
 
             // CRITICAL: Persist solver timeslots as single source of truth (never overwritten by config reconstruction)
-            if (r.timeslots && Array.isArray(r.timeslots) && r.timeslots.length > 0) {
-              console.log('[Schedule] 💾 PERSISTING solver timeslots to prevent config overwrite:', r.timeslots.length, 'slots');
-              setSolverTimeslots(r.timeslots);
+            if (fullResponse.timeslots && Array.isArray(fullResponse.timeslots) && fullResponse.timeslots.length > 0) {
+              console.log('[Schedule] 💾 PERSISTING solver timeslots to prevent config overwrite:', fullResponse.timeslots.length, 'slots');
+              setSolverTimeslots(fullResponse.timeslots);
             }
 
             await queryClient.invalidateQueries({ queryKey: ['scheduleSlots'] });
             await queryClient.invalidateQueries({ queryKey: ['scheduleVersions'] });
             await queryClient.invalidateQueries({ queryKey: ['students'] });
             setScheduleTab('student');
-            toast.success(`✅ Codex: ${deleted} deleted, ${inserted} optimized slots created`);
           }
         } catch (e) {
           console.error('❌❌❌ Auto OptaPlanner step CRASHED:', e);
@@ -3449,7 +3470,9 @@ Now process the user's input and return ONLY the JSON object.`,
                       </div>
 
                       {/* Force refresh hint: show current slot counts */}
-                      <div className="text-xs text-slate-500 mt-4">Persisted slots: {scheduleSlots.length} • Inserted this run: {optaPlannerResult?.slotsInserted ?? optaPlannerResult?.insertedCount ?? 0}</div>
+                      <div className="text-xs text-slate-500 mt-4">
+                        Persisted slots: {scheduleSlots.length} • Inserted this run: {optaPlannerResult?.result?.slotsInserted ?? 0} • Deleted: {optaPlannerResult?.result?.slotsDeleted ?? 0}
+                      </div>
                       <div className="p-4 space-y-3">
                         <div className="flex items-center justify-between">
                           <div className="text-sm text-slate-700">
@@ -3589,13 +3612,13 @@ Now process the user's input and return ONLY the JSON object.`,
                           </div>
                           <div className="p-3 rounded-lg bg-slate-100">
                             <div className="font-semibold text-slate-900 mb-1">Persistence</div>
-                            <div>schedule_version_id: <strong>{optaPlannerResult?.schedule_version_id || '—'}</strong></div>
-                            <div>scheduleVersionIdInput: <strong>{optaPlannerResult?.scheduleVersionIdInput ?? '—'}</strong></div>
-                            <div>scheduleVersionIdUsed: <strong>{optaPlannerResult?.scheduleVersionIdUsed ?? '—'}</strong></div>
-                            <div>performedDeletion: <strong>{String(optaPlannerResult?.performedDeletion ?? false)}</strong></div>
-                            <div>performedInsertion: <strong>{String(optaPlannerResult?.performedInsertion ?? false)}</strong></div>
-                            <div>slotsDeleted: <strong>{optaPlannerResult?.slotsDeleted ?? optaPlannerResult?.deletedCount ?? 0}</strong></div>
-                            <div>slotsInserted: <strong>{optaPlannerResult?.slotsInserted ?? optaPlannerResult?.insertedCount ?? 0}</strong></div>
+                            <div>schedule_version_id: <strong>{optaPlannerResult?.meta?.schedule_version_id || '—'}</strong></div>
+                            <div>slotsDeleted: <strong className={optaPlannerResult?.result?.slotsDeleted > 0 ? 'text-amber-700' : ''}>{optaPlannerResult?.result?.slotsDeleted ?? 0}</strong></div>
+                            <div>slotsInserted: <strong className={optaPlannerResult?.result?.slotsInserted === 0 ? 'text-rose-700' : 'text-green-700'}>{optaPlannerResult?.result?.slotsInserted ?? 0}</strong></div>
+                            <div>lessonsCreated: <strong>{optaPlannerResult?.result?.lessonsCreated ?? '—'}</strong></div>
+                            <div>lessonsAssigned: <strong>{optaPlannerResult?.result?.lessonsAssigned ?? '—'}</strong></div>
+                            <div>lessonsUnassigned: <strong>{optaPlannerResult?.result?.lessonsUnassigned ?? '—'}</strong></div>
+                            <div>score: <strong>{optaPlannerResult?.result?.score ?? '—'}</strong></div>
                           </div>
                           <div className="p-3 rounded-lg bg-slate-100">
                             <div className="font-semibold text-slate-900 mb-1">Timeslots</div>
