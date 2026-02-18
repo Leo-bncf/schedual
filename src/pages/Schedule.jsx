@@ -923,21 +923,21 @@ Now process the user's input and return ONLY the JSON object.`,
       const updatedGroups = await base44.entities.TeachingGroup.filter({ school_id: schoolId });
       console.log('Updated groups with teachers:', updatedGroups.filter(g => g.teacher_id).length);
 
-      // CRITICAL: If OptaPlanner auto-run is enabled for DP, skip ALL local scheduling
-      // OptaPlanner becomes single source of truth (purge → optimize → persist)
+      // CRITICAL: If Codex auto-run enabled, skip ALL local scheduling
+      // Codex becomes single source of truth (purge → optimize → persist)
       if (autoRunOptaPlanner && allowedProgrammes.includes('DP')) {
-        console.log('[Schedule] 🚀 OptaPlanner auto-run enabled - SKIPPING all local scheduling (DP/MYP/PYP)');
-        console.log('[Schedule] OptaPlanner will purge existing slots + generate complete optimized schedule');
+        console.log('[Schedule] 🚀 Codex auto-run enabled - SKIPPING all local scheduling');
+        console.log('[Schedule] Codex will purge + generate complete optimized schedule');
         
         setGenerationProgress(prev => ({
           ...prev,
-          stage: 'Preparing OptaPlanner',
+          stage: 'Preparing Codex Solver',
           percent: 30,
-          message: 'Skipping local scheduler - OptaPlanner will handle everything...',
+          message: 'Skipping local scheduler - Codex will handle everything...',
           completedSteps: ['teachers', 'preparation']
         }));
         
-        // Skip directly to OptaPlanner pipeline below (no local slot generation at all)
+        // Skip directly to Codex pipeline below (no local slot generation)
       } else {
         // Local scheduling for MYP/PYP or when OptaPlanner disabled
         console.log('[Schedule] 🔧 Using local scheduling algorithm (OptaPlanner disabled or no DP)');
@@ -1685,9 +1685,9 @@ Now process the user's input and return ONLY the JSON object.`,
         console.log(`Total local slots created: ${newSlots.length}`);
       } // End of local scheduling block
 
-      // OptaPlanner pipeline: Generate optimized DP schedule (SINGLE SOURCE OF TRUTH)
+      // Codex Pipeline: Generate optimized schedule (SINGLE SOURCE OF TRUTH)
       if (autoRunOptaPlanner && selectedVersion && allowedProgrammes.includes('DP')) {
-        console.log('[Schedule] 🔄 OptaPlanner Pipeline Starting');
+        console.log('[Schedule] 🔄 Codex Pipeline Starting');
         console.log('[Schedule] Step 1: Running pre-solve audit...');
         
         try {
@@ -1742,29 +1742,13 @@ Now process the user's input and return ONLY the JSON object.`,
           // CRITICAL: Check ok field FIRST - if not true, STOP immediately
           if (auditData.ok !== true) {
             console.error('[Schedule] ❌ AUDIT FAILED - ok !== true - BLOCKING generation');
-            console.error('[Schedule] 📦 Full audit response:', JSON.stringify(auditData, null, 2));
-            console.error('[Schedule] 📊 Response structure:', {
-              hasOk: 'ok' in auditData,
-              okValue: auditData.ok,
-              hasStage: 'stage' in auditData,
-              stageValue: auditData.stage,
-              hasError: 'error' in auditData,
-              errorValue: auditData.error,
-              hasErrorMessage: 'errorMessage' in auditData,
-              errorMessageValue: auditData.errorMessage,
-              hasRequestId: 'requestId' in auditData,
-              requestIdValue: auditData.requestId || 'NOT_PROVIDED',
-              hasValidationErrors: 'validationErrors' in auditData,
-              validationErrorsCount: Array.isArray(auditData.validationErrors) ? auditData.validationErrors.length : null,
-              hasDetails: 'details' in auditData,
-              detailsLength: Array.isArray(auditData.details) ? auditData.details.length : null,
-              hasMissingSubjects: 'missingSubjects' in auditData,
-              missingSubjectsCount: Array.isArray(auditData.missingSubjects) ? auditData.missingSubjects.length : null,
-              hasMissingGroups: 'missingGroups' in auditData,
-              missingGroupsCount: Array.isArray(auditData.missingGroups) ? auditData.missingGroups.length : null,
-              buildVersion: auditData.buildVersion || 'NOT_PROVIDED',
-              wrapperVersion: auditData.wrapperBuildVersion || 'NOT_PROVIDED',
-              allKeys: Object.keys(auditData)
+            console.error('[Schedule] 📊 Error details:', {
+              stage: auditData.stage,
+              errorCode: auditData.errorCode || auditData.code,
+              message: auditData.message || auditData.errorMessage || auditData.error,
+              requestId: auditData.requestId || 'N/A',
+              validationErrorsCount: Array.isArray(auditData.validationErrors) ? auditData.validationErrors.length : 0,
+              detailsCount: Array.isArray(auditData.details) ? auditData.details.length : 0
             });
             
             // CRITICAL: Log Codex 422 structured error if present
@@ -1808,22 +1792,17 @@ Now process the user's input and return ONLY the JSON object.`,
             setAuditResult({
               ok: false,
               stage: errorStage,
-              error: errorCode,
-              errorMessage: errorMessage,
-              suggestion: auditData.suggestion || null,
+              errorCode: auditData.errorCode || errorCode,
+              message: auditData.message || errorMessage,
+              requestId: auditData.requestId || null,
+              validationErrors: auditData.validationErrors || [],
+              details: auditData.details || errorDetails || [],
               meta: auditData.meta || null,
-              rawResponse: auditData,
-              // Legacy fields (preserved for backward compatibility)
-              studentAuditIssueCounts: auditData.studentAuditIssueCounts || {},
-              sampleAuditIssues: auditData.sampleAuditIssues || [],
-              // Enhanced error details
-              details: errorDetails,
+              // Legacy fields (for backward compatibility)
+              suggestion: auditData.suggestion || null,
               missingSubjects: auditData.missingSubjects || [],
               missingGroups: auditData.missingGroups || [],
-              splitSections: auditData.splitSections || [],
-              solverIdentity: auditData.solverIdentity || null,
-              buildVersion: auditData.buildVersion || null,
-              wrapperBuildVersion: auditData.wrapperBuildVersion || null
+              splitSections: auditData.splitSections || []
             });
             
             setShowAuditReport(true);
@@ -1832,32 +1811,30 @@ Now process the user's input and return ONLY the JSON object.`,
             
             // Enhanced toast message
             const toastMsg = errorStage === 'buildProblem' 
-              ? `❌ OptaPlanner Audit Failed: ${errorMessage} (check Subjects page for HL/SL hours)`
-              : `❌ ${errorStage}: ${errorMessage}`;
+              ? `❌ Codex Audit Failed: ${auditData.message || errorMessage}`
+              : `❌ ${errorStage}: ${auditData.message || errorMessage}`;
             
             toast.error(toastMsg, { duration: 10000 });
             return; // CRITICAL: STOP - do not proceed to solver
           }
           
           // SUCCESS: Log audit pass details
-          console.log('[Schedule] ✅ OptaPlanner Audit Passed:', {
+          console.log('[Schedule] ✅ Codex Audit Passed:', {
             stage: auditData.stage,
-            buildVersion: auditData.buildVersion || 'unknown',
-            wrapperVersion: auditData.wrapperBuildVersion || 'unknown',
-            validationReport: auditData.validationReport || null,
-            stats: auditData.stats || null,
-            message: 'Ready to proceed with OptaPlanner optimization'
+            meta: auditData.meta,
+            validationReport: auditData.result?.validationReport || null,
+            message: 'Ready to proceed with Codex optimization'
           });
           
           // STEP 3: Audit passed (ok === true) - proceed with solver
-          console.log('[Schedule] ✅ Pre-solve audit passed (ok=true) - proceeding to optimization');
-          console.log('[Schedule] OptaPlanner will: 1) Purge existing slots 2) Optimize schedule 3) Persist new slots');
+          console.log('[Schedule] ✅ Pre-solve audit passed (ok=true) - proceeding to Codex solver');
+          console.log('[Schedule] Codex will: 1) Purge existing slots 2) Optimize schedule 3) Persist new slots');
           
           setGenerationProgress(prev => ({
             ...prev,
-            stage: 'Running OptaPlanner Scheduler',
+            stage: 'Running Codex Solver',
             percent: 90,
-            message: 'OptaPlanner: Purging old slots + Optimizing DP Core/Tests + Persisting...'
+            message: 'Codex: Purging + Optimizing + Persisting...'
           }));
           
           const res = await base44.functions.invoke('optaPlannerPipeline', {
@@ -1879,8 +1856,10 @@ Now process the user's input and return ONLY the JSON object.`,
 
           // Check if function returned error
           if (r.ok === false) {
-            const solverName = r.solverIdentity?.engine || 'OptaPlanner';
-            console.error(`❌ ${solverName} returned error:`, r);
+            console.error(`❌ Codex returned error:`, r);
+            console.error('[Schedule] requestId:', r.requestId || 'N/A');
+            console.error('[Schedule] validationErrors:', r.validationErrors || []);
+            console.error('[Schedule] details:', r.details || []);
             
             // Special handling for cohort integrity violation
             if (r.stage === 'COHORT_INTEGRITY_VIOLATION') {
@@ -1949,8 +1928,7 @@ Now process the user's input and return ONLY the JSON object.`,
             await queryClient.invalidateQueries({ queryKey: ['scheduleVersions'] });
             await queryClient.invalidateQueries({ queryKey: ['students'] });
             setScheduleTab('student');
-            const solverName = r.solverIdentity?.engine || 'Solver';
-            toast.success(`✅ ${solverName}: ${deleted} deleted, ${inserted} optimized slots created`);
+            toast.success(`✅ Codex: ${deleted} deleted, ${inserted} optimized slots created`);
           }
         } catch (e) {
           console.error('❌❌❌ Auto OptaPlanner step CRASHED:', e);
@@ -1988,12 +1966,12 @@ Now process the user's input and return ONLY the JSON object.`,
             });
           }
 
-          // CRITICAL: Check if errorData is JSON with ok:false (solver business error, not crash)
-          // Status 422 = business/validation error, 500 = technical crash
-          if (errorData && typeof errorData === 'object' && errorData.ok === false) {
-            const solverName = errorData.solverIdentity?.engine || 'OptaPlanner';
-            const isBusinessError = statusCode === 422 || statusCode === 400;
-            console.log(`[Schedule] 📋 ${isBusinessError ? 'Business error (422)' : 'Solver error'}:`, errorData.stage);
+          // CRITICAL: Propagate Codex structured error
+          if (errorData && typeof errorData === 'object' && (errorData.ok === false || errorData.requestId)) {
+            console.log(`[Schedule] 📋 Codex error at stage:`, errorData.stage);
+            console.error('[Schedule] requestId:', errorData.requestId || 'N/A');
+            console.error('[Schedule] validationErrors:', errorData.validationErrors || []);
+            console.error('[Schedule] details:', errorData.details || []);
 
             // Special handling for COHORT_INTEGRITY_VIOLATION
             if (errorData.stage === 'COHORT_INTEGRITY_VIOLATION') {
@@ -2012,23 +1990,22 @@ Now process the user's input and return ONLY the JSON object.`,
               setOptaPlannerResult(errorData);
               toast.error(`Solver integrity violation: ${splitSections.length} sections with duplicate timeslots`, { duration: 10000 });
             }
-            // Other solver business errors
+            // Other Codex errors
             else {
-              const errorMsg = `Stage: ${errorData.stage}\nError: ${errorData.errorMessage || errorData.error}\n\n` +
-                (errorData.requestId ? `🔍 Codex requestId: ${errorData.requestId}\n\n` : '') +
+              const errorMsg = `Stage: ${errorData.stage}\nCode: ${errorData.errorCode || 'N/A'}\nMessage: ${errorData.message || errorData.errorMessage || errorData.error}\n\n` +
+                (errorData.requestId ? `🔍 Request ID: ${errorData.requestId}\n\n` : '') +
                 (errorData.validationErrors?.length ? `❌ Validation errors:\n${errorData.validationErrors.join('\n')}\n\n` : '') +
-                (errorData.details?.length ? `📋 Details:\n${errorData.details.map(d => `• ${d.entity}.${d.field}: ${d.reason}\n  💡 ${d.hint}`).join('\n')}\n\n` : '') +
-                `Stack:\n${errorData.errorStack || 'N/A'}`;
+                (errorData.details?.length ? `📋 Details:\n${errorData.details.map(d => `• ${d.entity}.${d.field}: ${d.reason}\n  💡 ${d.hint || 'N/A'}`).join('\n')}\n\n` : '');
               setOptaPlannerError(errorMsg);
               setOptaPlannerResult(errorData);
-              toast.error(`${solverName} error at "${errorData.stage}": ${errorData.errorMessage || errorData.error}`, { duration: 10000 });
+              toast.error(`Codex error at "${errorData.stage}": ${errorData.message || errorData.errorMessage || errorData.error}`, { duration: 10000 });
             }
           } 
           // HTTP 500 with no JSON body (actual crash)
           else if (statusCode === 500) {
             const errorMsg = `Backend function crashed (HTTP 500)\n\n${typeof errorData === 'string' ? errorData : JSON.stringify(errorData, null, 2)}\n\nCheck function logs for details.`;
             setOptaPlannerError(errorMsg);
-            toast.error('❌ callORToolScheduler function crashed (500). Check function logs.', { duration: 10000 });
+            toast.error('❌ Pipeline crashed (500). Check function logs.', { duration: 10000 });
           } 
           // Other errors
           else {
