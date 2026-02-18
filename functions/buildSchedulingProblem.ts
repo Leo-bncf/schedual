@@ -138,6 +138,55 @@ Deno.serve(async (req) => {
     const daysOfWeek = Array.isArray(school.days_of_week) && school.days_of_week.length > 0
       ? school.days_of_week
       : ['MONDAY','TUESDAY','WEDNESDAY','THURSDAY','FRIDAY'];
+    
+    // CRITICAL: Validate school timing configuration BEFORE generating timeslots
+    recordLog(`School timing config: start=${dayStartTime}, end=${dayEndTime}, period=${periodDurationMinutes}min`);
+    
+    const startMin = timeToMin(dayStartTime);
+    const endMin = timeToMin(dayEndTime);
+    const totalMinutesAvailable = endMin - startMin;
+    
+    if (startMin >= endMin) {
+      recordLog(`❌ CRITICAL: day_start_time (${dayStartTime}) >= day_end_time (${dayEndTime})`);
+      return Response.json({
+        ok: false,
+        stage: 'INVALID_SCHOOL_TIMING',
+        code: 'INVALID_DAY_TIMES',
+        error: 'School timing configuration invalid',
+        errorMessage: `❌ Cannot generate schedule: day_start_time (${dayStartTime}) must be before day_end_time (${dayEndTime}).\n\nPlease fix school timing configuration in Settings page.`,
+        details: [{
+          entity: 'School',
+          field: 'day_start_time / day_end_time',
+          reason: 'invalid',
+          hint: `Set day_start_time < day_end_time (e.g., start=08:00, end=18:00)`
+        }],
+        suggestion: '🔧 Go to Settings → School Configuration → Set valid day_start_time and day_end_time',
+        requiredAction: 'Fix school timing configuration',
+        buildVersion: BUILD_VERSION,
+        meta: { schedule_version_id, school_id, dayStartTime, dayEndTime }
+      }, { status: 422, headers: { 'Content-Type': 'application/json' } });
+    }
+    
+    if (periodDurationMinutes <= 0 || periodDurationMinutes > totalMinutesAvailable) {
+      recordLog(`❌ CRITICAL: period_duration_minutes (${periodDurationMinutes}) invalid (must be 1-${totalMinutesAvailable})`);
+      return Response.json({
+        ok: false,
+        stage: 'INVALID_SCHOOL_TIMING',
+        code: 'INVALID_PERIOD_DURATION',
+        error: 'Period duration invalid',
+        errorMessage: `❌ Cannot generate schedule: period_duration_minutes (${periodDurationMinutes}min) must be between 1 and ${totalMinutesAvailable}min (total day duration).\n\nPlease fix school configuration in Settings page.`,
+        details: [{
+          entity: 'School',
+          field: 'period_duration_minutes',
+          reason: 'out_of_range',
+          hint: `Set period_duration_minutes between 1 and ${totalMinutesAvailable} (e.g., 60 for 1-hour periods)`
+        }],
+        suggestion: '🔧 Go to Settings → School Configuration → Set valid period_duration_minutes (typically 45-60 minutes)',
+        requiredAction: 'Fix period_duration_minutes in Settings',
+        buildVersion: BUILD_VERSION,
+        meta: { schedule_version_id, school_id, periodDurationMinutes, totalMinutesAvailable }
+      }, { status: 422, headers: { 'Content-Type': 'application/json' } });
+    }
 
     // Build breaks array from school settings (convert period numbers to time ranges)
     const breaks = [];
@@ -204,6 +253,38 @@ Deno.serve(async (req) => {
     }
     
     recordLog(`Timeslots generated: ${timeslots.length}`);
+    
+    // CRITICAL: Block if zero timeslots generated
+    if (timeslots.length === 0) {
+      recordLog(`❌ CRITICAL: ZERO timeslots generated - cannot run solver`);
+      return Response.json({
+        ok: false,
+        stage: 'ZERO_TIMESLOTS_GENERATED',
+        code: 'NO_TIMESLOTS',
+        error: 'Zero timeslots generated',
+        errorMessage: `❌ Cannot run OptaPlanner: ZERO timeslots were generated.\n\nThis usually means:\n• day_start_time >= day_end_time\n• period_duration_minutes too large for day duration\n• Breaks cover all available time\n\nPlease fix school timing configuration in Settings page.`,
+        details: [{
+          entity: 'School',
+          field: 'day_start_time / day_end_time / period_duration_minutes / breaks',
+          reason: 'invalid',
+          hint: 'Check Settings → School Configuration: ensure valid timing (e.g., 08:00-18:00, 60min periods, breaks <10h total)'
+        }],
+        suggestion: '🔧 Go to Settings → School Configuration → Verify:\n• day_start_time < day_end_time\n• period_duration_minutes reasonable (45-60 min)\n• Breaks don\'t cover entire day',
+        requiredAction: 'Fix school timing to generate timeslots',
+        buildVersion: BUILD_VERSION,
+        schoolConfig: {
+          day_start_time: dayStartTime,
+          day_end_time: dayEndTime,
+          period_duration_minutes: periodDurationMinutes,
+          breaks_count: breaks.length,
+          days_of_week: daysOfWeek,
+          total_minutes_available: endMin - startMin
+        },
+        meta: { schedule_version_id, school_id }
+      }, { status: 422, headers: { 'Content-Type': 'application/json' } });
+    }
+    
+    recordLog(`✅ Timeslots validation passed: ${timeslots.length} timeslots across ${daysOfWeek.length} days`);
 
     const rooms = (roomsDb || []).map((r, idx) => ({ id: idx + 1, name: r?.name || `Room ${idx+1}`, capacity: r?.capacity || 0 }));
     const teachers = (teachersDb || []).map((t, idx) => ({ id: idx + 1, name: t?.full_name || `Teacher ${idx+1}` }));
@@ -864,6 +945,30 @@ if (isDP) {
       validationReport.exclusionReasons[skip.reason] = (validationReport.exclusionReasons[skip.reason] || 0) + 1;
     }
     
+    // CRITICAL: Final payload diagnostics BEFORE returning
+    console.log('[buildSchedulingProblem] 📤 FINAL PAYLOAD SUMMARY:', {
+      timeslots_count: timeslots.length,
+      rooms_count: rooms.length,
+      teachers_count: teachers.length,
+      subjects_count: subjectsList.length,
+      teachingGroups_count: teachingGroupsDb.length,
+      lessons_count: problemForSolver.lessons.length,
+      subjectRequirements_count: subjectRequirements.length,
+      school_config: {
+        day_start_time: dayStartTime,
+        day_end_time: dayEndTime,
+        period_duration_minutes: periodDurationMinutes,
+        breaks_count: breaks.length
+      },
+      teaching_groups_sample: teachingGroupsDb.slice(0, 3).map(tg => ({
+        id: tg.id,
+        name: tg.name,
+        subject_id: tg.subject_id,
+        level: tg.level,
+        required_minutes_per_week: Math.round(minutesForTG(tg))
+      }))
+    });
+    
     return Response.json({
       success: true,
       ok: true,
@@ -897,17 +1002,27 @@ if (isDP) {
         expectedLessonsBySubject,
         expectedMinutesBySubject
       }
-    });
+    }, { status: 200, headers: { 'Content-Type': 'application/json' } });
   } catch (error) {
-    console.error(`[buildSchedulingProblem] ERROR at stage="${stage}":`, error);
+    console.error(`[buildSchedulingProblem] ❌❌❌ UNEXPECTED ERROR at stage="${stage}":`, error);
+    console.error('[buildSchedulingProblem] Error stack:', error?.stack);
+    console.error('[buildSchedulingProblem] Context:', { schedule_version_id, school_id, stage });
     
     return Response.json({ 
       ok: false,
       buildVersion: BUILD_VERSION,
       stage,
+      code: 'INTERNAL_ERROR',
+      error: 'Unexpected error in buildSchedulingProblem',
       errorMessage: String(error?.message || error),
       errorStack: String(error?.stack || ''),
-      meta: { schedule_version_id, school_id }
-    }, { status: 200 });
+      details: [{
+        entity: 'System',
+        field: 'buildSchedulingProblem',
+        reason: 'crash',
+        hint: `Check server logs for stage=${stage}`
+      }],
+      meta: { schedule_version_id, school_id, stage }
+    }, { status: 500, headers: { 'Content-Type': 'application/json' } });
   }
 });

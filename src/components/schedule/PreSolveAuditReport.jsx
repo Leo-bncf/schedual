@@ -156,6 +156,22 @@ export default function PreSolveAuditReport({ auditResult, onProceed, onCancel }
                           {d.hint && <div className="ml-2 text-amber-600 italic">💡 {d.hint}</div>}
                         </div>
                       ))}
+                      {auditResult.details.length > 10 && (
+                        <div className="text-amber-600 italic">... and {auditResult.details.length - 10} more</div>
+                      )}
+                    </div>
+                  </div>
+                )}
+                
+                {/* School timing config (if timeslots=0) */}
+                {auditResult.schoolConfig && (
+                  <div className="mt-2 p-2 bg-blue-50 rounded border border-blue-200">
+                    <div className="font-semibold text-blue-900 mb-1">🏫 School Configuration:</div>
+                    <div className="text-[10px] space-y-0.5 text-blue-700">
+                      <div>Day: {auditResult.schoolConfig.day_start_time} → {auditResult.schoolConfig.day_end_time} ({auditResult.schoolConfig.total_minutes_available}min)</div>
+                      <div>Period: {auditResult.schoolConfig.period_duration_minutes}min</div>
+                      <div>Breaks: {auditResult.schoolConfig.breaks_count}</div>
+                      <div>Days/week: {auditResult.schoolConfig.days_of_week?.join(', ')}</div>
                     </div>
                   </div>
                 )}

@@ -1782,6 +1782,12 @@ Now process the user's input and return ONLY the JSON object.`,
               ));
             }
             
+            // DIAGNOSTIC: Log school config if timeslots=0
+            if (auditData.code === 'NO_TIMESLOTS' || (auditData.schoolConfig && auditData.schoolConfig.total_minutes_available <= 0)) {
+              console.error('[Schedule] 🚨 ZERO TIMESLOTS - School timing invalid:', auditData.schoolConfig);
+              console.error('[Schedule] 👉 Fix required: Settings → School Configuration → Verify day_start_time < day_end_time');
+            }
+            
             // Build structured error display
             const errorStage = auditData.stage || 'UNKNOWN_STAGE';
             const errorCode = auditData.error || auditData.code || 'AUDIT_FAILED';

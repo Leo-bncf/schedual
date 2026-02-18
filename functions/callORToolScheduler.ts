@@ -154,15 +154,35 @@ Deno.serve(async (req) => {
         missingSubjects_count: buildData?.missingSubjects?.length || 0
       });
     } catch (buildError) {
-      // CRITICAL: Axios throws on 4xx/5xx - extract structured error from response.data
+      // CRITICAL: Axios throws on 4xx/5xx - extract ALL fields from response.data
       console.error(`[OptaPlanner] ❌ buildSchedulingProblem threw error (HTTP ${buildError?.response?.status})`);
       console.error('[OptaPlanner] Error message:', buildError?.message);
-      console.error('[OptaPlanner] Response data (full):', JSON.stringify(buildError?.response?.data, null, 2));
+      console.error('[OptaPlanner] Response data (full JSON):', JSON.stringify(buildError?.response?.data, null, 2));
+      console.error('[OptaPlanner] Response headers:', buildError?.response?.headers);
 
       const errorData = buildError?.response?.data || {};
       const httpStatus = buildError?.response?.status;
 
-      // If 422/400 with structured error, propagate it
+      // CRITICAL: Extract ALL Codex 422 fields (requestId, validationErrors, details, meta)
+      const requestId = errorData?.requestId || errorData?.request_id || null;
+      const validationErrors = Array.isArray(errorData?.validationErrors) ? errorData.validationErrors : [];
+      const details = Array.isArray(errorData?.details) ? errorData.details : 
+                      Array.isArray(errorData?.missingGroups) ? errorData.missingGroups :
+                      Array.isArray(errorData?.missingSubjects) ? errorData.missingSubjects :
+                      Array.isArray(errorData?.excludedGroups) ? errorData.excludedGroups : [];
+
+      // Log Codex trace info
+      if (requestId) {
+        console.error(`[OptaPlanner] 🔍 Codex requestId: ${requestId}`);
+      }
+      if (validationErrors.length > 0) {
+        console.error(`[OptaPlanner] ❌ Codex validationErrors (${validationErrors.length}):`, validationErrors);
+      }
+      if (details.length > 0) {
+        console.error(`[OptaPlanner] 📋 Codex details (${details.length}):`, details.slice(0, 10));
+      }
+
+      // If 422/400 with structured error, propagate ALL fields
       if ((httpStatus === 422 || httpStatus === 400) && typeof errorData === 'object') {
         console.log('[OptaPlanner] 📋 Propagating structured 422 error from buildSchedulingProblem');
 
@@ -171,15 +191,18 @@ Deno.serve(async (req) => {
           stage: errorData.stage || 'buildProblem',
           code: errorData.code || errorData.error || 'BUILD_PROBLEM_FAILED',
           error: errorData.error || 'buildSchedulingProblem validation failed',
-          errorMessage: errorData.errorMessage || errorData.error || String(buildError?.message || 'Unknown error'),
+          errorMessage: errorData.errorMessage || errorData.message || errorData.error || String(buildError?.message || 'Unknown error'),
           errorStack: errorData.errorStack || String(buildError?.stack || ''),
           suggestion: errorData.suggestion || 'Check validation report for missing configuration',
-          details: errorData.missingGroups || errorData.missingSubjects || errorData.excludedGroups || [],
+          requestId, // ✅ Codex trace ID
+          validationErrors, // ✅ Codex validation error strings
+          details, // ✅ [{entity, field, reason, hint}]
           meta: errorData.meta || { schedule_version_id, schoolId },
           validationReport: errorData.validationReport || null,
           requiredAction: errorData.requiredAction || null,
           missingSubjects: errorData.missingSubjects || [],
           missingGroups: errorData.missingGroups || [],
+          affectedTeachingGroups: errorData.affectedTeachingGroups || [],
           buildVersion: errorData.buildVersion || null,
           wrapperBuildVersion: WRAPPER_BUILD_VERSION
         }, { status: 422, headers: { 'Content-Type': 'application/json' } });
