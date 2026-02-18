@@ -1754,6 +1754,10 @@ Now process the user's input and return ONLY the JSON object.`,
               errorValue: auditData.error,
               hasErrorMessage: 'errorMessage' in auditData,
               errorMessageValue: auditData.errorMessage,
+              hasRequestId: 'requestId' in auditData,
+              requestIdValue: auditData.requestId || 'NOT_PROVIDED',
+              hasValidationErrors: 'validationErrors' in auditData,
+              validationErrorsCount: Array.isArray(auditData.validationErrors) ? auditData.validationErrors.length : null,
               hasDetails: 'details' in auditData,
               detailsLength: Array.isArray(auditData.details) ? auditData.details.length : null,
               hasMissingSubjects: 'missingSubjects' in auditData,
@@ -1764,6 +1768,19 @@ Now process the user's input and return ONLY the JSON object.`,
               wrapperVersion: auditData.wrapperBuildVersion || 'NOT_PROVIDED',
               allKeys: Object.keys(auditData)
             });
+            
+            // CRITICAL: Log Codex 422 structured error if present
+            if (auditData.requestId) {
+              console.error('[Schedule] 🔍 Codex requestId:', auditData.requestId);
+            }
+            if (Array.isArray(auditData.validationErrors) && auditData.validationErrors.length > 0) {
+              console.error('[Schedule] ❌ Validation errors:', auditData.validationErrors);
+            }
+            if (Array.isArray(auditData.details) && auditData.details.length > 0) {
+              console.error('[Schedule] 📋 Details:', auditData.details.map((d, i) => 
+                `[${i+1}] ${d.entity || 'N/A'}.${d.field || 'N/A'}: ${d.reason || 'N/A'} (hint: ${d.hint || 'N/A'})`
+              ));
+            }
             
             // Build structured error display
             const errorStage = auditData.stage || 'UNKNOWN_STAGE';

@@ -937,16 +937,46 @@ Deno.serve(async (req) => {
       let parsedError = null;
       try {
         parsedError = JSON.parse(solverResponseText);
+        console.log('[OptaPlanner] 📋 Parsed 422 error from Codex:', JSON.stringify(parsedError, null, 2));
       } catch {
         parsedError = { rawText: solverResponseText };
       }
 
-      // Return 200 with ok:false so UI can parse JSON and show real solver status
+      // CRITICAL: Extract Codex 422 structured error (requestId, validationErrors, details)
+      const requestId = parsedError?.requestId || parsedError?.request_id || null;
+      const validationErrors = Array.isArray(parsedError?.validationErrors) ? parsedError.validationErrors : [];
+      const details = Array.isArray(parsedError?.details) ? parsedError.details : [];
+      const codexMeta = parsedError?.meta || {};
+
+      // Log requestId for tracing
+      if (requestId) {
+        console.error(`[OptaPlanner] 🔍 Codex requestId: ${requestId}`);
+      }
+
+      // Log validation errors
+      if (validationErrors.length > 0) {
+        console.error(`[OptaPlanner] ❌ Validation errors (${validationErrors.length}):`, validationErrors);
+      }
+
+      // Log details with entity/field/reason/hint
+      if (details.length > 0) {
+        console.error(`[OptaPlanner] 📋 Details (${details.length}):`);
+        details.slice(0, 10).forEach((d, i) => {
+          console.error(`  [${i+1}] ${d.entity || 'N/A'}.${d.field || 'N/A'}: ${d.reason || 'N/A'} (hint: ${d.hint || 'N/A'})`);
+        });
+      }
+
+      // Return 422 with structured error from Codex
       return Response.json({ 
         ok: false,
-        stage: 'callSolver',
-        error: 'Solver rejected the request',
-        errorMessage: `Solver returned HTTP ${solverHttpStatus}`,
+        stage: 'SOLVER_VALIDATION_FAILED',
+        code: parsedError?.code || parsedError?.error || 'SOLVER_422',
+        error: parsedError?.error || 'Solver validation failed',
+        errorMessage: parsedError?.errorMessage || parsedError?.message || `Solver returned HTTP ${solverHttpStatus}`,
+        requestId, // ✅ Codex trace ID
+        validationErrors, // ✅ Array of validation error strings
+        details, // ✅ Array of {entity, field, reason, hint}
+        meta: codexMeta,
         solverIdentity,
         solverEndpointUsed,
         solverHttpStatus,
