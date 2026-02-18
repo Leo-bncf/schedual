@@ -205,7 +205,7 @@ Deno.serve(async (req) => {
           affectedTeachingGroups: errorData.affectedTeachingGroups || [],
           buildVersion: errorData.buildVersion || null,
           wrapperBuildVersion: WRAPPER_BUILD_VERSION
-        }, { status: 422, headers: { 'Content-Type': 'application/json' } });
+        }, { status: 200 });
       }
 
       // Generic error (network/timeout)
@@ -219,7 +219,7 @@ Deno.serve(async (req) => {
         httpStatus: httpStatus || null,
         meta: { schedule_version_id, schoolId },
         wrapperBuildVersion: WRAPPER_BUILD_VERSION
-      }, { status: 500, headers: { 'Content-Type': 'application/json' } });
+      }, { status: 200 });
     }
 
     // SUCCESS PATH: Check if buildSchedulingProblem succeeded
@@ -234,15 +234,18 @@ Deno.serve(async (req) => {
         errorMessage: buildData?.errorMessage || buildData?.error || 'Unknown error',
         errorStack: buildData?.errorStack || '',
         suggestion: buildData?.suggestion || null,
-        details: buildData?.missingGroups || buildData?.missingSubjects || buildData?.excludedGroups || [],
+        requestId: buildData?.requestId || null,
+        validationErrors: buildData?.validationErrors || [],
+        details: buildData?.details || buildData?.missingGroups || buildData?.missingSubjects || buildData?.excludedGroups || [],
         meta: buildData?.meta || { schedule_version_id, schoolId },
         validationReport: buildData?.validationReport || null,
         requiredAction: buildData?.requiredAction || null,
         missingSubjects: buildData?.missingSubjects || [],
         missingGroups: buildData?.missingGroups || [],
         buildVersion: buildData?.buildVersion || null,
-        wrapperBuildVersion: WRAPPER_BUILD_VERSION
-      }, { status: 422, headers: { 'Content-Type': 'application/json' } });
+        wrapperBuildVersion: WRAPPER_BUILD_VERSION,
+        schoolConfig: buildData?.schoolConfig || null
+      }, { status: 200 });
     }
 
     const problem = buildData.problem;
@@ -421,7 +424,7 @@ Deno.serve(async (req) => {
         requirementsInvalidMinutes: requirementsInvalidMinutes || [],
         normalizedSubjectsIndex: normalizedSubjectsIndex || {},
         normalizedRequirementsSubjects: normalizedRequirementsSubjects || []
-        }, { status: 422, headers: { 'Content-Type': 'application/json' } });
+        }, { status: 200 });
     }
 
     // Step 2.5: Fetch solver identity FIRST (log engine type before solving)
@@ -1439,7 +1442,7 @@ Deno.serve(async (req) => {
         splitSections,
         suggestion: 'This indicates a solver bug. Each section should have unique timeslots for each period.',
         meta: { schedule_version_id, schoolId }
-      }, { status: 500 });
+        }, { status: 200 });
     }
     
     // FIX C: POST-SOLVE DEMAND VALIDATION (prevent under/over-scheduling)
@@ -1548,7 +1551,7 @@ Deno.serve(async (req) => {
         slotsDeleted: 0,
         slotsInserted: 0,
         meta: { schedule_version_id, schoolId }
-        }, { status: 422, headers: { 'Content-Type': 'application/json' } });
+        }, { status: 200 });
     }
     
     console.log('[OptaPlanner] ✅ Demand validation passed - all teaching groups scheduled correctly');
@@ -1622,7 +1625,7 @@ Deno.serve(async (req) => {
         },
         suggestion: 'Solver bug: hard constraint violated. Check solver logs for constraint enforcement issues.',
         meta: { schedule_version_id, schoolId }
-        }, { status: 422, headers: { 'Content-Type': 'application/json' } });
+        }, { status: 200 });
     }
     
     console.log('[OptaPlanner] ✅ Double booking validation passed - no conflicts detected');
