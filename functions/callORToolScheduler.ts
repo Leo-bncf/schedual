@@ -1086,7 +1086,7 @@ Deno.serve(async (req) => {
         solverHttpStatus,
         solverErrorBody: solverResponseText?.slice(0, 1000),
         meta: { schedule_version_id, schoolId }
-        }, { status: 422, headers: { 'Content-Type': 'application/json' } });
+      }, { status: 200 });
     }
     console.log('[OptaPlanner] solver score =', solution.score);
     
@@ -1661,7 +1661,7 @@ Deno.serve(async (req) => {
         })),
         suggestion: 'Configure solver to preserve original studentGroup format from input lessons. DO NOT create new studentGroup identifiers.',
         meta: { schedule_version_id, schoolId }
-        }, { status: 422, headers: { 'Content-Type': 'application/json' } });
+      }, { status: 200 });
     }
     
     console.log('[OptaPlanner] ✅ All assigned lessons have valid TG_ format');
@@ -1916,7 +1916,7 @@ Deno.serve(async (req) => {
             purgeErrors: purgeResponse.data.errors,
             suggestion: 'Most slots failed to delete. Wait 1 minute and retry.',
             meta: { schedule_version_id, schoolId }
-            }, { status: 422, headers: { 'Content-Type': 'application/json' } });
+          }, { status: 200 });
         }
       }
     } catch (purgeError) {
@@ -1928,7 +1928,7 @@ Deno.serve(async (req) => {
         errorMessage: purgeError.message || 'Unknown error',
         suggestion: 'Check that purgeScheduleSlots function exists and is deployed.',
         meta: { schedule_version_id, schoolId }
-        }, { status: 500, headers: { 'Content-Type': 'application/json' } });
+      }, { status: 200 });
     }
 
     stage = 'insertNewSlots';
@@ -2298,13 +2298,19 @@ Deno.serve(async (req) => {
       errorMessage: String(error?.message || error),
       errorStack: String(error?.stack || ''),
       errorCause: error?.cause ? String(error.cause) : null,
-      details: {
+      details: [{
+        entity: 'System',
+        field: 'callORToolScheduler',
+        reason: 'crash',
+        hint: `Check server logs for stage=${stage}`
+      }],
+      meta: { 
         errorStack: String(error?.stack || ''),
         schedule_version_id,
         schoolId,
         wrapperBuildVersion: WRAPPER_BUILD_VERSION,
         timestamp: new Date().toISOString()
-        }
-        }, { status: 500, headers: { 'Content-Type': 'application/json' } });
+      }
+    }, { status: 200 });
   }
 });
