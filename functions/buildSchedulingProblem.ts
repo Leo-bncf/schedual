@@ -936,8 +936,6 @@ if (isDP) {
       },
       teachingGroups: teachingGroupsDb.map((tg, idx) => {
         const minutes = minutesForTG(tg);
-        const subj = subjectById[tg.subject_id] || null;
-        const subjCode = subjectIdToCode[tg.subject_id] || null;
         
         // Log first TG as concrete example of DTO mapping
         if (idx === 0) {
@@ -962,18 +960,25 @@ if (isDP) {
           recordLog(`STRIPPED: year_group, name, minutes_per_week (float), student_ids, teacher_id, etc.`);
         }
         
-        // CODEX DTO CONTRACT: STRICT - only these fields allowed
-        // Codex InputValidator rejects unknown fields with 422
-        return {
-          id: String(tg.id || ''), // ✅ string, required, non-blank, unique
-          student_group: `TG_${tg.id}`, // ✅ string, required, non-blank (stable cohort key)
-          subject_id: String(tg.subject_id || ''), // ✅ string, required, non-blank
-          level: (tg.level === 'HL' || tg.level === 'SL') ? String(tg.level) : null, // ✅ optional, HL/SL only
-          required_minutes_per_week: Math.round(minutes), // ✅ integer (NOT float), optional
-          section_id: String(tg.id || '') // ✅ optional, for grouping
+        // UNIVERSAL MAPPING RULE: STRICT WHITELIST FOR ALL SCHOOLS
+        // Solver expects: required_minutes_per_week as integer
+        // Convert: minutes_per_week (float DB) → required_minutes_per_week (int)
+        // Forbidden: name, year_group, _meta, student_ids, teacher_id, etc.
+        
+        const solverDTO = {
+          id: String(tg.id || ''),
+          student_group: `TG_${tg.id}`,
+          subject_id: String(tg.subject_id || ''),
+          required_minutes_per_week: Math.round(minutes) // CRITICAL: int, not float
         };
-        // ❌ NO _meta, NO year_group, NO name, NO studentIds - Codex rejects unknown fields
-        // Base44 metadata lookups done via tg.id when mapping solver output back
+        
+        // Optional fields: only add if valid
+        if (tg.level === 'HL' || tg.level === 'SL') {
+          solverDTO.level = String(tg.level);
+        }
+        
+        // EXPLICIT: Return only whitelisted fields, no spread operator to prevent leaks
+        return solverDTO;
       })
     };
 
