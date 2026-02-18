@@ -644,35 +644,65 @@ if (isDP) {
     recordLog(`Adjustments made: ${teachingGroupsAdjusted.length}`);
     
     // CRITICAL: Validate DP subjects have HL/SL hours configured (CODEX requirement)
+    // SMART VALIDATION: Only enforce HL/SL if subject has HL/SL teaching groups
     const dpSubjectsWithoutHours = [];
     const dpTeachingGroupsAffected = [];
     
     for (const subj of subjectsDb) {
       if (subj.ib_level === 'DP') {
+        // Check if this subject has any HL/SL teaching groups
+        const subjectTGs = teachingGroupsDb.filter(tg => tg.subject_id === subj.id);
+        const hasHLGroup = subjectTGs.some(tg => String(tg.level || '').toUpperCase() === 'HL');
+        const hasSLGroup = subjectTGs.some(tg => String(tg.level || '').toUpperCase() === 'SL');
+        
+        // Only validate HL/SL hours if this subject has HL/SL groups
+        const needsHL = hasHLGroup;
+        const needsSL = hasSLGroup;
+        
+        if (!needsHL && !needsSL) {
+          // Subject has no HL/SL groups (e.g., TOK/CAS/EE with "Standard" or "All DP" groups)
+          // Skip validation - required_minutes_per_week will be used
+          recordLog(`✓ DP subject ${subj.code} has no HL/SL groups - skipping HL/SL hours validation`);
+          continue;
+        }
+        
+        // Check if required hours are configured
         const hasHL = typeof subj.hoursPerWeekHL === 'number' && subj.hoursPerWeekHL > 0;
         const hasSL = typeof subj.hoursPerWeekSL === 'number' && subj.hoursPerWeekSL > 0;
         
-        if (!hasHL || !hasSL) {
+        // Only block if missing hours for existing group levels
+        const missingHL = needsHL && !hasHL;
+        const missingSL = needsSL && !hasSL;
+        
+        if (missingHL || missingSL) {
           dpSubjectsWithoutHours.push({
             subject_id: subj.id,
             code: subj.code || subj.name,
             name: subj.name,
             hoursPerWeekHL: subj.hoursPerWeekHL || null,
             hoursPerWeekSL: subj.hoursPerWeekSL || null,
-            missing: !hasHL && !hasSL ? 'both' : !hasHL ? 'HL' : 'SL',
+            missing: missingHL && missingSL ? 'both' : missingHL ? 'HL' : 'SL',
             hl_configured: hasHL,
-            sl_configured: hasSL
+            sl_configured: hasSL,
+            has_hl_groups: hasHLGroup,
+            has_sl_groups: hasSLGroup
           });
           
-          // Find affected teaching groups
-          const affectedTGs = teachingGroupsDb.filter(tg => tg.subject_id === subj.id);
+          // Find affected teaching groups (only those with matching level)
+          const affectedTGs = subjectTGs.filter(tg => {
+            const level = String(tg.level || '').toUpperCase();
+            if (missingHL && level === 'HL') return true;
+            if (missingSL && level === 'SL') return true;
+            return false;
+          });
+          
           dpTeachingGroupsAffected.push(...affectedTGs.map(tg => ({
             tg_id: tg.id,
             name: tg.name,
             level: tg.level,
             year_group: tg.year_group,
             student_count: tg.student_ids?.length || 0,
-            missing_config: !hasHL && !hasSL ? 'HL+SL' : !hasHL ? 'HL' : 'SL'
+            missing_config: missingHL && missingSL ? 'HL+SL' : missingHL ? 'HL' : 'SL'
           })));
         }
       }
