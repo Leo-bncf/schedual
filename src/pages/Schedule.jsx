@@ -3403,7 +3403,7 @@ Now process the user's input and return ONLY the JSON object.`,
                         <div className="bg-white p-3 rounded border border-rose-200">
                           <div className="font-bold text-rose-700 mb-2">📤 Input (buildSchedulingProblem)</div>
                           <div className="space-y-1 text-slate-700">
-                            <div>coreRequirementsFound: <strong className={optaPlannerResult?.orToolRequestPayload?.coreRequirementsFound > 0 ? 'text-green-600' : 'text-rose-600'}>{optaPlannerResult?.orToolRequestPayload?.coreRequirementsFound || 0}</strong></div>
+                            <div>coreRequirementsFound: <strong className={optaPlannerResult?.coreSubjectRequirementsSample?.length > 0 ? 'text-green-600' : 'text-rose-600'}>{optaPlannerResult?.coreSubjectRequirementsSample?.length || 0}</strong></div>
                             {(optaPlannerResult?.coreSubjectRequirementsSample || []).slice(0, 5).map((req, i) => (
                               <div key={i} className="text-[11px] text-slate-600 truncate">
                                 {req.subject}: {req.minutesPerWeek}min/week ({req.studentGroup})
@@ -3437,11 +3437,11 @@ Now process the user's input and return ONLY the JSON object.`,
                           <div className="font-bold text-rose-700 mb-2">⚠️ Status</div>
                           <div className="space-y-1 text-slate-700">
                             <div>Stage: <strong>{optaPlannerResult?.stage || '—'}</strong></div>
-                            <div>HTTP Status: <strong className={optaPlannerResult?.orToolHttpStatus === 200 ? 'text-green-600' : 'text-rose-600'}>{optaPlannerResult?.orToolHttpStatus || '—'}</strong></div>
+                            <div>HTTP Status: <strong className={optaPlannerResult?.solverHttpStatus === 200 ? 'text-green-600' : 'text-rose-600'}>{optaPlannerResult?.solverHttpStatus || '—'}</strong></div>
                             <div className="text-[10px]">Total inserted: {optaPlannerResult?.slotsInserted || 0}</div>
-                            {optaPlannerResult?.optaPlannerErrorBody && (
+                            {optaPlannerResult?.solverErrorBody && (
                               <div className="mt-2 text-rose-700 bg-rose-100 p-1 rounded text-[10px]">
-                                {(optaPlannerResult.optaPlannerErrorBody || '').slice(0, 150)}
+                                {(optaPlannerResult.solverErrorBody || '').slice(0, 150)}
                               </div>
                             )}
                           </div>
@@ -3518,11 +3518,11 @@ Now process the user's input and return ONLY the JSON object.`,
                               <div className="mt-3 space-y-2 border-t border-slate-300 pt-2">
                                 <div className="text-[10px] text-slate-600">
                                   <div className="font-bold mb-1">📤 subjects sent (first 5):</div>
-                                  <pre className="bg-white rounded p-1.5 overflow-x-auto max-h-40">{JSON.stringify(optaPlannerResult?.solverRequestPayloadSubjects || [], null, 2)}</pre>
+                                  <pre className="bg-white rounded p-1.5 overflow-x-auto max-h-40">{JSON.stringify((optaPlannerResult?.problem?.subjects || []).slice(0, 5), null, 2)}</pre>
                                 </div>
                                 <div className="text-[10px] text-slate-600">
                                   <div className="font-bold mb-1">📤 subjectRequirements sent (first 10):</div>
-                                  <pre className="bg-white rounded p-1.5 overflow-x-auto max-h-40">{JSON.stringify(optaPlannerResult?.solverRequestPayloadSubjectRequirements || [], null, 2)}</pre>
+                                  <pre className="bg-white rounded p-1.5 overflow-x-auto max-h-40">{JSON.stringify((optaPlannerResult?.problem?.subjectRequirements || []).slice(0, 10), null, 2)}</pre>
                                 </div>
                                 {optaPlannerResult?.builderDiagnostics && (
                                   <div className="text-[10px] text-slate-600 mt-2">
