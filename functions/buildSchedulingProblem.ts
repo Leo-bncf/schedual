@@ -821,39 +821,19 @@ if (isDP) {
         const minutes = minutesForTG(tg);
         const subj = subjectById[tg.subject_id] || null;
         const subjCode = subjectIdToCode[tg.subject_id] || null;
-        const requiredPeriods = minutesToPeriods(minutes);
         
-        // CODEX DTO CONTRACT: Match expected fields exactly
-        // - id: string (required, non-blank, unique)
-        // - student_group: string (required, non-blank) - NOT "studentGroup"
-        // - subject_id: string (required, non-blank) - Codex uses this for lookups
-        // - level: string (optional, HL/SL only for DP special handling)
-        // - required_minutes_per_week: integer (not float!) - NOT "minutesPerWeek"
-        // - section_id: string (optional, for internal grouping)
-        // NO unknown fields (year_group, name, etc.) - strict validator
-        
+        // CODEX DTO CONTRACT: STRICT - only these fields allowed
+        // Codex InputValidator rejects unknown fields with 422
         return {
-          id: tg.id, // ✅ string, unique
-          student_group: `TG_${tg.id}`, // ✅ CRITICAL: Codex expects snake_case "student_group", NOT "studentGroup"
-          subject_id: tg.subject_id, // ✅ MongoDB ObjectId string
-          level: (tg.level === 'HL' || tg.level === 'SL') ? tg.level : null, // ✅ Only HL/SL, otherwise null
-          required_minutes_per_week: Math.round(minutes), // ✅ INTEGER (not float 360.0), snake_case
-          section_id: tg.id, // ✅ Optional, for Base44 linking
-          
-          // METADATA for Base44 (not sent to Codex strict validator)
-          _meta: {
-            teacher_id: tg.teacher_id || null,
-            room_id: tg.preferred_room_id || null,
-            ib_level: subj?.ib_level || null,
-            year_group: tg.year_group || null, // ❌ Do NOT send to Codex directly (comma-separated "DP1,DP2")
-            name: tg.name || null, // ❌ Do NOT send to Codex
-            studentIds: Array.isArray(tg.student_ids) ? tg.student_ids : [],
-            blockId: tg.block_id || null,
-            requiredPeriods,
-            hoursPerWeekHL: subj?.hoursPerWeekHL || null, // ✅ For HL/SL hours validation
-            hoursPerWeekSL: subj?.hoursPerWeekSL || null  // ✅ For HL/SL hours validation
-          }
+          id: String(tg.id || ''), // ✅ string, required, non-blank, unique
+          student_group: `TG_${tg.id}`, // ✅ string, required, non-blank (stable cohort key)
+          subject_id: String(tg.subject_id || ''), // ✅ string, required, non-blank
+          level: (tg.level === 'HL' || tg.level === 'SL') ? String(tg.level) : null, // ✅ optional, HL/SL only
+          required_minutes_per_week: Math.round(minutes), // ✅ integer (NOT float), optional
+          section_id: String(tg.id || '') // ✅ optional, for grouping
         };
+        // ❌ NO _meta, NO year_group, NO name, NO studentIds - Codex rejects unknown fields
+        // Base44 metadata lookups done via tg.id when mapping solver output back
       })
     };
 
