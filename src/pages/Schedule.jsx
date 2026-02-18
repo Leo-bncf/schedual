@@ -718,8 +718,31 @@ Now process the user's input and return ONLY the JSON object.`,
       if (data?.ok === false) {
       const solverName = data.solverIdentity?.engine || 'Solver';
       console.error(`❌ ${solverName} returned error:`, data);
-      setOptaPlannerError(`Stage: ${data.stage}\nError: ${data.errorMessage || data.error}\n\nStack:\n${data.errorStack || 'N/A'}`);
-      toast.error(`${solverName} failed at stage "${data.stage}": ${data.errorMessage || data.error}`);
+      
+      // UNIVERSAL ERROR DISPLAY: stage, code, errorMessage, details[], meta
+      const errorSummary = [
+        `Stage: ${data.stage || 'Unknown'}`,
+        `Code: ${data.code || data.errorCode || 'N/A'}`,
+        `Message: ${data.errorMessage || data.error || 'Unknown error'}`,
+        data.meta?.school_id ? `School ID: ${data.meta.school_id}` : null,
+        data.meta?.schedule_version_id ? `Schedule Version ID: ${data.meta.schedule_version_id}` : null,
+        data.details?.length > 0 ? `\nDetails (${data.details.length} issues):` : null,
+        ...(data.details || []).slice(0, 5).map((d, i) => 
+          `  ${i+1}. ${d.entity || 'N/A'}.${d.field || 'N/A'}: ${d.reason || 'N/A'}\n     💡 ${d.hint || 'N/A'}`
+        ),
+        data.details?.length > 5 ? `  ... +${data.details.length - 5} more issues` : null,
+        data.suggestion ? `\nSuggestion: ${data.suggestion}` : null,
+        data.requiredAction ? `Action Required: ${data.requiredAction}` : null
+      ].filter(Boolean).join('\n');
+      
+      setOptaPlannerError(errorSummary);
+      
+      toast.error(`❌ ${data.code || 'Error'} at ${data.stage}: ${data.errorMessage || data.error}`, { 
+        duration: 12000,
+        description: data.details?.length > 0 
+          ? `${data.details.length} validation issues detected. See diagnostics tab.` 
+          : undefined
+      });
       } else {
         // Persist solver timeslots to prevent config reconstruction overwrite
         if (data.timeslots && Array.isArray(data.timeslots) && data.timeslots.length > 0) {
@@ -735,12 +758,37 @@ Now process the user's input and return ONLY the JSON object.`,
     } catch (e) {
       console.error('OptaPlanner fetch failed:', e);
       const errorData = e?.response?.data;
-      if (errorData) {
-      setOptaPlannerResult(errorData);
-      if (errorData.ok === false) {
-      const solverName = errorData.solverIdentity?.engine || 'Solver';
-      setOptaPlannerError(`Stage: ${errorData.stage}\nError: ${errorData.errorMessage || errorData.error}\n\nStack:\n${errorData.errorStack || 'N/A'}`);
-      toast.error(`${solverName} crashed at "${errorData.stage}": ${errorData.errorMessage || errorData.error}`);
+      const statusCode = e?.response?.status;
+      
+      if (errorData && typeof errorData === 'object') {
+        setOptaPlannerResult(errorData);
+        
+        if (errorData.ok === false || errorData.code || errorData.stage) {
+          // UNIVERSAL ERROR DISPLAY: stage, code, errorMessage, details[], meta
+          const errorSummary = [
+            `Stage: ${errorData.stage || 'Unknown'}`,
+            `Code: ${errorData.code || errorData.errorCode || 'N/A'}`,
+            `Message: ${errorData.errorMessage || errorData.error || 'Unknown error'}`,
+            errorData.meta?.school_id ? `School ID: ${errorData.meta.school_id}` : null,
+            errorData.meta?.schedule_version_id ? `Schedule Version ID: ${errorData.meta.schedule_version_id}` : null,
+            errorData.details?.length > 0 ? `\n📋 Details (${errorData.details.length} issues):` : null,
+            ...(errorData.details || []).slice(0, 5).map((d, i) => 
+              `  ${i+1}. ${d.entity || 'N/A'}.${d.field || 'N/A'}: ${d.reason || 'N/A'}\n     💡 ${d.hint || 'N/A'}`
+            ),
+            errorData.details?.length > 5 ? `  ... +${errorData.details.length - 5} more issues` : null,
+            errorData.suggestion ? `\nSuggestion: ${errorData.suggestion}` : null,
+            errorData.requiredAction ? `Action Required: ${errorData.requiredAction}` : null,
+            errorData.errorStack ? `\nStack:\n${errorData.errorStack}` : null
+          ].filter(Boolean).join('\n');
+          
+          setOptaPlannerError(errorSummary);
+          
+          toast.error(`❌ ${errorData.code || errorData.errorCode || 'Error'}: ${errorData.errorMessage || errorData.error}`, { 
+            duration: 12000,
+            description: statusCode === 422 && errorData.details?.length > 0 
+              ? `${errorData.details.length} validation issues. See diagnostics.` 
+              : errorData.suggestion || undefined
+          });
         } else {
           setOptaPlannerError(e?.message || 'Failed to fetch OptaPlanner response');
           toast.error('Failed to retrieve OptaPlanner response');
@@ -1990,15 +2038,34 @@ Now process the user's input and return ONLY the JSON object.`,
               setOptaPlannerResult(errorData);
               toast.error(`Solver integrity violation: ${splitSections.length} sections with duplicate timeslots`, { duration: 10000 });
             }
-            // Other Codex errors
+            // Other Codex errors - UNIVERSAL DISPLAY FORMAT
             else {
-              const errorMsg = `Stage: ${errorData.stage}\nCode: ${errorData.errorCode || 'N/A'}\nMessage: ${errorData.message || errorData.errorMessage || errorData.error}\n\n` +
-                (errorData.requestId ? `🔍 Request ID: ${errorData.requestId}\n\n` : '') +
-                (errorData.validationErrors?.length ? `❌ Validation errors:\n${errorData.validationErrors.join('\n')}\n\n` : '') +
-                (errorData.details?.length ? `📋 Details:\n${errorData.details.map(d => `• ${d.entity}.${d.field}: ${d.reason}\n  💡 ${d.hint || 'N/A'}`).join('\n')}\n\n` : '');
-              setOptaPlannerError(errorMsg);
+              const errorSummary = [
+                `Stage: ${errorData.stage || 'Unknown'}`,
+                `Code: ${errorData.code || errorData.errorCode || 'N/A'}`,
+                `Message: ${errorData.message || errorData.errorMessage || errorData.error || 'Unknown error'}`,
+                errorData.meta?.school_id ? `School ID: ${errorData.meta.school_id}` : null,
+                errorData.meta?.schedule_version_id ? `Schedule Version ID: ${errorData.meta.schedule_version_id}` : null,
+                errorData.requestId ? `🔍 Codex Request ID: ${errorData.requestId}` : null,
+                errorData.validationErrors?.length > 0 ? `\n❌ Validation Errors (${errorData.validationErrors.length}):` : null,
+                ...(errorData.validationErrors || []).slice(0, 3).map((err, i) => `  ${i+1}. ${err}`),
+                errorData.validationErrors?.length > 3 ? `  ... +${errorData.validationErrors.length - 3} more` : null,
+                errorData.details?.length > 0 ? `\n📋 Details (${errorData.details.length} issues):` : null,
+                ...(errorData.details || []).slice(0, 5).map((d, i) => 
+                  `  ${i+1}. ${d.entity || 'N/A'}.${d.field || 'N/A'}: ${d.reason || 'N/A'}\n     💡 ${d.hint || 'N/A'}`
+                ),
+                errorData.details?.length > 5 ? `  ... +${errorData.details.length - 5} more issues` : null,
+                errorData.suggestion ? `\nSuggestion: ${errorData.suggestion}` : null,
+                errorData.requiredAction ? `Action Required: ${errorData.requiredAction}` : null
+              ].filter(Boolean).join('\n');
+              
+              setOptaPlannerError(errorSummary);
               setOptaPlannerResult(errorData);
-              toast.error(`Codex error at "${errorData.stage}": ${errorData.message || errorData.errorMessage || errorData.error}`, { duration: 10000 });
+              
+              toast.error(`❌ ${errorData.code || errorData.errorCode || 'Error'} at ${errorData.stage}`, { 
+                duration: 12000,
+                description: errorData.message || errorData.errorMessage || errorData.error
+              });
             }
           } 
           // HTTP 500 with no JSON body (actual crash)
@@ -2006,7 +2073,33 @@ Now process the user's input and return ONLY the JSON object.`,
             const errorMsg = `Backend function crashed (HTTP 500)\n\n${typeof errorData === 'string' ? errorData : JSON.stringify(errorData, null, 2)}\n\nCheck function logs for details.`;
             setOptaPlannerError(errorMsg);
             toast.error('❌ Pipeline crashed (500). Check function logs.', { duration: 10000 });
-          } 
+          }
+          // HTTP 422 with structured error (PRE_SOLVE_VALIDATION, etc.)
+          else if (statusCode === 422 && errorData && typeof errorData === 'object') {
+            const errorSummary = [
+              `Stage: ${errorData.stage || 'Unknown'}`,
+              `Code: ${errorData.code || errorData.errorCode || 'N/A'}`,
+              `Message: ${errorData.errorMessage || errorData.error || 'Validation failed'}`,
+              errorData.meta?.school_id ? `School ID: ${errorData.meta.school_id}` : null,
+              errorData.meta?.schedule_version_id ? `Schedule Version ID: ${errorData.meta.schedule_version_id}` : null,
+              errorData.details?.length > 0 ? `\n📋 Details (${errorData.details.length} issues):` : null,
+              ...(errorData.details || []).map((d, i) => 
+                `  ${i+1}. ${d.entity || 'N/A'}.${d.field || 'N/A'}: ${d.reason || 'N/A'}\n     💡 ${d.hint || 'N/A'}`
+              ),
+              errorData.suggestion ? `\nSuggestion: ${errorData.suggestion}` : null,
+              errorData.requiredAction ? `Action Required: ${errorData.requiredAction}` : null
+            ].filter(Boolean).join('\n');
+            
+            setOptaPlannerError(errorSummary);
+            setOptaPlannerResult(errorData);
+            
+            toast.error(`❌ ${errorData.code || 'Validation Failed'}: ${errorData.errorMessage || errorData.error}`, { 
+              duration: 12000,
+              description: errorData.details?.length > 0 
+                ? `${errorData.details.length} issues found. Check diagnostics.` 
+                : errorData.suggestion || undefined
+            });
+          }
           // Other errors
           else {
             setOptaPlannerError(e?.message || 'Solver failed');
