@@ -200,6 +200,18 @@ export default function Subjects() {
 
   const handleSubmit = (e) => {
     e.preventDefault();
+    
+    // Validate DP non-core subjects require HL+SL hours
+    if (formData.ib_level === 'DP' && !formData.is_core) {
+      const hlHours = parseFloat(formData.hoursPerWeekHL) || 0;
+      const slHours = parseFloat(formData.hoursPerWeekSL) || 0;
+      
+      if (hlHours <= 0 || slHours <= 0) {
+        alert('DP subjects require both HL and SL hours to be greater than 0 for schedule generation.');
+        return;
+      }
+    }
+    
     const group = IB_GROUPS.find(g => g.id === formData.ib_group);
     const data = { 
       ...formData,
@@ -936,38 +948,47 @@ ${trainingFeedback ? `LESSONS FROM ADMIN FEEDBACK:\n${trainingFeedback}\n\n` : '
             </div>
 
             {formData.ib_level === 'DP' && !formData.is_core ? (
-              <div className="grid grid-cols-2 gap-4">
-                <div className="space-y-2">
-                  <Label htmlFor="hl_hours">HL Hours/Week *</Label>
-                  <Input 
-                    id="hl_hours"
-                    type="number"
-                    step="0.5"
-                    min="1"
-                    max="12"
-                    value={formData.hoursPerWeekHL}
-                    onChange={(e) => setFormData({ ...formData, hoursPerWeekHL: parseFloat(e.target.value) || 6 })}
-                  />
-                  <p className="text-xs text-slate-500">
-                    IB standard: 6 hours/week (360 min)
+              <>
+                <div className="p-3 bg-blue-50 border border-blue-200 rounded-lg">
+                  <p className="text-xs text-blue-800">
+                    ⚠️ <strong>OptaPlanner requirement:</strong> Both HL and SL hours must be configured (non-zero) for schedule generation to work.
                   </p>
                 </div>
-                <div className="space-y-2">
-                  <Label htmlFor="sl_hours">SL Hours/Week *</Label>
-                  <Input 
-                    id="sl_hours"
-                    type="number"
-                    step="0.5"
-                    min="1"
-                    max="10"
-                    value={formData.hoursPerWeekSL}
-                    onChange={(e) => setFormData({ ...formData, hoursPerWeekSL: parseFloat(e.target.value) || 4 })}
-                  />
-                  <p className="text-xs text-slate-500">
-                    IB standard: 4 hours/week (240 min)
-                  </p>
+                <div className="grid grid-cols-2 gap-4">
+                  <div className="space-y-2">
+                    <Label htmlFor="hl_hours">HL Hours/Week *</Label>
+                    <Input 
+                      id="hl_hours"
+                      type="number"
+                      step="0.5"
+                      min="0.5"
+                      max="12"
+                      value={formData.hoursPerWeekHL}
+                      onChange={(e) => setFormData({ ...formData, hoursPerWeekHL: parseFloat(e.target.value) || 0 })}
+                      required
+                    />
+                    <p className="text-xs text-slate-500">
+                      IB standard: 6 hours/week (360 min)
+                    </p>
+                  </div>
+                  <div className="space-y-2">
+                    <Label htmlFor="sl_hours">SL Hours/Week *</Label>
+                    <Input 
+                      id="sl_hours"
+                      type="number"
+                      step="0.5"
+                      min="0.5"
+                      max="10"
+                      value={formData.hoursPerWeekSL}
+                      onChange={(e) => setFormData({ ...formData, hoursPerWeekSL: parseFloat(e.target.value) || 0 })}
+                      required
+                    />
+                    <p className="text-xs text-slate-500">
+                      IB standard: 4 hours/week (240 min)
+                    </p>
+                  </div>
                 </div>
-              </div>
+              </>
             ) : (
               <div className="space-y-2">
                 <Label htmlFor="pyp_myp_hours">Teaching Hours Per Week *</Label>
@@ -1044,7 +1065,12 @@ ${trainingFeedback ? `LESSONS FROM ADMIN FEEDBACK:\n${trainingFeedback}\n\n` : '
               <Button 
                 type="submit" 
                 className="bg-indigo-600 hover:bg-indigo-700"
-                disabled={createMutation.isPending || updateMutation.isPending}
+                disabled={
+                  createMutation.isPending || 
+                  updateMutation.isPending ||
+                  (formData.ib_level === 'DP' && !formData.is_core && 
+                   (parseFloat(formData.hoursPerWeekHL) <= 0 || parseFloat(formData.hoursPerWeekSL) <= 0))
+                }
               >
                 {editingSubject ? 'Save Changes' : 'Add Subject'}
               </Button>
