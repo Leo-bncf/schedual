@@ -11,11 +11,15 @@ REFACTORED: Cohort-Centered Schedule Builder (v2.1)
 - Stable, predictable solver input with complete subject coverage
 */
 
-// DEPLOYMENT TIMESTAMP: 2026-02-13T11:10:00Z
-// CRITICAL FIX: subjectRequirements TDZ resolved - declared before all usage
+// DEPLOYMENT TIMESTAMP: 2026-02-18T10:00:00Z
+// CRITICAL FIX: TeachingGroup DTO contract aligned with Codex expectations
+// - student_group (snake_case, not camelCase)
+// - required_minutes_per_week (integer, snake_case)
+// - No unknown fields (year_group, name removed from main object)
+// - HL/SL hours validation enforced
 
 Deno.serve(async (req) => {
-  const BUILD_VERSION = '2026-02-13T11:15:00Z-TDZ-FIX'; // Deployment marker
+  const BUILD_VERSION = '2026-02-18T10:00:00Z-CODEX-DTO-FIX'; // Deployment marker
   console.log(`[buildSchedulingProblem] 🚀 BUILD VERSION: ${BUILD_VERSION}`);
   
   let stage = 'init';
@@ -552,8 +556,10 @@ if (isDP) {
     recordLog(`Lessons created: ${lessons.length} total, ${teachingGroupsIncludedCount} sections included, ${teachingGroupsSkipped.length} skipped`);
     recordLog(`Adjustments made: ${teachingGroupsAdjusted.length}`);
     
-    // CRITICAL: Validate DP subjects have HL/SL hours configured
+    // CRITICAL: Validate DP subjects have HL/SL hours configured (CODEX requirement)
     const dpSubjectsWithoutHours = [];
+    const dpTeachingGroupsAffected = [];
+    
     for (const subj of subjectsDb) {
       if (subj.ib_level === 'DP') {
         const hasHL = typeof subj.hoursPerWeekHL === 'number' && subj.hoursPerWeekHL > 0;
@@ -566,25 +572,49 @@ if (isDP) {
             name: subj.name,
             hoursPerWeekHL: subj.hoursPerWeekHL || null,
             hoursPerWeekSL: subj.hoursPerWeekSL || null,
-            missing: !hasHL && !hasSL ? 'both' : !hasHL ? 'HL' : 'SL'
+            missing: !hasHL && !hasSL ? 'both' : !hasHL ? 'HL' : 'SL',
+            hl_configured: hasHL,
+            sl_configured: hasSL
           });
+          
+          // Find affected teaching groups
+          const affectedTGs = teachingGroupsDb.filter(tg => tg.subject_id === subj.id);
+          dpTeachingGroupsAffected.push(...affectedTGs.map(tg => ({
+            tg_id: tg.id,
+            name: tg.name,
+            level: tg.level,
+            year_group: tg.year_group,
+            student_count: tg.student_ids?.length || 0,
+            missing_config: !hasHL && !hasSL ? 'HL+SL' : !hasHL ? 'HL' : 'SL'
+          })));
         }
       }
     }
     
     if (dpSubjectsWithoutHours.length > 0) {
       recordLog(`❌ BLOCKING: ${dpSubjectsWithoutHours.length} DP subjects missing HL/SL hours configuration`);
+      recordLog(`❌ Affected teaching groups: ${dpTeachingGroupsAffected.length}`);
       
       return Response.json({
         ok: false,
-        stage: 'VALIDATION_FAILED_MISSING_HL_SL_HOURS',
+        stage: 'PRE_SOLVE_VALIDATION',
+        code: 'HOURS_MISSING_OR_INVALID',
         error: 'MISSING_HL_SL_HOURS_CONFIG',
-        errorMessage: `❌ Cannot run OptaPlanner: ${dpSubjectsWithoutHours.length} DP subjects are missing HL/SL hours configuration.\n\nOptaPlanner requires explicit hoursPerWeekHL and hoursPerWeekSL for all DP subjects to generate accurate schedules.\n\nPlease configure these values on the Subjects page before generating schedule.`,
+        errorMessage: `❌ Cannot run OptaPlanner: ${dpSubjectsWithoutHours.length} DP subjects are missing HL/SL hours configuration.\n\nCodex (OptaPlanner solver) requires explicit hoursPerWeekHL and hoursPerWeekSL for ALL DP subjects.\n\nThis affects ${dpTeachingGroupsAffected.length} teaching group(s).\n\n👉 Go to Subjects page and configure hours for each DP subject before generating schedule.`,
         missingSubjects: dpSubjectsWithoutHours,
+        affectedTeachingGroups: dpTeachingGroupsAffected,
+        details: dpSubjectsWithoutHours.map(s => ({
+          entity: 'Subject',
+          id: s.subject_id,
+          field: s.missing === 'both' ? 'hoursPerWeekHL + hoursPerWeekSL' : `hoursPerWeek${s.missing}`,
+          reason: 'missing',
+          hint: `Set ${s.missing} hours/week for ${s.code} (${s.name}) on Subjects page`
+        })),
         suggestion: '🔧 Go to Subjects page → Edit each DP subject → Set "Hours per week (HL)" and "Hours per week (SL)" fields (e.g., HL=6, SL=4)',
-        requiredAction: 'Configure hoursPerWeekHL and hoursPerWeekSL for all DP subjects',
+        requiredAction: 'Configure hoursPerWeekHL and hoursPerWeekSL for all DP subjects in Subjects page',
+        buildVersion: BUILD_VERSION,
         meta: { schedule_version_id, school_id }
-      }, { status: 422 });
+      }, { status: 422, headers: { 'Content-Type': 'application/json' } });
     }
     
     recordLog(`✅ HL/SL hours validation passed: ${dpSubjectsWithoutHours.length === 0 ? 'All DP subjects configured' : 'No DP subjects found'}`);
@@ -635,11 +665,19 @@ if (isDP) {
       
       return Response.json({
         ok: false,
-        stage: 'VALIDATION_FAILED_MISSING_HL_SL_HOURS',
+        stage: 'PRE_SOLVE_VALIDATION',
+        code: 'HOURS_MISSING_OR_INVALID',
         error: 'MISSING_HL_SL_HOURS_CONFIG',
-        errorMessage: `❌ Cannot generate schedule: ${missingSubjectConfig.length} DP subjects are missing HL/SL hours configuration.\n\nPlease configure hoursPerWeekHL and hoursPerWeekSL on the Subjects page before running OptaPlanner.`,
+        errorMessage: `❌ Cannot generate schedule: ${missingSubjectConfig.length} teaching group(s) blocked because their subjects lack HL/SL hours configuration.\n\nCodex validator requires hoursPerWeekHL and hoursPerWeekSL for all DP subjects.\n\n👉 Configure these on the Subjects page before running OptaPlanner.`,
         missingConfigurationCount: missingSubjectConfig.length,
         missingGroups: missingSubjectConfig,
+        details: missingSubjectConfig.map(g => ({
+          entity: 'TeachingGroup',
+          id: g.tg_id,
+          field: 'subject.hoursPerWeek' + (g.level || 'HL/SL'),
+          reason: 'invalid',
+          hint: `Subject ${g.subject_code} needs ${g.level || 'HL/SL'} hours configured`
+        })),
         suggestion: '🔧 Go to Subjects page → Edit each DP subject → Set "Hours per week (HL)" and "Hours per week (SL)" fields',
         validationReport: {
           totalTeachingGroups: teachingGroupsDb.length,
@@ -648,8 +686,9 @@ if (isDP) {
           missingSubjectHoursConfig: missingSubjectConfig.length,
           excludedGroups: teachingGroupsSkipped
         },
-        requiredAction: 'Configure hoursPerWeekHL and hoursPerWeekSL for all DP subjects in Subjects page'
-      }, { status: 422 });
+        requiredAction: 'Configure hoursPerWeekHL and hoursPerWeekSL for all DP subjects in Subjects page',
+        buildVersion: BUILD_VERSION
+      }, { status: 422, headers: { 'Content-Type': 'application/json' } });
     }
     
     const daysCount = daysOfWeek.length || 5;
@@ -784,21 +823,36 @@ if (isDP) {
         const subjCode = subjectIdToCode[tg.subject_id] || null;
         const requiredPeriods = minutesToPeriods(minutes);
         
+        // CODEX DTO CONTRACT: Match expected fields exactly
+        // - id: string (required, non-blank, unique)
+        // - student_group: string (required, non-blank) - NOT "studentGroup"
+        // - subject_id: string (required, non-blank) - Codex uses this for lookups
+        // - level: string (optional, HL/SL only for DP special handling)
+        // - required_minutes_per_week: integer (not float!) - NOT "minutesPerWeek"
+        // - section_id: string (optional, for internal grouping)
+        // NO unknown fields (year_group, name, etc.) - strict validator
+        
         return {
-          id: tg.id,
-          subject_id: tg.subject_id,
-          subjectCode: subjCode,
-          level: tg.level || null,
-          minutesPerWeek: minutes,
-          requiredPeriodsPerWeek: requiredPeriods,
-          teacher_id: tg.teacher_id || null,
-          room_id: tg.preferred_room_id || null,
-          ib_level: subj?.ib_level || null,
-          studentIds: Array.isArray(tg.student_ids) ? tg.student_ids : [],
-          blockId: tg.block_id || null,
-          // CRITICAL: Propagate subject hours for solver visibility
-          hoursPerWeekHL: subj?.hoursPerWeekHL || null,
-          hoursPerWeekSL: subj?.hoursPerWeekSL || null
+          id: tg.id, // ✅ string, unique
+          student_group: `TG_${tg.id}`, // ✅ CRITICAL: Codex expects snake_case "student_group", NOT "studentGroup"
+          subject_id: tg.subject_id, // ✅ MongoDB ObjectId string
+          level: (tg.level === 'HL' || tg.level === 'SL') ? tg.level : null, // ✅ Only HL/SL, otherwise null
+          required_minutes_per_week: Math.round(minutes), // ✅ INTEGER (not float 360.0), snake_case
+          section_id: tg.id, // ✅ Optional, for Base44 linking
+          
+          // METADATA for Base44 (not sent to Codex strict validator)
+          _meta: {
+            teacher_id: tg.teacher_id || null,
+            room_id: tg.preferred_room_id || null,
+            ib_level: subj?.ib_level || null,
+            year_group: tg.year_group || null, // ❌ Do NOT send to Codex directly (comma-separated "DP1,DP2")
+            name: tg.name || null, // ❌ Do NOT send to Codex
+            studentIds: Array.isArray(tg.student_ids) ? tg.student_ids : [],
+            blockId: tg.block_id || null,
+            requiredPeriods,
+            hoursPerWeekHL: subj?.hoursPerWeekHL || null, // ✅ For HL/SL hours validation
+            hoursPerWeekSL: subj?.hoursPerWeekSL || null  // ✅ For HL/SL hours validation
+          }
         };
       })
     };
