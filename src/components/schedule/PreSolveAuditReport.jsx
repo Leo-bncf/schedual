@@ -74,8 +74,32 @@ export default function PreSolveAuditReport({ auditResult, onProceed, onCancel }
               </div>
             </div>
 
-            {/* Missing Subjects (HL/SL Hours) */}
-            {(auditResult.missingSubjects?.length > 0 || auditResult.missingGroups?.length > 0) && (
+            {/* Details Array (standardized) */}
+            {auditResult.details && Array.isArray(auditResult.details) && auditResult.details.length > 0 && (
+              <div className="bg-white p-4 rounded-lg border-2 border-rose-300">
+                <div className="font-bold text-rose-900 mb-3">
+                  📋 Issues Detected ({auditResult.details.length})
+                </div>
+                <div className="space-y-2 max-h-64 overflow-y-auto">
+                  {auditResult.details.map((detail, idx) => (
+                    <div key={idx} className="p-3 bg-rose-50 rounded border border-rose-200">
+                      <div className="font-semibold text-rose-900">
+                        {detail.entity || 'Unknown'}.{detail.field || 'N/A'}
+                      </div>
+                      <div className="text-xs text-rose-700 mt-1">
+                        {detail.reason}
+                      </div>
+                      {detail.hint && (
+                        <div className="text-xs text-amber-700 mt-1 italic">💡 {detail.hint}</div>
+                      )}
+                    </div>
+                  ))}
+                </div>
+              </div>
+            )}
+            
+            {/* Legacy: Missing Subjects (HL/SL Hours) - fallback */}
+            {!auditResult.details?.length && (auditResult.missingSubjects?.length > 0 || auditResult.missingGroups?.length > 0) && (
               <div className="bg-white p-4 rounded-lg border-2 border-rose-300">
                 <div className="font-bold text-rose-900 mb-3">
                   Missing Configuration ({(auditResult.missingSubjects || auditResult.missingGroups || []).length} items)
