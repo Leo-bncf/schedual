@@ -60,10 +60,16 @@ export default function PreSolveAuditReport({ auditResult, onProceed, onCancel }
                 <div className="flex-1">
                   <div className="font-bold text-rose-900 mb-1">
                     Stage: {auditResult.stage || 'UNKNOWN'}
+                    {auditResult.errorCode && <span className="ml-2 text-xs text-rose-600">({auditResult.errorCode})</span>}
                   </div>
                   <div className="text-sm text-rose-800 mb-2">
-                    {auditResult.errorMessage || auditResult.error || 'Audit validation failed'}
+                    {auditResult.message || auditResult.errorMessage || auditResult.error || 'Audit validation failed'}
                   </div>
+                  {auditResult.requestId && (
+                    <div className="text-xs text-rose-700 font-mono mb-2">
+                      Request ID: {auditResult.requestId}
+                    </div>
+                  )}
                   {auditResult.suggestion && (
                     <div className="mt-3 p-3 bg-amber-50 border border-amber-300 rounded-lg">
                       <div className="font-semibold text-amber-900 mb-1">💡 Suggested Fix:</div>
@@ -119,8 +125,32 @@ export default function PreSolveAuditReport({ auditResult, onProceed, onCancel }
               </div>
             )}
 
-            {/* Split Sections (Cohort Integrity) */}
-            {auditResult.splitSections?.length > 0 && (
+            {/* Standardized Details Display */}
+            {auditResult.details && Array.isArray(auditResult.details) && auditResult.details.length > 0 && (
+              <div className="bg-white p-4 rounded-lg border-2 border-rose-300">
+                <div className="font-bold text-rose-900 mb-3">
+                  📋 Details ({auditResult.details.length})
+                </div>
+                <div className="space-y-2 max-h-64 overflow-y-auto">
+                  {auditResult.details.map((detail, idx) => (
+                    <div key={idx} className="p-3 bg-rose-50 rounded border border-rose-200">
+                      <div className="font-semibold text-rose-900">
+                        {detail.entity || 'N/A'}.{detail.field || 'N/A'}
+                      </div>
+                      <div className="text-xs text-rose-700 mt-1">
+                        {detail.reason || 'No reason provided'}
+                      </div>
+                      {detail.hint && (
+                        <div className="text-xs text-amber-700 mt-1 italic">💡 {detail.hint}</div>
+                      )}
+                    </div>
+                  ))}
+                </div>
+              </div>
+            )}
+            
+            {/* Legacy: Split Sections (Cohort Integrity) */}
+            {!auditResult.details?.length && auditResult.splitSections?.length > 0 && (
               <div className="bg-white p-4 rounded-lg border-2 border-rose-300">
                 <div className="font-bold text-rose-900 mb-3">
                   Split Sections ({auditResult.splitSections.length} sections)
@@ -145,67 +175,25 @@ export default function PreSolveAuditReport({ auditResult, onProceed, onCancel }
             <div className="bg-slate-100 p-3 rounded-lg text-xs">
               <div className="font-bold text-slate-700 mb-2">🔍 Debug Info:</div>
               <div className="space-y-1 text-slate-600">
-                <div>Solver Engine: <strong className="text-blue-600">OptaPlanner (Codex)</strong></div>
-                <div>Function: <code>callORToolScheduler</code> (internal wrapper)</div>
-                <div>Response ok: <strong className={auditResult.ok === true ? 'text-green-600' : 'text-rose-600'}>{String(auditResult.ok)}</strong></div>
-                <div>Response stage: <strong>{auditResult.stage || 'undefined'}</strong></div>
+                <div>Stage: <strong>{auditResult.stage || 'undefined'}</strong></div>
+                <div>Error Code: <strong className="text-rose-600">{auditResult.errorCode || auditResult.code || 'N/A'}</strong></div>
                 {auditResult.requestId && (
-                  <div>Request ID: <code className="text-blue-600 font-mono">{auditResult.requestId}</code></div>
-                )}
-                <div>Build version: <strong className={auditResult.buildVersion ? 'text-blue-600' : 'text-rose-600'}>{auditResult.buildVersion || '❌ NOT PROVIDED'}</strong></div>
-                <div>Wrapper version: <strong className={auditResult.wrapperBuildVersion ? 'text-blue-600' : 'text-rose-600'}>{auditResult.wrapperBuildVersion || '❌ NOT PROVIDED'}</strong></div>
-                {auditResult.meta && (
-                  <div>Meta: <code className="text-[10px]">{JSON.stringify(auditResult.meta)}</code></div>
-                )}
-                
-                {/* Codex requestId (for tracing) */}
-                {auditResult.requestId && (
-                  <div className="mt-2 p-2 bg-blue-50 rounded border border-blue-200">
-                    <div className="font-semibold text-blue-900 text-xs">🔍 Codex Request ID (for support):</div>
-                    <div className="font-mono text-[10px] text-blue-700 select-all">{auditResult.requestId}</div>
+                  <div className="mt-1 p-2 bg-blue-50 rounded border border-blue-200">
+                    <div className="font-semibold text-blue-900 text-xs mb-1">🔍 Request ID:</div>
+                    <div className="font-mono text-[10px] text-blue-700 select-all break-all">{auditResult.requestId}</div>
                     <button
                       onClick={() => {
                         navigator.clipboard.writeText(auditResult.requestId);
-                        toast.success('Request ID copied to clipboard');
+                        toast.success('Request ID copied');
                       }}
                       className="mt-1 text-xs text-blue-700 hover:underline"
                     >
-                      Copy to clipboard
+                      Copy
                     </button>
                   </div>
                 )}
-                
-                {/* Codex 422 Validation Errors */}
-                {auditResult.validationErrors && Array.isArray(auditResult.validationErrors) && auditResult.validationErrors.length > 0 && (
-                  <div className="mt-2 p-2 bg-rose-50 rounded border border-rose-200">
-                    <div className="font-semibold text-rose-900 mb-1">❌ Codex Validation Errors ({auditResult.validationErrors.length}):</div>
-                    <div className="text-[10px] space-y-1">
-                      {auditResult.validationErrors.map((err, i) => (
-                        <div key={i} className="text-rose-700">• {err}</div>
-                      ))}
-                      {auditResult.validationErrors.length > 10 && (
-                        <div className="text-rose-600 italic">... and {auditResult.validationErrors.length - 10} more</div>
-                      )}
-                    </div>
-                  </div>
-                )}
-                
-                {/* Codex 422 Details (entity/field/reason/hint) */}
-                {auditResult.details && Array.isArray(auditResult.details) && auditResult.details.length > 0 && (
-                  <div className="mt-2 p-2 bg-amber-50 rounded border border-amber-200">
-                    <div className="font-semibold text-amber-900 mb-1">📋 Details ({auditResult.details.length}):</div>
-                    <div className="text-[10px] space-y-1">
-                      {auditResult.details.slice(0, 10).map((d, i) => (
-                        <div key={i} className="text-amber-800">
-                          <strong>{d.entity || 'N/A'}</strong>.{d.field || 'N/A'}: {d.reason || 'N/A'}
-                          {d.hint && <div className="ml-2 text-amber-600 italic">💡 {d.hint}</div>}
-                        </div>
-                      ))}
-                      {auditResult.details.length > 10 && (
-                        <div className="text-amber-600 italic">... and {auditResult.details.length - 10} more</div>
-                      )}
-                    </div>
-                  </div>
+                {auditResult.meta && (
+                  <div className="mt-1">Meta: <code className="text-[10px]">{JSON.stringify(auditResult.meta)}</code></div>
                 )}
                 
                 {/* School timing config (if timeslots=0) */}
