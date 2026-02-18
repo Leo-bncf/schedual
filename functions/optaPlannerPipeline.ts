@@ -316,10 +316,16 @@ Deno.serve(async (req) => {
     });
     
     // ========================================
-    // STAGE 6: Persist to Database
+    // STAGE 6: Validate Solution Before Persist
     // ========================================
-    stage = 'persist';
-    console.log(`[OptaPlannerPipeline] ${stage}: saving ${solution.lessons?.length || 0} lessons to DB`);
+    stage = 'validateSolution';
+    
+    // Parse hardScore from score string (e.g., "-10hard/-814soft" or "0hard/100soft")
+    const scoreStr = String(solution.score || '');
+    const hardScoreMatch = scoreStr.match(/(-?\d+)hard/);
+    const hardScore = hardScoreMatch ? parseInt(hardScoreMatch[1]) : null;
+    
+    console.log(`[OptaPlannerPipeline] ${stage}: hardScore=${hardScore}, lessonsReturned=${solution.lessons?.length || 0}`);
     
     // Map solver output to ScheduleSlot entities
     const slots = (solution.lessons || []).map(lesson => ({
@@ -336,40 +342,147 @@ Deno.serve(async (req) => {
       status: lesson.timeslotId ? 'scheduled' : 'unscheduled'
     }));
     
-    // Delete old slots
+    const slotsToInsert = slots.filter(s => s.timeslot_id); // Only insert assigned slots
+    const unassignedCount = slots.filter(s => !s.timeslot_id).length;
+    
+    // CRITICAL GUARD 1: Block if hardScore < 0 (infeasible solution)
+    if (hardScore !== null && hardScore < 0) {
+      console.error(`[OptaPlannerPipeline] ❌ BLOCKING: hardScore=${hardScore} < 0 (infeasible solution)`);
+      console.error('[OptaPlannerPipeline] NOT purging existing slots - keeping current schedule');
+      
+      return Response.json({
+        ok: false,
+        stage: 'SOLUTION_INFEASIBLE',
+        code: 'HARD_CONSTRAINTS_VIOLATED',
+        error: 'Schedule infeasible',
+        errorMessage: `❌ OptaPlanner could not satisfy hard constraints.\n\nHard Score: ${hardScore} (must be 0 or positive)\n\nThe solver could not find a feasible schedule that satisfies all mandatory constraints.\n\n👉 Existing schedule preserved - no changes made.`,
+        details: [{
+          entity: 'Solution',
+          field: 'hardScore',
+          reason: `${hardScore} violations`,
+          hint: 'Review constraints, reduce required hours, or increase available timeslots'
+        }],
+        suggestion: '🔧 Try:\n• Reduce teaching hours/week for some subjects\n• Add more periods per day\n• Review hard constraints (may be too restrictive)\n• Check if enough teachers/rooms available',
+        requiredAction: 'Fix constraints or increase schedule capacity',
+        meta: { 
+          schoolId, 
+          schedule_version_id,
+          hardScore,
+          softScore: scoreStr,
+          lessonsReturned: solution.lessons?.length || 0,
+          lessonsAssigned: slotsToInsert.length,
+          lessonsUnassigned: unassignedCount
+        }
+      }, { status: 200 });
+    }
+    
+    // CRITICAL GUARD 2: Block if 0 slots to insert (destructive purge)
+    if (slotsToInsert.length === 0) {
+      console.error(`[OptaPlannerPipeline] ❌ BLOCKING: slotsToInsert=0 (would leave schedule empty)`);
+      console.error('[OptaPlannerPipeline] NOT purging existing slots - keeping current schedule');
+      
+      return Response.json({
+        ok: false,
+        stage: 'PERSISTENCE_BLOCKED',
+        code: 'ZERO_SLOTS_GENERATED',
+        error: 'No assignable slots',
+        errorMessage: `❌ OptaPlanner returned 0 assigned slots.\n\nSolver returned ${solution.lessons?.length || 0} lessons total, but ALL are unassigned (no timeslot_id).\n\nPurging existing slots would leave schedule empty.\n\n👉 Existing schedule preserved - no changes made.`,
+        details: [{
+          entity: 'Solution',
+          field: 'lessons',
+          reason: '0 lessons with timeslot assignments',
+          hint: 'Solver may be over-constrained or missing capacity'
+        }],
+        suggestion: '🔧 Try:\n• Increase periods per day in Settings\n• Reduce teaching hours for some subjects\n• Check if enough timeslots available\n• Review hard constraints',
+        requiredAction: 'Fix configuration to enable slot assignment',
+        meta: { 
+          schoolId, 
+          schedule_version_id,
+          hardScore,
+          softScore: scoreStr,
+          lessonsReturned: solution.lessons?.length || 0,
+          lessonsUnassigned: unassignedCount,
+          slotsToInsert: 0
+        }
+      }, { status: 200 });
+    }
+    
+    console.log(`[OptaPlannerPipeline] ✅ Validation passed: hardScore=${hardScore}, slotsToInsert=${slotsToInsert.length}`);
+    
+    // ========================================
+    // STAGE 7: Atomic Persist (Purge + Insert)
+    // ========================================
+    stage = 'persist';
+    console.log(`[OptaPlannerPipeline] ${stage}: atomic transaction - deleting old slots then inserting ${slotsToInsert.length} new slots`);
+    
     let deletedCount = 0;
-    try {
-      const purgeResponse = await base44.functions.invoke('purgeScheduleSlots', {
-        schedule_version_id
-      });
-      deletedCount = purgeResponse?.data?.deletedCount || 0;
-      console.log(`[OptaPlannerPipeline] Deleted ${deletedCount} old slots`);
-    } catch (purgeError) {
-      console.error('[OptaPlannerPipeline] ⚠️ Purge failed:', purgeError);
-    }
-    
-    // Insert new slots
     let insertedCount = 0;
-    if (slots.length > 0) {
-      const inserted = await base44.entities.ScheduleSlot.bulkCreate(slots);
-      insertedCount = Array.isArray(inserted) ? inserted.length : slots.length;
-      console.log(`[OptaPlannerPipeline] Inserted ${insertedCount} new slots`);
-    }
     
-    // Update schedule version
     try {
+      // Step 1: Purge old slots (safe - we have validated slots ready to insert)
+      try {
+        const purgeResponse = await base44.functions.invoke('purgeScheduleSlots', {
+          schedule_version_id
+        });
+        deletedCount = purgeResponse?.data?.deletedCount || 0;
+        console.log(`[OptaPlannerPipeline] ✅ Deleted ${deletedCount} old slots`);
+      } catch (purgeError) {
+        console.error('[OptaPlannerPipeline] ❌ Purge failed:', purgeError);
+        throw new Error(`Purge failed: ${purgeError?.message || purgeError}`);
+      }
+      
+      // Step 2: Insert new slots
+      const inserted = await base44.entities.ScheduleSlot.bulkCreate(slotsToInsert);
+      insertedCount = Array.isArray(inserted) ? inserted.length : slotsToInsert.length;
+      console.log(`[OptaPlannerPipeline] ✅ Inserted ${insertedCount} new slots`);
+      
+      // Step 3: Update schedule version
       await base44.entities.ScheduleVersion.update(schedule_version_id, {
         generated_at: new Date().toISOString(),
         score: solution.score || 0,
-        conflicts_count: slots.filter(s => !s.timeslot_id).length,
+        conflicts_count: unassignedCount,
         warnings_count: 0
       });
-    } catch (updateError) {
-      console.warn('[OptaPlannerPipeline] ⚠️ Failed to update schedule version:', updateError);
+      
+    } catch (persistError) {
+      console.error('[OptaPlannerPipeline] ❌❌❌ ATOMIC TRANSACTION FAILED');
+      console.error('[OptaPlannerPipeline] Error:', persistError);
+      console.error('[OptaPlannerPipeline] State:', { deletedCount, insertedCount, slotsToInsert: slotsToInsert.length });
+      
+      // CRITICAL: If insert failed after purge, schedule is now empty (data loss)
+      const dataLoss = deletedCount > 0 && insertedCount === 0;
+      
+      return Response.json({
+        ok: false,
+        stage: 'PERSISTENCE_FAILED',
+        code: dataLoss ? 'DATA_LOSS_DETECTED' : 'INSERT_FAILED',
+        error: 'Database persistence failed',
+        errorMessage: dataLoss 
+          ? `❌ CRITICAL: ${deletedCount} slots deleted but insert failed.\n\nSchedule is now empty (data loss occurred).\n\nError: ${persistError?.message || persistError}\n\n👉 Re-run schedule generation immediately to restore.`
+          : `❌ Failed to persist new schedule.\n\nError: ${persistError?.message || persistError}\n\n👉 Existing schedule may be partially affected.`,
+        details: [{
+          entity: 'Database',
+          field: 'bulkCreate',
+          reason: String(persistError?.message || persistError),
+          hint: dataLoss ? 'Re-generate schedule immediately - data was lost' : 'Retry persistence operation'
+        }],
+        suggestion: dataLoss 
+          ? '🚨 Data loss occurred. Click "Generate" immediately to restore schedule.'
+          : '🔧 Retry schedule generation to persist new slots.',
+        requiredAction: dataLoss ? 'URGENT: Re-generate schedule to restore data' : 'Retry generation',
+        meta: { 
+          schoolId, 
+          schedule_version_id,
+          deletedCount,
+          insertedCount,
+          slotsToInsert: slotsToInsert.length,
+          dataLoss
+        }
+      }, { status: 200 });
     }
     
     // ========================================
-    // STAGE 7: Return Success
+    // STAGE 8: Return Success
     // ========================================
     console.log('[OptaPlannerPipeline] ✅ SUCCESS - Pipeline complete');
     console.log('[OptaPlannerPipeline] Final counts:', {
@@ -383,11 +496,11 @@ Deno.serve(async (req) => {
       stage: 'complete',
       result: {
         lessonsCreated: solution.lessons?.length || 0,
-        lessonsAssigned: slots.filter(s => s.timeslot_id).length,
-        lessonsUnassigned: slots.filter(s => !s.timeslot_id).length,
+        lessonsAssigned: slotsToInsert.length,
+        lessonsUnassigned: unassignedCount,
         slotsDeleted: deletedCount,
         slotsInserted: insertedCount,
-        conflicts: slots.filter(s => !s.timeslot_id).length,
+        conflicts: unassignedCount,
         score: solution.score || 0
       },
       meta: { 
