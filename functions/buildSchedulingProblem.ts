@@ -904,10 +904,33 @@ if (isDP) {
         minPeriodsPerDay,
         targetPeriodsPerDay
       },
-      teachingGroups: teachingGroupsDb.map((tg) => {
+      teachingGroups: teachingGroupsDb.map((tg, idx) => {
         const minutes = minutesForTG(tg);
         const subj = subjectById[tg.subject_id] || null;
         const subjCode = subjectIdToCode[tg.subject_id] || null;
+        
+        // Log first TG as concrete example of DTO mapping
+        if (idx === 0) {
+          recordLog(`📋 CONCRETE MAPPING EXAMPLE (first TeachingGroup):`);
+          recordLog(`INPUT (Base44 TeachingGroup):`);
+          recordLog(`  {`);
+          recordLog(`    "id": "${tg.id}",`);
+          recordLog(`    "subject_id": "${tg.subject_id}",`);
+          recordLog(`    "level": "${tg.level || 'null'}",`);
+          recordLog(`    "minutes_per_week": ${tg.minutes_per_week},`);
+          recordLog(`    "year_group": "${tg.year_group || 'null'}",`);
+          recordLog(`    "name": "${tg.name}"`);
+          recordLog(`  }`);
+          recordLog(`OUTPUT (Codex DTO - whitelisted only):`);
+          recordLog(`  {`);
+          recordLog(`    "id": "${tg.id}",`);
+          recordLog(`    "student_group": "TG_${tg.id}",`);
+          recordLog(`    "subject_id": "${tg.subject_id}",`);
+          recordLog(`    "level": "${(tg.level === 'HL' || tg.level === 'SL') ? tg.level : 'null'}",`);
+          recordLog(`    "required_minutes_per_week": ${Math.round(minutes)}`);
+          recordLog(`  }`);
+          recordLog(`STRIPPED: year_group, name, minutes_per_week (float), student_ids, teacher_id, etc.`);
+        }
         
         // CODEX DTO CONTRACT: STRICT - only these fields allowed
         // Codex InputValidator rejects unknown fields with 422
