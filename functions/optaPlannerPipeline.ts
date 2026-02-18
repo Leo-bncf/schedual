@@ -33,8 +33,11 @@ Deno.serve(async (req) => {
       return Response.json({ 
         ok: false, 
         stage, 
-        error: 'Unauthorized',
-        code: 'NO_USER'
+        errorCode: 'NO_USER',
+        message: 'Unauthorized - no user authenticated',
+        validationErrors: [],
+        details: [],
+        meta: { schoolId: null, schedule_version_id: null }
       }, { status: 401 });
     }
     
@@ -42,8 +45,11 @@ Deno.serve(async (req) => {
       return Response.json({ 
         ok: false, 
         stage, 
-        error: 'User missing school_id',
-        code: 'NO_SCHOOL'
+        errorCode: 'NO_SCHOOL',
+        message: 'User missing school_id',
+        validationErrors: [],
+        details: [],
+        meta: { schoolId: null, schedule_version_id: null }
       }, { status: 403 });
     }
     
@@ -64,8 +70,11 @@ Deno.serve(async (req) => {
       return Response.json({ 
         ok: false, 
         stage, 
-        error: 'schedule_version_id required',
-        code: 'MISSING_SCHEDULE_VERSION'
+        errorCode: 'MISSING_SCHEDULE_VERSION',
+        message: 'schedule_version_id is required',
+        validationErrors: ['schedule_version_id missing in request body'],
+        details: [],
+        meta: { schoolId, schedule_version_id: null }
       }, { status: 400 });
     }
     
@@ -91,9 +100,12 @@ Deno.serve(async (req) => {
       return Response.json({
         ok: false,
         stage: 'buildProblem',
-        ...errorData, // ✅ Propagate ALL fields from buildSchedulingProblem
-        upstream: 'buildSchedulingProblem',
-        axiosError: buildError?.message
+        errorCode: errorData?.code || errorData?.errorCode || 'BUILD_ERROR',
+        message: errorData?.message || errorData?.error || 'Failed to build scheduling problem',
+        requestId: errorData?.requestId || null,
+        validationErrors: errorData?.validationErrors || [],
+        details: errorData?.details || [],
+        meta: { schoolId, schedule_version_id }
       }, { status: 200 });
     }
     
@@ -107,8 +119,12 @@ Deno.serve(async (req) => {
       return Response.json({
         ok: false,
         stage: 'buildProblem',
-        ...buildData, // ✅ Propagate ALL fields
-        upstream: 'buildSchedulingProblem'
+        errorCode: buildData?.code || buildData?.errorCode || 'BUILD_VALIDATION_ERROR',
+        message: buildData?.message || buildData?.error || 'Build validation failed',
+        requestId: buildData?.requestId || null,
+        validationErrors: buildData?.validationErrors || [],
+        details: buildData?.details || [],
+        meta: { schoolId, schedule_version_id }
       }, { status: 200 });
     }
     
@@ -124,13 +140,19 @@ Deno.serve(async (req) => {
       console.log('[OptaPlannerPipeline] Audit mode - returning problem without solving');
       return Response.json({
         ok: true,
-        stage: 'audit_complete',
-        audit: true,
-        problem: buildData.problem,
-        validationReport: buildData.validationReport,
-        stats: buildData.stats,
-        buildVersion: buildData.buildVersion,
-        pipelineVersion: PIPELINE_VERSION
+        stage: 'audit',
+        result: {
+          timeslots: buildData.problem?.timeslots?.length || 0,
+          lessons: buildData.problem?.lessons?.length || 0,
+          validationReport: buildData.validationReport,
+          stats: buildData.stats
+        },
+        meta: { 
+          schoolId, 
+          schedule_version_id,
+          buildVersion: buildData.buildVersion,
+          pipelineVersion: PIPELINE_VERSION
+        }
       });
     }
     
@@ -145,12 +167,15 @@ Deno.serve(async (req) => {
       return Response.json({
         ok: false,
         stage,
-        error: 'Solver endpoint or API key missing',
-        code: 'MISSING_SOLVER_CONFIG',
-        env: {
-          has_endpoint: !!SOLVER_ENDPOINT,
-          has_api_key: !!SOLVER_API_KEY
-        }
+        errorCode: 'MISSING_SOLVER_CONFIG',
+        message: 'Solver endpoint or API key not configured',
+        requestId: null,
+        validationErrors: [
+          !SOLVER_ENDPOINT ? 'OR_TOOL_ENDPOINT env var missing' : null,
+          !SOLVER_API_KEY ? 'OR_TOOL_API_KEY env var missing' : null
+        ].filter(Boolean),
+        details: [],
+        meta: { schoolId, schedule_version_id }
       }, { status: 503 });
     }
     
@@ -188,9 +213,12 @@ Deno.serve(async (req) => {
       return Response.json({
         ok: false,
         stage: 'callSolver',
-        error: 'Network error calling solver',
-        code: 'SOLVER_NETWORK_ERROR',
-        errorMessage: String(fetchError?.message || fetchError)
+        errorCode: 'SOLVER_NETWORK_ERROR',
+        message: 'Network error calling solver',
+        requestId: null,
+        validationErrors: [String(fetchError?.message || fetchError)],
+        details: [],
+        meta: { schoolId, schedule_version_id }
       }, { status: 200 });
     }
     
@@ -209,14 +237,17 @@ Deno.serve(async (req) => {
       
       return Response.json({
         ok: false,
-        stage: 'solverError',
-        error: 'Solver returned error',
-        code: parsedError?.code || 'SOLVER_ERROR',
-        httpStatus: solverResponse.status,
-        solverResponse: parsedError,
-        requestId: parsedError?.requestId,
-        validationErrors: parsedError?.validationErrors,
-        details: parsedError?.details
+        stage: 'solve',
+        errorCode: parsedError?.code || parsedError?.errorCode || 'SOLVER_ERROR',
+        message: parsedError?.message || parsedError?.error || `Solver returned HTTP ${solverResponse.status}`,
+        requestId: parsedError?.requestId || null,
+        validationErrors: parsedError?.validationErrors || [],
+        details: parsedError?.details || [],
+        meta: { 
+          schoolId, 
+          schedule_version_id,
+          solverHttpStatus: solverResponse.status
+        }
       }, { status: 200 });
     }
     
@@ -228,9 +259,12 @@ Deno.serve(async (req) => {
       return Response.json({
         ok: false,
         stage: 'parseSolution',
-        error: 'Invalid JSON from solver',
-        code: 'INVALID_SOLVER_RESPONSE',
-        preview: solverText.slice(0, 500)
+        errorCode: 'INVALID_SOLVER_RESPONSE',
+        message: 'Invalid JSON from solver',
+        requestId: null,
+        validationErrors: ['Solver returned non-JSON response'],
+        details: [{ entity: 'solver', field: 'response', reason: 'malformed JSON', hint: 'Check solver logs' }],
+        meta: { schoolId, schedule_version_id }
       }, { status: 200 });
     }
     
@@ -294,21 +328,22 @@ Deno.serve(async (req) => {
     // ========================================
     return Response.json({
       ok: true,
-      success: true,
       stage: 'complete',
-      schedule_version_id,
-      school_id: schoolId,
-      stats: {
-        lessons_total: solution.lessons?.length || 0,
-        lessons_assigned: slots.filter(s => s.timeslot_id).length,
-        lessons_unassigned: slots.filter(s => !s.timeslot_id).length,
-        slots_deleted: deletedCount,
-        slots_inserted: insertedCount,
+      result: {
+        lessonsCreated: solution.lessons?.length || 0,
+        lessonsAssigned: slots.filter(s => s.timeslot_id).length,
+        lessonsUnassigned: slots.filter(s => !s.timeslot_id).length,
+        slotsDeleted: deletedCount,
+        slotsInserted: insertedCount,
+        conflicts: slots.filter(s => !s.timeslot_id).length,
         score: solution.score || 0
       },
-      buildVersion: buildData.buildVersion,
-      pipelineVersion: PIPELINE_VERSION,
-      message: 'Schedule generated successfully'
+      meta: { 
+        schoolId, 
+        schedule_version_id,
+        buildVersion: buildData.buildVersion,
+        pipelineVersion: PIPELINE_VERSION
+      }
     });
     
   } catch (error) {
@@ -318,10 +353,17 @@ Deno.serve(async (req) => {
     return Response.json({
       ok: false,
       stage,
-      error: String(error?.message || error),
-      errorStack: String(error?.stack || ''),
-      code: 'PIPELINE_ERROR',
-      meta: { schedule_version_id, schoolId }
+      errorCode: 'PIPELINE_ERROR',
+      message: String(error?.message || error),
+      requestId: null,
+      validationErrors: [],
+      details: [{ 
+        entity: 'pipeline', 
+        field: 'execution', 
+        reason: String(error?.message || error), 
+        hint: 'Check function logs for stack trace' 
+      }],
+      meta: { schoolId, schedule_version_id }
     }, { status: 200 });
   }
 });
