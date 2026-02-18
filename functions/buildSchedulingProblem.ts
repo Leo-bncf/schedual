@@ -148,7 +148,7 @@ Deno.serve(async (req) => {
     
     if (startMin >= endMin) {
       recordLog(`❌ CRITICAL: day_start_time (${dayStartTime}) >= day_end_time (${dayEndTime})`);
-      return Response.json({
+      const errorBody = {
         ok: false,
         stage: 'INVALID_SCHOOL_TIMING',
         code: 'INVALID_DAY_TIMES',
@@ -164,12 +164,14 @@ Deno.serve(async (req) => {
         requiredAction: 'Fix school timing configuration',
         buildVersion: BUILD_VERSION,
         meta: { schedule_version_id, school_id, dayStartTime, dayEndTime }
-      }, { status: 422, headers: { 'Content-Type': 'application/json' } });
+      };
+      console.error('[buildSchedulingProblem] 🔍 422 RESPONSE BODY:', JSON.stringify(errorBody, null, 2));
+      return Response.json(errorBody, { status: 422, headers: { 'Content-Type': 'application/json' } });
     }
     
     if (periodDurationMinutes <= 0 || periodDurationMinutes > totalMinutesAvailable) {
       recordLog(`❌ CRITICAL: period_duration_minutes (${periodDurationMinutes}) invalid (must be 1-${totalMinutesAvailable})`);
-      return Response.json({
+      const errorBody = {
         ok: false,
         stage: 'INVALID_SCHOOL_TIMING',
         code: 'INVALID_PERIOD_DURATION',
@@ -185,7 +187,9 @@ Deno.serve(async (req) => {
         requiredAction: 'Fix period_duration_minutes in Settings',
         buildVersion: BUILD_VERSION,
         meta: { schedule_version_id, school_id, periodDurationMinutes, totalMinutesAvailable }
-      }, { status: 422, headers: { 'Content-Type': 'application/json' } });
+      };
+      console.error('[buildSchedulingProblem] 🔍 422 RESPONSE BODY:', JSON.stringify(errorBody, null, 2));
+      return Response.json(errorBody, { status: 422, headers: { 'Content-Type': 'application/json' } });
     }
 
     // Build breaks array from school settings (convert period numbers to time ranges)
@@ -257,7 +261,7 @@ Deno.serve(async (req) => {
     // CRITICAL: Block if zero timeslots generated
     if (timeslots.length === 0) {
       recordLog(`❌ CRITICAL: ZERO timeslots generated - cannot run solver`);
-      return Response.json({
+      const errorBody = {
         ok: false,
         stage: 'ZERO_TIMESLOTS_GENERATED',
         code: 'NO_TIMESLOTS',
@@ -281,7 +285,9 @@ Deno.serve(async (req) => {
           total_minutes_available: endMin - startMin
         },
         meta: { schedule_version_id, school_id }
-      }, { status: 422, headers: { 'Content-Type': 'application/json' } });
+      };
+      console.error('[buildSchedulingProblem] 🔍 422 RESPONSE BODY:', JSON.stringify(errorBody, null, 2));
+      return Response.json(errorBody, { status: 422, headers: { 'Content-Type': 'application/json' } });
     }
     
     recordLog(`✅ Timeslots validation passed: ${timeslots.length} timeslots across ${daysOfWeek.length} days`);
@@ -1008,7 +1014,7 @@ if (isDP) {
     console.error('[buildSchedulingProblem] Error stack:', error?.stack);
     console.error('[buildSchedulingProblem] Context:', { schedule_version_id, school_id, stage });
     
-    return Response.json({ 
+    const errorBody = { 
       ok: false,
       buildVersion: BUILD_VERSION,
       stage,
@@ -1023,6 +1029,8 @@ if (isDP) {
         hint: `Check server logs for stage=${stage}`
       }],
       meta: { schedule_version_id, school_id, stage }
-    }, { status: 500, headers: { 'Content-Type': 'application/json' } });
+    };
+    console.error('[buildSchedulingProblem] 🔍 500 RESPONSE BODY:', JSON.stringify(errorBody, null, 2));
+    return Response.json(errorBody, { status: 500, headers: { 'Content-Type': 'application/json' } });
   }
 });

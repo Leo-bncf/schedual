@@ -154,16 +154,16 @@ Deno.serve(async (req) => {
         missingSubjects_count: buildData?.missingSubjects?.length || 0
       });
     } catch (buildError) {
-      // CRITICAL: Axios throws on 4xx/5xx - extract ALL fields from response.data
+      // CRITICAL: Axios throws on 4xx/5xx - extract COMPLETE response.data
       console.error(`[OptaPlanner] ❌ buildSchedulingProblem threw error (HTTP ${buildError?.response?.status})`);
       console.error('[OptaPlanner] Error message:', buildError?.message);
-      console.error('[OptaPlanner] Response data (full JSON):', JSON.stringify(buildError?.response?.data, null, 2));
+      console.error('[OptaPlanner] 🔍 FULL RESPONSE DATA:', JSON.stringify(buildError?.response?.data, null, 2));
       console.error('[OptaPlanner] Response headers:', buildError?.response?.headers);
 
       const errorData = buildError?.response?.data || {};
       const httpStatus = buildError?.response?.status;
 
-      // CRITICAL: Extract ALL Codex 422 fields (requestId, validationErrors, details, meta)
+      // CRITICAL: Extract ALL fields from buildSchedulingProblem response (not just known ones)
       const requestId = errorData?.requestId || errorData?.request_id || null;
       const validationErrors = Array.isArray(errorData?.validationErrors) ? errorData.validationErrors : [];
       const details = Array.isArray(errorData?.details) ? errorData.details : 
@@ -171,40 +171,35 @@ Deno.serve(async (req) => {
                       Array.isArray(errorData?.missingSubjects) ? errorData.missingSubjects :
                       Array.isArray(errorData?.excludedGroups) ? errorData.excludedGroups : [];
 
-      // Log Codex trace info
+      // Log extracted fields
       if (requestId) {
-        console.error(`[OptaPlanner] 🔍 Codex requestId: ${requestId}`);
+        console.error(`[OptaPlanner] 🔍 requestId: ${requestId}`);
       }
       if (validationErrors.length > 0) {
-        console.error(`[OptaPlanner] ❌ Codex validationErrors (${validationErrors.length}):`, validationErrors);
+        console.error(`[OptaPlanner] ❌ validationErrors (${validationErrors.length}):`, validationErrors);
       }
       if (details.length > 0) {
-        console.error(`[OptaPlanner] 📋 Codex details (${details.length}):`, details.slice(0, 10));
+        console.error(`[OptaPlanner] 📋 details (${details.length}):`, details.slice(0, 10));
       }
 
-      // If 422/400 with structured error, propagate ALL fields
+      // If 422/400 with structured error, propagate ENTIRE errorData object + extracted fields
       if ((httpStatus === 422 || httpStatus === 400) && typeof errorData === 'object') {
         console.log('[OptaPlanner] 📋 Propagating structured 422 error from buildSchedulingProblem');
 
         return Response.json({ 
           ok: false,
+          ...errorData, // ✅ Spread ALL fields from buildSchedulingProblem response
+          // Override/ensure critical fields are present
           stage: errorData.stage || 'buildProblem',
           code: errorData.code || errorData.error || 'BUILD_PROBLEM_FAILED',
           error: errorData.error || 'buildSchedulingProblem validation failed',
           errorMessage: errorData.errorMessage || errorData.message || errorData.error || String(buildError?.message || 'Unknown error'),
-          errorStack: errorData.errorStack || String(buildError?.stack || ''),
           suggestion: errorData.suggestion || 'Check validation report for missing configuration',
           requestId, // ✅ Codex trace ID
           validationErrors, // ✅ Codex validation error strings
           details, // ✅ [{entity, field, reason, hint}]
-          meta: errorData.meta || { schedule_version_id, schoolId },
-          validationReport: errorData.validationReport || null,
-          requiredAction: errorData.requiredAction || null,
-          missingSubjects: errorData.missingSubjects || [],
-          missingGroups: errorData.missingGroups || [],
-          affectedTeachingGroups: errorData.affectedTeachingGroups || [],
-          buildVersion: errorData.buildVersion || null,
-          wrapperBuildVersion: WRAPPER_BUILD_VERSION
+          wrapperBuildVersion: WRAPPER_BUILD_VERSION,
+          upstream: 'buildSchedulingProblem' // ✅ Source of error
         }, { status: 200 });
       }
 
@@ -218,33 +213,26 @@ Deno.serve(async (req) => {
         errorStack: String(buildError?.stack || ''),
         httpStatus: httpStatus || null,
         meta: { schedule_version_id, schoolId },
-        wrapperBuildVersion: WRAPPER_BUILD_VERSION
+        wrapperBuildVersion: WRAPPER_BUILD_VERSION,
+        upstream: 'buildSchedulingProblem_network_error'
       }, { status: 200 });
     }
 
     // SUCCESS PATH: Check if buildSchedulingProblem succeeded
     if (!buildData?.success || buildData?.ok === false) {
-      console.error(`[OptaPlanner] ❌ buildProblem returned ok:false:`, buildData);
+      console.error(`[OptaPlanner] ❌ buildProblem returned ok:false`);
+      console.error('[OptaPlanner] 🔍 FULL buildData:', JSON.stringify(buildData, null, 2));
 
       return Response.json({ 
         ok: false,
+        ...buildData, // ✅ Spread ALL fields from buildSchedulingProblem response
+        // Override/ensure critical fields
         stage: buildData?.stage || 'buildProblem',
         code: buildData?.code || buildData?.error || 'BUILD_PROBLEM_FAILED',
         error: buildData?.error || 'buildSchedulingProblem failed',
         errorMessage: buildData?.errorMessage || buildData?.error || 'Unknown error',
-        errorStack: buildData?.errorStack || '',
-        suggestion: buildData?.suggestion || null,
-        requestId: buildData?.requestId || null,
-        validationErrors: buildData?.validationErrors || [],
-        details: buildData?.details || buildData?.missingGroups || buildData?.missingSubjects || buildData?.excludedGroups || [],
-        meta: buildData?.meta || { schedule_version_id, schoolId },
-        validationReport: buildData?.validationReport || null,
-        requiredAction: buildData?.requiredAction || null,
-        missingSubjects: buildData?.missingSubjects || [],
-        missingGroups: buildData?.missingGroups || [],
-        buildVersion: buildData?.buildVersion || null,
         wrapperBuildVersion: WRAPPER_BUILD_VERSION,
-        schoolConfig: buildData?.schoolConfig || null
+        upstream: 'buildSchedulingProblem'
       }, { status: 200 });
     }
 
