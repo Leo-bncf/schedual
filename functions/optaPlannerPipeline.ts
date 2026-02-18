@@ -81,124 +81,7 @@ Deno.serve(async (req) => {
     }
     
     // ========================================
-    // STAGE 2: Fetch School Data & Pre-Validate
-    // ========================================
-    stage = 'loadData';
-    
-    const teachingGroups = await base44.entities.TeachingGroup.filter({ school_id: schoolId });
-    const subjects = await base44.entities.Subject.filter({ school_id: schoolId });
-    
-    console.log(`[OptaPlannerPipeline] Loaded: ${teachingGroups.length} teaching groups, ${subjects.length} subjects`);
-    
-    // ========================================
-    // STAGE 3: DTO Mapping & Pre-Validation
-    // ========================================
-    stage = 'validateAndNormalize';
-    
-    const validationErrors = [];
-    const details = [];
-    const subjectIndex = {};
-    subjects.forEach(s => { subjectIndex[s.id] = s; });
-    
-    const normalizedGroups = [];
-    
-    for (const tg of teachingGroups) {
-      if (!tg.is_active) continue;
-      
-      const subject = subjectIndex[tg.subject_id];
-      if (!subject) {
-        details.push({
-          entity: 'TeachingGroup',
-          field: 'subject_id',
-          reason: `TeachingGroup "${tg.name}" references unknown subject ID: ${tg.subject_id}`,
-          hint: 'Remove or fix this teaching group'
-        });
-        continue;
-      }
-      
-      // Normalize minutes (float → int)
-      let minutesPerWeek = null;
-      if (typeof tg.minutes_per_week === 'number' && tg.minutes_per_week > 0) {
-        minutesPerWeek = Math.round(tg.minutes_per_week);
-      } else if (typeof tg.hours_per_week === 'number' && tg.hours_per_week > 0) {
-        minutesPerWeek = Math.round(tg.hours_per_week * 60);
-      } else {
-        // Fallback to subject defaults
-        const level = String(tg.level || '').toUpperCase();
-        if (subject.ib_level === 'DP') {
-          if (level === 'HL') {
-            if (!subject.hoursPerWeekHL || subject.hoursPerWeekHL <= 0) {
-              details.push({
-                entity: 'Subject',
-                field: 'hoursPerWeekHL',
-                reason: `Subject "${subject.name}" missing hoursPerWeekHL (required for HL teaching groups)`,
-                hint: 'Configure on Subjects page'
-              });
-              continue;
-            }
-            minutesPerWeek = Math.round(subject.hoursPerWeekHL * 60);
-          } else if (level === 'SL') {
-            if (!subject.hoursPerWeekSL || subject.hoursPerWeekSL <= 0) {
-              details.push({
-                entity: 'Subject',
-                field: 'hoursPerWeekSL',
-                reason: `Subject "${subject.name}" missing hoursPerWeekSL (required for SL teaching groups)`,
-                hint: 'Configure on Subjects page'
-              });
-              continue;
-            }
-            minutesPerWeek = Math.round(subject.hoursPerWeekSL * 60);
-          }
-        } else {
-          minutesPerWeek = subject.pyp_myp_minutes_per_week_default || 180;
-        }
-      }
-      
-      // Validate required_minutes_per_week > 0
-      if (!minutesPerWeek || minutesPerWeek <= 0) {
-        details.push({
-          entity: 'TeachingGroup',
-          field: 'required_minutes_per_week',
-          reason: `TeachingGroup "${tg.name}" has invalid minutes_per_week: ${minutesPerWeek}`,
-          hint: 'Configure minutes_per_week or hours_per_week on teaching group, or HL/SL hours on subject'
-        });
-        continue;
-      }
-      
-      // DTO Whitelist Mapping
-      const normalized = {
-        id: String(tg.id),
-        student_group: String(tg.name || tg.id), // Non-empty stable identifier
-        subject_id: String(tg.subject_id),
-        level: tg.level || null,
-        required_minutes_per_week: minutesPerWeek,
-        section_id: tg.section_id || null
-      };
-      
-      normalizedGroups.push(normalized);
-    }
-    
-    // Block if validation errors
-    if (details.length > 0) {
-      console.error(`[OptaPlannerPipeline] ❌ Pre-validation failed: ${details.length} issues`);
-      console.error('[OptaPlannerPipeline] Details:', JSON.stringify(details, null, 2));
-      
-      return Response.json({
-        ok: false,
-        stage: 'validateAndNormalize',
-        errorCode: 'PRE_VALIDATION_FAILED',
-        message: `${details.length} validation issues detected (HL/SL hours, invalid minutes, etc.)`,
-        requestId: null,
-        validationErrors: details.map(d => `${d.entity}.${d.field}: ${d.reason}`),
-        details,
-        meta: { schoolId, schedule_version_id, teachingGroupsTotal: teachingGroups.length, validCount: normalizedGroups.length }
-      }, { status: 200 });
-    }
-    
-    console.log(`[OptaPlannerPipeline] ✅ Normalized ${normalizedGroups.length} teaching groups`);
-    
-    // ========================================
-    // STAGE 4: Build Problem
+    // STAGE 2: Build Problem (handles all validation & DTO mapping)
     // ========================================
     stage = 'buildProblem';
     console.log(`[OptaPlannerPipeline] ${stage}: calling buildSchedulingProblem`);
@@ -207,8 +90,7 @@ Deno.serve(async (req) => {
     try {
       buildResponse = await base44.functions.invoke('buildSchedulingProblem', {
         schedule_version_id,
-        school_id: schoolId,
-        teaching_groups_override: normalizedGroups // Pass normalized groups
+        school_id: schoolId
       });
     } catch (buildError) {
       console.error(`[OptaPlannerPipeline] ❌ buildSchedulingProblem failed (HTTP ${buildError?.response?.status})`);
@@ -218,8 +100,8 @@ Deno.serve(async (req) => {
       console.error('[OptaPlannerPipeline] validationErrors:', errorData?.validationErrors || []);
       console.error('[OptaPlannerPipeline] details:', errorData?.details || []);
       
-      // Propagate error response directly (don't wrap)
-      if (errorData.ok === false || errorData.requestId) {
+      // CRITICAL: Propagate Codex error directly (don't wrap)
+      if (errorData.ok === false || errorData.requestId || errorData.validationErrors || errorData.details) {
         return Response.json(errorData, { status: 200 });
       }
       
@@ -260,6 +142,7 @@ Deno.serve(async (req) => {
     console.log('[OptaPlannerPipeline] Stats:', {
       timeslots: buildData?.problem?.timeslots?.length || 0,
       lessons: buildData?.problem?.lessons?.length || 0,
+      teachingGroups: buildData?.problem?.teachingGroups?.length || 0,
       subjects: buildData?.problem?.subjects?.length || 0
     });
     
@@ -311,26 +194,22 @@ Deno.serve(async (req) => {
     
     const problem = buildData.problem;
     
-    // CRITICAL: Apply strict DTO whitelist to problem.lessons (TeachingGroups)
-    const whitelistedLessons = (problem.lessons || []).map(lesson => ({
-      id: String(lesson.id),
-      student_group: String(lesson.student_group || lesson.studentGroup || lesson.id),
-      subject_id: String(lesson.subject_id || lesson.subjectId),
-      level: lesson.level || null,
-      required_minutes_per_week: typeof lesson.required_minutes_per_week === 'number' 
-        ? Math.round(lesson.required_minutes_per_week)
-        : (typeof lesson.minutesPerWeek === 'number' ? Math.round(lesson.minutesPerWeek) : null),
-      section_id: lesson.section_id || lesson.sectionId || null
-    }));
+    // Verify teachingGroups DTO format (buildSchedulingProblem already applies whitelist)
+    const tgSample = problem.teachingGroups?.[0];
+    if (tgSample) {
+      console.log('[OptaPlannerPipeline] DTO sample:', {
+        id: tgSample.id,
+        student_group: tgSample.student_group,
+        subject_id: tgSample.subject_id,
+        level: tgSample.level,
+        required_minutes_per_week: tgSample.required_minutes_per_week,
+        section_id: tgSample.section_id
+      });
+    }
     
-    // Prepare solver payload with whitelisted data
+    // Send problem as-is to Codex (buildSchedulingProblem handles DTO whitelist)
     const solverPayload = {
-      timeslots: problem.timeslots || [],
-      lessons: whitelistedLessons,
-      subjects: problem.subjects || [],
-      rooms: problem.rooms || [],
-      teachers: problem.teachers || [],
-      scheduleSettings: problem.scheduleSettings || {},
+      ...problem, // Already contains: timeslots, lessons, subjects, rooms, teachers, teachingGroups (DTO strict)
       schoolId,
       scheduleVersionId: schedule_version_id,
       debug: true,
@@ -338,11 +217,12 @@ Deno.serve(async (req) => {
     };
     
     console.log('[OptaPlannerPipeline] Codex payload prepared:', {
-      timeslots: solverPayload.timeslots.length,
-      lessons: solverPayload.lessons.length,
-      subjects: solverPayload.subjects.length,
-      rooms: solverPayload.rooms.length,
-      teachers: solverPayload.teachers.length
+      timeslots: solverPayload.timeslots?.length || 0,
+      lessons: solverPayload.lessons?.length || 0,
+      teachingGroups: solverPayload.teachingGroups?.length || 0,
+      subjects: solverPayload.subjects?.length || 0,
+      rooms: solverPayload.rooms?.length || 0,
+      teachers: solverPayload.teachers?.length || 0
     });
     
     let solverResponse;
