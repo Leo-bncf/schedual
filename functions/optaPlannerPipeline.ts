@@ -1,18 +1,20 @@
 import { createClientFromRequest } from 'npm:@base44/sdk@0.8.6';
 
 /**
- * OptaPlanner/Codex Scheduling Pipeline
+ * Codex Scheduling Pipeline (OptaPlanner Solver)
  * 
- * Clean, direct pipeline without error masking:
- * 1. Pre-audit (validate inputs)
- * 2. Build problem (via buildSchedulingProblem)
- * 3. Solve (call Codex solver)
- * 4. Persist (save to DB)
+ * Direct pipeline with strict DTO validation:
+ * 1. Load school data
+ * 2. Normalize TeachingGroups (DTO whitelist: id, student_group, subject_id, level, required_minutes_per_week, section_id)
+ * 3. Pre-validate (HL/SL hours, minutes > 0)
+ * 4. Build problem
+ * 5. Solve (call Codex)
+ * 6. Persist (save to DB)
  * 
- * Returns structured result with transparent error propagation (requestId, validationErrors, details)
+ * Returns: { ok, stage, result/errorCode, requestId, validationErrors[], details[], meta }
  */
 
-const PIPELINE_VERSION = '2026-02-18-OPTAPLANNER-CLEAN';
+const PIPELINE_VERSION = '2026-02-18-CODEX-DTO-STRICT';
 
 Deno.serve(async (req) => {
   console.log(`[OptaPlannerPipeline] 🚀 VERSION: ${PIPELINE_VERSION}`);
@@ -305,23 +307,42 @@ Deno.serve(async (req) => {
       }, { status: 503 });
     }
     
-    console.log(`[OptaPlannerPipeline] ${stage}: calling Codex at ${SOLVER_ENDPOINT}`);
+    console.log(`[OptaPlannerPipeline] ${stage}: calling Codex solver at ${SOLVER_ENDPOINT}`);
     
     const problem = buildData.problem;
     
-    // Prepare solver payload
+    // CRITICAL: Apply strict DTO whitelist to problem.lessons (TeachingGroups)
+    const whitelistedLessons = (problem.lessons || []).map(lesson => ({
+      id: String(lesson.id),
+      student_group: String(lesson.student_group || lesson.studentGroup || lesson.id),
+      subject_id: String(lesson.subject_id || lesson.subjectId),
+      level: lesson.level || null,
+      required_minutes_per_week: typeof lesson.required_minutes_per_week === 'number' 
+        ? Math.round(lesson.required_minutes_per_week)
+        : (typeof lesson.minutesPerWeek === 'number' ? Math.round(lesson.minutesPerWeek) : null),
+      section_id: lesson.section_id || lesson.sectionId || null
+    }));
+    
+    // Prepare solver payload with whitelisted data
     const solverPayload = {
-      ...problem,
+      timeslots: problem.timeslots || [],
+      lessons: whitelistedLessons,
+      subjects: problem.subjects || [],
+      rooms: problem.rooms || [],
+      teachers: problem.teachers || [],
+      scheduleSettings: problem.scheduleSettings || {},
       schoolId,
       scheduleVersionId: schedule_version_id,
       debug: true,
       strictDemand: true
     };
     
-    console.log('[OptaPlannerPipeline] Solver payload:', {
-      timeslots: solverPayload.timeslots?.length,
-      lessons: solverPayload.lessons?.length,
-      subjects: solverPayload.subjects?.length
+    console.log('[OptaPlannerPipeline] Codex payload prepared:', {
+      timeslots: solverPayload.timeslots.length,
+      lessons: solverPayload.lessons.length,
+      subjects: solverPayload.subjects.length,
+      rooms: solverPayload.rooms.length,
+      teachers: solverPayload.teachers.length
     });
     
     let solverResponse;
