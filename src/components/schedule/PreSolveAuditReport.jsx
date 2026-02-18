@@ -133,14 +133,35 @@ export default function PreSolveAuditReport({ auditResult, onProceed, onCancel }
                   <div>Meta: <code className="text-[10px]">{JSON.stringify(auditResult.meta)}</code></div>
                 )}
                 
+                {/* Codex requestId (for tracing) */}
+                {auditResult.requestId && (
+                  <div className="mt-2 p-2 bg-blue-50 rounded border border-blue-200">
+                    <div className="font-semibold text-blue-900 text-xs">🔍 Codex Request ID (for support):</div>
+                    <div className="font-mono text-[10px] text-blue-700 select-all">{auditResult.requestId}</div>
+                    <button
+                      onClick={() => {
+                        navigator.clipboard.writeText(auditResult.requestId);
+                        const { toast } = await import('sonner');
+                        toast.success('Request ID copied to clipboard');
+                      }}
+                      className="mt-1 text-xs text-blue-700 hover:underline"
+                    >
+                      Copy to clipboard
+                    </button>
+                  </div>
+                )}
+                
                 {/* Codex 422 Validation Errors */}
                 {auditResult.validationErrors && Array.isArray(auditResult.validationErrors) && auditResult.validationErrors.length > 0 && (
                   <div className="mt-2 p-2 bg-rose-50 rounded border border-rose-200">
-                    <div className="font-semibold text-rose-900 mb-1">🔍 Codex Validation Errors ({auditResult.validationErrors.length}):</div>
+                    <div className="font-semibold text-rose-900 mb-1">❌ Codex Validation Errors ({auditResult.validationErrors.length}):</div>
                     <div className="text-[10px] space-y-1">
-                      {auditResult.validationErrors.slice(0, 5).map((err, i) => (
+                      {auditResult.validationErrors.map((err, i) => (
                         <div key={i} className="text-rose-700">• {err}</div>
                       ))}
+                      {auditResult.validationErrors.length > 10 && (
+                        <div className="text-rose-600 italic">... and {auditResult.validationErrors.length - 10} more</div>
+                      )}
                     </div>
                   </div>
                 )}
