@@ -705,7 +705,7 @@ Now process the user's input and return ONLY the JSON object.`,
     setOptaPlannerLoading(true);
     setOptaPlannerError(null);
     try {
-      const res = await base44.functions.invoke('callORToolScheduler', { schedule_version_id: selectedVersion.id, dp_min_end_time: '16:00', dp_study_weekly: 8 });
+      const res = await base44.functions.invoke('optaPlannerPipeline', { schedule_version_id: selectedVersion.id });
       const data = res.data;
       setOptaPlannerResult(data);
 
@@ -1701,10 +1701,8 @@ Now process the user's input and return ONLY the JSON object.`,
           setOptaPlannerLoading(true);
           setOptaPlannerError(null);
           
-          const auditRes = await base44.functions.invoke('callORToolScheduler', {
+          const auditRes = await base44.functions.invoke('optaPlannerPipeline', {
             schedule_version_id: selectedVersion.id,
-            dp_min_end_time: '16:00',
-            dp_study_weekly: 8,
             audit: true
           });
           
@@ -1724,7 +1722,7 @@ Now process the user's input and return ONLY the JSON object.`,
           
           console.log('[Schedule] 📋 RAW AUDIT RESPONSE (FULL):', JSON.stringify(auditData, null, 2));
           console.log('[Schedule] 📋 OptaPlanner Audit Call:', {
-            function: 'callORToolScheduler', // Internal: OptaPlanner wrapper
+            function: 'optaPlannerPipeline', // Clean pipeline (no masking)
             payload: { 
               schedule_version_id: selectedVersion.id, 
               school_id: user.school_id,
@@ -1862,10 +1860,8 @@ Now process the user's input and return ONLY the JSON object.`,
             message: 'OptaPlanner: Purging old slots + Optimizing DP Core/Tests + Persisting...'
           }));
           
-          const res = await base44.functions.invoke('callORToolScheduler', {
-            schedule_version_id: selectedVersion.id,
-            dp_min_end_time: '16:00',
-            dp_study_weekly: 8
+          const res = await base44.functions.invoke('optaPlannerPipeline', {
+            schedule_version_id: selectedVersion.id
           });
           const r = res.data || {};
           
@@ -1996,7 +1992,10 @@ Now process the user's input and return ONLY the JSON object.`,
                 `Affected sections: ${splitSections.length}\n\n` +
                 `Example: ${splitSections[0]?.subject} - ${splitSections[0]?.studentGroup}\n` +
                 `Duplicate timeslots: ${JSON.stringify(splitSections[0]?.timeslots_list)}\n\n` +
-                `${errorData.suggestion || 'Solver bug: same class scheduled multiple times at same time'}`;
+                `${errorData.suggestion || 'Solver bug: same class scheduled multiple times at same time'}\n\n` +
+                (errorData.requestId ? `🔍 Codex requestId: ${errorData.requestId}\n` : '') +
+                (errorData.validationErrors?.length ? `\n❌ Validation errors:\n${errorData.validationErrors.join('\n')}\n` : '') +
+                (errorData.details?.length ? `\n📋 Details:\n${errorData.details.map(d => `• ${d.entity}.${d.field}: ${d.reason} (${d.hint})`).join('\n')}` : '');
 
               setOptaPlannerError(errorMsg);
               setOptaPlannerResult(errorData);
@@ -2004,7 +2003,11 @@ Now process the user's input and return ONLY the JSON object.`,
             }
             // Other solver business errors
             else {
-              const errorMsg = `Stage: ${errorData.stage}\nError: ${errorData.errorMessage || errorData.error}\n\nStack:\n${errorData.errorStack || 'N/A'}`;
+              const errorMsg = `Stage: ${errorData.stage}\nError: ${errorData.errorMessage || errorData.error}\n\n` +
+                (errorData.requestId ? `🔍 Codex requestId: ${errorData.requestId}\n\n` : '') +
+                (errorData.validationErrors?.length ? `❌ Validation errors:\n${errorData.validationErrors.join('\n')}\n\n` : '') +
+                (errorData.details?.length ? `📋 Details:\n${errorData.details.map(d => `• ${d.entity}.${d.field}: ${d.reason}\n  💡 ${d.hint}`).join('\n')}\n\n` : '') +
+                `Stack:\n${errorData.errorStack || 'N/A'}`;
               setOptaPlannerError(errorMsg);
               setOptaPlannerResult(errorData);
               toast.error(`${solverName} error at "${errorData.stage}": ${errorData.errorMessage || errorData.error}`, { duration: 10000 });
