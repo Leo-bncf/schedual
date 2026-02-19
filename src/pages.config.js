@@ -52,8 +52,10 @@ import ClassGroups from './pages/ClassGroups';
 import Constraints from './pages/Constraints';
 import ContactUs from './pages/ContactUs';
 import Dashboard from './pages/Dashboard';
+import DataSecurity from './pages/DataSecurity';
 import DatabaseSchema from './pages/DatabaseSchema';
 import Documentation from './pages/Documentation';
+import FAQ from './pages/FAQ';
 import Landing from './pages/Landing';
 import NotFound from './pages/NotFound';
 import Onboarding from './pages/Onboarding';
@@ -75,8 +77,6 @@ import Teachers from './pages/Teachers';
 import TermsOfUse from './pages/TermsOfUse';
 import TestData from './pages/TestData';
 import UserManagement from './pages/UserManagement';
-import FAQ from './pages/FAQ';
-import DataSecurity from './pages/DataSecurity';
 import __Layout from './Layout.jsx';
 
 
@@ -86,8 +86,10 @@ export const PAGES = {
     "Constraints": Constraints,
     "ContactUs": ContactUs,
     "Dashboard": Dashboard,
+    "DataSecurity": DataSecurity,
     "DatabaseSchema": DatabaseSchema,
     "Documentation": Documentation,
+    "FAQ": FAQ,
     "Landing": Landing,
     "NotFound": NotFound,
     "Onboarding": Onboarding,
@@ -109,8 +111,6 @@ export const PAGES = {
     "TermsOfUse": TermsOfUse,
     "TestData": TestData,
     "UserManagement": UserManagement,
-    "FAQ": FAQ,
-    "DataSecurity": DataSecurity,
 }
 
 export const pagesConfig = {

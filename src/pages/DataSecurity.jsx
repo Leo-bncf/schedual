@@ -288,7 +288,7 @@ export default function DataSecurity() {
               Our security team is here to address any concerns or questions about data protection, compliance, or our security practices.
             </p>
             <Link 
-              to={createPageUrl('Support')}
+              to={createPageUrl('ContactUs')}
               className="inline-block px-8 py-4 bg-blue-900 text-white font-semibold rounded-xl hover:bg-blue-800 transition-colors shadow-lg"
             >
               Contact Security Team
