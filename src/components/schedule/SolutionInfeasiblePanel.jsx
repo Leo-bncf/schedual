@@ -116,8 +116,18 @@ export default function SolutionInfeasiblePanel({ result, onRetry }) {
           </div>
         </div>
         
-        {/* Top Violating Constraints */}
-        {topViolations.length > 0 && (
+        {/* Constraint Details or Fallback Message */}
+        {isConstraintDetailsMissing ? (
+          <div className="bg-amber-50 p-4 rounded-lg border border-amber-300">
+            <div className="font-semibold text-amber-900 mb-2">⚠️ Détail des contraintes non disponible</div>
+            <p className="text-sm text-amber-800 mb-3">
+              OPTA n'a pas renvoyé le détail des contraintes violées pour ce run.
+            </p>
+            <p className="text-xs text-amber-700">
+              💡 Relancez la génération ou contactez le support avec le requestId pour un debug approfondi.
+            </p>
+          </div>
+        ) : topViolations.length > 0 ? (
           <div className="space-y-3">
             <div className="font-semibold text-rose-900">Top Violating Constraints:</div>
             {topViolations.slice(0, 5).map((violation, idx) => (
@@ -175,7 +185,7 @@ export default function SolutionInfeasiblePanel({ result, onRetry }) {
               </div>
             )}
           </div>
-        )}
+        ) : null}
         
         {/* User Action / Suggestion */}
         {(result.userAction || result.suggestion) && (
