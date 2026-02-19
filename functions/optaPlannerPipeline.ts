@@ -339,7 +339,8 @@ Deno.serve(async (req) => {
       day: lesson.day || null,
       period: lesson.period || null,
       is_double_period: false,
-      status: lesson.timeslotId ? 'scheduled' : 'unscheduled'
+      status: lesson.timeslotId ? 'scheduled' : 'unscheduled',
+      _subject_code: lesson.subject || null // Preserve subject code for diagnostics
     }));
     
     const slotsToInsert = slots.filter(s => s.timeslot_id); // Only insert assigned slots
@@ -436,7 +437,15 @@ Deno.serve(async (req) => {
       insertedCount = Array.isArray(inserted) ? inserted.length : slotsToInsert.length;
       console.log(`[OptaPlannerPipeline] ✅ Inserted ${insertedCount} new slots`);
       
-      // Step 3: Update schedule version
+      // Step 3: Count core slots inserted (TOK/CAS/EE)
+      const coreSlotsInsertedCount = {
+        TOK: slotsToInsert.filter(s => s._subject_code === 'TOK').length,
+        CAS: slotsToInsert.filter(s => s._subject_code === 'CAS').length,
+        EE: slotsToInsert.filter(s => s._subject_code === 'EE').length
+      };
+      console.log(`[OptaPlannerPipeline] 📊 Core slots inserted:`, coreSlotsInsertedCount);
+      
+      // Step 4: Update schedule version
       await base44.entities.ScheduleVersion.update(schedule_version_id, {
         generated_at: new Date().toISOString(),
         score: solution.score || 0,
@@ -501,8 +510,15 @@ Deno.serve(async (req) => {
         slotsDeleted: deletedCount,
         slotsInserted: insertedCount,
         conflicts: unassignedCount,
-        score: solution.score || 0
+        score: solution.score || 0,
+        coreSlotsInserted: coreSlotsInsertedCount // NEW: Core slots breakdown
       },
+      // Propagate build diagnostics for UI display
+      coreTeachingGroupsDetected: buildData?.coreTeachingGroupsDetected || [],
+      coreSubjectRequirementsSample: buildData?.coreSubjectRequirementsSample || [],
+      expectedLessonsBySubject: buildData?.expectedLessonsBySubject || {},
+      expectedMinutesBySubject: buildData?.expectedMinutesBySubject || {},
+      timeslots: buildData?.problem?.timeslots || [],
       meta: { 
         schoolId, 
         schedule_version_id,

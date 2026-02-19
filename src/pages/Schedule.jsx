@@ -3424,32 +3424,35 @@ Now process the user's input and return ONLY the JSON object.`,
                         <div className="bg-white p-3 rounded border border-rose-200">
                           <div className="font-bold text-rose-700 mb-2">📤 Input (buildSchedulingProblem)</div>
                           <div className="space-y-1 text-slate-700">
-                            <div>coreRequirementsFound: <strong className={optaPlannerResult?.coreSubjectRequirementsSample?.length > 0 ? 'text-green-600' : 'text-rose-600'}>{optaPlannerResult?.coreSubjectRequirementsSample?.length || 0}</strong></div>
+                            <div>coreRequirementsFound: <strong className={(optaPlannerResult?.coreSubjectRequirementsSample?.length || 0) > 0 ? 'text-green-600' : 'text-rose-600'}>{optaPlannerResult?.coreSubjectRequirementsSample?.length || 0}</strong></div>
                             {(optaPlannerResult?.coreSubjectRequirementsSample || []).slice(0, 5).map((req, i) => (
                               <div key={i} className="text-[11px] text-slate-600 truncate">
                                 {req.subject}: {req.minutesPerWeek}min/week ({req.studentGroup})
                               </div>
                             ))}
+                            <div className="mt-2 text-[11px] text-slate-600">
+                              Core TGs detected: <strong>{(optaPlannerResult?.coreTeachingGroupsDetected || []).reduce((sum, c) => sum + c.tgs_count, 0)}</strong>
+                            </div>
                           </div>
                         </div>
 
                         {/* Output: What solver returned */}
                         <div className="bg-white p-3 rounded border border-rose-200">
-                          <div className="font-bold text-rose-700 mb-2">📥 Output (OptaPlanner solver)</div>
+                          <div className="font-bold text-rose-700 mb-2">📥 Output (Solver assignments)</div>
                           <div className="space-y-1 text-slate-700">
-                            <div>TOK assigned: <strong className={optaPlannerResult?.assignedBySubjectCode?.TOK > 0 ? 'text-green-600' : 'text-rose-600'}>{optaPlannerResult?.assignedBySubjectCode?.TOK || 0}</strong></div>
-                            <div>CAS assigned: <strong className={optaPlannerResult?.assignedBySubjectCode?.CAS > 0 ? 'text-green-600' : 'text-rose-600'}>{optaPlannerResult?.assignedBySubjectCode?.CAS || 0}</strong></div>
-                            <div>EE assigned: <strong className={optaPlannerResult?.assignedBySubjectCode?.EE > 0 ? 'text-green-600' : 'text-rose-600'}>{optaPlannerResult?.assignedBySubjectCode?.EE || 0}</strong></div>
+                            <div>TOK lessons: <strong className={(optaPlannerResult?.expectedLessonsBySubject?.TOK || 0) > 0 ? 'text-green-600' : 'text-rose-600'}>{optaPlannerResult?.expectedLessonsBySubject?.TOK || 0}</strong></div>
+                            <div>CAS lessons: <strong className={(optaPlannerResult?.expectedLessonsBySubject?.CAS || 0) > 0 ? 'text-green-600' : 'text-rose-600'}>{optaPlannerResult?.expectedLessonsBySubject?.CAS || 0}</strong></div>
+                            <div>EE lessons: <strong className={(optaPlannerResult?.expectedLessonsBySubject?.EE || 0) > 0 ? 'text-green-600' : 'text-rose-600'}>{optaPlannerResult?.expectedLessonsBySubject?.EE || 0}</strong></div>
                           </div>
                         </div>
 
                         {/* DB Insertion */}
                         <div className="bg-white p-3 rounded border border-rose-200">
-                          <div className="font-bold text-rose-700 mb-2">💾 DB Insertion</div>
+                          <div className="font-bold text-rose-700 mb-2">💾 DB Insertion (actual)</div>
                           <div className="space-y-1 text-slate-700">
-                            <div>TOK inserted: <strong className={optaPlannerResult?.slotsInsertedBySubjectCode?.TOK > 0 ? 'text-green-600' : 'text-rose-600'}>{optaPlannerResult?.slotsInsertedBySubjectCode?.TOK || 0}</strong></div>
-                            <div>CAS inserted: <strong className={optaPlannerResult?.slotsInsertedBySubjectCode?.CAS > 0 ? 'text-green-600' : 'text-rose-600'}>{optaPlannerResult?.slotsInsertedBySubjectCode?.CAS || 0}</strong></div>
-                            <div>EE inserted: <strong className={optaPlannerResult?.slotsInsertedBySubjectCode?.EE > 0 ? 'text-green-600' : 'text-rose-600'}>{optaPlannerResult?.slotsInsertedBySubjectCode?.EE || 0}</strong></div>
+                            <div>TOK inserted: <strong className={(optaPlannerResult?.result?.coreSlotsInserted?.TOK || 0) > 0 ? 'text-green-600' : 'text-rose-600'}>{optaPlannerResult?.result?.coreSlotsInserted?.TOK || 0}</strong></div>
+                            <div>CAS inserted: <strong className={(optaPlannerResult?.result?.coreSlotsInserted?.CAS || 0) > 0 ? 'text-green-600' : 'text-rose-600'}>{optaPlannerResult?.result?.coreSlotsInserted?.CAS || 0}</strong></div>
+                            <div>EE inserted: <strong className={(optaPlannerResult?.result?.coreSlotsInserted?.EE || 0) > 0 ? 'text-green-600' : 'text-rose-600'}>{optaPlannerResult?.result?.coreSlotsInserted?.EE || 0}</strong></div>
                           </div>
                         </div>
 
@@ -3474,22 +3477,16 @@ Now process the user's input and return ONLY the JSON object.`,
                         Persisted slots: {scheduleSlots.length} • Inserted this run: {optaPlannerResult?.result?.slotsInserted ?? 0} • Deleted: {optaPlannerResult?.result?.slotsDeleted ?? 0}
                       </div>
                       <div className="p-4 space-y-3">
-                        <div className="flex items-center justify-between">
-                          <div className="text-sm text-slate-700">
-                            <div className="font-semibold text-slate-900 mb-1">OptaPlanner Response</div>
-                            <div className="flex gap-3">
-                              <span>Assigned TOK: <strong>{optaPlannerResult?.coreSlotsInsertedCount?.TOK || 0}</strong></span>
-                              <span>CAS: <strong>{optaPlannerResult?.coreSlotsInsertedCount?.CAS || 0}</strong></span>
-                              <span>EE: <strong>{optaPlannerResult?.coreSlotsInsertedCount?.EE || 0}</strong></span>
-                            </div>
+                      <div className="flex items-center justify-between">
+                        <div className="text-sm text-slate-700">
+                          <div className="font-semibold text-slate-900 mb-1">Core Slots (Final)</div>
+                          <div className="flex gap-3">
+                            <span>TOK: <strong className={(optaPlannerResult?.result?.coreSlotsInserted?.TOK || 0) > 0 ? 'text-green-600' : 'text-rose-600'}>{optaPlannerResult?.result?.coreSlotsInserted?.TOK || 0}</strong></span>
+                            <span>CAS: <strong className={(optaPlannerResult?.result?.coreSlotsInserted?.CAS || 0) > 0 ? 'text-green-600' : 'text-rose-600'}>{optaPlannerResult?.result?.coreSlotsInserted?.CAS || 0}</strong></span>
+                            <span>EE: <strong className={(optaPlannerResult?.result?.coreSlotsInserted?.EE || 0) > 0 ? 'text-green-600' : 'text-rose-600'}>{optaPlannerResult?.result?.coreSlotsInserted?.EE || 0}</strong></span>
                           </div>
-                          {optaPlannerResult?.sampleCoreSlot && (
-                            <div className="text-xs text-slate-600">
-                              <div className="font-medium text-slate-800">Sample Core Slot</div>
-                              <div>{optaPlannerResult.sampleCoreSlot.day} • Period {optaPlannerResult.sampleCoreSlot.period}</div>
-                            </div>
-                          )}
                         </div>
+                      </div>
 
                         {/* Quick verification panel */}
                         <div className="grid md:grid-cols-3 gap-3 text-xs">
@@ -3659,20 +3656,19 @@ Now process the user's input and return ONLY the JSON object.`,
                             <div className="space-y-3 text-xs text-slate-700">
                               <div className="grid md:grid-cols-3 gap-3">
                                 <div className="p-3 rounded-lg bg-slate-100">
-                                  <div className="font-semibold text-slate-900 mb-1">Expected Core (per week)</div>
+                                  <div className="font-semibold text-slate-900 mb-1">Expected Core (Input)</div>
                                   <div className="flex gap-4">
-                                    <span>TOK: <strong>{exp.TOK ?? 0}</strong></span>
-                                    <span>CAS: <strong>{exp.CAS ?? 0}</strong></span>
-                                    <span>EE: <strong>{exp.EE ?? 0}</strong></span>
+                                    <span>TOK: <strong>{(optaPlannerResult?.expectedLessonsBySubject?.TOK || 0)}</strong></span>
+                                    <span>CAS: <strong>{(optaPlannerResult?.expectedLessonsBySubject?.CAS || 0)}</strong></span>
+                                    <span>EE: <strong>{(optaPlannerResult?.expectedLessonsBySubject?.EE || 0)}</strong></span>
                                   </div>
                                 </div>
                                 <div className="p-3 rounded-lg bg-slate-100">
-                                  <div className="font-semibold text-slate-900 mb-1">Assigned vs Unassigned (Core)</div>
-                                  <div className="grid grid-cols-3 gap-2">
-                                    {['TOK', 'CAS', 'EE'].map(k => (
-                                      <div key={k}>
-                                        <div className="text-[11px] text-slate-500">{k}</div>
-                                        <div>✓ {asg[k] || 0} • ✗ {unasg[k] || 0}</div>
+                                  <div className="font-semibold text-slate-900 mb-1">Core TGs Detected</div>
+                                  <div className="space-y-1">
+                                    {(optaPlannerResult?.coreTeachingGroupsDetected || []).map((core, i) => (
+                                      <div key={i} className="text-[11px]">
+                                        {core.subject}: <strong>{core.tgs_count}</strong> TGs, <strong>{core.lessons_count}</strong> lessons
                                       </div>
                                     ))}
                                   </div>
@@ -3700,11 +3696,12 @@ Now process the user's input and return ONLY the JSON object.`,
                                   </div>
                                 </div>
                                 <div className="p-3 rounded-lg bg-slate-100">
-                                  <div className="font-semibold text-slate-900 mb-1">coreSlotsInsertedCount</div>
-                                  <pre className="bg-white rounded p-2 overflow-x-auto">{JSON.stringify(coreIns, null, 2)}</pre>
-                                  {optaPlannerResult?.testSlotsInsertedCount && (
-                                    <div className="mt-2 text-xs">testSlotsInsertedCount: <code>{JSON.stringify(optaPlannerResult.testSlotsInsertedCount)}</code></div>
-                                  )}
+                                  <div className="font-semibold text-slate-900 mb-1">Core Slots Inserted (Final)</div>
+                                  <div className="space-y-1">
+                                    <div>TOK: <strong className={(optaPlannerResult?.result?.coreSlotsInserted?.TOK || 0) > 0 ? 'text-green-600' : 'text-rose-600'}>{optaPlannerResult?.result?.coreSlotsInserted?.TOK || 0}</strong></div>
+                                    <div>CAS: <strong className={(optaPlannerResult?.result?.coreSlotsInserted?.CAS || 0) > 0 ? 'text-green-600' : 'text-rose-600'}>{optaPlannerResult?.result?.coreSlotsInserted?.CAS || 0}</strong></div>
+                                    <div>EE: <strong className={(optaPlannerResult?.result?.coreSlotsInserted?.EE || 0) > 0 ? 'text-green-600' : 'text-rose-600'}>{optaPlannerResult?.result?.coreSlotsInserted?.EE || 0}</strong></div>
+                                  </div>
                                 </div>
                                 <div className="p-3 rounded-lg bg-slate-100">
                                   <div className="font-semibold text-slate-900 mb-1">slotsToInsertBySubjectId</div>

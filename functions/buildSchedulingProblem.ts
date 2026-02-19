@@ -643,6 +643,57 @@ if (isDP) {
     recordLog(`Lessons created: ${lessons.length} total, ${teachingGroupsIncludedCount} sections included, ${teachingGroupsSkipped.length} skipped`);
     recordLog(`Adjustments made: ${teachingGroupsAdjusted.length}`);
     
+    // CORE DETECTION REPORT: Detect TOK/CAS/EE teaching groups and lessons
+    const coreTeachingGroupsReport = {
+      TOK: { tgs: [], lessons: [], total_minutes: 0 },
+      CAS: { tgs: [], lessons: [], total_minutes: 0 },
+      EE: { tgs: [], lessons: [], total_minutes: 0 }
+    };
+    
+    for (const tg of teachingGroupsDb) {
+      if (!tg?.subject_id) continue;
+      
+      const subj = subjectById[tg.subject_id];
+      if (!subj) continue;
+      
+      const subjCode = normalizeSubjectCode(subj.code || subj.name);
+      if (!subjCode) continue;
+      
+      // CORE DETECTION: Match on normalized subject code OR is_core flag
+      const isCore = subj.is_core === true || ['TOK', 'CAS', 'EE'].includes(subjCode);
+      if (!isCore) continue;
+      
+      const coreType = subjCode === 'TOK' ? 'TOK' : subjCode === 'CAS' ? 'CAS' : subjCode === 'EE' ? 'EE' : null;
+      if (!coreType) continue;
+      
+      // Find lessons created for this TG
+      const tgLessons = lessons.filter(l => l.teachingGroupId === tg.id);
+      const minutesForThisTG = minutesForTG(tg);
+      
+      coreTeachingGroupsReport[coreType].tgs.push({
+        tg_id: tg.id,
+        name: tg.name,
+        subject_id: tg.subject_id,
+        subject_code: subjCode,
+        year_group: tg.year_group,
+        student_count: (tg.student_ids || []).length,
+        minutes_per_week: minutesForThisTG,
+        lessons_created: tgLessons.length
+      });
+      
+      coreTeachingGroupsReport[coreType].lessons.push(...tgLessons);
+      coreTeachingGroupsReport[coreType].total_minutes += minutesForThisTG;
+    }
+    
+    // Log core report
+    ['TOK', 'CAS', 'EE'].forEach(core => {
+      const report = coreTeachingGroupsReport[core];
+      recordLog(`✅ ${core} CORE REPORT: ${report.tgs.length} TGs, ${report.lessons.length} lessons created, ${report.total_minutes}min total`);
+      report.tgs.forEach(tg => {
+        recordLog(`  - TG ${tg.tg_id} (${tg.name}): ${tg.student_count} students, ${tg.lessons_created} lessons, ${tg.minutes_per_week}min/week`);
+      });
+    });
+    
     // CRITICAL: Validate DP subjects have HL/SL hours configured (CODEX requirement)
     // SMART VALIDATION: Only enforce HL/SL if subject has HL/SL teaching groups AND is NOT a core subject
     const dpSubjectsWithoutHours = [];
@@ -1052,7 +1103,8 @@ if (isDP) {
         adjustments: teachingGroupsAdjusted,
         skipped: teachingGroupsSkipped,
         diagnosticLog,
-        lowPeriodWarnings: lowPeriodWarnings || []
+        lowPeriodWarnings: lowPeriodWarnings || [],
+        coreReport: coreTeachingGroupsReport // NEW: Core detection report
       },
       schoolIdUsed: school_id,
       scheduleVersionIdUsed: schedule_version_id,
@@ -1064,6 +1116,14 @@ if (isDP) {
       teachingGroupsAdjustedCount: teachingGroupsAdjusted.length,
       expectedMinutesBySubject,
       expectedLessonsBySubject,
+      coreTeachingGroupsDetected: ['TOK', 'CAS', 'EE'].map(core => ({
+        subject: core,
+        tgs_count: coreTeachingGroupsReport[core].tgs.length,
+        lessons_count: coreTeachingGroupsReport[core].lessons.length,
+        total_minutes: coreTeachingGroupsReport[core].total_minutes,
+        tgs: coreTeachingGroupsReport[core].tgs
+      })),
+      coreSubjectRequirementsSample: subjectRequirements.filter(r => ['TOK', 'CAS', 'EE'].includes(r.subject)),
       stats: {
         timeslots: timeslots.length,
         rooms: rooms.length,
