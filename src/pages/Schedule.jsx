@@ -115,12 +115,22 @@ export default function Schedule() {
       typeof payload.meta?.hardScore === 'number' ? payload.meta.hardScore :
       null;
 
-    // Force arrays — never null
-    const constraintBreakdown = Array.isArray(payload.constraintBreakdown) ? payload.constraintBreakdown : [];
-    const violatingConstraints = Array.isArray(payload.violatingConstraints) ? payload.violatingConstraints : [];
+    // CRITICAL: Force arrays — NEVER null
+    const constraintBreakdown = Array.isArray(payload.constraintBreakdown) && payload.constraintBreakdown.length > 0
+      ? payload.constraintBreakdown
+      : [];
+    const violatingConstraints = Array.isArray(payload.violatingConstraints) && payload.violatingConstraints.length > 0
+      ? payload.violatingConstraints
+      : [];
 
     // Detect fallback: infeasible but no constraint explanation
     const isFallback = typeof hardScore === 'number' && hardScore < 0 && constraintBreakdown.length === 0;
+
+    // CRITICAL: Correct generic/missing requiredAction text
+    let requiredAction = payload.requiredAction || '';
+    if (isFallback || requiredAction.includes('listed above') && violatingConstraints.length === 0) {
+      requiredAction = 'Aucune contrainte détaillée n\'a été renvoyée. Vérifiez la capacité (créneaux/profs/salles) ou réduisez la demande.';
+    }
 
     return {
       ...payload,
@@ -130,9 +140,7 @@ export default function Schedule() {
         ? ['HARD_CONSTRAINTS_VIOLATED_UNEXPLAINED']
         : violatingConstraints,
       isInfeasibleFallback: isFallback,
-      requiredAction: isFallback
-        ? 'Réduisez la demande OU augmentez la capacité, puis relancez.'
-        : payload.requiredAction,
+      requiredAction,
     };
   };
 
