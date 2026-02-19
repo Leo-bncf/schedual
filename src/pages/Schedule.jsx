@@ -3485,7 +3485,7 @@ Now process the user's input and return ONLY the JSON object.`,
                           <div className="space-y-1 text-slate-700">
                             <div>Stage: <strong>{optaPlannerResult?.stage || '—'}</strong></div>
                             <div>HTTP Status: <strong className={optaPlannerResult?.solverHttpStatus === 200 ? 'text-green-600' : 'text-rose-600'}>{optaPlannerResult?.solverHttpStatus || '—'}</strong></div>
-                            <div className="text-[10px]">Total inserted: {optaPlannerResult?.slotsInserted || 0}</div>
+                            <div className="text-[10px]">Total inserted: {optaPlannerResult?.result?.slotsInserted || 0}</div>
                             {optaPlannerResult?.solverErrorBody && (
                               <div className="mt-2 text-rose-700 bg-rose-100 p-1 rounded text-[10px]">
                                 {(optaPlannerResult.solverErrorBody || '').slice(0, 150)}
