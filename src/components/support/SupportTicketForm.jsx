@@ -21,8 +21,14 @@ export default function SupportTicketForm({ onSuccess }) {
   const queryClient = useQueryClient();
 
   const createTicketMutation = useMutation({
-    mutationFn: (data) => base44.functions.invoke('createSupportTicket', data),
-    onSuccess: () => {
+    mutationFn: async (data) => {
+      console.log('[SupportTicketForm] Submitting ticket:', data);
+      const response = await base44.functions.invoke('createSupportTicket', data);
+      console.log('[SupportTicketForm] Response:', response);
+      return response;
+    },
+    onSuccess: (response) => {
+      console.log('[SupportTicketForm] Success:', response);
       setSuccess(true);
       setFormData({ subject: '', description: '', priority: 'medium' });
       setTimeout(() => setSuccess(false), 5000);
@@ -30,6 +36,14 @@ export default function SupportTicketForm({ onSuccess }) {
       queryClient.invalidateQueries(['allSupportTickets']);
       if (onSuccess) onSuccess();
     },
+    onError: (error) => {
+      console.error('[SupportTicketForm] ❌ Ticket submission failed:', error);
+      console.error('[SupportTicketForm] Error details:', {
+        message: error?.message,
+        response_status: error?.response?.status,
+        response_data: error?.response?.data
+      });
+    }
   });
 
   const handleSubmit = (e) => {
