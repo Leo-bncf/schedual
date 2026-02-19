@@ -100,7 +100,9 @@ export default function Schedule() {
   const [scheduleTab, setScheduleTab] = useState('grid');
   const [showUpdateBanner, setShowUpdateBanner] = useState(false);
   const [showAdvanced, setShowAdvanced] = useState(false);
-  const [solverTimeslots, setSolverTimeslots] = useState(null); // Persist timeslots from OptaPlanner
+  const [solverTimeslotsByVersion, setSolverTimeslotsByVersion] = React.useState({}); // Cache timeslots per version
+  const prevVersionIdRef = React.useRef(null);
+  const solverTimeslots = solverTimeslotsByVersion[selectedVersion?.id] ?? null;
   const [auditResult, setAuditResult] = useState(null);
   const [showAuditReport, setShowAuditReport] = useState(false);
 
@@ -902,10 +904,13 @@ Now process the user's input and return ONLY the JSON object.`,
           toast.success(`✅ OptaPlanner: ${deleted} deleted, ${inserted} slots created`);
         }
         
-        // Persist solver timeslots to prevent config reconstruction overwrite
+        // Persist solver timeslots to version-specific cache
         if (payload.timeslots && Array.isArray(payload.timeslots) && payload.timeslots.length > 0) {
-          console.log('[handleFetchORTool] 💾 PERSISTING solver timeslots:', payload.timeslots.length, 'slots');
-          setSolverTimeslots(payload.timeslots);
+          console.log('[handleFetchORTool] 💾 Caching solver timeslots for version:', selectedVersion?.id, payload.timeslots.length);
+          setSolverTimeslotsByVersion(prev => ({
+            ...prev,
+            [selectedVersion.id]: payload.timeslots
+          }));
         }
         
         await queryClient.invalidateQueries({ queryKey: ['scheduleSlots'] });
@@ -2243,10 +2248,13 @@ Now process the user's input and return ONLY the JSON object.`,
               toast.success(`✅ Codex: ${deleted} deleted, ${inserted} optimized slots created`);
             }
 
-            // CRITICAL: Persist solver timeslots as single source of truth (never overwritten by config reconstruction)
+            // CRITICAL: Persist solver timeslots to version-specific cache (never overwritten by config reconstruction)
             if (payload.timeslots && Array.isArray(payload.timeslots) && payload.timeslots.length > 0) {
-              console.log('[Schedule] 💾 PERSISTING solver timeslots to prevent config overwrite:', payload.timeslots.length, 'slots');
-              setSolverTimeslots(payload.timeslots);
+              console.log('[Schedule] 💾 Caching solver timeslots for version:', selectedVersion?.id, payload.timeslots.length);
+              setSolverTimeslotsByVersion(prev => ({
+                ...prev,
+                [selectedVersion.id]: payload.timeslots
+              }));
             }
 
             await queryClient.invalidateQueries({ queryKey: ['scheduleSlots'] });
@@ -2444,13 +2452,18 @@ Now process the user's input and return ONLY the JSON object.`,
     }
   }, [scheduleVersions, selectedVersion, publishedVersion, draftVersions, hasAutoSelected]);
 
-  // Clear solver timeslots when version changes (AFTER school data loaded to prevent race)
+  // Track version changes without destructive clearing
   React.useEffect(() => {
-    if (selectedVersion && school) {
-      console.log('[Schedule] Version changed (school loaded) - clearing persisted solver timeslots');
-      setSolverTimeslots(null);
+    const versionId = selectedVersion?.id;
+    if (!versionId) return;
+
+    // Only log when version actually changes (not on every school hydration)
+    if (prevVersionIdRef.current && prevVersionIdRef.current !== versionId) {
+      console.log('[Schedule] Version changed - switching solverTimeslots cache (no destructive clear)');
     }
-  }, [selectedVersion?.id, school?.id]);
+
+    prevVersionIdRef.current = versionId;
+  }, [selectedVersion?.id]);
 
   // Calculate stats for selected version
   const stats = React.useMemo(() => {
