@@ -65,6 +65,7 @@ import UtilizationStats from '../components/schedule/UtilizationStats';
 import CohortIntegrityReport from '../components/schedule/CohortIntegrityReport';
 import PreSolveAuditReport from '../components/schedule/PreSolveAuditReport';
 import GlobalPeriodCoverageReport from '../components/schedule/GlobalPeriodCoverageReport';
+import SolutionInfeasiblePanel from '../components/schedule/SolutionInfeasiblePanel';
 
 
 export default function Schedule() {
@@ -2749,8 +2750,16 @@ Now process the user's input and return ONLY the JSON object.`,
         </div>
       )}
 
-      {/* OptaPlanner Error Panel (shown BEFORE main content) */}
-      {selectedVersion && optaPlannerResult?.ok === false && (
+      {/* SOLUTION_INFEASIBLE: Enhanced display with requestId + constraint breakdown */}
+      {selectedVersion && optaPlannerResult?.ok === false && optaPlannerResult?.stage === 'SOLUTION_INFEASIBLE' && (
+        <SolutionInfeasiblePanel 
+          result={optaPlannerResult} 
+          onRetry={handleGenerateSchedule}
+        />
+      )}
+      
+      {/* OptaPlanner Error Panel (other error types) */}
+      {selectedVersion && optaPlannerResult?.ok === false && optaPlannerResult?.stage !== 'SOLUTION_INFEASIBLE' && (
         <Card className="border-2 border-rose-500 shadow-xl bg-gradient-to-br from-rose-50 to-rose-100">
           <CardHeader className="bg-rose-600 text-white">
             <CardTitle className="flex items-center gap-2">
