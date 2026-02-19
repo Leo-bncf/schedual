@@ -211,7 +211,7 @@ export default function SolutionInfeasiblePanel({ result, onRetry }) {
         {/* Confirmation */}
         <div className="bg-blue-50 p-3 rounded-lg border border-blue-200">
           <p className="text-sm text-blue-900 font-medium">
-            ✅ Planning actuel conservé : aucune modification appliquée.
+            ✅ {FIXED_PRESERVED_LINE}
           </p>
         </div>
         
