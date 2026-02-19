@@ -13,8 +13,10 @@ export default function SolutionInfeasiblePanel({ result, onRetry }) {
   
   const requestId = result.requestId || result.meta?.requestId || null;
   const hardScore = result.meta?.hardScore || 0;
-  const constraintBreakdown = result.constraintBreakdown || null;
+  const constraintBreakdown = result.constraintBreakdown || [];
+  const violatingConstraints = result.violatingConstraints || [];
   const topViolations = constraintBreakdown?.summary || [];
+  const isConstraintDetailsMissing = result.isConstraintDetailsMissing || (topViolations.length === 0 && violatingConstraints.length === 0);
   
   const handleCopyRequestId = () => {
     if (!requestId) return;
