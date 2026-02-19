@@ -65,6 +65,27 @@ const stageUiMap = {
 };
 
 /**
+ * Fixed message always shown to user when schedule generation fails
+ * (no exceptions, regardless of fallback mode)
+ */
+export const FIXED_PRESERVED_LINE = "Planning actuel conservé : aucune modification appliquée.";
+
+/**
+ * UI text when OPTA returns infeasible with no constraint details
+ * (fallback mode: hardScore < 0 but constraintBreakdown empty)
+ */
+export const infeasibleFallbackUi = {
+  toast: "Planning impossible",
+  title: "Impossible de générer un emploi du temps réalisable",
+  message: "Les contraintes obligatoires ne peuvent pas être satisfaites (hard).",
+  preservedLine: FIXED_PRESERVED_LINE,
+  extraInfo:
+    "OPTA n'a pas renvoyé le détail des contraintes violées pour cette tentative.",
+  userAction:
+    "Réduisez la demande (minutes/sem) OU augmentez la capacité (créneaux/ressources), puis relancez. Si besoin, contactez le support avec le requestId."
+};
+
+/**
  * Normalize OPTA error payload to UI-friendly format
  * Applies stageUiMap fallbacks when fields are missing
  */
