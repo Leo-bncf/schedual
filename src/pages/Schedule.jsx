@@ -417,7 +417,7 @@ export default function Schedule() {
     return slots;
   }, [school, optaPlannerResult, solverTimeslots, scheduleSlots.length]);
 
-  // SOURCE OF TRUTH: Calculate periodsPerDay from actual timeslots (NEVER fallback to school.periods_per_day if timeslots exist)
+  // SOURCE OF TRUTH: Calculate periodsPerDay from actual timeslots (NEVER fallback to hardcoded values)
   const dynamicPeriodsPerDay = React.useMemo(() => {
     // PRIORITY 1: If timeslots exist, ALWAYS use them (NEVER fallback to school config)
     if (timeslots.length > 0) {
@@ -508,9 +508,9 @@ export default function Schedule() {
       return calculatedPeriods;
     }
     
-    // FALLBACK: ONLY if no timeslots, no scheduleSettings, no school (exceptional case)
-    console.error('[Schedule] ❌ CRITICAL: No timeslots, no scheduleSettings, no school - using hardcoded fallback 8 periods/day (SHOULD NEVER HAPPEN)');
-    return 8;
+    // CRITICAL: No data available - return null to trigger loading state (NEVER return hardcoded fallback)
+    console.warn('[Schedule] ⚠️ periodsPerDay: No data available (school/settings/timeslots) - returning null (loading state)');
+    return null;
   }, [timeslots, optaPlannerResult?.scheduleSettingsSent, school]);
 
   const { data: constraints = [], refetch: refetchConstraints } = useQuery({
@@ -2908,69 +2908,96 @@ Now process the user's input and return ONLY the JSON object.`,
                   </div>
 
                   <div id="master-schedule-grid">
-                    <TimetableGrid
-                      slots={selectedClassGroupId ? scheduleSlots.filter(slot => {
-                        if (slot.classgroup_id) {
-                          return slot.classgroup_id === selectedClassGroupId;
-                        }
-                        const group = teachingGroups.find(g => g.id === slot.teaching_group_id);
-                        if (!group) return false;
-                        const groupStudents = group.student_ids || [];
-                        const classGroupStudents = students
-                          .filter(s => s.classgroup_id === selectedClassGroupId)
-                          .map(s => s.id);
-                        return groupStudents.some(sid => classGroupStudents.includes(sid));
-                      }) : scheduleSlots}
-                      groups={teachingGroups}
-                      rooms={rooms}
-                      subjects={subjects}
-                      teachers={teachers}
-                      classGroups={classGroups}
-                      periodsPerDay={dynamicPeriodsPerDay}
-                      breakPeriods={school?.settings?.break_periods || []}
-                      lunchPeriod={school?.settings?.lunch_period || 4}
-                      dayStartTime={school?.day_start_time || schoolConfig.day_start_time}
-                      dayEndTime={school?.day_end_time || schoolConfig.day_end_time}
-                      periodDurationMinutes={school?.period_duration_minutes || schoolConfig.period_duration_minutes}
-                      timeslots={timeslots}
-                      onSlotClick={(day, period, slot) => {
-                        console.log('Clicked:', day, period, slot);
-                      }}
-                      exportId="master-timetable"
-                    />
+                    {dynamicPeriodsPerDay === null ? (
+                      <Card className="border-slate-200">
+                        <CardContent className="py-12 text-center">
+                          <Loader2 className="w-12 h-12 text-slate-300 mx-auto mb-4 animate-spin" />
+                          <p className="text-slate-500">Loading schedule configuration...</p>
+                        </CardContent>
+                      </Card>
+                    ) : (
+                      <TimetableGrid
+                        slots={selectedClassGroupId ? scheduleSlots.filter(slot => {
+                          if (slot.classgroup_id) {
+                            return slot.classgroup_id === selectedClassGroupId;
+                          }
+                          const group = teachingGroups.find(g => g.id === slot.teaching_group_id);
+                          if (!group) return false;
+                          const groupStudents = group.student_ids || [];
+                          const classGroupStudents = students
+                            .filter(s => s.classgroup_id === selectedClassGroupId)
+                            .map(s => s.id);
+                          return groupStudents.some(sid => classGroupStudents.includes(sid));
+                        }) : scheduleSlots}
+                        groups={teachingGroups}
+                        rooms={rooms}
+                        subjects={subjects}
+                        teachers={teachers}
+                        classGroups={classGroups}
+                        periodsPerDay={dynamicPeriodsPerDay}
+                        breakPeriods={school?.settings?.break_periods || []}
+                        lunchPeriod={school?.settings?.lunch_period || 4}
+                        dayStartTime={school?.day_start_time || schoolConfig.day_start_time}
+                        dayEndTime={school?.day_end_time || schoolConfig.day_end_time}
+                        periodDurationMinutes={school?.period_duration_minutes || schoolConfig.period_duration_minutes}
+                        timeslots={timeslots}
+                        onSlotClick={(day, period, slot) => {
+                          console.log('Clicked:', day, period, slot);
+                        }}
+                        exportId="master-timetable"
+                      />
+                    )}
                   </div>
                 </TabsContent>
 
                 <TabsContent value="student">
-                  <StudentScheduleView
-                    students={students.filter(s => s.is_active)}
-                    slots={scheduleSlots}
-                    groups={teachingGroups}
-                    subjects={subjects}
-                    teachers={teachers}
-                    rooms={rooms}
-                    selectedStudentId={selectedStudentId}
-                    onStudentChange={setSelectedStudentId}
-                    exportId="student-schedule"
-                    scheduleVersionId={selectedVersion?.id}
-                    unassignedBySubjectCode={optaPlannerResult?.unassignedBySubjectCode}
-                    timeslots={timeslots}
-                    scheduleSettings={optaPlannerResult?.problem?.scheduleSettings || school}
-                  />
+                  {dynamicPeriodsPerDay === null ? (
+                    <Card className="border-slate-200">
+                      <CardContent className="py-12 text-center">
+                        <Loader2 className="w-12 h-12 text-slate-300 mx-auto mb-4 animate-spin" />
+                        <p className="text-slate-500">Loading schedule configuration...</p>
+                      </CardContent>
+                    </Card>
+                  ) : (
+                    <StudentScheduleView
+                      students={students.filter(s => s.is_active)}
+                      slots={scheduleSlots}
+                      groups={teachingGroups}
+                      subjects={subjects}
+                      teachers={teachers}
+                      rooms={rooms}
+                      selectedStudentId={selectedStudentId}
+                      onStudentChange={setSelectedStudentId}
+                      exportId="student-schedule"
+                      scheduleVersionId={selectedVersion?.id}
+                      unassignedBySubjectCode={optaPlannerResult?.unassignedBySubjectCode}
+                      timeslots={timeslots}
+                      scheduleSettings={optaPlannerResult?.problem?.scheduleSettings || school}
+                    />
+                  )}
                 </TabsContent>
 
                 <TabsContent value="teacher">
-                  <TeacherScheduleView
-                    teachers={teachers.filter(t => t.is_active)}
-                    slots={scheduleSlots}
-                    groups={teachingGroups}
-                    subjects={subjects}
-                    rooms={rooms}
-                    selectedTeacherId={selectedTeacherId}
-                    onTeacherChange={setSelectedTeacherId}
-                    exportId="teacher-schedule"
-                    timeslots={timeslots}
-                  />
+                  {dynamicPeriodsPerDay === null ? (
+                    <Card className="border-slate-200">
+                      <CardContent className="py-12 text-center">
+                        <Loader2 className="w-12 h-12 text-slate-300 mx-auto mb-4 animate-spin" />
+                        <p className="text-slate-500">Loading schedule configuration...</p>
+                      </CardContent>
+                    </Card>
+                  ) : (
+                    <TeacherScheduleView
+                      teachers={teachers.filter(t => t.is_active)}
+                      slots={scheduleSlots}
+                      groups={teachingGroups}
+                      subjects={subjects}
+                      rooms={rooms}
+                      selectedTeacherId={selectedTeacherId}
+                      onTeacherChange={setSelectedTeacherId}
+                      exportId="teacher-schedule"
+                      timeslots={timeslots}
+                    />
+                  )}
                 </TabsContent>
               </Tabs>
             )}
