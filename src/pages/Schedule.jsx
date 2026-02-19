@@ -2082,7 +2082,7 @@ Now process the user's input and return ONLY the JSON object.`,
             ...prev,
             stage: 'Running Codex Solver',
             percent: 90,
-            message: 'Codex: Purging + Optimizing + Persisting (atomic transaction)...'
+            message: 'Codex: Optimizing schedule... (if feasible, will replace existing slots atomically)'
           }));
           
           const res = await base44.functions.invoke('optaPlannerPipeline', {
