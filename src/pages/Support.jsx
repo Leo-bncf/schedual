@@ -46,12 +46,58 @@ export default function Support() {
     return colors[priority] || colors.medium;
   };
 
+  const getStatusIcon = (status) => {
+    const icons = {
+      open: Clock,
+      in_progress: Loader2,
+      waiting_for_customer: AlertCircle,
+      resolved: CheckCircle,
+      closed: CheckCircle
+    };
+    return icons[status] || Clock;
+  };
+
   return (
-    <div className="max-w-7xl mx-auto space-y-6">
-      <div>
-        <h1 className="text-3xl font-bold text-slate-900 mb-2">Support Center</h1>
-        <p className="text-slate-600">Submit tickets and track your support requests</p>
-      </div>
+    <div className="min-h-screen bg-gradient-to-br from-slate-50 to-blue-50">
+      <div className="max-w-7xl mx-auto space-y-8">
+        {/* Header Section */}
+        <div className="bg-white rounded-2xl shadow-lg border border-slate-200 p-8">
+          <div className="flex items-start gap-6">
+            <div className="w-16 h-16 rounded-2xl bg-gradient-to-br from-blue-900 to-blue-700 flex items-center justify-center flex-shrink-0">
+              <MessageCircle className="w-8 h-8 text-white" />
+            </div>
+            <div className="flex-1">
+              <h1 className="text-4xl font-bold text-slate-900 mb-3">Support Center</h1>
+              <p className="text-lg text-slate-600 mb-4">
+                Need help with Schedual? Our team is here to assist you with technical issues, 
+                account questions, scheduling problems, or any other concerns.
+              </p>
+              <div className="grid sm:grid-cols-3 gap-4 mt-6">
+                <div className="flex items-start gap-3 p-4 rounded-lg bg-blue-50 border border-blue-200">
+                  <Clock className="w-5 h-5 text-blue-700 mt-0.5 flex-shrink-0" />
+                  <div>
+                    <div className="font-semibold text-blue-900 text-sm">Response Time</div>
+                    <div className="text-xs text-blue-700 mt-1">Within 24-48 hours</div>
+                  </div>
+                </div>
+                <div className="flex items-start gap-3 p-4 rounded-lg bg-green-50 border border-green-200">
+                  <CheckCircle className="w-5 h-5 text-green-700 mt-0.5 flex-shrink-0" />
+                  <div>
+                    <div className="font-semibold text-green-900 text-sm">Priority Support</div>
+                    <div className="text-xs text-green-700 mt-1">Available for all plans</div>
+                  </div>
+                </div>
+                <div className="flex items-start gap-3 p-4 rounded-lg bg-indigo-50 border border-indigo-200">
+                  <Inbox className="w-5 h-5 text-indigo-700 mt-0.5 flex-shrink-0" />
+                  <div>
+                    <div className="font-semibold text-indigo-900 text-sm">Track Progress</div>
+                    <div className="text-xs text-indigo-700 mt-1">Real-time ticket updates</div>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
 
       <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
         <TabsList className="bg-white border border-slate-200 w-full sm:w-auto">
