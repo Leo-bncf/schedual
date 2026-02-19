@@ -694,13 +694,13 @@ Deno.serve(async (req) => {
           stage: 'PERSISTENCE_FAILED',
           code: dataLoss ? 'DATA_LOSS_DETECTED' : 'TRANSACTION_FAILED',
           severity: dataLoss ? 'critical' : 'error',
-          title: dataLoss ? '🚨 PERTE DE DONNÉES CRITIQUE' : 'Échec de la transaction',
+          title: dataLoss ? '🚨 PERTE DE DONNÉES CRITIQUE' : 'Échec d\'enregistrement',
           message: dataLoss 
             ? `${deletedCount} créneaux supprimés mais l'insertion a échoué. Le planning est maintenant vide.`
-            : `La transaction de persistence du nouveau planning a échoué.`,
+            : `Le planning a été généré mais n'a pas pu être enregistré.`,
           userAction: dataLoss 
             ? '🚨 URGENT : Régénérez immédiatement le planning pour restaurer vos données.'
-            : 'Réessayez la génération du planning.',
+            : 'Réessayez. Si ça persiste, contactez le support avec le requestId.',
           requestId,
           details: [{
             entity: 'Database',
@@ -750,9 +750,9 @@ Deno.serve(async (req) => {
         stage: 'PERSISTENCE_ERROR',
         code: 'FUNCTION_ERROR',
         severity: 'error',
-        title: 'Erreur de persistence',
-        message: `Impossible d'appeler la fonction de remplacement atomique des créneaux.`,
-        userAction: 'Contactez le support technique avec l\'erreur : ' + String(persistError?.message || persistError).slice(0, 100),
+        title: 'Échec d\'enregistrement',
+        message: 'Le planning a été généré mais n\'a pas pu être enregistré.',
+        userAction: 'Réessayez. Si ça persiste, contactez le support avec le requestId.',
         requestId,
         details: [{
           entity: 'Function',
