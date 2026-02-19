@@ -358,6 +358,12 @@ export default function Schedule() {
 
   // SOURCE OF TRUTH: Use solver timeslots OR reconstruct from scheduleSettings (NOT school config)
   const timeslots = React.useMemo(() => {
+    // Guard: waiting for school to load
+    if (!school?.id) {
+      console.log('[Schedule] ⏳ timeslots: waiting for school');
+      return [];
+    }
+
     // CRITICAL: When solver fails, keep grid stable - use last known timeslots (do NOT return empty)
     // Priority 1: Use persisted solver timeslots (set once by OptaPlanner, never overwritten)
     if (solverTimeslots && Array.isArray(solverTimeslots) && solverTimeslots.length > 0) {
