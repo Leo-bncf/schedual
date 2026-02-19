@@ -10,7 +10,7 @@ import { MessageCircle, Send, CheckCircle, AlertCircle } from 'lucide-react';
 import { base44 } from '@/api/base44Client';
 import { useMutation, useQueryClient } from '@tanstack/react-query';
 
-export default function SupportTicketForm() {
+export default function SupportTicketForm({ onSuccess }) {
   const [formData, setFormData] = useState({
     subject: '',
     description: '',
@@ -28,6 +28,7 @@ export default function SupportTicketForm() {
       setTimeout(() => setSuccess(false), 5000);
       queryClient.invalidateQueries(['supportTickets']);
       queryClient.invalidateQueries(['allSupportTickets']);
+      if (onSuccess) onSuccess();
     },
   });
 
