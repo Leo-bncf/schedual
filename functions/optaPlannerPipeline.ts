@@ -146,6 +146,74 @@ Deno.serve(async (req) => {
       subjects: buildData?.problem?.subjects?.length || 0
     });
     
+    // ========================================
+    // STAGE 3: Validate scheduleSettings completeness (DTO contract enforcement)
+    // ========================================
+    stage = 'validateScheduleSettings';
+    console.log(`[OptaPlannerPipeline] ${stage}: validating scheduleSettings completeness`);
+    
+    const scheduleSettings = buildData?.problem?.scheduleSettings;
+    const settingsValidation = [];
+    
+    if (!scheduleSettings) {
+      settingsValidation.push('scheduleSettings object missing');
+    } else {
+      if (!scheduleSettings.dayStartTime || scheduleSettings.dayStartTime === null) {
+        settingsValidation.push('dayStartTime missing or null');
+      }
+      if (!scheduleSettings.dayEndTime || scheduleSettings.dayEndTime === null) {
+        settingsValidation.push('dayEndTime missing or null');
+      }
+      if (!scheduleSettings.periodDurationMinutes || scheduleSettings.periodDurationMinutes <= 0) {
+        settingsValidation.push(`periodDurationMinutes invalid (${scheduleSettings.periodDurationMinutes})`);
+      }
+      if (!Array.isArray(scheduleSettings.daysOfWeek) || scheduleSettings.daysOfWeek.length === 0) {
+        settingsValidation.push('daysOfWeek missing or empty array');
+      }
+      if (!Array.isArray(scheduleSettings.breaks)) {
+        settingsValidation.push('breaks must be array (can be empty)');
+      }
+      if (typeof scheduleSettings.minPeriodsPerDay !== 'number' || scheduleSettings.minPeriodsPerDay <= 0) {
+        settingsValidation.push(`minPeriodsPerDay invalid (${scheduleSettings.minPeriodsPerDay})`);
+      }
+      if (typeof scheduleSettings.targetPeriodsPerDay !== 'number' || scheduleSettings.targetPeriodsPerDay <= 0) {
+        settingsValidation.push(`targetPeriodsPerDay invalid (${scheduleSettings.targetPeriodsPerDay})`);
+      }
+    }
+    
+    if (settingsValidation.length > 0) {
+      console.error('[OptaPlannerPipeline] ❌ scheduleSettings validation failed:', settingsValidation);
+      
+      return Response.json({
+        ok: false,
+        stage: 'validateScheduleSettings',
+        errorCode: 'INCOMPLETE_SCHEDULE_SETTINGS',
+        message: 'Schedule settings incomplete',
+        errorMessage: `❌ DTO Contract Violation: scheduleSettings is incomplete.\n\nMissing or invalid fields:\n${settingsValidation.map((v, i) => `${i+1}. ${v}`).join('\n')}\n\nThis is likely a school configuration issue.\n\n👉 Fix school timing configuration in Settings page.`,
+        validationErrors: settingsValidation,
+        details: settingsValidation.map(v => ({
+          entity: 'scheduleSettings',
+          field: v.split(' ')[0],
+          reason: 'missing_or_invalid',
+          hint: 'Ensure school has valid day_start_time, day_end_time, period_duration_minutes, and days_of_week configured'
+        })),
+        suggestion: '🔧 Go to Settings → School Configuration → Verify all timing fields are set correctly',
+        requiredAction: 'Fix school configuration to ensure complete scheduleSettings',
+        receivedSettings: scheduleSettings || null,
+        meta: { schoolId, schedule_version_id }
+      }, { status: 200 });
+    }
+    
+    console.log('[OptaPlannerPipeline] ✅ scheduleSettings validation passed:', {
+      dayStartTime: scheduleSettings.dayStartTime,
+      dayEndTime: scheduleSettings.dayEndTime,
+      periodDurationMinutes: scheduleSettings.periodDurationMinutes,
+      daysOfWeek: scheduleSettings.daysOfWeek.length,
+      breaks: scheduleSettings.breaks.length,
+      minPeriodsPerDay: scheduleSettings.minPeriodsPerDay,
+      targetPeriodsPerDay: scheduleSettings.targetPeriodsPerDay
+    });
+    
     // Early return for audit-only mode
     if (auditOnly) {
       console.log('[OptaPlannerPipeline] Audit mode - returning problem without solving');
