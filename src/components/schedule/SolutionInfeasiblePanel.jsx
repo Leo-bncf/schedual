@@ -5,6 +5,7 @@ import { Badge } from "@/components/ui/badge";
 import { AlertTriangle, Download, Users, Building2, Copy, CheckCircle } from 'lucide-react';
 import { toast } from 'sonner';
 import { createPageUrl } from '../../utils';
+import { FIXED_PRESERVED_LINE } from './scheduleErrorMapping';
 
 export default function SolutionInfeasiblePanel({ result, onRetry }) {
   const [copiedRequestId, setCopiedRequestId] = React.useState(false);
