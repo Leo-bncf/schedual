@@ -308,11 +308,14 @@ Deno.serve(async (req) => {
       }, { status: 200 });
     }
     
+    // Always extract requestId from solver response
+    const requestId = solution.requestId || solution.meta?.requestId || null;
+
     console.log('[OptaPlannerPipeline] ✅ Solver completed');
     console.log('[OptaPlannerPipeline] Result:', {
       score: solution.score,
       lessonsReturned: solution.lessons?.length || 0,
-      requestId: solution.requestId || 'N/A'
+      requestId: requestId || 'N/A'
     });
     
     // ========================================
@@ -350,19 +353,61 @@ Deno.serve(async (req) => {
     if (hardScore !== null && hardScore < 0) {
       console.error(`[OptaPlannerPipeline] ❌ BLOCKING: hardScore=${hardScore} < 0 (infeasible solution)`);
       console.error('[OptaPlannerPipeline] NOT purging existing slots - keeping current schedule');
-      
+
+      // Parse constraint violations from solver response (if available)
+      const constraintViolations = solution.constraintMatches || solution.indictmentMap || solution.violations || [];
+      const topViolations = Array.isArray(constraintViolations) 
+        ? constraintViolations
+            .filter(v => v.score && String(v.score).includes('hard'))
+            .sort((a, b) => {
+              const aImpact = parseInt(String(a.score).match(/-?\d+/)?.[0] || '0');
+              const bImpact = parseInt(String(b.score).match(/-?\d+/)?.[0] || '0');
+              return aImpact - bImpact; // Most negative first
+            })
+            .slice(0, 10)
+            .map(v => ({
+              constraintId: v.constraintId || v.constraintName || v.constraint || 'unknown',
+              constraintName: v.constraintName || v.name || v.constraint || 'Unknown Constraint',
+              count: v.matchCount || v.count || 1,
+              scoreImpact: v.score || v.impact || 'N/A',
+              sampleFacts: (v.justificationList || v.facts || v.entities || []).slice(0, 3).map(f => 
+                typeof f === 'string' ? f : JSON.stringify(f)
+              )
+            }))
+        : [];
+
+      // Extract capacity summaries (if available)
+      const teacherCapacity = solution.teacherCapacitySummary || null;
+      const roomCapacity = solution.roomCapacitySummary || null;
+
+      // Always include requestId
+      const requestId = solution.requestId || solution.meta?.requestId || null;
+
+      console.error('[OptaPlannerPipeline] Top constraint violations:', topViolations.length > 0 ? topViolations : 'None returned by solver');
+
       return Response.json({
         ok: false,
         stage: 'SOLUTION_INFEASIBLE',
         code: 'HARD_CONSTRAINTS_VIOLATED',
         error: 'Schedule infeasible',
         errorMessage: `❌ OptaPlanner could not satisfy hard constraints.\n\nHard Score: ${hardScore} (must be 0 or positive)\n\nThe solver could not find a feasible schedule that satisfies all mandatory constraints.\n\n👉 Existing schedule preserved - no changes made.`,
-        details: [{
-          entity: 'Solution',
-          field: 'hardScore',
-          reason: `${hardScore} violations`,
-          hint: 'Review constraints, reduce required hours, or increase available timeslots'
-        }],
+        requestId,
+        violatingConstraints: topViolations.length > 0 ? topViolations : undefined,
+        teacherCapacitySummary: teacherCapacity,
+        roomCapacitySummary: roomCapacity,
+        details: topViolations.length > 0 
+          ? topViolations.map(v => ({
+              entity: 'Constraint',
+              field: v.constraintName,
+              reason: `${v.count} violation(s), impact: ${v.scoreImpact}`,
+              hint: v.sampleFacts.length > 0 ? `Examples: ${v.sampleFacts.join('; ')}` : 'Review this constraint configuration'
+            }))
+          : [{
+              entity: 'Solution',
+              field: 'hardScore',
+              reason: `${hardScore} violations (solver did not return constraint breakdown)`,
+              hint: 'Review constraints, reduce required hours, or increase available timeslots'
+            }],
         suggestion: '🔧 Try:\n• Reduce teaching hours/week for some subjects\n• Add more periods per day\n• Review hard constraints (may be too restrictive)\n• Check if enough teachers/rooms available',
         requiredAction: 'Fix constraints or increase schedule capacity',
         meta: { 
@@ -372,7 +417,8 @@ Deno.serve(async (req) => {
           softScore: scoreStr,
           lessonsReturned: solution.lessons?.length || 0,
           lessonsAssigned: slotsToInsert.length,
-          lessonsUnassigned: unassignedCount
+          lessonsUnassigned: unassignedCount,
+          requestId
         }
       }, { status: 200 });
     }
@@ -388,6 +434,7 @@ Deno.serve(async (req) => {
         code: 'ZERO_SLOTS_GENERATED',
         error: 'No assignable slots',
         errorMessage: `❌ OptaPlanner returned 0 assigned slots.\n\nSolver returned ${solution.lessons?.length || 0} lessons total, but ALL are unassigned (no timeslot_id).\n\nPurging existing slots would leave schedule empty.\n\n👉 Existing schedule preserved - no changes made.`,
+        requestId,
         details: [{
           entity: 'Solution',
           field: 'lessons',
@@ -403,10 +450,11 @@ Deno.serve(async (req) => {
           softScore: scoreStr,
           lessonsReturned: solution.lessons?.length || 0,
           lessonsUnassigned: unassignedCount,
-          slotsToInsert: 0
+          slotsToInsert: 0,
+          requestId
         }
       }, { status: 200 });
-    }
+      }
     
     console.log(`[OptaPlannerPipeline] ✅ Validation passed: hardScore=${hardScore}, slotsToInsert=${slotsToInsert.length}`);
     
@@ -513,6 +561,7 @@ Deno.serve(async (req) => {
         score: solution.score || 0,
         coreSlotsInserted: coreSlotsInsertedCount // NEW: Core slots breakdown
       },
+      requestId,
       // Propagate build diagnostics for UI display
       coreTeachingGroupsDetected: buildData?.coreTeachingGroupsDetected || [],
       coreSubjectRequirementsSample: buildData?.coreSubjectRequirementsSample || [],
@@ -524,7 +573,7 @@ Deno.serve(async (req) => {
         schedule_version_id,
         buildVersion: buildData?.buildVersion || 'unknown',
         pipelineVersion: PIPELINE_VERSION,
-        requestId: solution.requestId || null
+        requestId
       }
     });
     
