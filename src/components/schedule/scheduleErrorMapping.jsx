@@ -103,14 +103,19 @@ export function normalizeErrorPayload(payload) {
                                      constraintBreakdown.length === 0 && 
                                      violatingConstraints.length === 0;
   
+  // Select UI text: fallback if no constraint details, else use stageUiMap
+  const isInfeasible = stage === 'SOLUTION_INFEASIBLE';
+  const useFallback = isInfeasible && constraintBreakdown.length === 0;
+  const selectedUi = useFallback ? infeasibleFallbackUi : mapEntry;
+  
   return {
     stage,
     code,
-    toast: payload.toast || mapEntry.toast,
-    title: payload.title || mapEntry.title,
-    message: payload.message || mapEntry.message,
-    userAction: payload.userAction || mapEntry.userAction,
-    preservedLine: FIXED_PRESERVED_LINE,
+    toast: payload.toast || selectedUi.toast,
+    title: payload.title || selectedUi.title,
+    message: payload.message || selectedUi.message,
+    userAction: payload.userAction || selectedUi.userAction,
+    preservedLine: selectedUi.preservedLine || FIXED_PRESERVED_LINE,
     requestId: payload.requestId || null,
     validationErrors: payload.validationErrors || [],
     details: payload.details || [],
@@ -119,6 +124,8 @@ export function normalizeErrorPayload(payload) {
     violatingConstraints,
     // Flag for UI to know we're missing details
     isConstraintDetailsMissing,
+    // Extra info for fallback mode
+    extraInfo: useFallback ? selectedUi.extraInfo : null,
     meta: payload.meta || {}
   };
 }
