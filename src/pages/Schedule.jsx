@@ -2085,12 +2085,20 @@ Now process the user's input and return ONLY the JSON object.`,
           }));
           
           const res = await base44.functions.invoke('optaPlannerPipeline', {
-            schedule_version_id: selectedVersion.id
+           schedule_version_id: selectedVersion.id
           });
-          
+
           // CRITICAL: Normalize axios response - extract data at correct level
-          const payload = res?.data || {};
-          
+          const raw = res?.data || {};
+
+          // CRITICAL: Sanitize SOLUTION_INFEASIBLE (fallback guard against null arrays from OPTA)
+          const payload = sanitizeInfeasible(raw);
+
+          // Log buildVersion to verify OPTA deployment
+          if (payload.buildVersion) {
+           console.log('[Schedule] 🔧 OPTA Build Version:', payload.buildVersion);
+          }
+
           // RUNTIME ASSERTION: payload.ok MUST be boolean
           if (typeof payload.ok !== 'boolean') {
             console.error('[Schedule] ❌ RUNTIME ASSERT FAILED: payload.ok is not boolean:', {
