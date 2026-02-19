@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { ChevronDown, Calendar, Users, Sparkles, Shield, CreditCard, Settings } from 'lucide-react';
+import { Plus, Minus, Calendar, Users, Sparkles, Shield, CreditCard, Settings } from 'lucide-react';
 import { cn } from '@/lib/utils';
 
 const faqData = [
@@ -256,12 +256,11 @@ export default function FAQSection() {
                             <span className="font-semibold text-slate-900 group-hover:text-blue-900 transition-colors flex-1">
                               {item.q}
                             </span>
-                            <ChevronDown 
-                              className={cn(
-                                "w-5 h-5 text-slate-400 flex-shrink-0 transition-transform",
-                                isItemOpen && "rotate-180"
-                              )}
-                            />
+                            {isItemOpen ? (
+                              <Minus className="w-5 h-5 text-blue-900 flex-shrink-0 transition-all" />
+                            ) : (
+                              <Plus className="w-5 h-5 text-blue-900 flex-shrink-0 transition-all" />
+                            )}
                           </div>
                         </button>
                         
