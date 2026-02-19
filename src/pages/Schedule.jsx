@@ -852,7 +852,8 @@ Now process the user's input and return ONLY the JSON object.`,
 
       // Check if function returned error
       if (payload?.ok === false) {
-        console.error(`❌ Solver returned error:`, payload);
+        const solverOk = typeof payload.ok === 'boolean' ? payload.ok : null;
+        console.error(`❌ Solver returned error (ok=${solverOk}):`, payload);
       
       // UNIVERSAL ERROR DISPLAY
       const errorSummary = [
