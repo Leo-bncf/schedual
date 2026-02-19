@@ -35,8 +35,11 @@ Deno.serve(async (req) => {
       return Response.json({ 
         ok: false, 
         stage, 
-        errorCode: 'NO_USER',
-        message: 'Unauthorized - no user authenticated',
+        code: 'NO_USER',
+        severity: 'error',
+        title: 'Non authentifié',
+        message: 'Vous devez être connecté pour générer un planning.',
+        userAction: 'Connectez-vous et réessayez.',
         validationErrors: [],
         details: [],
         meta: { schoolId: null, schedule_version_id: null }
@@ -47,8 +50,11 @@ Deno.serve(async (req) => {
       return Response.json({ 
         ok: false, 
         stage, 
-        errorCode: 'NO_SCHOOL',
-        message: 'User missing school_id',
+        code: 'NO_SCHOOL',
+        severity: 'error',
+        title: 'École manquante',
+        message: 'Votre compte n\'est pas lié à une école.',
+        userAction: 'Contactez le support pour lier votre compte à une école.',
         validationErrors: [],
         details: [],
         meta: { schoolId: null, schedule_version_id: null }
@@ -72,8 +78,11 @@ Deno.serve(async (req) => {
       return Response.json({ 
         ok: false, 
         stage, 
-        errorCode: 'MISSING_SCHEDULE_VERSION',
-        message: 'schedule_version_id is required',
+        code: 'MISSING_SCHEDULE_VERSION',
+        severity: 'error',
+        title: 'Version de planning manquante',
+        message: 'Aucune version de planning spécifiée dans la requête.',
+        userAction: 'Sélectionnez ou créez une version de planning et réessayez.',
         validationErrors: ['schedule_version_id missing in request body'],
         details: [],
         meta: { schoolId, schedule_version_id: null }
@@ -108,8 +117,11 @@ Deno.serve(async (req) => {
       return Response.json({
         ok: false,
         stage: 'buildProblem',
-        errorCode: errorData?.code || errorData?.errorCode || 'BUILD_ERROR',
-        message: errorData?.message || errorData?.error || 'Failed to build scheduling problem',
+        code: errorData?.code || errorData?.errorCode || 'BUILD_ERROR',
+        severity: 'error',
+        title: errorData?.title || 'Erreur de construction du planning',
+        message: errorData?.message || errorData?.error || 'Impossible de construire le problème de planification.',
+        userAction: errorData?.userAction || 'Vérifiez la configuration de votre école et réessayez.',
         requestId: errorData?.requestId || null,
         validationErrors: errorData?.validationErrors || [],
         details: errorData?.details || [],
@@ -129,8 +141,11 @@ Deno.serve(async (req) => {
       return Response.json({
         ok: false,
         stage: 'buildProblem',
-        errorCode: buildData?.code || buildData?.errorCode || 'BUILD_VALIDATION_ERROR',
-        message: buildData?.message || buildData?.error || 'Build validation failed',
+        code: buildData?.code || buildData?.errorCode || 'BUILD_VALIDATION_ERROR',
+        severity: 'error',
+        title: buildData?.title || 'Validation de configuration échouée',
+        message: buildData?.message || buildData?.error || 'Des erreurs de configuration empêchent la génération.',
+        userAction: buildData?.userAction || 'Corrigez les problèmes listés ci-dessous et régénérez.',
         requestId: buildData?.requestId || null,
         validationErrors: buildData?.validationErrors || [],
         details: buildData?.details || [],
@@ -187,9 +202,11 @@ Deno.serve(async (req) => {
       return Response.json({
         ok: false,
         stage: 'validateScheduleSettings',
-        errorCode: 'INCOMPLETE_SCHEDULE_SETTINGS',
-        message: 'Schedule settings incomplete',
-        errorMessage: `❌ DTO Contract Violation: scheduleSettings is incomplete.\n\nMissing or invalid fields:\n${settingsValidation.map((v, i) => `${i+1}. ${v}`).join('\n')}\n\nThis is likely a school configuration issue.\n\n👉 Fix school timing configuration in Settings page.`,
+        code: 'INCOMPLETE_SCHEDULE_SETTINGS',
+        severity: 'error',
+        title: 'Configuration horaire incomplète',
+        message: `Des champs de configuration horaire sont manquants ou invalides (${settingsValidation.length} problèmes).`,
+        userAction: 'Allez dans Réglages → Configuration École → Vérifiez les horaires de début/fin de journée et durée des périodes.',
         validationErrors: settingsValidation,
         details: settingsValidation.map(v => ({
           entity: 'scheduleSettings',
@@ -197,8 +214,6 @@ Deno.serve(async (req) => {
           reason: 'missing_or_invalid',
           hint: 'Ensure school has valid day_start_time, day_end_time, period_duration_minutes, and days_of_week configured'
         })),
-        suggestion: '🔧 Go to Settings → School Configuration → Verify all timing fields are set correctly',
-        requiredAction: 'Fix school configuration to ensure complete scheduleSettings',
         receivedSettings: scheduleSettings || null,
         meta: { schoolId, schedule_version_id }
       }, { status: 200 });
@@ -246,8 +261,11 @@ Deno.serve(async (req) => {
       return Response.json({
         ok: false,
         stage,
-        errorCode: 'MISSING_SOLVER_CONFIG',
-        message: 'Solver endpoint or API key not configured',
+        code: 'MISSING_SOLVER_CONFIG',
+        severity: 'error',
+        title: 'Configuration OPTA manquante',
+        message: 'Le endpoint ou la clé API du solver ne sont pas configurés.',
+        userAction: 'Contactez le support technique - configuration serveur requise.',
         requestId: null,
         validationErrors: [
           !SOLVER_ENDPOINT ? 'OR_TOOL_ENDPOINT env var missing' : null,
@@ -310,9 +328,12 @@ Deno.serve(async (req) => {
       
       return Response.json({
         ok: false,
-        stage: 'solve',
-        errorCode: 'SOLVER_NETWORK_ERROR',
-        message: 'Network error calling solver',
+        stage: 'OPTA_CALL',
+        code: 'SOLVER_NETWORK_ERROR',
+        severity: 'error',
+        title: 'Impossible de contacter OPTA',
+        message: 'La connexion a échoué (réseau ou délai dépassé).',
+        userAction: 'Réessayez dans quelques instants. Si ça continue, vérifiez la configuration réseau et le endpoint OPTA.',
         requestId: null,
         validationErrors: [String(fetchError?.message || fetchError)],
         details: [{ entity: 'solver', field: 'network', reason: String(fetchError?.message || fetchError), hint: 'Check solver endpoint availability' }],
@@ -346,8 +367,11 @@ Deno.serve(async (req) => {
       return Response.json({
         ok: false,
         stage: 'solve',
-        errorCode: parsedError?.code || parsedError?.errorCode || 'SOLVER_ERROR',
-        message: parsedError?.message || parsedError?.error || `Solver returned HTTP ${solverResponse.status}`,
+        code: parsedError?.code || parsedError?.errorCode || 'SOLVER_ERROR',
+        severity: 'error',
+        title: parsedError?.title || 'OPTA a renvoyé une erreur',
+        message: parsedError?.message || parsedError?.error || `Le solver a retourné HTTP ${solverResponse.status}.`,
+        userAction: parsedError?.userAction || 'Vérifiez les diagnostics et réessayez. Contactez le support si le problème persiste.',
         requestId: parsedError?.requestId || null,
         validationErrors: parsedError?.validationErrors || [],
         details: parsedError?.details || [],
@@ -367,8 +391,11 @@ Deno.serve(async (req) => {
       return Response.json({
         ok: false,
         stage: 'parseSolution',
-        errorCode: 'INVALID_SOLVER_RESPONSE',
-        message: 'Invalid JSON from solver',
+        code: 'INVALID_SOLVER_RESPONSE',
+        severity: 'error',
+        title: 'Réponse OPTA invalide',
+        message: 'Le solver a renvoyé une réponse JSON malformée.',
+        userAction: 'Contactez le support technique avec votre request ID.',
         requestId: null,
         validationErrors: ['Solver returned non-JSON response'],
         details: [{ entity: 'solver', field: 'response', reason: 'malformed JSON', hint: 'Check solver logs' }],
@@ -535,8 +562,12 @@ Deno.serve(async (req) => {
         ok: false,
         stage: 'SOLUTION_INFEASIBLE',
         code: 'HARD_CONSTRAINTS_VIOLATED',
-        error: 'Schedule infeasible',
-        errorMessage: `❌ OptaPlanner could not satisfy hard constraints.\n\nHard Score: ${hardScore} (must be 0 or positive)\n\n${topViolationsSummary.length > 0 ? `Top ${topViolationsSummary.length} violated constraint(s):\n${topViolationsSummary.map((v, i) => `${i+1}. ${v.constraintName}: ${v.violationCount} violations (score: ${v.scoreImpact})`).join('\n')}\n\n` : ''}The solver could not find a feasible schedule that satisfies all mandatory constraints.\n\n👉 Existing schedule preserved - no changes made.`,
+        severity: 'error',
+        title: 'Planning impossible',
+        message: `OPTA n'a pas pu satisfaire toutes les contraintes obligatoires (score dur : ${hardScore}, doit être ≥ 0).`,
+        userAction: topViolationsSummary.length > 0 
+          ? `Corrigez les contraintes les plus violées :\n${topViolationsSummary.slice(0, 3).map((v, i) => `${i+1}. ${v.constraintName} (${v.violationCount}×)`).join('\n')}\n\nPuis régénérez le planning.`
+          : 'Réduisez les heures requises, augmentez les créneaux disponibles, ou assouplissez les contraintes dures.',
         requestId,
         constraintBreakdown: topViolationsSummary.length > 0 ? {
           summary: topViolationsSummary.map(v => ({
@@ -607,8 +638,10 @@ Deno.serve(async (req) => {
         ok: false,
         stage: 'PERSISTENCE_BLOCKED',
         code: 'ZERO_SLOTS_GENERATED',
-        error: 'No assignable slots',
-        errorMessage: `❌ OptaPlanner returned 0 assigned slots.\n\nSolver returned ${solution.lessons?.length || 0} lessons total, but ALL are unassigned (no timeslot_id).\n\nPurging existing slots would leave schedule empty.\n\n👉 Existing schedule preserved - no changes made.`,
+        severity: 'error',
+        title: 'Aucun créneau généré',
+        message: `OPTA a retourné ${solution.lessons?.length || 0} leçons mais aucune n'est assignée à un créneau horaire.`,
+        userAction: 'Augmentez le nombre de périodes par jour dans Réglages, réduisez les heures requises pour certaines matières, ou vérifiez les contraintes dures.',
         requestId,
         details: [{
           entity: 'Solution',
@@ -616,8 +649,6 @@ Deno.serve(async (req) => {
           reason: '0 lessons with timeslot assignments',
           hint: 'Solver may be over-constrained or missing capacity'
         }],
-        suggestion: '🔧 Try:\n• Increase periods per day in Settings\n• Reduce teaching hours for some subjects\n• Check if enough timeslots available\n• Review hard constraints',
-        requiredAction: 'Fix configuration to enable slot assignment',
         meta: { 
           schoolId, 
           schedule_version_id,
@@ -662,10 +693,14 @@ Deno.serve(async (req) => {
           ok: false,
           stage: 'PERSISTENCE_FAILED',
           code: dataLoss ? 'DATA_LOSS_DETECTED' : 'TRANSACTION_FAILED',
-          error: 'Atomic transaction failed',
-          errorMessage: dataLoss 
-            ? `❌ CRITICAL: ${deletedCount} slots deleted but insert failed.\n\nSchedule is now empty (data loss occurred).\n\nError: ${replaceData.error}\n\n👉 Re-run schedule generation immediately to restore.`
-            : `❌ Transaction failed to persist new schedule.\n\nError: ${replaceData.error}\n\n👉 Existing schedule preserved - no changes made.`,
+          severity: dataLoss ? 'critical' : 'error',
+          title: dataLoss ? '🚨 PERTE DE DONNÉES CRITIQUE' : 'Échec de la transaction',
+          message: dataLoss 
+            ? `${deletedCount} créneaux supprimés mais l'insertion a échoué. Le planning est maintenant vide.`
+            : `La transaction de persistence du nouveau planning a échoué.`,
+          userAction: dataLoss 
+            ? '🚨 URGENT : Régénérez immédiatement le planning pour restaurer vos données.'
+            : 'Réessayez la génération du planning.',
           requestId,
           details: [{
             entity: 'Database',
@@ -673,10 +708,6 @@ Deno.serve(async (req) => {
             reason: replaceData.errorDetails || replaceData.error || 'Transaction failed',
             hint: dataLoss ? 'Re-generate schedule immediately - data was lost' : 'Retry schedule generation'
           }],
-          suggestion: dataLoss 
-            ? '🚨 Data loss occurred. Click "Generate" immediately to restore schedule.'
-            : '🔧 Retry schedule generation to persist new slots.',
-          requiredAction: dataLoss ? 'URGENT: Re-generate schedule to restore data' : 'Retry generation',
           meta: { 
             schoolId, 
             schedule_version_id,
@@ -718,8 +749,10 @@ Deno.serve(async (req) => {
         ok: false,
         stage: 'PERSISTENCE_ERROR',
         code: 'FUNCTION_ERROR',
-        error: 'Persistence function error',
-        errorMessage: `❌ Failed to call atomic replace function.\n\nError: ${persistError?.message || persistError}\n\n👉 Check function logs for details.`,
+        severity: 'error',
+        title: 'Erreur de persistence',
+        message: `Impossible d'appeler la fonction de remplacement atomique des créneaux.`,
+        userAction: 'Contactez le support technique avec l\'erreur : ' + String(persistError?.message || persistError).slice(0, 100),
         requestId,
         details: [{
           entity: 'Function',
@@ -727,8 +760,6 @@ Deno.serve(async (req) => {
           reason: String(persistError?.message || persistError),
           hint: 'Check backend function logs and database connectivity'
         }],
-        suggestion: '🔧 Check function logs and retry schedule generation.',
-        requiredAction: 'Investigate function error',
         meta: { 
           schoolId, 
           schedule_version_id,
@@ -786,8 +817,11 @@ Deno.serve(async (req) => {
     return Response.json({
       ok: false,
       stage,
-      errorCode: 'PIPELINE_ERROR',
-      message: String(error?.message || error),
+      code: 'PIPELINE_ERROR',
+      severity: 'error',
+      title: 'Erreur interne du pipeline',
+      message: 'Une erreur inattendue s\'est produite pendant la génération.',
+      userAction: 'Contactez le support avec l\'erreur : ' + String(error?.message || error).slice(0, 100),
       requestId: null,
       validationErrors: [],
       details: [{ 
