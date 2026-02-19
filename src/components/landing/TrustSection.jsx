@@ -64,7 +64,7 @@ export default function TrustSection() {
         >
           <p className="text-sm text-slate-500 mb-4">Trusted by leading IB schools worldwide</p>
           <div className="flex items-center justify-center gap-8 flex-wrap">
-            {['🔒 SSL/TLS', '🛡️ SOC 2 Type II', '✓ Privacy Shield', '🔐 2FA Enabled'].map((badge, i) => (
+            {['🔒 SSL/TLS', '✓ Privacy Shield', '🔐 2FA Enabled'].map((badge, i) => (
               <div key={i} className="px-4 py-2 bg-white/60 backdrop-blur-sm rounded-full border border-slate-200 text-sm font-semibold text-slate-700">
                 {badge}
               </div>
