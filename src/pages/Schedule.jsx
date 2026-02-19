@@ -2013,7 +2013,7 @@ Now process the user's input and return ONLY the JSON object.`,
           
           // STEP 3: Audit passed (ok === true) - proceed with solver
           console.log('[Schedule] ✅ Pre-solve audit passed (ok=true) - proceeding to Codex solver');
-          console.log('[Schedule] Codex will: 1) Purge existing slots 2) Optimize schedule 3) Persist new slots (atomic)');
+          console.log('[Schedule] Codex will attempt optimization. On success (ok=true): 1) Purge existing slots 2) Insert optimized slots (atomic). On infeasibility (hardScore<0): existing schedule preserved.');
           
           // CRITICAL: Re-validate inputs before actual solver call (data may have changed)
           const solverInputValidation = {
