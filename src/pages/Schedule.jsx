@@ -210,17 +210,12 @@ export default function Schedule() {
   });
 
   const { data: scheduleSlots = [], isLoading: loadingSlots } = useQuery({
-    queryKey: ['scheduleSlots', selectedVersion?.id],
-    queryFn: async () => {
-      if (!selectedVersion) return [];
+  queryKey: ['scheduleSlots', selectedVersion?.id],
+  queryFn: async () => {
+    if (!selectedVersion) return [];
 
-      // CRITICAL: If OptaPlanner failed, don't try to reconstruct - return empty
-      if (optaPlannerResult?.ok === false) {
-        console.log('[Schedule] ⚠️ OptaPlanner failed - returning empty slots (no fallback)');
-        return [];
-      }
-
-      const slots = await base44.entities.ScheduleSlot.filter({ schedule_version: selectedVersion.id });
+    // CRITICAL: Always load persisted slots from DB - even if solver failed (keep grid stable)
+    const slots = await base44.entities.ScheduleSlot.filter({ schedule_version: selectedVersion.id });
       const inserted = (optaPlannerResult?.persistedSlotsSample || []).map(s => ({ ...s, schedule_version: selectedVersion.id }));
       const result = Array.isArray(inserted) && inserted.length > 0 ? [...slots, ...inserted] : slots;
 
@@ -238,6 +233,7 @@ export default function Schedule() {
       console.log('[Schedule] DEBUG - timeslots source:', timeslotsSource);
       console.log('[Schedule] DEBUG - solverTimeslots:', solverTimeslots?.length || 0, 'slots');
       console.log('[Schedule] DEBUG - optaPlannerResult.ok:', optaPlannerResult?.ok);
+      console.log('[Schedule] DEBUG - Solver failed but keeping grid stable:', optaPlannerResult?.ok === false);
 
       return result;
     },
@@ -309,20 +305,16 @@ export default function Schedule() {
 
   // SOURCE OF TRUTH: Use solver timeslots OR reconstruct from scheduleSettings (NOT school config)
   const timeslots = React.useMemo(() => {
-    // CRITICAL: If OptaPlanner failed, do NOT reconstruct - return empty to show error state
-    if (optaPlannerResult?.ok === false) {
-      console.log('[Schedule] ❌ OptaPlanner failed - returning empty timeslots (error state)');
-      return [];
-    }
-    
+    // CRITICAL: When solver fails, keep grid stable - use last known timeslots (do NOT return empty)
     // Priority 1: Use persisted solver timeslots (set once by OptaPlanner, never overwritten)
     if (solverTimeslots && Array.isArray(solverTimeslots) && solverTimeslots.length > 0) {
-      console.log('[Schedule] ✅ Using PERSISTED timeslots from OptaPlanner solver:', solverTimeslots.length, 'slots');
+      const source = optaPlannerResult?.ok === false ? '(stable - solver failed, using last known)' : '(stable)';
+      console.log('[Schedule] ✅ Using PERSISTED timeslots from OptaPlanner solver:', solverTimeslots.length, 'slots', source);
       return solverTimeslots;
     }
     
-    // Priority 2: Use current OptaPlanner result timeslots (temporary until persisted)
-    if (optaPlannerResult?.timeslots && Array.isArray(optaPlannerResult.timeslots) && optaPlannerResult.timeslots.length > 0) {
+    // Priority 2: Use current OptaPlanner result timeslots (temporary until persisted) - ONLY if solver succeeded
+    if (optaPlannerResult?.ok === true && optaPlannerResult?.timeslots && Array.isArray(optaPlannerResult.timeslots) && optaPlannerResult.timeslots.length > 0) {
       console.log('[Schedule] ⚠️ Using TEMPORARY timeslots from OptaPlanner result:', optaPlannerResult.timeslots.length, 'slots (not yet persisted)');
       return optaPlannerResult.timeslots;
     }
