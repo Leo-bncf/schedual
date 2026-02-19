@@ -1293,8 +1293,89 @@ if (isDP) {
       });
     }
     
-    // VALIDATION 4: Student feasibility (DP)
-    recordLog('Validation 4: Student feasibility (DP)');
+    // VALIDATION 4: Hours mismatch between Subject config and TeachingGroup requirements
+    recordLog('Validation 4: Hours mismatch validation');
+    const hoursMismatchIssues = [];
+    
+    for (const tg of teachingGroupsDb) {
+      if (!tg?.subject_id || tg.is_active === false) continue;
+      
+      const subj = subjectById[tg.subject_id];
+      if (!subj || subj.ib_level !== 'DP') continue; // Only validate DP subjects
+      
+      const level = String(tg.level || '').toUpperCase();
+      if (level !== 'HL' && level !== 'SL') continue; // Skip non-HL/SL groups
+      
+      // Get expected hours from Subject entity
+      const expectedHours = level === 'HL' ? subj.hoursPerWeekHL : subj.hoursPerWeekSL;
+      if (!expectedHours) continue; // Already blocked by previous validation
+      
+      const expectedMinutes = expectedHours * 60;
+      const expectedPeriods = minutesToPeriods(expectedMinutes);
+      
+      // Get actual configured minutes for this teaching group
+      const actualMinutes = minutesForTG(tg);
+      const actualPeriods = minutesToPeriods(actualMinutes);
+      
+      // Check for mismatch
+      if (expectedPeriods !== actualPeriods) {
+        const diff = actualPeriods - expectedPeriods;
+        hoursMismatchIssues.push({
+          tg_id: tg.id,
+          tg_name: tg.name,
+          subject_id: subj.id,
+          subject_code: subjectIdToCode[tg.subject_id] || subj.code,
+          subject_name: subj.name,
+          level,
+          year_group: tg.year_group,
+          student_count: (tg.student_ids || []).length,
+          expected_hours: expectedHours,
+          expected_minutes: expectedMinutes,
+          expected_periods: expectedPeriods,
+          actual_minutes: actualMinutes,
+          actual_periods: actualPeriods,
+          difference_periods: diff,
+          difference_sign: diff > 0 ? '+' : '',
+          source: debugMinutesSourceByTG[tg.id]?.source || 'UNKNOWN'
+        });
+      }
+    }
+    
+    if (hoursMismatchIssues.length > 0) {
+      recordLog(`❌ BLOCKING: ${hoursMismatchIssues.length} teaching groups have hours mismatches`);
+      validationErrors.push(`Hours mismatch: ${hoursMismatchIssues.length} teaching group(s)`);
+      
+      hoursMismatchIssues.forEach(issue => {
+        validationDetails.push({
+          entity: 'TeachingGroup',
+          id: issue.tg_id,
+          field: 'minutes_per_week',
+          reason: `Mismatch: Subject expects ${issue.expected_hours}h/week (${issue.expected_periods}p) but TeachingGroup has ${Math.round(issue.actual_minutes/60)}h (${issue.actual_periods}p) [${issue.difference_sign}${Math.abs(issue.difference_periods)}p]`,
+          hint: `Edit ${issue.tg_name}: set minutes_per_week to ${issue.expected_minutes} to match Subject ${issue.subject_code} ${issue.level} configuration`,
+          data: issue
+        });
+      });
+      
+      return Response.json({
+        ok: false,
+        stage: 'PRE_SOLVE_VALIDATION',
+        code: 'HOURS_MISMATCH',
+        error: 'Hours mismatch between Subject and TeachingGroup configuration',
+        errorMessage: `❌ Cannot generate schedule: ${hoursMismatchIssues.length} teaching group(s) have hour mismatches.\n\nTeachingGroup minutes_per_week does not match Subject hoursPerWeekHL/SL configuration.\n\nThis will cause solver to assign wrong number of periods.\n\n👉 Fix these mismatches before running OptaPlanner.`,
+        hoursMismatchCount: hoursMismatchIssues.length,
+        hoursMismatches: hoursMismatchIssues,
+        details: validationDetails.filter(d => d.entity === 'TeachingGroup' && d.field === 'minutes_per_week'),
+        suggestion: '🔧 Fix options:\n1. Update TeachingGroup minutes_per_week to match Subject hours\n2. Adjust Subject hoursPerWeekHL/SL if requirements changed\n\nEach DP TeachingGroup must have minutes_per_week that matches its Subject\'s HL or SL hours configuration.',
+        requiredAction: 'Fix hours mismatches listed in details[] - click each to see expected vs actual values',
+        buildVersion: BUILD_VERSION,
+        meta: { schedule_version_id, school_id }
+      }, { status: 422, headers: { 'Content-Type': 'application/json' } });
+    }
+    
+    recordLog(`✅ Hours mismatch validation passed: All TeachingGroups match Subject hour expectations`);
+    
+    // VALIDATION 5: Student feasibility (DP)
+    recordLog('Validation 5: Student feasibility (DP)');
     const studentFeasibilityIssues = [];
     
     // Load students to check DP feasibility
@@ -1370,8 +1451,8 @@ if (isDP) {
       });
     }
     
-    // VALIDATION 5: Timeslot capacity sanity (already validated above, but add final check)
-    recordLog('Validation 5: Timeslot configuration sanity');
+    // VALIDATION 6: Timeslot capacity sanity (already validated above, but add final check)
+    recordLog('Validation 6: Timeslot configuration sanity');
     if (timeslots.length === 0) {
       validationErrors.push('Zero timeslots generated');
       validationDetails.push({
