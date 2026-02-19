@@ -252,8 +252,65 @@ export default function Schedule() {
     enabled: !!schoolId,
   });
 
+  // SOURCE OF TRUTH: schedule settings for validations + child components
+  const scheduleSettings = React.useMemo(() => {
+    // Prefer what solver actually used/sent
+    const fromSolver =
+      optaPlannerResult?.problem?.scheduleSettings ||
+      optaPlannerResult?.scheduleSettingsSent;
+
+    if (fromSolver) return fromSolver;
+
+    // Next: school DB config
+    if (school?.id) {
+      return {
+        day_start_time: school.day_start_time || school.school_start_time || '08:00',
+        day_end_time: school.day_end_time || '18:00',
+        period_duration_minutes: school.period_duration_minutes || 60,
+        days_of_week:
+          Array.isArray(school.days_of_week) && school.days_of_week.length > 0
+            ? school.days_of_week
+            : ['MONDAY', 'TUESDAY', 'WEDNESDAY', 'THURSDAY', 'FRIDAY'],
+        breaks: school.breaks || [],
+        min_periods_per_day: school.min_periods_per_day ?? null,
+        target_periods_per_day: school.target_periods_per_day ?? null,
+      };
+    }
+
+    // Last: local UI config state (still better than undefined)
+    return {
+      day_start_time: schoolConfig.day_start_time || '08:00',
+      day_end_time: schoolConfig.day_end_time || '18:00',
+      period_duration_minutes: schoolConfig.period_duration_minutes || 60,
+      days_of_week:
+        Array.isArray(schoolConfig.days_of_week) && schoolConfig.days_of_week.length > 0
+          ? schoolConfig.days_of_week
+          : ['MONDAY', 'TUESDAY', 'WEDNESDAY', 'THURSDAY', 'FRIDAY'],
+      breaks: schoolConfig.breaks || [],
+      min_periods_per_day: schoolConfig.min_periods_per_day ?? null,
+      target_periods_per_day: schoolConfig.target_periods_per_day ?? null,
+    };
+  }, [
+    optaPlannerResult?.problem?.scheduleSettings,
+    optaPlannerResult?.scheduleSettingsSent,
+    school?.id,
+    schoolConfig.day_start_time,
+    schoolConfig.day_end_time,
+    schoolConfig.period_duration_minutes,
+    schoolConfig.days_of_week,
+    schoolConfig.breaks,
+    schoolConfig.min_periods_per_day,
+    schoolConfig.target_periods_per_day,
+  ]);
+
   const { data: scheduleSlots = [], isLoading: loadingSlots } = useQuery({
-  queryKey: ['scheduleSlots', selectedVersion?.id],
+  queryKey: [
+    'scheduleSlots',
+    selectedVersion?.id,
+    optaPlannerResult?.ok,
+    optaPlannerResult?.stage,
+    optaPlannerResult?.result?.slotsInserted,
+  ],
   queryFn: async () => {
     if (!selectedVersion) return [];
 
