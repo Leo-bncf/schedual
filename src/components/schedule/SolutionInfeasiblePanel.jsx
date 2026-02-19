@@ -93,23 +93,23 @@ export default function SolutionInfeasiblePanel({ result, onRetry }) {
         {/* Hard Score Summary */}
         <div className="bg-white p-4 rounded-lg border border-rose-300">
           <div className="font-semibold text-rose-900 mb-2">Score Summary</div>
-          <div className="flex items-center gap-4">
+          <div className="flex items-center gap-4 flex-wrap">
             <div>
               <span className="text-sm text-slate-600">Hard Score: </span>
               <span className="text-2xl font-bold text-rose-700">{hardScore}</span>
               <span className="text-sm text-slate-500 ml-2">(must be 0 or positive)</span>
             </div>
-            {constraintBreakdown && (
+            {constraintBreakdown && constraintBreakdown.length > 0 && (
               <>
                 <div className="h-8 w-px bg-slate-300" />
                 <div>
                   <span className="text-sm text-slate-600">Constraints Violated: </span>
-                  <span className="text-xl font-bold text-rose-700">{constraintBreakdown.totalConstraintsViolated || 0}</span>
+                  <span className="text-xl font-bold text-rose-700">{constraintBreakdown[0]?.totalConstraintsViolated || 0}</span>
                 </div>
                 <div className="h-8 w-px bg-slate-300" />
                 <div>
                   <span className="text-sm text-slate-600">Total Violations: </span>
-                  <span className="text-xl font-bold text-rose-700">{constraintBreakdown.totalViolationCount || 0}</span>
+                  <span className="text-xl font-bold text-rose-700">{constraintBreakdown[0]?.totalViolationCount || 0}</span>
                 </div>
               </>
             )}
