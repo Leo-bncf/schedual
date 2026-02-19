@@ -258,13 +258,11 @@ export default function FAQSection() {
                             <span className="font-semibold text-slate-900 group-hover:text-blue-900 transition-colors flex-1">
                               {item.q}
                             </span>
-                            <div className="w-8 h-8 rounded-full bg-blue-900 flex items-center justify-center flex-shrink-0">
-                              {isItemOpen ? (
-                                <Minus className="w-4 h-4 text-white transition-all" />
-                              ) : (
-                                <Plus className="w-4 h-4 text-white transition-all" />
-                              )}
-                            </div>
+                            {isItemOpen ? (
+                              <Minus className="w-5 h-5 text-blue-900 flex-shrink-0 transition-all" />
+                            ) : (
+                              <Plus className="w-5 h-5 text-blue-900 flex-shrink-0 transition-all" />
+                            )}
                           </div>
                         </button>
                         
