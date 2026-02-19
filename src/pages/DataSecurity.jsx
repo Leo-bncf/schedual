@@ -1,8 +1,10 @@
 import React from 'react';
+import { Link } from 'react-router-dom';
 import { Shield, Lock, Globe, FileCheck, Server, Eye, UserCheck, CheckCircle } from 'lucide-react';
 import LandingHeader from '../components/landing/LandingHeader';
 import LandingFooter from '../components/landing/LandingFooter';
 import { Card, CardContent } from '@/components/ui/card';
+import { createPageUrl } from '../utils';
 
 export default function DataSecurity() {
   const complianceFeatures = [
@@ -285,12 +287,12 @@ export default function DataSecurity() {
             <p className="text-slate-600 mb-8">
               Our security team is here to address any concerns or questions about data protection, compliance, or our security practices.
             </p>
-            <a 
-              href="#demo-booking"
+            <Link 
+              to={createPageUrl('Support')}
               className="inline-block px-8 py-4 bg-blue-900 text-white font-semibold rounded-xl hover:bg-blue-800 transition-colors shadow-lg"
             >
               Contact Security Team
-            </a>
+            </Link>
           </div>
         </div>
       </section>

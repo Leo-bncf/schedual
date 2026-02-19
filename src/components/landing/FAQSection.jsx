@@ -1,6 +1,8 @@
 import React, { useState } from 'react';
+import { Link } from 'react-router-dom';
 import { Plus, Minus, Calendar, Users, Sparkles, Shield, CreditCard, Settings } from 'lucide-react';
 import { cn } from '@/lib/utils';
+import { createPageUrl } from '../../utils';
 
 const faqData = [
   {
@@ -284,12 +286,12 @@ export default function FAQSection() {
           <p className="text-blue-100 mb-6 max-w-xl mx-auto">
             Our team is here to help you get started with automated IB timetabling
           </p>
-          <a 
-            href="#demo-booking"
+          <Link 
+            to={createPageUrl('Support')}
             className="inline-block px-8 py-3 bg-white text-blue-900 font-semibold rounded-xl hover:bg-blue-50 transition-colors"
           >
-            Book a Demo
-          </a>
+            Contact Support
+          </Link>
         </div>
       </div>
     </section>
