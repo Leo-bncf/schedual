@@ -459,81 +459,105 @@ Deno.serve(async (req) => {
     console.log(`[OptaPlannerPipeline] ✅ Validation passed: hardScore=${hardScore}, slotsToInsert=${slotsToInsert.length}`);
     
     // ========================================
-    // STAGE 7: Atomic Persist (Purge + Insert)
+    // STAGE 7: Atomic Persist (Purge + Insert in Single Transaction)
     // ========================================
     stage = 'persist';
-    console.log(`[OptaPlannerPipeline] ${stage}: atomic transaction - deleting old slots then inserting ${slotsToInsert.length} new slots`);
-    
+    console.log(`[OptaPlannerPipeline] ${stage}: atomic transaction - replacing ${slotsToInsert.length} slots`);
+
     let deletedCount = 0;
     let insertedCount = 0;
-    
+
     try {
-      // Step 1: Purge old slots (safe - we have validated slots ready to insert)
-      try {
-        const purgeResponse = await base44.functions.invoke('purgeScheduleSlots', {
-          schedule_version_id
-        });
-        deletedCount = purgeResponse?.data?.deletedCount || 0;
-        console.log(`[OptaPlannerPipeline] ✅ Deleted ${deletedCount} old slots`);
-      } catch (purgeError) {
-        console.error('[OptaPlannerPipeline] ❌ Purge failed:', purgeError);
-        throw new Error(`Purge failed: ${purgeError?.message || purgeError}`);
+      // CRITICAL: Call atomic replace function to ensure transaction safety
+      const replaceResponse = await base44.functions.invoke('atomicReplaceScheduleSlots', {
+        schedule_version_id,
+        slots: slotsToInsert
+      });
+
+      const replaceData = replaceResponse?.data || {};
+
+      if (!replaceData.success) {
+        console.error('[OptaPlannerPipeline] ❌ Atomic replace failed:', replaceData);
+
+        const dataLoss = replaceData.dataLoss || false;
+        deletedCount = replaceData.deletedCount || 0;
+        insertedCount = replaceData.insertedCount || 0;
+
+        return Response.json({
+          ok: false,
+          stage: 'PERSISTENCE_FAILED',
+          code: dataLoss ? 'DATA_LOSS_DETECTED' : 'TRANSACTION_FAILED',
+          error: 'Atomic transaction failed',
+          errorMessage: dataLoss 
+            ? `❌ CRITICAL: ${deletedCount} slots deleted but insert failed.\n\nSchedule is now empty (data loss occurred).\n\nError: ${replaceData.error}\n\n👉 Re-run schedule generation immediately to restore.`
+            : `❌ Transaction failed to persist new schedule.\n\nError: ${replaceData.error}\n\n👉 Existing schedule preserved - no changes made.`,
+          requestId,
+          details: [{
+            entity: 'Database',
+            field: 'atomicReplace',
+            reason: replaceData.errorDetails || replaceData.error || 'Transaction failed',
+            hint: dataLoss ? 'Re-generate schedule immediately - data was lost' : 'Retry schedule generation'
+          }],
+          suggestion: dataLoss 
+            ? '🚨 Data loss occurred. Click "Generate" immediately to restore schedule.'
+            : '🔧 Retry schedule generation to persist new slots.',
+          requiredAction: dataLoss ? 'URGENT: Re-generate schedule to restore data' : 'Retry generation',
+          meta: { 
+            schoolId, 
+            schedule_version_id,
+            deletedCount,
+            insertedCount,
+            expectedInsertions: slotsToInsert.length,
+            dataLoss,
+            requestId
+          }
+        }, { status: 200 });
       }
-      
-      // Step 2: Insert new slots
-      const inserted = await base44.entities.ScheduleSlot.bulkCreate(slotsToInsert);
-      insertedCount = Array.isArray(inserted) ? inserted.length : slotsToInsert.length;
-      console.log(`[OptaPlannerPipeline] ✅ Inserted ${insertedCount} new slots`);
-      
-      // Step 3: Count core slots inserted (TOK/CAS/EE)
+
+      // Success - extract counts from atomic operation
+      deletedCount = replaceData.deletedCount || 0;
+      insertedCount = replaceData.insertedCount || 0;
+
+      console.log(`[OptaPlannerPipeline] ✅ Atomic replace succeeded: deleted ${deletedCount}, inserted ${insertedCount}`);
+
+      // Count core slots inserted (TOK/CAS/EE)
       const coreSlotsInsertedCount = {
         TOK: slotsToInsert.filter(s => s._subject_code === 'TOK').length,
         CAS: slotsToInsert.filter(s => s._subject_code === 'CAS').length,
         EE: slotsToInsert.filter(s => s._subject_code === 'EE').length
       };
       console.log(`[OptaPlannerPipeline] 📊 Core slots inserted:`, coreSlotsInsertedCount);
-      
-      // Step 4: Update schedule version
+
+      // Update schedule version metadata
       await base44.entities.ScheduleVersion.update(schedule_version_id, {
         generated_at: new Date().toISOString(),
         score: solution.score || 0,
         conflicts_count: unassignedCount,
         warnings_count: 0
       });
-      
+
     } catch (persistError) {
-      console.error('[OptaPlannerPipeline] ❌❌❌ ATOMIC TRANSACTION FAILED');
-      console.error('[OptaPlannerPipeline] Error:', persistError);
-      console.error('[OptaPlannerPipeline] State:', { deletedCount, insertedCount, slotsToInsert: slotsToInsert.length });
-      
-      // CRITICAL: If insert failed after purge, schedule is now empty (data loss)
-      const dataLoss = deletedCount > 0 && insertedCount === 0;
-      
+      console.error('[OptaPlannerPipeline] ❌ Persistence error:', persistError);
+
       return Response.json({
         ok: false,
-        stage: 'PERSISTENCE_FAILED',
-        code: dataLoss ? 'DATA_LOSS_DETECTED' : 'INSERT_FAILED',
-        error: 'Database persistence failed',
-        errorMessage: dataLoss 
-          ? `❌ CRITICAL: ${deletedCount} slots deleted but insert failed.\n\nSchedule is now empty (data loss occurred).\n\nError: ${persistError?.message || persistError}\n\n👉 Re-run schedule generation immediately to restore.`
-          : `❌ Failed to persist new schedule.\n\nError: ${persistError?.message || persistError}\n\n👉 Existing schedule may be partially affected.`,
+        stage: 'PERSISTENCE_ERROR',
+        code: 'FUNCTION_ERROR',
+        error: 'Persistence function error',
+        errorMessage: `❌ Failed to call atomic replace function.\n\nError: ${persistError?.message || persistError}\n\n👉 Check function logs for details.`,
+        requestId,
         details: [{
-          entity: 'Database',
-          field: 'bulkCreate',
+          entity: 'Function',
+          field: 'atomicReplaceScheduleSlots',
           reason: String(persistError?.message || persistError),
-          hint: dataLoss ? 'Re-generate schedule immediately - data was lost' : 'Retry persistence operation'
+          hint: 'Check backend function logs and database connectivity'
         }],
-        suggestion: dataLoss 
-          ? '🚨 Data loss occurred. Click "Generate" immediately to restore schedule.'
-          : '🔧 Retry schedule generation to persist new slots.',
-        requiredAction: dataLoss ? 'URGENT: Re-generate schedule to restore data' : 'Retry generation',
+        suggestion: '🔧 Check function logs and retry schedule generation.',
+        requiredAction: 'Investigate function error',
         meta: { 
           schoolId, 
           schedule_version_id,
-          deletedCount,
-          insertedCount,
-          slotsToInsert: slotsToInsert.length,
-          dataLoss
+          requestId
         }
       }, { status: 200 });
     }
