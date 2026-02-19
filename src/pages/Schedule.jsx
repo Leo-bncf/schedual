@@ -417,28 +417,30 @@ export default function Schedule() {
     return slots;
   }, [school, optaPlannerResult, solverTimeslots, scheduleSlots.length]);
 
-  // SOURCE OF TRUTH: Calculate periodsPerDay from actual timeslots/scheduleSettings
+  // SOURCE OF TRUTH: Calculate periodsPerDay from actual timeslots (NEVER fallback to school.periods_per_day if timeslots exist)
   const dynamicPeriodsPerDay = React.useMemo(() => {
-    // Priority 1: Derive from timeslots (actual solver output)
+    // CRITICAL: If timeslots exist, ALWAYS use them (NEVER fallback to school config)
     if (timeslots.length > 0) {
       const daysOfWeek = optaPlannerResult?.scheduleSettingsSent?.days_of_week || school?.days_of_week || ['MONDAY', 'TUESDAY', 'WEDNESDAY', 'THURSDAY', 'FRIDAY'];
       const periodsPerDay = Math.ceil(timeslots.length / Math.max(1, daysOfWeek.length));
       
-      console.log('[Schedule] ✅ periodsPerDay calculated from timeslots:', {
+      console.log('[Schedule] ✅ periodsPerDay from timeslots (SOURCE OF TRUTH):', {
         timeslots: timeslots.length,
         daysOfWeek: daysOfWeek.length,
-        periodsPerDay
+        periodsPerDay,
+        source: 'TIMESLOTS_ARRAY'
       });
       
       return periodsPerDay;
     }
     
-    // Priority 2: Calculate from scheduleSettings (day_start/end + duration)
+    // Priority 2: Calculate from scheduleSettings (solver config) OR school config (but NOT fallback if we have timeslots)
+    // CRITICAL: Only use scheduleSettings if timeslots are empty (prevents mismatch)
     const settings = optaPlannerResult?.scheduleSettingsSent || school;
     if (settings) {
       const dayStart = settings.day_start_time || settings.school_start_time || '08:00';
       const dayEnd = settings.day_end_time || '18:00';
-      const periodDuration = settings.period_duration_minutes || settings.period_duration_minutes || 60;
+      const periodDuration = settings.period_duration_minutes || 60;
       const breaks = settings.breaks || [];
       
       const [startHour, startMin] = dayStart.split(':').map(Number);
@@ -457,7 +459,8 @@ export default function Schedule() {
       const availableMinutes = totalMinutes - breakMinutes;
       const calculatedPeriods = Math.floor(availableMinutes / periodDuration);
       
-      console.log('[Schedule] 📊 periodsPerDay calculated from time range:', {
+      console.log('[Schedule] 📊 periodsPerDay calculated from config (timeslots empty):', {
+        source: optaPlannerResult?.scheduleSettingsSent ? 'SOLVER_SETTINGS' : 'SCHOOL_CONFIG',
         dayStart,
         dayEnd,
         periodDuration,
@@ -470,11 +473,10 @@ export default function Schedule() {
       return calculatedPeriods;
     }
     
-    // Fallback: Use config value
-    const fallbackPeriods = school?.periods_per_day || 8;
-    console.warn('[Schedule] ⚠️ Using fallback periodsPerDay from school.periods_per_day:', fallbackPeriods);
-    return fallbackPeriods;
-  }, [timeslots, optaPlannerResult, school]);
+    // Fallback: ONLY if no timeslots AND no settings (rare case - no schedule generated yet)
+    console.error('[Schedule] ❌ CRITICAL: No timeslots, no scheduleSettings, no school - using hardcoded fallback 8 periods/day');
+    return 8;
+  }, [timeslots, optaPlannerResult?.scheduleSettingsSent, school]);
 
   const { data: constraints = [], refetch: refetchConstraints } = useQuery({
     queryKey: ['constraints', schoolId],
