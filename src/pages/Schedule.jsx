@@ -300,6 +300,7 @@ export default function Schedule() {
   };
 
   const minutesToPeriods = (m) => {
+    // CRITICAL: Use school config for period duration (this is metadata, not computed from timeslots)
     const period = school?.period_duration_minutes || schoolConfig.period_duration_minutes || 60;
     return Math.max(0, Math.ceil(m / period));
   };
@@ -1101,7 +1102,11 @@ Now process the user's input and return ONLY the JSON object.`,
           return dayMap[up] || String(d).charAt(0).toUpperCase() + String(d).slice(1).toLowerCase();
         };
         const days = (school?.days_of_week || ['MONDAY', 'TUESDAY', 'WEDNESDAY', 'THURSDAY', 'FRIDAY']).map(normalizeDay);
-        const periodsPerDay = school?.periods_per_day || 8;
+        
+        // CRITICAL: Use dynamicPeriodsPerDay (calculated from timeslots/config), NEVER school.periods_per_day
+        const periodsPerDay = dynamicPeriodsPerDay || 10; // Fallback to 10 only if dynamicPeriodsPerDay is null
+        console.log('[Schedule] Local scheduling using periodsPerDay:', periodsPerDay, '(source: dynamicPeriodsPerDay)');
+        
         const periods = Array.from({ length: periodsPerDay }, (_, i) => i + 1);
         const newSlots = [];
 
