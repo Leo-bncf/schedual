@@ -102,6 +102,22 @@ export default function Schedule() {
   const [solverTimeslots, setSolverTimeslots] = useState(null); // Persist timeslots from OptaPlanner
   const [auditResult, setAuditResult] = useState(null);
   const [showAuditReport, setShowAuditReport] = useState(false);
+
+  // CRITICAL: Runtime validator for OptaPlanner response format
+  const setOptaPlannerResultSafe = (payload) => {
+    if (payload && typeof payload.ok !== 'boolean') {
+      console.error('[Schedule] ❌ RUNTIME ASSERT FAILED: optaPlannerResult.ok is not boolean:', {
+        ok_type: typeof payload.ok,
+        ok_value: payload.ok,
+        payload_keys: Object.keys(payload || {}),
+        has_result: 'result' in payload,
+        result_keys: payload.result ? Object.keys(payload.result) : null,
+        stage: payload.stage,
+        full_payload_sample: JSON.stringify(payload).slice(0, 300)
+      });
+    }
+    setOptaPlannerResult(payload);
+  };
   const [formData, setFormData] = useState({
     name: '',
     academic_year: '2024-2025',
@@ -745,49 +761,49 @@ Now process the user's input and return ONLY the JSON object.`,
       const res = await base44.functions.invoke('optaPlannerPipeline', { schedule_version_id: selectedVersion.id });
       
       // CRITICAL: Store full response (res.data), NOT res.data.result
-      const data = res.data || {};
-      setOptaPlannerResult(data);
+      const payload = res.data || {};
+      setOptaPlannerResultSafe(payload);
       
-      console.log('[handleFetchORTool] Response.ok:', data.ok);
-      console.log('[handleFetchORTool] Response.stage:', data.stage);
+      console.log('[handleFetchORTool] Response.ok:', payload.ok);
+      console.log('[handleFetchORTool] Response.stage:', payload.stage);
 
       // Log solver identity to console
-      if (data?.solverIdentity) {
-        console.log(`🔧 SOLVER: ${data.solverIdentity.engine} (${data.solverIdentity.implementation}) v${data.solverIdentity.version}`);
+      if (payload?.solverIdentity) {
+        console.log(`🔧 SOLVER: ${payload.solverIdentity.engine} (${payload.solverIdentity.implementation}) v${payload.solverIdentity.version}`);
       }
 
       // Check if function returned error
-      if (data?.ok === false) {
-        const solverName = data.solverIdentity?.engine || 'Solver';
-        console.error(`❌ ${solverName} returned error:`, data);
+      if (payload?.ok === false) {
+        const solverName = payload.solverIdentity?.engine || 'Solver';
+        console.error(`❌ ${solverName} returned error:`, payload);
       
       // UNIVERSAL ERROR DISPLAY: stage, code, errorMessage, details[], meta
       const errorSummary = [
-        `Stage: ${data.stage || 'Unknown'}`,
-        `Code: ${data.code || data.errorCode || 'N/A'}`,
-        `Message: ${data.errorMessage || data.error || 'Unknown error'}`,
-        data.meta?.school_id ? `School ID: ${data.meta.school_id}` : null,
-        data.meta?.schedule_version_id ? `Schedule Version ID: ${data.meta.schedule_version_id}` : null,
-        data.details?.length > 0 ? `\nDetails (${data.details.length} issues):` : null,
-        ...(data.details || []).slice(0, 5).map((d, i) => 
+        `Stage: ${payload.stage || 'Unknown'}`,
+        `Code: ${payload.code || payload.errorCode || 'N/A'}`,
+        `Message: ${payload.errorMessage || payload.error || 'Unknown error'}`,
+        payload.meta?.school_id ? `School ID: ${payload.meta.school_id}` : null,
+        payload.meta?.schedule_version_id ? `Schedule Version ID: ${payload.meta.schedule_version_id}` : null,
+        payload.details?.length > 0 ? `\nDetails (${payload.details.length} issues):` : null,
+        ...(payload.details || []).slice(0, 5).map((d, i) => 
           `  ${i+1}. ${d.entity || 'N/A'}.${d.field || 'N/A'}: ${d.reason || 'N/A'}\n     💡 ${d.hint || 'N/A'}`
         ),
-        data.details?.length > 5 ? `  ... +${data.details.length - 5} more issues` : null,
-        data.suggestion ? `\nSuggestion: ${data.suggestion}` : null,
-        data.requiredAction ? `Action Required: ${data.requiredAction}` : null
+        payload.details?.length > 5 ? `  ... +${payload.details.length - 5} more issues` : null,
+        payload.suggestion ? `\nSuggestion: ${payload.suggestion}` : null,
+        payload.requiredAction ? `Action Required: ${payload.requiredAction}` : null
       ].filter(Boolean).join('\n');
       
       setOptaPlannerError(errorSummary);
       
-      toast.error(`❌ ${data.code || 'Error'} at ${data.stage}: ${data.errorMessage || data.error}`, { 
+      toast.error(`❌ ${payload.code || 'Error'} at ${payload.stage}: ${payload.errorMessage || payload.error}`, { 
         duration: 12000,
-        description: data.details?.length > 0 
-          ? `${data.details.length} validation issues detected. See diagnostics tab.` 
+        description: payload.details?.length > 0 
+          ? `${payload.details.length} validation issues detected. See diagnostics tab.` 
           : undefined
       });
-      } else if (data.ok === true) {
-        // Success path - read from data.result
-        const result = data.result || {};
+      } else if (payload.ok === true) {
+        // Success path - read from payload.result
+        const result = payload.result || {};
         const inserted = result.slotsInserted ?? 0;
         const deleted = result.slotsDeleted ?? 0;
         
@@ -802,17 +818,17 @@ Now process the user's input and return ONLY the JSON object.`,
         }
         
         // Persist solver timeslots to prevent config reconstruction overwrite
-        if (data.timeslots && Array.isArray(data.timeslots) && data.timeslots.length > 0) {
-          console.log('[handleFetchORTool] 💾 PERSISTING solver timeslots:', data.timeslots.length, 'slots');
-          setSolverTimeslots(data.timeslots);
+        if (payload.timeslots && Array.isArray(payload.timeslots) && payload.timeslots.length > 0) {
+          console.log('[handleFetchORTool] 💾 PERSISTING solver timeslots:', payload.timeslots.length, 'slots');
+          setSolverTimeslots(payload.timeslots);
         }
         
         await queryClient.invalidateQueries({ queryKey: ['scheduleSlots'] });
         await queryClient.invalidateQueries({ queryKey: ['scheduleVersions'] });
         setScheduleTab('student');
       } else {
-        // data.ok is undefined or null - unexpected response format
-        console.warn('[handleFetchORTool] ⚠️ Unexpected response format (ok is undefined):', data);
+        // payload.ok is undefined or null - unexpected response format
+        console.warn('[handleFetchORTool] ⚠️ Unexpected response format (ok is undefined):', payload);
         toast.warning('OptaPlanner response format unexpected. Check diagnostics.');
       }
     } catch (e) {
@@ -821,7 +837,7 @@ Now process the user's input and return ONLY the JSON object.`,
       const statusCode = e?.response?.status;
       
       if (errorData && typeof errorData === 'object') {
-        setOptaPlannerResult(errorData);
+        setOptaPlannerResultSafe(errorData);
         
         if (errorData.ok === false || errorData.code || errorData.stage) {
           // UNIVERSAL ERROR DISPLAY: stage, code, errorMessage, details[], meta
@@ -1949,35 +1965,34 @@ Now process the user's input and return ONLY the JSON object.`,
             schedule_version_id: selectedVersion.id
           });
           
-          // CRITICAL: Store full response (res.data), NOT res.data.result
-          // This ensures optaPlannerResult.ok, optaPlannerResult.stage are accessible
-          const fullResponse = res.data || {};
+          // CRITICAL: Normalize response - always use res.data as payload
+          const payload = res.data || {};
           
           // CRITICAL: Log full response for debugging
-          console.log('[Schedule] 📦 FULL OptaPlanner Response:', fullResponse);
-          console.log('[Schedule] Response keys:', Object.keys(fullResponse));
-          console.log('[Schedule] Response.ok:', fullResponse.ok);
-          console.log('[Schedule] Response.stage:', fullResponse.stage);
-          console.log('[Schedule] Response.result:', fullResponse.result);
+          console.log('[Schedule] 📦 FULL OptaPlanner Response:', payload);
+          console.log('[Schedule] Response keys:', Object.keys(payload));
+          console.log('[Schedule] Response.ok:', payload.ok);
+          console.log('[Schedule] Response.stage:', payload.stage);
+          console.log('[Schedule] Response.result:', payload.result);
           console.log('[Schedule] HTTP Status from axios:', res.status);
           
-          setOptaPlannerResult(fullResponse);
+          setOptaPlannerResultSafe(payload);
 
           // Log solver identity to console
-          if (fullResponse?.solverIdentity) {
-            console.log(`🔧 SOLVER: ${fullResponse.solverIdentity.engine} (${fullResponse.solverIdentity.implementation}) v${fullResponse.solverIdentity.version}`);
+          if (payload?.solverIdentity) {
+            console.log(`🔧 SOLVER: ${payload.solverIdentity.engine} (${payload.solverIdentity.implementation}) v${payload.solverIdentity.version}`);
           }
 
           // Check if function returned error
-          if (fullResponse.ok === false) {
-            console.error(`❌ Codex returned error:`, fullResponse);
-            console.error('[Schedule] requestId:', fullResponse.requestId || 'N/A');
-            console.error('[Schedule] validationErrors:', fullResponse.validationErrors || []);
-            console.error('[Schedule] details:', fullResponse.details || []);
+          if (payload.ok === false) {
+            console.error(`❌ Codex returned error:`, payload);
+            console.error('[Schedule] requestId:', payload.requestId || 'N/A');
+            console.error('[Schedule] validationErrors:', payload.validationErrors || []);
+            console.error('[Schedule] details:', payload.details || []);
             
             // Special handling for cohort integrity violation
-            if (fullResponse.stage === 'COHORT_INTEGRITY_VIOLATION') {
-              const splitSections = fullResponse.splitSections || [];
+            if (payload.stage === 'COHORT_INTEGRITY_VIOLATION') {
+              const splitSections = payload.splitSections || [];
               const count = splitSections.length;
               const firstSection = splitSections[0] || {};
               
@@ -1985,53 +2000,53 @@ Now process the user's input and return ONLY the JSON object.`,
                 `Example: ${firstSection.subject || 'Unknown'} - ${firstSection.studentGroup}\n` +
                 `Timeslots: ${JSON.stringify(firstSection.timeslots_list)}\n` +
                 `Reason: ${firstSection.reason}\n\n` +
-                `${fullResponse.suggestion || 'This is a solver constraint violation - same class cannot be scheduled multiple times at the same time.'}`;
+                `${payload.suggestion || 'This is a solver constraint violation - same class cannot be scheduled multiple times at the same time.'}`;
               
               setOptaPlannerError(errorMsg);
               toast.error(`Solver integrity violation: ${count} sections with duplicate timeslots. Check diagnostics.`, { duration: 10000 });
             }
             // Special handling for missing HL/SL hours validation
-            else if (fullResponse.stage === 'VALIDATION_FAILED_MISSING_HL_SL_HOURS' || fullResponse.error === 'MISSING_HL_SL_HOURS_CONFIG') {
-              const missingSubjects = fullResponse.missingSubjects || fullResponse.missingGroups || [];
+            else if (payload.stage === 'VALIDATION_FAILED_MISSING_HL_SL_HOURS' || payload.error === 'MISSING_HL_SL_HOURS_CONFIG') {
+              const missingSubjects = payload.missingSubjects || payload.missingGroups || [];
               const count = missingSubjects.length;
               const subjectNames = missingSubjects.slice(0, 5).map(s => `${s?.name || s?.code || 'Unknown'} (missing: ${s?.missing || '?'})`).join(', ');
               const moreText = count > 5 ? ` +${count - 5} more` : '';
               toast.error(`❌ Cannot run OptaPlanner: ${count} DP subjects missing HL/SL hours. Configure on Subjects page.`, { duration: 12000 });
-              setOptaPlannerError(`VALIDATION FAILED: Missing HL/SL Hours Configuration\n\n${count} DP subjects need hoursPerWeekHL and hoursPerWeekSL configured:\n\n${subjectNames}${moreText}\n\n${fullResponse.suggestion || 'Go to Subjects page and set HL/SL hours for each DP subject'}\n\n${fullResponse.requiredAction || ''}\n\nDetailed list:\n${JSON.stringify(missingSubjects, null, 2)}`);
+              setOptaPlannerError(`VALIDATION FAILED: Missing HL/SL Hours Configuration\n\n${count} DP subjects need hoursPerWeekHL and hoursPerWeekSL configured:\n\n${subjectNames}${moreText}\n\n${payload.suggestion || 'Go to Subjects page and set HL/SL hours for each DP subject'}\n\n${payload.requiredAction || ''}\n\nDetailed list:\n${JSON.stringify(missingSubjects, null, 2)}`);
             }
             // Special handling for missing config validation (legacy)
-            else if (fullResponse.error === 'MISSING_MINUTES_CONFIGURATION' || fullResponse.stage === 'VALIDATION_FAILED_MISSING_CONFIG') {
-              const missingGroups = fullResponse.missingGroups || fullResponse.filteredDPGroups || [];
-              const count = fullResponse.missingConfigurationCount || missingGroups.length;
+            else if (payload.error === 'MISSING_MINUTES_CONFIGURATION' || payload.stage === 'VALIDATION_FAILED_MISSING_CONFIG') {
+              const missingGroups = payload.missingGroups || payload.filteredDPGroups || [];
+              const count = payload.missingConfigurationCount || missingGroups.length;
               const groupNames = missingGroups.slice(0, 5).map(g => `${g?.name || 'Unknown'} (${g?.subject || '?'})`).join(', ');
               const moreText = count > 5 ? ` +${count - 5} more` : '';
               toast.error(`❌ Cannot generate schedule: ${count} TeachingGroups missing minutes/periods configuration. See diagnostics.`, { duration: 10000 });
-              setOptaPlannerError(`VALIDATION FAILED: ${count} TeachingGroups Missing Configuration\n\n${groupNames}${moreText}\n\n${fullResponse.suggestion || 'Configure minutes_per_week, periods_per_week, or hours_per_week for each TeachingGroup'}\n\nDetailed list:\n${JSON.stringify(missingGroups, null, 2)}`);
+              setOptaPlannerError(`VALIDATION FAILED: ${count} TeachingGroups Missing Configuration\n\n${groupNames}${moreText}\n\n${payload.suggestion || 'Configure minutes_per_week, periods_per_week, or hours_per_week for each TeachingGroup'}\n\nDetailed list:\n${JSON.stringify(missingGroups, null, 2)}`);
             }
             // Special handling for timeslots validation
-            else if (fullResponse.stage === 'VALIDATION_TIMESLOTS_EMPTY') {
+            else if (payload.stage === 'VALIDATION_TIMESLOTS_EMPTY') {
               toast.error('❌ Cannot run OptaPlanner: No timeslots generated. Fix school settings (day_start_time/day_end_time/period_duration).', { duration: 10000 });
-              setOptaPlannerError(`${fullResponse.errorMessage}\n\n${fullResponse.suggestion || ''}`);
+              setOptaPlannerError(`${payload.errorMessage}\n\n${payload.suggestion || ''}`);
             }
             // CRITICAL: Special handling for SOLUTION_INFEASIBLE (hardScore < 0)
-            else if (fullResponse.stage === 'SOLUTION_INFEASIBLE') {
-              toast.error(`❌ OptaPlanner: Hard constraints violated (hardScore=${fullResponse.meta?.hardScore || 'N/A'}). Existing schedule preserved.`, { duration: 12000 });
-              setOptaPlannerError(`${fullResponse.errorMessage}\n\n${fullResponse.suggestion || ''}`);
+            else if (payload.stage === 'SOLUTION_INFEASIBLE') {
+              toast.error(`❌ OptaPlanner: Hard constraints violated (hardScore=${payload.meta?.hardScore || 'N/A'}). Existing schedule preserved.`, { duration: 12000 });
+              setOptaPlannerError(`${payload.errorMessage}\n\n${payload.suggestion || ''}`);
             }
             // CRITICAL: Special handling for PERSISTENCE_BLOCKED (0 slots inserted)
-            else if (fullResponse.stage === 'PERSISTENCE_BLOCKED') {
+            else if (payload.stage === 'PERSISTENCE_BLOCKED') {
               toast.error(`❌ OptaPlanner: Zero slots generated. Existing schedule preserved.`, { duration: 12000 });
-              setOptaPlannerError(`${fullResponse.errorMessage}\n\n${fullResponse.suggestion || ''}`);
+              setOptaPlannerError(`${payload.errorMessage}\n\n${payload.suggestion || ''}`);
             }
             // Generic solver error
             else {
-              const solverName = fullResponse.solverIdentity?.engine || 'Solver';
-              toast.error(`${solverName} failed at stage "${fullResponse.stage}": ${fullResponse.errorMessage || fullResponse.error || 'Unknown error'}`);
-              setOptaPlannerError(`Stage: ${fullResponse.stage}\nError: ${fullResponse.errorMessage || fullResponse.error}\n\nStack:\n${fullResponse.errorStack || 'N/A'}`);
+              const solverName = payload.solverIdentity?.engine || 'Solver';
+              toast.error(`${solverName} failed at stage "${payload.stage}": ${payload.errorMessage || payload.error || 'Unknown error'}`);
+              setOptaPlannerError(`Stage: ${payload.stage}\nError: ${payload.errorMessage || payload.error}\n\nStack:\n${payload.errorStack || 'N/A'}`);
             }
           } else {
-            // Success path - read from response.result object
-            const result = fullResponse.result || {};
+            // Success path - read from payload.result object
+            const result = payload.result || {};
             const inserted = result.slotsInserted ?? 0;
             const deleted = result.slotsDeleted ?? 0;
             
@@ -2049,9 +2064,9 @@ Now process the user's input and return ONLY the JSON object.`,
             }
 
             // CRITICAL: Persist solver timeslots as single source of truth (never overwritten by config reconstruction)
-            if (fullResponse.timeslots && Array.isArray(fullResponse.timeslots) && fullResponse.timeslots.length > 0) {
-              console.log('[Schedule] 💾 PERSISTING solver timeslots to prevent config overwrite:', fullResponse.timeslots.length, 'slots');
-              setSolverTimeslots(fullResponse.timeslots);
+            if (payload.timeslots && Array.isArray(payload.timeslots) && payload.timeslots.length > 0) {
+              console.log('[Schedule] 💾 PERSISTING solver timeslots to prevent config overwrite:', payload.timeslots.length, 'slots');
+              setSolverTimeslots(payload.timeslots);
             }
 
             await queryClient.invalidateQueries({ queryKey: ['scheduleSlots'] });
@@ -2116,7 +2131,7 @@ Now process the user's input and return ONLY the JSON object.`,
                 (errorData.details?.length ? `\n📋 Details:\n${errorData.details.map(d => `• ${d.entity}.${d.field}: ${d.reason} (${d.hint})`).join('\n')}` : '');
 
               setOptaPlannerError(errorMsg);
-              setOptaPlannerResult(errorData);
+              setOptaPlannerResultSafe(errorData);
               toast.error(`Solver integrity violation: ${splitSections.length} sections with duplicate timeslots`, { duration: 10000 });
             }
             // Other Codex errors - UNIVERSAL DISPLAY FORMAT
@@ -2141,7 +2156,7 @@ Now process the user's input and return ONLY the JSON object.`,
               ].filter(Boolean).join('\n');
               
               setOptaPlannerError(errorSummary);
-              setOptaPlannerResult(errorData);
+              setOptaPlannerResultSafe(errorData);
               
               toast.error(`❌ ${errorData.code || errorData.errorCode || 'Error'} at ${errorData.stage}`, { 
                 duration: 12000,
@@ -2172,7 +2187,7 @@ Now process the user's input and return ONLY the JSON object.`,
             ].filter(Boolean).join('\n');
             
             setOptaPlannerError(errorSummary);
-            setOptaPlannerResult(errorData);
+            setOptaPlannerResultSafe(errorData);
             
             toast.error(`❌ ${errorData.code || 'Validation Failed'}: ${errorData.errorMessage || errorData.error}`, { 
               duration: 12000,
@@ -2203,7 +2218,7 @@ Now process the user's input and return ONLY the JSON object.`,
       
       if (isPlannerError && !wasCancelled) {
         const errorData = error.response.data;
-        setOptaPlannerResult(errorData);
+        setOptaPlannerResultSafe(errorData);
         setOptaPlannerError(`Stage: ${errorData.stage}\nError: ${errorData.errorMessage || errorData.error}\n\nStack:\n${errorData.errorStack || 'N/A'}`);
         
         setGenerationProgress({
@@ -2246,13 +2261,13 @@ Now process the user's input and return ONLY the JSON object.`,
     }
   }, [scheduleVersions, selectedVersion, publishedVersion, draftVersions, hasAutoSelected]);
 
-  // Clear solver timeslots when version changes (start fresh)
+  // Clear solver timeslots when version changes (AFTER school data loaded to prevent race)
   React.useEffect(() => {
-    if (selectedVersion) {
-      console.log('[Schedule] Version changed - clearing persisted solver timeslots');
+    if (selectedVersion && school) {
+      console.log('[Schedule] Version changed (school loaded) - clearing persisted solver timeslots');
       setSolverTimeslots(null);
     }
-  }, [selectedVersion?.id]);
+  }, [selectedVersion?.id, school?.id]);
 
   // Calculate stats for selected version
   const stats = React.useMemo(() => {
