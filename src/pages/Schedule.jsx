@@ -784,12 +784,31 @@ Now process the user's input and return ONLY the JSON object.`,
     try {
       const res = await base44.functions.invoke('optaPlannerPipeline', { schedule_version_id: selectedVersion.id });
       
-      // CRITICAL: Store full response (res.data), NOT res.data.result
-      const payload = res.data || {};
+      // CRITICAL: Normalize axios response - extract data at correct level
+      const payload = res?.data || {};
+      
+      // RUNTIME ASSERTION: payload.ok MUST be boolean
+      if (typeof payload.ok !== 'boolean') {
+        console.error('[handleFetchORTool] ❌ RUNTIME ASSERT FAILED: payload.ok is not boolean:', {
+          ok_type: typeof payload.ok,
+          ok_value: payload.ok,
+          payload_keys: Object.keys(payload || {}),
+          has_result: 'result' in payload,
+          result_keys: payload.result ? Object.keys(payload.result) : null,
+          stage: payload.stage,
+          axios_status: res?.status,
+          full_response_sample: JSON.stringify(res).slice(0, 500)
+        });
+        
+        toast.error(`❌ Invalid API response format (ok: ${typeof payload.ok}). Check diagnostics.`, { duration: 10000 });
+        setOptaPlannerError(`MALFORMED RESPONSE: payload.ok is ${typeof payload.ok}, expected boolean.\n\nKeys: ${Object.keys(payload).join(', ')}\n\nThis indicates a backend response parsing issue.`);
+        setOptaPlannerLoading(false);
+        return; // STOP UI FLOW
+      }
+      
       setOptaPlannerResultSafe(payload);
       
-      console.log('[handleFetchORTool] Response.ok:', payload.ok);
-      console.log('[handleFetchORTool] Response.stage:', payload.stage);
+      console.log('[handleFetchORTool] ✅ Response validated - ok:', payload.ok, 'stage:', payload.stage);
 
       // Log solver identity to console
       if (payload?.solverIdentity) {
@@ -2038,18 +2057,32 @@ Now process the user's input and return ONLY the JSON object.`,
             schedule_version_id: selectedVersion.id
           });
           
-          // CRITICAL: Normalize response - always use res.data as payload
-          const payload = res.data || {};
+          // CRITICAL: Normalize axios response - extract data at correct level
+          const payload = res?.data || {};
           
-          // CRITICAL: Log full response for debugging
-          console.log('[Schedule] 📦 FULL OptaPlanner Response:', payload);
-          console.log('[Schedule] Response keys:', Object.keys(payload));
-          console.log('[Schedule] Response.ok:', payload.ok);
-          console.log('[Schedule] Response.stage:', payload.stage);
-          console.log('[Schedule] Response.result:', payload.result);
-          console.log('[Schedule] HTTP Status from axios:', res.status);
+          // RUNTIME ASSERTION: payload.ok MUST be boolean
+          if (typeof payload.ok !== 'boolean') {
+            console.error('[Schedule] ❌ RUNTIME ASSERT FAILED: payload.ok is not boolean:', {
+              ok_type: typeof payload.ok,
+              ok_value: payload.ok,
+              payload_keys: Object.keys(payload || {}),
+              has_result: 'result' in payload,
+              result_keys: payload.result ? Object.keys(payload.result) : null,
+              stage: payload.stage,
+              axios_status: res?.status,
+              full_response_sample: JSON.stringify(res).slice(0, 500)
+            });
+            
+            toast.error(`❌ Invalid API response format (ok: ${typeof payload.ok}). Check diagnostics.`, { duration: 10000 });
+            setOptaPlannerError(`MALFORMED RESPONSE: payload.ok is ${typeof payload.ok}, expected boolean.\n\nKeys: ${Object.keys(payload).join(', ')}\n\nThis indicates a backend response parsing issue.`);
+            setOptaPlannerLoading(false);
+            setIsGenerating(false);
+            return; // STOP UI FLOW
+          }
           
           setOptaPlannerResultSafe(payload);
+          
+          console.log('[Schedule] ✅ Response validated - ok:', payload.ok, 'stage:', payload.stage);
 
           // Log solver identity to console
           if (payload?.solverIdentity) {
