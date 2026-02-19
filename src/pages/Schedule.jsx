@@ -706,18 +706,23 @@ Now process the user's input and return ONLY the JSON object.`,
     setOptaPlannerError(null);
     try {
       const res = await base44.functions.invoke('optaPlannerPipeline', { schedule_version_id: selectedVersion.id });
-      const data = res.data;
+      
+      // CRITICAL: Store full response (res.data), NOT res.data.result
+      const data = res.data || {};
       setOptaPlannerResult(data);
+      
+      console.log('[handleFetchORTool] Response.ok:', data.ok);
+      console.log('[handleFetchORTool] Response.stage:', data.stage);
 
       // Log solver identity to console
       if (data?.solverIdentity) {
-      console.log(`🔧 SOLVER: ${data.solverIdentity.engine} (${data.solverIdentity.implementation}) v${data.solverIdentity.version}`);
+        console.log(`🔧 SOLVER: ${data.solverIdentity.engine} (${data.solverIdentity.implementation}) v${data.solverIdentity.version}`);
       }
 
       // Check if function returned error
       if (data?.ok === false) {
-      const solverName = data.solverIdentity?.engine || 'Solver';
-      console.error(`❌ ${solverName} returned error:`, data);
+        const solverName = data.solverIdentity?.engine || 'Solver';
+        console.error(`❌ ${solverName} returned error:`, data);
       
       // UNIVERSAL ERROR DISPLAY: stage, code, errorMessage, details[], meta
       const errorSummary = [
@@ -743,17 +748,35 @@ Now process the user's input and return ONLY the JSON object.`,
           ? `${data.details.length} validation issues detected. See diagnostics tab.` 
           : undefined
       });
-      } else {
+      } else if (data.ok === true) {
+        // Success path - read from data.result
+        const result = data.result || {};
+        const inserted = result.slotsInserted ?? 0;
+        const deleted = result.slotsDeleted ?? 0;
+        
+        console.log(`[handleFetchORTool] ✅ Success: deleted ${deleted}, inserted ${inserted}`);
+        
+        // CRITICAL: Block if 0 slots inserted
+        if (inserted === 0) {
+          toast.error('❌ OptaPlanner returned 0 slots. Check diagnostics.', { duration: 10000 });
+          setOptaPlannerError(`OptaPlanner reported success but inserted 0 slots.\n\nDeleted: ${deleted}\nInserted: ${inserted}`);
+        } else {
+          toast.success(`✅ OptaPlanner: ${deleted} deleted, ${inserted} slots created`);
+        }
+        
         // Persist solver timeslots to prevent config reconstruction overwrite
         if (data.timeslots && Array.isArray(data.timeslots) && data.timeslots.length > 0) {
-          console.log('[Schedule] 💾 PERSISTING solver timeslots (manual OptaPlanner run):', data.timeslots.length, 'slots');
+          console.log('[handleFetchORTool] 💾 PERSISTING solver timeslots:', data.timeslots.length, 'slots');
           setSolverTimeslots(data.timeslots);
         }
         
         await queryClient.invalidateQueries({ queryKey: ['scheduleSlots'] });
         await queryClient.invalidateQueries({ queryKey: ['scheduleVersions'] });
         setScheduleTab('student');
-        toast.success('OptaPlanner response retrieved');
+      } else {
+        // data.ok is undefined or null - unexpected response format
+        console.warn('[handleFetchORTool] ⚠️ Unexpected response format (ok is undefined):', data);
+        toast.warning('OptaPlanner response format unexpected. Check diagnostics.');
       }
     } catch (e) {
       console.error('OptaPlanner fetch failed:', e);
