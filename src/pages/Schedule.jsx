@@ -587,9 +587,18 @@ export default function Schedule() {
       console.log('Fetching constraints for school:', schoolId);
       const result = await base44.entities.Constraint.filter({ school_id: schoolId });
       console.log('Fetched constraints:', result);
+      if (!Array.isArray(result)) {
+        console.error('[Schedule] ❌ Constraints malformed (expected array):', result);
+        toast.error('Erreur: contraintes invalides (format non reconnu)');
+        return [];
+      }
       return result;
     },
     enabled: !!schoolId,
+    onError: (error) => {
+      console.error('[Schedule] ❌ Constraints load failed:', error?.message || error);
+      toast.error(`Impossible de charger les contraintes: ${error?.response?.status === 403 ? 'accès refusé' : error?.response?.status === 401 ? 'authentification requise' : 'erreur API'}`);
+    }
   });
 
   // Detect data changes to suggest regeneration
