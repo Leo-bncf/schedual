@@ -1066,6 +1066,243 @@ if (isDP) {
       validationReport.exclusionReasons[skip.reason] = (validationReport.exclusionReasons[skip.reason] || 0) + 1;
     }
     
+    // ========================================
+    // PRE-SOLVE FEASIBILITY VALIDATION
+    // ========================================
+    stage = 'PRE_SOLVE_VALIDATION';
+    recordLog(`${stage}: Running feasibility checks before solver`);
+    
+    const validationErrors = [];
+    const validationDetails = [];
+    
+    // VALIDATION 1: Teacher capacity check
+    recordLog('Validation 1: Teacher capacity');
+    const teacherCapacityIssues = [];
+    const availablePeriodsPerWeek = timeslots.length; // Total periods available per week
+    
+    for (const teacher of teachersDb) {
+      if (!teacher?.id) continue;
+      
+      // Find all teaching groups assigned to this teacher
+      const assignedGroups = teachingGroupsDb.filter(tg => tg.teacher_id === teacher.id && tg.is_active !== false);
+      
+      // Calculate total required periods for this teacher
+      let totalRequiredPeriods = 0;
+      for (const tg of assignedGroups) {
+        const minutes = minutesForTG(tg);
+        if (minutes > 0) {
+          totalRequiredPeriods += minutesToPeriods(minutes);
+        }
+      }
+      
+      // Check if teacher exceeds available capacity
+      const teacherMaxHours = teacher.max_hours_per_week || 25;
+      const teacherMaxPeriods = Math.floor((teacherMaxHours * 60) / periodDurationMinutes);
+      const feasiblePeriods = Math.min(teacherMaxPeriods, availablePeriodsPerWeek);
+      
+      if (totalRequiredPeriods > feasiblePeriods) {
+        teacherCapacityIssues.push({
+          teacher_id: teacher.id,
+          teacher_name: teacher.full_name || teacher.email,
+          required_periods: totalRequiredPeriods,
+          available_periods: feasiblePeriods,
+          max_hours_per_week: teacherMaxHours,
+          assigned_groups: assignedGroups.length,
+          overflow: totalRequiredPeriods - feasiblePeriods
+        });
+      }
+    }
+    
+    if (teacherCapacityIssues.length > 0) {
+      recordLog(`❌ BLOCKING: ${teacherCapacityIssues.length} teachers exceed capacity`);
+      validationErrors.push(`Teacher capacity exceeded: ${teacherCapacityIssues.length} teacher(s)`);
+      teacherCapacityIssues.forEach(issue => {
+        validationDetails.push({
+          entity: 'Teacher',
+          id: issue.teacher_id,
+          field: 'capacity',
+          reason: `Requires ${issue.required_periods} periods/week but only ${issue.available_periods} available (overflow: ${issue.overflow})`,
+          hint: `Reduce teaching groups for ${issue.teacher_name} or increase max_hours_per_week from ${issue.max_hours_per_week}h`,
+          data: issue
+        });
+      });
+    }
+    
+    // VALIDATION 2: Room capacity check
+    recordLog('Validation 2: Room capacity');
+    const roomCapacityIssues = [];
+    
+    // Group lessons by required room type
+    const lessonsByRoomType = {};
+    for (const tg of teachingGroupsDb) {
+      if (!tg?.subject_id || tg.is_active === false) continue;
+      
+      const subj = subjectById[tg.subject_id];
+      if (!subj) continue;
+      
+      const roomType = subj.requires_special_room || 'classroom';
+      const minutes = minutesForTG(tg);
+      if (minutes > 0) {
+        if (!lessonsByRoomType[roomType]) {
+          lessonsByRoomType[roomType] = { count: 0, groups: [] };
+        }
+        lessonsByRoomType[roomType].count += minutesToPeriods(minutes);
+        lessonsByRoomType[roomType].groups.push({
+          tg_id: tg.id,
+          name: tg.name,
+          periods: minutesToPeriods(minutes)
+        });
+      }
+    }
+    
+    // Validate each room type has sufficient capacity
+    for (const [roomType, data] of Object.entries(lessonsByRoomType)) {
+      const roomsOfType = roomsDb.filter(r => 
+        r.is_active !== false && 
+        (r.room_type === roomType || (roomType === 'classroom' && !r.room_type))
+      );
+      
+      const totalRoomCapacity = roomsOfType.length * availablePeriodsPerWeek;
+      const requiredCapacity = data.count;
+      
+      if (requiredCapacity > totalRoomCapacity) {
+        roomCapacityIssues.push({
+          room_type: roomType,
+          required_periods: requiredCapacity,
+          available_capacity: totalRoomCapacity,
+          rooms_of_type: roomsOfType.length,
+          overflow: requiredCapacity - totalRoomCapacity,
+          affected_groups: data.groups.length
+        });
+      }
+    }
+    
+    if (roomCapacityIssues.length > 0) {
+      recordLog(`❌ BLOCKING: ${roomCapacityIssues.length} room types have insufficient capacity`);
+      validationErrors.push(`Room capacity exceeded: ${roomCapacityIssues.length} room type(s)`);
+      roomCapacityIssues.forEach(issue => {
+        validationDetails.push({
+          entity: 'Room',
+          field: 'capacity',
+          room_type: issue.room_type,
+          reason: `Need ${issue.required_periods} periods but only ${issue.available_capacity} available (${issue.rooms_of_type} rooms × ${availablePeriodsPerWeek} periods/week)`,
+          hint: `Add more ${issue.room_type} rooms or reduce subjects requiring this room type`,
+          data: issue
+        });
+      });
+    }
+    
+    // VALIDATION 3: Missing critical assignments
+    recordLog('Validation 3: Missing critical assignments');
+    const missingAssignments = [];
+    
+    for (const tg of teachingGroupsDb) {
+      if (tg.is_active === false) continue;
+      
+      const minutes = minutesForTG(tg);
+      if (minutes <= 0) continue; // Already handled by MISSING_CONFIG validation
+      
+      const issues = [];
+      
+      if (!tg.subject_id) {
+        issues.push('subject_id missing');
+      }
+      
+      if (!tg.teacher_id) {
+        issues.push('teacher_id missing');
+      }
+      
+      // Check if subject requires special room but TG has no preferred_room_id
+      const subj = subjectById[tg.subject_id];
+      if (subj?.requires_special_room && !tg.preferred_room_id) {
+        issues.push(`requires_special_room (${subj.requires_special_room}) but no preferred_room_id`);
+      }
+      
+      if (issues.length > 0) {
+        missingAssignments.push({
+          tg_id: tg.id,
+          name: tg.name,
+          subject_code: (tg.subject_id && subjectIdToCode[tg.subject_id]) || 'UNKNOWN',
+          issues,
+          student_count: (tg.student_ids || []).length
+        });
+      }
+    }
+    
+    if (missingAssignments.length > 0) {
+      recordLog(`❌ BLOCKING: ${missingAssignments.length} teaching groups missing critical assignments`);
+      validationErrors.push(`Missing assignments: ${missingAssignments.length} group(s)`);
+      missingAssignments.forEach(item => {
+        validationDetails.push({
+          entity: 'TeachingGroup',
+          id: item.tg_id,
+          field: 'assignments',
+          reason: `Missing: ${item.issues.join(', ')}`,
+          hint: `Assign missing fields for ${item.name} (${item.subject_code})`,
+          data: item
+        });
+      });
+    }
+    
+    // VALIDATION 4: Timeslot capacity sanity (already validated above, but add final check)
+    recordLog('Validation 4: Timeslot configuration sanity');
+    if (timeslots.length === 0) {
+      validationErrors.push('Zero timeslots generated');
+      validationDetails.push({
+        entity: 'School',
+        field: 'timeslots',
+        reason: 'No valid timeslots could be generated from school configuration',
+        hint: 'Check day_start_time, day_end_time, period_duration_minutes, and breaks'
+      });
+    }
+    
+    // Check for inconsistent timeslots
+    const uniqueDays = new Set(timeslots.map(ts => ts.dayOfWeek));
+    const periodsPerDayByDay = {};
+    timeslots.forEach(ts => {
+      if (!periodsPerDayByDay[ts.dayOfWeek]) periodsPerDayByDay[ts.dayOfWeek] = 0;
+      periodsPerDayByDay[ts.dayOfWeek]++;
+    });
+    
+    const periodsPerDayValues = Object.values(periodsPerDayByDay);
+    const minPeriodsPerDay = Math.min(...periodsPerDayValues);
+    const maxPeriodsPerDay = Math.max(...periodsPerDayValues);
+    
+    if (maxPeriodsPerDay - minPeriodsPerDay > 2) {
+      recordLog(`⚠️ WARNING: Inconsistent periods per day across days (min: ${minPeriodsPerDay}, max: ${maxPeriodsPerDay})`);
+      validationDetails.push({
+        entity: 'School',
+        field: 'timeslots_consistency',
+        reason: `Inconsistent periods/day: ${JSON.stringify(periodsPerDayByDay)}`,
+        hint: 'Check if breaks are configured differently per day',
+        severity: 'warning'
+      });
+    }
+    
+    // BLOCK if any validation errors found
+    if (validationErrors.length > 0) {
+      recordLog(`❌ PRE_SOLVE_VALIDATION FAILED: ${validationErrors.length} validation error(s)`);
+      
+      return Response.json({
+        ok: false,
+        stage: 'PRE_SOLVE_VALIDATION',
+        code: 'INFEASIBLE_CONSTRAINTS',
+        error: 'Pre-solve validation failed',
+        errorMessage: `❌ Cannot run OptaPlanner: ${validationErrors.length} feasibility issue(s) detected.\n\n${validationErrors.join('\n')}\n\nFix these issues before generating schedule.`,
+        validationErrors,
+        details: validationDetails,
+        suggestion: '🔧 Fix capacity and assignment issues:\n• Reduce teaching load for overloaded teachers\n• Add more rooms or reduce room requirements\n• Assign teachers and rooms to all teaching groups',
+        requiredAction: 'Fix validation issues listed in details[] array',
+        teacherCapacityIssues: teacherCapacityIssues.length > 0 ? teacherCapacityIssues : undefined,
+        roomCapacityIssues: roomCapacityIssues.length > 0 ? roomCapacityIssues : undefined,
+        missingAssignments: missingAssignments.length > 0 ? missingAssignments : undefined,
+        buildVersion: BUILD_VERSION,
+        meta: { schedule_version_id, school_id }
+      }, { status: 422, headers: { 'Content-Type': 'application/json' } });
+    }
+    
+    recordLog(`✅ PRE_SOLVE_VALIDATION PASSED: All feasibility checks passed`);
+    
     // CRITICAL: Final payload diagnostics BEFORE returning
     console.log('[buildSchedulingProblem] 📤 FINAL PAYLOAD SUMMARY:', {
       timeslots_count: timeslots.length,
