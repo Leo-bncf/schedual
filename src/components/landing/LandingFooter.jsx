@@ -41,7 +41,7 @@ export default function LandingFooter() {
             <ul className="space-y-2 text-sm">
               <li><a href="#" className="text-white/90 hover:text-white transition-colors">Documentation</a></li>
               <li><Link to={createPageUrl('ContactUs')} className="text-white/90 hover:text-white transition-colors">Contact Us</Link></li>
-              <li><a href="#" className="text-white/90 hover:text-white transition-colors">FAQ</a></li>
+              <li><Link to={createPageUrl('FAQ')} className="text-white/90 hover:text-white transition-colors">FAQ</Link></li>
             </ul>
           </div>
 

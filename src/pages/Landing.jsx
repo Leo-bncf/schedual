@@ -9,7 +9,6 @@ import InfoSection from '../components/landing/InfoSection';
 import HowItWorksSection from '../components/landing/HowItWorksSection';
 import ComparisonSection from '../components/landing/ComparisonSection';
 import PricingTiersSection from '../components/landing/PricingTiersSection';
-import FAQSection from '../components/landing/FAQSection';
 import LandingFooter from '../components/landing/LandingFooter';
 import TermsAcceptanceDialog from '../components/landing/TermsAcceptanceDialog';
 
@@ -27,7 +26,6 @@ export default function Landing() {
       <MissionSection />
       <ComparisonSection />
       <PricingTiersSection />
-      <FAQSection />
       <LandingFooter />
     </div>
   );
