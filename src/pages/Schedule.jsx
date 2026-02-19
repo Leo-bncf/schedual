@@ -2121,8 +2121,9 @@ Now process the user's input and return ONLY the JSON object.`,
           }
           
           setOptaPlannerResultSafe(payload);
-          
-          console.log('[Schedule] ✅ Response validated - ok:', payload.ok, 'stage:', payload.stage);
+
+          const solverOk = typeof payload.ok === 'boolean' ? payload.ok : null;
+          console.log('[Schedule] ✅ Response validated - ok:', solverOk, 'stage:', payload.stage);
 
           // Log solver identity to console
           if (payload?.solverIdentity) {
