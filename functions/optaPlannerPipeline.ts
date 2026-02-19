@@ -458,17 +458,44 @@ Deno.serve(async (req) => {
         stage: 'SOLUTION_INFEASIBLE',
         code: 'HARD_CONSTRAINTS_VIOLATED',
         error: 'Schedule infeasible',
-        errorMessage: `❌ OptaPlanner could not satisfy hard constraints.\n\nHard Score: ${hardScore} (must be 0 or positive)\n\nThe solver could not find a feasible schedule that satisfies all mandatory constraints.\n\n👉 Existing schedule preserved - no changes made.`,
+        errorMessage: `❌ OptaPlanner could not satisfy hard constraints.\n\nHard Score: ${hardScore} (must be 0 or positive)\n\n${topViolationsSummary.length > 0 ? `Top ${topViolationsSummary.length} violated constraint(s):\n${topViolationsSummary.map((v, i) => `${i+1}. ${v.constraintName}: ${v.violationCount} violations (score: ${v.scoreImpact})`).join('\n')}\n\n` : ''}The solver could not find a feasible schedule that satisfies all mandatory constraints.\n\n👉 Existing schedule preserved - no changes made.`,
         requestId,
-        violatingConstraints: topViolations.length > 0 ? topViolations : undefined,
+        constraintBreakdown: topViolationsSummary.length > 0 ? {
+          summary: topViolationsSummary.map(v => ({
+            constraintName: v.constraintName,
+            violationCount: v.violationCount,
+            scoreImpact: v.scoreImpact,
+            sampleViolations: v.examples.map(ex => ({
+              teacher: ex.teacherId,
+              teachingGroup: ex.tgId,
+              room: ex.roomId,
+              day: ex.day,
+              period: ex.period,
+              timeslot: ex.timeslotId,
+              description: ex.description
+            }))
+          })),
+          totalConstraintsViolated: Object.keys(violationsByConstraint).length,
+          totalViolationCount: parsedViolations.reduce((sum, v) => sum + v.violationCount, 0)
+        } : null,
+        violatingConstraints: parsedViolations.slice(0, 20), // Legacy field - top 20 detailed violations
         teacherCapacitySummary: teacherCapacity,
         roomCapacitySummary: roomCapacity,
-        details: topViolations.length > 0 
-          ? topViolations.map(v => ({
+        details: topViolationsSummary.length > 0 
+          ? topViolationsSummary.map(v => ({
               entity: 'Constraint',
               field: v.constraintName,
-              reason: `${v.count} violation(s), impact: ${v.scoreImpact}`,
-              hint: v.sampleFacts.length > 0 ? `Examples: ${v.sampleFacts.join('; ')}` : 'Review this constraint configuration'
+              reason: `${v.violationCount} violation(s), score impact: ${v.scoreImpact}`,
+              hint: v.examples.length > 0 
+                ? `Affected: ${v.examples.map(ex => {
+                    const parts = [];
+                    if (ex.teacherId) parts.push(`teacher:${ex.teacherId.slice(0,8)}`);
+                    if (ex.tgId) parts.push(`tg:${ex.tgId.slice(0,8)}`);
+                    if (ex.roomId) parts.push(`room:${ex.roomId.slice(0,8)}`);
+                    if (ex.day && ex.period) parts.push(`${ex.day}P${ex.period}`);
+                    return parts.join(' ');
+                  }).slice(0, 3).join(' | ')}` 
+                : 'Review this constraint configuration'
             }))
           : [{
               entity: 'Solution',
@@ -476,8 +503,10 @@ Deno.serve(async (req) => {
               reason: `${hardScore} violations (solver did not return constraint breakdown)`,
               hint: 'Review constraints, reduce required hours, or increase available timeslots'
             }],
-        suggestion: '🔧 Try:\n• Reduce teaching hours/week for some subjects\n• Add more periods per day\n• Review hard constraints (may be too restrictive)\n• Check if enough teachers/rooms available',
-        requiredAction: 'Fix constraints or increase schedule capacity',
+        suggestion: topViolationsSummary.length > 0
+          ? `🔧 Most violated constraints:\n${topViolationsSummary.slice(0, 3).map((v, i) => `${i+1}. ${v.constraintName} (${v.violationCount}×)`).join('\n')}\n\nFix these constraints first to resolve ${Math.abs(hardScore)} total violations.`
+          : '🔧 Try:\n• Reduce teaching hours/week for some subjects\n• Add more periods per day\n• Review hard constraints (may be too restrictive)\n• Check if enough teachers/rooms available',
+        requiredAction: 'Fix violated constraints listed above',
         meta: { 
           schoolId, 
           schedule_version_id,
