@@ -357,18 +357,23 @@ Deno.serve(async (req) => {
     console.error('[assignTeachers] Error stack:', error?.stack);
     console.error('[assignTeachers] Elapsed before crash:', elapsed, 'ms');
     
+    // CRITICAL: Always return structured JSON, never plain text/502
     return Response.json({ 
-      success: false,
-      error: 'INTERNAL_ERROR',
-      message: error?.message || 'Failed to assign teachers',
+      ok: false,
       stage,
+      code: 'ASSIGN_TEACHERS_FAILED',
+      message: error?.message || 'Failed to assign teachers',
+      requestId: new Date().toISOString() + '-' + Math.random().toString(36).slice(2, 9),
       elapsedMs: elapsed,
       details: {
         errorType: error?.name,
         errorMessage: error?.message,
-        errorStack: error?.stack?.split('\n').slice(0, 5).join('\n'), // First 5 lines of stack
-        timestamp: new Date().toISOString()
-      }
-    }, { status: 500, headers: { 'Content-Type': 'application/json' } });
+        errorStack: error?.stack?.split('\n').slice(0, 5).join('\n')
+      },
+      timestamp: new Date().toISOString()
+    }, { 
+      status: 500, 
+      headers: { 'Content-Type': 'application/json' } 
+    });
   }
 });
