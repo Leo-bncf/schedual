@@ -422,27 +422,100 @@ Deno.serve(async (req) => {
       console.error(`[OptaPlannerPipeline] ❌ BLOCKING: hardScore=${hardScore} < 0 (infeasible solution)`);
       console.error('[OptaPlannerPipeline] NOT purging existing slots - keeping current schedule');
 
-      // Parse constraint violations from solver response (if available)
+      // ========================================
+      // ENHANCED CONSTRAINT VIOLATION BREAKDOWN
+      // ========================================
       const constraintViolations = solution.constraintMatches || solution.indictmentMap || solution.violations || [];
-      const topViolations = Array.isArray(constraintViolations) 
+      console.log('[OptaPlannerPipeline] Raw constraint violations from solver:', constraintViolations?.length || 0);
+      
+      // Parse and enrich violations with structured data
+      const parsedViolations = Array.isArray(constraintViolations) 
         ? constraintViolations
             .filter(v => v.score && String(v.score).includes('hard'))
-            .sort((a, b) => {
-              const aImpact = parseInt(String(a.score).match(/-?\d+/)?.[0] || '0');
-              const bImpact = parseInt(String(b.score).match(/-?\d+/)?.[0] || '0');
-              return aImpact - bImpact; // Most negative first
+            .map(v => {
+              const scoreImpact = parseInt(String(v.score).match(/-?\d+/)?.[0] || '0');
+              const facts = v.justificationList || v.facts || v.entities || [];
+              
+              // Extract structured data from facts (teacherId, tgId, timeslot, etc.)
+              const parsedFacts = facts.slice(0, 5).map(fact => {
+                if (typeof fact === 'string') {
+                  // Try to extract IDs from string facts
+                  const teacherMatch = fact.match(/teacher[_\s]?id[:\s]+([a-f0-9]{24})/i);
+                  const tgMatch = fact.match(/teaching[_\s]?group[_\s]?id[:\s]+([a-f0-9]{24})/i);
+                  const roomMatch = fact.match(/room[_\s]?id[:\s]+([a-f0-9]{24})/i);
+                  const dayMatch = fact.match(/(monday|tuesday|wednesday|thursday|friday)/i);
+                  const periodMatch = fact.match(/period[:\s]+(\d+)/i);
+                  
+                  return {
+                    raw: fact,
+                    teacherId: teacherMatch?.[1] || null,
+                    tgId: tgMatch?.[1] || null,
+                    roomId: roomMatch?.[1] || null,
+                    day: dayMatch?.[1] || null,
+                    period: periodMatch?.[1] ? parseInt(periodMatch[1]) : null
+                  };
+                } else if (typeof fact === 'object') {
+                  // Extract from object facts
+                  return {
+                    raw: JSON.stringify(fact),
+                    teacherId: fact.teacherId || fact.teacher_id || null,
+                    tgId: fact.teachingGroupId || fact.teaching_group_id || fact.studentGroup || null,
+                    roomId: fact.roomId || fact.room_id || null,
+                    day: fact.day || fact.dayOfWeek || null,
+                    period: fact.period || fact.timeslot || null,
+                    timeslotId: fact.timeslotId || fact.timeslot_id || null
+                  };
+                }
+                return { raw: String(fact) };
+              });
+              
+              return {
+                constraintId: v.constraintId || v.constraintName || v.constraint || 'unknown',
+                constraintName: v.constraintName || v.name || v.constraint || 'Unknown Constraint',
+                violationCount: v.matchCount || v.count || facts.length || 1,
+                scoreImpact,
+                totalImpact: scoreImpact * (v.matchCount || v.count || 1),
+                sampleFacts: parsedFacts
+              };
             })
-            .slice(0, 10)
-            .map(v => ({
-              constraintId: v.constraintId || v.constraintName || v.constraint || 'unknown',
-              constraintName: v.constraintName || v.name || v.constraint || 'Unknown Constraint',
-              count: v.matchCount || v.count || 1,
-              scoreImpact: v.score || v.impact || 'N/A',
-              sampleFacts: (v.justificationList || v.facts || v.entities || []).slice(0, 3).map(f => 
-                typeof f === 'string' ? f : JSON.stringify(f)
-              )
-            }))
+            .sort((a, b) => a.totalImpact - b.totalImpact) // Most negative total impact first
         : [];
+
+      // Group violations by constraint type for summary
+      const violationsByConstraint = {};
+      parsedViolations.forEach(v => {
+        const key = v.constraintName;
+        if (!violationsByConstraint[key]) {
+          violationsByConstraint[key] = {
+            constraintName: v.constraintName,
+            totalViolations: 0,
+            totalScoreImpact: 0,
+            examples: []
+          };
+        }
+        violationsByConstraint[key].totalViolations += v.violationCount;
+        violationsByConstraint[key].totalScoreImpact += v.totalImpact;
+        violationsByConstraint[key].examples.push(...v.sampleFacts);
+      });
+
+      // Sort by total impact and take top 10 constraints
+      const topViolationsSummary = Object.values(violationsByConstraint)
+        .sort((a, b) => a.totalScoreImpact - b.totalScoreImpact)
+        .slice(0, 10)
+        .map(v => ({
+          constraintName: v.constraintName,
+          violationCount: v.totalViolations,
+          scoreImpact: v.totalScoreImpact,
+          examples: v.examples.slice(0, 3).map(ex => ({
+            teacherId: ex.teacherId || null,
+            tgId: ex.tgId || null,
+            roomId: ex.roomId || null,
+            day: ex.day || null,
+            period: ex.period || null,
+            timeslotId: ex.timeslotId || null,
+            description: ex.raw
+          }))
+        }));
 
       // Extract capacity summaries (if available)
       const teacherCapacity = solution.teacherCapacitySummary || null;
@@ -451,7 +524,12 @@ Deno.serve(async (req) => {
       // Always include requestId
       const requestId = solution.requestId || solution.meta?.requestId || null;
 
-      console.error('[OptaPlannerPipeline] Top constraint violations:', topViolations.length > 0 ? topViolations : 'None returned by solver');
+      console.error('[OptaPlannerPipeline] Constraint violation breakdown:', {
+        totalConstraintsViolated: Object.keys(violationsByConstraint).length,
+        totalViolationCount: parsedViolations.reduce((sum, v) => sum + v.violationCount, 0),
+        totalScoreImpact: hardScore,
+        topConstraints: topViolationsSummary.map(v => `${v.constraintName}: ${v.violationCount} violations (${v.scoreImpact} impact)`)
+      });
 
       return Response.json({
         ok: false,
