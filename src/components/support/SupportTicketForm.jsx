@@ -24,17 +24,32 @@ export default function SupportTicketForm({ onSuccess }) {
     mutationFn: async (data) => {
       console.log('[SupportTicketForm] Submitting ticket:', data);
       const response = await base44.functions.invoke('createSupportTicket', data);
-      console.log('[SupportTicketForm] Response:', response);
-      return response;
+      console.log('[SupportTicketForm] Full response:', response);
+      console.log('[SupportTicketForm] Response data:', response?.data);
+      
+      // Validate response
+      if (!response?.data?.success || !response?.data?.ticket) {
+        console.error('[SupportTicketForm] ❌ Invalid response format:', response?.data);
+        throw new Error('Invalid response from server');
+      }
+      
+      return response.data;
     },
-    onSuccess: (response) => {
-      console.log('[SupportTicketForm] Success:', response);
+    onSuccess: async (data) => {
+      console.log('[SupportTicketForm] ✅ Ticket created:', data.ticket);
+      
+      // Force refresh tickets before switching tabs
+      await queryClient.invalidateQueries({ queryKey: ['supportTickets'] });
+      await queryClient.invalidateQueries({ queryKey: ['allSupportTickets'] });
+      
       setSuccess(true);
       setFormData({ subject: '', description: '', priority: 'medium' });
-      setTimeout(() => setSuccess(false), 5000);
-      queryClient.invalidateQueries(['supportTickets']);
-      queryClient.invalidateQueries(['allSupportTickets']);
-      if (onSuccess) onSuccess();
+      
+      // Switch to history tab after short delay
+      setTimeout(() => {
+        setSuccess(false);
+        if (onSuccess) onSuccess();
+      }, 1500);
     },
     onError: (error) => {
       console.error('[SupportTicketForm] ❌ Ticket submission failed:', error);
