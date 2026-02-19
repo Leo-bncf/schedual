@@ -483,7 +483,7 @@ export default function Schedule() {
     });
     
     return slots;
-  }, [school, optaPlannerResult, solverTimeslots, scheduleSlots.length]);
+  }, [school?.id, optaPlannerResult?.ok, optaPlannerResult?.stage, optaPlannerResult?.scheduleSettingsSent, solverTimeslots, scheduleSlots.length]);
 
   // SOURCE OF TRUTH: Calculate periodsPerDay from actual timeslots (NEVER fallback to hardcoded values)
   const dynamicPeriodsPerDay = React.useMemo(() => {
