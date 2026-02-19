@@ -304,7 +304,7 @@ export default function FAQSection() {
             Our team is here to help you get started with automated IB timetabling
           </p>
           <Link 
-            to={createPageUrl('Support')}
+            to={createPageUrl('ContactUs')}
             className="inline-block px-8 py-3 bg-white text-blue-900 font-semibold rounded-xl hover:bg-blue-50 transition-colors"
           >
             Contact Support
