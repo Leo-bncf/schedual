@@ -75,6 +75,48 @@ export default function Layout({ children, currentPageName }) {
   const isNewClient = (userData) => userData && !userData.school_id && !isSuperAdmin;
   const hasActiveSubscription = () => school && (school.subscription_status === 'active' || school.subscription_status === 'trialing');
 
+  // DIAGNOSTIC: Log failed resource loads (403, 404, CORS, etc.)
+  useEffect(() => {
+    const handleResourceError = (event) => {
+      if (event.target && (event.target.tagName === 'IMG' || event.target.tagName === 'SCRIPT' || event.target.tagName === 'LINK')) {
+        console.error('🚫 Resource failed to load:', {
+          type: event.target.tagName,
+          url: event.target.src || event.target.href,
+          status: 'unknown (no status available for resource load errors)'
+        });
+      }
+    };
+    
+    window.addEventListener('error', handleResourceError, true);
+    
+    // Intercept fetch errors globally
+    const originalFetch = window.fetch;
+    window.fetch = async (...args) => {
+      try {
+        const response = await originalFetch(...args);
+        if (!response.ok && response.status === 403) {
+          console.error('🚫 Fetch 403 blocked:', {
+            url: args[0],
+            status: response.status,
+            statusText: response.statusText
+          });
+        }
+        return response;
+      } catch (error) {
+        console.error('🚫 Fetch failed:', {
+          url: args[0],
+          error: error.message
+        });
+        throw error;
+      }
+    };
+    
+    return () => {
+      window.removeEventListener('error', handleResourceError, true);
+      window.fetch = originalFetch;
+    };
+  }, []);
+
   useEffect(() => {
     const loadAuth = async () => {
       try {
