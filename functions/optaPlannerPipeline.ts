@@ -640,8 +640,8 @@ Deno.serve(async (req) => {
         code: 'ZERO_SLOTS_GENERATED',
         severity: 'error',
         title: 'Aucun créneau généré',
-        message: `OPTA a retourné ${solution.lessons?.length || 0} leçons mais aucune n'est assignée à un créneau horaire.`,
-        userAction: 'Augmentez le nombre de périodes par jour dans Réglages, réduisez les heures requises pour certaines matières, ou vérifiez les contraintes dures.',
+        message: 'OPTA a terminé, mais aucun créneau n\'a pu être inséré.',
+        userAction: 'Vérifiez les paramètres d\'établissement (jours, horaires, durée), les ressources (profs/salles) et relancez.',
         requestId,
         details: [{
           entity: 'Solution',
