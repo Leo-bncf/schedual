@@ -756,6 +756,29 @@ Now process the user's input and return ONLY the JSON object.`,
   // Fetch full OptaPlanner scheduler JSON response and display it
   const handleFetchORTool = async () => {
     if (!selectedVersion) return;
+    
+    // CRITICAL: Frontend gate - validate all required inputs are loaded before calling solver
+    const inputValidation = {
+      schoolId: !!school?.id,
+      scheduleVersionId: !!selectedVersion?.id,
+      timeslots: (timeslots && timeslots.length > 0) || scheduleSettings || (school?.day_start_time && school?.day_end_time),
+      teachingGroups: teachingGroups && teachingGroups.length > 0,
+      teachers: teachers && teachers.length > 0,
+      rooms: rooms && rooms.length > 0
+    };
+    
+    const missingInputs = Object.entries(inputValidation)
+      .filter(([_, isValid]) => !isValid)
+      .map(([key]) => key);
+    
+    if (missingInputs.length > 0) {
+      console.error('[handleFetchORTool] ❌ BLOCKING: Required inputs not loaded:', missingInputs);
+      toast.error(`Cannot generate schedule - still loading: ${missingInputs.join(', ')}`, { duration: 8000 });
+      return;
+    }
+    
+    console.log('[handleFetchORTool] ✅ Input validation passed - all required data loaded');
+    
     setOptaPlannerLoading(true);
     setOptaPlannerError(null);
     try {
@@ -1820,6 +1843,29 @@ Now process the user's input and return ONLY the JSON object.`,
         console.log('[Schedule] Step 1: Running pre-solve audit...');
         
         try {
+          // CRITICAL: Frontend gate before audit
+          const inputValidation = {
+            schoolId: !!school?.id,
+            scheduleVersionId: !!selectedVersion?.id,
+            timeslots: (timeslots && timeslots.length > 0) || scheduleSettings || (school?.day_start_time && school?.day_end_time),
+            teachingGroups: teachingGroups && teachingGroups.length > 0,
+            teachers: teachers && teachers.length > 0,
+            rooms: rooms && rooms.length > 0
+          };
+          
+          const missingInputs = Object.entries(inputValidation)
+            .filter(([_, isValid]) => !isValid)
+            .map(([key]) => key);
+          
+          if (missingInputs.length > 0) {
+            console.error('[Schedule] ❌ BLOCKING AUDIT: Required inputs not loaded:', missingInputs);
+            toast.error(`Cannot run audit - still loading: ${missingInputs.join(', ')}`, { duration: 8000 });
+            setIsGenerating(false);
+            return;
+          }
+          
+          console.log('[Schedule] ✅ Audit input validation passed - all required data loaded');
+          
           // STEP 1: Run audit first (audit=true)
           setGenerationProgress(prev => ({
             ...prev,
@@ -1957,13 +2003,35 @@ Now process the user's input and return ONLY the JSON object.`,
           
           // STEP 3: Audit passed (ok === true) - proceed with solver
           console.log('[Schedule] ✅ Pre-solve audit passed (ok=true) - proceeding to Codex solver');
-          console.log('[Schedule] Codex will: 1) Purge existing slots 2) Optimize schedule 3) Persist new slots');
+          console.log('[Schedule] Codex will: 1) Purge existing slots 2) Optimize schedule 3) Persist new slots (atomic)');
+          
+          // CRITICAL: Re-validate inputs before actual solver call (data may have changed)
+          const solverInputValidation = {
+            schoolId: !!school?.id,
+            scheduleVersionId: !!selectedVersion?.id,
+            timeslots: (timeslots && timeslots.length > 0) || scheduleSettings || (school?.day_start_time && school?.day_end_time),
+            teachingGroups: teachingGroups && teachingGroups.length > 0,
+            teachers: teachers && teachers.length > 0,
+            rooms: rooms && rooms.length > 0
+          };
+          
+          const solverMissingInputs = Object.entries(solverInputValidation)
+            .filter(([_, isValid]) => !isValid)
+            .map(([key]) => key);
+          
+          if (solverMissingInputs.length > 0) {
+            console.error('[Schedule] ❌ BLOCKING SOLVER: Required inputs became unavailable:', solverMissingInputs);
+            toast.error(`Cannot run solver - data changed: ${solverMissingInputs.join(', ')}`, { duration: 8000 });
+            setOptaPlannerLoading(false);
+            setIsGenerating(false);
+            return;
+          }
           
           setGenerationProgress(prev => ({
             ...prev,
             stage: 'Running Codex Solver',
             percent: 90,
-            message: 'Codex: Purging + Optimizing + Persisting...'
+            message: 'Codex: Purging + Optimizing + Persisting (atomic transaction)...'
           }));
           
           const res = await base44.functions.invoke('optaPlannerPipeline', {
@@ -2541,8 +2609,16 @@ Now process the user's input and return ONLY the JSON object.`,
                 variant="outline"
                 size="sm"
                 onClick={handleFetchORTool}
-                disabled={!selectedVersion || optaPlannerLoading}
-                className="border-slate-200"
+                disabled={!selectedVersion || optaPlannerLoading || !school?.id || !teachers?.length || !rooms?.length || !teachingGroups?.length}
+                className="border-slate-200 disabled:opacity-50"
+                title={
+                  !school?.id ? 'Loading school data...' :
+                  !teachers?.length ? 'Loading teachers...' :
+                  !rooms?.length ? 'Loading rooms...' :
+                  !teachingGroups?.length ? 'Loading teaching groups...' :
+                  optaPlannerLoading ? 'Running...' :
+                  'Run OptaPlanner pipeline'
+                }
               >
                 {optaPlannerLoading ? (
                   <>
