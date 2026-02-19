@@ -118,14 +118,11 @@ export default function SolutionInfeasiblePanel({ result, onRetry }) {
         </div>
         
         {/* Constraint Details or Fallback Message */}
-        {isConstraintDetailsMissing ? (
+        {topViolations.length === 0 ? (
           <div className="bg-amber-50 p-4 rounded-lg border border-amber-300">
             <div className="font-semibold text-amber-900 mb-2">⚠️ Détail des contraintes non disponible</div>
-            <p className="text-sm text-amber-800 mb-3">
-              OPTA n'a pas renvoyé le détail des contraintes violées pour ce run.
-            </p>
-            <p className="text-xs text-amber-700">
-              💡 Relancez la génération ou contactez le support avec le requestId pour un debug approfondi.
+            <p className="text-sm text-amber-800">
+              OPTA n'a pas renvoyé le détail des contraintes violées pour cette tentative.
             </p>
           </div>
         ) : topViolations.length > 0 ? (
