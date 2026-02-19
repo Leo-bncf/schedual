@@ -11,6 +11,34 @@ import { createClientFromRequest } from 'npm:@base44/sdk@0.8.6';
  *   "mode": "DP" | "MYP" | "PYP" // Optional filter
  * }
  */
+
+// CRITICAL: Global error handler to prevent unhandled 502 errors
+const safeSentinelResponse = (stage, error, elapsed) => {
+  const payload = {
+    ok: false,
+    stage: stage || 'unknown',
+    code: 'SERVER_ERROR',
+    message: error?.message || 'Unhandled server error',
+    requestId: new Date().toISOString() + '-' + Math.random().toString(36).slice(2, 9),
+    elapsedMs: elapsed || 0,
+    timestamp: new Date().toISOString()
+  };
+  
+  console.error('[assignTeachers] 🔴 SENTINEL ERROR - returning structured JSON:', payload);
+  return new Response(JSON.stringify(payload), {
+    status: 500,
+    headers: { 'Content-Type': 'application/json' }
+  });
+};
+
+// CRITICAL: Timeout wrapper to prevent hanging requests
+const withTimeout = async (promise, timeoutMs = 30000) => {
+  const timeoutPromise = new Promise((_, reject) =>
+    setTimeout(() => reject(new Error(`Operation timed out after ${timeoutMs}ms`)), timeoutMs)
+  );
+  return Promise.race([promise, timeoutPromise]);
+};
+
 Deno.serve(async (req) => {
   const startTime = Date.now();
   let stage = 'init';
