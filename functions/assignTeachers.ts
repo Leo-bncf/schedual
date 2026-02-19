@@ -120,15 +120,18 @@ Deno.serve(async (req) => {
       }, { status: 403 });
     }
 
-    // FETCH DATA: Optimized batch loading
+    // FETCH DATA: Optimized batch loading with timeout protection
     stage = 'fetch_data';
     const fetchStart = Date.now();
     
-    const [allTeachingGroups, allTeachers, allSubjects] = await Promise.all([
-      base44.entities.TeachingGroup.filter({ school_id, is_active: true }),
-      base44.entities.Teacher.filter({ school_id, is_active: true }),
-      base44.entities.Subject.filter({ school_id, is_active: true })
-    ]);
+    const [allTeachingGroups, allTeachers, allSubjects] = await withTimeout(
+      Promise.all([
+        base44.entities.TeachingGroup.filter({ school_id, is_active: true }),
+        base44.entities.Teacher.filter({ school_id, is_active: true }),
+        base44.entities.Subject.filter({ school_id, is_active: true })
+      ]),
+      20000 // 20 second timeout for data fetch
+    );
     
     console.log(`[assignTeachers] ✅ Data fetched in ${Date.now() - fetchStart}ms:`, {
       teaching_groups: allTeachingGroups.length,
