@@ -17,7 +17,7 @@ export default function TrustSection() {
           </motion.div>
         </div>
 
-        <div className="grid md:grid-cols-4 gap-6">
+        <div className="grid md:grid-cols-3 gap-6">
           {[
             {
               icon: Shield,
@@ -30,12 +30,6 @@ export default function TrustSection() {
               title: 'End-to-End Encryption',
               description: 'Bank-level AES-256 encryption for all data in transit and at rest. Your information is always protected.',
               color: 'from-purple-500 to-purple-600'
-            },
-            {
-              icon: Globe,
-              title: 'ISO 27001 Certified',
-              description: 'International standards for information security management. Audited and verified annually.',
-              color: 'from-emerald-500 to-emerald-600'
             },
             {
               icon: FileCheck,
