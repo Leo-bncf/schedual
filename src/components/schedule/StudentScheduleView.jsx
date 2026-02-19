@@ -451,42 +451,48 @@ export default function StudentScheduleView({ students, slots, groups, subjects,
         </Card>
       )}
       
-      <div className="flex items-center gap-4">
-        <GraduationCap className="w-5 h-5 text-indigo-600" />
-        <Select value={selectedStudentId || ''} onValueChange={onStudentChange}>
-          <SelectTrigger className="w-72">
-            <SelectValue placeholder="Select a student..." />
-          </SelectTrigger>
-          <SelectContent>
-            {students.map(student => (
-              <SelectItem key={student.id} value={student.id}>
-                {student.full_name} ({student.year_group})
-              </SelectItem>
-            ))}
-          </SelectContent>
-        </Select>
-        {selectedStudent && (
-          <>
-            <Badge variant="outline">{studentSlots.length} periods per week</Badge>
-            <Badge variant="outline" className="bg-blue-50 text-blue-900">
-              {(selectedStudent.assigned_groups || []).length} groups assigned
-            </Badge>
-            {loadingServerSlots && <Badge variant="outline">Loading server slots...</Badge>}
-          </>
-        )}
-        {selectedStudent && (
-          (() => {
-            const warnCore = (unassignedBySubjectCode?.TOK || 0) + (unassignedBySubjectCode?.CAS || 0) + (unassignedBySubjectCode?.EE || 0);
-            if (warnCore > 0) {
-              return (
-                <div className="text-xs text-rose-700 bg-rose-50 border border-rose-200 rounded px-2 py-1">
-                  Warning: core lessons unassigned (TOK/CAS/EE) — check OR-Tool details.
-                </div>
-              );
-            }
-            return null;
-          })()
-        )}
+      <div className="space-y-4">
+        <div className="flex items-center gap-2 mb-3">
+          <GraduationCap className="w-5 h-5 text-indigo-600" />
+          <span className="text-sm font-medium text-slate-700">Select Student</span>
+          {selectedStudent && (
+            <>
+              <Badge variant="outline">{studentSlots.length} periods</Badge>
+              <Badge variant="outline" className="bg-blue-50 text-blue-900">
+                {(selectedStudent.assigned_groups || []).length} groups
+              </Badge>
+              {loadingServerSlots && <Badge variant="outline">Loading...</Badge>}
+            </>
+          )}
+        </div>
+        
+        <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-2 max-h-[400px] overflow-y-auto p-1">
+          {students.map(student => (
+            <button
+              key={student.id}
+              onClick={() => onStudentChange(student.id)}
+              className={cn(
+                "p-3 rounded-lg border-2 transition-all text-left hover:shadow-md",
+                selectedStudentId === student.id
+                  ? "bg-blue-900 text-white border-blue-700 shadow-lg"
+                  : "bg-white text-slate-900 border-slate-200 hover:border-blue-300"
+              )}
+            >
+              <div className={cn(
+                "font-semibold text-sm truncate",
+                selectedStudentId === student.id ? "text-white" : "text-slate-900"
+              )}>
+                {student.full_name}
+              </div>
+              <div className={cn(
+                "text-xs mt-1",
+                selectedStudentId === student.id ? "text-blue-100" : "text-slate-500"
+              )}>
+                {student.year_group}
+              </div>
+            </button>
+          ))}
+        </div>
       </div>
 
       {/* HARD CHECK: No assigned_groups = cannot render */}

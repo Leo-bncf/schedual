@@ -83,23 +83,42 @@ export default function TeacherScheduleView({ teachers, slots, groups, subjects,
 
   return (
     <div className="space-y-4">
-      <div className="flex items-center gap-4">
-        <User className="w-5 h-5 text-indigo-600" />
-        <Select value={selectedTeacherId || ''} onValueChange={onTeacherChange}>
-          <SelectTrigger className="w-72">
-            <SelectValue placeholder="Select a teacher..." />
-          </SelectTrigger>
-          <SelectContent>
-            {teachers.map(teacher => (
-              <SelectItem key={teacher.id} value={teacher.id}>
+      <div className="space-y-4">
+        <div className="flex items-center gap-2 mb-3">
+          <User className="w-5 h-5 text-indigo-600" />
+          <span className="text-sm font-medium text-slate-700">Select Teacher</span>
+          {selectedTeacher && (
+            <Badge variant="outline">{teacherSlots.length} periods</Badge>
+          )}
+        </div>
+        
+        <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-2 max-h-[400px] overflow-y-auto p-1">
+          {teachers.map(teacher => (
+            <button
+              key={teacher.id}
+              onClick={() => onTeacherChange(teacher.id)}
+              className={cn(
+                "p-3 rounded-lg border-2 transition-all text-left hover:shadow-md",
+                selectedTeacherId === teacher.id
+                  ? "bg-blue-900 text-white border-blue-700 shadow-lg"
+                  : "bg-white text-slate-900 border-slate-200 hover:border-blue-300"
+              )}
+            >
+              <div className={cn(
+                "font-semibold text-sm truncate",
+                selectedTeacherId === teacher.id ? "text-white" : "text-slate-900"
+              )}>
                 {teacher.full_name}
-              </SelectItem>
-            ))}
-          </SelectContent>
-        </Select>
-        {selectedTeacher && (
-          <Badge variant="outline">{teacherSlots.length} periods per week</Badge>
-        )}
+              </div>
+              <div className={cn(
+                "text-xs mt-1",
+                selectedTeacherId === teacher.id ? "text-blue-100" : "text-slate-500"
+              )}>
+                {teacher.email?.split('@')[0] || 'Teacher'}
+              </div>
+            </button>
+          ))}
+        </div>
       </div>
 
       {selectedTeacher && (
