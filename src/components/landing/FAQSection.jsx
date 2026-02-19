@@ -219,7 +219,7 @@ export default function FAQSection() {
   };
 
   return (
-    <section className="pt-32 pb-24 bg-gradient-to-b from-white to-slate-50">
+    <section className="pt-40 pb-24 bg-gradient-to-b from-white to-slate-50">
       <div className="max-w-5xl mx-auto px-6 sm:px-8">
         {/* Header */}
         <div className="text-center mb-16">

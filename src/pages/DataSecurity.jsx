@@ -103,7 +103,7 @@ export default function DataSecurity() {
       <LandingHeader />
 
       {/* Hero Section */}
-      <section className="relative bg-gradient-to-br from-blue-950 via-blue-900 to-slate-900 text-white py-24 px-6 overflow-hidden">
+      <section className="relative bg-gradient-to-br from-blue-950 via-blue-900 to-slate-900 text-white pt-40 pb-16 px-6 overflow-hidden">
         <div className="absolute inset-0 opacity-10">
           <div className="absolute top-0 right-0 w-96 h-96 bg-cyan-500 rounded-full blur-3xl"></div>
           <div className="absolute bottom-0 left-0 w-64 h-64 bg-blue-600 rounded-full blur-3xl"></div>
@@ -123,7 +123,7 @@ export default function DataSecurity() {
       </section>
 
       {/* Compliance Cards */}
-      <section className="py-20 px-6 bg-gradient-to-b from-slate-50 to-white">
+      <section className="py-12 px-6 bg-gradient-to-b from-slate-50 to-white">
         <div className="max-w-7xl mx-auto">
           <div className="grid md:grid-cols-2 lg:grid-cols-4 gap-6">
             {complianceFeatures.map((feature, idx) => {
@@ -160,10 +160,10 @@ export default function DataSecurity() {
       </section>
 
       {/* Security Measures */}
-      <section className="py-20 px-6 bg-white">
+      <section className="py-12 px-6 bg-white">
         <div className="max-w-6xl mx-auto">
-          <div className="text-center mb-16">
-            <h2 className="text-4xl font-bold text-slate-900 mb-4">Security Measures</h2>
+          <div className="text-center mb-10">
+            <h2 className="text-4xl font-bold text-slate-900 mb-3">Security Measures</h2>
             <p className="text-lg text-slate-600 max-w-2xl mx-auto">
               Multi-layered protection to keep your school's data safe and accessible
             </p>
@@ -197,10 +197,10 @@ export default function DataSecurity() {
       </section>
 
       {/* Certifications */}
-      <section className="py-20 px-6 bg-gradient-to-b from-slate-50 to-white">
+      <section className="py-12 px-6 bg-gradient-to-b from-slate-50 to-white">
         <div className="max-w-4xl mx-auto">
-          <div className="text-center mb-12">
-            <h2 className="text-4xl font-bold text-slate-900 mb-4">Certifications & Compliance</h2>
+          <div className="text-center mb-8">
+            <h2 className="text-4xl font-bold text-slate-900 mb-3">Certifications & Compliance</h2>
             <p className="text-lg text-slate-600">
               Independently verified and audited security standards
             </p>
@@ -223,13 +223,13 @@ export default function DataSecurity() {
       </section>
 
       {/* Data Handling Principles */}
-      <section className="py-20 px-6 bg-white">
+      <section className="py-12 px-6 bg-white">
         <div className="max-w-4xl mx-auto">
-          <div className="text-center mb-12">
-            <h2 className="text-4xl font-bold text-slate-900 mb-4">Our Data Handling Principles</h2>
+          <div className="text-center mb-8">
+            <h2 className="text-4xl font-bold text-slate-900 mb-3">Our Data Handling Principles</h2>
           </div>
 
-          <div className="space-y-6">
+          <div className="space-y-4">
             <Card className="border-l-4 border-blue-900">
               <CardContent className="p-6">
                 <h3 className="text-lg font-bold text-slate-900 mb-2">Data Minimization</h3>
@@ -279,7 +279,7 @@ export default function DataSecurity() {
       </section>
 
       {/* Security Contact */}
-      <section className="py-20 px-6 bg-gradient-to-br from-slate-50 to-blue-50">
+      <section className="py-12 px-6 bg-gradient-to-br from-slate-50 to-blue-50">
         <div className="max-w-3xl mx-auto text-center">
           <div className="bg-white rounded-2xl p-12 shadow-xl border border-slate-200">
             <Shield className="w-16 h-16 text-blue-900 mx-auto mb-6" />
