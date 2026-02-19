@@ -3272,20 +3272,20 @@ Now process the user's input and return ONLY the JSON object.`,
                     </Card>
                   ) : (
                     <StudentScheduleView
-                      students={students.filter(s => s.is_active)}
-                      slots={scheduleSlots}
-                      groups={teachingGroups}
-                      subjects={subjects}
-                      teachers={teachers}
-                      rooms={rooms}
-                      selectedStudentId={selectedStudentId}
-                      onStudentChange={setSelectedStudentId}
-                      exportId="student-schedule"
-                      scheduleVersionId={selectedVersion?.id}
-                      unassignedBySubjectCode={optaPlannerResult?.unassignedBySubjectCode}
-                      timeslots={timeslots}
-                      scheduleSettings={optaPlannerResult?.problem?.scheduleSettings || school}
-                    />
+                       students={students.filter(s => s.is_active)}
+                       slots={scheduleSlots}
+                       groups={teachingGroups}
+                       subjects={subjects}
+                       teachers={teachers}
+                       rooms={rooms}
+                       selectedStudentId={selectedStudentId}
+                       onStudentChange={setSelectedStudentId}
+                       exportId="student-schedule"
+                       scheduleVersionId={selectedVersion?.id}
+                       unassignedBySubjectCode={optaPlannerResult?.unassignedBySubjectCode}
+                       timeslots={timeslots}
+                       scheduleSettings={scheduleSettings}
+                     />
                   )}
                 </TabsContent>
 
