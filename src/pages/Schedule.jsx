@@ -813,14 +813,13 @@ Now process the user's input and return ONLY the JSON object.`,
 
       // Check if function returned error
       if (payload?.ok === false) {
-        const solverName = payload.solverIdentity?.engine || 'Solver';
-        console.error(`❌ ${solverName} returned error:`, payload);
+        console.error(`❌ Solver returned error:`, payload);
       
-      // UNIVERSAL ERROR DISPLAY: stage, code, errorMessage, details[], meta
+      // UNIVERSAL ERROR DISPLAY
       const errorSummary = [
         `Stage: ${payload.stage || 'Unknown'}`,
         `Code: ${payload.code || payload.errorCode || 'N/A'}`,
-        `Message: ${payload.errorMessage || payload.error || 'Unknown error'}`,
+        `Message: ${payload.message || payload.errorMessage || payload.error || 'Unknown error'}`,
         payload.meta?.school_id ? `School ID: ${payload.meta.school_id}` : null,
         payload.meta?.schedule_version_id ? `Schedule Version ID: ${payload.meta.schedule_version_id}` : null,
         payload.details?.length > 0 ? `\nDetails (${payload.details.length} issues):` : null,
@@ -834,11 +833,10 @@ Now process the user's input and return ONLY the JSON object.`,
       
       setOptaPlannerError(errorSummary);
       
-      toast.error(`❌ ${payload.code || 'Error'} at ${payload.stage}: ${payload.errorMessage || payload.error}`, { 
+      // Toast: prioritize title → code → fallback
+      toast.error(payload.title || payload.code || 'Erreur de génération', { 
         duration: 12000,
-        description: payload.details?.length > 0 
-          ? `${payload.details.length} validation issues detected. See diagnostics tab.` 
-          : undefined
+        description: payload.message || payload.errorMessage || payload.error
       });
       } else if (payload.ok === true) {
         // Success path - read from payload.result
@@ -879,11 +877,11 @@ Now process the user's input and return ONLY the JSON object.`,
         setOptaPlannerResultSafe(errorData);
         
         if (errorData.ok === false || errorData.code || errorData.stage) {
-          // UNIVERSAL ERROR DISPLAY: stage, code, errorMessage, details[], meta
+          // UNIVERSAL ERROR DISPLAY
           const errorSummary = [
             `Stage: ${errorData.stage || 'Unknown'}`,
             `Code: ${errorData.code || errorData.errorCode || 'N/A'}`,
-            `Message: ${errorData.errorMessage || errorData.error || 'Unknown error'}`,
+            `Message: ${errorData.message || errorData.errorMessage || errorData.error || 'Unknown error'}`,
             errorData.meta?.school_id ? `School ID: ${errorData.meta.school_id}` : null,
             errorData.meta?.schedule_version_id ? `Schedule Version ID: ${errorData.meta.schedule_version_id}` : null,
             errorData.details?.length > 0 ? `\n📋 Details (${errorData.details.length} issues):` : null,
@@ -898,11 +896,10 @@ Now process the user's input and return ONLY the JSON object.`,
           
           setOptaPlannerError(errorSummary);
           
-          toast.error(`❌ ${errorData.code || errorData.errorCode || 'Error'}: ${errorData.errorMessage || errorData.error}`, { 
+          // Toast: prioritize title → code → fallback
+          toast.error(errorData.title || errorData.code || errorData.errorCode || 'Erreur de génération', { 
             duration: 12000,
-            description: statusCode === 422 && errorData.details?.length > 0 
-              ? `${errorData.details.length} validation issues. See diagnostics.` 
-              : errorData.suggestion || undefined
+            description: errorData.message || errorData.errorMessage || errorData.error
           });
         } else {
           setOptaPlannerError(e?.message || 'Failed to fetch OptaPlanner response');
@@ -1999,12 +1996,11 @@ Now process the user's input and return ONLY the JSON object.`,
             setOptaPlannerLoading(false);
             setIsGenerating(false);
             
-            // Enhanced toast message
-            const toastMsg = errorStage === 'buildProblem' 
-              ? `❌ Codex Audit Failed: ${auditData.message || errorMessage}`
-              : `❌ ${errorStage}: ${auditData.message || errorMessage}`;
-            
-            toast.error(toastMsg, { duration: 10000 });
+            // Toast: prioritize title → code → fallback
+            toast.error(auditData.title || auditData.code || errorCode || 'Erreur d\'audit', { 
+              duration: 12000,
+              description: auditData.message || errorMessage
+            });
             return; // CRITICAL: STOP - do not proceed to solver
           }
           
@@ -2105,7 +2101,10 @@ Now process the user's input and return ONLY the JSON object.`,
                 `${payload.suggestion || 'This is a solver constraint violation - same class cannot be scheduled multiple times at the same time.'}`;
               
               setOptaPlannerError(errorMsg);
-              toast.error(`Solver integrity violation: ${count} sections with duplicate timeslots. Check diagnostics.`, { duration: 10000 });
+              toast.error(payload.title || 'Violation d\'intégrité du solver', { 
+                duration: 12000,
+                description: payload.message || `${count} sections avec doublons de créneaux`
+              });
             }
             // Special handling for missing HL/SL hours validation
             else if (payload.stage === 'VALIDATION_FAILED_MISSING_HL_SL_HOURS' || payload.error === 'MISSING_HL_SL_HOURS_CONFIG') {
@@ -2113,7 +2112,11 @@ Now process the user's input and return ONLY the JSON object.`,
               const count = missingSubjects.length;
               const subjectNames = missingSubjects.slice(0, 5).map(s => `${s?.name || s?.code || 'Unknown'} (missing: ${s?.missing || '?'})`).join(', ');
               const moreText = count > 5 ? ` +${count - 5} more` : '';
-              toast.error(`❌ Cannot run OptaPlanner: ${count} DP subjects missing HL/SL hours. Configure on Subjects page.`, { duration: 12000 });
+              
+              toast.error(payload.title || 'Configuration HL/SL manquante', { 
+                duration: 12000,
+                description: payload.message || `${count} matières DP nécessitent heures HL/SL`
+              });
               setOptaPlannerError(`VALIDATION FAILED: Missing HL/SL Hours Configuration\n\n${count} DP subjects need hoursPerWeekHL and hoursPerWeekSL configured:\n\n${subjectNames}${moreText}\n\n${payload.suggestion || 'Go to Subjects page and set HL/SL hours for each DP subject'}\n\n${payload.requiredAction || ''}\n\nDetailed list:\n${JSON.stringify(missingSubjects, null, 2)}`);
             }
             // Special handling for missing config validation (legacy)
@@ -2122,29 +2125,44 @@ Now process the user's input and return ONLY the JSON object.`,
               const count = payload.missingConfigurationCount || missingGroups.length;
               const groupNames = missingGroups.slice(0, 5).map(g => `${g?.name || 'Unknown'} (${g?.subject || '?'})`).join(', ');
               const moreText = count > 5 ? ` +${count - 5} more` : '';
-              toast.error(`❌ Cannot generate schedule: ${count} TeachingGroups missing minutes/periods configuration. See diagnostics.`, { duration: 10000 });
+              
+              toast.error(payload.title || 'Configuration manquante', { 
+                duration: 12000,
+                description: payload.message || `${count} groupes sans config minutes/périodes`
+              });
               setOptaPlannerError(`VALIDATION FAILED: ${count} TeachingGroups Missing Configuration\n\n${groupNames}${moreText}\n\n${payload.suggestion || 'Configure minutes_per_week, periods_per_week, or hours_per_week for each TeachingGroup'}\n\nDetailed list:\n${JSON.stringify(missingGroups, null, 2)}`);
             }
             // Special handling for timeslots validation
             else if (payload.stage === 'VALIDATION_TIMESLOTS_EMPTY') {
-              toast.error('❌ Cannot run OptaPlanner: No timeslots generated. Fix school settings (day_start_time/day_end_time/period_duration).', { duration: 10000 });
-              setOptaPlannerError(`${payload.errorMessage}\n\n${payload.suggestion || ''}`);
+              toast.error(payload.title || 'Aucun créneau disponible', { 
+                duration: 12000,
+                description: payload.message || 'Vérifiez configuration horaire école'
+              });
+              setOptaPlannerError(`${payload.message || payload.errorMessage}\n\n${payload.suggestion || ''}`);
             }
             // CRITICAL: Special handling for SOLUTION_INFEASIBLE (hardScore < 0)
             else if (payload.stage === 'SOLUTION_INFEASIBLE') {
-              toast.error(`❌ OptaPlanner: Hard constraints violated (hardScore=${payload.meta?.hardScore || 'N/A'}). Existing schedule preserved.`, { duration: 12000 });
-              setOptaPlannerError(`${payload.errorMessage}\n\n${payload.suggestion || ''}`);
+              toast.error(payload.title || 'Planning impossible', { 
+                duration: 12000,
+                description: payload.message || `Contraintes dures violées (score=${payload.meta?.hardScore})`
+              });
+              setOptaPlannerError(`${payload.message || payload.errorMessage}\n\n${payload.suggestion || ''}`);
             }
             // CRITICAL: Special handling for PERSISTENCE_BLOCKED (0 slots inserted)
             else if (payload.stage === 'PERSISTENCE_BLOCKED') {
-              toast.error(`❌ OptaPlanner: Zero slots generated. Existing schedule preserved.`, { duration: 12000 });
-              setOptaPlannerError(`${payload.errorMessage}\n\n${payload.suggestion || ''}`);
+              toast.error(payload.title || 'Aucun créneau généré', { 
+                duration: 12000,
+                description: payload.message || 'Planning actuel conservé'
+              });
+              setOptaPlannerError(`${payload.message || payload.errorMessage}\n\n${payload.suggestion || ''}`);
             }
             // Generic solver error
             else {
-              const solverName = payload.solverIdentity?.engine || 'Solver';
-              toast.error(`${solverName} failed at stage "${payload.stage}": ${payload.errorMessage || payload.error || 'Unknown error'}`);
-              setOptaPlannerError(`Stage: ${payload.stage}\nError: ${payload.errorMessage || payload.error}\n\nStack:\n${payload.errorStack || 'N/A'}`);
+              toast.error(payload.title || payload.code || payload.stage || 'Erreur solver', { 
+                duration: 12000,
+                description: payload.message || payload.errorMessage || payload.error
+              });
+              setOptaPlannerError(`Stage: ${payload.stage}\nError: ${payload.message || payload.errorMessage || payload.error}\n\nStack:\n${payload.errorStack || 'N/A'}`);
             }
           } else {
             // Success path - read from payload.result object
@@ -2234,7 +2252,10 @@ Now process the user's input and return ONLY the JSON object.`,
 
               setOptaPlannerError(errorMsg);
               setOptaPlannerResultSafe(errorData);
-              toast.error(`Solver integrity violation: ${splitSections.length} sections with duplicate timeslots`, { duration: 10000 });
+              toast.error(errorData.title || 'Violation d\'intégrité', { 
+                duration: 12000,
+                description: errorData.message || `${splitSections.length} sections avec doublons`
+              });
             }
             // Other Codex errors - UNIVERSAL DISPLAY FORMAT
             else {
@@ -2260,7 +2281,8 @@ Now process the user's input and return ONLY the JSON object.`,
               setOptaPlannerError(errorSummary);
               setOptaPlannerResultSafe(errorData);
               
-              toast.error(`❌ ${errorData.code || errorData.errorCode || 'Error'} at ${errorData.stage}`, { 
+              // Toast: prioritize title → code → fallback
+              toast.error(errorData.title || errorData.code || errorData.errorCode || 'Erreur de génération', { 
                 duration: 12000,
                 description: errorData.message || errorData.errorMessage || errorData.error
               });
@@ -2291,11 +2313,10 @@ Now process the user's input and return ONLY the JSON object.`,
             setOptaPlannerError(errorSummary);
             setOptaPlannerResultSafe(errorData);
             
-            toast.error(`❌ ${errorData.code || 'Validation Failed'}: ${errorData.errorMessage || errorData.error}`, { 
+            // Toast: prioritize title → code → fallback
+            toast.error(errorData.title || errorData.code || 'Erreur de validation', { 
               duration: 12000,
-              description: errorData.details?.length > 0 
-                ? `${errorData.details.length} issues found. Check diagnostics.` 
-                : errorData.suggestion || undefined
+              description: errorData.message || errorData.errorMessage || errorData.error
             });
           }
           // Other errors
@@ -2767,12 +2788,10 @@ Now process the user's input and return ONLY the JSON object.`,
           <CardHeader className="bg-rose-600 text-white">
             <CardTitle className="flex items-center gap-2">
               <AlertTriangle className="w-6 h-6" />
-              {optaPlannerResult.stage === 'COHORT_INTEGRITY_VIOLATION' 
-                ? 'Solver Integrity Violation' 
-                : `OptaPlanner Failed: ${optaPlannerResult.stage || 'Unknown Stage'}`}
+              {optaPlannerResult.title || optaPlannerResult.stage || 'Erreur de génération'}
             </CardTitle>
             <CardDescription className="text-rose-50">
-              Schedule generation stopped. Fix the issue below and retry.
+              {optaPlannerResult.message || 'Génération arrêtée. Corrigez le problème et réessayez.'} Planning actuel conservé : aucune modification appliquée.
             </CardDescription>
           </CardHeader>
           <CardContent className="p-6 space-y-4">
@@ -2784,13 +2803,20 @@ Now process the user's input and return ONLY the JSON object.`,
               </p>
             </div>
 
-            {/* Suggestion */}
-            {optaPlannerResult.suggestion && (
+            {/* User Action / Suggestion */}
+            {(optaPlannerResult.userAction || optaPlannerResult.suggestion) && (
               <div className="bg-amber-50 p-4 rounded-lg border border-amber-300">
-                <div className="font-semibold text-amber-900 mb-2">💡 Suggested Fix:</div>
-                <p className="text-sm text-amber-800">{optaPlannerResult.suggestion}</p>
+                <div className="font-semibold text-amber-900 mb-2">💡 Action requise :</div>
+                <p className="text-sm text-amber-800">{optaPlannerResult.userAction || optaPlannerResult.suggestion}</p>
               </div>
             )}
+            
+            {/* Confirmation */}
+            <div className="bg-blue-50 p-3 rounded-lg border border-blue-200 mt-4">
+              <p className="text-sm text-blue-900 font-medium">
+                ✅ Planning actuel conservé : aucune modification appliquée.
+              </p>
+            </div>
 
             {/* COHORT_INTEGRITY_VIOLATION: Show affected sections */}
             {optaPlannerResult.stage === 'COHORT_INTEGRITY_VIOLATION' && optaPlannerResult.splitSections && (

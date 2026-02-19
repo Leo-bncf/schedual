@@ -56,10 +56,10 @@ export default function SolutionInfeasiblePanel({ result, onRetry }) {
       <CardHeader className="bg-rose-600 text-white">
         <CardTitle className="flex items-center gap-2">
           <AlertTriangle className="w-6 h-6" />
-          Schedule Infeasible (Hard Constraints Violated)
+          {result.title || 'Planning impossible (contraintes dures violées)'}
         </CardTitle>
         <CardDescription className="text-rose-50">
-          OptaPlanner could not satisfy all mandatory constraints. Existing schedule preserved.
+          {result.message || 'OptaPlanner n\'a pas pu satisfaire toutes les contraintes obligatoires.'} Planning actuel conservé : aucune modification appliquée.
         </CardDescription>
       </CardHeader>
       
@@ -175,13 +175,20 @@ export default function SolutionInfeasiblePanel({ result, onRetry }) {
           </div>
         )}
         
-        {/* Suggestion */}
-        {result.suggestion && (
+        {/* User Action / Suggestion */}
+        {(result.userAction || result.suggestion) && (
           <div className="bg-amber-50 p-4 rounded-lg border border-amber-300">
-            <div className="font-semibold text-amber-900 mb-2">💡 Suggested Fix:</div>
-            <p className="text-sm text-amber-800 whitespace-pre-wrap">{result.suggestion}</p>
+            <div className="font-semibold text-amber-900 mb-2">💡 Action requise :</div>
+            <p className="text-sm text-amber-800 whitespace-pre-wrap">{result.userAction || result.suggestion}</p>
           </div>
         )}
+        
+        {/* Confirmation */}
+        <div className="bg-blue-50 p-3 rounded-lg border border-blue-200">
+          <p className="text-sm text-blue-900 font-medium">
+            ✅ Planning actuel conservé : aucune modification appliquée.
+          </p>
+        </div>
         
         {/* Action Buttons */}
         <div className="flex flex-wrap gap-2 pt-2 border-t border-rose-200">
