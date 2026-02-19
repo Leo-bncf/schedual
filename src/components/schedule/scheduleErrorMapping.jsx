@@ -73,6 +73,15 @@ export function normalizeErrorPayload(payload) {
   const code = payload.code || payload.errorCode || "UNKNOWN_ERROR";
   const mapEntry = stageUiMap[stage] || stageUiMap["SERVER_ERROR"];
   
+  // Normalize constraint data (ensure arrays, never null)
+  const constraintBreakdown = Array.isArray(payload.constraintBreakdown) ? payload.constraintBreakdown : [];
+  const violatingConstraints = Array.isArray(payload.violatingConstraints) ? payload.violatingConstraints : [];
+  
+  // Check if we're in "fallback infeasible mode" (no constraint details returned)
+  const isConstraintDetailsMissing = stage === 'SOLUTION_INFEASIBLE' && 
+                                     constraintBreakdown.length === 0 && 
+                                     violatingConstraints.length === 0;
+  
   return {
     stage,
     code,
@@ -84,9 +93,11 @@ export function normalizeErrorPayload(payload) {
     requestId: payload.requestId || null,
     validationErrors: payload.validationErrors || [],
     details: payload.details || [],
-    // Pass through additional fields for specific stages
-    constraintBreakdown: payload.constraintBreakdown || null,
-    violatingConstraints: payload.violatingConstraints || null,
+    // Normalized constraint fields
+    constraintBreakdown,
+    violatingConstraints,
+    // Flag for UI to know we're missing details
+    isConstraintDetailsMissing,
     meta: payload.meta || {}
   };
 }
