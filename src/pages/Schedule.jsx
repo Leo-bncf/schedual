@@ -2132,7 +2132,10 @@ Now process the user's input and return ONLY the JSON object.`,
 
           // Check if function returned error
           if (payload.ok === false) {
-            console.error(`❌ Codex returned error:`, payload);
+            console.error(`❌ Codex returned error (ok=false):`, payload);
+            console.error('[Schedule] DEBUG - payload.ok:', payload.ok);
+            console.error('[Schedule] DEBUG - payload.stage:', payload.stage);
+            console.error('[Schedule] DEBUG - payload.code:', payload.code || payload.errorCode);
             console.error('[Schedule] requestId:', payload.requestId || 'N/A');
             console.error('[Schedule] validationErrors:', payload.validationErrors || []);
             console.error('[Schedule] details:', payload.details || []);
