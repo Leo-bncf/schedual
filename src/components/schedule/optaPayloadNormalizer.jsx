@@ -51,6 +51,29 @@ export function normalizeOptaPayload(raw) {
 }
 
 /**
+ * Detect if payload is an infeasible solution with no constraint details.
+ * 
+ * This occurs when OPTA returns hardScore < 0 but does not provide
+ * constraintBreakdown (empty arrays). In this case, display generic
+ * fallback message to user - do NOT use violatingConstraints array
+ * (it contains only technical placeholders like "HARD_CONSTRAINTS_VIOLATED_UNEXPLAINED").
+ * 
+ * @param {Object} payload - Normalized payload from normalizeOptaPayload()
+ * @returns {boolean} True if this is infeasible without constraint details
+ */
+export function isInfeasibleFallback(payload) {
+  const isInfeasible = payload.ok === false && payload.stage === "SOLUTION_INFEASIBLE";
+  
+  if (!isInfeasible) return false;
+  
+  const hasNegativeHardScore = typeof payload.hardScore === "number" && payload.hardScore < 0;
+  const noConstraintDetails = payload.constraintBreakdown.length === 0;
+  
+  // Both conditions must be true: infeasible + no breakdown
+  return hasNegativeHardScore && noConstraintDetails;
+}
+
+/**
  * Usage pattern in components:
  * 
  * const raw = res?.data || {};
@@ -62,6 +85,12 @@ export function normalizeOptaPayload(raw) {
  * 
  * // Normalize
  * const payload = normalizeOptaPayload(raw);
+ * 
+ * // Detect fallback mode (no constraint details available)
+ * if (isInfeasibleFallback(payload)) {
+ *   // Display generic "no details available" message
+ *   // Do NOT display violatingConstraints - it's technical only
+ * }
  * 
  * // Safe to use now - arrays always defined, fields normalized
  * setOptaPlannerResultSafe(payload);
