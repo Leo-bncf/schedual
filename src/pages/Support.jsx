@@ -318,6 +318,7 @@ export default function Support() {
           )}
         </TabsContent>
       </Tabs>
+      </div>
     </div>
   );
 }
