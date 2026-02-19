@@ -1128,11 +1128,61 @@ if (isDP) {
       });
     }
     
-    // VALIDATION 2: Room capacity check
-    recordLog('Validation 2: Room capacity');
+    // VALIDATION 2: Room eligibility per lesson
+    recordLog('Validation 2: Room eligibility per lesson');
+    const roomEligibilityIssues = [];
     const roomCapacityIssues = [];
     
-    // Group lessons by required room type
+    // Build room type index
+    const roomsByType = {};
+    for (const room of roomsDb) {
+      if (room.is_active === false) continue;
+      const type = room.room_type || 'classroom';
+      if (!roomsByType[type]) roomsByType[type] = [];
+      roomsByType[type].push(room);
+    }
+    
+    // Check each teaching group has eligible rooms
+    for (const tg of teachingGroupsDb) {
+      if (!tg?.subject_id || tg.is_active === false) continue;
+      
+      const subj = subjectById[tg.subject_id];
+      if (!subj) continue;
+      
+      const minutes = minutesForTG(tg);
+      if (minutes <= 0) continue;
+      
+      const requiredRoomType = subj.requires_special_room || 'classroom';
+      const eligibleRooms = roomsByType[requiredRoomType] || roomsByType['classroom'] || [];
+      
+      if (eligibleRooms.length === 0) {
+        roomEligibilityIssues.push({
+          tg_id: tg.id,
+          name: tg.name,
+          subject_code: (tg.subject_id && subjectIdToCode[tg.subject_id]) || 'UNKNOWN',
+          required_room_type: requiredRoomType,
+          student_count: (tg.student_ids || []).length,
+          periods: minutesToPeriods(minutes)
+        });
+      }
+    }
+    
+    if (roomEligibilityIssues.length > 0) {
+      recordLog(`❌ BLOCKING: ${roomEligibilityIssues.length} teaching groups have no eligible rooms`);
+      validationErrors.push(`Room eligibility: ${roomEligibilityIssues.length} group(s) have no eligible rooms`);
+      roomEligibilityIssues.forEach(issue => {
+        validationDetails.push({
+          entity: 'TeachingGroup',
+          id: issue.tg_id,
+          field: 'room_eligibility',
+          reason: `Requires ${issue.required_room_type} room but none exist`,
+          hint: `Add ${issue.required_room_type} rooms or change subject room requirement for ${issue.name}`,
+          data: issue
+        });
+      });
+    }
+    
+    // Global capacity check
     const lessonsByRoomType = {};
     for (const tg of teachingGroupsDb) {
       if (!tg?.subject_id || tg.is_active === false) continue;
@@ -1155,7 +1205,6 @@ if (isDP) {
       }
     }
     
-    // Validate each room type has sufficient capacity
     for (const [roomType, data] of Object.entries(lessonsByRoomType)) {
       const roomsOfType = roomsDb.filter(r => 
         r.is_active !== false && 
@@ -1244,8 +1293,85 @@ if (isDP) {
       });
     }
     
-    // VALIDATION 4: Timeslot capacity sanity (already validated above, but add final check)
-    recordLog('Validation 4: Timeslot configuration sanity');
+    // VALIDATION 4: Student feasibility (DP)
+    recordLog('Validation 4: Student feasibility (DP)');
+    const studentFeasibilityIssues = [];
+    
+    // Load students to check DP feasibility
+    const studentsDb = await base44.entities.Student.filter({ school_id }).catch(() => []);
+    
+    for (const student of studentsDb) {
+      if (!student?.id || student.is_active === false) continue;
+      if (student.ib_programme !== 'DP') continue; // Only validate DP students
+      
+      // Find all teaching groups this student is enrolled in
+      const studentGroups = teachingGroupsDb.filter(tg => 
+        Array.isArray(tg.student_ids) && tg.student_ids.includes(student.id) && tg.is_active !== false
+      );
+      
+      // Calculate total required periods for this student
+      let totalRequiredPeriods = 0;
+      const groupBreakdown = [];
+      
+      for (const tg of studentGroups) {
+        const minutes = minutesForTG(tg);
+        if (minutes > 0) {
+          const periods = minutesToPeriods(minutes);
+          totalRequiredPeriods += periods;
+          
+          groupBreakdown.push({
+            tg_id: tg.id,
+            name: tg.name,
+            subject_code: (tg.subject_id && subjectIdToCode[tg.subject_id]) || 'UNKNOWN',
+            level: tg.level,
+            periods_per_week: periods,
+            minutes_per_week: minutes
+          });
+        }
+      }
+      
+      // DP students must have exactly 6 subjects (IB requirement)
+      const subjectCount = studentGroups.length;
+      const expectedSubjects = 6;
+      
+      // Check if student's total load is schedulable within available timeslots
+      // Basic upper bound: student can't have more periods than available per week
+      if (totalRequiredPeriods > availablePeriodsPerWeek) {
+        studentFeasibilityIssues.push({
+          student_id: student.id,
+          student_name: student.full_name || student.email,
+          year_group: student.year_group,
+          total_required_periods: totalRequiredPeriods,
+          available_periods_per_week: availablePeriodsPerWeek,
+          overflow: totalRequiredPeriods - availablePeriodsPerWeek,
+          subject_count: subjectCount,
+          groups_breakdown: groupBreakdown
+        });
+      }
+      
+      // Validate subject count (warning, not blocking)
+      if (subjectCount < expectedSubjects) {
+        recordLog(`⚠️ WARNING: DP student ${student.full_name} has only ${subjectCount} subjects (expected ${expectedSubjects})`);
+      }
+    }
+    
+    if (studentFeasibilityIssues.length > 0) {
+      recordLog(`❌ BLOCKING: ${studentFeasibilityIssues.length} DP students have impossible schedules`);
+      validationErrors.push(`Student feasibility: ${studentFeasibilityIssues.length} DP student(s) have impossible loads`);
+      studentFeasibilityIssues.forEach(issue => {
+        validationDetails.push({
+          entity: 'Student',
+          id: issue.student_id,
+          field: 'schedule_load',
+          reason: `Requires ${issue.total_required_periods} periods/week but only ${issue.available_periods_per_week} available (overflow: ${issue.overflow})`,
+          hint: `Reduce subject hours or fix HL/SL configuration for ${issue.student_name} (${issue.subject_count} subjects enrolled)`,
+          data: issue
+        });
+      });
+    }
+    
+    // VALIDATION 5: Timeslot capacity sanity (already validated above, but add final check)
+    recordLog('Validation 5: Timeslot configuration sanity');
     if (timeslots.length === 0) {
       validationErrors.push('Zero timeslots generated');
       validationDetails.push({
@@ -1294,7 +1420,9 @@ if (isDP) {
         suggestion: '🔧 Fix capacity and assignment issues:\n• Reduce teaching load for overloaded teachers\n• Add more rooms or reduce room requirements\n• Assign teachers and rooms to all teaching groups',
         requiredAction: 'Fix validation issues listed in details[] array',
         teacherCapacityIssues: teacherCapacityIssues.length > 0 ? teacherCapacityIssues : undefined,
+        roomEligibilityIssues: roomEligibilityIssues.length > 0 ? roomEligibilityIssues : undefined,
         roomCapacityIssues: roomCapacityIssues.length > 0 ? roomCapacityIssues : undefined,
+        studentFeasibilityIssues: studentFeasibilityIssues.length > 0 ? studentFeasibilityIssues : undefined,
         missingAssignments: missingAssignments.length > 0 ? missingAssignments : undefined,
         buildVersion: BUILD_VERSION,
         meta: { schedule_version_id, school_id }
