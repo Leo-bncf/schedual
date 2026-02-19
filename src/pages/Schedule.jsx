@@ -1086,7 +1086,7 @@ Now process the user's input and return ONLY the JSON object.`,
       // Codex becomes single source of truth (purge → optimize → persist)
       if (autoRunOptaPlanner && allowedProgrammes.includes('DP')) {
         console.log('[Schedule] 🚀 Codex auto-run enabled - SKIPPING all local scheduling');
-        console.log('[Schedule] Codex will purge + generate complete optimized schedule');
+        console.log('[Schedule] Codex will attempt to generate an optimized schedule. If feasible, will purge existing slots and persist new ones. If infeasible (hard constraints violated), existing schedule is preserved.');
         
         setGenerationProgress(prev => ({
           ...prev,
