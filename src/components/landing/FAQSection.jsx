@@ -181,7 +181,7 @@ const faqData = [
       },
       {
         q: 'How do I contact customer support?',
-        a: 'School admins can create support tickets from the Support Ticket page in the dashboard. Our team typically responds within 24-48 hours (Priority Support customers get faster response times).'
+        a: 'School admins can create support tickets from the Support Ticket page. Our team typically responds within 24-48 hours (Priority Support customers get faster response times).'
       },
       {
         q: 'Is there a help center or tutorial?',
