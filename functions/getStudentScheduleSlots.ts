@@ -65,6 +65,10 @@ Deno.serve(async (req) => {
     });
     
     console.log('[getStudentScheduleSlots] 📊 Total slots in schedule:', allSlots.length);
+    console.log('[getStudentScheduleSlots] 🔍 Filters applied:', { 
+      school_id: user.school_id, 
+      schedule_version: schedule_version_id 
+    });
     
     // Step 3: Filter slots by student's assigned teaching groups
     const studentSlots = allSlots.filter(slot => {
@@ -161,11 +165,17 @@ Deno.serve(async (req) => {
       ok: true,
       slots: studentSlots,
       diagnostics: {
+        filters_applied: { 
+          school_id: user.school_id, 
+          schedule_version: schedule_version_id 
+        },
+        schedule_version_id_used: schedule_version_id,
+        total_slots_in_schedule: allSlots.length,
+        student_slots_returned: studentSlots.length,
         student_name: student.full_name,
         year_group: student.year_group,
         assigned_groups_count: assignedGroupIds.length,
         assigned_groups: assignedGroupIds,
-        total_slots_loaded: studentSlots.length,
         unique_teaching_groups: uniqueTGIds.size,
         slots_with_null_tg: slotsWithNullTG,
         slots_with_unknown_tg: slotsWithUnknownTG,
