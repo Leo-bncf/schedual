@@ -24,7 +24,7 @@ const faqData = [
       },
       {
         q: 'What platforms is the app available on?',
-        a: 'Schedual is a web-based application accessible from any modern browser (Chrome, Safari, Firefox, Edge) on desktop, laptop, or tablet. No iOS or Android app installation is required.'
+        a: 'Schedual is a cloud-based web application accessible via any modern web browser (Chrome, Safari, Firefox, Edge) on desktop, laptop, or tablet devices. No software installation, iOS app, or Android app is required. The interface is fully responsive and optimized for desktop use during schedule building, with mobile-friendly views for reviewing timetables on the go. All data syncs in real-time across devices and team members.'
       }
     ]
   },
@@ -38,7 +38,7 @@ const faqData = [
       },
       {
         q: 'Can I customize scheduling rules and constraints?',
-        a: 'Yes. You can define hard constraints (must-follow rules like "teachers cannot teach more than 4 consecutive periods") and soft constraints (preferences like "prefer morning slots for science labs"). The AI respects all constraints during optimization.'
+        a: 'Yes, extensive constraint customization is available, especially with the Advanced Constraint Engine add-on ($660/year). You can define hard constraints (strict rules that cannot be violated, such as "no teacher shall teach more than 4 consecutive periods" or "Physics HL requires a lab room") and soft constraints (preferences like "prefer morning slots for science practicals" or "minimize teacher idle time"). The base system includes essential IB-specific constraints, while the Advanced Constraint Engine unlocks custom rule builders, natural language constraint input, and fine-tuned weighting for soft constraint priorities.'
       },
       {
         q: 'What if the AI can\'t generate a feasible schedule?',
@@ -46,7 +46,7 @@ const faqData = [
       },
       {
         q: 'Can I combine DP1 and DP2 students in the same teaching groups?',
-        a: 'Yes. For subjects configured with "combine_dp1_dp2" enabled, the system automatically creates combined teaching groups. Otherwise, DP1 and DP2 students are scheduled separately.'
+        a: 'Yes, this is fully supported on a per-subject basis. On the Subjects page, each DP subject has a "Combine DP1 & DP2" toggle. When enabled, the system automatically merges DP1 and DP2 students taking that subject (at the same level - HL or SL) into shared teaching groups during schedule generation. This is particularly useful for smaller schools or less popular subject options where separate cohort groups would be inefficient. When disabled, DP1 and DP2 students are kept in separate teaching groups. You can mix strategies across subjects (e.g., combine Math Analysis HL but separate English A HL).'
       }
     ]
   },
@@ -68,7 +68,7 @@ const faqData = [
       },
       {
         q: 'What if I don\'t have enough rooms?',
-        a: 'The system will flag room capacity issues in the pre-solve audit. You can add more rooms, increase room capacities, or configure subjects to share rooms (e.g., electives in the same block).'
+        a: 'Before schedule generation begins, the pre-solve audit checks if total required teaching hours exceed available room-period capacity. If insufficient rooms are detected, the audit report will show exactly how many additional rooms you need and during which periods the shortage occurs. You have several options: (1) Add more physical rooms via the Rooms page, (2) Increase capacity limits on existing rooms if they can accommodate larger groups, (3) Use the block_id feature to schedule elective subjects concurrently (students choose one option, so these groups can run in parallel using the same rooms), (4) Adjust your school timing settings to add more periods per day. The system also flags special room requirements (e.g., if you have 3 science groups needing labs but only 2 lab rooms available).'
       }
     ]
   },
@@ -82,7 +82,7 @@ const faqData = [
       },
       {
         q: 'How do I view student and teacher schedules?',
-        a: 'After generating a schedule, use the Students and Teachers tabs to view individual timetables. You can export schedules as PDFs or images for printing and distribution.'
+        a: 'After successful schedule generation, go to the Schedule page and select the version you want to view. Three tabs are available: (1) Students tab - choose a student from the dropdown to see their personal weekly timetable grid showing subjects, teachers, and rooms per period. The system also validates that DP students have the correct number of periods per subject based on HL/SL hours. (2) Teachers tab - select a teacher to view their teaching load, including which groups they teach and when. (3) Rooms tab - view room utilization showing which teaching groups occupy each room during each time slot. You can export individual schedules as PDF documents or PNG images via the Export button for printing and distribution to staff and families.'
       },
       {
         q: 'Can I manually edit the generated schedule?',
@@ -90,8 +90,8 @@ const faqData = [
       },
       {
         q: 'What happens if I update data after generating a schedule?',
-        a: 'A banner alerts you when underlying data (teachers, students, rooms, teaching groups) has changed since the last generation. You can regenerate to incorporate the updates.'
-      }
+        a: 'Schedual tracks the updated_date timestamp of all entities (teachers, students, rooms, subjects, teaching groups) and compares them to the generated_at timestamp of your active schedule version. If any underlying data has been modified after schedule generation, a prominent yellow banner appears at the top of the Schedule page warning you that "Underlying data has changed since this schedule was generated." This could include updates like adding a new student, changing a teacher\'s unavailability, or modifying subject hours. The existing schedule remains fully visible and functional. When you\'re ready to incorporate the changes, click "Regenerate Schedule" to create an updated version. Your old schedule version is preserved in case you need to revert or compare.'
+      },
     ]
   },
   {
@@ -104,20 +104,20 @@ const faqData = [
       },
       {
         q: 'Can I try before buying?',
-        a: 'Yes. New schools get a trial period to test all features before subscription billing begins. Contact us via the demo booking form to schedule a personalized walkthrough.'
+        a: 'Yes, Schedual offers trial access for prospective schools. After creating an account and selecting a tier during checkout, you enter a trial period where you can fully explore all features before your first payment is processed. The trial allows you to import your school data, configure settings, generate test schedules, and evaluate whether Schedual meets your needs. If you\'d like a guided demonstration before committing, use the "Book a Demo" form on our landing page to schedule a personalized 30-45 minute walkthrough with our team. We\'ll show you the complete workflow from data import to final schedule export using sample IB school data.'
       },
       {
         q: 'What payment methods are supported?',
-        a: 'We accept all major credit cards (Visa, Mastercard, Amex) and bank transfers via Stripe Checkout. Subscriptions are billed annually.'
+        a: 'Schedual uses Stripe as our payment processor. We accept all major credit cards (Visa, Mastercard, American Express, Discover), debit cards, and bank transfers (ACH in US, SEPA in Europe) through Stripe Checkout. Subscriptions are billed annually in USD. When you upgrade tiers or add/remove add-ons mid-cycle, charges are automatically prorated based on the remaining time in your billing period. Stripe provides secure payment processing with PCI DSS Level 1 compliance - we never store your payment card details on our servers. All transactions include automatic receipts via email.'
       },
       {
         q: 'Can I upgrade or downgrade my tier?',
-        a: 'Yes. You can change tiers or add/remove add-ons from your Account Manager page. Changes are prorated based on your billing cycle.'
+        a: 'Yes, tier changes and add-on modifications are fully supported. From your Account Manager page, you can upgrade from Tier 1 to Tier 2 or 3, downgrade if your school size decreases, or add/remove any add-ons at any time. When you make changes mid-billing cycle, Stripe automatically calculates prorated charges - you\'re credited for unused time on your old plan and charged for the remaining time on your new plan. For example, upgrading from Tier 2 ($2,200) to Tier 3 ($4,950) halfway through your annual subscription would charge you approximately $1,375 (half of the $2,750 difference). Downgrades result in credits applied to your next renewal. Changes take effect immediately upon confirmation.'
       },
       {
         q: 'How are refunds handled?',
-        a: 'Please contact our support team via the Support Ticket page for refund requests. Refunds are handled on a case-by-case basis according to our Terms of Use.'
-      }
+        a: 'Refund requests must be submitted through the Support Ticket page, where you can create a ticket explaining your situation and reason for requesting a refund. Our support team reviews each request individually according to our Terms of Use. Factors considered include: length of active subscription, usage patterns, reason for cancellation, and timing of the request. Schools who discover technical issues preventing proper use of the system, or those within the first 30 days of their initial subscription, are generally eligible for full or partial refunds. Refunds are processed back to your original payment method via Stripe within 5-10 business days after approval. Note that one-time setup fees for add-ons (like Onboarding & First Setup) are typically non-refundable after services have been rendered.'
+      },
     ]
   },
   {
@@ -134,8 +134,8 @@ const faqData = [
       },
       {
         q: 'Can I add custom constraints for my school?',
-        a: 'Yes. Use the Constraints tab to define hard constraints (must-follow rules) or soft constraints (preferences). Describe your rule in natural language and our AI converts it to a structured constraint.'
-      }
+        a: 'Yes, custom constraint creation is supported through the Constraints page (visible in the main navigation). Base tier subscriptions include a standard set of essential constraints covering IB requirements, teacher/room availability, and workload limits. With the Advanced Constraint Engine add-on ($660/year), you unlock: (1) Custom constraint builder - define new hard constraints (strict rules) or soft constraints (preferences) tailored to your school\'s unique needs. (2) Natural language input - describe constraints in plain English (e.g., "Science labs should be scheduled in the morning") and our AI converts them to structured rules. (3) Constraint weighting - assign priority scores to soft constraints so the solver knows which preferences matter most. (4) Constraint templates - save and reuse common constraint patterns. Examples of custom constraints: "Grade 12 students should not have classes after 3pm on Fridays", "Music theory and band practice must not overlap", or "Teachers with young children prefer morning-only schedules".'
+      },
     ]
   },
   {
@@ -152,8 +152,8 @@ const faqData = [
       },
       {
         q: 'Who can see student schedules?',
-        a: 'Only admin users from your school can view schedules. Students and teachers do not have login access unless explicitly invited with appropriate roles.'
-      }
+        a: 'Access to student schedules is restricted to authorized admin users from your school only. Each school\'s data is completely isolated using row-level security (RLS) - other schools using Schedual cannot see your information. By default, students and teachers do not have login credentials or system access. If you want to grant teachers or students access, you can invite them as users from the Account Manager page, but this is entirely optional. Most schools prefer to export PDF timetables and distribute them via email or print rather than giving students direct system access. The base subscription includes 3 admin user seats (typically the schedule coordinator, deputy head, and academic director). Additional admin users can be added via the Extra Admin User add-on ($275/year per seat).'
+      },
     ]
   },
   {
@@ -162,16 +162,16 @@ const faqData = [
     questions: [
       {
         q: 'What reports are available?',
-        a: 'The Reports page provides teacher workload analysis, room utilization stats, subject coverage reports, and bottleneck detection. You can identify over/under-utilized resources and scheduling inefficiencies.'
+        a: 'The Reports page (accessible from main navigation) provides comprehensive analytics after schedule generation. Available reports include: (1) Teacher Workload Report - shows each teacher\'s total teaching hours, number of different groups taught, consecutive period counts, and free periods. Helps identify overloaded teachers or unbalanced distributions. (2) Room Utilization Report - displays occupancy rates for each room, showing which rooms are underutilized (potential for consolidation) or overbooked (need more rooms). (3) Subject Coverage Report - verifies that all teaching groups received their required weekly hours, flagging any groups with insufficient or excessive periods. (4) Bottleneck Analysis - identifies scheduling constraints that limit optimization, such as subjects competing for scarce lab rooms or teachers with limited availability. (5) Global Period Coverage Report - shows slot-by-slot how many groups are scheduled vs. total capacity, highlighting peak demand periods. (6) Cohort Integrity Report - for PYP/MYP schools, verifies that students in the same ClassGroup share identical schedules. All reports can be viewed on-screen, printed, or exported as PDFs for leadership presentations or documentation.'
       },
       {
         q: 'Can I track schedule generation history?',
-        a: 'Yes. Each schedule version is timestamped with generation metadata, including which constraints were applied, optimization scores, and conflict counts.'
+        a: 'Yes, Schedual maintains a complete audit trail of all schedule generation attempts. Each schedule version record includes: (1) Generation timestamp - exact date/time when the schedule was created. (2) Generated by - which admin user initiated the generation. (3) Optimization score - the solver\'s objective score (0-100) indicating overall constraint satisfaction quality. (4) Hard constraint satisfaction - boolean flag showing whether all mandatory rules were met (feasible solution) or violated (infeasible). (5) Soft constraint score - percentage of preference constraints satisfied. (6) Conflicts and warnings count - number of issues detected in the generated schedule. (7) Solver parameters - which algorithm settings and constraint weights were used. (8) Request ID - unique identifier for debugging purposes if you need to contact support. (9) Execution duration - how long the solver ran (typically 5-15 minutes). This metadata helps you compare different schedule versions, understand why certain attempts failed, and document your scheduling decisions for school leadership or accreditation purposes.'
       },
       {
         q: 'Can I export reports?',
-        a: 'Yes. All schedules can be exported as PDFs or images. Diagnostic data can be downloaded as JSON for technical analysis.'
-      }
+        a: 'Yes, comprehensive export options are available throughout the system. Schedule exports: Individual student/teacher timetables can be downloaded as PDF documents or PNG images from the Schedule page using the "Export" button - perfect for printing and distribution. Data exports: On any entity page (Students, Teachers, Rooms, Subjects), use the "Export to CSV" button to download the full dataset in spreadsheet format for backup or analysis in Excel. Report exports: Analytical reports like Teacher Workload, Room Utilization, and Subject Coverage can be printed to PDF directly from your browser. Diagnostic exports: When schedule generation fails or succeeds, you can download the complete solver diagnostic report as a JSON file containing detailed constraint violation breakdowns, timeslot mappings, and debugging information. These JSON files can be shared with our support team if you need troubleshooting assistance. Bulk export: Some schools use the exported CSV data to feed into their SIS (Student Information System) or to create custom reports in tools like Tableau or Power BI.'
+      },
     ]
   },
   {
@@ -188,12 +188,12 @@ const faqData = [
       },
       {
         q: 'Is there a help center or tutorial?',
-        a: 'Yes. New schools are guided through an interactive Setup Guide (Onboarding page) that walks you through initial configuration, data import, and first schedule generation.'
+        a: 'Yes, Schedual includes comprehensive onboarding resources. New schools see an interactive Setup Guide on the Onboarding page (accessible from main navigation) that provides a step-by-step checklist: (1) Configure school settings (timing, periods, breaks), (2) Import or create rooms, (3) Import or create teachers with qualifications, (4) Import or create students with subject choices, (5) Define DP subjects with HL/SL hours, (6) Create ClassGroups for PYP/MYP (if applicable), (7) Generate teaching groups, (8) Review pre-solve audit, (9) Generate your first schedule. Each step includes tooltips, example data, and links to relevant pages. The Setup Guide tracks your progress and marks completed steps with checkmarks. Additionally, most pages include contextual help buttons (? icons) that explain features and provide usage tips. Schools who purchase the Onboarding & First Setup add-on ($1,320 one-time) receive personalized 1-on-1 training sessions via video call where our team guides you through the entire setup process using your actual school data.'
       },
       {
         q: 'How do I reset my password?',
-        a: 'Use the "Forgot Password" link on the login page. You\'ll receive a verification code via email to reset your password securely.'
-      }
+        a: 'If you forget your password or need to reset it for security reasons, click the "Forgot Password" link on the login page. Enter your email address (the one associated with your Schedual account) and click Submit. Our system will send a 6-digit verification code to your email within 1-2 minutes. Enter this code on the verification screen within 15 minutes (codes expire after 15 minutes for security). After successful verification, you\'ll be prompted to create a new password meeting our security requirements (minimum 8 characters, at least one uppercase letter, one lowercase letter, one number, and one special character). Your new password takes effect immediately. If you don\'t receive the verification email, check your spam/junk folder or request a new code. For security, verification codes are single-use and the system locks your account temporarily after 5 failed verification attempts. If you\'re locked out, contact support via the Support Ticket page.'
+      },
     ]
   }
 ];
