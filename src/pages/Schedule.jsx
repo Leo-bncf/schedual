@@ -104,6 +104,38 @@ export default function Schedule() {
   const [auditResult, setAuditResult] = useState(null);
   const [showAuditReport, setShowAuditReport] = useState(false);
 
+  // CRITICAL: Sanitize SOLUTION_INFEASIBLE payloads (fallback guard against null arrays)
+  const sanitizeInfeasible = (payload) => {
+    if (!payload || payload.ok !== false || payload.stage !== 'SOLUTION_INFEASIBLE') {
+      return payload;
+    }
+
+    const hardScore =
+      typeof payload.hardScore === 'number' ? payload.hardScore :
+      typeof payload.meta?.hardScore === 'number' ? payload.meta.hardScore :
+      null;
+
+    // Force arrays — never null
+    const constraintBreakdown = Array.isArray(payload.constraintBreakdown) ? payload.constraintBreakdown : [];
+    const violatingConstraints = Array.isArray(payload.violatingConstraints) ? payload.violatingConstraints : [];
+
+    // Detect fallback: infeasible but no constraint explanation
+    const isFallback = typeof hardScore === 'number' && hardScore < 0 && constraintBreakdown.length === 0;
+
+    return {
+      ...payload,
+      hardScore,
+      constraintBreakdown,
+      violatingConstraints: isFallback && violatingConstraints.length === 0
+        ? ['HARD_CONSTRAINTS_VIOLATED_UNEXPLAINED']
+        : violatingConstraints,
+      isInfeasibleFallback: isFallback,
+      requiredAction: isFallback
+        ? 'Réduisez la demande OU augmentez la capacité, puis relancez.'
+        : payload.requiredAction,
+    };
+  };
+
   // CRITICAL: Runtime validator for OptaPlanner response format
   const setOptaPlannerResultSafe = (payload) => {
     if (payload && typeof payload.ok !== 'boolean') {
