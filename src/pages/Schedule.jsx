@@ -230,13 +230,12 @@ export default function Schedule() {
             : 'fallback - school config';
 
       // Debug logging - CRITICAL: Read ok from correct object
-      const solverResponse = optaPlannerResult || {};
-      const keepingGridStable = solverResponse.ok === false && result.length > 0;
+      const keepingGridStable = optaPlannerResult?.ok === false && result.length > 0;
       
       console.log('[Schedule] DEBUG - scheduleSlots.length:', result.length);
       console.log('[Schedule] DEBUG - timeslots source:', timeslotsSource);
       console.log('[Schedule] DEBUG - solverTimeslots:', solverTimeslots?.length || 0, 'slots');
-      console.log('[Schedule] DEBUG - solverResponse.ok:', solverResponse.ok);
+      console.log('[Schedule] DEBUG - payload.ok:', optaPlannerResult?.ok);
       console.log('[Schedule] DEBUG - Solver failed but keeping grid stable:', keepingGridStable);
 
       return result;
