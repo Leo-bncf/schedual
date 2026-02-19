@@ -51,6 +51,7 @@ export default function LandingFooter() {
             <ul className="space-y-2 text-sm">
               <li><Link to={createPageUrl('PrivacyPolicy')} className="text-white/90 hover:text-white transition-colors">Privacy Policy</Link></li>
               <li><Link to={createPageUrl('TermsOfUse')} className="text-white/90 hover:text-white transition-colors">Terms of Service</Link></li>
+              <li><Link to={createPageUrl('DataSecurity')} className="text-white/90 hover:text-white transition-colors">Security & Compliance</Link></li>
             </ul>
           </div>
         </div>
