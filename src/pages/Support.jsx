@@ -100,7 +100,7 @@ export default function Support() {
         </div>
 
       <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
-        <TabsList className="bg-white border border-slate-200 w-full sm:w-auto">
+        <TabsList className="bg-white border border-slate-200 w-full sm:w-auto shadow-sm">
           <TabsTrigger value="new" className="data-[state=active]:bg-blue-900 data-[state=active]:text-white flex-1 sm:flex-none">
             <MessageCircle className="w-4 h-4 mr-2" />
             New Ticket
@@ -112,9 +112,87 @@ export default function Support() {
         </TabsList>
 
         {/* New Ticket Tab */}
-        <TabsContent value="new" className="mt-6">
-          <div className="max-w-3xl">
-            <SupportTicketForm onSuccess={() => setActiveTab('history')} />
+        <TabsContent value="new" className="mt-8">
+          <div className="grid lg:grid-cols-3 gap-6">
+            {/* Form Section */}
+            <div className="lg:col-span-2">
+              <SupportTicketForm onSuccess={() => setActiveTab('history')} />
+            </div>
+
+            {/* Info Section */}
+            <div className="space-y-6">
+              <Card className="border-blue-200 bg-white shadow-lg">
+                <CardHeader className="bg-gradient-to-br from-blue-50 to-white border-b border-blue-100">
+                  <CardTitle className="text-lg text-blue-900">What We Can Help With</CardTitle>
+                </CardHeader>
+                <CardContent className="p-6 space-y-4">
+                  <div className="space-y-3">
+                    <div className="flex items-start gap-3">
+                      <div className="w-8 h-8 rounded-lg bg-blue-100 flex items-center justify-center flex-shrink-0">
+                        <span className="text-blue-700 font-bold text-sm">1</span>
+                      </div>
+                      <div>
+                        <div className="font-semibold text-slate-900 text-sm">Technical Issues</div>
+                        <div className="text-xs text-slate-600 mt-0.5">Bugs, errors, or features not working as expected</div>
+                      </div>
+                    </div>
+                    <div className="flex items-start gap-3">
+                      <div className="w-8 h-8 rounded-lg bg-blue-100 flex items-center justify-center flex-shrink-0">
+                        <span className="text-blue-700 font-bold text-sm">2</span>
+                      </div>
+                      <div>
+                        <div className="font-semibold text-slate-900 text-sm">Scheduling Problems</div>
+                        <div className="text-xs text-slate-600 mt-0.5">Conflicts, constraints, or optimization questions</div>
+                      </div>
+                    </div>
+                    <div className="flex items-start gap-3">
+                      <div className="w-8 h-8 rounded-lg bg-blue-100 flex items-center justify-center flex-shrink-0">
+                        <span className="text-blue-700 font-bold text-sm">3</span>
+                      </div>
+                      <div>
+                        <div className="font-semibold text-slate-900 text-sm">Account & Billing</div>
+                        <div className="text-xs text-slate-600 mt-0.5">Subscription, payments, or account management</div>
+                      </div>
+                    </div>
+                    <div className="flex items-start gap-3">
+                      <div className="w-8 h-8 rounded-lg bg-blue-100 flex items-center justify-center flex-shrink-0">
+                        <span className="text-blue-700 font-bold text-sm">4</span>
+                      </div>
+                      <div>
+                        <div className="font-semibold text-slate-900 text-sm">Feature Requests</div>
+                        <div className="text-xs text-slate-600 mt-0.5">Suggestions for new features or improvements</div>
+                      </div>
+                    </div>
+                  </div>
+                </CardContent>
+              </Card>
+
+              <Card className="border-slate-200 bg-white shadow-lg">
+                <CardHeader className="bg-gradient-to-br from-slate-50 to-white border-b border-slate-100">
+                  <CardTitle className="text-lg text-slate-900">Tips for Quick Resolution</CardTitle>
+                </CardHeader>
+                <CardContent className="p-6">
+                  <ul className="space-y-2 text-xs text-slate-700">
+                    <li className="flex items-start gap-2">
+                      <CheckCircle className="w-4 h-4 text-green-600 mt-0.5 flex-shrink-0" />
+                      <span>Be specific about the issue you're experiencing</span>
+                    </li>
+                    <li className="flex items-start gap-2">
+                      <CheckCircle className="w-4 h-4 text-green-600 mt-0.5 flex-shrink-0" />
+                      <span>Include relevant details (page, feature, error messages)</span>
+                    </li>
+                    <li className="flex items-start gap-2">
+                      <CheckCircle className="w-4 h-4 text-green-600 mt-0.5 flex-shrink-0" />
+                      <span>Mention what you've already tried</span>
+                    </li>
+                    <li className="flex items-start gap-2">
+                      <CheckCircle className="w-4 h-4 text-green-600 mt-0.5 flex-shrink-0" />
+                      <span>Set priority level appropriately</span>
+                    </li>
+                  </ul>
+                </CardContent>
+              </Card>
+            </div>
           </div>
         </TabsContent>
 
