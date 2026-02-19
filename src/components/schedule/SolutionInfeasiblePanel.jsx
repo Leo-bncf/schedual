@@ -187,13 +187,28 @@ export default function SolutionInfeasiblePanel({ result, onRetry }) {
           </div>
         ) : null}
         
-        {/* User Action / Suggestion */}
-        {(result.userAction || result.suggestion) && (
-          <div className="bg-amber-50 p-4 rounded-lg border border-amber-300">
-            <div className="font-semibold text-amber-900 mb-2">💡 Action requise :</div>
-            <p className="text-sm text-amber-800 whitespace-pre-wrap">{result.userAction || result.suggestion}</p>
-          </div>
-        )}
+        {/* User Action / Suggestion + Concrete Actions */}
+        <div className="bg-amber-50 p-4 rounded-lg border border-amber-300 space-y-3">
+          <div className="font-semibold text-amber-900">💡 Actions recommandées :</div>
+          
+          {/* Show main user action only if constraint details exist */}
+          {topViolations.length > 0 && result.userAction && (
+            <p className="text-sm text-amber-800 whitespace-pre-wrap">{result.userAction}</p>
+          )}
+          
+          {/* Fallback actions when details missing */}
+          {isConstraintDetailsMissing && (
+            <p className="text-sm text-amber-800">Augmentez la capacité ou réduisez la demande, puis relancez.</p>
+          )}
+          
+          {/* Concrete action items */}
+          <ul className="text-sm text-amber-800 space-y-1 ml-4">
+            <li>• Réduire les heures/semaine pour certaines matières</li>
+            <li>• Ajouter des périodes par jour</li>
+            <li>• Vérifier la disponibilité des profs/salles</li>
+            <li>• Assouplir les contraintes obligatoires trop strictes</li>
+          </ul>
+        </div>
         
         {/* Confirmation */}
         <div className="bg-blue-50 p-3 rounded-lg border border-blue-200">
