@@ -278,7 +278,7 @@ Deno.serve(async (req) => {
       no_qualified: assignmentLog.filter(l => l.status === 'no_qualified_teacher').length
     });
 
-    // BATCH UPDATE: Apply all assignments in optimized batches
+    // BATCH UPDATE: Apply all assignments in optimized batches with timeout + error resilience
     stage = 'batch_update';
     const updateStart = Date.now();
     
@@ -298,20 +298,25 @@ Deno.serve(async (req) => {
         console.log(`[assignTeachers] Processing batch ${i + 1}/${batches.length} (${batch.length} groups)`);
         
         try {
-          await Promise.all(
-            batch.map(update => 
-              base44.asServiceRole.entities.TeachingGroup.update(update.id, {
-                teacher_id: update.teacher_id
-              }).catch(err => {
-                console.error(`[assignTeachers] ❌ Failed to update group ${update.id}:`, err.message);
-                batchErrors++;
-                throw err;
-              })
-            )
+          await withTimeout(
+            Promise.allSettled(
+              batch.map(update => 
+                base44.asServiceRole.entities.TeachingGroup.update(update.id, {
+                  teacher_id: update.teacher_id
+                }).catch(err => {
+                  console.error(`[assignTeachers] ❌ Failed to update group ${update.id}:`, err.message);
+                  batchErrors++;
+                  // Don't rethrow - let Promise.allSettled handle it
+                  return { status: 'error', error: err.message };
+                })
+              )
+            ),
+            15000 // 15 second timeout per batch
           );
         } catch (batchError) {
           console.error(`[assignTeachers] ❌ Batch ${i + 1} failed:`, batchError.message);
-          // Continue with remaining batches
+          batchErrors++;
+          // Continue with remaining batches - don't crash
         }
       }
       
