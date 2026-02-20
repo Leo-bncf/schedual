@@ -870,41 +870,68 @@ if (isDP) {
     
     const isValidMongoId = (id) => /^[a-f0-9]{24}$/i.test(String(id || ''));
     const subjectCodesInLessons = Array.from(new Set(lessons.map(l => l.subject).filter(Boolean)));
+    
+    // CRITICAL: Build subjects array with ONLY id + hl_hours + sl_hours (Codex format)
     const subjectsList = subjectCodesInLessons.map(code => {
       const subjId = subjectIdByCode[code] || null;
       const subj = subjId ? subjectById[subjId] : null;
       const validId = subjId && isValidMongoId(subjId) ? subjId : '000000000000000000000000';
       
-      // Transform hoursPerWeekHL/SL into hoursPerWeekByLevel object
-      const hoursPerWeekByLevel = {};
+      // Extract HL/SL hours (prioritize hoursPerWeekHL/SL, fallback to deprecated fields)
+      let hl_hours = 0;
+      let sl_hours = 0;
+      
       if (subj?.ib_level === 'DP') {
-        // PRIORITY 1: Use admin-configured hoursPerWeekHL/SL (set on Subjects page)
+        // PRIORITY 1: Use admin-configured hoursPerWeekHL/SL
         if (typeof subj.hoursPerWeekHL === 'number' && subj.hoursPerWeekHL > 0) {
-          hoursPerWeekByLevel.HL = subj.hoursPerWeekHL;
-        }
-        if (typeof subj.hoursPerWeekSL === 'number' && subj.hoursPerWeekSL > 0) {
-          hoursPerWeekByLevel.SL = subj.hoursPerWeekSL;
+          hl_hours = subj.hoursPerWeekHL;
+        } else if (typeof subj.hl_minutes_per_week_default === 'number' && subj.hl_minutes_per_week_default > 0) {
+          hl_hours = Math.round(subj.hl_minutes_per_week_default / 60);
         }
         
-        // PRIORITY 2: Fallback to deprecated fields if new ones not set
-        if (!hoursPerWeekByLevel.HL && typeof subj.hl_minutes_per_week_default === 'number' && subj.hl_minutes_per_week_default > 0) {
-          hoursPerWeekByLevel.HL = Math.round(subj.hl_minutes_per_week_default / 60);
-        }
-        if (!hoursPerWeekByLevel.SL && typeof subj.sl_minutes_per_week_default === 'number' && subj.sl_minutes_per_week_default > 0) {
-          hoursPerWeekByLevel.SL = Math.round(subj.sl_minutes_per_week_default / 60);
+        if (typeof subj.hoursPerWeekSL === 'number' && subj.hoursPerWeekSL > 0) {
+          sl_hours = subj.hoursPerWeekSL;
+        } else if (typeof subj.sl_minutes_per_week_default === 'number' && subj.sl_minutes_per_week_default > 0) {
+          sl_hours = Math.round(subj.sl_minutes_per_week_default / 60);
         }
       }
       
       return {
         id: validId,
-        code: code,
-        name: subj?.name || code,
-        hoursPerWeekByLevel: Object.keys(hoursPerWeekByLevel).length > 0 ? hoursPerWeekByLevel : undefined, // ✅ HL/SL hours sent to solver
-        is_core: subj?.is_core || false,
-        ib_level: subj?.ib_level || null,
-        // DIAGNOSTIC: Include raw hours for validation
-        _debug_hoursHL: subj?.hoursPerWeekHL || null,
-        _debug_hoursSL: subj?.hoursPerWeekSL || null
+        hl_hours,
+        sl_hours
+      };
+    });
+    
+    // CRITICAL: Build subjects_hours array with detailed hour/minute config
+    const subjectsHours = subjectCodesInLessons.map(code => {
+      const subjId = subjectIdByCode[code] || null;
+      const subj = subjId ? subjectById[subjId] : null;
+      const validId = subjId && isValidMongoId(subjId) ? subjId : '000000000000000000000000';
+      
+      let hl_hours = 0;
+      let sl_hours = 0;
+      
+      if (subj?.ib_level === 'DP') {
+        if (typeof subj.hoursPerWeekHL === 'number' && subj.hoursPerWeekHL > 0) {
+          hl_hours = subj.hoursPerWeekHL;
+        } else if (typeof subj.hl_minutes_per_week_default === 'number' && subj.hl_minutes_per_week_default > 0) {
+          hl_hours = Math.round(subj.hl_minutes_per_week_default / 60);
+        }
+        
+        if (typeof subj.hoursPerWeekSL === 'number' && subj.hoursPerWeekSL > 0) {
+          sl_hours = subj.hoursPerWeekSL;
+        } else if (typeof subj.sl_minutes_per_week_default === 'number' && subj.sl_minutes_per_week_default > 0) {
+          sl_hours = Math.round(subj.sl_minutes_per_week_default / 60);
+        }
+      }
+      
+      return {
+        subject_id: validId,
+        hl_hours,
+        sl_hours,
+        hl_minutes_per_week: hl_hours * 60,
+        sl_minutes_per_week: sl_hours * 60
       };
     });
     
