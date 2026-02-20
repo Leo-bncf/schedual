@@ -799,23 +799,9 @@ if (isDP) {
     
     recordLog(`✅ HL/SL hours validation passed: ${dpSubjectsWithoutHours.length === 0 ? 'All DP subjects configured' : 'No DP subjects found'}`);
 
-    // DIAGNOSTIC: Verify French/English lessons format
-    const frenchEnglishLessons = lessons.filter(l => 
-      l.subject.includes('FRENCH') || l.subject.includes('ENGLISH') || l.subject.includes('ANGLAIS')
-    );
-
-    if (frenchEnglishLessons.length > 0) {
-      recordLog(`📊 French/English lessons: ${frenchEnglishLessons.length} total`);
-      recordLog(`Sample French/English lesson: ${JSON.stringify(frenchEnglishLessons[0], null, 2)}`);
-
-      // Verify ALL have teachingGroupId
-      const missingTGId = frenchEnglishLessons.filter(l => !l.teachingGroupId);
-      if (missingTGId.length > 0) {
-        recordLog(`⚠️ WARNING: ${missingTGId.length} French/English lessons missing teachingGroupId`);
-      }
-    } else {
-      recordLog(`⚠️ WARNING: No French/English lessons created - check subject codes`);
-    }
+    // DIAGNOSTIC: Log lessons format (subject_id-based)
+    recordLog(`📊 Sample lesson format: ${JSON.stringify(lessons[0], null, 2)}`);
+    recordLog(`✅ Lessons now use subject_id instead of subject code`);
 
     // HARD FAIL if groups are missing subject hour configuration
     const missingHoursConfig = teachingGroupsSkipped.filter(s => 
