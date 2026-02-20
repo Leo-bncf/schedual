@@ -304,11 +304,20 @@ Deno.serve(async (req) => {
       name: t?.full_name || `Teacher ${idx+1}`
     }));
     
+    // Create numeric subject IDs and mapping
+    const subjects = (subjectsDb || []).map((s, idx) => ({
+      id: idx + 1, // Numeric ID for OptaPlanner
+      name: s?.name || `Subject ${idx+1}`,
+      code: s?.code || `SUB${idx+1}`
+    }));
+    
     // Mapping tables: Numeric ID -> MongoDB ID
     const roomNumericIdToBase44Id = {};
     const teacherNumericIdToBase44Id = {};
+    const subjectNumericIdToBase44Id = {};
     (roomsDb || []).forEach((r, idx) => { if (r?.id) roomNumericIdToBase44Id[idx+1] = r.id; });
     (teachersDb || []).forEach((t, idx) => { if (t?.id) teacherNumericIdToBase44Id[idx+1] = t.id; });
+    (subjectsDb || []).forEach((s, idx) => { if (s?.id) subjectNumericIdToBase44Id[idx+1] = s.id; });
 
     stage = 'buildLessons';
     recordLog(`${stage}: processing ${teachingGroupsDb.length} teaching groups (cohort-centered approach)`);
@@ -562,11 +571,13 @@ teachingGroupsIncludedCount++;
 const studentGroup = `TG_${tg.id}`;
 const cap = Math.max(1, (tg.student_ids || []).length);
 
-// Map MongoDB IDs back to numeric IDs for OptaPlanner
+// Map MongoDB IDs to numeric IDs for OptaPlanner
 const teacherIdx = (tg.teacher_id && teachersDb) ? teachersDb.findIndex(t => t?.id === tg.teacher_id) : -1;
 const roomIdx = (tg.preferred_room_id && roomsDb) ? roomsDb.findIndex(r => r?.id === tg.preferred_room_id) : -1;
+const subjectIdx = (tg.subject_id && subjectsDb) ? subjectsDb.findIndex(s => s?.id === tg.subject_id) : -1;
 const teacherNumeric = teacherIdx >= 0 ? teacherIdx + 1 : null;
 const roomNumeric = roomIdx >= 0 ? roomIdx + 1 : null;
+const subjectNumeric = subjectIdx >= 0 ? subjectIdx + 1 : null;
 
 // Track diagnostics
 teachingGroupsDiagnostics.push({
@@ -604,8 +615,8 @@ const isFrenchOrEnglish = subjCode.includes('FRENCH') || subjCode.includes('ENGL
 for (let i = 0; i < weeklyCount; i++) {
   const lesson = {
     id: lessonId++,
-    subject: tg.subject_id,
-    subjectId: tg.subject_id,
+    subject: subjectNumeric, // Numeric ID for OptaPlanner
+    subjectId: subjectNumeric,
     studentGroup: `TG_${tg.id}`,
     teachingGroupId: tg.id,
     sectionId: tg.id,
@@ -615,8 +626,8 @@ for (let i = 0; i < weeklyCount; i++) {
     blockId,
     requiredCapacity: cap,
     timeslotId: null,
-    roomId: roomNumeric || null, // Numeric for OptaPlanner
-    teacherId: teacherNumeric || null, // Numeric for OptaPlanner
+    roomId: roomNumeric || null,
+    teacherId: teacherNumeric || null,
   };
 
   // Log first French/English lesson for verification
@@ -632,13 +643,12 @@ const isDP = (String(tg.year_group || '').toUpperCase().includes('DP')) || (subj
 if (isDP) {
   studentGroupSoftPreferences[studentGroup] = { minEndTime: dpMinEndTime, penalty: 5 };
   const studyCount = Math.max(0, dpStudyWeekly - weeklyCount);
-  // STUDY blocks use dummy subject_id
-  const studySubjectId = '000000000000000000000000';
+  // STUDY blocks use numeric ID 0 (reserved for STUDY)
   for (let s = 0; s < studyCount; s++) {
     lessons.push({
       id: lessonId++,
-      subject: studySubjectId,
-      subjectId: studySubjectId,
+      subject: 0, // Reserved numeric ID for STUDY
+      subjectId: 0,
       studentGroup,
       sectionId: tg.id,
       studentIds,
@@ -1011,6 +1021,7 @@ if (isDP) {
       subjectRequirements: subjectRequirements.filter(r => !excludeFromSolver.has(r.subject)),
       teacherNumericIdToBase44Id,
       roomNumericIdToBase44Id,
+      subjectNumericIdToBase44Id,
       studentGroupSoftPreferences,
       scheduleSettings: {
         periodDurationMinutes,
