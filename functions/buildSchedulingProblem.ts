@@ -992,6 +992,50 @@ if (isDP) {
     });
 
     recordLog(`✅ Built subjects: ${subjectsList.length} entries, subjects_hours: ${subjectsHours.length} entries`);
+    
+    // ========================================
+    // CRITICAL VALIDATION: Block if ANY subject has 0 hours
+    // ========================================
+    const subjectsWithZeroHours = [];
+    
+    for (const subj of subjectsList) {
+      if (subj.hl_hours === 0 && subj.sl_hours === 0) {
+        const subjEntity = subjectById[subj.id];
+        subjectsWithZeroHours.push({
+          subject_id: subj.id,
+          code: subjEntity?.code || 'UNKNOWN',
+          name: subjEntity?.name || 'Unknown Subject',
+          ib_level: subjEntity?.ib_level || null,
+          reason: 'Both hl_hours and sl_hours are 0'
+        });
+      }
+    }
+    
+    if (subjectsWithZeroHours.length > 0) {
+      recordLog(`❌ BLOCKING: ${subjectsWithZeroHours.length} subjects have 0 hours configured`);
+      
+      return Response.json({
+        ok: false,
+        stage: 'PRE_SOLVE_VALIDATION',
+        code: 'SUBJECTS_MISSING_HOURS',
+        error: 'Subjects without hour configuration',
+        errorMessage: `❌ Cannot run solver: ${subjectsWithZeroHours.length} subject(s) have 0 hours configured.\n\nCodex requires all subjects to have valid hl_hours or sl_hours > 0.\n\n👉 Configure hours for these subjects before generating schedule.`,
+        subjectsWithZeroHours,
+        details: subjectsWithZeroHours.map(s => ({
+          entity: 'Subject',
+          id: s.subject_id,
+          field: 'hoursPerWeekHL / hoursPerWeekSL',
+          reason: 'Both hl_hours and sl_hours are 0',
+          hint: `Set hours for ${s.code} (${s.name}) on Subjects page`
+        })),
+        suggestion: '🔧 Go to Subjects page → Edit each subject → Set "Hours per week (HL)" and/or "Hours per week (SL)" fields',
+        requiredAction: 'Configure hours for all subjects listed above',
+        buildVersion: BUILD_VERSION,
+        meta: { schedule_version_id, school_id }
+      }, { status: 422, headers: { 'Content-Type': 'application/json' } });
+    }
+    
+    recordLog(`✅ Subjects hours validation passed: All ${subjectsList.length} subjects have hours > 0`);
 
 
     // VALIDATION: Check for suspiciously low requiredPeriods in DP groups - ALREADY DECLARED AT TOP
