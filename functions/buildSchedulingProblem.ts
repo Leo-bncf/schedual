@@ -612,6 +612,9 @@ teachingGroupsDiagnostics.push({
 expectedLessonsBySubject[subjCode] = (expectedLessonsBySubject[subjCode] || 0) + weeklyCount;
 expectedMinutesBySubject[subjCode] = (expectedMinutesBySubject[subjCode] || 0) + minutesUsed;
 
+// CRITICAL: Store weeklyCount for subjectRequirements (MUST MATCH lessons created)
+const lessonsToCreate = weeklyCount;
+
 // Create EXACTLY periods_per_week lessons for this teaching group
 // CRITICAL: studentGroup MUST be "TG_<teaching_group_id>" for persistence
 // E.g., Film HL with 360min (6h) → periods_per_week=6 → CREATE 6 LESSONS
@@ -634,22 +637,44 @@ if (teachingGroupsIncludedCount === 0 && studentIdsNumeric.length > 0) {
 
 const blockId = tg.block_id || null;
 
-recordLog(`Creating ${weeklyCount} lessons for TG ${tg.id} (${tg.name}, ${subjCode}) with ${studentIdsNumeric.length} students (numeric IDs)`);
+recordLog(`Creating ${lessonsToCreate} lessons for TG ${tg.id} (${tg.name}, ${subjCode}) with ${studentIdsNumeric.length} students (numeric IDs)`);
 
-for (let i = 0; i < weeklyCount; i++) {
+for (let i = 0; i < lessonsToCreate; i++) {
   const lesson = {
     id: lessonId++,
     subject: tg.subject_id,
     studentGroup: `TG_${tg.id}`,
     studentIds: studentIdsNumeric,
   };
-  
+
   // Only add teacherId/roomId if they exist
   if (teacherNumeric) lesson.teacherId = teacherNumeric;
   if (roomNumeric) lesson.roomId = roomNumeric;
 
   lessons.push(lesson);
 }
+
+// CRITICAL: Track exact lessons created for verification
+teachingGroupsDiagnostics.push({
+  tg_id: tg.id,
+  name: tg.name,
+  subject_code: subjCode,
+  minutesSource: debugMinutesSourceByTG[tg.id],
+  minutesUsed,
+  requiredPeriods: weeklyCount,
+  lessons_created: lessonsToCreate, // PROOF: exact number created
+  ib_level: subj?.ib_level || null,
+  year_group: tg.year_group || null,
+  level: tg.level || null,
+  has_students: hasStudents,
+  student_count: (tg.student_ids || []).length,
+  teacher_id: tg.teacher_id || null,
+  room_id: tg.preferred_room_id || null,
+  included: true
+});
+
+expectedLessonsBySubject[subjCode] = (expectedLessonsBySubject[subjCode] || 0) + lessonsToCreate;
+expectedMinutesBySubject[subjCode] = (expectedMinutesBySubject[subjCode] || 0) + minutesUsed;
 
 // DP: add study blocks + preferences
 const isDP = (String(tg.year_group || '').toUpperCase().includes('DP')) || (subj?.ib_level === 'DP');
@@ -896,27 +921,39 @@ if (isDP) {
     const daysCount = daysOfWeek.length || 5;
     const periodsPerDay = Math.floor(timeslots.length / Math.max(1, daysCount));
     
-    // Build subjectRequirements (one per section) - MOVED HERE from line 1082
+    // Build subjectRequirements (one per section) - MUST MATCH lessons[] exactly
     subjectRequirements = []; // Reset array
-    for (const tg of teachingGroupsDb) {
+
+    // CRITICAL: Build from teachingGroupsDiagnostics to ensure exact match
+    for (const diag of teachingGroupsDiagnostics) {
+      if (!diag.included) continue; // Skip excluded groups
+
+      const tg = teachingGroupsDb.find(g => g.id === diag.tg_id);
+      if (!tg) continue;
+
       const subjId = tg.subject_id;
-      const subjCode = subjectIdToCode[subjId];
-      if (!subjId || !subjCode) continue;
+      if (!subjId) continue;
 
-      const minutesUsed = minutesForTG(tg);
-      if (!minutesUsed || minutesUsed <= 0) continue;
-
-      const requiredPeriods = minutesToPeriods(minutesUsed);
-
-      // CRITICAL: Use subject ID (not code) in subjectRequirements
+      // CRITICAL: Use EXACT same requiredPeriods as lessons_created
       subjectRequirements.push({
         studentGroup: `TG_${tg.id}`,
-        subject: subjId, // ✅ Use subject_id instead of code
-        minutesPerWeek: minutesUsed,
-        requiredPeriods,
+        subject: subjId,
+        minutesPerWeek: diag.minutesUsed,
+        requiredPeriods: diag.lessons_created, // ✅ EXACT match with lessons
         teachingGroupId: tg.id,
         sectionId: tg.id
       });
+    }
+
+    // VERIFICATION: Log counts to prove they match
+    const totalLessonsCreated = lessons.filter(l => !excludeFromSolver.has(l.subject)).length;
+    const totalRequiredPeriods = subjectRequirements.reduce((sum, r) => sum + r.requiredPeriods, 0);
+
+    recordLog(`✅ Lessons vs Requirements verification: lessons=${totalLessonsCreated}, requiredPeriods=${totalRequiredPeriods} (must match)`);
+
+    if (totalLessonsCreated !== totalRequiredPeriods) {
+      recordLog(`❌ MISMATCH DETECTED: lessons (${totalLessonsCreated}) ≠ requiredPeriods (${totalRequiredPeriods})`);
+      recordLog(`This will cause Codex to reject with LESSONS_MISMATCH_FOR_REQUIREMENTS`);
     }
     
     const isValidMongoId = (id) => /^[a-f0-9]{24}$/i.test(String(id || ''));
