@@ -534,17 +534,37 @@ Deno.serve(async (req) => {
     
     // DIAGNOSTIC: Log sample lessons to understand assignment status
     if (solution.lessons?.length > 0) {
-      const sampleLessons = solution.lessons.slice(0, 5);
-      console.log('[OptaPlannerPipeline] 🔍 Sample lessons returned by solver:', JSON.stringify(sampleLessons, null, 2));
-      
-      const assignedCount = solution.lessons.filter(l => l.timeslotId).length;
-      const unassignedCount = solution.lessons.filter(l => !l.timeslotId).length;
+      const sampleLessons = solution.lessons.slice(0, 10);
+      console.log('[OptaPlannerPipeline] 🔍 Sample lessons returned by solver (first 10):');
+      sampleLessons.forEach((lesson, idx) => {
+        console.log(`  [${idx}]:`, {
+          id: lesson.id,
+          subject: lesson.subject || lesson.subjectId,
+          timeslotId: lesson.timeslotId,
+          teacherId: lesson.teacherId,
+          roomId: lesson.roomId,
+          studentGroup: lesson.studentGroup,
+          day: lesson.day,
+          period: lesson.period
+        });
+      });
+
+      const assignedCount = solution.lessons.filter(l => l.timeslotId || l.timeslotId === 0).length;
+      const unassignedCount = solution.lessons.filter(l => !l.timeslotId && l.timeslotId !== 0).length;
       console.log('[OptaPlannerPipeline] 📊 Assignment summary:', {
         total: solution.lessons.length,
         assigned: assignedCount,
         unassigned: unassignedCount,
-        assignmentRate: `${Math.round((assignedCount / solution.lessons.length) * 100)}%`
+        assignmentRate: `${Math.round((assignedCount / solution.lessons.length) * 100)}%`,
+        hardScore: solution.hardScore || hardScore,
+        softScore: solution.softScore || scoreStr
       });
+
+      // Log reasons for unassignment if available
+      if (unassignedCount > 0) {
+        const unassignedSample = solution.lessons.filter(l => !l.timeslotId && l.timeslotId !== 0).slice(0, 5);
+        console.log('[OptaPlannerPipeline] 🔍 Sample unassigned lessons:', JSON.stringify(unassignedSample, null, 2));
+      }
     }
     
     // ========================================
