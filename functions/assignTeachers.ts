@@ -183,6 +183,23 @@ Deno.serve(async (req) => {
       }, { status: 200, headers: { 'Content-Type': 'application/json' } });
     }
 
+    // CRITICAL: Skip assignment if too many groups (avoid 502 timeout)
+    const MAX_GROUPS_FOR_AUTO_ASSIGN = 25;
+    if (teachingGroups.length > MAX_GROUPS_FOR_AUTO_ASSIGN) {
+      console.log(`[assignTeachers] ⚠️ Too many groups (${teachingGroups.length} > ${MAX_GROUPS_FOR_AUTO_ASSIGN}) - skipping auto-assignment to avoid timeout`);
+      return Response.json({ 
+        success: true, 
+        message: `Skipped teacher assignment for ${teachingGroups.length} groups (exceeds limit of ${MAX_GROUPS_FOR_AUTO_ASSIGN}). Assign teachers manually or in smaller batches.`,
+        teachersAssigned: 0,
+        groupsProcessed: 0,
+        skipped: true,
+        reason: 'TOO_MANY_GROUPS',
+        groupCount: teachingGroups.length,
+        maxAllowed: MAX_GROUPS_FOR_AUTO_ASSIGN,
+        elapsedMs: Date.now() - startTime
+      }, { status: 200, headers: { 'Content-Type': 'application/json' } });
+    }
+
     // ASSIGNMENT LOGIC: Optimized with teacher workload tracking
     stage = 'assign_teachers';
     const assignStart = Date.now();
