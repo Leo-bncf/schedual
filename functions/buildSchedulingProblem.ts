@@ -642,9 +642,13 @@ recordLog(`Creating ${lessonsToCreate} lessons for TG ${tg.id} (${tg.name}, ${su
 for (let i = 0; i < lessonsToCreate; i++) {
   const lesson = {
     id: lessonId++,
-    subject: tg.subject_id,
+    subject: subjCode,  // CRITICAL: Use subject CODE, not MongoDB ID
     studentGroup: `TG_${tg.id}`,
+    teachingGroupId: tg.id,
+    sectionId: tg.id,
     studentIds: studentIdsNumeric,
+    blockId,
+    requiredCapacity: cap
   };
 
   // Only add teacherId/roomId if they exist
