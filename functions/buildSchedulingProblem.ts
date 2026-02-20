@@ -79,18 +79,20 @@ Deno.serve(async (req) => {
       recordLog(`Using ${teachingGroupsFromCaller.length} teaching groups from caller (post-generation/sync)`);
     }
     
-    const [school, allRooms, allTeachers, allSubjects, allTeachingGroups] = await Promise.all([
+    const [school, allRooms, allTeachers, allSubjects, allTeachingGroups, allStudents] = await Promise.all([
       base44.entities.School.filter({ id: school_id }).then(r => r?.[0] || null).catch(() => null),
       base44.entities.Room.filter({ school_id }).catch(() => []),
       base44.entities.Teacher.filter({ school_id }).catch(() => []),
       base44.entities.Subject.filter({ school_id }).catch(() => []),
       useCallerTGs ? Promise.resolve(teachingGroupsFromCaller) : base44.entities.TeachingGroup.filter({ school_id }).catch(() => []),
+      base44.entities.Student.filter({ school_id }).catch(() => []),
     ]);
     
     const roomsDb = (allRooms || []).filter(r => r?.is_active !== false);
     const teachersDb = (allTeachers || []).filter(t => t?.is_active !== false);
     const subjectsDb = (allSubjects || []).filter(s => s?.is_active !== false);
     const teachingGroupsDb = (allTeachingGroups || []).filter(tg => tg?.is_active !== false);
+    const studentsDb = (allStudents || []).filter(s => s?.is_active !== false);
 
     if (!school) {
       return Response.json({ ok: false, stage, error: 'School not found', meta: { schedule_version_id, school_id } }, { status: 404 });
@@ -293,9 +295,8 @@ Deno.serve(async (req) => {
     recordLog(`✅ Timeslots validation passed: ${timeslots.length} timeslots across ${daysOfWeek.length} days`);
 
     // CRITICAL: OptaPlanner format requirements:
-    // - rooms/teachers: NUMERIC IDs (Java constraint)
+    // - rooms/teachers/students: NUMERIC IDs (Java Long)
     // - subjects: MongoDB IDs (strings) are OK
-    // - studentIds: NOT USED in lessons (OptaPlanner uses studentGroup only)
     const rooms = (roomsDb || []).map((r, idx) => ({ 
       id: idx + 1,
       name: r?.name || `Room ${idx+1}`, 
@@ -308,11 +309,21 @@ Deno.serve(async (req) => {
       externalId: t?.id || `teacher_ext_${idx+1}`
     }));
     
-    // Mapping tables: Numeric ID -> MongoDB ID
+    // Mapping tables: Numeric ID <-> MongoDB ID
     const roomNumericIdToBase44Id = {};
     const teacherNumericIdToBase44Id = {};
+    const studentBase44IdToNumeric = {};
+    const studentNumericIdToBase44Id = {};
+    
     (roomsDb || []).forEach((r, idx) => { if (r?.id) roomNumericIdToBase44Id[idx+1] = r.id; });
     (teachersDb || []).forEach((t, idx) => { if (t?.id) teacherNumericIdToBase44Id[idx+1] = t.id; });
+    (studentsDb || []).forEach((s, idx) => { 
+      if (s?.id) {
+        const numericId = idx + 10001; // Start from 10001 for students
+        studentBase44IdToNumeric[s.id] = numericId;
+        studentNumericIdToBase44Id[numericId] = s.id;
+      }
+    });
 
     stage = 'buildLessons';
     recordLog(`${stage}: processing ${teachingGroupsDb.length} teaching groups (cohort-centered approach)`);
@@ -597,7 +608,10 @@ expectedMinutesBySubject[subjCode] = (expectedMinutesBySubject[subjCode] || 0) +
 // Create EXACTLY periods_per_week lessons for this teaching group
 // CRITICAL: studentGroup MUST be "TG_<teaching_group_id>" for persistence
 // E.g., Film HL with 360min (6h) → periods_per_week=6 → CREATE 6 LESSONS
-// NOTE: studentIds NOT included in lessons - OptaPlanner uses studentGroup only
+// studentIds MUST be numeric (Java Long) - map MongoDB IDs to integers
+const studentIdsNumeric = Array.isArray(tg.student_ids) 
+  ? tg.student_ids.map(sid => studentBase44IdToNumeric[sid]).filter(id => id != null)
+  : [];
 const blockId = tg.block_id || null;
 
 recordLog(`Creating ${weeklyCount} lessons for TG ${tg.id} (${tg.name}, ${subjCode})`);
@@ -610,9 +624,10 @@ for (let i = 0; i < weeklyCount; i++) {
     id: lessonId++,
     subject: tg.subject_id,
     studentGroup: `TG_${tg.id}`,
+    studentIds: studentIdsNumeric,
   };
   
-  // Only add teacherId/roomId if they exist (OptaPlanner minimal format)
+  // Only add teacherId/roomId if they exist
   if (teacherNumeric) lesson.teacherId = teacherNumeric;
   if (roomNumeric) lesson.roomId = roomNumeric;
 
@@ -992,6 +1007,7 @@ if (isDP) {
       subjectRequirements: subjectRequirements.filter(r => !excludeFromSolver.has(r.subject)),
       teacherNumericIdToBase44Id,
       roomNumericIdToBase44Id,
+      studentNumericIdToBase44Id,
       studentGroupSoftPreferences,
       scheduleSettings: {
         periodDurationMinutes,
@@ -1389,8 +1405,7 @@ if (isDP) {
     recordLog('Validation 5: Student feasibility (DP)');
     const studentFeasibilityIssues = [];
     
-    // Load students for validation
-    const studentsDb = await base44.entities.Student.filter({ school_id }).catch(() => []);
+    // Use already-loaded students from initial Promise.all
     
     for (const student of studentsDb) {
       if (!student?.id || student.is_active === false) continue;
