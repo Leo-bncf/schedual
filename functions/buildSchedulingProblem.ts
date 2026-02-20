@@ -994,6 +994,29 @@ if (isDP) {
       });
     }
     
+    // Build subjectRequirements (one per section) - ALREADY DECLARED AT TOP
+    subjectRequirements = []; // Reset array
+    for (const tg of teachingGroupsDb) {
+      const subjId = tg.subject_id;
+      const subjCode = subjectIdToCode[subjId];
+      if (!subjId || !subjCode) continue;
+
+      const minutesUsed = minutesForTG(tg);
+      if (!minutesUsed || minutesUsed <= 0) continue;
+
+      const requiredPeriods = minutesToPeriods(minutesUsed);
+
+      // CRITICAL: Use subject ID (not code) in subjectRequirements
+      subjectRequirements.push({
+        studentGroup: `TG_${tg.id}`,
+        subject: subjId, // ✅ Use subject_id instead of code
+        minutesPerWeek: minutesUsed,
+        requiredPeriods,
+        teachingGroupId: tg.id,
+        sectionId: tg.id
+      });
+    }
+
     // CRITICAL: Only exclude STUDY from solver (keep TEST for scheduling)
     const excludeFromSolver = new Set(['STUDY']);
     const problemForSolver = {
@@ -1001,7 +1024,8 @@ if (isDP) {
       rooms,
       teachers,
       lessons: lessons.filter(l => !excludeFromSolver.has(l.subject)),
-      subjects: subjectsList.filter(s => !excludeFromSolver.has(s.code)),
+      subjects: subjectsList,
+      subjects_hours: subjectsHours,
       subjectRequirements: subjectRequirements.filter(r => !excludeFromSolver.has(r.subject)),
       subjectIdByCode,
       teacherNumericIdToBase44Id,
