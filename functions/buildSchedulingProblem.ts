@@ -610,9 +610,11 @@ for (let i = 0; i < weeklyCount; i++) {
     id: lessonId++,
     subject: tg.subject_id,
     studentGroup: `TG_${tg.id}`,
-    teacherId: teacherNumeric || null,
-    roomId: roomNumeric || null,
   };
+  
+  // Only add teacherId/roomId if they exist (OptaPlanner minimal format)
+  if (teacherNumeric) lesson.teacherId = teacherNumeric;
+  if (roomNumeric) lesson.roomId = roomNumeric;
 
   lessons.push(lesson);
 }
@@ -660,7 +662,7 @@ if (isDP) {
       if (!coreType) continue;
       
       // Find lessons created for this TG
-      const tgLessons = lessons.filter(l => l.teachingGroupId === tg.id);
+      const tgLessons = lessons.filter(l => l.studentGroup === `TG_${tg.id}`);
       const minutesForThisTG = minutesForTG(tg);
       
       coreTeachingGroupsReport[coreType].tgs.push({
