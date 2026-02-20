@@ -502,11 +502,17 @@ Deno.serve(async (req) => {
       }, { status: 200 });
     }
     
+    // CRITICAL: Log raw solver response for debugging
+    console.log('[OptaPlannerPipeline] 📤 SOLVER RAW RESPONSE (first 2000 chars):', solverText.slice(0, 2000));
+    console.log('[OptaPlannerPipeline] 📏 Full response length:', solverText.length, 'bytes');
+
     let solution;
     try {
       solution = JSON.parse(solverText);
     } catch (parseError) {
       console.error('[OptaPlannerPipeline] ❌ Failed to parse solver response');
+      console.error('[OptaPlannerPipeline] Parse error:', parseError.message);
+      console.error('[OptaPlannerPipeline] Response preview:', solverText.slice(0, 500));
       return Response.json({
         ok: false,
         stage: 'parseSolution',
@@ -521,7 +527,19 @@ Deno.serve(async (req) => {
         meta: { schoolId, schedule_version_id }
       }, { status: 200 });
     }
-    
+
+    // CRITICAL: Log parsed solution structure
+    console.log('[OptaPlannerPipeline] 📋 PARSED SOLUTION STRUCTURE:', {
+      hasLessons: !!solution.lessons,
+      lessonsType: Array.isArray(solution.lessons) ? 'array' : typeof solution.lessons,
+      lessonsCount: Array.isArray(solution.lessons) ? solution.lessons.length : 'N/A',
+      score: solution.score || 'N/A',
+      hardScore: solution.hardScore || 'N/A',
+      softScore: solution.softScore || 'N/A',
+      requestId: solution.requestId || solution.meta?.requestId || 'N/A',
+      topLevelKeys: Object.keys(solution)
+    });
+
     // Always extract requestId from solver response
     const requestId = solution.requestId || solution.meta?.requestId || null;
 
