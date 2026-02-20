@@ -278,61 +278,93 @@ Deno.serve(async (req) => {
       no_qualified: assignmentLog.filter(l => l.status === 'no_qualified_teacher').length
     });
 
-    // BATCH UPDATE: Ultra-aggressive parallel batching to prevent 502 timeout
+    // BATCH UPDATE: Return immediately, process updates async (fire-and-forget for large batches)
     stage = 'batch_update';
     const updateStart = Date.now();
     
     if (updates.length > 0) {
-      // CRITICAL: Very small batches processed in parallel with aggressive timeout
-      const BATCH_SIZE = 10; // Process 10 groups per batch
-      const BATCH_TIMEOUT = 8000; // 8 second max per batch
-      const batches = [];
+      // CRITICAL FIX: For large batches (>20), return success immediately and process async
+      // This prevents 502 timeout while still completing the assignment
+      const ASYNC_THRESHOLD = 20;
       
-      for (let i = 0; i < updates.length; i += BATCH_SIZE) {
-        batches.push(updates.slice(i, i + BATCH_SIZE));
+      if (updates.length > ASYNC_THRESHOLD) {
+        console.log(`[assignTeachers] 🚀 Large batch (${updates.length} groups) - returning immediately, processing async`);
+        
+        // Fire-and-forget: Process updates in background
+        (async () => {
+          try {
+            console.log(`[assignTeachers-async] Starting background update of ${updates.length} groups`);
+            let successCount = 0;
+            let failCount = 0;
+            
+            // Process in small batches sequentially
+            const BATCH_SIZE = 5;
+            for (let i = 0; i < updates.length; i += BATCH_SIZE) {
+              const batch = updates.slice(i, i + BATCH_SIZE);
+              const results = await Promise.allSettled(
+                batch.map(u => base44.asServiceRole.entities.TeachingGroup.update(u.id, { teacher_id: u.teacher_id }))
+              );
+              
+              results.forEach(r => {
+                if (r.status === 'fulfilled') successCount++;
+                else failCount++;
+              });
+              
+              // Small delay between batches
+              if (i + BATCH_SIZE < updates.length) {
+                await new Promise(r => setTimeout(r, 100));
+              }
+            }
+            
+            console.log(`[assignTeachers-async] ✅ Background update complete: ${successCount} success, ${failCount} failed`);
+          } catch (asyncError) {
+            console.error('[assignTeachers-async] ❌ Background update failed:', asyncError.message);
+          }
+        })();
+        
+        // Return immediately to prevent timeout
+        return Response.json({
+          success: true,
+          teachersAssigned: assignedCount,
+          groupsProcessed: teachingGroups.length,
+          groupsSkipped: skippedCount,
+          assignmentLog: assignmentLog.slice(0, 20),
+          teacherWorkload,
+          elapsedMs: Date.now() - startTime,
+          message: `Teacher assignment queued for ${assignedCount} groups (processing in background)`,
+          asyncMode: true,
+          timing: {
+            fetch: Date.now() - fetchStart,
+            assignment: Date.now() - assignStart,
+            total: Date.now() - startTime
+          }
+        }, { status: 200, headers: { 'Content-Type': 'application/json' } });
       }
       
-      console.log(`[assignTeachers] Updating ${updates.length} groups in ${batches.length} batches (BATCH_SIZE=${BATCH_SIZE}, TIMEOUT=${BATCH_TIMEOUT}ms)`);
-      
+      // For small batches (<= 20), process synchronously with timeout
+      console.log(`[assignTeachers] Updating ${updates.length} groups synchronously (small batch)`);
+      const BATCH_SIZE = 10;
       let successfulUpdates = 0;
       let failedUpdates = 0;
       
-      for (let i = 0; i < batches.length; i++) {
-        const batch = batches[i];
-        const batchStartTime = Date.now();
-        
+      for (let i = 0; i < updates.length; i += BATCH_SIZE) {
+        const batch = updates.slice(i, i + BATCH_SIZE);
         try {
-          // Parallel updates within batch with timeout
           const results = await withTimeout(
-            Promise.allSettled(
-              batch.map(update => 
-                base44.asServiceRole.entities.TeachingGroup.update(update.id, {
-                  teacher_id: update.teacher_id
-                })
-              )
-            ),
-            BATCH_TIMEOUT
+            Promise.allSettled(batch.map(u => base44.asServiceRole.entities.TeachingGroup.update(u.id, { teacher_id: u.teacher_id }))),
+            5000
           );
-          
-          // Count successes/failures
-          results.forEach((result, idx) => {
-            if (result.status === 'fulfilled') {
-              successfulUpdates++;
-            } else {
-              failedUpdates++;
-              console.error(`[assignTeachers] ❌ Group ${batch[idx].id} update failed:`, result.reason?.message);
-            }
+          results.forEach(r => {
+            if (r.status === 'fulfilled') successfulUpdates++;
+            else failedUpdates++;
           });
-          
-          console.log(`[assignTeachers] ✅ Batch ${i + 1}/${batches.length} done in ${Date.now() - batchStartTime}ms (✓${successfulUpdates} ✗${failedUpdates})`);
-          
-        } catch (batchError) {
-          console.error(`[assignTeachers] ❌ Batch ${i + 1} timeout/error:`, batchError.message);
+        } catch (err) {
+          console.error(`[assignTeachers] Batch error:`, err.message);
           failedUpdates += batch.length;
         }
       }
       
-      console.log(`[assignTeachers] ✅ Updates completed in ${Date.now() - updateStart}ms (success: ${successfulUpdates}, failed: ${failedUpdates})`);
+      console.log(`[assignTeachers] ✅ Sync updates completed: ${successfulUpdates} success, ${failedUpdates} failed`);
     }
 
     const totalElapsed = Date.now() - startTime;
