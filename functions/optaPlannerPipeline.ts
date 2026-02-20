@@ -400,7 +400,20 @@ Deno.serve(async (req) => {
         JSON.stringify(solverPayload.subjectRequirements.slice(0, 3), null, 2)
       );
     }
-    
+
+    // LOG FULL PAYLOAD (truncated for readability)
+    console.log('[OptaPlannerPipeline] 📤 FULL PAYLOAD TO CODEX (first 10 lessons, first 10 requirements):');
+    console.log(JSON.stringify({
+      timeslots: solverPayload.timeslots?.slice(0, 5),
+      lessons: solverPayload.lessons?.slice(0, 10),
+      teachingGroups: solverPayload.teachingGroups?.slice(0, 5),
+      subjects: solverPayload.subjects?.slice(0, 5),
+      subjectRequirements: solverPayload.subjectRequirements?.slice(0, 10),
+      rooms: solverPayload.rooms?.length,
+      teachers: solverPayload.teachers?.length,
+      scheduleSettings: solverPayload.scheduleSettings
+    }, null, 2));
+
     // CRITICAL: Final validation before sending to OptaPlanner
     if (solverPayload.lessons?.length > 0) {
       const firstLesson = solverPayload.lessons[0];
