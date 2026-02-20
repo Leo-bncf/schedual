@@ -292,18 +292,23 @@ Deno.serve(async (req) => {
     
     recordLog(`✅ Timeslots validation passed: ${timeslots.length} timeslots across ${daysOfWeek.length} days`);
 
-    // CRITICAL: Use MongoDB IDs directly (not numeric indexes)
-    const rooms = (roomsDb || []).map(r => ({ 
-      id: r.id, 
-      name: r?.name || 'Room', 
-      capacity: r?.capacity || 0,
-      externalId: r.id
+    // CRITICAL: OptaPlanner requires NUMERIC IDs (Java deserialization constraint)
+    // We map numeric IDs -> MongoDB IDs for persistence
+    const rooms = (roomsDb || []).map((r, idx) => ({ 
+      id: idx + 1, // Numeric ID for OptaPlanner
+      name: r?.name || `Room ${idx+1}`, 
+      capacity: r?.capacity || 0
     }));
-    const teachers = (teachersDb || []).map(t => ({ 
-      id: t.id, 
-      name: t?.full_name || 'Teacher',
-      externalId: t.id
+    const teachers = (teachersDb || []).map((t, idx) => ({ 
+      id: idx + 1, // Numeric ID for OptaPlanner
+      name: t?.full_name || `Teacher ${idx+1}`
     }));
+    
+    // Mapping tables: Numeric ID -> MongoDB ID
+    const roomNumericIdToBase44Id = {};
+    const teacherNumericIdToBase44Id = {};
+    (roomsDb || []).forEach((r, idx) => { if (r?.id) roomNumericIdToBase44Id[idx+1] = r.id; });
+    (teachersDb || []).forEach((t, idx) => { if (t?.id) teacherNumericIdToBase44Id[idx+1] = t.id; });
 
     stage = 'buildLessons';
     recordLog(`${stage}: processing ${teachingGroupsDb.length} teaching groups (cohort-centered approach)`);
@@ -557,9 +562,11 @@ teachingGroupsIncludedCount++;
 const studentGroup = `TG_${tg.id}`;
 const cap = Math.max(1, (tg.student_ids || []).length);
 
-// CRITICAL: Use MongoDB IDs directly (not numeric indexes)
-const teacherId = tg.teacher_id || null;
-const roomId = tg.preferred_room_id || null;
+// Map MongoDB IDs back to numeric IDs for OptaPlanner
+const teacherIdx = (tg.teacher_id && teachersDb) ? teachersDb.findIndex(t => t?.id === tg.teacher_id) : -1;
+const roomIdx = (tg.preferred_room_id && roomsDb) ? roomsDb.findIndex(r => r?.id === tg.preferred_room_id) : -1;
+const teacherNumeric = teacherIdx >= 0 ? teacherIdx + 1 : null;
+const roomNumeric = roomIdx >= 0 ? roomIdx + 1 : null;
 
 // Track diagnostics
 teachingGroupsDiagnostics.push({
@@ -608,8 +615,8 @@ for (let i = 0; i < weeklyCount; i++) {
     blockId,
     requiredCapacity: cap,
     timeslotId: null,
-    roomId: roomId || null, // ✅ MongoDB ID directly
-    teacherId: teacherId || null, // ✅ MongoDB ID directly
+    roomId: roomNumeric || null, // Numeric for OptaPlanner
+    teacherId: teacherNumeric || null, // Numeric for OptaPlanner
   };
 
   // Log first French/English lesson for verification
@@ -1002,6 +1009,8 @@ if (isDP) {
       subjects: subjectsList,
       subjects_hours: subjectsHours,
       subjectRequirements: subjectRequirements.filter(r => !excludeFromSolver.has(r.subject)),
+      teacherNumericIdToBase44Id,
+      roomNumericIdToBase44Id,
       studentGroupSoftPreferences,
       scheduleSettings: {
         periodDurationMinutes,
