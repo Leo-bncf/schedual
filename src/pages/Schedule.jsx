@@ -106,6 +106,75 @@ export default function Schedule() {
   const [auditResult, setAuditResult] = useState(null);
   const [showAuditReport, setShowAuditReport] = useState(false);
 
+  // CRITICAL: Sanitize payload for OptaPlanner (MUST be called before solver)
+  // Ensures studentIds are numbers (Java Long), not strings/objects
+  const sanitizeForOpta = (payload) => {
+    const out = structuredClone(payload || {});
+
+    const toNum = (v) => {
+      if (v === null || v === undefined || v === "") return null;
+      if (typeof v === "number") return Number.isFinite(v) ? v : null;
+      if (typeof v === "string") {
+        const n = Number(v.trim());
+        return Number.isFinite(n) ? n : null;
+      }
+      if (typeof v === "object") {
+        if (v.id !== undefined) return toNum(v.id);
+        if (v._id !== undefined) return toNum(v._id);
+      }
+      return null;
+    };
+
+    const toSubjectId = (v) => {
+      if (v === null || v === undefined) return null;
+      if (typeof v === "string") return v.trim();
+      if (typeof v === "object") return String(v.id ?? v._id ?? "").trim() || null;
+      return String(v);
+    };
+
+    out.lessons = Array.isArray(out.lessons) ? out.lessons.map((l) => {
+      const lesson = { ...l };
+      
+      lesson.id = toNum(lesson.id);
+      lesson.teacherId = toNum(lesson.teacherId);
+      lesson.roomId = toNum(lesson.roomId);
+      lesson.timeslotId = toNum(lesson.timeslotId);
+      lesson.blockId = toNum(lesson.blockId);
+      lesson.requiredCapacity = toNum(lesson.requiredCapacity);
+      
+      lesson.subject = toSubjectId(lesson.subject);
+      if (lesson.subjectId !== undefined) lesson.subjectId = toSubjectId(lesson.subjectId);
+      
+      // CRITICAL: studentIds MUST be number[]
+      const rawStudentIds = Array.isArray(lesson.studentIds) ? lesson.studentIds : [];
+      lesson.studentIds = rawStudentIds.map(toNum).filter((x) => x !== null);
+      
+      return lesson;
+    }) : [];
+
+    out.subjectRequirements = Array.isArray(out.subjectRequirements)
+      ? out.subjectRequirements.map((r) => ({ ...r, subject: toSubjectId(r.subject) }))
+      : [];
+
+    out.teachers = Array.isArray(out.teachers)
+      ? out.teachers.map((t) => ({ 
+          ...t, 
+          id: toNum(t.id), 
+          unavailableSlotIds: (t.unavailableSlotIds || []).map(toNum).filter((x) => x !== null) 
+        }))
+      : [];
+
+    out.rooms = Array.isArray(out.rooms)
+      ? out.rooms.map((r) => ({ ...r, id: toNum(r.id), capacity: toNum(r.capacity) }))
+      : [];
+
+    // Debug log
+    const sample = out.lessons[0] || {};
+    console.log("[OPTA sanitize] lesson[0].studentIds sample:", sample.studentIds, "types:", (sample.studentIds || []).map((x) => typeof x));
+
+    return out;
+  };
+
   // CRITICAL: Sanitize SOLUTION_INFEASIBLE payloads (fallback guard against null arrays)
   const sanitizeInfeasible = (payload) => {
     if (!payload || payload.ok !== false || payload.stage !== 'SOLUTION_INFEASIBLE') {
