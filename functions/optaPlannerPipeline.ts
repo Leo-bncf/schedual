@@ -429,52 +429,18 @@ Deno.serve(async (req) => {
     
     let solverResponse;
     try {
-      // CRITICAL: Add timeout to prevent Deno Deploy from timing out (50s limit)
-      // Solver should respond within 45s max to leave buffer for persistence
-      const controller = new AbortController();
-      const timeoutId = setTimeout(() => controller.abort(), 45000); // 45 second timeout
-      
+      // NOTE: No timeout set - let Deno Deploy handle natural timeout (~55s)
+      // If solver takes >55s, Deno will return 502 TIME_LIMIT
+      // For >60s solver runs, async job queue architecture would be needed
       solverResponse = await fetch(SOLVER_ENDPOINT, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
           'X-API-Key': SOLVER_API_KEY
         },
-        body: JSON.stringify(solverPayload),
-        signal: controller.signal
+        body: JSON.stringify(solverPayload)
       });
-      
-      clearTimeout(timeoutId);
     } catch (fetchError) {
-      // Check if it's a timeout error
-      if (fetchError.name === 'AbortError') {
-        console.error('[OptaPlannerPipeline] ❌ Solver timeout (45s limit exceeded)');
-        return Response.json({
-          ok: false,
-          stage: 'OPTA_TIMEOUT',
-          code: 'SOLVER_TIMEOUT',
-          severity: 'error',
-          title: 'Délai OPTA dépassé',
-          message: 'OPTA n\'a pas répondu dans le délai imparti (45s). Le problème est probablement trop complexe.',
-          userAction: 'Réduisez la complexité: moins de groupes, moins d\'heures requises, ou désactivez certaines contraintes temporairement.',
-          requestId: null,
-          validationErrors: ['Solver did not respond within 45 seconds'],
-          details: [{
-            entity: 'solver',
-            field: 'timeout',
-            reason: 'Solver execution exceeded 45 second limit',
-            hint: 'Reduce problem complexity: fewer teaching groups, fewer required hours, or fewer constraints'
-          }],
-          meta: { 
-            schoolId, 
-            schedule_version_id,
-            timeoutSeconds: 45,
-            lessonsCount: solverPayload.lessons?.length || 0,
-            teachingGroupsCount: solverPayload.teachingGroups?.length || 0,
-            timeslotsCount: solverPayload.timeslots?.length || 0
-          }
-        }, { status: 200 });
-      }
       console.error('[OptaPlannerPipeline] ❌ Solver network error:', fetchError);
       console.error('[OptaPlannerPipeline] requestId: N/A (network error)');
       console.error('[OptaPlannerPipeline] validationErrors:', [String(fetchError?.message || fetchError)]);
