@@ -596,12 +596,15 @@ const isFrenchOrEnglish = subjCode.includes('FRENCH') || subjCode.includes('ENGL
 for (let i = 0; i < weeklyCount; i++) {
   const lesson = {
     id: lessonId++,
-    subject: subjCode,
-    studentGroup: `TG_${tg.id}`, // CRITICAL: Format required for callORToolScheduler persistence
-    teachingGroupId: tg.id, // EXPLICIT: Link to Base44 TeachingGroup
-    sectionId: tg.id, // Redundant but kept for clarity
-    studentIds, // Solver uses this for cohort detection
-    blockId, // Solver uses this for elective concurrency
+    subject: tg.subject_id, // ✅ Use subject_id instead of code
+    subjectId: tg.subject_id, // Explicit field for clarity
+    studentGroup: `TG_${tg.id}`,
+    teachingGroupId: tg.id,
+    sectionId: tg.id,
+    studentIds,
+    level: tg.level || null,
+    yearGroup: tg.year_group || null,
+    blockId,
     requiredCapacity: cap,
     timeslotId: null,
     roomId: roomNumeric || null,
