@@ -292,32 +292,26 @@ Deno.serve(async (req) => {
     
     recordLog(`✅ Timeslots validation passed: ${timeslots.length} timeslots across ${daysOfWeek.length} days`);
 
-    // CRITICAL: OptaPlanner requires NUMERIC IDs (Java deserialization constraint)
-    // We map numeric IDs -> MongoDB IDs for persistence
+    // CRITICAL: OptaPlanner format requirements:
+    // - rooms/teachers: NUMERIC IDs (Java constraint)
+    // - subjects: MongoDB IDs (strings) are OK
     const rooms = (roomsDb || []).map((r, idx) => ({ 
-      id: idx + 1, // Numeric ID for OptaPlanner
+      id: idx + 1,
       name: r?.name || `Room ${idx+1}`, 
-      capacity: r?.capacity || 0
+      capacity: r?.capacity || 0,
+      externalId: r?.id || `room_ext_${idx+1}`
     }));
     const teachers = (teachersDb || []).map((t, idx) => ({ 
-      id: idx + 1, // Numeric ID for OptaPlanner
-      name: t?.full_name || `Teacher ${idx+1}`
-    }));
-    
-    // Create numeric subject IDs and mapping
-    const subjects = (subjectsDb || []).map((s, idx) => ({
-      id: idx + 1, // Numeric ID for OptaPlanner
-      name: s?.name || `Subject ${idx+1}`,
-      code: s?.code || `SUB${idx+1}`
+      id: idx + 1,
+      name: t?.full_name || `Teacher ${idx+1}`,
+      externalId: t?.id || `teacher_ext_${idx+1}`
     }));
     
     // Mapping tables: Numeric ID -> MongoDB ID
     const roomNumericIdToBase44Id = {};
     const teacherNumericIdToBase44Id = {};
-    const subjectNumericIdToBase44Id = {};
     (roomsDb || []).forEach((r, idx) => { if (r?.id) roomNumericIdToBase44Id[idx+1] = r.id; });
     (teachersDb || []).forEach((t, idx) => { if (t?.id) teacherNumericIdToBase44Id[idx+1] = t.id; });
-    (subjectsDb || []).forEach((s, idx) => { if (s?.id) subjectNumericIdToBase44Id[idx+1] = s.id; });
 
     stage = 'buildLessons';
     recordLog(`${stage}: processing ${teachingGroupsDb.length} teaching groups (cohort-centered approach)`);
@@ -571,13 +565,11 @@ teachingGroupsIncludedCount++;
 const studentGroup = `TG_${tg.id}`;
 const cap = Math.max(1, (tg.student_ids || []).length);
 
-// Map MongoDB IDs to numeric IDs for OptaPlanner
+// Map MongoDB IDs to numeric IDs for rooms/teachers (subjects stay as MongoDB IDs)
 const teacherIdx = (tg.teacher_id && teachersDb) ? teachersDb.findIndex(t => t?.id === tg.teacher_id) : -1;
 const roomIdx = (tg.preferred_room_id && roomsDb) ? roomsDb.findIndex(r => r?.id === tg.preferred_room_id) : -1;
-const subjectIdx = (tg.subject_id && subjectsDb) ? subjectsDb.findIndex(s => s?.id === tg.subject_id) : -1;
 const teacherNumeric = teacherIdx >= 0 ? teacherIdx + 1 : null;
 const roomNumeric = roomIdx >= 0 ? roomIdx + 1 : null;
-const subjectNumeric = subjectIdx >= 0 ? subjectIdx + 1 : null;
 
 // Track diagnostics
 teachingGroupsDiagnostics.push({
@@ -615,8 +607,8 @@ const isFrenchOrEnglish = subjCode.includes('FRENCH') || subjCode.includes('ENGL
 for (let i = 0; i < weeklyCount; i++) {
   const lesson = {
     id: lessonId++,
-    subject: subjectNumeric, // Numeric ID for OptaPlanner
-    subjectId: subjectNumeric,
+    subject: tg.subject_id, // MongoDB ID (string) - OptaPlanner accepts this
+    subjectId: tg.subject_id,
     studentGroup: `TG_${tg.id}`,
     teachingGroupId: tg.id,
     sectionId: tg.id,
@@ -643,12 +635,13 @@ const isDP = (String(tg.year_group || '').toUpperCase().includes('DP')) || (subj
 if (isDP) {
   studentGroupSoftPreferences[studentGroup] = { minEndTime: dpMinEndTime, penalty: 5 };
   const studyCount = Math.max(0, dpStudyWeekly - weeklyCount);
-  // STUDY blocks use numeric ID 0 (reserved for STUDY)
+  // STUDY blocks use special ID
+  const studySubjectId = 'STUDY_BLOCK';
   for (let s = 0; s < studyCount; s++) {
     lessons.push({
       id: lessonId++,
-      subject: 0, // Reserved numeric ID for STUDY
-      subjectId: 0,
+      subject: studySubjectId,
+      subjectId: studySubjectId,
       studentGroup,
       sectionId: tg.id,
       studentIds,
@@ -1021,7 +1014,6 @@ if (isDP) {
       subjectRequirements: subjectRequirements.filter(r => !excludeFromSolver.has(r.subject)),
       teacherNumericIdToBase44Id,
       roomNumericIdToBase44Id,
-      subjectNumericIdToBase44Id,
       studentGroupSoftPreferences,
       scheduleSettings: {
         periodDurationMinutes,
