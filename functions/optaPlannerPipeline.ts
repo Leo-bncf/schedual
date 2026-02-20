@@ -529,6 +529,21 @@ Deno.serve(async (req) => {
       requestId: requestId || 'N/A'
     });
     
+    // DIAGNOSTIC: Log sample lessons to understand assignment status
+    if (solution.lessons?.length > 0) {
+      const sampleLessons = solution.lessons.slice(0, 5);
+      console.log('[OptaPlannerPipeline] 🔍 Sample lessons returned by solver:', JSON.stringify(sampleLessons, null, 2));
+      
+      const assignedCount = solution.lessons.filter(l => l.timeslotId).length;
+      const unassignedCount = solution.lessons.filter(l => !l.timeslotId).length;
+      console.log('[OptaPlannerPipeline] 📊 Assignment summary:', {
+        total: solution.lessons.length,
+        assigned: assignedCount,
+        unassigned: unassignedCount,
+        assignmentRate: `${Math.round((assignedCount / solution.lessons.length) * 100)}%`
+      });
+    }
+    
     // ========================================
     // STAGE 6: Validate Solution Before Persist
     // ========================================
@@ -749,6 +764,24 @@ Deno.serve(async (req) => {
     if (slotsToInsert.length === 0) {
       console.error(`[OptaPlannerPipeline] ❌ BLOCKING: slotsToInsert=0 (would leave schedule empty)`);
       console.error('[OptaPlannerPipeline] NOT purging existing slots - keeping current schedule');
+      console.error('[OptaPlannerPipeline] 🔍 DIAGNOSTIC:', {
+        lessonsReturned: solution.lessons?.length || 0,
+        lessonsWithTimeslot: slotsToInsert.length,
+        lessonsWithoutTimeslot: unassignedCount,
+        hardScore,
+        scoreStr,
+        constraintMatches: solution.constraintMatches?.length || 0,
+        sampleUnassignedLesson: solution.lessons?.find(l => !l.timeslotId)
+      });
+      
+      // Extract detailed unassignment reasons if available
+      const unassignedReasons = {};
+      solution.lessons?.forEach(l => {
+        if (!l.timeslotId) {
+          const reason = l.unassignedReason || l.status || 'unknown';
+          unassignedReasons[reason] = (unassignedReasons[reason] || 0) + 1;
+        }
+      });
       
       return Response.json({
         ok: false,
@@ -756,14 +789,21 @@ Deno.serve(async (req) => {
         code: 'ZERO_SLOTS_GENERATED',
         severity: 'error',
         title: 'Aucun créneau généré',
-        message: 'OPTA a terminé, mais aucun créneau n\'a pu être inséré.',
-        userAction: 'Vérifiez les paramètres d\'établissement (jours, horaires, durée), les ressources (profs/salles) et relancez.',
+        message: hardScore !== null && hardScore < 0
+          ? `OPTA a trouvé une solution impossible (score dur : ${hardScore}). Toutes les leçons sont restées non assignées.`
+          : `OPTA a terminé (score dur : ${hardScore || 'N/A'}) mais aucun créneau n'a été assigné.`,
+        userAction: hardScore !== null && hardScore < 0
+          ? 'Contraintes dures violées. Réduisez les heures requises, augmentez les créneaux disponibles, ou assouplissez les contraintes.'
+          : 'Vérifiez les paramètres d\'établissement (jours, horaires, durée), les ressources (profs/salles) et relancez.',
         requestId,
+        unassignedReasons,
         details: [{
           entity: 'Solution',
           field: 'lessons',
-          reason: '0 lessons with timeslot assignments',
-          hint: 'Solver may be over-constrained or missing capacity'
+          reason: `${solution.lessons?.length || 0} lessons returned but 0 have timeslot assignments`,
+          hint: hardScore !== null && hardScore < 0 
+            ? 'Hard constraints violated - solver could not find feasible solution'
+            : 'Solver completed but assigned 0 lessons - may be over-constrained or misconfigured'
         }],
         meta: { 
           schoolId, 
@@ -773,7 +813,8 @@ Deno.serve(async (req) => {
           lessonsReturned: solution.lessons?.length || 0,
           lessonsUnassigned: unassignedCount,
           slotsToInsert: 0,
-          requestId
+          requestId,
+          unassignedReasons
         }
       }, { status: 200 });
       }
