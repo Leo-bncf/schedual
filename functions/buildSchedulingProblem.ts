@@ -935,13 +935,13 @@ if (isDP) {
       const tg = teachingGroupsDb.find(g => g.id === diag.tg_id);
       if (!tg) continue;
 
-      const subjId = tg.subject_id;
-      if (!subjId) continue;
+      const subjCode = (tg.subject_id && subjectIdToCode[tg.subject_id]) || null;
+      if (!subjCode) continue;
 
-      // CRITICAL: Use EXACT same requiredPeriods as lessons_created
+      // CRITICAL: Use EXACT same subject CODE as lessons (not MongoDB ID)
       subjectRequirements.push({
         studentGroup: `TG_${tg.id}`,
-        subject: subjId,
+        subject: subjCode,  // Use CODE, not MongoDB ID
         minutesPerWeek: diag.minutesUsed,
         requiredPeriods: diag.lessons_created, // ✅ EXACT match with lessons
         teachingGroupId: tg.id,
