@@ -1102,7 +1102,7 @@ if (isDP) {
     }
 
     // CRITICAL: Only exclude STUDY from solver (keep TEST for scheduling)
-    const excludeFromSolver = new Set(['STUDY']);
+    const excludeFromSolver = new Set(['STUDY', 'STUDY_BLOCK']);
     const problemForSolver = {
       timeslots,
       rooms,
