@@ -1701,7 +1701,12 @@ if (isDP) {
         total_minutes: coreTeachingGroupsReport[core].total_minutes,
         tgs: coreTeachingGroupsReport[core].tgs
       })),
-      coreSubjectRequirementsSample: subjectRequirements.filter(r => ['TOK', 'CAS', 'EE'].includes(r.subject)),
+      coreSubjectRequirementsSample: subjectRequirements.filter(r => {
+        const subj = subjectById[r.subject];
+        if (!subj) return false;
+        const code = normalizeSubjectCode(subj.code || subj.name);
+        return ['TOK', 'CAS', 'EE'].includes(code);
+      }),
       stats: {
         timeslots: timeslots.length,
         rooms: rooms.length,
