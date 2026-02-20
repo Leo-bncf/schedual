@@ -896,16 +896,39 @@ if (isDP) {
     const daysCount = daysOfWeek.length || 5;
     const periodsPerDay = Math.floor(timeslots.length / Math.max(1, daysCount));
     
+    // Build subjectRequirements (one per section) - MOVED HERE from line 1082
+    subjectRequirements = []; // Reset array
+    for (const tg of teachingGroupsDb) {
+      const subjId = tg.subject_id;
+      const subjCode = subjectIdToCode[subjId];
+      if (!subjId || !subjCode) continue;
+
+      const minutesUsed = minutesForTG(tg);
+      if (!minutesUsed || minutesUsed <= 0) continue;
+
+      const requiredPeriods = minutesToPeriods(minutesUsed);
+
+      // CRITICAL: Use subject ID (not code) in subjectRequirements
+      subjectRequirements.push({
+        studentGroup: `TG_${tg.id}`,
+        subject: subjId, // ✅ Use subject_id instead of code
+        minutesPerWeek: minutesUsed,
+        requiredPeriods,
+        teachingGroupId: tg.id,
+        sectionId: tg.id
+      });
+    }
+    
     const isValidMongoId = (id) => /^[a-f0-9]{24}$/i.test(String(id || ''));
 
-    // CRITICAL: Collect ALL subjectIds used in lessons AND subjectRequirements
+    // CRITICAL: Collect ALL subjectIds used in lessons AND subjectRequirements (NOW BUILT)
     const subjectIdsUsed = new Set();
-    lessons.forEach(l => { if (l.subject) subjectIdsUsed.add(l.subject); });
+    lessons.forEach(l => { if (l.subject && l.subject !== 'STUDY_BLOCK') subjectIdsUsed.add(l.subject); });
     subjectRequirements.forEach(r => { if (r.subject) subjectIdsUsed.add(r.subject); });
 
     const allUsedSubjectIds = Array.from(subjectIdsUsed).filter(Boolean);
 
-    recordLog(`📋 Building subjects arrays for ${allUsedSubjectIds.length} unique subjectIds`);
+    recordLog(`📋 Building subjects arrays for ${allUsedSubjectIds.length} unique subjectIds (excluding STUDY_BLOCK)`);
 
     // CRITICAL: Build subjects array with ONLY id + hl_hours + sl_hours (Codex format)
     // GUARANTEE: Every subjectId used has an entry with hours > 0
