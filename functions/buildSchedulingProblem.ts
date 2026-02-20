@@ -1061,7 +1061,7 @@ if (isDP) {
     recordLog(`✅ Subjects hours validation passed: All ${subjectsList.length} subjects have hours > 0`);
 
 
-    // VALIDATION: Check for suspiciously low requiredPeriods in DP groups - ALREADY DECLARED AT TOP
+    // VALIDATION: Check for suspiciously low requiredPeriods in DP groups
     lowPeriodWarnings = []; // Reset array
     subjectRequirements.forEach(req => {
       const tgId = String(req.studentGroup || '').replace('TG_', '');
@@ -1098,29 +1098,6 @@ if (isDP) {
       recordLog(`⚠️ WARNING: ${lowPeriodWarnings.length} DP groups with suspiciously low requiredPeriods`);
       lowPeriodWarnings.forEach(w => {
         recordLog(`  - ${w.name} (${w.level}): ${w.requiredPeriods}p/week (expected ${w.expected}p/week)`);
-      });
-    }
-    
-    // Build subjectRequirements (one per section) - ALREADY DECLARED AT TOP
-    subjectRequirements = []; // Reset array
-    for (const tg of teachingGroupsDb) {
-      const subjId = tg.subject_id;
-      const subjCode = subjectIdToCode[subjId];
-      if (!subjId || !subjCode) continue;
-
-      const minutesUsed = minutesForTG(tg);
-      if (!minutesUsed || minutesUsed <= 0) continue;
-
-      const requiredPeriods = minutesToPeriods(minutesUsed);
-
-      // CRITICAL: Use subject ID (not code) in subjectRequirements
-      subjectRequirements.push({
-        studentGroup: `TG_${tg.id}`,
-        subject: subjId, // ✅ Use subject_id instead of code
-        minutesPerWeek: minutesUsed,
-        requiredPeriods,
-        teachingGroupId: tg.id,
-        sectionId: tg.id
       });
     }
 
