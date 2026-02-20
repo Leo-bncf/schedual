@@ -324,6 +324,13 @@ Deno.serve(async (req) => {
         studentNumericIdToBase44Id[numericId] = s.id;
       }
     });
+    
+    // DEBUG: Verify student mapping
+    const firstStudentId = Object.keys(studentBase44IdToNumeric)[0];
+    if (firstStudentId) {
+      const mapped = studentBase44IdToNumeric[firstStudentId];
+      recordLog(`✅ Student mapping example: MongoDB "${firstStudentId}" → numeric ${mapped} (type: ${typeof mapped})`);
+    }
 
     stage = 'buildLessons';
     recordLog(`${stage}: processing ${teachingGroupsDb.length} teaching groups (cohort-centered approach)`);
@@ -610,14 +617,24 @@ expectedMinutesBySubject[subjCode] = (expectedMinutesBySubject[subjCode] || 0) +
 // E.g., Film HL with 360min (6h) → periods_per_week=6 → CREATE 6 LESSONS
 // studentIds MUST be numeric (Java Long) - map MongoDB IDs to integers
 const studentIdsNumeric = Array.isArray(tg.student_ids) 
-  ? tg.student_ids.map(sid => studentBase44IdToNumeric[sid]).filter(id => id != null)
+  ? tg.student_ids.map(sid => {
+      const numericId = studentBase44IdToNumeric[sid];
+      if (!numericId) {
+        recordLog(`⚠️ Student ${sid} not found in mapping - skipping`);
+      }
+      return numericId;
+    }).filter(id => id != null)
   : [];
+
+// DEBUG: Log studentIds types for first lesson of first TG
+if (teachingGroupsIncludedCount === 0 && studentIdsNumeric.length > 0) {
+  recordLog(`🔍 FIRST LESSON studentIds: ${JSON.stringify(studentIdsNumeric)} | types: ${studentIdsNumeric.map(x => typeof x).join(', ')}`);
+  recordLog(`🔍 Verification: All numeric? ${studentIdsNumeric.every(x => typeof x === 'number' && Number.isFinite(x))}`);
+}
+
 const blockId = tg.block_id || null;
 
-recordLog(`Creating ${weeklyCount} lessons for TG ${tg.id} (${tg.name}, ${subjCode})`);
-
-// DIAGNOSTIC: Log French/English/Anglais lesson creation
-const isFrenchOrEnglish = subjCode.includes('FRENCH') || subjCode.includes('ENGLISH') || subjCode.includes('ANGLAIS');
+recordLog(`Creating ${weeklyCount} lessons for TG ${tg.id} (${tg.name}, ${subjCode}) with ${studentIdsNumeric.length} students (numeric IDs)`);
 
 for (let i = 0; i < weeklyCount; i++) {
   const lesson = {
@@ -803,9 +820,24 @@ if (isDP) {
     
     recordLog(`✅ HL/SL hours validation passed: ${dpSubjectsWithoutHours.length === 0 ? 'All DP subjects configured' : 'No DP subjects found'}`);
 
-    // DIAGNOSTIC: Log lessons format (subject_id-based)
-    recordLog(`📊 Sample lesson format: ${JSON.stringify(lessons[0], null, 2)}`);
-    recordLog(`✅ Lessons now use subject_id instead of subject code`);
+    // DIAGNOSTIC: Log lessons format + verify studentIds types
+    if (lessons.length > 0) {
+      const firstLesson = lessons[0];
+      recordLog(`📊 Sample lesson format: ${JSON.stringify(firstLesson, null, 2)}`);
+      recordLog(`✅ Lessons now use subject_id instead of subject code`);
+      
+      // CRITICAL: Verify studentIds are ALL numbers
+      if (Array.isArray(firstLesson.studentIds)) {
+        const types = firstLesson.studentIds.map(x => typeof x);
+        const allNumeric = firstLesson.studentIds.every(x => typeof x === 'number' && Number.isFinite(x));
+        recordLog(`🔍 FINAL CHECK - lesson[0].studentIds types: [${types.join(', ')}] | All numeric? ${allNumeric}`);
+        
+        if (!allNumeric) {
+          recordLog(`❌ CRITICAL: studentIds contains non-numeric values!`);
+          recordLog(`❌ Values: ${JSON.stringify(firstLesson.studentIds)}`);
+        }
+      }
+    }
 
     // HARD FAIL if groups are missing subject hour configuration
     const missingHoursConfig = teachingGroupsSkipped.filter(s => 

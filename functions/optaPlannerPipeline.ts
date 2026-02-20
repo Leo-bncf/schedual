@@ -381,6 +381,52 @@ Deno.serve(async (req) => {
       teachers: solverPayload.teachers?.length || 0
     });
     
+    // CRITICAL: Final validation before sending to OptaPlanner
+    if (solverPayload.lessons?.length > 0) {
+      const firstLesson = solverPayload.lessons[0];
+      const studentIdsTypes = Array.isArray(firstLesson.studentIds) 
+        ? firstLesson.studentIds.map(x => typeof x)
+        : [];
+      const allNumeric = Array.isArray(firstLesson.studentIds) && 
+        firstLesson.studentIds.every(x => typeof x === 'number' && Number.isFinite(x));
+      
+      console.log('[OptaPlannerPipeline] 🔍 FINAL VALIDATION - lesson[0].studentIds:', {
+        value: firstLesson.studentIds,
+        types: studentIdsTypes,
+        allNumeric,
+        length: firstLesson.studentIds?.length || 0
+      });
+      
+      if (!allNumeric && Array.isArray(firstLesson.studentIds) && firstLesson.studentIds.length > 0) {
+        console.error('[OptaPlannerPipeline] ❌ BLOCKING: studentIds contains non-numeric values - this will fail OptaPlanner deserialization');
+        console.error('[OptaPlannerPipeline] Sample lesson:', JSON.stringify(firstLesson, null, 2));
+        
+        return Response.json({
+          ok: false,
+          stage: 'validatePayload',
+          code: 'INVALID_STUDENT_IDS_TYPE',
+          severity: 'error',
+          title: 'Type de données invalide',
+          message: 'Les studentIds doivent être des nombres (Java Long), pas des chaînes ou objets.',
+          userAction: 'Erreur interne du pipeline - contactez le support.',
+          requestId: null,
+          validationErrors: [`studentIds contains ${studentIdsTypes.filter(t => t !== 'number').length} non-numeric values`],
+          details: [{
+            entity: 'Lesson',
+            field: 'studentIds',
+            reason: `Expected number[], got mixed types: ${[...new Set(studentIdsTypes)].join(', ')}`,
+            hint: 'All studentIds must be numeric (Java Long) for OptaPlanner deserialization',
+            sample: firstLesson.studentIds
+          }],
+          meta: { 
+            schoolId, 
+            schedule_version_id,
+            sampleLesson: firstLesson
+          }
+        }, { status: 200 });
+      }
+    }
+    
     let solverResponse;
     try {
       solverResponse = await fetch(SOLVER_ENDPOINT, {
