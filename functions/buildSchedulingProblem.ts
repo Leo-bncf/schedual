@@ -897,18 +897,26 @@ if (isDP) {
     const periodsPerDay = Math.floor(timeslots.length / Math.max(1, daysCount));
     
     const isValidMongoId = (id) => /^[a-f0-9]{24}$/i.test(String(id || ''));
-    const subjectCodesInLessons = Array.from(new Set(lessons.map(l => l.subject).filter(Boolean)));
-    
+
+    // CRITICAL: Collect ALL subjectIds used in lessons AND subjectRequirements
+    const subjectIdsUsed = new Set();
+    lessons.forEach(l => { if (l.subject) subjectIdsUsed.add(l.subject); });
+    subjectRequirements.forEach(r => { if (r.subject) subjectIdsUsed.add(r.subject); });
+
+    const allUsedSubjectIds = Array.from(subjectIdsUsed).filter(Boolean);
+
+    recordLog(`📋 Building subjects arrays for ${allUsedSubjectIds.length} unique subjectIds`);
+
     // CRITICAL: Build subjects array with ONLY id + hl_hours + sl_hours (Codex format)
-    const subjectsList = subjectCodesInLessons.map(code => {
-      const subjId = subjectIdByCode[code] || null;
-      const subj = subjId ? subjectById[subjId] : null;
+    // GUARANTEE: Every subjectId used has an entry with hours > 0
+    const subjectsList = allUsedSubjectIds.map(subjId => {
+      const subj = subjectById[subjId] || null;
       const validId = subjId && isValidMongoId(subjId) ? subjId : '000000000000000000000000';
-      
+
       // Extract HL/SL hours (prioritize hoursPerWeekHL/SL, fallback to deprecated fields)
       let hl_hours = 0;
       let sl_hours = 0;
-      
+
       if (subj?.ib_level === 'DP') {
         // PRIORITY 1: Use admin-configured hoursPerWeekHL/SL
         if (typeof subj.hoursPerWeekHL === 'number' && subj.hoursPerWeekHL > 0) {
@@ -916,44 +924,64 @@ if (isDP) {
         } else if (typeof subj.hl_minutes_per_week_default === 'number' && subj.hl_minutes_per_week_default > 0) {
           hl_hours = Math.round(subj.hl_minutes_per_week_default / 60);
         }
-        
+
         if (typeof subj.hoursPerWeekSL === 'number' && subj.hoursPerWeekSL > 0) {
           sl_hours = subj.hoursPerWeekSL;
         } else if (typeof subj.sl_minutes_per_week_default === 'number' && subj.sl_minutes_per_week_default > 0) {
           sl_hours = Math.round(subj.sl_minutes_per_week_default / 60);
         }
+      } else {
+        // Non-DP subjects: use default or derive from subjectRequirements
+        const requirement = subjectRequirements.find(r => r.subject === subjId);
+        if (requirement) {
+          const hoursFromRequirement = Math.round((requirement.minutesPerWeek || 0) / 60);
+          hl_hours = hoursFromRequirement;
+          sl_hours = hoursFromRequirement;
+        }
       }
-      
+
+      // LOG WARNING if hours are 0
+      if (hl_hours === 0 && sl_hours === 0) {
+        recordLog(`⚠️ Subject ${subjId} (${subj?.code || 'UNKNOWN'}) has 0 hours configured - this may cause solver issues`);
+      }
+
       return {
         id: validId,
         hl_hours,
         sl_hours
       };
     });
-    
+
     // CRITICAL: Build subjects_hours array with detailed hour/minute config
-    const subjectsHours = subjectCodesInLessons.map(code => {
-      const subjId = subjectIdByCode[code] || null;
-      const subj = subjId ? subjectById[subjId] : null;
+    const subjectsHours = allUsedSubjectIds.map(subjId => {
+      const subj = subjectById[subjId] || null;
       const validId = subjId && isValidMongoId(subjId) ? subjId : '000000000000000000000000';
-      
+
       let hl_hours = 0;
       let sl_hours = 0;
-      
+
       if (subj?.ib_level === 'DP') {
         if (typeof subj.hoursPerWeekHL === 'number' && subj.hoursPerWeekHL > 0) {
           hl_hours = subj.hoursPerWeekHL;
         } else if (typeof subj.hl_minutes_per_week_default === 'number' && subj.hl_minutes_per_week_default > 0) {
           hl_hours = Math.round(subj.hl_minutes_per_week_default / 60);
         }
-        
+
         if (typeof subj.hoursPerWeekSL === 'number' && subj.hoursPerWeekSL > 0) {
           sl_hours = subj.hoursPerWeekSL;
         } else if (typeof subj.sl_minutes_per_week_default === 'number' && subj.sl_minutes_per_week_default > 0) {
           sl_hours = Math.round(subj.sl_minutes_per_week_default / 60);
         }
+      } else {
+        // Non-DP subjects
+        const requirement = subjectRequirements.find(r => r.subject === subjId);
+        if (requirement) {
+          const hoursFromRequirement = Math.round((requirement.minutesPerWeek || 0) / 60);
+          hl_hours = hoursFromRequirement;
+          sl_hours = hoursFromRequirement;
+        }
       }
-      
+
       return {
         subject_id: validId,
         hl_hours,
@@ -962,6 +990,8 @@ if (isDP) {
         sl_minutes_per_week: sl_hours * 60
       };
     });
+
+    recordLog(`✅ Built subjects: ${subjectsList.length} entries, subjects_hours: ${subjectsHours.length} entries`);
 
 
     // VALIDATION: Check for suspiciously low requiredPeriods in DP groups - ALREADY DECLARED AT TOP
