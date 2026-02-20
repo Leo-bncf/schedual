@@ -278,61 +278,61 @@ Deno.serve(async (req) => {
       no_qualified: assignmentLog.filter(l => l.status === 'no_qualified_teacher').length
     });
 
-    // BATCH UPDATE: Apply all assignments in smaller sequential batches to avoid timeout
+    // BATCH UPDATE: Ultra-aggressive parallel batching to prevent 502 timeout
     stage = 'batch_update';
     const updateStart = Date.now();
     
     if (updates.length > 0) {
-      // Process in SMALLER sequential chunks to avoid deployment timeout
-      const BATCH_SIZE = 20; // Reduced from 50 for faster individual batches
+      // CRITICAL: Very small batches processed in parallel with aggressive timeout
+      const BATCH_SIZE = 10; // Process 10 groups per batch
+      const BATCH_TIMEOUT = 8000; // 8 second max per batch
       const batches = [];
+      
       for (let i = 0; i < updates.length; i += BATCH_SIZE) {
         batches.push(updates.slice(i, i + BATCH_SIZE));
       }
       
-      console.log(`[assignTeachers] Updating ${updates.length} groups in ${batches.length} batches (BATCH_SIZE=${BATCH_SIZE})`);
+      console.log(`[assignTeachers] Updating ${updates.length} groups in ${batches.length} batches (BATCH_SIZE=${BATCH_SIZE}, TIMEOUT=${BATCH_TIMEOUT}ms)`);
       
-      let batchErrors = 0;
       let successfulUpdates = 0;
+      let failedUpdates = 0;
       
       for (let i = 0; i < batches.length; i++) {
         const batch = batches[i];
         const batchStartTime = Date.now();
-        console.log(`[assignTeachers] Processing batch ${i + 1}/${batches.length} (${batch.length} groups)...`);
         
         try {
-          // Use sequential updates instead of Promise.all to reduce memory/cpu pressure
-          for (const update of batch) {
-            try {
-              await withTimeout(
+          // Parallel updates within batch with timeout
+          const results = await withTimeout(
+            Promise.allSettled(
+              batch.map(update => 
                 base44.asServiceRole.entities.TeachingGroup.update(update.id, {
                   teacher_id: update.teacher_id
-                }),
-                10000 // 10 second timeout per individual update
-              );
+                })
+              )
+            ),
+            BATCH_TIMEOUT
+          );
+          
+          // Count successes/failures
+          results.forEach((result, idx) => {
+            if (result.status === 'fulfilled') {
               successfulUpdates++;
-            } catch (updateError) {
-              console.error(`[assignTeachers] ❌ Failed to update group ${update.id}:`, updateError.message);
-              batchErrors++;
-              // Continue with next update in batch
+            } else {
+              failedUpdates++;
+              console.error(`[assignTeachers] ❌ Group ${batch[idx].id} update failed:`, result.reason?.message);
             }
-          }
+          });
           
-          const batchDuration = Date.now() - batchStartTime;
-          console.log(`[assignTeachers] ✅ Batch ${i + 1}/${batches.length} completed in ${batchDuration}ms (success: ${successfulUpdates}, errors: ${batchErrors})`);
+          console.log(`[assignTeachers] ✅ Batch ${i + 1}/${batches.length} done in ${Date.now() - batchStartTime}ms (✓${successfulUpdates} ✗${failedUpdates})`);
           
-          // Add small delay between batches to prevent overwhelming the backend
-          if (i < batches.length - 1) {
-            await new Promise(resolve => setTimeout(resolve, 200));
-          }
         } catch (batchError) {
-          console.error(`[assignTeachers] ❌ Batch ${i + 1} failed:`, batchError.message);
-          batchErrors++;
-          // Continue with remaining batches - don't crash
+          console.error(`[assignTeachers] ❌ Batch ${i + 1} timeout/error:`, batchError.message);
+          failedUpdates += batch.length;
         }
       }
       
-      console.log(`[assignTeachers] ✅ All batch updates completed in ${Date.now() - updateStart}ms (successful: ${successfulUpdates}, errors: ${batchErrors})`);
+      console.log(`[assignTeachers] ✅ Updates completed in ${Date.now() - updateStart}ms (success: ${successfulUpdates}, failed: ${failedUpdates})`);
     }
 
     const totalElapsed = Date.now() - startTime;
