@@ -934,25 +934,7 @@ if (isDP) {
         sl_minutes_per_week: sl_hours * 60
       };
     });
-    
-    // Build subjectRequirements (one per section) - ALREADY DECLARED AT TOP
-    subjectRequirements = []; // Reset array
-    for (const tg of teachingGroupsDb) {
-      const subjCode = subjectIdToCode[tg.subject_id];
-      if (!subjCode) continue;
 
-      const minutesUsed = minutesForTG(tg);
-      if (!minutesUsed || minutesUsed <= 0) continue;
-
-      const requiredPeriods = minutesToPeriods(minutesUsed);
-
-      subjectRequirements.push({
-        studentGroup: `TG_${tg.id}`,
-        subject: subjCode,
-        minutesPerWeek: minutesUsed,
-        requiredPeriods
-      });
-    }
 
     // VALIDATION: Check for suspiciously low requiredPeriods in DP groups - ALREADY DECLARED AT TOP
     lowPeriodWarnings = []; // Reset array
