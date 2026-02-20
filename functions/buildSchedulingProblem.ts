@@ -293,7 +293,7 @@ Deno.serve(async (req) => {
     recordLog(`✅ Timeslots validation passed: ${timeslots.length} timeslots across ${daysOfWeek.length} days`);
 
     // CRITICAL: OptaPlanner format requirements:
-    // - rooms/teachers: NUMERIC IDs (Java constraint)
+    // - rooms/teachers/students: NUMERIC IDs (Java constraint)
     // - subjects: MongoDB IDs (strings) are OK
     const rooms = (roomsDb || []).map((r, idx) => ({ 
       id: idx + 1,
@@ -307,11 +307,27 @@ Deno.serve(async (req) => {
       externalId: t?.id || `teacher_ext_${idx+1}`
     }));
     
+    // Load all students and create numeric mapping
+    const studentsDb = await base44.entities.Student.filter({ school_id }).catch(() => []);
+    const students = (studentsDb || []).map((s, idx) => ({
+      id: idx + 1,
+      name: s?.full_name || `Student ${idx+1}`,
+      externalId: s?.id || `student_ext_${idx+1}`
+    }));
+    
     // Mapping tables: Numeric ID -> MongoDB ID
     const roomNumericIdToBase44Id = {};
     const teacherNumericIdToBase44Id = {};
+    const studentNumericIdToBase44Id = {};
+    const studentBase44IdToNumeric = {};
     (roomsDb || []).forEach((r, idx) => { if (r?.id) roomNumericIdToBase44Id[idx+1] = r.id; });
     (teachersDb || []).forEach((t, idx) => { if (t?.id) teacherNumericIdToBase44Id[idx+1] = t.id; });
+    (studentsDb || []).forEach((s, idx) => {
+      if (s?.id) {
+        studentNumericIdToBase44Id[idx+1] = s.id;
+        studentBase44IdToNumeric[s.id] = idx + 1;
+      }
+    });
 
     stage = 'buildLessons';
     recordLog(`${stage}: processing ${teachingGroupsDb.length} teaching groups (cohort-centered approach)`);
@@ -596,7 +612,10 @@ expectedMinutesBySubject[subjCode] = (expectedMinutesBySubject[subjCode] || 0) +
 // Create EXACTLY periods_per_week lessons for this teaching group
 // CRITICAL: studentGroup MUST be "TG_<teaching_group_id>" for persistence
 // E.g., Film HL with 360min (6h) → periods_per_week=6 → CREATE 6 LESSONS
-const studentIds = Array.isArray(tg.student_ids) ? tg.student_ids : [];
+// Map student MongoDB IDs to numeric IDs for OptaPlanner
+const studentIds = Array.isArray(tg.student_ids) 
+  ? tg.student_ids.map(sid => studentBase44IdToNumeric[sid]).filter(Boolean)
+  : [];
 const blockId = tg.block_id || null;
 
 recordLog(`Creating ${weeklyCount} lessons for TG ${tg.id} (${tg.name}, ${subjCode})`);
@@ -1014,6 +1033,7 @@ if (isDP) {
       subjectRequirements: subjectRequirements.filter(r => !excludeFromSolver.has(r.subject)),
       teacherNumericIdToBase44Id,
       roomNumericIdToBase44Id,
+      studentNumericIdToBase44Id,
       studentGroupSoftPreferences,
       scheduleSettings: {
         periodDurationMinutes,
