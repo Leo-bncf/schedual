@@ -1426,8 +1426,60 @@ if (isDP) {
       });
     }
     
-    // VALIDATION 4: Hours mismatch between Subject config and TeachingGroup requirements
-    recordLog('Validation 4: Hours mismatch validation');
+    // VALIDATION 4: Codex requirement - DP subjects MUST have BOTH hl_hours AND sl_hours > 0
+    recordLog('Validation 4: Codex DP subject hours completeness');
+    const dpSubjectsMissingHours = [];
+
+    for (const subj of subjectsDb) {
+      if (subj.ib_level === 'DP' && subj.is_active !== false) {
+        // Skip core subjects (TOK/CAS/EE)
+        if (subj.is_core === true) continue;
+
+        const hlHours = typeof subj.hoursPerWeekHL === 'number' ? subj.hoursPerWeekHL : 0;
+        const slHours = typeof subj.hoursPerWeekSL === 'number' ? subj.hoursPerWeekSL : 0;
+
+        // Codex requires BOTH hl_hours AND sl_hours > 0 for DP subjects
+        if (hlHours <= 0 || slHours <= 0) {
+          dpSubjectsMissingHours.push({
+            subject_id: subj.id,
+            code: subj.code || subj.name,
+            name: subj.name,
+            hl_hours: hlHours,
+            sl_hours: slHours,
+            missing: hlHours <= 0 && slHours <= 0 ? 'both' : hlHours <= 0 ? 'HL' : 'SL'
+          });
+        }
+      }
+    }
+
+    if (dpSubjectsMissingHours.length > 0) {
+      recordLog(`❌ BLOCKING: ${dpSubjectsMissingHours.length} DP subjects missing HL or SL hours (Codex requirement)`);
+
+      return Response.json({
+        ok: false,
+        stage: 'PRE_SOLVE_VALIDATION',
+        code: 'CODEX_HOURS_REQUIREMENT',
+        error: 'DP subjects must have BOTH HL and SL hours configured',
+        errorMessage: `❌ Codex solver requires ALL DP subjects to have BOTH hoursPerWeekHL AND hoursPerWeekSL > 0.\n\n${dpSubjectsMissingHours.length} subject(s) are missing hours:\n${dpSubjectsMissingHours.map(s => `• ${s.code}: HL=${s.hl_hours}h, SL=${s.sl_hours}h (missing ${s.missing})`).join('\n')}\n\n👉 Configure hours for ALL DP subjects before generating schedule.`,
+        missingSubjects: dpSubjectsMissingHours,
+        details: dpSubjectsMissingHours.map(s => ({
+          entity: 'Subject',
+          id: s.subject_id,
+          field: `hoursPerWeek${s.missing}`,
+          reason: `Codex requires BOTH HL and SL hours > 0 for DP subjects`,
+          hint: `Set ${s.missing} hours for ${s.code} (${s.name}) on Subjects page`
+        })),
+        suggestion: '🔧 Go to Subjects page → Edit each DP subject → Set BOTH "Hours per week (HL)" AND "Hours per week (SL)" (e.g., HL=6, SL=4)\n\nCodex solver will reject the payload if any DP subject has HL=0 or SL=0.',
+        requiredAction: 'Configure BOTH hoursPerWeekHL and hoursPerWeekSL for all DP subjects',
+        buildVersion: BUILD_VERSION,
+        meta: { schedule_version_id, school_id }
+      }, { status: 422, headers: { 'Content-Type': 'application/json' } });
+    }
+
+    recordLog(`✅ Codex DP hours validation passed: All DP subjects have HL AND SL hours configured`);
+
+    // VALIDATION 5: Hours mismatch between Subject config and TeachingGroup requirements
+    recordLog('Validation 5: Hours mismatch validation');
     const hoursMismatchIssues = [];
     
     for (const tg of teachingGroupsDb) {
@@ -1506,9 +1558,9 @@ if (isDP) {
     }
     
     recordLog(`✅ Hours mismatch validation passed: All TeachingGroups match Subject hour expectations`);
-    
-    // VALIDATION 5: Student feasibility (DP)
-    recordLog('Validation 5: Student feasibility (DP)');
+
+    // VALIDATION 6: Student feasibility (DP)
+    recordLog('Validation 6: Student feasibility (DP)');
     const studentFeasibilityIssues = [];
     
     // Use already-loaded students from initial Promise.all
@@ -1583,8 +1635,8 @@ if (isDP) {
       });
     }
     
-    // VALIDATION 6: Timeslot capacity sanity (already validated above, but add final check)
-    recordLog('Validation 6: Timeslot configuration sanity');
+    // VALIDATION 7: Timeslot capacity sanity (already validated above, but add final check)
+    recordLog('Validation 7: Timeslot configuration sanity');
     if (timeslots.length === 0) {
       validationErrors.push('Zero timeslots generated');
       validationDetails.push({
