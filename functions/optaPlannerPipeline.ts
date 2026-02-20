@@ -371,15 +371,35 @@ Deno.serve(async (req) => {
       debug: true,
       strictDemand: true
     };
-    
+
     console.log('[OptaPlannerPipeline] Codex payload prepared:', {
       timeslots: solverPayload.timeslots?.length || 0,
       lessons: solverPayload.lessons?.length || 0,
       teachingGroups: solverPayload.teachingGroups?.length || 0,
       subjects: solverPayload.subjects?.length || 0,
       rooms: solverPayload.rooms?.length || 0,
-      teachers: solverPayload.teachers?.length || 0
+      teachers: solverPayload.teachers?.length || 0,
+      subjectRequirements: solverPayload.subjectRequirements?.length || 0
     });
+
+    // CRITICAL: Log exact counts for mismatch debugging
+    const lessonsCount = solverPayload.lessons?.length || 0;
+    const requirementsCount = solverPayload.subjectRequirements?.length || 0;
+    const requirementsPeriodSum = (solverPayload.subjectRequirements || []).reduce((sum, r) => sum + (r.requiredPeriods || 0), 0);
+
+    console.log('[OptaPlannerPipeline] 🔍 MISMATCH DEBUG:', {
+      lessonsCount,
+      requirementsCount,
+      requirementsPeriodSum,
+      match: lessonsCount === requirementsPeriodSum ? '✅ MATCH' : `❌ MISMATCH (diff: ${lessonsCount - requirementsPeriodSum})`
+    });
+
+    // Sample first 3 subjectRequirements for debugging
+    if (solverPayload.subjectRequirements?.length > 0) {
+      console.log('[OptaPlannerPipeline] 📋 Sample subjectRequirements (first 3):', 
+        JSON.stringify(solverPayload.subjectRequirements.slice(0, 3), null, 2)
+      );
+    }
     
     // CRITICAL: Final validation before sending to OptaPlanner
     if (solverPayload.lessons?.length > 0) {
