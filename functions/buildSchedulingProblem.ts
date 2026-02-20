@@ -624,10 +624,13 @@ const isDP = (String(tg.year_group || '').toUpperCase().includes('DP')) || (subj
 if (isDP) {
   studentGroupSoftPreferences[studentGroup] = { minEndTime: dpMinEndTime, penalty: 5 };
   const studyCount = Math.max(0, dpStudyWeekly - weeklyCount);
+  // STUDY blocks use dummy subject_id
+  const studySubjectId = '000000000000000000000000';
   for (let s = 0; s < studyCount; s++) {
     lessons.push({
       id: lessonId++,
-      subject: 'STUDY',
+      subject: studySubjectId,
+      subjectId: studySubjectId,
       studentGroup,
       sectionId: tg.id,
       studentIds,
