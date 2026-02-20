@@ -280,6 +280,16 @@ Deno.serve(async (req) => {
     
     const problem = buildData.problem;
     
+    // CRITICAL DEBUG: Log lessons BEFORE sanitization
+    console.log('[OptaPlannerPipeline] 🔍 BEFORE SANITIZATION - lessons sample (first 3):', 
+      JSON.stringify(problem.lessons?.slice(0, 3).map(l => ({
+        id: l.id,
+        subject: l.subject,
+        subjectType: typeof l.subject,
+        studentGroup: l.studentGroup
+      })), null, 2)
+    );
+    
     // Verify teachingGroups DTO format (buildSchedulingProblem already applies whitelist)
     const tgSample = problem.teachingGroups?.[0];
     if (tgSample) {
