@@ -79,18 +79,20 @@ Deno.serve(async (req) => {
       recordLog(`Using ${teachingGroupsFromCaller.length} teaching groups from caller (post-generation/sync)`);
     }
     
-    const [school, allRooms, allTeachers, allSubjects, allTeachingGroups] = await Promise.all([
+    const [school, allRooms, allTeachers, allSubjects, allTeachingGroups, allStudents] = await Promise.all([
       base44.entities.School.filter({ id: school_id }).then(r => r?.[0] || null).catch(() => null),
       base44.entities.Room.filter({ school_id }).catch(() => []),
       base44.entities.Teacher.filter({ school_id }).catch(() => []),
       base44.entities.Subject.filter({ school_id }).catch(() => []),
       useCallerTGs ? Promise.resolve(teachingGroupsFromCaller) : base44.entities.TeachingGroup.filter({ school_id }).catch(() => []),
+      base44.entities.Student.filter({ school_id }).catch(() => []),
     ]);
     
     const roomsDb = (allRooms || []).filter(r => r?.is_active !== false);
     const teachersDb = (allTeachers || []).filter(t => t?.is_active !== false);
     const subjectsDb = (allSubjects || []).filter(s => s?.is_active !== false);
     const teachingGroupsDb = (allTeachingGroups || []).filter(tg => tg?.is_active !== false);
+    const studentsDb = (allStudents || []).filter(s => s?.is_active !== false);
 
     if (!school) {
       return Response.json({ ok: false, stage, error: 'School not found', meta: { schedule_version_id, school_id } }, { status: 404 });
@@ -307,15 +309,14 @@ Deno.serve(async (req) => {
       externalId: t?.id || `teacher_ext_${idx+1}`
     }));
     
-    // Load all students and create numeric mapping
-    const studentsDb = await base44.entities.Student.filter({ school_id }).catch(() => []);
+    // Create numeric student mapping
     const students = (studentsDb || []).map((s, idx) => ({
       id: idx + 1,
       name: s?.full_name || `Student ${idx+1}`,
       externalId: s?.id || `student_ext_${idx+1}`
     }));
     
-    // Mapping tables: Numeric ID -> MongoDB ID
+    // Mapping tables: Numeric ID <-> MongoDB ID
     const roomNumericIdToBase44Id = {};
     const teacherNumericIdToBase44Id = {};
     const studentNumericIdToBase44Id = {};
@@ -612,9 +613,9 @@ expectedMinutesBySubject[subjCode] = (expectedMinutesBySubject[subjCode] || 0) +
 // Create EXACTLY periods_per_week lessons for this teaching group
 // CRITICAL: studentGroup MUST be "TG_<teaching_group_id>" for persistence
 // E.g., Film HL with 360min (6h) → periods_per_week=6 → CREATE 6 LESSONS
-// Map student MongoDB IDs to numeric IDs for OptaPlanner
+// Map student MongoDB IDs to numeric IDs for OptaPlanner (Java requires Long, not String)
 const studentIds = Array.isArray(tg.student_ids) 
-  ? tg.student_ids.map(sid => studentBase44IdToNumeric[sid]).filter(Boolean)
+  ? tg.student_ids.map(sid => studentBase44IdToNumeric[sid]).filter(id => id != null)
   : [];
 const blockId = tg.block_id || null;
 
@@ -1431,8 +1432,7 @@ if (isDP) {
     recordLog('Validation 5: Student feasibility (DP)');
     const studentFeasibilityIssues = [];
     
-    // Load students to check DP feasibility
-    const studentsDb = await base44.entities.Student.filter({ school_id }).catch(() => []);
+    // Use already-loaded students (studentsDb from initial Promise.all)
     
     for (const student of studentsDb) {
       if (!student?.id || student.is_active === false) continue;
