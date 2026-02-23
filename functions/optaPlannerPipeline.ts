@@ -251,11 +251,11 @@ Deno.serve(async (req) => {
     }
     
     // ========================================
-    // STAGE 5: Call Solver (Codex)
+    // STAGE 5: Call Solver (Codex OptaPlanner)
     // ========================================
     stage = 'solve';
-    const SOLVER_ENDPOINT = Deno.env.get('OR_TOOL_ENDPOINT') || Deno.env.get('SOLVER_ENDPOINT');
-    const SOLVER_API_KEY = Deno.env.get('OR_TOOL_API_KEY') || Deno.env.get('SOLVER_API_KEY');
+    const SOLVER_ENDPOINT = Deno.env.get('OPTAPLANNER_ENDPOINT') || Deno.env.get('OR_TOOL_ENDPOINT');
+    const SOLVER_API_KEY = Deno.env.get('OPTAPLANNER_API_KEY') || Deno.env.get('OR_TOOL_API_KEY');
     
     if (!SOLVER_ENDPOINT || !SOLVER_API_KEY) {
       return Response.json({
