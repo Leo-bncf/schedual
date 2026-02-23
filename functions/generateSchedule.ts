@@ -175,13 +175,13 @@ Deno.serve(async (req) => {
     });
 
     // 3. Envoyer au VPS OptaPlanner avec timeout 10min
-    const vpsUrl = Deno.env.get('OPTAPLANNER_ENDPOINT');
-    const apiKey = Deno.env.get('OPTAPLANNER_API_KEY');
+    const vpsUrl = school.optaplanner_endpoint;
+    const apiKey = school.optaplanner_api_key;
 
     if (!vpsUrl || !apiKey) {
       return Response.json({
         error: 'OptaPlanner VPS not configured',
-        message: 'Missing OPTAPLANNER_ENDPOINT or OPTAPLANNER_API_KEY'
+        message: 'Please configure OptaPlanner endpoint and API key in Settings → Solver tab'
       }, { status: 500 });
     }
 
