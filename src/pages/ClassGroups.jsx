@@ -17,7 +17,6 @@ import {
 import PageHeader from '../components/ui-custom/PageHeader';
 import EmptyState from '../components/ui-custom/EmptyState';
 import GenerateInfoDialog from '../components/ui-custom/GenerateInfoDialog';
-import GenerationProgress from '../components/schedule/GenerationProgress';
 
 export default function ClassGroups() {
   const [searchQuery, setSearchQuery] = useState('');
@@ -401,24 +400,6 @@ export default function ClassGroups() {
         onConfirm={handleAutoGenerate}
         type="classgroups"
         isGenerating={isGenerating}
-      />
-
-      {/* Generation Progress Dialog */}
-      <GenerationProgress
-        open={isGenerating}
-        progress={generationProgress}
-        title="Creating Student Classes"
-        onClose={() => {
-          setIsGenerating(false);
-          setGenerationProgress({
-            stage: '',
-            percent: 0,
-            message: '',
-            currentStep: '',
-            completedSteps: [],
-            completed: false
-          });
-        }}
       />
 
       {/* Diagnostics Dialog */}

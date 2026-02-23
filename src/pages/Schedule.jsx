@@ -59,13 +59,11 @@ import ScheduleExporter from '../components/schedule/ScheduleExporter';
 import ConflictAlert from '../components/schedule/ConflictAlert';
 import ConflictViewer from '../components/schedule/ConflictViewer';
 import EmptyState from '../components/ui-custom/EmptyState';
-import GenerationProgress from '../components/schedule/GenerationProgress';
 import ScheduleUpdateBanner from '../components/schedule/ScheduleUpdateBanner';
 import UtilizationStats from '../components/schedule/UtilizationStats';
 import CohortIntegrityReport from '../components/schedule/CohortIntegrityReport';
 import PreSolveAuditReport from '../components/schedule/PreSolveAuditReport';
 import GlobalPeriodCoverageReport from '../components/schedule/GlobalPeriodCoverageReport';
-import SolutionInfeasiblePanel from '../components/schedule/SolutionInfeasiblePanel';
 
 
 export default function Schedule() {
@@ -2996,13 +2994,7 @@ Now process the user's input and return ONLY the JSON object.`,
         </div>
       )}
 
-      {/* SOLUTION_INFEASIBLE: Enhanced display with requestId + constraint breakdown */}
-      {selectedVersion && optaPlannerResult?.ok === false && optaPlannerResult?.stage === 'SOLUTION_INFEASIBLE' && (
-        <SolutionInfeasiblePanel 
-          result={optaPlannerResult} 
-          onRetry={handleGenerateSchedule}
-        />
-      )}
+
       
       {/* OptaPlanner Error Panel (other error types) */}
       {selectedVersion && optaPlannerResult?.ok === false && optaPlannerResult?.stage !== 'SOLUTION_INFEASIBLE' && (
