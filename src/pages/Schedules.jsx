@@ -660,16 +660,21 @@ export default function Schedules() {
           </Tabs>
         )
       ) : (
-        <Card className="border-blue-200">
-          <CardContent className="py-20 text-center">
-            <Calendar className="w-16 h-16 text-slate-300 mx-auto mb-4" />
-            <h3 className="text-lg font-semibold text-slate-900 mb-2">No Schedule Version Selected</h3>
-            <p className="text-slate-500 mb-6">Create a new version to get started</p>
+        <Card className="border-0 shadow-xl bg-white/90 backdrop-blur">
+          <CardContent className="py-24 text-center">
+            <div className="inline-flex p-8 rounded-3xl bg-gradient-to-br from-blue-50 to-indigo-50 mb-6">
+              <Calendar className="w-20 h-20 text-blue-400" />
+            </div>
+            <h3 className="text-2xl font-bold text-slate-900 mb-3">No Active Schedule</h3>
+            <p className="text-lg text-slate-500 mb-8 max-w-md mx-auto">
+              Create your first schedule version to start organizing your timetable
+            </p>
             <Button
               onClick={() => setIsDialogOpen(true)}
-              className="bg-blue-900 hover:bg-blue-800"
+              size="lg"
+              className="bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-700 hover:to-indigo-700 shadow-lg hover:shadow-xl transition-all"
             >
-              <Plus className="w-4 h-4 mr-2" />
+              <Plus className="w-5 h-5 mr-2" />
               Create First Version
             </Button>
           </CardContent>
