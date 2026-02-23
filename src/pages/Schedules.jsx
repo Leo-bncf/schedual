@@ -438,17 +438,19 @@ export default function Schedules() {
             </TabsList>
 
             {/* Admin Overview Tab */}
-            <TabsContent value="overview" className="space-y-6">
-              <Card className="border-blue-200">
-                <CardHeader className="bg-blue-50">
-                  <CardTitle className="flex items-center gap-2">
-                    <Calendar className="w-5 h-5 text-blue-900" />
-                    All Active Classes
+            <TabsContent value="overview" className="space-y-6 mt-6">
+              <Card className="border-0 shadow-lg bg-white/90 backdrop-blur">
+                <CardHeader className="bg-gradient-to-r from-blue-50 to-indigo-50 border-b">
+                  <CardTitle className="flex items-center gap-3 text-xl">
+                    <div className="p-2 rounded-lg bg-blue-600">
+                      <Calendar className="w-5 h-5 text-white" />
+                    </div>
+                    Active Teaching Groups
                   </CardTitle>
-                  <CardDescription>Overview of all scheduled teaching groups</CardDescription>
+                  <CardDescription className="text-base">Complete overview of scheduled classes</CardDescription>
                 </CardHeader>
                 <CardContent className="pt-6">
-                  <div className="grid gap-3">
+                  <div className="grid gap-4">
                     {teachingGroups
                       .filter(g => g.is_active)
                       .map(group => {
@@ -458,40 +460,43 @@ export default function Schedules() {
                         const room = rooms.find(r => r.id === groupSlots[0]?.room_id);
 
                         return (
-                          <div key={group.id} className="p-4 rounded-lg border border-slate-200 hover:border-blue-300 transition-all">
+                          <div 
+                            key={group.id} 
+                            className="group p-6 rounded-xl border-2 border-slate-100 hover:border-blue-300 hover:shadow-lg transition-all bg-white"
+                          >
                             <div className="flex items-start justify-between">
                               <div className="flex-1">
-                                <h4 className="font-semibold text-slate-900 mb-1">{group.name}</h4>
-                                <div className="flex flex-wrap gap-2 text-sm text-slate-600">
-                                  <span className="flex items-center gap-1">
+                                <h4 className="text-lg font-bold text-slate-900 mb-3 group-hover:text-blue-900 transition-colors">
+                                  {group.name}
+                                </h4>
+                                <div className="flex flex-wrap gap-4 text-sm">
+                                  <div className="flex items-center gap-2 px-3 py-1.5 rounded-lg bg-blue-50 text-blue-700">
                                     <BookOpen className="w-4 h-4" />
-                                    {subject?.code || 'N/A'}
-                                  </span>
-                                  <span>•</span>
-                                  <span className="flex items-center gap-1">
+                                    <span className="font-medium">{subject?.code || 'N/A'}</span>
+                                  </div>
+                                  <div className="flex items-center gap-2 px-3 py-1.5 rounded-lg bg-emerald-50 text-emerald-700">
                                     <Users className="w-4 h-4" />
-                                    {teacher?.full_name || 'Unassigned'}
-                                  </span>
+                                    <span className="font-medium">{teacher?.full_name || 'Unassigned'}</span>
+                                  </div>
                                   {room && (
-                                    <>
-                                      <span>•</span>
-                                      <span className="flex items-center gap-1">
-                                        <Building2 className="w-4 h-4" />
-                                        {room.name}
-                                      </span>
-                                    </>
+                                    <div className="flex items-center gap-2 px-3 py-1.5 rounded-lg bg-purple-50 text-purple-700">
+                                      <Building2 className="w-4 h-4" />
+                                      <span className="font-medium">{room.name}</span>
+                                    </div>
                                   )}
                                 </div>
                               </div>
-                              <div className="text-right">
-                                <Badge className={`${
-                                  groupSlots.length > 0 ? 'bg-emerald-100 text-emerald-700' : 'bg-amber-100 text-amber-700'
+                              <div className="flex flex-col items-end gap-2">
+                                <Badge className={`px-4 py-2 text-sm font-semibold ${
+                                  groupSlots.length > 0 
+                                    ? 'bg-gradient-to-r from-emerald-500 to-teal-600 text-white' 
+                                    : 'bg-gradient-to-r from-amber-500 to-orange-600 text-white'
                                 }`}>
                                   {groupSlots.length} periods
                                 </Badge>
-                                <p className="text-xs text-slate-500 mt-1">
+                                <div className="text-sm text-slate-500 font-medium">
                                   {group.student_ids?.length || 0} students
-                                </p>
+                                </div>
                               </div>
                             </div>
                           </div>
