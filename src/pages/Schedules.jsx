@@ -133,12 +133,6 @@ export default function Schedules() {
   const handleGenerateSchedule = async () => {
     if (!selectedVersion) return;
 
-    // Validation: check OptaPlanner config
-    if (!school?.optaplanner_endpoint || !school?.optaplanner_api_key) {
-      toast.error('OptaPlanner not configured. Go to Settings → Solver tab', { duration: 8000 });
-      return;
-    }
-
     setGenDialogOpen(true);
     setGenStatus('generating');
     setGenMessage('');
