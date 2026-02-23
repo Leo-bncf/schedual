@@ -1202,6 +1202,11 @@ if (isDP) {
         if (tg.level === 'HL' || tg.level === 'SL') {
           solverDTO.level = String(tg.level);
         }
+        
+        // DEBUG: Log first 3 DTOs to verify subject_id format
+        if (idx < 3) {
+          recordLog(`🔍 TG_DTO[${idx}]: subject_id="${solverDTO.subject_id}" (CODE, not MongoDB ID "${tg.subject_id}")`);
+        }
 
         return solverDTO;
       })
