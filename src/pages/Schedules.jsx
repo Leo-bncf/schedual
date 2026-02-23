@@ -139,13 +139,14 @@ export default function Schedules() {
     setGenError('');
 
     try {
-      const { data } = await base44.functions.invoke('generateSchedule', {
+      const { data } = await base44.functions.invoke('optaPlannerPipeline', {
         schedule_version_id: selectedVersion.id
       });
 
-      if (data.ok) {
+      if (data.ok === true) {
         setGenStatus('success');
-        setGenMessage(`✅ ${data.slotsCreated} slots créés avec succès! Score: ${data.score || 'N/A'}`);
+        const inserted = data.result?.slotsInserted || 0;
+        setGenMessage(`✅ ${inserted} slots créés avec succès! Score: ${data.result?.score || 'N/A'}`);
         await queryClient.invalidateQueries({ queryKey: ['scheduleSlots'] });
         await queryClient.invalidateQueries({ queryKey: ['scheduleVersions'] });
       } else {
