@@ -247,27 +247,34 @@ export default function Schedules() {
   const draftVersions = scheduleVersions.filter(v => v.status === 'draft');
 
   return (
-    <div className="space-y-6">
-      <PageHeader
-        title="Schedules"
-        description="Generate and view timetables"
-        actions={
-          <Button onClick={() => setIsDialogOpen(true)} className="bg-blue-900 hover:bg-blue-800">
-            <Plus className="w-4 h-4 mr-2" />
-            New Version
-          </Button>
-        }
-      />
+    <div className="min-h-screen bg-gradient-to-br from-slate-50 via-blue-50/30 to-slate-50">
+      <div className="max-w-7xl mx-auto space-y-8">
+        {/* Hero Header */}
+        <div className="relative overflow-hidden rounded-2xl bg-gradient-to-br from-blue-900 via-blue-800 to-indigo-900 p-8 shadow-2xl">
+          <div className="absolute inset-0 bg-grid-white/5"></div>
+          <div className="relative z-10 flex items-center justify-between">
+            <div>
+              <h1 className="text-3xl font-bold text-white mb-2 tracking-tight">Schedule Management</h1>
+              <p className="text-blue-100 text-lg">AI-powered timetable generation and optimization</p>
+            </div>
+            <Button 
+              onClick={() => setIsDialogOpen(true)} 
+              className="bg-white text-blue-900 hover:bg-blue-50 shadow-lg hover:shadow-xl transition-all"
+            >
+              <Plus className="w-4 h-4 mr-2" />
+              New Version
+            </Button>
+          </div>
+        </div>
 
-      {/* Version Selector */}
-      <Card className="border-blue-200 bg-white shadow-sm">
-        <CardContent className="p-6">
-          <div className="flex flex-col lg:flex-row lg:items-center lg:justify-between gap-4">
-            <div className="flex flex-col sm:flex-row sm:items-center gap-4 flex-1">
-              <div className="flex-1">
-                <Label className="text-sm text-slate-600 mb-2 block">Active Version</Label>
+        {/* Version Selector Card */}
+        <Card className="border-0 shadow-lg hover:shadow-xl transition-all bg-white/90 backdrop-blur">
+          <CardContent className="p-8">
+            <div className="flex flex-col lg:flex-row lg:items-center gap-6">
+              <div className="flex-1 space-y-3">
+                <Label className="text-sm font-semibold text-slate-700 uppercase tracking-wide">Active Schedule Version</Label>
                 <Select value={selectedVersion?.id || ''} onValueChange={(id) => setSelectedVersion(scheduleVersions.find(v => v.id === id))}>
-                  <SelectTrigger className="w-full">
+                  <SelectTrigger className="h-12 text-base border-2 hover:border-blue-300 transition-colors">
                     <SelectValue placeholder="Select a schedule version" />
                   </SelectTrigger>
                   <SelectContent>
@@ -276,20 +283,26 @@ export default function Schedules() {
                     ) : (
                       <>
                         {publishedVersion && (
-                          <SelectItem value={publishedVersion.id}>
-                            <div className="flex items-center gap-2">
-                              <CheckCircle className="w-4 h-4 text-emerald-600" />
-                              <span className="font-medium">{publishedVersion.name}</span>
-                              <Badge className="ml-2 bg-emerald-100 text-emerald-700 text-xs">Published</Badge>
+                          <SelectItem value={publishedVersion.id} className="py-3">
+                            <div className="flex items-center gap-3">
+                              <CheckCircle className="w-5 h-5 text-emerald-600" />
+                              <div>
+                                <div className="font-semibold">{publishedVersion.name}</div>
+                                <div className="text-xs text-slate-500">{publishedVersion.academic_year}</div>
+                              </div>
+                              <Badge className="ml-auto bg-emerald-500 text-white">Live</Badge>
                             </div>
                           </SelectItem>
                         )}
                         {draftVersions.map(version => (
-                          <SelectItem key={version.id} value={version.id}>
-                            <div className="flex items-center gap-2">
-                              <Clock className="w-4 h-4 text-slate-400" />
-                              <span>{version.name}</span>
-                              <Badge variant="outline" className="ml-2 text-xs">Draft</Badge>
+                          <SelectItem key={version.id} value={version.id} className="py-3">
+                            <div className="flex items-center gap-3">
+                              <Clock className="w-5 h-5 text-amber-500" />
+                              <div>
+                                <div className="font-medium">{version.name}</div>
+                                <div className="text-xs text-slate-500">{version.academic_year}</div>
+                              </div>
+                              <Badge variant="outline" className="ml-auto">Draft</Badge>
                             </div>
                           </SelectItem>
                         ))}
@@ -298,27 +311,20 @@ export default function Schedules() {
                   </SelectContent>
                 </Select>
               </div>
+
               {selectedVersion && (
-                <div className="flex items-center gap-2 text-sm text-slate-500">
-                  <span>{selectedVersion.academic_year}</span>
-                  <span>•</span>
-                  <span>{selectedVersion.term || 'Full Year'}</span>
-                </div>
+                <Button
+                  onClick={handleGenerateSchedule}
+                  size="lg"
+                  className="bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-700 hover:to-indigo-700 text-white shadow-lg hover:shadow-xl transition-all"
+                >
+                  <Sparkles className="w-5 h-5 mr-2" />
+                  Generate Schedule
+                </Button>
               )}
             </div>
-
-            {selectedVersion && (
-              <Button
-                onClick={handleGenerateSchedule}
-                className="bg-blue-900 hover:bg-blue-800"
-              >
-                <Sparkles className="w-4 h-4 mr-2" />
-                Generate Schedule
-              </Button>
-            )}
-          </div>
-        </CardContent>
-      </Card>
+          </CardContent>
+        </Card>
 
       {/* Quick Stats */}
       {selectedVersion && scheduleSlots.length > 0 && (
