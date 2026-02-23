@@ -771,7 +771,6 @@ export default function Schedules() {
         message={genMessage}
         error={genError}
       />
-      </div>
     </div>
   );
 }
