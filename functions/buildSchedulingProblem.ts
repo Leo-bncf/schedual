@@ -1,7 +1,7 @@
 import { createClientFromRequest } from 'npm:@base44/sdk@0.8.6';
 
 /*
-REFACTORED: Cohort-Centered Schedule Builder (v2.1)
+REFACTORED: Cohort-Centered Schedule Builder (v2.1.1)
 - Each TeachingGroup = ONE canonical section/cohort (identified by teaching_group_id)
 - NO aggressive filtering - include all TGs unless completely invalid
 - Comprehensive fallback system ensures all TGs have duration (minutes_per_week)
@@ -9,14 +9,16 @@ REFACTORED: Cohort-Centered Schedule Builder (v2.1)
 - IB standards enforcement: HL≥300min, SL≥180min
 - Detailed diagnostics log all adjustments, warnings, and skips
 - Stable, predictable solver input with complete subject coverage
+- FORCE REDEPLOY: 2026-02-23T23:25:00Z
 */
 
-// DEPLOYMENT TIMESTAMP: 2026-02-18T10:00:00Z
+// DEPLOYMENT TIMESTAMP: 2026-02-23T23:25:00Z
 // CRITICAL FIX: TeachingGroup DTO contract aligned with Codex expectations
 // - student_group (snake_case, not camelCase)
 // - required_minutes_per_week (integer, snake_case)
 // - No unknown fields (year_group, name removed from main object)
 // - HL/SL hours validation enforced
+// - SUBJECT CODE FIX: teachingGroups.subject_id uses CODE not MongoDB ID
 
 Deno.serve(async (req) => {
   const BUILD_VERSION = '2026-02-23T23:20:00Z-SUBJECT-CODE-FIX-V2'; // Deployment marker
