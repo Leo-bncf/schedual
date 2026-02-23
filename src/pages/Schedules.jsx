@@ -151,11 +151,14 @@ export default function Schedules() {
       } else {
         setGenStatus('error');
         setGenError(data.message || data.error || 'Unknown error');
+        toast.error(data.message || data.error || 'Generation failed', { duration: 8000 });
       }
     } catch (error) {
       console.error('Generation error:', error);
       setGenStatus('error');
-      setGenError(error.response?.data?.message || error.message || 'Failed to generate schedule');
+      const errorMsg = error.response?.data?.message || error.message || 'Failed to generate schedule';
+      setGenError(errorMsg);
+      toast.error(errorMsg, { duration: 8000 });
     }
   };
 
