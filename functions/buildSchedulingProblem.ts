@@ -1760,6 +1760,12 @@ if (isDP) {
       }))
     });
     
+    // CRITICAL: Verify teachingGroups in problemForSolver use CODE
+    console.log('[buildSchedulingProblem] 🔍 VERIFY teachingGroups[0-2] use CODE:');
+    problemForSolver.teachingGroups.slice(0, 3).forEach((tg, i) => {
+      console.log(`  [${i}]: subject_id="${tg.subject_id}" (should be CODE like "CHEM", not MongoDB ID)`);
+    });
+    
     return Response.json({
       success: true,
       ok: true,
