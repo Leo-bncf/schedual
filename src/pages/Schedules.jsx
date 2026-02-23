@@ -508,37 +508,47 @@ export default function Schedules() {
             </TabsContent>
 
             {/* Student Viewer Tab */}
-            <TabsContent value="student" className="space-y-6">
-              <Card className="border-blue-200">
-                <CardHeader className="bg-blue-50">
-                  <CardTitle className="flex items-center gap-2">
-                    <Users className="w-5 h-5 text-blue-900" />
+            <TabsContent value="student" className="space-y-6 mt-6">
+              <Card className="border-0 shadow-lg bg-white/90 backdrop-blur">
+                <CardHeader className="bg-gradient-to-r from-indigo-50 to-purple-50 border-b">
+                  <CardTitle className="flex items-center gap-3 text-xl">
+                    <div className="p-2 rounded-lg bg-indigo-600">
+                      <Users className="w-5 h-5 text-white" />
+                    </div>
                     Student Timetable Viewer
                   </CardTitle>
-                  <CardDescription>View individual student schedules</CardDescription>
+                  <CardDescription className="text-base">View personalized schedules for each student</CardDescription>
                 </CardHeader>
                 <CardContent className="pt-6 space-y-6">
                   {/* Student Search & Select */}
                   <div className="space-y-3">
-                    <Label className="text-sm font-medium">Select Student</Label>
-                    <div className="flex gap-3">
+                    <Label className="text-sm font-semibold text-slate-700 uppercase tracking-wide">Find Student</Label>
+                    <div className="flex flex-col sm:flex-row gap-3">
                       <div className="flex-1 relative">
-                        <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400" />
+                        <Search className="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-slate-400" />
                         <Input
                           placeholder="Search by name or email..."
                           value={searchStudent}
                           onChange={(e) => setSearchStudent(e.target.value)}
-                          className="pl-10"
+                          className="pl-12 h-12 text-base border-2 hover:border-blue-300 transition-colors"
                         />
                       </div>
                       <Select value={selectedStudentId || ''} onValueChange={setSelectedStudentId}>
-                        <SelectTrigger className="w-[300px]">
+                        <SelectTrigger className="sm:w-[320px] h-12 text-base border-2 hover:border-blue-300 transition-colors">
                           <SelectValue placeholder="Choose student" />
                         </SelectTrigger>
                         <SelectContent>
                           {filteredStudents.map(student => (
-                            <SelectItem key={student.id} value={student.id}>
-                              {student.full_name} ({student.year_group})
+                            <SelectItem key={student.id} value={student.id} className="py-3">
+                              <div className="flex items-center gap-2">
+                                <div className="w-8 h-8 rounded-full bg-gradient-to-br from-blue-500 to-indigo-600 flex items-center justify-center text-white text-sm font-bold">
+                                  {student.full_name?.charAt(0)?.toUpperCase()}
+                                </div>
+                                <div>
+                                  <div className="font-medium">{student.full_name}</div>
+                                  <div className="text-xs text-slate-500">{student.year_group}</div>
+                                </div>
+                              </div>
                             </SelectItem>
                           ))}
                         </SelectContent>
