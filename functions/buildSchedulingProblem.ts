@@ -19,8 +19,9 @@ REFACTORED: Cohort-Centered Schedule Builder (v2.1)
 // - HL/SL hours validation enforced
 
 Deno.serve(async (req) => {
-  const BUILD_VERSION = '2026-02-18T10:00:00Z-CODEX-DTO-FIX'; // Deployment marker
-  console.log(`[buildSchedulingProblem] 🚀 BUILD VERSION: ${BUILD_VERSION}`);
+  const BUILD_VERSION = '2026-02-23T23:20:00Z-SUBJECT-CODE-FIX-V2'; // Deployment marker
+  console.log(`🚀🚀🚀 [buildSchedulingProblem] BUILD VERSION: ${BUILD_VERSION} 🚀🚀🚀`);
+  console.log('🔧 CRITICAL FIX: teachingGroups.subject_id NOW USES SUBJECT CODE (not MongoDB ID)');
   
   let stage = 'init';
   let school_id = null;
