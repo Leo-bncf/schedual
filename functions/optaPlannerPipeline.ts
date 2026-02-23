@@ -94,11 +94,14 @@ Deno.serve(async (req) => {
 
     const responseText = await response.text();
     console.log('[Pipeline] Response status:', response.status);
+    console.log('[Pipeline] Full response:', responseText);
 
     if (!response.ok) {
+      console.error('[Pipeline] OptaPlanner error:', responseText);
       return Response.json({
         ok: false,
-        error: `OptaPlanner error ${response.status}: ${responseText.substring(0, 200)}`
+        error: `OptaPlanner error ${response.status}`,
+        details: responseText
       }, { status: 500 });
     }
 
