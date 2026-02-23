@@ -157,9 +157,11 @@ export default function Schedules() {
     } catch (error) {
       console.error('Generation error:', error);
       setGenStatus('error');
-      const errorMsg = error.response?.data?.message || error.message || 'Failed to generate schedule';
-      setGenError(errorMsg);
-      toast.error(errorMsg, { duration: 8000 });
+      const apiError = error.response?.data?.error || error.message || 'Failed to generate schedule';
+      const details = error.response?.data?.details || '';
+      const fullError = details ? `${apiError}\n\nDetails: ${details}` : apiError;
+      setGenError(fullError);
+      toast.error(apiError, { duration: 10000 });
     }
   };
 
