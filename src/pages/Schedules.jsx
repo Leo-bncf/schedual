@@ -326,52 +326,75 @@ export default function Schedules() {
           </CardContent>
         </Card>
 
-      {/* Quick Stats */}
+      {/* Analytics Dashboard */}
       {selectedVersion && scheduleSlots.length > 0 && (
-        <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
-          <Card className="border-blue-200 bg-gradient-to-br from-blue-50 to-white">
-            <CardContent className="p-5">
-              <div className="flex items-center justify-between">
-                <div>
-                  <p className="text-xs text-slate-600 mb-1">Students Scheduled</p>
-                  <p className="text-2xl font-bold text-blue-900">{stats.studentsScheduled}/{students.length}</p>
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+          <Card className="border-0 shadow-lg hover:shadow-xl transition-all overflow-hidden group">
+            <div className="absolute inset-0 bg-gradient-to-br from-blue-500 to-indigo-600 opacity-90 group-hover:opacity-100 transition-opacity"></div>
+            <CardContent className="relative p-6">
+              <div className="flex items-start justify-between mb-4">
+                <div className="p-3 rounded-xl bg-white/20 backdrop-blur">
+                  <Users className="w-6 h-6 text-white" />
                 </div>
-                <div className="text-3xl font-bold text-blue-600">{stats.coverage}%</div>
+                <div className="text-right">
+                  <div className="text-3xl font-bold text-white">{stats.coverage}%</div>
+                  <div className="text-sm text-blue-100">Coverage</div>
+                </div>
+              </div>
+              <div className="text-white">
+                <div className="text-2xl font-bold mb-1">{stats.studentsScheduled}</div>
+                <div className="text-sm text-blue-100">of {students.length} students scheduled</div>
               </div>
             </CardContent>
           </Card>
-          <Card className="border-blue-200 bg-white">
-            <CardContent className="p-5">
-              <div className="flex items-center justify-between">
-                <div>
-                  <p className="text-xs text-slate-600 mb-1">Teachers Assigned</p>
-                  <p className="text-2xl font-bold text-slate-900">{stats.teachersAssigned}/{teachers.length}</p>
+
+          <Card className="border-0 shadow-lg hover:shadow-xl transition-all overflow-hidden group">
+            <div className="absolute inset-0 bg-gradient-to-br from-emerald-500 to-teal-600 opacity-90 group-hover:opacity-100 transition-opacity"></div>
+            <CardContent className="relative p-6">
+              <div className="flex items-start justify-between mb-4">
+                <div className="p-3 rounded-xl bg-white/20 backdrop-blur">
+                  <Users className="w-6 h-6 text-white" />
                 </div>
-                <Users className="w-8 h-8 text-blue-600" />
+                <div className="text-right">
+                  <div className="text-3xl font-bold text-white">{Math.round((stats.teachersAssigned/teachers.length)*100)}%</div>
+                  <div className="text-sm text-emerald-100">Active</div>
+                </div>
+              </div>
+              <div className="text-white">
+                <div className="text-2xl font-bold mb-1">{stats.teachersAssigned}</div>
+                <div className="text-sm text-emerald-100">of {teachers.length} teachers assigned</div>
               </div>
             </CardContent>
           </Card>
-          <Card className="border-blue-200 bg-white">
-            <CardContent className="p-5">
-              <div className="flex items-center justify-between">
-                <div>
-                  <p className="text-xs text-slate-600 mb-1">Total Periods</p>
-                  <p className="text-2xl font-bold text-slate-900">{stats.totalSlots}</p>
+
+          <Card className="border-0 shadow-lg hover:shadow-xl transition-all overflow-hidden group">
+            <div className="absolute inset-0 bg-gradient-to-br from-amber-500 to-orange-600 opacity-90 group-hover:opacity-100 transition-opacity"></div>
+            <CardContent className="relative p-6">
+              <div className="flex items-start justify-between mb-4">
+                <div className="p-3 rounded-xl bg-white/20 backdrop-blur">
+                  <Calendar className="w-6 h-6 text-white" />
                 </div>
-                <Calendar className="w-8 h-8 text-blue-600" />
+              </div>
+              <div className="text-white">
+                <div className="text-3xl font-bold mb-1">{stats.totalSlots}</div>
+                <div className="text-sm text-amber-100">Total periods scheduled</div>
               </div>
             </CardContent>
           </Card>
-          <Card className="border-blue-200 bg-white">
-            <CardContent className="p-5">
-              <div className="flex items-center justify-between">
-                <div>
-                  <p className="text-xs text-slate-600 mb-1">Rooms Used</p>
-                  <p className="text-2xl font-bold text-slate-900">
-                    {new Set(scheduleSlots.map(s => s.room_id).filter(Boolean)).size}
-                  </p>
+
+          <Card className="border-0 shadow-lg hover:shadow-xl transition-all overflow-hidden group">
+            <div className="absolute inset-0 bg-gradient-to-br from-purple-500 to-pink-600 opacity-90 group-hover:opacity-100 transition-opacity"></div>
+            <CardContent className="relative p-6">
+              <div className="flex items-start justify-between mb-4">
+                <div className="p-3 rounded-xl bg-white/20 backdrop-blur">
+                  <Building2 className="w-6 h-6 text-white" />
                 </div>
-                <Building2 className="w-8 h-8 text-blue-600" />
+              </div>
+              <div className="text-white">
+                <div className="text-3xl font-bold mb-1">
+                  {new Set(scheduleSlots.map(s => s.room_id).filter(Boolean)).size}
+                </div>
+                <div className="text-sm text-purple-100">Rooms in use</div>
               </div>
             </CardContent>
           </Card>
