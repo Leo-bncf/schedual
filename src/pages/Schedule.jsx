@@ -1496,9 +1496,7 @@ Now process the user's input and return ONLY the JSON object.`,
             await queryClient.invalidateQueries({ queryKey: ['scheduleVersions'] });
             await queryClient.invalidateQueries({ queryKey: ['students'] });
             setScheduleTab('student');
-          }
-        } catch (e) {
-          console.error('❌❌❌ Auto OptaPlanner step CRASHED:', e);
+
           console.error('Error message:', e?.message);
           console.error('Error stack:', e?.stack);
           console.error('Axios response:', e?.response);
