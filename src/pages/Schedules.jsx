@@ -420,12 +420,18 @@ export default function Schedules() {
           </Card>
         ) : (
           <Tabs defaultValue="overview" className="w-full">
-            <TabsList className="bg-white border border-blue-200">
-              <TabsTrigger value="overview" className="data-[state=active]:bg-blue-900 data-[state=active]:text-white">
+            <TabsList className="bg-white/80 backdrop-blur border-0 shadow-md p-1.5 rounded-xl">
+              <TabsTrigger 
+                value="overview" 
+                className="rounded-lg data-[state=active]:bg-gradient-to-r data-[state=active]:from-blue-600 data-[state=active]:to-indigo-600 data-[state=active]:text-white data-[state=active]:shadow-lg transition-all px-6"
+              >
                 <Calendar className="w-4 h-4 mr-2" />
                 Admin Overview
               </TabsTrigger>
-              <TabsTrigger value="student" className="data-[state=active]:bg-blue-900 data-[state=active]:text-white">
+              <TabsTrigger 
+                value="student" 
+                className="rounded-lg data-[state=active]:bg-gradient-to-r data-[state=active]:from-blue-600 data-[state=active]:to-indigo-600 data-[state=active]:text-white data-[state=active]:shadow-lg transition-all px-6"
+              >
                 <Users className="w-4 h-4 mr-2" />
                 Student Viewer
               </TabsTrigger>
