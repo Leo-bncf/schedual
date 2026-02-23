@@ -64,7 +64,6 @@ import Panel from './pages/Panel';
 import PrivacyPolicy from './pages/PrivacyPolicy';
 import Reports from './pages/Reports';
 import Rooms from './pages/Rooms';
-import Schedule from './pages/Schedule';
 import Settings from './pages/Settings';
 import Students from './pages/Students';
 import Subjects from './pages/Subjects';
@@ -99,7 +98,6 @@ export const PAGES = {
     "PrivacyPolicy": PrivacyPolicy,
     "Reports": Reports,
     "Rooms": Rooms,
-    "Schedule": Schedule,
     "Settings": Settings,
     "Students": Students,
     "Subjects": Subjects,
