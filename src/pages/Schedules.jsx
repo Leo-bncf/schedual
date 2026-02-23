@@ -404,16 +404,22 @@ export default function Schedules() {
       {/* Main Content */}
       {selectedVersion ? (
         scheduleSlots.length === 0 ? (
-          <Card className="border-blue-200">
-            <CardContent className="py-20 text-center">
-              <Calendar className="w-16 h-16 text-slate-300 mx-auto mb-4" />
-              <h3 className="text-lg font-semibold text-slate-900 mb-2">No Schedule Generated</h3>
-              <p className="text-slate-500 mb-6">Click "Generate Schedule" to create timetables with OptaPlanner</p>
+          <Card className="border-0 shadow-xl bg-white/90 backdrop-blur overflow-hidden">
+            <div className="absolute inset-0 bg-gradient-to-br from-blue-500/5 via-indigo-500/5 to-purple-500/5"></div>
+            <CardContent className="relative py-24 text-center">
+              <div className="inline-flex p-8 rounded-3xl bg-gradient-to-br from-blue-100 via-indigo-100 to-purple-100 mb-6 animate-pulse">
+                <Sparkles className="w-20 h-20 text-blue-600" />
+              </div>
+              <h3 className="text-2xl font-bold text-slate-900 mb-3">Ready to Generate</h3>
+              <p className="text-lg text-slate-600 mb-8 max-w-2xl mx-auto">
+                Use AI-powered OptaPlanner to automatically create optimized timetables for your school
+              </p>
               <Button
                 onClick={handleGenerateSchedule}
-                className="bg-blue-900 hover:bg-blue-800"
+                size="lg"
+                className="bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-700 hover:to-indigo-700 shadow-lg hover:shadow-xl transition-all"
               >
-                <Sparkles className="w-4 h-4 mr-2" />
+                <Sparkles className="w-5 h-5 mr-2" />
                 Generate Schedule Now
               </Button>
             </CardContent>
