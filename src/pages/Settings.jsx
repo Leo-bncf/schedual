@@ -155,8 +155,6 @@ export default function Settings() {
     periods_per_day: 8,
     days_per_week: 5,
     school_start_time: '08:00',
-    optaplanner_endpoint: '',
-    optaplanner_api_key: '',
     settings: {}
   });
 
@@ -172,8 +170,6 @@ export default function Settings() {
         periods_per_day: school.periods_per_day || 8,
         days_per_week: school.days_per_week || 5,
         school_start_time: school.school_start_time || '08:00',
-        optaplanner_endpoint: school.optaplanner_endpoint || '',
-        optaplanner_api_key: school.optaplanner_api_key || '',
         settings: school.settings || {}
       });
     }
@@ -306,7 +302,7 @@ export default function Settings() {
       />
 
       <Tabs defaultValue="school" className="space-y-6">
-        <TabsList className="grid grid-cols-6 w-full max-w-5xl bg-slate-100 p-1 h-auto rounded-2xl">
+        <TabsList className="grid grid-cols-5 w-full max-w-5xl bg-slate-100 p-1 h-auto rounded-2xl">
           <TabsTrigger value="school" className="flex flex-col items-center gap-1.5 py-3 rounded-xl data-[state=active]:bg-white data-[state=active]:shadow-sm">
             <Building2 className="w-5 h-5" />
             <span className="text-xs font-medium">School Info</span>
@@ -318,10 +314,6 @@ export default function Settings() {
           <TabsTrigger value="academic" className="flex flex-col items-center gap-1.5 py-3 rounded-xl data-[state=active]:bg-white data-[state=active]:shadow-sm">
             <GraduationCap className="w-5 h-5" />
             <span className="text-xs font-medium">Academic</span>
-          </TabsTrigger>
-          <TabsTrigger value="solver" className="flex flex-col items-center gap-1.5 py-3 rounded-xl data-[state=active]:bg-white data-[state=active]:shadow-sm">
-            <Zap className="w-5 h-5" />
-            <span className="text-xs font-medium">Solver</span>
           </TabsTrigger>
           <TabsTrigger value="subscription" className="flex flex-col items-center gap-1.5 py-3 rounded-xl data-[state=active]:bg-white data-[state=active]:shadow-sm">
             <CreditCard className="w-5 h-5" />
@@ -657,96 +649,7 @@ export default function Settings() {
           </div>
         </TabsContent>
 
-        <TabsContent value="solver">
-          <Card className="border-0 shadow-md">
-            <CardHeader className="bg-gradient-to-r from-violet-50 to-purple-50">
-              <div className="flex items-center gap-3">
-                <div className="p-2 rounded-lg bg-violet-100">
-                  <Zap className="w-5 h-5 text-violet-700" />
-                </div>
-                <div>
-                  <CardTitle className="text-lg">OptaPlanner Configuration</CardTitle>
-                  <CardDescription>Connect your OptaPlanner VPS for schedule generation</CardDescription>
-                </div>
-              </div>
-            </CardHeader>
-            <CardContent className="pt-6 space-y-6">
-              <div className="p-4 rounded-lg bg-blue-50 border border-blue-200">
-                <div className="flex items-start gap-3">
-                  <Info className="w-5 h-5 text-blue-600 mt-0.5 flex-shrink-0" />
-                  <div className="text-sm text-blue-900">
-                    <p className="font-semibold mb-2">🔌 About OptaPlanner Integration</p>
-                    <p className="mb-3">OptaPlanner is the constraint-based AI solver that generates optimal schedules for your school. You need to configure your own VPS endpoint.</p>
-                    <ul className="list-disc list-inside space-y-1 text-xs">
-                      <li>Deploy OptaPlanner on your own server (VPS, cloud, etc.)</li>
-                      <li>Enter the API endpoint URL below (e.g., https://your-vps.com/solve)</li>
-                      <li>Provide the API key for authentication</li>
-                      <li>The solver will be called when generating schedules</li>
-                    </ul>
-                  </div>
-                </div>
-              </div>
 
-              <div className="space-y-4">
-                <div className="space-y-2">
-                  <Label htmlFor="optaplanner_endpoint" className="flex items-center gap-2 text-sm font-semibold">
-                    <Globe className="w-4 h-4 text-violet-600" />
-                    OptaPlanner Endpoint URL
-                  </Label>
-                  <Input 
-                    id="optaplanner_endpoint"
-                    type="url"
-                    value={formData.optaplanner_endpoint || ''}
-                    onChange={(e) => setFormData({ ...formData, optaplanner_endpoint: e.target.value })}
-                    placeholder="https://your-vps.com/solve"
-                    className="h-11 font-mono text-sm"
-                  />
-                  <p className="text-xs text-slate-500">Full URL of your OptaPlanner API endpoint</p>
-                </div>
-
-                <div className="space-y-2">
-                  <Label htmlFor="optaplanner_api_key" className="flex items-center gap-2 text-sm font-semibold">
-                    <Shield className="w-4 h-4 text-violet-600" />
-                    API Key
-                  </Label>
-                  <Input 
-                    id="optaplanner_api_key"
-                    type="password"
-                    value={formData.optaplanner_api_key || ''}
-                    onChange={(e) => setFormData({ ...formData, optaplanner_api_key: e.target.value })}
-                    placeholder="Your API key"
-                    className="h-11 font-mono text-sm"
-                  />
-                  <p className="text-xs text-slate-500">Bearer token for authenticating requests to your VPS</p>
-                </div>
-              </div>
-
-              {school?.optaplanner_endpoint && school?.optaplanner_api_key && (
-                <div className="p-4 rounded-lg bg-green-50 border border-green-200">
-                  <div className="flex items-center gap-3">
-                    <CheckCircle2 className="w-5 h-5 text-green-600" />
-                    <div className="text-sm text-green-900">
-                      <p className="font-semibold">✓ OptaPlanner configured</p>
-                      <p className="text-xs mt-1">Endpoint: {school.optaplanner_endpoint}</p>
-                    </div>
-                  </div>
-                </div>
-              )}
-
-              {(!school?.optaplanner_endpoint || !school?.optaplanner_api_key) && (
-                <div className="p-4 rounded-lg bg-amber-50 border border-amber-200">
-                  <div className="flex items-start gap-3">
-                    <AlertCircle className="w-5 h-5 text-amber-600 mt-0.5" />
-                    <div className="text-sm text-amber-900">
-                      <p className="font-semibold">⚠️ Configuration Required</p>
-                      <p className="text-xs mt-1">You need to configure OptaPlanner before generating schedules. Enter your VPS endpoint and API key above, then click "Save Changes".</p>
-                    </div>
-                  </div>
-                </div>
-              )}
-            </CardContent>
-          </Card>
-        </TabsContent>
 
         <TabsContent value="subscription">
           <div className="space-y-6">
