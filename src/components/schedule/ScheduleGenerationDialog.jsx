@@ -92,10 +92,15 @@ export default function ScheduleGenerationDialog({ open, onClose, status, messag
           )}
 
           {status === 'error' && (
-            <div className="space-y-3">
+            <motion.div 
+              initial={{ opacity: 0, scale: 0.95 }}
+              animate={{ opacity: 1, scale: 1 }}
+              exit={{ opacity: 0, scale: 0.95 }}
+              className="py-6 space-y-4"
+            >
               {isTeacherCapacityError ? (
                 <>
-                  <div className="p-4 rounded-lg bg-amber-50 border border-amber-200">
+                  <div className="p-4 rounded-lg bg-amber-50 border border-amber-200 max-h-64 overflow-y-auto custom-scrollbar">
                     <p className="text-sm text-amber-900 font-semibold mb-2">{error}</p>
                     <p className="text-xs text-amber-800 mb-3">{message.message}</p>
                     
@@ -137,9 +142,9 @@ export default function ScheduleGenerationDialog({ open, onClose, status, messag
                 </>
               ) : (
                 <>
-                  <div className="p-5 rounded-xl bg-red-50 border border-red-200 shadow-sm">
+                  <div className="p-5 rounded-xl bg-red-50 border border-red-200 shadow-sm max-h-64 overflow-y-auto custom-scrollbar">
                     <div className="flex items-center gap-2 mb-3">
-                      <XCircle className="w-5 h-5 text-red-600" />
+                      <XCircle className="w-5 h-5 text-red-600 shrink-0" />
                       <p className="font-semibold text-red-900 text-base">Détails de l'erreur</p>
                     </div>
                     <p className="text-sm text-red-800 whitespace-pre-wrap leading-relaxed">{error}</p>
