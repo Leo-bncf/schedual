@@ -188,19 +188,61 @@ Deno.serve(async (req) => {
       shuffleInputOrder: false
     };
 
-    // Log teacher assignments to debug capacity issues
+    // Validate teacher capacity before sending to OptaPlanner
     const teacherAssignments = {};
+    const overloadedTeachers = [];
+    
     teachers.forEach((t, idx) => {
       const teacherId = idx + 1;
       const assignedLessons = lessons.filter(l => l.teacherId === teacherId);
+      const maxPeriods = Math.min(t.max_hours_per_week || 25, 45);
+      const isOverloaded = assignedLessons.length > maxPeriods;
+      
       teacherAssignments[t.full_name] = {
-        maxPeriods: t.max_hours_per_week || 25,
+        maxPeriods: maxPeriods,
         assignedLessons: assignedLessons.length,
-        overload: assignedLessons.length > (t.max_hours_per_week || 25)
+        overload: isOverloaded
       };
+      
+      if (isOverloaded) {
+        overloadedTeachers.push({
+          name: t.full_name,
+          assigned: assignedLessons.length,
+          max: maxPeriods,
+          teachingGroups: teachingGroups
+            .filter(tg => tg.teacher_id === t.id)
+            .map(tg => {
+              const subject = subjects.find(s => s.id === tg.subject_id);
+              const requiredMinutes = tg.minutes_per_week || 180;
+              const periodDuration = schoolData.period_duration_minutes || 60;
+              const numLessons = Math.ceil(requiredMinutes / periodDuration);
+              return {
+                subject: subject?.name || 'Unknown',
+                yearGroup: tg.year_group,
+                minutesPerWeek: requiredMinutes,
+                lessonsNeeded: numLessons
+              };
+            })
+        });
+      }
     });
     
     console.log('[Pipeline] Teacher capacity check:', teacherAssignments);
+    
+    if (overloadedTeachers.length > 0) {
+      console.error('[Pipeline] Teacher capacity exceeded:', overloadedTeachers);
+      return Response.json({
+        ok: false,
+        error: 'Teacher capacity exceeded',
+        code: 'TEACHER_CAPACITY_EXCEEDED',
+        details: {
+          message: `${overloadedTeachers.length} teacher(s) have been assigned more lessons than their weekly capacity allows.`,
+          overloadedTeachers: overloadedTeachers,
+          solution: 'Either increase the teacher\'s max hours per week, assign some teaching groups to other teachers, or reduce the weekly hours required for some subjects.'
+        }
+      }, { status: 400 });
+    }
+    
     console.log('[Pipeline] Calling OptaPlanner:', OPTAPLANNER_ENDPOINT);
     console.log('[Pipeline] Payload summary:', {
       rooms: rooms.length,
