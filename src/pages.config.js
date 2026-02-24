@@ -76,6 +76,8 @@ import Teachers from './pages/Teachers';
 import TermsOfUse from './pages/TermsOfUse';
 import TestData from './pages/TestData';
 import UserManagement from './pages/UserManagement';
+import StudentProfile from './pages/StudentProfile';
+import TeacherProfile from './pages/TeacherProfile';
 import __Layout from './Layout.jsx';
 
 
@@ -109,6 +111,8 @@ export const PAGES = {
     "TermsOfUse": TermsOfUse,
     "TestData": TestData,
     "UserManagement": UserManagement,
+    "StudentProfile": StudentProfile,
+    "TeacherProfile": TeacherProfile,
 }
 
 export const pagesConfig = {

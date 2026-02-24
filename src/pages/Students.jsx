@@ -311,7 +311,7 @@ export default function Students() {
             {row.full_name?.split(' ').map(n => n[0]).join('').slice(0, 2)}
           </div>
           <div>
-            <p className="font-medium text-slate-900">{row.full_name}</p>
+            <Link to={`${createPageUrl('StudentProfile')}?id=${row.id}`} className="font-medium text-slate-900 hover:text-blue-600 hover:underline">{row.full_name}</Link>
             <p className="text-sm text-slate-500">{row.student_id}</p>
           </div>
         </div>
@@ -1101,7 +1101,11 @@ Return ONLY students array, no other text.`,
                           {student.full_name?.split(' ').map(n => n[0]).join('').slice(0, 2)}
                         </div>
                         <div>
-                          <CardTitle className="text-base font-semibold text-slate-900">{student.full_name}</CardTitle>
+                          <CardTitle className="text-base font-semibold text-slate-900 hover:text-blue-600 hover:underline cursor-pointer">
+                            <Link to={`${createPageUrl('StudentProfile')}?id=${student.id}`}>
+                              {student.full_name}
+                            </Link>
+                          </CardTitle>
                           <p className="text-xs text-slate-500 mt-0.5">{student.student_id}</p>
                         </div>
                       </div>
