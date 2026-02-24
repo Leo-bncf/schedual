@@ -42,68 +42,79 @@ Deno.serve(async (req) => {
     }
 
     const schoolData = school[0];
-    const periodsPerDay = schoolData.periods_per_day || 10;
-    const daysPerWeek = schoolData.days_per_week || 5;
 
-    const timeslots = [];
-    const dayNames = ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday'];
-    
-    for (let day = 0; day < daysPerWeek; day++) {
-      for (let period = 0; period < periodsPerDay; period++) {
-        timeslots.push({
-          id: day * periodsPerDay + period,
-          dayOfWeek: dayNames[day],
-          periodIndex: period
-        });
-      }
-    }
-
-    // Create ID mappings: Base44 string IDs → numeric IDs for OptaPlanner
+    // Create ID mappings for reverse lookup
     const roomIdMap = new Map();
     const teacherIdMap = new Map();
     const studentIdMap = new Map();
-    const tgIdMap = new Map();
 
-    rooms.forEach((r, idx) => roomIdMap.set(r.id, idx));
-    teachers.forEach((t, idx) => teacherIdMap.set(t.id, idx));
-    students.forEach((s, idx) => studentIdMap.set(s.id, idx));
-    teachingGroups.forEach((tg, idx) => tgIdMap.set(tg.id, idx));
+    rooms.forEach((r, idx) => roomIdMap.set(r.id, idx + 1));
+    teachers.forEach((t, idx) => teacherIdMap.set(t.id, idx + 1));
+    students.forEach((s, idx) => studentIdMap.set(s.id, idx + 1000));
 
-    const lessons = teachingGroups
-      .filter(tg => tg.teacher_id && tg.student_ids?.length > 0)
-      .map((tg) => {
+    // Build reverse mappings
+    const subjectIdByCode = {};
+    const teacherIdById = {};
+    const roomIdById = {};
+
+    subjects.forEach(s => {
+      if (s.code) subjectIdByCode[s.code] = s.id;
+    });
+
+    teachers.forEach((t, idx) => {
+      teacherIdById[idx + 1] = t.id;
+    });
+
+    rooms.forEach((r, idx) => {
+      roomIdById[idx + 1] = r.id;
+    });
+
+    // Build teachingGroups array
+    const teachingGroupsPayload = teachingGroups
+      .filter(tg => tg.is_active)
+      .map(tg => {
         const subject = subjects.find(s => s.id === tg.subject_id);
-        const teacher = teachers.find(t => t.id === tg.teacher_id);
-        const room = rooms.find(r => r.id === tg.preferred_room_id);
-
         return {
-          id: tgIdMap.get(tg.id),
-          teachingGroupId: tg.id,
-          subject: subject?.code || subject?.name || 'Unknown',
-          subjectName: subject?.name || 'Unknown',
-          subjectCode: subject?.code || 'UNK',
+          id: tg.id,
+          subjectId: tg.subject_id,
           studentGroup: tg.year_group || 'DP1',
-          teacherId: teacher ? teacherIdMap.get(teacher.id) : null,
-          teacherName: teacher?.full_name || 'Unknown',
-          studentIds: (tg.student_ids || []).map(sid => studentIdMap.get(sid)).filter(id => id != null),
-          roomId: room ? roomIdMap.get(room.id) : null,
-          durationMinutes: tg.minutes_per_week || 180,
-          yearGroup: tg.year_group || 'DP1',
-          level: tg.level || 'SL'
+          sectionId: `sec_${tg.year_group || 'DP1'}_${tg.id.slice(-4)}`,
+          level: tg.level || 'SL',
+          requiredMinutesPerWeek: tg.minutes_per_week || 180
         };
       });
 
-    // Build subjects list
-    const subjectsList = subjects
-      .filter(s => s.is_active)
-      .map((s, idx) => ({
-        id: idx,
-        code: s.code || s.name,
-        name: s.name,
-        ibLevel: s.ib_level
-      }));
+    // Build lessons - one lesson per teaching group per required session
+    const lessons = [];
+    let lessonId = 1;
 
-    // Build subject requirements with proper fields - filter out invalid entries
+    teachingGroups
+      .filter(tg => tg.is_active && tg.teacher_id && tg.student_ids?.length > 0)
+      .forEach(tg => {
+        const subject = subjects.find(s => s.id === tg.subject_id);
+        const teacherId = teacherIdMap.get(tg.teacher_id);
+        const studentIds = (tg.student_ids || []).map(sid => studentIdMap.get(sid)).filter(id => id != null);
+        const requiredMinutes = tg.minutes_per_week || 180;
+        const periodDuration = schoolData.period_duration_minutes || 60;
+        const numLessons = Math.ceil(requiredMinutes / periodDuration);
+
+        for (let i = 0; i < numLessons; i++) {
+          lessons.push({
+            id: lessonId++,
+            teachingGroupId: tg.id,
+            sectionId: `sec_${tg.year_group || 'DP1'}_${tg.id.slice(-4)}`,
+            subject: subject?.code || subject?.name || 'Unknown',
+            studentGroup: tg.year_group || 'DP1',
+            teacherId: teacherId || null,
+            requiredCapacity: studentIds.length,
+            studentIds: studentIds,
+            timeslotId: null,
+            roomId: null
+          });
+        }
+      });
+
+    // Build subjectRequirements
     const subjectRequirements = teachingGroups
       .filter(tg => {
         const subject = subjects.find(s => s.id === tg.subject_id);
@@ -114,35 +125,66 @@ Deno.serve(async (req) => {
       .map(tg => {
         const subject = subjects.find(s => s.id === tg.subject_id);
         return {
-          subject: subject.code || subject.name,
+          teachingGroupId: tg.id,
+          sectionId: `sec_${tg.year_group || 'DP1'}_${tg.id.slice(-4)}`,
           studentGroup: tg.year_group,
-          level: tg.level || 'SL',
+          subject: subject.code || subject.name,
           minutesPerWeek: tg.minutes_per_week || 180
         };
       });
 
     const payload = {
-      timeslots,
-      rooms: rooms.map((r, idx) => ({ id: idx, name: r.name, capacity: r.capacity })),
-      teachers: teachers.map((t, idx) => ({ id: idx, name: t.full_name })),
-      students: students.map((s, idx) => ({
-        id: idx,
-        name: s.full_name,
-        yearGroup: s.year_group,
-        programme: s.ib_programme
+      schoolId: user.school_id,
+      scheduleVersionId: schedule_version_id,
+      scheduleVersion: `v${new Date().toISOString().split('T')[0]}`,
+      
+      scheduleSettings: {
+        periodDurationMinutes: schoolData.period_duration_minutes || 60,
+        dayStartTime: schoolData.day_start_time || "08:00",
+        dayEndTime: schoolData.day_end_time || "18:00",
+        daysOfWeek: schoolData.days_of_week || ["MONDAY", "TUESDAY", "WEDNESDAY", "THURSDAY", "FRIDAY"],
+        breaks: schoolData.breaks || []
+      },
+
+      rooms: rooms.map((r, idx) => ({
+        id: idx + 1,
+        name: r.name,
+        capacity: r.capacity,
+        externalId: r.id
       })),
-      subjects: subjectsList,
+
+      teachers: teachers.map((t, idx) => ({
+        id: idx + 1,
+        name: t.full_name,
+        unavailableSlotIds: [],
+        externalId: t.id
+      })),
+
+      subjects: subjects.filter(s => s.is_active).map(s => ({
+        id: s.id,
+        code: s.code || s.name,
+        name: s.name
+      })),
+
+      subjectIdByCode,
+      teacherIdById,
+      roomIdById,
+
+      teachingGroups: teachingGroupsPayload,
       lessons,
       subjectRequirements,
-      scheduleSettings: {
-        periodsPerDay,
-        daysPerWeek,
-        schoolId: user.school_id,
-        periodDurationMinutes: school.period_duration_minutes || 60,
-        dayStartTime: school.day_start_time || "08:00",
-        dayEndTime: school.day_end_time || "18:00",
-        daysOfWeek: school.days_of_week || ["MONDAY", "TUESDAY", "WEDNESDAY", "THURSDAY", "FRIDAY"]
-      }
+
+      blockedSlotIds: [],
+      
+      constraints: {
+        maxSameSubjectPerDayHardEnabled: true,
+        maxSameSubjectPerDayLimit: 2
+      },
+
+      randomSeed: 42,
+      randomizeSearch: false,
+      numSearchWorkers: 1,
+      shuffleInputOrder: false
     };
 
     console.log('[Pipeline] Calling OptaPlanner:', OPTAPLANNER_ENDPOINT);
