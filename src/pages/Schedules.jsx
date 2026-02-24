@@ -398,13 +398,23 @@ export default function Schedules() {
               </div>
 
               {selectedVersion && (
-                <Button
-                  onClick={handleGenerateSchedule}
-                  className="bg-blue-600 hover:bg-blue-700 lg:mt-5"
-                >
-                  <Sparkles className="w-4 h-4 mr-2" />
-                  Generate Schedule
-                </Button>
+                <div className="flex items-center gap-2 lg:mt-5">
+                  <Button
+                    onClick={handleGenerateSchedule}
+                    className="bg-blue-600 hover:bg-blue-700"
+                  >
+                    <Sparkles className="w-4 h-4 mr-2" />
+                    Generate Schedule
+                  </Button>
+                  <Button
+                    variant="destructive"
+                    size="icon"
+                    onClick={() => setIsDeleteDialogOpen(true)}
+                    title="Delete version"
+                  >
+                    <Trash2 className="w-4 h-4" />
+                  </Button>
+                </div>
               )}
             </div>
           </CardContent>
