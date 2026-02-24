@@ -53,6 +53,90 @@ Deno.serve(async (req) => {
 
     const schoolData = school[0];
 
+    // ===== PRE-PIPELINE VALIDATION =====
+    const validationErrors = [];
+
+    // 1. Check minimum data availability
+    if (!rooms || rooms.length === 0) {
+      validationErrors.push('❌ No active rooms configured. Please add rooms first.');
+    }
+    if (!teachers || teachers.length === 0) {
+      validationErrors.push('❌ No active teachers configured. Please add teachers first.');
+    }
+    if (!subjects || subjects.length === 0) {
+      validationErrors.push('❌ No active subjects configured. Please add subjects first.');
+    }
+    if (!teachingGroups || teachingGroups.length === 0) {
+      validationErrors.push('❌ No active teaching groups. Please create teaching groups first.');
+    }
+
+    // 2. Validate teaching groups have required fields
+    const invalidTGs = teachingGroups.filter(tg => 
+      !tg.subject_id || !tg.year_group || !tg.teacher_id || !tg.student_ids || tg.student_ids.length === 0
+    );
+    if (invalidTGs.length > 0) {
+      validationErrors.push(`⚠️  ${invalidTGs.length} teaching group(s) missing required fields (subject, year_group, teacher, or students)`);
+    }
+
+    // 3. Validate subject hours are configured
+    const subjectsNoHours = subjects.filter(s => 
+      (s.ib_level === 'DP' && (!s.hoursPerWeekHL || !s.hoursPerWeekSL)) ||
+      (s.ib_level !== 'DP' && !s.pyp_myp_minutes_per_week_default)
+    );
+    if (subjectsNoHours.length > 0) {
+      validationErrors.push(`⚠️  ${subjectsNoHours.length} subject(s) missing weekly hours configuration`);
+    }
+
+    // 4. Check room capacity vs teaching group sizes
+    const roomCapacityIssues = [];
+    teachingGroups.forEach(tg => {
+      const requiredCapacity = tg.student_ids?.length || 0;
+      const availableRooms = rooms.filter(r => r.capacity >= requiredCapacity);
+      if (availableRooms.length === 0) {
+        roomCapacityIssues.push({
+          teaching_group: tg.name,
+          students: requiredCapacity,
+          largestRoom: Math.max(...rooms.map(r => r.capacity || 0))
+        });
+      }
+    });
+    if (roomCapacityIssues.length > 0) {
+      validationErrors.push(`❌ ${roomCapacityIssues.length} teaching group(s) exceed available room capacity`);
+    }
+
+    // 5. Check teacher overload
+    const teacherOverloadIssues = [];
+    teachers.forEach(t => {
+      const assignedTGs = teachingGroups.filter(tg => tg.teacher_id === t.id);
+      const totalMinutes = assignedTGs.reduce((sum, tg) => sum + (tg.minutes_per_week || 180), 0);
+      const maxMinutes = (t.max_hours_per_week || 25) * 60;
+      if (totalMinutes > maxMinutes) {
+        teacherOverloadIssues.push({
+          teacher: t.full_name,
+          assignedMinutes: totalMinutes,
+          maxMinutes: maxMinutes,
+          groups: assignedTGs.length
+        });
+      }
+    });
+    if (teacherOverloadIssues.length > 0) {
+      validationErrors.push(`❌ ${teacherOverloadIssues.length} teacher(s) overloaded with too many teaching groups`);
+    }
+
+    if (validationErrors.length > 0) {
+      console.error('[Pipeline] Validation failed:', validationErrors);
+      return Response.json({
+        ok: false,
+        error: 'Pre-pipeline validation failed',
+        code: 'VALIDATION_FAILED',
+        validation_errors: validationErrors,
+        room_capacity_issues: roomCapacityIssues,
+        teacher_overload_issues: teacherOverloadIssues
+      }, { status: 400 });
+    }
+
+    console.log('[Pipeline] Validation passed ✅');
+
     // Create ID mappings for reverse lookup
     const roomIdMap = new Map();
     const teacherIdMap = new Map();
