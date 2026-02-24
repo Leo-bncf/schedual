@@ -482,32 +482,80 @@ export default function StudentScheduleView({ students, slots, groups, subjects,
           )}
         </div>
         
-        <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-2 max-h-[400px] overflow-y-auto p-1">
-          {students.map(student => (
-            <button
-              key={student.id}
-              onClick={() => onStudentChange(student.id)}
-              className={cn(
-                "p-3 rounded-lg border-2 transition-all text-left hover:shadow-md",
-                selectedStudentId === student.id
-                  ? "bg-blue-900 text-white border-blue-700 shadow-lg"
-                  : "bg-white text-slate-900 border-slate-200 hover:border-blue-300"
-              )}
-            >
-              <div className={cn(
-                "font-semibold text-sm truncate",
-                selectedStudentId === student.id ? "text-white" : "text-slate-900"
-              )}>
-                {student.full_name}
+        <div className="bg-white rounded-xl border border-slate-200 p-4 shadow-sm mb-6">
+          <div className="flex flex-col sm:flex-row gap-4 items-start sm:items-center justify-between mb-4">
+            <div className="relative w-full sm:max-w-xs">
+              <div className="absolute inset-y-0 left-3 flex items-center pointer-events-none">
+                <svg className="w-4 h-4 text-slate-400" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
+                </svg>
               </div>
-              <div className={cn(
-                "text-xs mt-1",
-                selectedStudentId === student.id ? "text-blue-100" : "text-slate-500"
-              )}>
-                {student.year_group}
+              <input
+                type="text"
+                placeholder="Search students..."
+                className="w-full pl-9 pr-4 py-2 border border-slate-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all"
+                onChange={(e) => {
+                  const val = e.target.value.toLowerCase();
+                  const els = document.querySelectorAll('.student-btn');
+                  els.forEach(el => {
+                    const text = el.textContent.toLowerCase();
+                    if (text.includes(val)) {
+                      el.style.display = 'flex';
+                    } else {
+                      el.style.display = 'none';
+                    }
+                  });
+                }}
+              />
+            </div>
+            
+            {selectedStudent && (
+              <div className="flex items-center gap-2 bg-blue-50 text-blue-900 px-3 py-1.5 rounded-lg border border-blue-100 text-sm font-medium">
+                <GraduationCap className="w-4 h-4 text-blue-600" />
+                Selected: {selectedStudent.full_name}
               </div>
-            </button>
-          ))}
+            )}
+          </div>
+          
+          <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-3 max-h-[300px] overflow-y-auto pr-1 custom-scrollbar">
+            {students.map(student => (
+              <button
+                key={student.id}
+                onClick={() => onStudentChange(student.id)}
+                className={cn(
+                  "student-btn flex flex-col items-start p-3 rounded-xl border transition-all duration-200 text-left w-full group outline-none focus:ring-2 focus:ring-blue-500",
+                  selectedStudentId === student.id
+                    ? "bg-blue-600 text-white border-blue-600 shadow-md transform scale-[1.02]"
+                    : "bg-white text-slate-900 border-slate-200 hover:border-blue-400 hover:shadow-sm hover:bg-blue-50/50"
+                )}
+              >
+                <div className="flex items-center gap-3 w-full">
+                  <div className={cn(
+                    "w-8 h-8 rounded-full flex items-center justify-center text-xs font-bold shrink-0 transition-colors",
+                    selectedStudentId === student.id
+                      ? "bg-white/20 text-white"
+                      : "bg-slate-100 text-slate-600 group-hover:bg-blue-100 group-hover:text-blue-700"
+                  )}>
+                    {student.full_name.charAt(0)}
+                  </div>
+                  <div className="flex-1 min-w-0">
+                    <div className={cn(
+                      "font-semibold text-sm truncate w-full transition-colors",
+                      selectedStudentId === student.id ? "text-white" : "text-slate-900"
+                    )}>
+                      {student.full_name}
+                    </div>
+                    <div className={cn(
+                      "text-xs truncate w-full transition-colors",
+                      selectedStudentId === student.id ? "text-blue-100" : "text-slate-500"
+                    )}>
+                      {student.year_group}
+                    </div>
+                  </div>
+                </div>
+              </button>
+            ))}
+          </div>
         </div>
       </div>
 
