@@ -402,64 +402,57 @@ export default function Schedules() {
           </Button>
         </div>
 
-        {/* Version Selector & Generate */}
+        {/* Version Selector */}
         <Card className="border border-slate-200 shadow-sm">
           <CardContent className="p-6">
-            <div className="flex flex-col lg:flex-row lg:items-center gap-4">
-              <div className="flex-1">
-                <Label className="text-xs font-medium text-slate-600 mb-2 block">Active Version</Label>
-                <Select value={selectedVersion?.id || ''} onValueChange={(id) => setSelectedVersion(scheduleVersions.find(v => v.id === id))}>
-                  <SelectTrigger className="h-10 border-slate-200">
-                    <SelectValue placeholder="Select version" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {scheduleVersions.length === 0 ? (
-                      <div className="p-3 text-sm text-slate-500">No versions yet</div>
-                    ) : (
-                      <>
-                        {publishedVersion && (
-                          <SelectItem value={publishedVersion.id}>
-                            <div className="flex items-center gap-2">
-                              <CheckCircle className="w-4 h-4 text-emerald-600" />
-                              <span className="font-medium">{publishedVersion.name}</span>
-                              <Badge className="ml-2 bg-emerald-500 text-white text-xs">Live</Badge>
-                            </div>
-                          </SelectItem>
-                        )}
-                        {draftVersions.map(version => (
-                          <SelectItem key={version.id} value={version.id}>
-                            <div className="flex items-center gap-2">
-                              <Clock className="w-4 h-4 text-slate-400" />
-                              <span>{version.name}</span>
-                              <Badge variant="outline" className="ml-2 text-xs">Draft</Badge>
-                            </div>
-                          </SelectItem>
-                        ))}
-                      </>
-                    )}
-                  </SelectContent>
-                </Select>
-              </div>
-
-              {selectedVersion && (
-                <div className="flex items-center gap-2 lg:mt-5">
+            <div className="flex flex-col gap-2">
+              <Label className="text-sm font-medium text-slate-600">Active Version</Label>
+              <div className="flex items-center gap-4">
+                <div className="flex-1">
+                  <Select value={selectedVersion?.id || ''} onValueChange={(id) => setSelectedVersion(scheduleVersions.find(v => v.id === id))}>
+                    <SelectTrigger className="h-10 border-slate-200">
+                      <SelectValue placeholder="Select version" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {scheduleVersions.length === 0 ? (
+                        <div className="p-3 text-sm text-slate-500">No versions yet</div>
+                      ) : (
+                        <>
+                          {publishedVersion && (
+                            <SelectItem value={publishedVersion.id}>
+                              <div className="flex items-center gap-2">
+                                <CheckCircle className="w-4 h-4 text-emerald-600" />
+                                <span className="font-medium">{publishedVersion.name}</span>
+                                <Badge className="ml-2 bg-emerald-500 text-white text-xs">Live</Badge>
+                              </div>
+                            </SelectItem>
+                          )}
+                          {draftVersions.map(version => (
+                            <SelectItem key={version.id} value={version.id}>
+                              <div className="flex items-center gap-2">
+                                <Clock className="w-4 h-4 text-slate-400" />
+                                <span>{version.name}</span>
+                                <Badge variant="outline" className="ml-2 text-xs">Draft</Badge>
+                              </div>
+                            </SelectItem>
+                          ))}
+                        </>
+                      )}
+                    </SelectContent>
+                  </Select>
+                </div>
+                {selectedVersion && (
                   <Button
-                    onClick={handleGenerateSchedule}
-                    className="bg-blue-600 hover:bg-blue-700"
-                  >
-                    <Sparkles className="w-4 h-4 mr-2" />
-                    Generate Schedule
-                  </Button>
-                  <Button
-                    variant="destructive"
+                    variant="ghost"
                     size="icon"
                     onClick={() => setIsDeleteDialogOpen(true)}
                     title="Delete version"
+                    className="text-red-500 hover:text-red-600 hover:bg-red-50"
                   >
                     <Trash2 className="w-4 h-4" />
                   </Button>
-                </div>
-              )}
+                )}
+              </div>
             </div>
           </CardContent>
         </Card>
