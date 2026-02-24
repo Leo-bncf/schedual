@@ -69,19 +69,20 @@ Deno.serve(async (req) => {
       roomIdById[idx + 1] = r.id;
     });
 
-    // Build teachingGroups array
-    const teachingGroupsPayload = teachingGroups
+    // Build teachingGroups array - include both real and synthetic groups
+    const teachingGroupsPayload = [];
+    
+    teachingGroups
       .filter(tg => tg.is_active)
-      .map(tg => {
-        const subject = subjects.find(s => s.id === tg.subject_id);
-        return {
+      .forEach(tg => {
+        teachingGroupsPayload.push({
           id: tg.id,
           subjectId: tg.subject_id,
           studentGroup: tg.year_group || 'DP1',
           sectionId: `sec_${tg.year_group || 'DP1'}_${tg.id.slice(-4)}`,
           level: tg.level || 'SL',
           requiredMinutesPerWeek: tg.minutes_per_week || 180
-        };
+        });
       });
 
     // Build lessons - handle combine_dp1_dp2 subjects
@@ -128,6 +129,17 @@ Deno.serve(async (req) => {
           const numCombinedLessons = Math.ceil(slMinutes / periodDuration);
 
           const combinedTgId = `combined_${subjectId}`;
+          
+          // Add synthetic teaching group for combined lessons
+          teachingGroupsPayload.push({
+            id: combinedTgId,
+            subjectId: subjectId,
+            studentGroup: combinedTgId,
+            sectionId: `sec_combined_${subjectId}`,
+            level: 'COMBINED',
+            requiredMinutesPerWeek: slMinutes
+          });
+          
           for (let i = 0; i < numCombinedLessons; i++) {
             lessons.push({
               id: lessonId++,
@@ -168,6 +180,17 @@ Deno.serve(async (req) => {
         const numExtensionLessons = Math.ceil(extensionMinutes / periodDuration);
 
         const hlExtTgId = `hl_ext_${subjectId}`;
+        
+        // Add synthetic teaching group for HL extensions
+        teachingGroupsPayload.push({
+          id: hlExtTgId,
+          subjectId: subjectId,
+          studentGroup: hlExtTgId,
+          sectionId: `sec_hl_${subjectId}`,
+          level: 'HL_EXTENSION',
+          requiredMinutesPerWeek: extensionMinutes
+        });
+        
         for (let i = 0; i < numExtensionLessons; i++) {
           lessons.push({
             id: lessonId++,
