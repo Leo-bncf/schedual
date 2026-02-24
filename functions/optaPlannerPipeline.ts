@@ -180,8 +180,12 @@ Deno.serve(async (req) => {
       validationErrors.push(`❌ ${teacherOverloadIssues.length} teacher(s) overloaded with too many teaching groups`);
     }
 
-    if (validationErrors.length > 0) {
-      console.error('[Pipeline] Validation failed:', validationErrors);
+    // We don't want warning-only errors (like ⚠️) to completely block the pipeline if there are no hard (❌) errors.
+    // Let's check if any error is a hard error (❌).
+    const hasHardErrors = validationErrors.some(err => err.includes('❌'));
+
+    if (hasHardErrors) {
+      console.error('[Pipeline] Validation failed with hard errors:', validationErrors);
       
       // Format detailed teacher overload info
       const teacherDetails = teacherOverloadIssues.map(t => ({
@@ -221,6 +225,8 @@ Deno.serve(async (req) => {
           'Split large teaching groups into smaller sections'
         ] : []
       }, { status: 400 });
+    } else if (validationErrors.length > 0) {
+      console.warn('[Pipeline] Validation warnings (proceeding to solver):', validationErrors);
     }
 
     console.log('[Pipeline] Validation passed ✅');
