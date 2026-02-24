@@ -10,6 +10,7 @@ import { Loader2, CheckCircle, XCircle } from 'lucide-react';
 import { Button } from "@/components/ui/button";
 
 export default function ScheduleGenerationDialog({ open, onClose, status, message, error }) {
+  const isTeacherCapacityError = message && typeof message === 'object' && message.overloadedTeachers;
   return (
     <Dialog open={open} onOpenChange={onClose}>
       <DialogContent className="max-w-md">
@@ -53,13 +54,52 @@ export default function ScheduleGenerationDialog({ open, onClose, status, messag
 
           {status === 'error' && (
             <div className="space-y-3">
-              <div className="p-4 rounded-lg bg-red-50 border border-red-200">
-                <p className="text-sm text-red-900 font-medium mb-2">Error:</p>
-                <p className="text-sm text-red-800 whitespace-pre-wrap">{error}</p>
-              </div>
-              <Button onClick={onClose} className="w-full">
-                Close
-              </Button>
+              {isTeacherCapacityError ? (
+                <>
+                  <div className="p-4 rounded-lg bg-amber-50 border border-amber-200">
+                    <p className="text-sm text-amber-900 font-semibold mb-2">{error}</p>
+                    <p className="text-xs text-amber-800 mb-3">{message.message}</p>
+                    
+                    <div className="space-y-2 mt-3">
+                      {message.overloadedTeachers.map((teacher, idx) => (
+                        <div key={idx} className="bg-white rounded p-3 border border-amber-200">
+                          <div className="flex items-center justify-between mb-2">
+                            <span className="font-semibold text-slate-900 text-sm">{teacher.name}</span>
+                            <span className="text-xs text-red-600 font-medium">
+                              {teacher.assigned} / {teacher.max} periods
+                            </span>
+                          </div>
+                          <div className="text-xs text-slate-600 space-y-1">
+                            {teacher.teachingGroups.map((tg, i) => (
+                              <div key={i} className="flex items-center justify-between">
+                                <span>{tg.subject} ({tg.yearGroup})</span>
+                                <span className="text-slate-500">{tg.lessonsNeeded} periods</span>
+                              </div>
+                            ))}
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                    
+                    <p className="text-xs text-amber-700 mt-3 italic">
+                      💡 {message.solution}
+                    </p>
+                  </div>
+                  <Button onClick={onClose} className="w-full">
+                    Close
+                  </Button>
+                </>
+              ) : (
+                <>
+                  <div className="p-4 rounded-lg bg-red-50 border border-red-200">
+                    <p className="text-sm text-red-900 font-medium mb-2">Error:</p>
+                    <p className="text-sm text-red-800 whitespace-pre-wrap">{error}</p>
+                  </div>
+                  <Button onClick={onClose} className="w-full">
+                    Close
+                  </Button>
+                </>
+              )}
             </div>
           )}
         </div>

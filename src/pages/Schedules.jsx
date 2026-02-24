@@ -184,12 +184,17 @@ export default function Schedules() {
       
       const responseData = error.response?.data;
       let errorMsg = error.message || 'Failed to generate schedule';
+      let teacherDetails = null;
       
       if (responseData) {
         console.log('Error response:', responseData);
         errorMsg = responseData.error || errorMsg;
         
-        if (responseData.details) {
+        // Check for teacher capacity error
+        if (responseData.code === 'TEACHER_CAPACITY_EXCEEDED' && responseData.details) {
+          teacherDetails = responseData.details;
+          errorMsg = teacherDetails.message || 'Teacher capacity exceeded';
+        } else if (responseData.details) {
           console.log('Error details:', responseData.details);
           if (typeof responseData.details === 'string') {
             try {
@@ -205,6 +210,7 @@ export default function Schedules() {
       }
       
       setGenError(errorMsg);
+      setGenMessage(teacherDetails);
       toast.error(errorMsg, { duration: 10000 });
     }
   };
