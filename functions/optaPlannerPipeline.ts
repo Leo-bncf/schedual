@@ -301,7 +301,7 @@ Deno.serve(async (req) => {
         const slGroups = tgs.filter(tg => tg.level === 'SL');
         
         // Combined lessons (HL + SL, DP1 + DP2) - use SL hours as base
-        if (slGroups.length > 0) {
+        if (slGroups.length > 0 || hlGroups.length > 0) {
           const allStudents = new Set();
           const allTeachers = new Set();
           
@@ -315,11 +315,12 @@ Deno.serve(async (req) => {
           const teacherId = teacherIdMap.get(primaryTeacher);
           
           // Use SL hours for combined lessons (typically 3h)
-          const slMinutes = slGroups[0]?.minutes_per_week || (subject?.hoursPerWeekSL || 3) * 60;
+          const slMinutes = slGroups.length > 0 ? (slGroups[0]?.minutes_per_week || (subject?.hoursPerWeekSL || 3) * 60) : ((subject?.hoursPerWeekSL || 3) * 60);
           const periodDuration = schoolData.period_duration_minutes || 60;
           const numCombinedLessons = Math.ceil(slMinutes / periodDuration);
 
           const combinedTgId = `combined_${subjectId}`;
+          syntheticToRealTgMap[combinedTgId] = [...hlGroups, ...slGroups].map(tg => tg.id);
           
           // Add synthetic teaching group for combined lessons
           teachingGroupsPayload.push({
