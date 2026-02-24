@@ -188,14 +188,35 @@ export default function Schedules() {
       
       if (responseData) {
         console.log('Error response:', responseData);
+        console.log('Error details:', responseData.details);
+        console.log('Full error details object:', JSON.stringify(responseData.details, null, 2));
+        
         errorMsg = responseData.error || errorMsg;
         
-        // Check for teacher capacity error
+        // Check for teacher capacity error from our backend
         if (responseData.code === 'TEACHER_CAPACITY_EXCEEDED' && responseData.details) {
           teacherDetails = responseData.details;
           errorMsg = teacherDetails.message || 'Teacher capacity exceeded';
-        } else if (responseData.details) {
-          console.log('Error details:', responseData.details);
+        } 
+        // Check for teacher capacity error from OptaPlanner
+        else if (responseData.details?.code === 'TEACHER_CAPACITY_EXCEEDED') {
+          // OptaPlanner returned the error - use their details array
+          const optaDetails = responseData.details.details || [];
+          console.log('OptaPlanner teacher capacity details:', optaDetails);
+          
+          teacherDetails = {
+            message: responseData.details.message || 'At least one teacher requires more lessons than available timeslots.',
+            overloadedTeachers: optaDetails.map(detail => ({
+              name: detail.teacherName || 'Unknown',
+              assigned: detail.requiredLessons || 0,
+              max: detail.availableTimeslots || 50,
+              teachingGroups: [] // OptaPlanner doesn't provide this breakdown
+            })),
+            solution: 'Either reduce the teaching hours assigned to this teacher, or increase their max hours per week in the Teachers page.'
+          };
+          errorMsg = teacherDetails.message;
+        }
+        else if (responseData.details) {
           if (typeof responseData.details === 'string') {
             try {
               const parsed = JSON.parse(responseData.details);
