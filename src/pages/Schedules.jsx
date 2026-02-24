@@ -626,6 +626,13 @@ export default function Schedules() {
                 <Users className="w-4 h-4 mr-2" />
                 Student View
               </TabsTrigger>
+              <TabsTrigger 
+                value="generation" 
+                className="data-[state=active]:bg-slate-100 data-[state=active]:text-slate-900"
+              >
+                <Settings2 className="w-4 h-4 mr-2" />
+                Generation Settings
+              </TabsTrigger>
             </TabsList>
 
             {/* Admin Overview Tab */}
