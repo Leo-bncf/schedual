@@ -223,10 +223,9 @@ Deno.serve(async (req) => {
         details: errorDetails,
         payloadSummary: {
           lessons: lessons.length,
-          timeslots: timeslots.length,
           teachers: teachers.length,
           rooms: rooms.length,
-          students: students.length
+          teachingGroups: teachingGroupsPayload.length
         }
       }, { status: 400 });
     }
