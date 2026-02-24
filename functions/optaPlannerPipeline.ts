@@ -511,6 +511,30 @@ Deno.serve(async (req) => {
         }
       }, { status: 400 });
     }
+
+    // ===== DETAILED CONSTRAINT VERIFICATION =====
+    console.log('[Pipeline] Verifying constraints consistency...');
+    
+    // Verify all subject requirements can be met with available lessons
+    const lessonsBySubject = {};
+    lessons.forEach(l => {
+      if (!lessonsBySubject[l.subject]) lessonsBySubject[l.subject] = 0;
+      lessonsBySubject[l.subject]++;
+    });
+
+    const constraintWarnings = [];
+    subjectRequirements.forEach(req => {
+      const lessonsForSubject = lessonsBySubject[req.subject] || 0;
+      const periodDuration = schoolData.period_duration_minutes || 60;
+      const expectedLessons = Math.ceil(req.minutesPerWeek / periodDuration);
+      if (lessonsForSubject < expectedLessons) {
+        constraintWarnings.push(`⚠️  ${req.subject} expects ${expectedLessons} lessons/week but only ${lessonsForSubject} lessons defined`);
+      }
+    });
+
+    if (constraintWarnings.length > 0) {
+      console.warn('[Pipeline] Constraint warnings:', constraintWarnings);
+    }
     
     console.log('[Pipeline] Calling OptaPlanner:', OPTAPLANNER_ENDPOINT);
     console.log('[Pipeline] Payload summary:', {
