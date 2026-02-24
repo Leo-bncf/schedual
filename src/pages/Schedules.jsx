@@ -821,6 +821,92 @@ export default function Schedules() {
                 </CardContent>
               </Card>
             </TabsContent>
+
+            {/* Generation Settings Tab */}
+            <TabsContent value="generation" className="space-y-4 mt-4">
+              <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+                <Card className="border border-slate-200 shadow-sm">
+                  <CardHeader className="border-b border-slate-100 bg-slate-50/50">
+                    <CardTitle className="text-lg flex items-center gap-2">
+                      <Settings2 className="w-5 h-5 text-slate-500" />
+                      Optimization Constraints
+                    </CardTitle>
+                    <CardDescription>Configure rules for the OptaPlanner engine</CardDescription>
+                  </CardHeader>
+                  <CardContent className="p-6 space-y-6">
+                    <div className="flex items-center justify-between">
+                      <div className="space-y-0.5">
+                        <Label className="text-base font-medium">Strict Daily Subject Limits</Label>
+                        <p className="text-sm text-slate-500">Prevent students from having the same subject too many times per day</p>
+                      </div>
+                      <Switch 
+                        checked={constraints.maxSameSubjectPerDayHardEnabled} 
+                        onCheckedChange={(c) => setConstraints(prev => ({ ...prev, maxSameSubjectPerDayHardEnabled: c }))} 
+                      />
+                    </div>
+                    
+                    {constraints.maxSameSubjectPerDayHardEnabled && (
+                      <div className="pl-4 border-l-2 border-slate-100">
+                        <Label className="text-sm text-slate-600 mb-2 block">Maximum periods per day for same subject</Label>
+                        <Select 
+                          value={constraints.maxSameSubjectPerDayLimit.toString()} 
+                          onValueChange={(val) => setConstraints(prev => ({ ...prev, maxSameSubjectPerDayLimit: parseInt(val) }))}
+                        >
+                          <SelectTrigger className="w-32">
+                            <SelectValue />
+                          </SelectTrigger>
+                          <SelectContent>
+                            <SelectItem value="1">1 Period</SelectItem>
+                            <SelectItem value="2">2 Periods</SelectItem>
+                            <SelectItem value="3">3 Periods</SelectItem>
+                            <SelectItem value="4">4 Periods</SelectItem>
+                          </SelectContent>
+                        </Select>
+                      </div>
+                    )}
+
+                    <div className="flex items-center justify-between">
+                      <div className="space-y-0.5">
+                        <Label className="text-base font-medium">Flexible Weekly Hours</Label>
+                        <p className="text-sm text-slate-500">Allow slight variations (+/- 1 period) from target weekly hours if needed</p>
+                      </div>
+                      <Switch 
+                        checked={constraints.allowFlexibleWeeklyCounts} 
+                        onCheckedChange={(c) => setConstraints(prev => ({ ...prev, allowFlexibleWeeklyCounts: c }))} 
+                      />
+                    </div>
+
+                    <div className="flex items-center justify-between">
+                      <div className="space-y-0.5">
+                        <Label className="text-base font-medium">Relax Student Conflicts</Label>
+                        <p className="text-sm text-slate-500">Prioritize scheduling all lessons even if it causes minor student double-bookings</p>
+                      </div>
+                      <Switch 
+                        checked={constraints.relaxStudentGroupConflicts} 
+                        onCheckedChange={(c) => setConstraints(prev => ({ ...prev, relaxStudentGroupConflicts: c }))} 
+                      />
+                    </div>
+                  </CardContent>
+                </Card>
+
+                <Card className="border border-slate-200 shadow-sm h-full flex flex-col justify-center items-center text-center p-12 bg-gradient-to-br from-blue-50/50 to-white">
+                  <div className="w-20 h-20 rounded-2xl bg-blue-100 flex items-center justify-center mb-6 shadow-sm">
+                    <Sparkles className="w-10 h-10 text-blue-600" />
+                  </div>
+                  <h3 className="text-2xl font-bold text-slate-900 mb-3">Re-generate Timetable</h3>
+                  <p className="text-slate-500 max-w-sm mb-8">
+                    Apply the configured constraints and create a new optimized schedule. This will overwrite the current version.
+                  </p>
+                  <Button
+                    onClick={handleGenerateSchedule}
+                    className="bg-blue-600 hover:bg-blue-700 h-12 px-8 text-base shadow-md hover:shadow-lg transition-all"
+                  >
+                    <Play className="w-5 h-5 mr-2 fill-current" />
+                    Start Generation
+                  </Button>
+                </Card>
+              </div>
+            </TabsContent>
           </Tabs>
         )
       ) : (
