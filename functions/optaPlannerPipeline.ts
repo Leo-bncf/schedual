@@ -122,11 +122,24 @@ Deno.serve(async (req) => {
 
     if (!response.ok) {
       console.error('[Pipeline] OptaPlanner error:', responseText);
+      let errorDetails;
+      try {
+        errorDetails = JSON.parse(responseText);
+      } catch {
+        errorDetails = responseText;
+      }
       return Response.json({
         ok: false,
-        error: `OptaPlanner error ${response.status}`,
-        details: responseText
-      }, { status: 500 });
+        error: `OptaPlanner validation failed`,
+        details: errorDetails,
+        payloadSummary: {
+          lessons: lessons.length,
+          timeslots: timeslots.length,
+          teachers: teachers.length,
+          rooms: rooms.length,
+          students: students.length
+        }
+      }, { status: 400 });
     }
 
     const result = JSON.parse(responseText);
