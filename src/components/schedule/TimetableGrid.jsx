@@ -492,9 +492,31 @@ export default function TimetableGrid({
                           teacher = getTeacherInfo(slot.teacher_id);
                         }
                         
-                        const colorScheme = subject && subjectGroupColors[subject.ib_group] 
-                          ? subjectGroupColors[subject.ib_group] 
-                          : { bg: 'bg-slate-50', border: 'border-l-slate-400', text: 'text-slate-900' };
+                        const getSubjectColor = (subjectName) => {
+                          if (!subjectName) return { bg: 'bg-slate-50', border: 'border-l-slate-400', text: 'text-slate-900' };
+                          const colors = [
+                            { bg: 'bg-blue-50', border: 'border-l-blue-400', text: 'text-blue-900' },
+                            { bg: 'bg-indigo-50', border: 'border-l-indigo-400', text: 'text-indigo-900' },
+                            { bg: 'bg-violet-50', border: 'border-l-violet-400', text: 'text-violet-900' },
+                            { bg: 'bg-purple-50', border: 'border-l-purple-400', text: 'text-purple-900' },
+                            { bg: 'bg-fuchsia-50', border: 'border-l-fuchsia-400', text: 'text-fuchsia-900' },
+                            { bg: 'bg-pink-50', border: 'border-l-pink-400', text: 'text-pink-900' },
+                            { bg: 'bg-rose-50', border: 'border-l-rose-400', text: 'text-rose-900' },
+                            { bg: 'bg-orange-50', border: 'border-l-orange-400', text: 'text-orange-900' },
+                            { bg: 'bg-amber-50', border: 'border-l-amber-400', text: 'text-amber-900' },
+                            { bg: 'bg-emerald-50', border: 'border-l-emerald-400', text: 'text-emerald-900' },
+                            { bg: 'bg-teal-50', border: 'border-l-teal-400', text: 'text-teal-900' },
+                            { bg: 'bg-cyan-50', border: 'border-l-cyan-400', text: 'text-cyan-900' },
+                            { bg: 'bg-sky-50', border: 'border-l-sky-400', text: 'text-sky-900' },
+                          ];
+                          let hash = 0;
+                          for (let i = 0; i < subjectName.length; i++) {
+                            hash = subjectName.charCodeAt(i) + ((hash << 5) - hash);
+                          }
+                          return colors[Math.abs(hash) % colors.length];
+                        };
+
+                        const colorScheme = subject ? getSubjectColor(subject.name) : { bg: 'bg-slate-50', border: 'border-l-slate-400', text: 'text-slate-900' };
 
                         return (
                           <div 
