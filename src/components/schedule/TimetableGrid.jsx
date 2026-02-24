@@ -13,8 +13,12 @@ const calculatePeriodTimes = (dayStartTime = '08:00', periodDurationMinutes = 60
   for (let i = 1; i <= periodsPerDay; i++) {
     const h = Math.floor(totalMinutes / 60);
     const m = totalMinutes % 60;
-    times[i] = `${String(h).padStart(2, '0')}:${String(m).padStart(2, '0')}`;
+    const startTimeStr = `${String(h).padStart(2, '0')}:${String(m).padStart(2, '0')}`;
     totalMinutes += (periodDurationMinutes || 60);
+    const endH = Math.floor(totalMinutes / 60);
+    const endM = totalMinutes % 60;
+    const endTimeStr = `${String(endH).padStart(2, '0')}:${String(endM).padStart(2, '0')}`;
+    times[i] = `${startTimeStr} - ${endTimeStr}`;
   }
   
   return times;
