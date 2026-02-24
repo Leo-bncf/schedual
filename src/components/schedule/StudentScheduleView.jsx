@@ -832,7 +832,7 @@ export default function StudentScheduleView({ students, slots, groups, subjects,
               {Array.from({ length: maxPeriodsPerDay }, (_, idx) => idx + 1).map(period => (
                 <div key={period} className="grid grid-cols-[80px_repeat(5,1fr)] border-b border-slate-200" style={{ minHeight: '60px' }}>
                   <div className="p-2 bg-slate-50 border-r border-slate-200 flex flex-col justify-center">
-                    <div className="text-xs font-medium text-slate-700">{periodTimes[period]}</div>
+                    <div className="text-sm font-bold text-slate-800">{periodTimes[period]}</div>
                   </div>
                   {DAYS.map(day => {
                     const event = getEventForPeriod(day, period);
