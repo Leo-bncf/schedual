@@ -48,7 +48,8 @@ export default function TimetableGrid({
   dayStartTime = '08:00',
   dayEndTime = '18:00',
   periodDurationMinutes = 60,
-  timeslots = []
+  timeslots = [],
+  globalView = false
 }) {
   const [selectedSlot, setSelectedSlot] = React.useState(null);
   const [isEditing, setIsEditing] = React.useState(false);
@@ -430,13 +431,13 @@ export default function TimetableGrid({
                   }
 
                   // MULTI-LESSON DISPLAY: Show all visible slots in this cell
-                  const displayCount = Math.min(visibleSlots.length, 2); // Show max 2 cards
+                  const displayCount = globalView ? visibleSlots.length : Math.min(visibleSlots.length, 2);
                   const remainingCount = visibleSlots.length - displayCount;
 
                   return (
                     <div 
                       key={`${day}-${uiRow}`} 
-                      className="border-r border-slate-300 last:border-r-0 p-2 space-y-1 relative"
+                      className={`border-r border-slate-300 last:border-r-0 p-2 relative ${globalView ? 'flex flex-row flex-wrap gap-1 content-start' : 'space-y-1'}`}
                       onDragOver={(e) => e.preventDefault()}
                       onDrop={(e) => {
                         e.preventDefault();
@@ -505,70 +506,84 @@ export default function TimetableGrid({
                               e.dataTransfer.setData('sourceDay', day);
                               e.dataTransfer.setData('sourcePeriod', String(uiRow));
                             }}
-                            className="cursor-move hover:shadow-lg hover:scale-105 transition-all rounded-lg overflow-hidden group"
+                            className={`cursor-move transition-all overflow-hidden group ${globalView ? 'w-[calc(50%-4px)] lg:w-[calc(33.33%-4px)] rounded hover:ring-2 hover:ring-blue-400' : 'hover:shadow-lg hover:scale-105 rounded-lg'}`}
                             onClick={() => handleSlotClick(slot)}
                           >
-                            <div className="absolute top-1 right-1 opacity-0 group-hover:opacity-100 transition-opacity z-10">
-                              <div className="px-1.5 py-0.5 bg-white/90 rounded shadow text-[10px] font-bold text-slate-600">⋮⋮</div>
-                            </div>
-                            {subject && (
-                              <div className={`p-3 border-l-4 ${colorScheme.bg} ${colorScheme.border} border border-slate-200 relative`}>
-                                <div className="font-bold text-sm text-slate-900 leading-tight mb-1.5">
-                                  {subject.name}
-                                </div>
-                                <Badge variant="outline" className="w-fit mb-2 bg-white/70 font-semibold text-xs">
-                                  {level}
-                                </Badge>
-                                <div className="text-xs text-slate-700 space-y-1">
-                                  {teacher ? (
-                                    <div className="font-medium">👤 {teacher.full_name}</div>
-                                  ) : (
-                                    <div className="font-medium text-amber-600">👤 No teacher assigned</div>
-                                  )}
-                                  <div className="font-medium">📍 {room?.name || 'TBD'}</div>
-                                </div>
-                                {span > 1 && (
-                                  <div className="mt-2 text-xs text-slate-500 font-medium">
-                                    {span} periods
+                            {!globalView && (
+                              <div className="absolute top-1 right-1 opacity-0 group-hover:opacity-100 transition-opacity z-10">
+                                <div className="px-1.5 py-0.5 bg-white/90 rounded shadow text-[10px] font-bold text-slate-600">⋮⋮</div>
+                              </div>
+                            )}
+                            {globalView ? (
+                              <div 
+                                className={`p-1 border border-slate-200 rounded ${subject ? colorScheme.bg : 'bg-slate-50'} text-[10px] w-full flex flex-col justify-center items-center`}
+                                title={`${subject?.name || slot.notes || 'Unassigned'} | ${teacher?.full_name || 'No teacher'} | ${room?.name || 'TBD'}`}
+                              >
+                                <span className="font-bold text-center truncate w-full block">{subject?.code || subject?.name || '---'}</span>
+                                <span className="text-slate-600 opacity-80 text-center truncate w-full block text-[9px]">{room?.name || 'TBD'}</span>
+                              </div>
+                            ) : (
+                              <>
+                                {subject && (
+                                  <div className={`p-3 border-l-4 ${colorScheme.bg} ${colorScheme.border} border border-slate-200 relative`}>
+                                    <div className="font-bold text-sm text-slate-900 leading-tight mb-1.5">
+                                      {subject.name}
+                                    </div>
+                                    <Badge variant="outline" className="w-fit mb-2 bg-white/70 font-semibold text-xs">
+                                      {level}
+                                    </Badge>
+                                    <div className="text-xs text-slate-700 space-y-1">
+                                      {teacher ? (
+                                        <div className="font-medium">👤 {teacher.full_name}</div>
+                                      ) : (
+                                        <div className="font-medium text-amber-600">👤 No teacher assigned</div>
+                                      )}
+                                      <div className="font-medium">📍 {room?.name || 'TBD'}</div>
+                                    </div>
+                                    {span > 1 && (
+                                      <div className="mt-2 text-xs text-slate-500 font-medium">
+                                        {span} periods
+                                      </div>
+                                    )}
                                   </div>
                                 )}
-                              </div>
-                            )}
 
-                            {!subject && slot.notes?.includes('Study') && (
-                              <div className="p-3 border-l-4 border-slate-400 bg-slate-50 border border-slate-200">
-                                <div className="font-bold text-sm text-slate-700 leading-tight mb-1.5">
-                                  Study / Free Period
-                                </div>
-                                <div className="text-xs text-slate-500">Self-study time</div>
-                              </div>
-                            )}
+                                {!subject && slot.notes?.includes('Study') && (
+                                  <div className="p-3 border-l-4 border-slate-400 bg-slate-50 border border-slate-200">
+                                    <div className="font-bold text-sm text-slate-700 leading-tight mb-1.5">
+                                      Study / Free Period
+                                    </div>
+                                    <div className="text-xs text-slate-500">Self-study time</div>
+                                  </div>
+                                )}
 
-                            {!subject && !slot.notes?.includes('Study') && (slot.notes?.includes('Test') || slot.notes?.includes('Assessment')) && (
-                              <div className="p-3 border-l-4 border-red-400 bg-red-50 border border-red-200">
-                                <div className="font-bold text-sm text-red-900 leading-tight mb-1.5">
-                                  📝 {slot.notes}
-                                </div>
-                                <div className="text-xs text-red-700">
-                                  Assessment Period
-                                </div>
-                              </div>
-                            )}
+                                {!subject && !slot.notes?.includes('Study') && (slot.notes?.includes('Test') || slot.notes?.includes('Assessment')) && (
+                                  <div className="p-3 border-l-4 border-red-400 bg-red-50 border border-red-200">
+                                    <div className="font-bold text-sm text-red-900 leading-tight mb-1.5">
+                                      📝 {slot.notes}
+                                    </div>
+                                    <div className="text-xs text-red-700">
+                                      Assessment Period
+                                    </div>
+                                  </div>
+                                )}
 
-                            {!subject && !slot.notes?.includes('Study') && !(slot.notes?.includes('Test') || slot.notes?.includes('Assessment')) && (
-                              <div className="p-3 border-l-4 border-slate-300 bg-slate-50 border border-slate-200">
-                                <div className="font-bold text-sm text-slate-600 leading-tight mb-1.5">
-                                  Unassigned Class
-                                </div>
-                                <div className="text-xs text-slate-500 space-y-1">
-                                  {teacher ? (
-                                    <div className="font-medium">👤 {teacher.full_name}</div>
-                                  ) : (
-                                    <div className="font-medium text-amber-600">👤 No teacher assigned</div>
-                                  )}
-                                  <div className="font-medium">📍 {room?.name || 'TBD'}</div>
-                                </div>
-                              </div>
+                                {!subject && !slot.notes?.includes('Study') && !(slot.notes?.includes('Test') || slot.notes?.includes('Assessment')) && (
+                                  <div className="p-3 border-l-4 border-slate-300 bg-slate-50 border border-slate-200">
+                                    <div className="font-bold text-sm text-slate-600 leading-tight mb-1.5">
+                                      Unassigned Class
+                                    </div>
+                                    <div className="text-xs text-slate-500 space-y-1">
+                                      {teacher ? (
+                                        <div className="font-medium">👤 {teacher.full_name}</div>
+                                      ) : (
+                                        <div className="font-medium text-amber-600">👤 No teacher assigned</div>
+                                      )}
+                                      <div className="font-medium">📍 {room?.name || 'TBD'}</div>
+                                    </div>
+                                  </div>
+                                )}
+                              </>
                             )}
                           </div>
                         );

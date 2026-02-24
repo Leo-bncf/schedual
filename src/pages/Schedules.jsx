@@ -715,6 +715,7 @@ export default function Schedules() {
                     dayEndTime={school?.day_end_time || '18:00'}
                     periodDurationMinutes={school?.period_duration_minutes || 60}
                     breakPeriods={school?.breaks?.map(b => parseInt(b.start)) || []}
+                    globalView={overviewFilterType === 'all'}
                     onSlotClick={(day, uiRow, actionData) => {
                       if (actionData.action === 'move') {
                         if (confirm(`Are you sure you want to move this lesson to ${day}, Period ${uiRow}?`)) {
