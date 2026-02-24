@@ -27,6 +27,16 @@ Deno.serve(async (req) => {
       }, { status: 500 });
     }
 
+    // CRITICAL: Create/update TOK/CAS/EE groups BEFORE fetching teaching groups
+    console.log('[Pipeline] Ensuring core DP groups are properly split by year...');
+    try {
+      await base44.functions.invoke('createCoreDPGroups', {});
+      console.log('[Pipeline] Core DP groups synchronized');
+    } catch (coreGroupError) {
+      console.error('[Pipeline] Failed to create core groups:', coreGroupError);
+      // Continue anyway - core groups may already exist
+    }
+
     const [scheduleVersion, teachers, students, rooms, teachingGroups, subjects, school] = await Promise.all([
       base44.entities.ScheduleVersion.filter({ id: schedule_version_id }),
       base44.entities.Teacher.filter({ school_id: user.school_id, is_active: true }),
