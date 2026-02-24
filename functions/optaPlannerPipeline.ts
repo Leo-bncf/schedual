@@ -252,21 +252,18 @@ Deno.serve(async (req) => {
 
     if (result.lessons && Array.isArray(result.lessons)) {
       for (const lesson of result.lessons) {
-        if (lesson.timeslot != null) {
-          const timeslot = timeslots.find(t => t.id === lesson.timeslot);
-          if (timeslot) {
-            slotsToInsert.push({
-              school_id: user.school_id,
-              schedule_version: schedule_version_id,
-              teaching_group_id: lesson.teachingGroupId,
-              teacher_id: typeof lesson.teacherId === 'number' ? teacherIdReverse.get(lesson.teacherId) : lesson.teacherId,
-              room_id: lesson.roomId != null ? (typeof lesson.roomId === 'number' ? roomIdReverse.get(lesson.roomId) : lesson.roomId) : (lesson.room != null ? roomIdReverse.get(lesson.room) : null),
-              timeslot_id: lesson.timeslot,
-              day: timeslot.dayOfWeek,
-              period: timeslot.periodIndex + 1,
-              status: 'scheduled'
-            });
-          }
+        if (lesson.timeslotId != null) {
+          slotsToInsert.push({
+            school_id: user.school_id,
+            schedule_version: schedule_version_id,
+            teaching_group_id: lesson.teachingGroupId,
+            teacher_id: teacherIdById[lesson.teacherId] || null,
+            room_id: roomIdById[lesson.roomId] || null,
+            timeslot_id: lesson.timeslotId,
+            day: lesson.dayOfWeek || 'Monday',
+            period: lesson.periodIndex != null ? lesson.periodIndex + 1 : 1,
+            status: 'scheduled'
+          });
         }
       }
     }
