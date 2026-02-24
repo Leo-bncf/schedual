@@ -9,7 +9,7 @@ Deno.serve(async (req) => {
       return Response.json({ ok: false, error: 'Unauthorized' }, { status: 401 });
     }
 
-    const { schedule_version_id } = await req.json();
+    const { schedule_version_id, constraints } = await req.json();
     
     if (!schedule_version_id) {
       return Response.json({ ok: false, error: 'Missing schedule_version_id' }, { status: 400 });
