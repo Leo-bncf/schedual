@@ -19,7 +19,7 @@ import {
 } from 'lucide-react';
 import { Link } from 'react-router-dom';
 import { createPageUrl } from '../utils';
-import PageHeader from '../components/ui-custom/PageHeader';
+
 
 export default function Dashboard() {
   const { data: user } = useQuery({
@@ -70,19 +70,19 @@ export default function Dashboard() {
 
   return (
     <div className="space-y-10">
-      <PageHeader 
-        title="Dashboard"
-        description="Overview of your scheduling system"
-        actions={
-          <Link to={createPageUrl('Schedule')}>
-            <Button size="lg" className="bg-blue-600 hover:bg-blue-700 shadow-lg">
-              <Calendar className="w-5 h-5 mr-2" />
-              Go to Scheduling
-              <ArrowRight className="w-4 h-4 ml-2" />
-            </Button>
-          </Link>
-        }
-      />
+      <div className="flex items-center justify-between">
+        <div>
+          <h1 className="text-3xl font-bold text-slate-900">Dashboard</h1>
+          <p className="text-slate-500 mt-1">Overview of your scheduling system</p>
+        </div>
+        <Link to={createPageUrl('Schedules')}>
+          <Button size="lg" className="bg-blue-600 hover:bg-blue-700 shadow-lg">
+            <Calendar className="w-5 h-5 mr-2" />
+            Go to Scheduling
+            <ArrowRight className="w-4 h-4 ml-2" />
+          </Button>
+        </Link>
+      </div>
 
       {/* Stats Grid - Quick Access Cards */}
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
@@ -208,7 +208,7 @@ export default function Dashboard() {
               </div>
               Schedule Status
             </CardTitle>
-            <Link to={createPageUrl('Schedule')}>
+            <Link to={createPageUrl('Schedules')}>
               <Button variant="ghost" size="sm" className="text-slate-600 hover:text-slate-900 hover:bg-slate-100 rounded-xl">
                 View All <ArrowRight className="w-4 h-4 ml-1" />
               </Button>
@@ -275,7 +275,7 @@ export default function Dashboard() {
             <div className="text-center py-12">
               <Calendar className="w-16 h-16 text-slate-300 mx-auto mb-4" />
               <p className="text-slate-500 mb-4">No schedules created yet</p>
-              <Link to={createPageUrl('Schedule')}>
+              <Link to={createPageUrl('Schedules')}>
                 <Button size="lg" className="bg-blue-600 hover:bg-blue-700 shadow-lg">
                   <Sparkles className="w-5 h-5 mr-2" />
                   Create First Schedule

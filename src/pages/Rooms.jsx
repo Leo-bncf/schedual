@@ -21,7 +21,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import { Plus, Search, Building2, Users, MoreHorizontal, Pencil, Trash2, FlaskConical, Palette, Monitor, Music, BookOpen, Dumbbell, Upload, Loader2, CheckCircle, X, FileText } from 'lucide-react';
+import { Plus, Search, Building2, Users, MoreHorizontal, Pencil, Trash2, FlaskConical, Palette, Monitor, Music, BookOpen, Dumbbell, Upload, Loader2 } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import {
   DropdownMenu,

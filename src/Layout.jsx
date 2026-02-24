@@ -32,8 +32,7 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
-import LoginVerification from './components/auth/LoginVerification';
-import { CSRFProvider } from './components/auth/CSRFProvider';
+
 
 const navigation = [
   // School Admin Pages
@@ -67,8 +66,8 @@ export default function Layout({ children, currentPageName }) {
   const [school, setSchool] = useState(null);
   const [isSuperAdmin, setIsSuperAdmin] = useState(false);
   const [isLoading, setIsLoading] = useState(true);
-  const [needsVerification, setNeedsVerification] = useState(false);
-  const [sessionToken, setSessionToken] = useState(null);
+
+
 
   // Role definitions - school_id alone determines school admin access
   const isSchoolAdmin = (userData) => !!userData?.school_id && !isSuperAdmin;
@@ -194,9 +193,7 @@ export default function Layout({ children, currentPageName }) {
     loadAuth();
   }, []);
 
-  const handleVerified = async () => {
-    setNeedsVerification(false);
-  };
+
 
   if (isLoading) {
     return (
@@ -209,23 +206,7 @@ export default function Layout({ children, currentPageName }) {
     );
   }
 
-  if (needsVerification) {
-    return (
-      <>
-        <LoginVerification 
-          open={needsVerification}
-          onVerified={handleVerified}
-          sessionToken={sessionToken}
-        />
-        <div className="min-h-screen flex items-center justify-center bg-slate-50">
-          <div className="text-center">
-            <div className="w-16 h-16 border-4 border-blue-900 border-t-transparent rounded-full animate-spin mx-auto mb-4"></div>
-            <p className="text-slate-600">Verifying your login...</p>
-          </div>
-        </div>
-      </>
-    );
-  }
+
 
   // Role-based access control with React Router navigation
   const schoolOnlyPages = ['Dashboard', 'Onboarding', 'Schedule', 'TeachingGroups', 'Teachers', 'Students', 'Subjects', 'Rooms', 'Constraints', 'AIAdvisor', 'Settings', 'Support'];
@@ -248,7 +229,6 @@ export default function Layout({ children, currentPageName }) {
   };
 
   return (
-    <CSRFProvider>
       <div className="min-h-screen bg-slate-50">
         <style>{`
         @import url('https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;600;700&display=swap');
@@ -418,6 +398,5 @@ export default function Layout({ children, currentPageName }) {
         </main>
       </div>
     </div>
-    </CSRFProvider>
   );
 }

@@ -21,7 +21,7 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { Plus, Search, GraduationCap, MoreHorizontal, Pencil, Trash2, Upload, Loader2, CheckCircle, Mail } from 'lucide-react';
+import { Plus, Search, GraduationCap, MoreHorizontal, Pencil, Trash2, Upload, Loader2 } from 'lucide-react';
 import { AnimatePresence, motion } from 'framer-motion';
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import {
@@ -293,24 +293,7 @@ export default function Students() {
     return matchesSearch && matchesYear;
     });
 
-    const handleServiceVerify = async () => {
-      const { data } = await base44.functions.invoke('diagnoseStudents', { school_id: schoolId });
-      const totals = data?.totals || {};
-      const cross = data?.crossSchool || {};
-      const bySchool = cross.studentsBySchool ? Object.entries(cross.studentsBySchool).slice(0,5).map(([k,v])=>`${k}: ${v}`).join(', ') : 'n/a';
-      alert(`School ${totals.schoolId || schoolId}\nStudents: ${totals.students_total || 0}\nClassGroups: ${totals.classgroups_total || 0}\nSubjects: ${totals.subjects_total || 0}\nAll schools (sample): ${bySchool}`);
-    };
 
-    const handleAttachVisible = async () => {
-    const ids = filteredStudents.map(s => s.id).filter(Boolean);
-    if (ids.length === 0) { alert('No students in current view.'); return; }
-    if (!confirm(`Re-tag ${ids.length} students to your school?`)) return;
-    const { data } = await base44.functions.invoke('retagStudentsToSchool', { studentIds: ids });
-    alert(`Re-tagged ${data?.updated || 0} students. Confirmed now in school ${data?.targetSchoolId}: ${data?.confirmedToTarget || 0}\nBy school: ${JSON.stringify(data?.countsBySchool || {})}`);
-    queryClient.invalidateQueries({ queryKey: ['students', schoolId] });
-    queryClient.invalidateQueries({ queryKey: ['students'] });
-    queryClient.invalidateQueries({ queryKey: ['classGroups'] });
-    };
 
     const getSubjectInfo = (choices) => {
     if (!choices || !Array.isArray(choices)) return { hl: 0, sl: 0 };
@@ -629,51 +612,7 @@ Return ONLY students array, no other text.`,
         throw new Error('No students found in document');
       }
 
-      // STRICT validation: Reject extraction if DP students are incomplete or have duplicate subjects at different levels
-      const validationErrors = [];
-      const validationWarnings = [];
-      
-      for (const student of extractedStudents) {
-        if (student.ib_programme === 'DP' && student.subjects) {
-          // Check for duplicate subject names (same subject at different levels)
-          const subjectNames = student.subjects.map(s => s.name?.toLowerCase().trim());
-          const uniqueSubjects = new Set(subjectNames);
-          const uniqueCount = uniqueSubjects.size;
-          
-          // CRITICAL: Subject count must match unique count (no duplicates at different levels)
-          if (subjectNames.length !== uniqueCount) {
-            validationErrors.push(`${student.full_name}: Same subject appears at multiple levels (${subjectNames.length} entries, ${uniqueCount} unique)`);
-          }
-          
-          // CRITICAL: DP students MUST have exactly 6 unique subjects
-          if (uniqueCount !== 6) {
-            validationErrors.push(`${student.full_name}: Has ${uniqueCount} unique subjects instead of 6`);
-          }
-          
-          const hlCount = student.subjects.filter(s => s.level === 'HL').length;
-          const slCount = student.subjects.filter(s => s.level === 'SL').length;
-          
-          // Validate HL/SL distribution
-          if (hlCount < 3 || hlCount > 4) {
-            validationErrors.push(`${student.full_name}: Invalid HL count (${hlCount}) - must be 3 or 4`);
-          }
-          if (slCount < 2 || slCount > 3) {
-            validationErrors.push(`${student.full_name}: Invalid SL count (${slCount}) - must be 2 or 3`);
-          }
-        }
-      }
-      
-      // REJECT extraction if critical errors found
-      if (validationErrors.length > 0) {
-        console.error('❌ EXTRACTION REJECTED - CRITICAL VALIDATION ERRORS:\n' + validationErrors.join('\n'));
-        toast.error(`Extraction rejected: ${validationErrors.length} students have incomplete data. Please check the document format and try again.`);
-        setUploadProgress({ stage: 'idle', progress: 0 });
-        return;
-      }
-      
-      if (validationWarnings.length > 0) {
-        console.warn('⚠️ VALIDATION WARNINGS:\n' + validationWarnings.join('\n'));
-      }
+
 
       // Clean duplicates - SAME SUBJECT NAME CANNOT APPEAR AT DIFFERENT LEVELS
       extractedStudents = extractedStudents.map(student => {
@@ -734,20 +673,7 @@ Return ONLY students array, no other text.`,
         throw new Error(`AI returned incomplete data for ${invalidStudents.length} students. Please try again.`);
       }
 
-      const allStudents = extractedStudents;
-      console.log(`Total extracted: ${allStudents.length} students from AI`);
-
-      // Validation logging
-      const dpStudents = allStudents.filter(s => s.ib_programme === 'DP');
-      if (dpStudents.length > 0) {
-        const issues = dpStudents.filter(s => s.subjects?.length !== 6 || !s.subjects.every(subj => subj.level));
-        if (issues.length > 0) {
-          console.warn(`⚠️ ${issues.length} DP students with incomplete subjects:`, 
-            issues.map(s => `${s.full_name}: ${s.subjects?.length || 0} subjects`));
-        }
-      }
-
-      const rawStudents = allStudents;
+      const rawStudents = extractedStudents;
       
       // Smart deduplication - only remove TRUE duplicates (exact same person extracted twice)
       const studentsData = [];
@@ -792,24 +718,7 @@ Return ONLY students array, no other text.`,
 
       console.log(`Extracted ${studentsData.length} unique students`);
 
-      // Validate DP students have 6 subjects
-      const dpValidationWarnings = [];
-      studentsData.forEach((student, idx) => {
-        if (student.ib_programme === 'DP') {
-          const subjectCount = student.subjects?.length || 0;
-          if (subjectCount !== 6) {
-            dpValidationWarnings.push(`${student.full_name}: has ${subjectCount} subjects (expected 6)`);
-          }
-        }
-      });
 
-      if (dpValidationWarnings.length > 0) {
-        const warningMsg = `Warning: ${dpValidationWarnings.length} DP students don't have exactly 6 subjects:\n${dpValidationWarnings.slice(0, 5).join('\n')}${dpValidationWarnings.length > 5 ? `\n...and ${dpValidationWarnings.length - 5} more` : ''}`;
-        console.warn(warningMsg);
-        if (!confirm(`${warningMsg}\n\nDo you want to continue anyway? These students will need manual correction.`)) {
-          throw new Error('Upload cancelled due to validation warnings');
-        }
-      }
 
       setUploadState(prev => ({ ...prev, stage: 'creating', totalStudents: studentsData.length, progress: `Creating ${studentsData.length} students...` }));
 
@@ -1055,13 +964,6 @@ Return ONLY students array, no other text.`,
                   Import Document
                 </>
               )}
-            </Button>
-
-            <Button type="button" variant="outline" onClick={handleServiceVerify}>
-              Verify
-            </Button>
-            <Button type="button" variant="outline" onClick={handleAttachVisible}>
-              Attach Visible
             </Button>
 
             <motion.div whileHover={{ scale: 1.05 }} whileTap={{ scale: 0.95 }}>

@@ -23,7 +23,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import { Plus, Search, BookOpen, MoreHorizontal, Pencil, Trash2, FlaskConical, Palette, Calculator, Globe, Languages, FileText, Upload, Loader2, CheckCircle, Sparkles } from 'lucide-react';
+import { Plus, Search, BookOpen, MoreHorizontal, Pencil, Trash2, FlaskConical, Palette, Calculator, Globe, Languages, FileText, Upload, Loader2, Sparkles } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import {
   DropdownMenu,
@@ -79,13 +79,7 @@ export default function Subjects() {
 
   const { data: user } = useQuery({
     queryKey: ['currentUser'],
-    queryFn: async () => {
-      const userData = await base44.auth.me();
-      console.log('🔍 Full user object:', userData);
-      console.log('🔍 User school_id:', userData?.school_id);
-      console.log('🔍 User school_id type:', typeof userData?.school_id);
-      return userData;
-    },
+    queryFn: () => base44.auth.me(),
   });
 
   const schoolId = user?.school_id;
@@ -105,20 +99,11 @@ export default function Subjects() {
   };
   const allowedProgrammes = getAllowedProgrammes(school);
 
-  const { data: subjects = [], isLoading, error } = useQuery({
+  const { data: subjects = [], isLoading } = useQuery({
     queryKey: ['subjects', schoolId],
-    queryFn: async () => {
-      console.log('Fetching subjects for school:', schoolId);
-      const result = await base44.entities.Subject.list();
-      console.log('Subjects fetched:', result);
-      return result;
-    },
+    queryFn: () => base44.entities.Subject.list(),
     enabled: !!schoolId,
   });
-
-  console.log('User school_id:', schoolId);
-  console.log('Subjects data:', subjects);
-  console.log('Query error:', error);
 
   const createMutation = useMutation({
     mutationFn: (data) => {
@@ -385,30 +370,6 @@ ${trainingFeedback ? `LESSONS FROM ADMIN FEEDBACK:\n${trainingFeedback}\n\n` : '
 
   return (
     <div className="space-y-6">
-      <Button 
-        variant="outline"
-        onClick={async () => {
-          try {
-            const { data } = await base44.functions.invoke('debugSubjects');
-            console.log('🔍 Full debug data:', data);
-            
-            const stepResults = data.steps.map(s => {
-              if (s.action === 'create') {
-                return `Step ${s.step} (${s.action}): ${s.success ? '✅' : '❌'} ID: ${s.id || 'null'} Returned: ${JSON.stringify(s.returned || {})}`;
-              }
-              return `Step ${s.step} (${s.action}): ${s.success ? '✅' : '❌'} ${s.count !== undefined ? `${s.count} subjects` : s.found !== undefined ? `Found ${s.found}` : s.error || ''}`;
-            }).join('\n');
-            
-            alert(`${data.diagnosis}\n\n${stepResults}`);
-          } catch (err) {
-            console.error('❌ Error:', err);
-            alert('Error: ' + (err.message || JSON.stringify(err)));
-          }
-        }}
-      >
-        🔍 Debug & Test Create
-      </Button>
-
       <PageHeader 
         title="Subjects"
         description="Manage IB Programme subjects; features shown depend on your plan"
@@ -468,79 +429,7 @@ ${trainingFeedback ? `LESSONS FROM ADMIN FEEDBACK:\n${trainingFeedback}\n\n` : '
         </div>
       </div>
 
-      {/* DP Core Subjects Section */}
-      {allowedProgrammes.includes('DP') && (
-        <Card className="border-0 shadow-sm hidden">
-          <CardHeader className="bg-gradient-to-r from-blue-50 to-indigo-50">
-            <div className="flex items-center gap-3">
-              <div className="p-2 rounded-lg bg-blue-100">
-                <Sparkles className="w-5 h-5 text-blue-700" />
-              </div>
-              <div>
-                <h3 className="text-lg font-semibold text-slate-900">DP Core Components</h3>
-                <p className="text-sm text-slate-600">
-                  Add TOK, CAS, and Extended Essay subjects with their teaching requirements
-                </p>
-              </div>
-            </div>
-          </CardHeader>
-          <CardContent className="pt-6">
-            <div className="space-y-3">
-              {['TOK', 'CAS', 'EE'].map((coreType) => {
-                const existingCore = subjects.find(s => s.code === coreType && s.is_core);
-                
-                return (
-                  <div key={coreType} className="flex items-center justify-between p-4 rounded-lg border-2 bg-gradient-to-r from-blue-50 to-indigo-50 border-blue-200">
-                    <div className="flex-1">
-                      <div className="flex items-center gap-3">
-                        <div className="w-10 h-10 rounded-full bg-blue-200 flex items-center justify-center">
-                          <span className="font-bold text-purple-900 text-sm">{coreType}</span>
-                        </div>
-                        <div>
-                          <h4 className="font-semibold text-blue-900">
-                            {coreType === 'TOK' ? 'Theory of Knowledge' : coreType === 'CAS' ? 'Creativity, Activity, Service' : 'Extended Essay'}
-                          </h4>
-                          {existingCore ? (
-                            <p className="text-sm text-blue-700">
-                              {existingCore.pyp_myp_hours_per_week || 2} hours/week
-                            </p>
-                          ) : (
-                            <p className="text-sm text-blue-600">Not configured yet</p>
-                          )}
-                        </div>
-                      </div>
-                    </div>
-                    <Button
-                      onClick={() => {
-                        if (existingCore) {
-                          handleEdit(existingCore);
-                        } else {
-                          setFormData({
-                            name: coreType === 'TOK' ? 'Theory of Knowledge' : coreType === 'CAS' ? 'Creativity, Activity, Service' : 'Extended Essay',
-                            code: coreType,
-                            ib_level: 'DP',
-                            ib_group: 1,
-                            ib_group_name: 'Language & Literature',
-                            is_core: true,
-                            pyp_myp_hours_per_week: coreType === 'TOK' ? 3 : 1,
-                            is_active: true
-                          });
-                          setEditingSubject(null);
-                          setIsDialogOpen(true);
-                        }
-                      }}
-                      variant={existingCore ? "outline" : "default"}
-                      className={existingCore ? "" : "bg-blue-600 hover:bg-blue-700"}
-                    >
-                      {existingCore ? 'Edit' : 'Add'}
-                    </Button>
-                  </div>
-                );
-              })}
-            </div>
-          </CardContent>
-        </Card>
-      )}
+
 
       {subjects.length === 0 && !isLoading ? (
         <EmptyState 
@@ -664,58 +553,7 @@ ${trainingFeedback ? `LESSONS FROM ADMIN FEEDBACK:\n${trainingFeedback}\n\n` : '
                           </div>
                           )}
 
-                          {/* Core Components (DP only) */}
-          {false && (
-            <div>
-              <h3 className="text-lg font-bold text-slate-700 mb-4 flex items-center gap-2">
-                <div className="h-1 w-12 bg-gradient-to-r from-slate-700 to-slate-900 rounded-full" />
-                Core Components
-              </h3>
-              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
-                {coreSubjects.map((subject, index) => (
-                  <motion.div
-                    key={subject.id}
-                    initial={{ opacity: 0, scale: 0.9 }}
-                    animate={{ opacity: 1, scale: 1 }}
-                    transition={{ delay: index * 0.05 }}
-                    whileHover={{ scale: 1.03, y: -5 }}
-                  >
-                    <Card className="border-0 shadow-lg hover:shadow-2xl transition-all duration-300 overflow-hidden">
-                      <div className="h-1 bg-gradient-to-r from-slate-700 to-slate-900" />
-                      <CardContent className="p-4">
-                      <div className="flex items-start justify-between">
-                        <div className="flex items-center gap-3">
-                          <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-slate-700 to-slate-800 flex items-center justify-center">
-                            <BookOpen className="w-5 h-5 text-white" />
-                          </div>
-                          <div>
-                            <p className="font-semibold text-slate-900">{subject.name}</p>
-                            <p className="text-sm text-slate-500">{subject.code}</p>
-                          </div>
-                        </div>
-                        <DropdownMenu>
-                          <DropdownMenuTrigger asChild>
-                            <Button variant="ghost" size="icon" className="h-8 w-8">
-                              <MoreHorizontal className="w-4 h-4" />
-                            </Button>
-                          </DropdownMenuTrigger>
-                          <DropdownMenuContent align="end">
-                            <DropdownMenuItem onClick={() => handleEdit(subject)}>
-                              <Pencil className="w-4 h-4 mr-2" /> Edit
-                            </DropdownMenuItem>
-                            <DropdownMenuItem className="text-rose-600" onClick={() => deleteMutation.mutate(subject.id)}>
-                              <Trash2 className="w-4 h-4 mr-2" /> Delete
-                            </DropdownMenuItem>
-                          </DropdownMenuContent>
-                          </DropdownMenu>
-                          </div>
-                          </CardContent>
-                          </Card>
-                          </motion.div>
-                          ))}
-                          </div>
-                          </div>
-                          )}
+
 
                           {/* DP Subject Groups (gated) */}
           {allowedProgrammes.includes('DP') && groupedSubjects.map(group => {

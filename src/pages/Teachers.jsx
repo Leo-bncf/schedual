@@ -20,7 +20,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import { Plus, Search, Mail, Clock, BookOpen, MoreHorizontal, Pencil, Trash2, Upload, Loader2 } from 'lucide-react';
+import { Plus, Search, Mail, Clock, MoreHorizontal, Pencil, Trash2, Upload, Loader2 } from 'lucide-react';
 import { AnimatePresence, motion } from 'framer-motion';
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import {

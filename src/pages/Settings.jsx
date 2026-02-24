@@ -42,22 +42,18 @@ import {
   CreditCard,
   Users,
   Mail,
-  UserPlus,
   AlertCircle,
-  XCircle,
   Info,
   Globe,
   MapPin,
   Hash,
   School,
-  Timer,
   MoreHorizontal,
   Trash2,
   Plus,
   GraduationCap,
   Zap,
-  ArrowRight,
-  CheckCircle2
+  ArrowRight
 } from 'lucide-react';
 import PageHeader from '../components/ui-custom/PageHeader';
 import YearAdvancement from '../components/settings/YearAdvancement';
