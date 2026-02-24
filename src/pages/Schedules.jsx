@@ -543,7 +543,7 @@ export default function Schedules() {
                 <Play className="w-5 h-5 mr-2 fill-current" />
                 Start Generation
               </Button>
-            </CardContent>
+            </Card>
             
             <Card className="border border-slate-200 shadow-sm">
               <CardHeader className="border-b border-slate-100 bg-slate-50/50">
