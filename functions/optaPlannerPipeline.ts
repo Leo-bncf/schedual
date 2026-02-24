@@ -457,8 +457,10 @@ Deno.serve(async (req) => {
       
       constraints: {
         maxSameSubjectPerDayHardEnabled: false,
-        maxSameSubjectPerDayLimit: 3,
-        exactWeeklyCountEnabled: false
+        maxSameSubjectPerDayLimit: 4,
+        exactWeeklyCountEnabled: false,
+        allowFlexibleWeeklyCounts: true,
+        relaxStudentGroupConflicts: false
       },
 
       randomSeed: 42,
