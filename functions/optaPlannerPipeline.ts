@@ -214,24 +214,67 @@ Deno.serve(async (req) => {
       }
     });
 
-    // Build subjectRequirements
-    const subjectRequirements = teachingGroups
-      .filter(tg => {
-        const subject = subjects.find(s => s.id === tg.subject_id);
-        const hasValidSubject = subject && (subject.code || subject.name);
-        const hasValidYearGroup = tg.year_group && tg.year_group.trim().length > 0;
-        return tg.is_active && hasValidSubject && hasValidYearGroup;
-      })
-      .map(tg => {
-        const subject = subjects.find(s => s.id === tg.subject_id);
-        return {
-          teachingGroupId: tg.id,
-          sectionId: `sec_${tg.year_group || 'DP1'}_${tg.id.slice(-4)}`,
-          studentGroup: tg.year_group,
-          subject: subject.code || subject.name,
-          minutesPerWeek: tg.minutes_per_week || 180
-        };
-      });
+    // Build subjectRequirements - must match lesson structure for combine_dp1_dp2
+    const subjectRequirements = [];
+    const processedReqTGs = new Set();
+
+    Object.entries(tgsBySubject).forEach(([subjectId, tgs]) => {
+      const subject = subjects.find(s => s.id === subjectId);
+      if (!subject) return;
+
+      const shouldCombine = subject?.combine_dp1_dp2 === true;
+
+      if (shouldCombine) {
+        const hlGroups = tgs.filter(tg => tg.level === 'HL');
+        const slGroups = tgs.filter(tg => tg.level === 'SL');
+        
+        // Combined requirement (SL hours)
+        if (slGroups.length > 0) {
+          const slMinutes = slGroups[0]?.minutes_per_week || (subject?.hoursPerWeekSL || 3) * 60;
+          subjectRequirements.push({
+            teachingGroupId: `combined_${subjectId}`,
+            sectionId: `sec_combined_${subjectId}`,
+            studentGroup: 'DP1+DP2',
+            subject: subject.code || subject.name,
+            minutesPerWeek: slMinutes
+          });
+          slGroups.forEach(tg => processedReqTGs.add(tg.id));
+        }
+
+        // HL extension requirement
+        if (hlGroups.length > 0) {
+          const hlMinutes = hlGroups[0]?.minutes_per_week || (subject?.hoursPerWeekHL || 5) * 60;
+          const slMinutes = (subject?.hoursPerWeekSL || 3) * 60;
+          const extensionMinutes = Math.max(0, hlMinutes - slMinutes);
+          
+          if (extensionMinutes > 0) {
+            subjectRequirements.push({
+              teachingGroupId: `hl_ext_${subjectId}`,
+              sectionId: `sec_hl_${subjectId}`,
+              studentGroup: 'DP1+DP2 HL',
+              subject: subject.code || subject.name,
+              minutesPerWeek: extensionMinutes
+            });
+          }
+          hlGroups.forEach(tg => processedReqTGs.add(tg.id));
+        }
+      } else {
+        // Regular requirements
+        tgs.forEach(tg => {
+          if (processedReqTGs.has(tg.id)) return;
+          if (!tg.is_active || !tg.year_group || !tg.year_group.trim()) return;
+
+          subjectRequirements.push({
+            teachingGroupId: tg.id,
+            sectionId: `sec_${tg.year_group || 'DP1'}_${tg.id.slice(-4)}`,
+            studentGroup: tg.year_group,
+            subject: subject.code || subject.name,
+            minutesPerWeek: tg.minutes_per_week || 180
+          });
+          processedReqTGs.add(tg.id);
+        });
+      }
+    });
 
     const payload = {
       schoolId: user.school_id,
