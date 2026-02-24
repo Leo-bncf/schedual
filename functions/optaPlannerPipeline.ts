@@ -568,10 +568,31 @@ Deno.serve(async (req) => {
       } catch {
         errorDetails = responseText;
       }
+
+      // Extract constraint violations for clearer diagnostics
+      const diagnostics = {
+        lessons: lessons.length,
+        teachers: teachers.length,
+        rooms: rooms.length,
+        teachingGroups: teachingGroupsPayload.length,
+        subjectRequirements: subjectRequirements.length,
+        lessonsByTeacher: {},
+        unassignedLessonCount: lessons.filter(l => !l.teacherId).length,
+        constraintSummary: ''
+      };
+
+      if (errorDetails.hard_constraints_violated) {
+        const violations = errorDetails.hard_constraints_violated;
+        diagnostics.constraintSummary = `Hard constraints violated:\n${Object.entries(violations || {})
+          .map(([k, v]) => `  • ${k}: ${v} violations`)
+          .join('\n')}`;
+      }
+
       return Response.json({
         ok: false,
         error: `OptaPlanner validation failed`,
         details: errorDetails,
+        diagnostics: diagnostics,
         payloadSummary: {
           lessons: lessons.length,
           teachers: teachers.length,
