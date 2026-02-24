@@ -533,11 +533,11 @@ Deno.serve(async (req) => {
       blockedSlotIds: [],
       
       constraints: {
-        maxSameSubjectPerDayHardEnabled: false,
-        maxSameSubjectPerDayLimit: 4,
-        exactWeeklyCountEnabled: false,
-        allowFlexibleWeeklyCounts: true,
-        relaxStudentGroupConflicts: true // CRITICAL: Temporarily relax hard conflicts when testing impossible workloads
+        maxSameSubjectPerDayHardEnabled: constraints?.maxSameSubjectPerDayHardEnabled ?? false,
+        maxSameSubjectPerDayLimit: constraints?.maxSameSubjectPerDayLimit ?? 4,
+        exactWeeklyCountEnabled: constraints?.exactWeeklyCountEnabled ?? false,
+        allowFlexibleWeeklyCounts: constraints?.allowFlexibleWeeklyCounts ?? true,
+        relaxStudentGroupConflicts: constraints?.relaxStudentGroupConflicts ?? true
       },
 
       randomSeed: 42,
