@@ -84,35 +84,135 @@ Deno.serve(async (req) => {
         };
       });
 
-    // Build lessons - one lesson per teaching group per required session
+    // Build lessons - handle combine_dp1_dp2 subjects
     const lessons = [];
     let lessonId = 1;
 
+    // Group teaching groups by subject for combine_dp1_dp2 logic
+    const tgsBySubject = {};
     teachingGroups
       .filter(tg => tg.is_active && tg.teacher_id && tg.student_ids?.length > 0)
       .forEach(tg => {
-        const subject = subjects.find(s => s.id === tg.subject_id);
-        const teacherId = teacherIdMap.get(tg.teacher_id);
-        const studentIds = (tg.student_ids || []).map(sid => studentIdMap.get(sid)).filter(id => id != null);
-        const requiredMinutes = tg.minutes_per_week || 180;
-        const periodDuration = schoolData.period_duration_minutes || 60;
-        const numLessons = Math.ceil(requiredMinutes / periodDuration);
-
-        for (let i = 0; i < numLessons; i++) {
-          lessons.push({
-            id: lessonId++,
-            teachingGroupId: tg.id,
-            sectionId: `sec_${tg.year_group || 'DP1'}_${tg.id.slice(-4)}`,
-            subject: subject?.code || subject?.name || 'Unknown',
-            studentGroup: tg.year_group || 'DP1',
-            teacherId: teacherId || null,
-            requiredCapacity: studentIds.length,
-            studentIds: studentIds,
-            timeslotId: null,
-            roomId: null
-          });
-        }
+        if (!tgsBySubject[tg.subject_id]) tgsBySubject[tg.subject_id] = [];
+        tgsBySubject[tg.subject_id].push(tg);
       });
+
+    const processedTGs = new Set();
+
+    Object.entries(tgsBySubject).forEach(([subjectId, tgs]) => {
+      const subject = subjects.find(s => s.id === subjectId);
+      const shouldCombine = subject?.combine_dp1_dp2 === true;
+
+      if (shouldCombine) {
+        // Separate HL and SL groups
+        const hlGroups = tgs.filter(tg => tg.level === 'HL');
+        const slGroups = tgs.filter(tg => tg.level === 'SL');
+        
+        // Combined lessons (HL + SL, DP1 + DP2) - use SL hours as base
+        if (slGroups.length > 0) {
+          const allStudents = new Set();
+          const allTeachers = new Set();
+          
+          [...hlGroups, ...slGroups].forEach(tg => {
+            (tg.student_ids || []).forEach(sid => allStudents.add(sid));
+            if (tg.teacher_id) allTeachers.add(tg.teacher_id);
+          });
+          
+          const combinedStudentIds = Array.from(allStudents).map(sid => studentIdMap.get(sid)).filter(id => id != null);
+          const primaryTeacher = Array.from(allTeachers)[0]; // Use first teacher
+          const teacherId = teacherIdMap.get(primaryTeacher);
+          
+          // Use SL hours for combined lessons (typically 3h)
+          const slMinutes = slGroups[0]?.minutes_per_week || (subject?.hoursPerWeekSL || 3) * 60;
+          const periodDuration = schoolData.period_duration_minutes || 60;
+          const numCombinedLessons = Math.ceil(slMinutes / periodDuration);
+
+          for (let i = 0; i < numCombinedLessons; i++) {
+            lessons.push({
+              id: lessonId++,
+              teachingGroupId: `combined_${subjectId}`,
+              sectionId: `sec_combined_${subjectId}`,
+              subject: subject?.code || subject?.name || 'Unknown',
+              studentGroup: 'DP1+DP2',
+              teacherId: teacherId || null,
+              requiredCapacity: combinedStudentIds.length,
+              studentIds: combinedStudentIds,
+              timeslotId: null,
+              roomId: null
+            });
+          }
+          
+          slGroups.forEach(tg => processedTGs.add(tg.id));
+        }
+
+        // HL extension lessons (HL only, DP1 + DP2)
+        if (hlGroups.length > 0) {
+          const hlStudents = new Set();
+          const hlTeachers = new Set();
+          
+          hlGroups.forEach(tg => {
+            (tg.student_ids || []).forEach(sid => hlStudents.add(sid));
+            if (tg.teacher_id) hlTeachers.add(tg.teacher_id);
+          });
+          
+          const hlStudentIds = Array.from(hlStudents).map(sid => studentIdMap.get(sid)).filter(id => id != null);
+          const primaryTeacher = Array.from(hlTeachers)[0];
+          const teacherId = teacherIdMap.get(primaryTeacher);
+          
+          // HL extension = HL hours - SL hours (typically 5h - 3h = 2h)
+          const hlMinutes = hlGroups[0]?.minutes_per_week || (subject?.hoursPerWeekHL || 5) * 60;
+          const slMinutes = (subject?.hoursPerWeekSL || 3) * 60;
+          const extensionMinutes = Math.max(0, hlMinutes - slMinutes);
+          const periodDuration = schoolData.period_duration_minutes || 60;
+          const numExtensionLessons = Math.ceil(extensionMinutes / periodDuration);
+
+          for (let i = 0; i < numExtensionLessons; i++) {
+            lessons.push({
+              id: lessonId++,
+              teachingGroupId: `hl_ext_${subjectId}`,
+              sectionId: `sec_hl_${subjectId}`,
+              subject: `${subject?.code || subject?.name} HL`,
+              studentGroup: 'DP1+DP2 HL',
+              teacherId: teacherId || null,
+              requiredCapacity: hlStudentIds.length,
+              studentIds: hlStudentIds,
+              timeslotId: null,
+              roomId: null
+            });
+          }
+          
+          hlGroups.forEach(tg => processedTGs.add(tg.id));
+        }
+      } else {
+        // Regular teaching groups (no combining)
+        tgs.forEach(tg => {
+          if (processedTGs.has(tg.id)) return;
+          
+          const teacherId = teacherIdMap.get(tg.teacher_id);
+          const studentIds = (tg.student_ids || []).map(sid => studentIdMap.get(sid)).filter(id => id != null);
+          const requiredMinutes = tg.minutes_per_week || 180;
+          const periodDuration = schoolData.period_duration_minutes || 60;
+          const numLessons = Math.ceil(requiredMinutes / periodDuration);
+
+          for (let i = 0; i < numLessons; i++) {
+            lessons.push({
+              id: lessonId++,
+              teachingGroupId: tg.id,
+              sectionId: `sec_${tg.year_group || 'DP1'}_${tg.id.slice(-4)}`,
+              subject: subject?.code || subject?.name || 'Unknown',
+              studentGroup: tg.year_group || 'DP1',
+              teacherId: teacherId || null,
+              requiredCapacity: studentIds.length,
+              studentIds: studentIds,
+              timeslotId: null,
+              roomId: null
+            });
+          }
+          
+          processedTGs.add(tg.id);
+        });
+      }
+    });
 
     // Build subjectRequirements
     const subjectRequirements = teachingGroups
