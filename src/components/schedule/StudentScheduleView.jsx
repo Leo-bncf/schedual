@@ -493,33 +493,23 @@ export default function StudentScheduleView({ students, slots, groups, subjects,
               </div>
               <input
                 type="text"
-                placeholder="Search students..."
+                value={studentSearchQuery}
+                placeholder="Chercher un élève..."
                 className="w-full pl-9 pr-4 py-2 border border-slate-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all"
-                onChange={(e) => {
-                  const val = e.target.value.toLowerCase();
-                  const els = document.querySelectorAll('.student-btn');
-                  els.forEach(el => {
-                    const text = el.textContent.toLowerCase();
-                    if (text.includes(val)) {
-                      el.style.display = 'flex';
-                    } else {
-                      el.style.display = 'none';
-                    }
-                  });
-                }}
+                onChange={(e) => setStudentSearchQuery(e.target.value)}
               />
             </div>
             
             {selectedStudent && (
               <div className="flex items-center gap-2 bg-blue-50 text-blue-900 px-3 py-1.5 rounded-lg border border-blue-100 text-sm font-medium">
                 <GraduationCap className="w-4 h-4 text-blue-600" />
-                Selected: {selectedStudent.full_name}
+                Sélectionné : {selectedStudent.full_name}
               </div>
             )}
           </div>
           
           <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-3 max-h-[300px] overflow-y-auto pr-1 custom-scrollbar">
-            {students.map(student => (
+            {students.filter(student => student.full_name.toLowerCase().includes(studentSearchQuery.toLowerCase())).map(student => (
               <button
                 key={student.id}
                 onClick={() => onStudentChange(student.id)}
