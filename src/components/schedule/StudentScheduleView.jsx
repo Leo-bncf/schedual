@@ -43,9 +43,29 @@ export default function StudentScheduleView({ students, slots, groups, subjects,
       daySlots.forEach((ts, idx) => {
         const uiRow = idx + 1;
         map[ts.id] = { uiRow, startTime: ts.startTime, endTime: ts.endTime };
-        if (!times[uiRow]) times[uiRow] = ts.startTime;
+        if (!times[uiRow]) times[uiRow] = ts.startTime ? `${ts.startTime.substring(0, 5)} - ${ts.endTime.substring(0, 5)}` : '';
       });
     });
+
+    // Fallback if no timeslots
+    if (Object.keys(times).length === 0) {
+      const [startHour, startMin] = (scheduleSettings?.day_start_time || '08:00').split(':').map(Number);
+      const periodDuration = scheduleSettings?.period_duration_minutes || 60;
+      let totalMinutes = startHour * 60 + startMin;
+      const periods = scheduleSettings?.periods_per_day || 10;
+      
+      for (let i = 1; i <= periods; i++) {
+        const h = Math.floor(totalMinutes / 60);
+        const m = totalMinutes % 60;
+        const startTimeStr = `${String(h).padStart(2, '0')}:${String(m).padStart(2, '0')}`;
+        totalMinutes += periodDuration;
+        const endH = Math.floor(totalMinutes / 60);
+        const endM = totalMinutes % 60;
+        const endTimeStr = `${String(endH).padStart(2, '0')}:${String(endM).padStart(2, '0')}`;
+        times[i] = `${startTimeStr} - ${endTimeStr}`;
+      }
+      maxPeriods = periods;
+    }
     
     // Parse breaks from scheduleSettings
     const breaks = Array.isArray(scheduleSettings?.breaks) ? scheduleSettings.breaks : [];
