@@ -146,22 +146,60 @@ export default function Schedules() {
       if (data.ok === true) {
         setGenStatus('success');
         const inserted = data.result?.slotsInserted || 0;
-        setGenMessage(`✅ ${inserted} slots créés avec succès! Score: ${data.result?.score || 'N/A'}`);
+        setGenMessage(`✅ ${inserted} slots created successfully! Score: ${data.result?.score || 'N/A'}`);
         await queryClient.invalidateQueries({ queryKey: ['scheduleSlots'] });
         await queryClient.invalidateQueries({ queryKey: ['scheduleVersions'] });
       } else {
+        console.error('Generation failed:', data);
         setGenStatus('error');
-        setGenError(data.message || data.error || 'Unknown error');
-        toast.error(data.message || data.error || 'Generation failed', { duration: 8000 });
+        
+        let errorMsg = data.error || 'Generation failed';
+        
+        if (data.details) {
+          console.log('OptaPlanner details:', data.details);
+          if (typeof data.details === 'object' && data.details.message) {
+            errorMsg = data.details.message;
+          } else if (typeof data.details === 'string') {
+            try {
+              const parsed = JSON.parse(data.details);
+              if (parsed.message) errorMsg = parsed.message;
+            } catch (e) {
+              // Keep original error
+            }
+          }
+        }
+        
+        setGenError(errorMsg);
+        toast.error(errorMsg, { duration: 10000 });
       }
     } catch (error) {
       console.error('Generation error:', error);
       setGenStatus('error');
-      const apiError = error.response?.data?.error || error.message || 'Failed to generate schedule';
-      const details = error.response?.data?.details || '';
-      const fullError = details ? `${apiError}\n\nDetails: ${details}` : apiError;
-      setGenError(fullError);
-      toast.error(apiError, { duration: 10000 });
+      
+      const responseData = error.response?.data;
+      let errorMsg = error.message || 'Failed to generate schedule';
+      
+      if (responseData) {
+        console.log('Error response:', responseData);
+        errorMsg = responseData.error || errorMsg;
+        
+        if (responseData.details) {
+          console.log('Error details:', responseData.details);
+          if (typeof responseData.details === 'string') {
+            try {
+              const parsed = JSON.parse(responseData.details);
+              if (parsed.message) errorMsg = parsed.message;
+            } catch (e) {
+              // Keep original error
+            }
+          } else if (responseData.details.message) {
+            errorMsg = responseData.details.message;
+          }
+        }
+      }
+      
+      setGenError(errorMsg);
+      toast.error(errorMsg, { duration: 10000 });
     }
   };
 
