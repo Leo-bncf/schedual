@@ -39,6 +39,7 @@ import {
   Play
 } from 'lucide-react';
 import ScheduleGenerationDialog from '../components/schedule/ScheduleGenerationDialog';
+import TimetableGrid from '../components/schedule/TimetableGrid';
 
 export default function Schedules() {
   const [isDialogOpen, setIsDialogOpen] = useState(false);
@@ -50,6 +51,8 @@ export default function Schedules() {
   const [genError, setGenError] = useState('');
   const [selectedStudentId, setSelectedStudentId] = useState(null);
   const [searchStudent, setSearchStudent] = useState('');
+  const [overviewFilterType, setOverviewFilterType] = useState('all');
+  const [overviewFilterId, setOverviewFilterId] = useState('all');
   const [formData, setFormData] = useState({
     name: '',
     academic_year: '2024-2025',
@@ -380,6 +383,14 @@ export default function Schedules() {
   const selectedStudent = students.find(s => s.id === selectedStudentId);
   const studentSchedule = selectedStudentId ? getStudentSchedule(selectedStudentId) : null;
 
+  const filteredOverviewSlots = React.useMemo(() => {
+    if (overviewFilterType === 'all' || overviewFilterId === 'all') return scheduleSlots;
+    if (overviewFilterType === 'teacher') return scheduleSlots.filter(s => s.teacher_id === overviewFilterId);
+    if (overviewFilterType === 'room') return scheduleSlots.filter(s => s.room_id === overviewFilterId);
+    if (overviewFilterType === 'teachingGroup') return scheduleSlots.filter(s => s.teaching_group_id === overviewFilterId);
+    return scheduleSlots;
+  }, [scheduleSlots, overviewFilterType, overviewFilterId]);
+
   const publishedVersion = scheduleVersions.find(v => v.status === 'published');
   const draftVersions = scheduleVersions.filter(v => v.status === 'draft');
 
@@ -639,54 +650,64 @@ export default function Schedules() {
             <TabsContent value="overview" className="space-y-4 mt-4">
               <Card className="border border-slate-200">
                 <CardHeader className="border-b border-slate-100 pb-4">
-                  <CardTitle className="text-base font-semibold">Teaching Groups</CardTitle>
-                  <CardDescription>Overview of scheduled classes</CardDescription>
-                </CardHeader>
-                <CardContent className="pt-4">
-                  <div className="space-y-3">
-                    {teachingGroups
-                      .filter(g => g.is_active)
-                      .map(group => {
-                        const groupSlots = scheduleSlots.filter(s => s.teaching_group_id === group.id);
-                        const subject = subjects.find(s => s.id === group.subject_id);
-                        const teacher = teachers.find(t => t.id === group.teacher_id);
-                        const room = rooms.find(r => r.id === groupSlots[0]?.room_id);
+                  <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+                    <div>
+                      <CardTitle className="text-base font-semibold">School Timetable</CardTitle>
+                      <CardDescription>Calendar view of generated lessons</CardDescription>
+                    </div>
+                    <div className="flex items-center gap-2">
+                      <Select value={overviewFilterType} onValueChange={(val) => { setOverviewFilterType(val); setOverviewFilterId('all'); }}>
+                        <SelectTrigger className="w-[140px]">
+                          <SelectValue placeholder="Filter by..." />
+                        </SelectTrigger>
+                        <SelectContent>
+                          <SelectItem value="all">All Lessons</SelectItem>
+                          <SelectItem value="teacher">By Teacher</SelectItem>
+                          <SelectItem value="room">By Room</SelectItem>
+                          <SelectItem value="teachingGroup">By Group</SelectItem>
+                        </SelectContent>
+                      </Select>
 
-                        return (
-                          <div 
-                            key={group.id} 
-                            className="p-4 rounded-lg border border-slate-200 hover:border-slate-300 hover:bg-slate-50 transition-all"
-                          >
-                            <div className="flex items-center justify-between">
-                              <div className="flex-1">
-                                <h4 className="text-sm font-semibold text-slate-900 mb-2">
-                                  {group.name}
-                                </h4>
-                                <div className="flex flex-wrap gap-2 text-xs">
-                                  <span className="px-2 py-1 rounded bg-blue-50 text-blue-700 font-medium">
-                                    {subject?.code || 'N/A'}
-                                  </span>
-                                  <span className="px-2 py-1 rounded bg-slate-100 text-slate-700">
-                                    {teacher?.full_name || 'Unassigned'}
-                                  </span>
-                                  {room && (
-                                    <span className="px-2 py-1 rounded bg-slate-100 text-slate-700">
-                                      {room.name}
-                                    </span>
-                                  )}
-                                  <span className="px-2 py-1 rounded bg-slate-100 text-slate-600">
-                                    {group.student_ids?.length || 0} students
-                                  </span>
-                                </div>
-                              </div>
-                              <Badge className={groupSlots.length > 0 ? 'bg-emerald-500' : 'bg-amber-500'}>
-                                {groupSlots.length} periods
-                              </Badge>
-                            </div>
-                          </div>
-                        );
-                      })}
+                      {overviewFilterType !== 'all' && (
+                        <Select value={overviewFilterId} onValueChange={setOverviewFilterId}>
+                          <SelectTrigger className="w-[200px]">
+                            <SelectValue placeholder="Select specific..." />
+                          </SelectTrigger>
+                          <SelectContent>
+                            <SelectItem value="all">Select {overviewFilterType}...</SelectItem>
+                            {overviewFilterType === 'teacher' && teachers.map(t => (
+                              <SelectItem key={t.id} value={t.id}>{t.full_name}</SelectItem>
+                            ))}
+                            {overviewFilterType === 'room' && rooms.map(r => (
+                              <SelectItem key={r.id} value={r.id}>{r.name}</SelectItem>
+                            ))}
+                            {overviewFilterType === 'teachingGroup' && teachingGroups.filter(g => g.is_active).map(g => (
+                              <SelectItem key={g.id} value={g.id}>{g.name}</SelectItem>
+                            ))}
+                          </SelectContent>
+                        </Select>
+                      )}
+                    </div>
                   </div>
+                </CardHeader>
+                <CardContent className="pt-4 p-0 sm:p-4">
+                  <TimetableGrid 
+                    slots={filteredOverviewSlots}
+                    groups={teachingGroups}
+                    rooms={rooms}
+                    subjects={subjects}
+                    teachers={teachers}
+                    periodsPerDay={school?.periods_per_day || 10}
+                    dayStartTime={school?.day_start_time || '08:00'}
+                    dayEndTime={school?.day_end_time || '18:00'}
+                    periodDurationMinutes={school?.period_duration_minutes || 60}
+                    breakPeriods={school?.breaks?.map(b => parseInt(b.start)) || []}
+                    onSlotClick={(day, uiRow, actionData) => {
+                      if (actionData.action === 'move') {
+                        // Implement drag and drop if needed later, right now it just opens details
+                      }
+                    }}
+                  />
                 </CardContent>
               </Card>
             </TabsContent>
