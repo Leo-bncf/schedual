@@ -521,7 +521,12 @@ Deno.serve(async (req) => {
         externalId: t.id
       })),
 
-      subjects: subjects.filter(s => s.is_active).map(s => ({
+      subjects: subjects.filter(s => {
+        if (!s.is_active) return false;
+        // OptaPlanner fails if a subject is defined but has no subjectRequirements
+        const codeOrName = s.code || s.name;
+        return subjectRequirements.some(req => req.subject === codeOrName);
+      }).map(s => ({
         id: s.id,
         code: s.code || s.name,
         name: s.name
