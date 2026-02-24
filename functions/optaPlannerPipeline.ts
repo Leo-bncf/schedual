@@ -166,10 +166,10 @@ Deno.serve(async (req) => {
     }
 
     if (slotsToInsert.length > 0) {
-      await base44.asServiceRole.entities.ScheduleSlot.bulkCreate(slotsToInsert);
+      await base44.entities.ScheduleSlot.bulkCreate(slotsToInsert);
     }
 
-    await base44.asServiceRole.entities.ScheduleVersion.update(schedule_version_id, {
+    await base44.entities.ScheduleVersion.update(schedule_version_id, {
       score: result.score || 0,
       generated_at: new Date().toISOString()
     });
