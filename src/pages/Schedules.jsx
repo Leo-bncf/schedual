@@ -753,18 +753,18 @@ export default function Schedules() {
           </Tabs>
         )
       ) : (
-        <Card className="border border-slate-200">
-          <CardContent className="py-16 text-center">
-            <div className="w-16 h-16 rounded-full bg-slate-100 flex items-center justify-center mx-auto mb-4">
-              <Calendar className="w-8 h-8 text-slate-400" />
+        <Card className="border border-slate-200 shadow-sm">
+          <CardContent className="py-24 flex flex-col items-center justify-center">
+            <div className="w-16 h-16 rounded-full bg-slate-100 border border-slate-200 flex items-center justify-center mb-6">
+              <Calendar className="w-8 h-8 text-slate-400" strokeWidth={1.5} />
             </div>
-            <h3 className="text-base font-semibold text-slate-900 mb-2">No Schedule Version</h3>
-            <p className="text-sm text-slate-500 mb-6">
+            <h3 className="text-lg font-semibold text-slate-900 mb-2">No Schedule Version</h3>
+            <p className="text-sm text-slate-500 mb-8 max-w-sm text-center">
               Create a schedule version to get started
             </p>
             <Button
               onClick={() => setIsDialogOpen(true)}
-              className="bg-blue-600 hover:bg-blue-700"
+              className="bg-blue-600 hover:bg-blue-700 px-6 font-medium"
             >
               <Plus className="w-4 h-4 mr-2" />
               Create Version
