@@ -152,23 +152,34 @@ export default function Schedules() {
       } else {
         console.error('Generation failed:', data);
         setGenStatus('error');
-        
+
         let errorMsg = data.error || 'Generation failed';
-        
+
         if (data.details) {
           console.log('OptaPlanner details:', data.details);
-          if (typeof data.details === 'object' && data.details.message) {
+
+          // Check for validation errors array
+          if (data.details.validationErrors && Array.isArray(data.details.validationErrors)) {
+            const validationErrors = data.details.validationErrors;
+            console.log('Validation errors:', validationErrors);
+            errorMsg = `Validation failed:\n${validationErrors.slice(0, 5).join('\n')}${validationErrors.length > 5 ? `\n... and ${validationErrors.length - 5} more errors` : ''}`;
+          } else if (typeof data.details === 'object' && data.details.message) {
             errorMsg = data.details.message;
           } else if (typeof data.details === 'string') {
             try {
               const parsed = JSON.parse(data.details);
-              if (parsed.message) errorMsg = parsed.message;
+              if (parsed.validationErrors && Array.isArray(parsed.validationErrors)) {
+                const validationErrors = parsed.validationErrors;
+                errorMsg = `Validation failed:\n${validationErrors.slice(0, 5).join('\n')}${validationErrors.length > 5 ? `\n... and ${validationErrors.length - 5} more errors` : ''}`;
+              } else if (parsed.message) {
+                errorMsg = parsed.message;
+              }
             } catch (e) {
               // Keep original error
             }
           }
         }
-        
+
         setGenError(errorMsg);
         toast.error(errorMsg, { duration: 10000 });
       }
