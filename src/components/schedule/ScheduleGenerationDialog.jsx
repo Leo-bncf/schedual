@@ -95,6 +95,7 @@ export default function ScheduleGenerationDialog({ open, onClose, status, messag
 
           {status === 'error' && (
             <motion.div 
+              key="error"
               initial={{ opacity: 0, scale: 0.95 }}
               animate={{ opacity: 1, scale: 1 }}
               exit={{ opacity: 0, scale: 0.95 }}
