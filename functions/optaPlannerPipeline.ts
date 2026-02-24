@@ -103,8 +103,85 @@ Deno.serve(async (req) => {
     Object.entries(tgsBySubject).forEach(([subjectId, tgs]) => {
       const subject = subjects.find(s => s.id === subjectId);
       const shouldCombine = subject?.combine_dp1_dp2 === true;
+      const isCore = subject?.is_core === true;
 
-      if (shouldCombine) {
+      // Core subjects (TOK, EE, CAS) need to be split by year group even if they share a teaching group
+      if (isCore) {
+        tgs.forEach(tg => {
+          if (processedTGs.has(tg.id)) return;
+          
+          // Split students by year group
+          const dp1Students = students.filter(s => s.year_group === 'DP1' && (tg.student_ids || []).includes(s.id));
+          const dp2Students = students.filter(s => s.year_group === 'DP2' && (tg.student_ids || []).includes(s.id));
+          
+          const teacherId = teacherIdMap.get(tg.teacher_id);
+          const requiredMinutes = tg.minutes_per_week || 60;
+          const periodDuration = schoolData.period_duration_minutes || 60;
+          const numLessons = Math.ceil(requiredMinutes / periodDuration);
+          
+          // Create separate lessons for DP1
+          if (dp1Students.length > 0) {
+            const dp1StudentIds = dp1Students.map(s => studentIdMap.get(s.id)).filter(id => id != null);
+            const dp1TgId = `${tg.id}_DP1`;
+            
+            teachingGroupsPayload.push({
+              id: dp1TgId,
+              subjectId: subjectId,
+              studentGroup: 'DP1',
+              sectionId: `sec_DP1_${tg.id.slice(-4)}`,
+              level: tg.level || 'Standard',
+              requiredMinutesPerWeek: requiredMinutes
+            });
+            
+            for (let i = 0; i < numLessons; i++) {
+              lessons.push({
+                id: lessonId++,
+                teachingGroupId: dp1TgId,
+                sectionId: `sec_DP1_${tg.id.slice(-4)}`,
+                subject: subject?.code || subject?.name || 'Unknown',
+                studentGroup: 'DP1',
+                teacherId: teacherId || null,
+                requiredCapacity: dp1StudentIds.length,
+                studentIds: dp1StudentIds,
+                timeslotId: null,
+                roomId: null
+              });
+            }
+          }
+          
+          // Create separate lessons for DP2
+          if (dp2Students.length > 0) {
+            const dp2StudentIds = dp2Students.map(s => studentIdMap.get(s.id)).filter(id => id != null);
+            const dp2TgId = `${tg.id}_DP2`;
+            
+            teachingGroupsPayload.push({
+              id: dp2TgId,
+              subjectId: subjectId,
+              studentGroup: 'DP2',
+              sectionId: `sec_DP2_${tg.id.slice(-4)}`,
+              level: tg.level || 'Standard',
+              requiredMinutesPerWeek: requiredMinutes
+            });
+            
+            for (let i = 0; i < numLessons; i++) {
+              lessons.push({
+                id: lessonId++,
+                teachingGroupId: dp2TgId,
+                sectionId: `sec_DP2_${tg.id.slice(-4)}`,
+                subject: subject?.code || subject?.name || 'Unknown',
+                studentGroup: 'DP2',
+                teacherId: teacherId || null,
+                requiredCapacity: dp2StudentIds.length,
+                studentIds: dp2StudentIds,
+                timeslotId: null,
+                roomId: null
+              });
+            }
+          }
+          
+          processedTGs.add(tg.id);
+        });
+      } else if (shouldCombine) {
         // Separate HL and SL groups
         const hlGroups = tgs.filter(tg => tg.level === 'HL');
         const slGroups = tgs.filter(tg => tg.level === 'SL');
@@ -248,8 +325,39 @@ Deno.serve(async (req) => {
       if (!subject) return;
 
       const shouldCombine = subject?.combine_dp1_dp2 === true;
+      const isCore = subject?.is_core === true;
 
-      if (shouldCombine) {
+      // Core subjects need separate requirements by year group
+      if (isCore) {
+        tgs.forEach(tg => {
+          if (processedReqTGs.has(tg.id)) return;
+          
+          const dp1Students = students.filter(s => s.year_group === 'DP1' && (tg.student_ids || []).includes(s.id));
+          const dp2Students = students.filter(s => s.year_group === 'DP2' && (tg.student_ids || []).includes(s.id));
+          
+          if (dp1Students.length > 0) {
+            subjectRequirements.push({
+              teachingGroupId: `${tg.id}_DP1`,
+              sectionId: `sec_DP1_${tg.id.slice(-4)}`,
+              studentGroup: 'DP1',
+              subject: subject.code || subject.name,
+              minutesPerWeek: tg.minutes_per_week || 60
+            });
+          }
+          
+          if (dp2Students.length > 0) {
+            subjectRequirements.push({
+              teachingGroupId: `${tg.id}_DP2`,
+              sectionId: `sec_DP2_${tg.id.slice(-4)}`,
+              studentGroup: 'DP2',
+              subject: subject.code || subject.name,
+              minutesPerWeek: tg.minutes_per_week || 60
+            });
+          }
+          
+          processedReqTGs.add(tg.id);
+        });
+      } else if (shouldCombine) {
         const hlGroups = tgs.filter(tg => tg.level === 'HL');
         const slGroups = tgs.filter(tg => tg.level === 'SL');
         
