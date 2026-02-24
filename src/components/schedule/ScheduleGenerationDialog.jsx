@@ -131,32 +131,28 @@ export default function ScheduleGenerationDialog({ open, onClose, status, messag
                       💡 {message.solution}
                     </p>
                   </div>
-                  <Button onClick={onClose} className="w-full">
-                    Close
+                  <Button variant="outline" onClick={onClose} className="w-full border-amber-300 text-amber-900 hover:bg-amber-100">
+                    Fermer et ajuster
                   </Button>
                 </>
               ) : (
                 <>
-                  <div className="p-4 rounded-lg bg-red-50 border border-red-200">
-                    <p className="text-sm text-red-900 font-medium mb-2">Error:</p>
-                    <p className="text-sm text-red-800 whitespace-pre-wrap">{error}</p>
+                  <div className="p-5 rounded-xl bg-red-50 border border-red-200 shadow-sm">
+                    <div className="flex items-center gap-2 mb-3">
+                      <XCircle className="w-5 h-5 text-red-600" />
+                      <p className="font-semibold text-red-900 text-base">Détails de l'erreur</p>
+                    </div>
+                    <p className="text-sm text-red-800 whitespace-pre-wrap leading-relaxed">{error}</p>
                   </div>
-                  <Button onClick={onClose} className="w-full">
-                    Close
+                  <Button variant="outline" onClick={onClose} className="w-full border-red-200 text-red-700 hover:bg-red-50">
+                    Fermer
                   </Button>
                 </>
               )}
-            </div>
+            </motion.div>
           )}
+          </AnimatePresence>
         </div>
-
-        {status === 'success' && (
-          <div className="flex justify-end">
-            <Button onClick={onClose} className="bg-blue-900 hover:bg-blue-800">
-              View Schedule
-            </Button>
-          </div>
-        )}
       </DialogContent>
     </Dialog>
   );
