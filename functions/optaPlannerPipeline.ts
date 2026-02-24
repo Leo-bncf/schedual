@@ -127,13 +127,14 @@ Deno.serve(async (req) => {
           const periodDuration = schoolData.period_duration_minutes || 60;
           const numCombinedLessons = Math.ceil(slMinutes / periodDuration);
 
+          const combinedTgId = `combined_${subjectId}`;
           for (let i = 0; i < numCombinedLessons; i++) {
             lessons.push({
               id: lessonId++,
-              teachingGroupId: `combined_${subjectId}`,
+              teachingGroupId: combinedTgId,
               sectionId: `sec_combined_${subjectId}`,
               subject: subject?.code || subject?.name || 'Unknown',
-              studentGroup: 'DP1+DP2',
+              studentGroup: combinedTgId,
               teacherId: teacherId || null,
               requiredCapacity: combinedStudentIds.length,
               studentIds: combinedStudentIds,
@@ -173,7 +174,7 @@ Deno.serve(async (req) => {
             teachingGroupId: hlExtTgId,
             sectionId: `sec_hl_${subjectId}`,
             subject: subject?.code || subject?.name || 'Unknown',
-            studentGroup: 'DP1+DP2 HL',
+            studentGroup: hlExtTgId,
             teacherId: teacherId || null,
             requiredCapacity: hlStudentIds.length,
             studentIds: hlStudentIds,
@@ -232,10 +233,11 @@ Deno.serve(async (req) => {
         // Combined requirement (SL hours)
         if (slGroups.length > 0) {
           const slMinutes = slGroups[0]?.minutes_per_week || (subject?.hoursPerWeekSL || 3) * 60;
+          const combinedTgId = `combined_${subjectId}`;
           subjectRequirements.push({
-            teachingGroupId: `combined_${subjectId}`,
+            teachingGroupId: combinedTgId,
             sectionId: `sec_combined_${subjectId}`,
-            studentGroup: 'DP1+DP2',
+            studentGroup: combinedTgId,
             subject: subject.code || subject.name,
             minutesPerWeek: slMinutes
           });
@@ -249,10 +251,11 @@ Deno.serve(async (req) => {
           const extensionMinutes = Math.max(0, hlMinutes - slMinutes);
           
           if (extensionMinutes > 0) {
+            const hlExtTgId = `hl_ext_${subjectId}`;
             subjectRequirements.push({
-              teachingGroupId: `hl_ext_${subjectId}`,
+              teachingGroupId: hlExtTgId,
               sectionId: `sec_hl_${subjectId}`,
-              studentGroup: 'DP1+DP2 HL',
+              studentGroup: hlExtTgId,
               subject: subject.code || subject.name,
               minutesPerWeek: extensionMinutes
             });
