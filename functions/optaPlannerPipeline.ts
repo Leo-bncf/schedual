@@ -104,11 +104,48 @@ Deno.serve(async (req) => {
       validationErrors.push(`❌ ${roomCapacityIssues.length} teaching group(s) exceed available room capacity`);
     }
 
-    // 5. Check teacher overload
+    // 5. Check teacher overload - accounting for combine_dp1_dp2 subjects
     const teacherOverloadIssues = [];
     teachers.forEach(t => {
       const assignedTGs = teachingGroups.filter(tg => tg.teacher_id === t.id);
-      const totalMinutes = assignedTGs.reduce((sum, tg) => sum + (tg.minutes_per_week || 180), 0);
+      
+      // Group TGs by subject to handle combine_dp1_dp2 logic
+      const tgsBySubjectForTeacher = {};
+      assignedTGs.forEach(tg => {
+        if (!tgsBySubjectForTeacher[tg.subject_id]) {
+          tgsBySubjectForTeacher[tg.subject_id] = [];
+        }
+        tgsBySubjectForTeacher[tg.subject_id].push(tg);
+      });
+      
+      // Calculate actual teaching minutes considering combine_dp1_dp2
+      let totalMinutes = 0;
+      Object.entries(tgsBySubjectForTeacher).forEach(([subjectId, subjectTGs]) => {
+        const subject = subjects.find(s => s.id === subjectId);
+        const shouldCombine = subject?.combine_dp1_dp2 === true;
+        
+        if (shouldCombine) {
+          // For combined subjects: count base SL hours + HL extension hours only once
+          const slMinutes = (subject?.hoursPerWeekSL || 3) * 60;
+          const hlMinutes = (subject?.hoursPerWeekHL || 5) * 60;
+          const extensionMinutes = Math.max(0, hlMinutes - slMinutes);
+          
+          // If teacher has both SL and HL, add SL + extension. If only HL, add just the extension.
+          const hasHL = subjectTGs.some(tg => tg.level === 'HL');
+          const hasSL = subjectTGs.some(tg => tg.level === 'SL');
+          
+          if (hasSL) {
+            totalMinutes += slMinutes;
+          }
+          if (hasHL) {
+            totalMinutes += extensionMinutes;
+          }
+        } else {
+          // Regular subjects: sum all minutes
+          totalMinutes += subjectTGs.reduce((sum, tg) => sum + (tg.minutes_per_week || 180), 0);
+        }
+      });
+      
       const maxMinutes = (t.max_hours_per_week || 25) * 60;
       if (totalMinutes > maxMinutes) {
         teacherOverloadIssues.push({
