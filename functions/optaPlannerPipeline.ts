@@ -547,7 +547,7 @@ Deno.serve(async (req) => {
         maxSameSubjectPerDayLimit: 4,
         exactWeeklyCountEnabled: false,
         allowFlexibleWeeklyCounts: true,
-        relaxStudentGroupConflicts: false
+        relaxStudentGroupConflicts: true // CRITICAL: Temporarily relax hard conflicts when testing impossible workloads
       },
 
       randomSeed: 42,
