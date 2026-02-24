@@ -93,16 +93,27 @@ Deno.serve(async (req) => {
         };
       });
 
-    // Build subject requirements from subjects
-    const subjectRequirements = subjects
+    // Build subjects list
+    const subjectsList = subjects
       .filter(s => s.is_active)
       .map(s => ({
-        subjectCode: s.code,
-        subjectName: s.name,
-        ibLevel: s.ib_level,
-        hlMinutesPerWeek: s.hoursPerWeekHL ? s.hoursPerWeekHL * 60 : s.hl_minutes_per_week_default || 300,
-        slMinutesPerWeek: s.hoursPerWeekSL ? s.hoursPerWeekSL * 60 : s.sl_minutes_per_week_default || 180
+        code: s.code || s.name,
+        name: s.name,
+        ibLevel: s.ib_level
       }));
+
+    // Build subject requirements with proper fields
+    const subjectRequirements = teachingGroups
+      .filter(tg => tg.is_active)
+      .map(tg => {
+        const subject = subjects.find(s => s.id === tg.subject_id);
+        return {
+          subject: subject?.code || subject?.name || 'Unknown',
+          studentGroup: tg.year_group || 'DP1',
+          level: tg.level || 'SL',
+          minutesPerWeek: tg.minutes_per_week || 180
+        };
+      });
 
     const payload = {
       timeslots,
@@ -114,6 +125,7 @@ Deno.serve(async (req) => {
         yearGroup: s.year_group,
         programme: s.ib_programme
       })),
+      subjects: subjectsList,
       lessons,
       subjectRequirements,
       schoolConfig: {
