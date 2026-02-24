@@ -23,7 +23,7 @@ export default function ScheduleGenerationDialog({ open, onClose, status, messag
         <div className={`h-2 w-full ${status === 'generating' ? 'bg-blue-600 animate-pulse' : status === 'success' ? 'bg-green-500' : 'bg-red-500'}`} />
         
         <div className="p-6 sm:p-8">
-          <DialogHeader className="mb-6">
+          <DialogHeader className="mb-2">
             <DialogTitle className="flex items-center justify-center gap-3 text-2xl font-bold text-center">
               {status === 'generating' && <Loader2 className="w-7 h-7 animate-spin text-blue-600" />}
               {status === 'success' && <CheckCircle className="w-7 h-7 text-green-600" />}
