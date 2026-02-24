@@ -752,11 +752,20 @@ export default function StudentScheduleView({ students, slots, groups, subjects,
             );
           })()}
           
-          <Card className="overflow-hidden border-blue-200 shadow-sm" id={exportId}>
+          <Card className={cn("overflow-hidden border-blue-200 shadow-sm transition-all duration-300 bg-white", isFullscreen ? "fixed inset-4 z-[100] flex flex-col shadow-2xl overflow-hidden" : "")} id={exportId}>
+            <div className="flex items-center justify-between p-2 border-b border-slate-200 bg-slate-50 sticky top-0 z-20">
+              <div className="text-sm font-semibold text-slate-700 pl-2">
+                Emploi du temps : {selectedStudent?.full_name}
+              </div>
+              <Button variant="outline" size="sm" onClick={() => setIsFullscreen(!isFullscreen)} className="bg-white">
+                {isFullscreen ? <Minimize2 className="w-4 h-4 mr-2" /> : <Maximize2 className="w-4 h-4 mr-2" />}
+                <span className="hidden sm:inline">{isFullscreen ? 'Quitter plein écran' : 'Plein écran (Paysage)'}</span>
+              </Button>
+            </div>
             <div className="h-1 bg-blue-500" />
-          <div className="overflow-x-auto">
-            <div className="min-w-[900px]">
-              <div className="grid grid-cols-[80px_repeat(5,1fr)] bg-white border-b-2 border-slate-300">
+            <div className={cn("overflow-auto", isFullscreen ? "flex-1" : "overflow-x-auto")}>
+              <div className={cn("min-w-[900px]", isFullscreen ? "min-w-[1200px]" : "")}>
+                <div className="grid grid-cols-[80px_repeat(5,1fr)] bg-white border-b-2 border-slate-300 sticky top-0 z-10 shadow-sm">
                 <div className="p-3 border-r border-slate-200"></div>
                 {DAYS.map(day => (
                   <div key={day} className="p-3 font-semibold text-slate-700 text-center text-sm border-r border-slate-200 last:border-r-0">
