@@ -166,10 +166,11 @@ Deno.serve(async (req) => {
         const periodDuration = schoolData.period_duration_minutes || 60;
         const numExtensionLessons = Math.ceil(extensionMinutes / periodDuration);
 
+        const hlExtTgId = `hl_ext_${subjectId}`;
         for (let i = 0; i < numExtensionLessons; i++) {
           lessons.push({
             id: lessonId++,
-            teachingGroupId: `hl_ext_${subjectId}`,
+            teachingGroupId: hlExtTgId,
             sectionId: `sec_hl_${subjectId}`,
             subject: subject?.code || subject?.name || 'Unknown',
             studentGroup: 'DP1+DP2 HL',
