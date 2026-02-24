@@ -96,7 +96,8 @@ Deno.serve(async (req) => {
     // Build subjects list
     const subjectsList = subjects
       .filter(s => s.is_active)
-      .map(s => ({
+      .map((s, idx) => ({
+        id: idx,
         code: s.code || s.name,
         name: s.name,
         ibLevel: s.ib_level
