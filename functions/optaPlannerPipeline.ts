@@ -126,7 +126,7 @@ Deno.serve(async (req) => {
     // 5. Check teacher overload - accounting for combine_dp1_dp2 subjects
     const teacherOverloadIssues = [];
     teachers.forEach(t => {
-      const assignedTGs = teachingGroups.filter(tg => tg.teacher_id === t.id);
+      const assignedTGs = teachingGroupsToProcess.filter(tg => tg.teacher_id === t.id);
       
       // Group TGs by subject to handle combine_dp1_dp2 logic
       const tgsBySubjectForTeacher = {};
