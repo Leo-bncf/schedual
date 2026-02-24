@@ -15,6 +15,7 @@ export default function StudentScheduleView({ students, slots, groups, subjects,
   const [diagnostics, setDiagnostics] = React.useState(null);
   const [loadingServerSlots, setLoadingServerSlots] = React.useState(false);
   const [useServerSlots, setUseServerSlots] = React.useState(true); // Default to server-side JOIN
+  const [isFullscreen, setIsFullscreen] = React.useState(false);
   
   // DYNAMIC PERIOD CALCULATION: Derive from timeslots, not hardcoded
   const DAY_MAP = { MONDAY: 'Monday', TUESDAY: 'Tuesday', WEDNESDAY: 'Wednesday', THURSDAY: 'Thursday', FRIDAY: 'Friday' };
