@@ -209,6 +209,10 @@ export default function Schedules() {
         console.log('Full error details object:', JSON.stringify(responseData.details, null, 2));
         
         errorMsg = responseData.error || errorMsg;
+
+        if (errorMsg === 'Rate limit exceeded') {
+          errorMsg = "Vous avez lancé trop de requêtes récemment. Veuillez patienter quelques instants avant de réessayer (Rate limit exceeded).";
+        }
         
         // Check for teacher capacity error from our backend
         if (responseData.code === 'TEACHER_CAPACITY_EXCEEDED' && responseData.details) {
