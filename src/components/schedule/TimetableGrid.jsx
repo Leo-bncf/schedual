@@ -668,35 +668,20 @@ export default function TimetableGrid({
                 })}
                 </div>
                 
-                {/* Break Row */}
-                {breakPeriods.includes(uiRow) && (
-                  <div className="grid grid-cols-[100px_repeat(5,1fr)] border-b-2 border-blue-300 bg-gradient-to-r from-blue-50 to-cyan-50">
-                    <div className="p-3 bg-blue-100 border-r border-blue-300 flex flex-col justify-center">
-                      <div className="text-sm font-bold text-blue-900">☕ Break</div>
-                      <div className="text-xs text-blue-700 mt-1">15 min</div>
-                    </div>
-                    {DAYS.map(day => (
-                      <div key={`${day}-break-${uiRow}`} className="p-3 border-r border-blue-200 last:border-r-0 flex items-center justify-center">
-                        <span className="text-blue-700 font-medium text-sm">Short Break</span>
-                      </div>
-                    ))}
-                  </div>
-                )}
-
-                {/* Lunch Break Row */}
-                {uiRow === lunchPeriod && (
-                  <div className="grid grid-cols-[100px_repeat(5,1fr)] border-b-2 border-amber-300 bg-gradient-to-r from-amber-50 to-orange-50">
+                {/* Break Rows mapped from scheduleSettings */}
+                {breakRowsData.filter(br => Math.round(br.afterPeriod) === uiRow).map(breakRow => (
+                  <div key={breakRow.id} className="grid grid-cols-[100px_repeat(5,1fr)] border-b-2 border-amber-300 bg-gradient-to-r from-amber-50 to-orange-50">
                     <div className="p-4 bg-amber-100 border-r border-amber-300 flex flex-col justify-center">
-                      <div className="text-sm font-bold text-amber-900">🍽️ Lunch</div>
-                      <div className="text-sm text-amber-700 mt-1">12:30 - 13:00</div>
+                      <div className="text-sm font-bold text-amber-900">{breakRow.emoji} {breakRow.label}</div>
+                      <div className="text-sm text-amber-700 mt-1">{breakRow.startTime} - {breakRow.endTime}</div>
                     </div>
                     {DAYS.map(day => (
-                      <div key={`${day}-lunch`} className="p-4 border-r border-amber-200 last:border-r-0 flex items-center justify-center">
-                        <span className="text-amber-700 font-medium text-sm">Lunch Break</span>
+                      <div key={`${day}-${breakRow.id}`} className="p-4 border-r border-amber-200 last:border-r-0 flex items-center justify-center">
+                        <span className="text-amber-700 font-medium text-sm">{breakRow.label}</span>
                       </div>
                     ))}
                   </div>
-                )}
+                ))}
               </React.Fragment>
             ))}
           </div>
