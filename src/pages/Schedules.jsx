@@ -127,6 +127,21 @@ export default function Schedules() {
     },
   });
 
+  const deleteVersionMutation = useMutation({
+    mutationFn: async (versionId) => {
+      return base44.entities.ScheduleVersion.delete(versionId);
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['scheduleVersions'] });
+      setSelectedVersion(null);
+      setIsDeleteDialogOpen(false);
+      toast.success("Schedule version deleted successfully");
+    },
+    onError: (err) => {
+      toast.error("Failed to delete version: " + err.message);
+    }
+  });
+
   const handleGenerateSchedule = async () => {
     if (!selectedVersion) return;
 
