@@ -296,62 +296,54 @@ export default function Schedules() {
   const draftVersions = scheduleVersions.filter(v => v.status === 'draft');
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-slate-50 via-blue-50/30 to-slate-50">
-      <div className="max-w-7xl mx-auto space-y-8">
-        {/* Hero Header */}
-        <div className="relative overflow-hidden rounded-2xl bg-gradient-to-br from-blue-900 via-blue-800 to-indigo-900 p-8 shadow-2xl">
-          <div className="absolute inset-0 bg-grid-white/5"></div>
-          <div className="relative z-10 flex items-center justify-between">
-            <div>
-              <h1 className="text-3xl font-bold text-white mb-2 tracking-tight">Schedule Management</h1>
-              <p className="text-blue-100 text-lg">AI-powered timetable generation and optimization</p>
-            </div>
-            <Button 
-              onClick={() => setIsDialogOpen(true)} 
-              className="bg-white text-blue-900 hover:bg-blue-50 shadow-lg hover:shadow-xl transition-all"
-            >
-              <Plus className="w-4 h-4 mr-2" />
-              New Version
-            </Button>
+    <div className="min-h-screen bg-slate-50">
+      <div className="max-w-[1400px] mx-auto space-y-6">
+        {/* Compact Header */}
+        <div className="flex items-center justify-between">
+          <div>
+            <h1 className="text-2xl font-bold text-slate-900">Schedules</h1>
+            <p className="text-sm text-slate-500 mt-1">Manage and generate timetables</p>
           </div>
+          <Button 
+            onClick={() => setIsDialogOpen(true)} 
+            size="sm"
+            className="bg-blue-600 hover:bg-blue-700"
+          >
+            <Plus className="w-4 h-4 mr-2" />
+            New Version
+          </Button>
         </div>
 
-        {/* Version Selector Card */}
-        <Card className="border-0 shadow-lg hover:shadow-xl transition-all bg-white/90 backdrop-blur">
-          <CardContent className="p-8">
-            <div className="flex flex-col lg:flex-row lg:items-center gap-6">
-              <div className="flex-1 space-y-3">
-                <Label className="text-sm font-semibold text-slate-700 uppercase tracking-wide">Active Schedule Version</Label>
+        {/* Version Selector & Generate */}
+        <Card className="border border-slate-200 shadow-sm">
+          <CardContent className="p-6">
+            <div className="flex flex-col lg:flex-row lg:items-center gap-4">
+              <div className="flex-1">
+                <Label className="text-xs font-medium text-slate-600 mb-2 block">Active Version</Label>
                 <Select value={selectedVersion?.id || ''} onValueChange={(id) => setSelectedVersion(scheduleVersions.find(v => v.id === id))}>
-                  <SelectTrigger className="h-12 text-base border-2 hover:border-blue-300 transition-colors">
-                    <SelectValue placeholder="Select a schedule version" />
+                  <SelectTrigger className="h-10 border-slate-200">
+                    <SelectValue placeholder="Select version" />
                   </SelectTrigger>
                   <SelectContent>
                     {scheduleVersions.length === 0 ? (
-                      <div className="p-4 text-sm text-slate-500">No versions yet. Create one to start.</div>
+                      <div className="p-3 text-sm text-slate-500">No versions yet</div>
                     ) : (
                       <>
                         {publishedVersion && (
-                          <SelectItem value={publishedVersion.id} className="py-3">
-                            <div className="flex items-center gap-3">
-                              <CheckCircle className="w-5 h-5 text-emerald-600" />
-                              <div>
-                                <div className="font-semibold">{publishedVersion.name}</div>
-                                <div className="text-xs text-slate-500">{publishedVersion.academic_year}</div>
-                              </div>
-                              <Badge className="ml-auto bg-emerald-500 text-white">Live</Badge>
+                          <SelectItem value={publishedVersion.id}>
+                            <div className="flex items-center gap-2">
+                              <CheckCircle className="w-4 h-4 text-emerald-600" />
+                              <span className="font-medium">{publishedVersion.name}</span>
+                              <Badge className="ml-2 bg-emerald-500 text-white text-xs">Live</Badge>
                             </div>
                           </SelectItem>
                         )}
                         {draftVersions.map(version => (
-                          <SelectItem key={version.id} value={version.id} className="py-3">
-                            <div className="flex items-center gap-3">
-                              <Clock className="w-5 h-5 text-amber-500" />
-                              <div>
-                                <div className="font-medium">{version.name}</div>
-                                <div className="text-xs text-slate-500">{version.academic_year}</div>
-                              </div>
-                              <Badge variant="outline" className="ml-auto">Draft</Badge>
+                          <SelectItem key={version.id} value={version.id}>
+                            <div className="flex items-center gap-2">
+                              <Clock className="w-4 h-4 text-slate-400" />
+                              <span>{version.name}</span>
+                              <Badge variant="outline" className="ml-2 text-xs">Draft</Badge>
                             </div>
                           </SelectItem>
                         ))}
@@ -364,10 +356,9 @@ export default function Schedules() {
               {selectedVersion && (
                 <Button
                   onClick={handleGenerateSchedule}
-                  size="lg"
-                  className="bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-700 hover:to-indigo-700 text-white shadow-lg hover:shadow-xl transition-all"
+                  className="bg-blue-600 hover:bg-blue-700 lg:mt-5"
                 >
-                  <Sparkles className="w-5 h-5 mr-2" />
+                  <Sparkles className="w-4 h-4 mr-2" />
                   Generate Schedule
                 </Button>
               )}
@@ -375,75 +366,67 @@ export default function Schedules() {
           </CardContent>
         </Card>
 
-      {/* Analytics Dashboard */}
+      {/* Stats */}
       {selectedVersion && scheduleSlots.length > 0 && (
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
-          <Card className="border-0 shadow-lg hover:shadow-xl transition-all overflow-hidden group">
-            <div className="absolute inset-0 bg-gradient-to-br from-blue-500 to-indigo-600 opacity-90 group-hover:opacity-100 transition-opacity"></div>
-            <CardContent className="relative p-6">
-              <div className="flex items-start justify-between mb-4">
-                <div className="p-3 rounded-xl bg-white/20 backdrop-blur">
-                  <Users className="w-6 h-6 text-white" />
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+          <Card className="border border-slate-200">
+            <CardContent className="p-4">
+              <div className="flex items-center justify-between">
+                <div>
+                  <p className="text-xs text-slate-500">Students</p>
+                  <p className="text-2xl font-bold text-slate-900 mt-1">{stats.studentsScheduled}/{students.length}</p>
+                  <p className="text-xs text-emerald-600 font-medium mt-1">{stats.coverage}% coverage</p>
                 </div>
-                <div className="text-right">
-                  <div className="text-3xl font-bold text-white">{stats.coverage}%</div>
-                  <div className="text-sm text-blue-100">Coverage</div>
+                <div className="w-10 h-10 rounded-lg bg-blue-50 flex items-center justify-center">
+                  <Users className="w-5 h-5 text-blue-600" />
                 </div>
-              </div>
-              <div className="text-white">
-                <div className="text-2xl font-bold mb-1">{stats.studentsScheduled}</div>
-                <div className="text-sm text-blue-100">of {students.length} students scheduled</div>
               </div>
             </CardContent>
           </Card>
 
-          <Card className="border-0 shadow-lg hover:shadow-xl transition-all overflow-hidden group">
-            <div className="absolute inset-0 bg-gradient-to-br from-emerald-500 to-teal-600 opacity-90 group-hover:opacity-100 transition-opacity"></div>
-            <CardContent className="relative p-6">
-              <div className="flex items-start justify-between mb-4">
-                <div className="p-3 rounded-xl bg-white/20 backdrop-blur">
-                  <Users className="w-6 h-6 text-white" />
+          <Card className="border border-slate-200">
+            <CardContent className="p-4">
+              <div className="flex items-center justify-between">
+                <div>
+                  <p className="text-xs text-slate-500">Teachers</p>
+                  <p className="text-2xl font-bold text-slate-900 mt-1">{stats.teachersAssigned}/{teachers.length}</p>
+                  <p className="text-xs text-slate-600 font-medium mt-1">{Math.round((stats.teachersAssigned/teachers.length)*100)}% active</p>
                 </div>
-                <div className="text-right">
-                  <div className="text-3xl font-bold text-white">{Math.round((stats.teachersAssigned/teachers.length)*100)}%</div>
-                  <div className="text-sm text-emerald-100">Active</div>
+                <div className="w-10 h-10 rounded-lg bg-emerald-50 flex items-center justify-center">
+                  <Users className="w-5 h-5 text-emerald-600" />
                 </div>
-              </div>
-              <div className="text-white">
-                <div className="text-2xl font-bold mb-1">{stats.teachersAssigned}</div>
-                <div className="text-sm text-emerald-100">of {teachers.length} teachers assigned</div>
               </div>
             </CardContent>
           </Card>
 
-          <Card className="border-0 shadow-lg hover:shadow-xl transition-all overflow-hidden group">
-            <div className="absolute inset-0 bg-gradient-to-br from-amber-500 to-orange-600 opacity-90 group-hover:opacity-100 transition-opacity"></div>
-            <CardContent className="relative p-6">
-              <div className="flex items-start justify-between mb-4">
-                <div className="p-3 rounded-xl bg-white/20 backdrop-blur">
-                  <Calendar className="w-6 h-6 text-white" />
+          <Card className="border border-slate-200">
+            <CardContent className="p-4">
+              <div className="flex items-center justify-between">
+                <div>
+                  <p className="text-xs text-slate-500">Total Periods</p>
+                  <p className="text-2xl font-bold text-slate-900 mt-1">{stats.totalSlots}</p>
+                  <p className="text-xs text-slate-600 font-medium mt-1">Scheduled</p>
                 </div>
-              </div>
-              <div className="text-white">
-                <div className="text-3xl font-bold mb-1">{stats.totalSlots}</div>
-                <div className="text-sm text-amber-100">Total periods scheduled</div>
+                <div className="w-10 h-10 rounded-lg bg-amber-50 flex items-center justify-center">
+                  <Calendar className="w-5 h-5 text-amber-600" />
+                </div>
               </div>
             </CardContent>
           </Card>
 
-          <Card className="border-0 shadow-lg hover:shadow-xl transition-all overflow-hidden group">
-            <div className="absolute inset-0 bg-gradient-to-br from-purple-500 to-pink-600 opacity-90 group-hover:opacity-100 transition-opacity"></div>
-            <CardContent className="relative p-6">
-              <div className="flex items-start justify-between mb-4">
-                <div className="p-3 rounded-xl bg-white/20 backdrop-blur">
-                  <Building2 className="w-6 h-6 text-white" />
+          <Card className="border border-slate-200">
+            <CardContent className="p-4">
+              <div className="flex items-center justify-between">
+                <div>
+                  <p className="text-xs text-slate-500">Rooms Used</p>
+                  <p className="text-2xl font-bold text-slate-900 mt-1">
+                    {new Set(scheduleSlots.map(s => s.room_id).filter(Boolean)).size}
+                  </p>
+                  <p className="text-xs text-slate-600 font-medium mt-1">Active spaces</p>
                 </div>
-              </div>
-              <div className="text-white">
-                <div className="text-3xl font-bold mb-1">
-                  {new Set(scheduleSlots.map(s => s.room_id).filter(Boolean)).size}
+                <div className="w-10 h-10 rounded-lg bg-purple-50 flex items-center justify-center">
+                  <Building2 className="w-5 h-5 text-purple-600" />
                 </div>
-                <div className="text-sm text-purple-100">Rooms in use</div>
               </div>
             </CardContent>
           </Card>
@@ -453,59 +436,52 @@ export default function Schedules() {
       {/* Main Content */}
       {selectedVersion ? (
         scheduleSlots.length === 0 ? (
-          <Card className="border-0 shadow-xl bg-white/90 backdrop-blur overflow-hidden">
-            <div className="absolute inset-0 bg-gradient-to-br from-blue-500/5 via-indigo-500/5 to-purple-500/5"></div>
-            <CardContent className="relative py-24 text-center">
-              <div className="inline-flex p-8 rounded-3xl bg-gradient-to-br from-blue-100 via-indigo-100 to-purple-100 mb-6 animate-pulse">
-                <Sparkles className="w-20 h-20 text-blue-600" />
+          <Card className="border border-slate-200">
+            <CardContent className="py-16 text-center">
+              <div className="w-16 h-16 rounded-full bg-blue-50 flex items-center justify-center mx-auto mb-4">
+                <Sparkles className="w-8 h-8 text-blue-600" />
               </div>
-              <h3 className="text-2xl font-bold text-slate-900 mb-3">Ready to Generate</h3>
-              <p className="text-lg text-slate-600 mb-8 max-w-2xl mx-auto">
-                Use AI-powered OptaPlanner to automatically create optimized timetables for your school
+              <h3 className="text-lg font-semibold text-slate-900 mb-2">Ready to Generate</h3>
+              <p className="text-sm text-slate-500 mb-6 max-w-md mx-auto">
+                Click Generate Schedule to create an optimized timetable
               </p>
               <Button
                 onClick={handleGenerateSchedule}
-                size="lg"
-                className="bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-700 hover:to-indigo-700 shadow-lg hover:shadow-xl transition-all"
+                className="bg-blue-600 hover:bg-blue-700"
               >
-                <Sparkles className="w-5 h-5 mr-2" />
-                Generate Schedule Now
+                <Sparkles className="w-4 h-4 mr-2" />
+                Generate Schedule
               </Button>
             </CardContent>
           </Card>
         ) : (
           <Tabs defaultValue="overview" className="w-full">
-            <TabsList className="bg-white/80 backdrop-blur border-0 shadow-md p-1.5 rounded-xl">
+            <TabsList className="bg-white border border-slate-200 p-1">
               <TabsTrigger 
                 value="overview" 
-                className="rounded-lg data-[state=active]:bg-gradient-to-r data-[state=active]:from-blue-600 data-[state=active]:to-indigo-600 data-[state=active]:text-white data-[state=active]:shadow-lg transition-all px-6"
+                className="data-[state=active]:bg-slate-100 data-[state=active]:text-slate-900"
               >
                 <Calendar className="w-4 h-4 mr-2" />
-                Admin Overview
+                Overview
               </TabsTrigger>
               <TabsTrigger 
                 value="student" 
-                className="rounded-lg data-[state=active]:bg-gradient-to-r data-[state=active]:from-blue-600 data-[state=active]:to-indigo-600 data-[state=active]:text-white data-[state=active]:shadow-lg transition-all px-6"
+                className="data-[state=active]:bg-slate-100 data-[state=active]:text-slate-900"
               >
                 <Users className="w-4 h-4 mr-2" />
-                Student Viewer
+                Student View
               </TabsTrigger>
             </TabsList>
 
             {/* Admin Overview Tab */}
-            <TabsContent value="overview" className="space-y-6 mt-6">
-              <Card className="border-0 shadow-lg bg-white/90 backdrop-blur">
-                <CardHeader className="bg-gradient-to-r from-blue-50 to-indigo-50 border-b">
-                  <CardTitle className="flex items-center gap-3 text-xl">
-                    <div className="p-2 rounded-lg bg-blue-600">
-                      <Calendar className="w-5 h-5 text-white" />
-                    </div>
-                    Active Teaching Groups
-                  </CardTitle>
-                  <CardDescription className="text-base">Complete overview of scheduled classes</CardDescription>
+            <TabsContent value="overview" className="space-y-4 mt-4">
+              <Card className="border border-slate-200">
+                <CardHeader className="border-b border-slate-100 pb-4">
+                  <CardTitle className="text-base font-semibold">Teaching Groups</CardTitle>
+                  <CardDescription>Overview of scheduled classes</CardDescription>
                 </CardHeader>
-                <CardContent className="pt-6">
-                  <div className="grid gap-4">
+                <CardContent className="pt-4">
+                  <div className="space-y-3">
                     {teachingGroups
                       .filter(g => g.is_active)
                       .map(group => {
@@ -517,42 +493,33 @@ export default function Schedules() {
                         return (
                           <div 
                             key={group.id} 
-                            className="group p-6 rounded-xl border-2 border-slate-100 hover:border-blue-300 hover:shadow-lg transition-all bg-white"
+                            className="p-4 rounded-lg border border-slate-200 hover:border-slate-300 hover:bg-slate-50 transition-all"
                           >
-                            <div className="flex items-start justify-between">
+                            <div className="flex items-center justify-between">
                               <div className="flex-1">
-                                <h4 className="text-lg font-bold text-slate-900 mb-3 group-hover:text-blue-900 transition-colors">
+                                <h4 className="text-sm font-semibold text-slate-900 mb-2">
                                   {group.name}
                                 </h4>
-                                <div className="flex flex-wrap gap-4 text-sm">
-                                  <div className="flex items-center gap-2 px-3 py-1.5 rounded-lg bg-blue-50 text-blue-700">
-                                    <BookOpen className="w-4 h-4" />
-                                    <span className="font-medium">{subject?.code || 'N/A'}</span>
-                                  </div>
-                                  <div className="flex items-center gap-2 px-3 py-1.5 rounded-lg bg-emerald-50 text-emerald-700">
-                                    <Users className="w-4 h-4" />
-                                    <span className="font-medium">{teacher?.full_name || 'Unassigned'}</span>
-                                  </div>
+                                <div className="flex flex-wrap gap-2 text-xs">
+                                  <span className="px-2 py-1 rounded bg-blue-50 text-blue-700 font-medium">
+                                    {subject?.code || 'N/A'}
+                                  </span>
+                                  <span className="px-2 py-1 rounded bg-slate-100 text-slate-700">
+                                    {teacher?.full_name || 'Unassigned'}
+                                  </span>
                                   {room && (
-                                    <div className="flex items-center gap-2 px-3 py-1.5 rounded-lg bg-purple-50 text-purple-700">
-                                      <Building2 className="w-4 h-4" />
-                                      <span className="font-medium">{room.name}</span>
-                                    </div>
+                                    <span className="px-2 py-1 rounded bg-slate-100 text-slate-700">
+                                      {room.name}
+                                    </span>
                                   )}
+                                  <span className="px-2 py-1 rounded bg-slate-100 text-slate-600">
+                                    {group.student_ids?.length || 0} students
+                                  </span>
                                 </div>
                               </div>
-                              <div className="flex flex-col items-end gap-2">
-                                <Badge className={`px-4 py-2 text-sm font-semibold ${
-                                  groupSlots.length > 0 
-                                    ? 'bg-gradient-to-r from-emerald-500 to-teal-600 text-white' 
-                                    : 'bg-gradient-to-r from-amber-500 to-orange-600 text-white'
-                                }`}>
-                                  {groupSlots.length} periods
-                                </Badge>
-                                <div className="text-sm text-slate-500 font-medium">
-                                  {group.student_ids?.length || 0} students
-                                </div>
-                              </div>
+                              <Badge className={groupSlots.length > 0 ? 'bg-emerald-500' : 'bg-amber-500'}>
+                                {groupSlots.length} periods
+                              </Badge>
                             </div>
                           </div>
                         );
@@ -563,46 +530,39 @@ export default function Schedules() {
             </TabsContent>
 
             {/* Student Viewer Tab */}
-            <TabsContent value="student" className="space-y-6 mt-6">
-              <Card className="border-0 shadow-lg bg-white/90 backdrop-blur">
-                <CardHeader className="bg-gradient-to-r from-indigo-50 to-purple-50 border-b">
-                  <CardTitle className="flex items-center gap-3 text-xl">
-                    <div className="p-2 rounded-lg bg-indigo-600">
-                      <Users className="w-5 h-5 text-white" />
-                    </div>
-                    Student Timetable Viewer
-                  </CardTitle>
-                  <CardDescription className="text-base">View personalized schedules for each student</CardDescription>
+            <TabsContent value="student" className="space-y-4 mt-4">
+              <Card className="border border-slate-200">
+                <CardHeader className="border-b border-slate-100 pb-4">
+                  <CardTitle className="text-base font-semibold">Student Timetable</CardTitle>
+                  <CardDescription>View individual student schedules</CardDescription>
                 </CardHeader>
-                <CardContent className="pt-6 space-y-6">
+                <CardContent className="pt-4 space-y-4">
                   {/* Student Search & Select */}
-                  <div className="space-y-3">
-                    <Label className="text-sm font-semibold text-slate-700 uppercase tracking-wide">Find Student</Label>
-                    <div className="flex flex-col sm:flex-row gap-3">
+                  <div className="space-y-2">
+                    <Label className="text-xs font-medium text-slate-600">Select Student</Label>
+                    <div className="flex flex-col sm:flex-row gap-2">
                       <div className="flex-1 relative">
-                        <Search className="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-slate-400" />
+                        <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400" />
                         <Input
-                          placeholder="Search by name or email..."
+                          placeholder="Search by name..."
                           value={searchStudent}
                           onChange={(e) => setSearchStudent(e.target.value)}
-                          className="pl-12 h-12 text-base border-2 hover:border-blue-300 transition-colors"
+                          className="pl-9 h-10 border-slate-200"
                         />
                       </div>
                       <Select value={selectedStudentId || ''} onValueChange={setSelectedStudentId}>
-                        <SelectTrigger className="sm:w-[320px] h-12 text-base border-2 hover:border-blue-300 transition-colors">
+                        <SelectTrigger className="sm:w-[280px] h-10 border-slate-200">
                           <SelectValue placeholder="Choose student" />
                         </SelectTrigger>
                         <SelectContent>
                           {filteredStudents.map(student => (
-                            <SelectItem key={student.id} value={student.id} className="py-3">
+                            <SelectItem key={student.id} value={student.id}>
                               <div className="flex items-center gap-2">
-                                <div className="w-8 h-8 rounded-full bg-gradient-to-br from-blue-500 to-indigo-600 flex items-center justify-center text-white text-sm font-bold">
+                                <div className="w-6 h-6 rounded-full bg-blue-100 flex items-center justify-center text-blue-700 text-xs font-semibold">
                                   {student.full_name?.charAt(0)?.toUpperCase()}
                                 </div>
-                                <div>
-                                  <div className="font-medium">{student.full_name}</div>
-                                  <div className="text-xs text-slate-500">{student.year_group}</div>
-                                </div>
+                                <span className="text-sm">{student.full_name}</span>
+                                <span className="text-xs text-slate-500">({student.year_group})</span>
                               </div>
                             </SelectItem>
                           ))}
@@ -613,39 +573,31 @@ export default function Schedules() {
 
                   {/* Student Schedule Display */}
                   {selectedStudent && studentSchedule && (
-                    <div className="space-y-6">
+                    <div className="space-y-4">
                       {/* Student Info Card */}
-                      <div className="relative overflow-hidden rounded-2xl bg-gradient-to-br from-blue-600 via-indigo-600 to-purple-600 p-6 shadow-xl">
-                        <div className="absolute inset-0 bg-grid-white/10"></div>
-                        <div className="relative flex items-center gap-4">
-                          <div className="w-16 h-16 rounded-2xl bg-white/20 backdrop-blur flex items-center justify-center text-white font-bold text-2xl shadow-lg">
+                      <div className="p-4 rounded-lg border border-slate-200 bg-slate-50">
+                        <div className="flex items-center gap-3">
+                          <div className="w-10 h-10 rounded-lg bg-blue-100 flex items-center justify-center text-blue-700 font-bold">
                             {selectedStudent.full_name?.charAt(0)?.toUpperCase() || 'S'}
                           </div>
                           <div className="flex-1">
-                            <h3 className="text-2xl font-bold text-white mb-1">{selectedStudent.full_name}</h3>
-                            <div className="flex items-center gap-3 text-blue-100">
-                              <span className="font-medium">{selectedStudent.year_group}</span>
-                              <span>•</span>
-                              <span>{selectedStudent.email}</span>
-                            </div>
+                            <h3 className="text-sm font-semibold text-slate-900">{selectedStudent.full_name}</h3>
+                            <p className="text-xs text-slate-500">{selectedStudent.year_group} • {selectedStudent.email}</p>
                           </div>
-                          <div className="px-4 py-2 rounded-xl bg-white/20 backdrop-blur border border-white/30">
-                            <div className="text-xs text-blue-100">Programme</div>
-                            <div className="text-lg font-bold text-white">{selectedStudent.ib_programme || 'IB'}</div>
-                          </div>
+                          <Badge variant="outline" className="text-xs">{selectedStudent.ib_programme || 'IB'}</Badge>
                         </div>
                       </div>
 
                       {/* Timetable Grid */}
-                      <div className="overflow-x-auto rounded-xl border-2 border-slate-200 shadow-lg">
-                        <table className="w-full border-collapse">
+                      <div className="overflow-x-auto rounded-lg border border-slate-200">
+                        <table className="w-full border-collapse text-sm">
                           <thead>
-                            <tr className="bg-gradient-to-r from-slate-100 to-slate-50">
-                              <th className="sticky left-0 z-10 p-4 text-left text-sm font-bold text-slate-800 bg-slate-100 border-b-2 border-slate-300">
+                            <tr className="bg-slate-50">
+                              <th className="sticky left-0 z-10 p-3 text-left text-xs font-semibold text-slate-700 bg-slate-50 border-b border-slate-200">
                                 Period
                               </th>
                               {Object.keys(studentSchedule).map(day => (
-                                <th key={day} className="p-4 text-center text-sm font-bold text-slate-800 border-b-2 border-slate-300 min-w-[160px]">
+                                <th key={day} className="p-3 text-center text-xs font-semibold text-slate-700 border-b border-slate-200 min-w-[140px]">
                                   {day.charAt(0) + day.slice(1).toLowerCase()}
                                 </th>
                               ))}
@@ -653,40 +605,36 @@ export default function Schedules() {
                           </thead>
                           <tbody>
                             {Array.from({ length: 10 }, (_, i) => i + 1).map(period => (
-                              <tr key={period} className="hover:bg-slate-50/50 transition-colors">
-                                <td className="sticky left-0 z-10 p-4 text-sm font-bold text-slate-700 bg-slate-50 border-b border-slate-200">
-                                  <div className="flex items-center gap-2">
-                                    <div className="w-8 h-8 rounded-lg bg-blue-100 text-blue-700 flex items-center justify-center font-bold text-xs">
-                                      {period}
-                                    </div>
-                                  </div>
+                              <tr key={period} className="hover:bg-slate-50 transition-colors">
+                                <td className="sticky left-0 z-10 p-3 text-xs font-semibold text-slate-600 bg-white border-b border-slate-100">
+                                  {period}
                                 </td>
                                 {Object.entries(studentSchedule).map(([day, periods]) => {
                                   const slot = periods[period - 1];
                                   return (
-                                    <td key={day} className="p-2 border-b border-slate-200">
+                                    <td key={day} className="p-2 border-b border-slate-100">
                                       {slot ? (
-                                        <div className="group p-4 rounded-xl bg-gradient-to-br from-blue-500 via-indigo-500 to-purple-600 text-white shadow-md hover:shadow-xl transition-all cursor-pointer">
-                                          <div className="font-bold text-sm mb-2">{slot.subject}</div>
-                                          <div className="space-y-1.5 text-xs">
-                                            <div className="flex items-center gap-1.5 opacity-90">
-                                              <Users className="w-3.5 h-3.5" />
+                                        <div className="p-3 rounded-lg bg-blue-50 border border-blue-100 hover:border-blue-200 transition-colors">
+                                          <div className="font-semibold text-xs text-slate-900 mb-1">{slot.subject}</div>
+                                          <div className="space-y-0.5 text-xs text-slate-600">
+                                            <div className="flex items-center gap-1">
+                                              <Users className="w-3 h-3" />
                                               <span>{slot.teacher}</span>
                                             </div>
-                                            <div className="flex items-center gap-1.5 opacity-90">
-                                              <Building2 className="w-3.5 h-3.5" />
+                                            <div className="flex items-center gap-1">
+                                              <Building2 className="w-3 h-3" />
                                               <span>{slot.room}</span>
                                             </div>
                                           </div>
                                           {slot.level && (
-                                            <Badge className="mt-2 bg-white/25 hover:bg-white/35 text-white text-[10px] px-2 py-0.5 border-0">
+                                            <Badge className="mt-1.5 bg-blue-600 text-white text-[10px] px-1.5 py-0.5">
                                               {slot.level}
                                             </Badge>
                                           )}
                                         </div>
                                       ) : (
-                                        <div className="h-28 flex items-center justify-center">
-                                          <div className="text-2xl text-slate-200">·</div>
+                                        <div className="h-20 flex items-center justify-center">
+                                          <span className="text-slate-300">—</span>
                                         </div>
                                       )}
                                     </td>
@@ -701,12 +649,11 @@ export default function Schedules() {
                   )}
 
                   {!selectedStudent && (
-                    <div className="text-center py-20">
-                      <div className="inline-flex p-6 rounded-2xl bg-gradient-to-br from-slate-100 to-slate-50 mb-6">
-                        <Users className="w-16 h-16 text-slate-400" />
+                    <div className="text-center py-12">
+                      <div className="w-12 h-12 rounded-lg bg-slate-100 flex items-center justify-center mx-auto mb-3">
+                        <Users className="w-6 h-6 text-slate-400" />
                       </div>
-                      <h3 className="text-xl font-bold text-slate-900 mb-2">No Student Selected</h3>
-                      <p className="text-slate-500">Choose a student from the dropdown to view their personalized timetable</p>
+                      <p className="text-sm text-slate-500">Select a student to view their timetable</p>
                     </div>
                   )}
                 </CardContent>
@@ -715,22 +662,21 @@ export default function Schedules() {
           </Tabs>
         )
       ) : (
-        <Card className="border-0 shadow-xl bg-white/90 backdrop-blur">
-          <CardContent className="py-24 text-center">
-            <div className="inline-flex p-8 rounded-3xl bg-gradient-to-br from-blue-50 to-indigo-50 mb-6">
-              <Calendar className="w-20 h-20 text-blue-400" />
+        <Card className="border border-slate-200">
+          <CardContent className="py-16 text-center">
+            <div className="w-16 h-16 rounded-full bg-slate-100 flex items-center justify-center mx-auto mb-4">
+              <Calendar className="w-8 h-8 text-slate-400" />
             </div>
-            <h3 className="text-2xl font-bold text-slate-900 mb-3">No Active Schedule</h3>
-            <p className="text-lg text-slate-500 mb-8 max-w-md mx-auto">
-              Create your first schedule version to start organizing your timetable
+            <h3 className="text-base font-semibold text-slate-900 mb-2">No Schedule Version</h3>
+            <p className="text-sm text-slate-500 mb-6">
+              Create a schedule version to get started
             </p>
             <Button
               onClick={() => setIsDialogOpen(true)}
-              size="lg"
-              className="bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-700 hover:to-indigo-700 shadow-lg hover:shadow-xl transition-all"
+              className="bg-blue-600 hover:bg-blue-700"
             >
-              <Plus className="w-5 h-5 mr-2" />
-              Create First Version
+              <Plus className="w-4 h-4 mr-2" />
+              Create Version
             </Button>
           </CardContent>
         </Card>
