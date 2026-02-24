@@ -34,7 +34,9 @@ import {
   Users,
   Building2,
   Search,
-  Trash2
+  Trash2,
+  Settings2,
+  Play
 } from 'lucide-react';
 import ScheduleGenerationDialog from '../components/schedule/ScheduleGenerationDialog';
 
