@@ -58,22 +58,33 @@ Deno.serve(async (req) => {
       }
     }
 
+    // Create ID mappings: Base44 string IDs → numeric IDs for OptaPlanner
+    const roomIdMap = new Map();
+    const teacherIdMap = new Map();
+    const studentIdMap = new Map();
+    const tgIdMap = new Map();
+
+    rooms.forEach((r, idx) => roomIdMap.set(r.id, idx));
+    teachers.forEach((t, idx) => teacherIdMap.set(t.id, idx));
+    students.forEach((s, idx) => studentIdMap.set(s.id, idx));
+    teachingGroups.forEach((tg, idx) => tgIdMap.set(tg.id, idx));
+
     const lessons = teachingGroups
       .filter(tg => tg.teacher_id && tg.student_ids?.length > 0)
-      .map((tg, idx) => {
+      .map((tg) => {
         const subject = subjects.find(s => s.id === tg.subject_id);
         const teacher = teachers.find(t => t.id === tg.teacher_id);
         const room = rooms.find(r => r.id === tg.preferred_room_id);
 
         return {
-          id: idx,
-          teachingGroupId: tg.id,
+          id: tgIdMap.get(tg.id),
+          teachingGroupId: tg.id, // Keep original for mapping back
           subjectName: subject?.name || 'Unknown',
           subjectCode: subject?.code || 'UNK',
-          teacherId: teacher?.id,
+          teacherId: teacher ? teacherIdMap.get(teacher.id) : null,
           teacherName: teacher?.full_name || 'Unknown',
-          studentIds: tg.student_ids || [],
-          roomId: room?.id || null,
+          studentIds: (tg.student_ids || []).map(sid => studentIdMap.get(sid)).filter(id => id != null),
+          roomId: room ? roomIdMap.get(room.id) : null,
           durationMinutes: tg.minutes_per_week || 180,
           yearGroup: tg.year_group || 'DP1',
           level: tg.level || 'SL'
@@ -82,10 +93,10 @@ Deno.serve(async (req) => {
 
     const payload = {
       timeslots,
-      rooms: rooms.map(r => ({ id: r.id, name: r.name, capacity: r.capacity })),
-      teachers: teachers.map(t => ({ id: t.id, name: t.full_name })),
-      students: students.map(s => ({
-        id: s.id,
+      rooms: rooms.map((r, idx) => ({ id: idx, name: r.name, capacity: r.capacity })),
+      teachers: teachers.map((t, idx) => ({ id: idx, name: t.full_name })),
+      students: students.map((s, idx) => ({
+        id: idx,
         name: s.full_name,
         yearGroup: s.year_group,
         programme: s.ib_programme
