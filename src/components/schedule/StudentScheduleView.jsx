@@ -338,13 +338,28 @@ export default function StudentScheduleView({ students, slots, groups, subjects,
     }
   }, [selectedStudent, studentSlots, timeslots, timeslotToPosition]);
 
-  const subjectColors = {
-    1: 'bg-blue-200/80 border-blue-400',
-    2: 'bg-emerald-200/80 border-emerald-400',
-    3: 'bg-amber-200/80 border-amber-400',
-    4: 'bg-rose-200/80 border-rose-400',
-    5: 'bg-violet-200/80 border-violet-400',
-    6: 'bg-cyan-200/80 border-cyan-400',
+  const getSubjectColor = (subjectName) => {
+    if (!subjectName) return { bg: 'bg-slate-50', border: 'border-slate-300', text: 'text-slate-900', badge: 'bg-slate-100 text-slate-700' };
+    const colors = [
+      { bg: 'bg-blue-50', border: 'border-blue-400', text: 'text-blue-900', badge: 'bg-blue-100 text-blue-800' },
+      { bg: 'bg-indigo-50', border: 'border-indigo-400', text: 'text-indigo-900', badge: 'bg-indigo-100 text-indigo-800' },
+      { bg: 'bg-violet-50', border: 'border-violet-400', text: 'text-violet-900', badge: 'bg-violet-100 text-violet-800' },
+      { bg: 'bg-purple-50', border: 'border-purple-400', text: 'text-purple-900', badge: 'bg-purple-100 text-purple-800' },
+      { bg: 'bg-fuchsia-50', border: 'border-fuchsia-400', text: 'text-fuchsia-900', badge: 'bg-fuchsia-100 text-fuchsia-800' },
+      { bg: 'bg-pink-50', border: 'border-pink-400', text: 'text-pink-900', badge: 'bg-pink-100 text-pink-800' },
+      { bg: 'bg-rose-50', border: 'border-rose-400', text: 'text-rose-900', badge: 'bg-rose-100 text-rose-800' },
+      { bg: 'bg-orange-50', border: 'border-orange-400', text: 'text-orange-900', badge: 'bg-orange-100 text-orange-800' },
+      { bg: 'bg-amber-50', border: 'border-amber-400', text: 'text-amber-900', badge: 'bg-amber-100 text-amber-800' },
+      { bg: 'bg-emerald-50', border: 'border-emerald-400', text: 'text-emerald-900', badge: 'bg-emerald-100 text-emerald-800' },
+      { bg: 'bg-teal-50', border: 'border-teal-400', text: 'text-teal-900', badge: 'bg-teal-100 text-teal-800' },
+      { bg: 'bg-cyan-50', border: 'border-cyan-400', text: 'text-cyan-900', badge: 'bg-cyan-100 text-cyan-800' },
+      { bg: 'bg-sky-50', border: 'border-sky-400', text: 'text-sky-900', badge: 'bg-sky-100 text-sky-800' },
+    ];
+    let hash = 0;
+    for (let i = 0; i < subjectName.length; i++) {
+      hash = subjectName.charCodeAt(i) + ((hash << 5) - hash);
+    }
+    return colors[Math.abs(hash) % colors.length];
   };
 
   // Hard check: block render if student has no assigned_groups
