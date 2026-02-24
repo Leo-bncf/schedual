@@ -115,9 +115,16 @@ export default function TimetableGrid({
       emoji: idx === 0 ? '☕' : '🍽️',
       startTime: br.start,
       endTime: br.end,
-      afterPeriod: timeslots.filter(t => t.endTime <= br.start).length / DAYS.length // Estimate which period row it comes after
+      afterPeriod: timeslots && timeslots.length > 0 
+        ? timeslots.filter(t => t.endTime <= br.start).length / DAYS.length 
+        : (() => {
+            const [startHour, startMin] = (dayStartTime || '08:00').split(':').map(Number);
+            const [breakStartHour, breakStartMin] = br.start.split(':').map(Number);
+            const elapsedMins = (breakStartHour * 60 + breakStartMin) - (startHour * 60 + startMin);
+            return Math.round(elapsedMins / (periodDurationMinutes || 60));
+          })()
     }));
-  }, [scheduleSettings, timeslots]);
+  }, [scheduleSettings, timeslots, dayStartTime, periodDurationMinutes]);
 
   const normalizedSlots = React.useMemo(() => {
     console.log('[TimetableGrid] DEBUG - timeslots.length:', timeslots.length);
