@@ -108,7 +108,7 @@ Deno.serve(async (req) => {
 
     // 4. Check room capacity vs teaching group sizes
     const roomCapacityIssues = [];
-    teachingGroups.forEach(tg => {
+    teachingGroupsToProcess.forEach(tg => {
       const requiredCapacity = tg.student_ids?.length || 0;
       const availableRooms = rooms.filter(r => r.capacity >= requiredCapacity);
       if (availableRooms.length === 0) {
