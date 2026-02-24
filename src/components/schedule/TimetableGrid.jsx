@@ -49,6 +49,7 @@ export default function TimetableGrid({
   dayEndTime = '18:00',
   periodDurationMinutes = 60,
   timeslots = [],
+  scheduleSettings = {},
   globalView = false
 }) {
   const [selectedSlot, setSelectedSlot] = React.useState(null);
