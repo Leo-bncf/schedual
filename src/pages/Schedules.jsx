@@ -52,6 +52,14 @@ export default function Schedules() {
     academic_year: '2024-2025',
     term: 'Fall',
   });
+  
+  const [constraints, setConstraints] = useState({
+    maxSameSubjectPerDayHardEnabled: false,
+    maxSameSubjectPerDayLimit: 4,
+    exactWeeklyCountEnabled: false,
+    allowFlexibleWeeklyCounts: true,
+    relaxStudentGroupConflicts: true
+  });
 
   const queryClient = useQueryClient();
 
