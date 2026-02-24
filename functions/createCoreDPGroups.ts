@@ -57,7 +57,12 @@ Deno.serve(async (req) => {
       }
     }
 
-    // Check existing TGs and create if absent
+    // Fetch DP students by year group for separate TGs
+    const dp1Students = await client.asServiceRole.entities.Student.filter({ school_id, year_group: 'DP1', is_active: true });
+    const dp2Students = await client.asServiceRole.entities.Student.filter({ school_id, year_group: 'DP2', is_active: true });
+    const dp1StudentIds = (dp1Students || []).map(s => s.id);
+    const dp2StudentIds = (dp2Students || []).map(s => s.id);
+
     const created = [];
     const updated = [];
     const skipped = [];
@@ -65,55 +70,58 @@ Deno.serve(async (req) => {
     for (const code of targets) {
       const subj = subjectByCode.get(code);
       const existing = await client.entities.TeachingGroup.filter({ school_id, subject_id: subj.id });
-      let updatedAny = false;
-      if (existing && existing.length > 0) {
-        for (const tg of existing) {
-          const needsUpdate = (tg.is_active !== true) || (!tg.minutes_per_week || tg.minutes_per_week < quotas[code]);
-          if (needsUpdate) {
-            await client.entities.TeachingGroup.update(tg.id, { is_active: true, minutes_per_week: quotas[code] });
-            console.log('[createCoreDPGroups] updated TG', { code, id: tg.id, minutes_per_week: quotas[code] });
-            updatedAny = true;
+      
+      // Delete old combined groups (year_group='DP1,DP2')
+      for (const tg of (existing || [])) {
+        if (tg.year_group === 'DP1,DP2' || tg.year_group === 'DP1+DP2') {
+          await client.asServiceRole.entities.TeachingGroup.delete(tg.id);
+          console.log('[createCoreDPGroups] deleted old combined TG', { code, id: tg.id });
+        }
+      }
+
+      // Create separate DP1 and DP2 groups
+      const yearGroups = [
+        { year: 'DP1', studentIds: dp1StudentIds },
+        { year: 'DP2', studentIds: dp2StudentIds }
+      ];
+
+      for (const { year, studentIds } of yearGroups) {
+        if (studentIds.length === 0) continue; // Skip if no students
+
+        const existingForYear = await client.entities.TeachingGroup.filter({ 
+          school_id, 
+          subject_id: subj.id,
+          year_group: year
+        });
+
+        if (existingForYear && existingForYear.length > 0) {
+          // Update existing
+          for (const tg of existingForYear) {
+            await client.asServiceRole.entities.TeachingGroup.update(tg.id, { 
+              is_active: true, 
+              minutes_per_week: quotas[code],
+              student_ids: studentIds
+            });
+            console.log('[createCoreDPGroups] updated TG', { code, year, id: tg.id, students: studentIds.length });
           }
-        }
-        if (updatedAny) {
-          updated.push({ code, updated_count: existing.length });
+          updated.push({ code, year, updated_count: existingForYear.length });
         } else {
-          skipped.push({ code, reason: 'already_satisfies_quota', existing_count: existing.length });
+          // Create new
+          const tg = await client.entities.TeachingGroup.create({
+            school_id,
+            name: `${subj.name} - ${year}`,
+            subject_id: subj.id,
+            year_group: year,
+            level: 'Standard',
+            minutes_per_week: quotas[code],
+            student_ids: studentIds,
+            is_active: true
+          });
+          console.log('[createCoreDPGroups] created TG', { code, year, id: tg.id, students: studentIds.length });
+          created.push({ code, year, teaching_group_id: tg.id });
         }
-        continue;
-      }
-
-      const tg = await client.entities.TeachingGroup.create({
-        school_id,
-        name: `${subj.name} - DP1+DP2`,
-        subject_id: subj.id,
-        year_group: 'DP1,DP2',
-        minutes_per_week: quotas[code],
-        is_active: true
-        // teacher_id optional (omit)
-        // preferred_room_id optional (omit)
-      });
-      console.log('[createCoreDPGroups] created TG', { code, id: tg.id, minutes_per_week: quotas[code] });
-      created.push({ code, teaching_group_id: tg.id });
-    }
-
-    // Auto-enroll all DP students into core TGs (TOK/CAS/EE)
-    const dpStudents = await client.asServiceRole.entities.Student.filter({ school_id, ib_programme: 'DP', is_active: true });
-    // Include both DP1 and DP2 regardless of classgroup membership
-    const dpStudentIds = (dpStudents || []).map(s => s.id);
-    const coreSubjectIds = targets.map(code => subjectByCode.get(code)?.id).filter(Boolean);
-    const allTGs = await client.asServiceRole.entities.TeachingGroup.filter({ school_id, is_active: true });
-    let enrollUpdated = 0;
-    for (const tg of (allTGs || [])) {
-      if (!coreSubjectIds.includes(tg.subject_id)) continue;
-      const current = Array.isArray(tg.student_ids) ? tg.student_ids : [];
-      const merged = Array.from(new Set([...(current || []), ...dpStudentIds]));
-      if (merged.length !== current.length) {
-        await client.asServiceRole.entities.TeachingGroup.update(tg.id, { student_ids: merged });
-        enrollUpdated++;
       }
     }
-    console.log('[createCoreDPGroups] auto-enroll DP students into core TGs', { dp_students: dpStudentIds.length, groups_updated: enrollUpdated });
 
     // Verification logs
     const verification = {};
