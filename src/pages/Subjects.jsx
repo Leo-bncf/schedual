@@ -154,7 +154,6 @@ export default function Subjects() {
       pyp_myp_hours_per_week: 3,
       requires_lab: false,
       requires_special_room: '',
-      is_core: false,
       combine_dp1_dp2: false,
       is_active: true
     });
@@ -176,7 +175,6 @@ export default function Subjects() {
       pyp_myp_hours_per_week: subject.pyp_myp_minutes_per_week_default ? Math.round(subject.pyp_myp_minutes_per_week_default / 60) : 3,
       requires_lab: subject.requires_lab || false,
       requires_special_room: subject.requires_special_room || '',
-      is_core: subject.is_core || false,
       combine_dp1_dp2: subject.combine_dp1_dp2 || false,
       is_active: subject.is_active !== false
     });
@@ -186,8 +184,8 @@ export default function Subjects() {
   const handleSubmit = (e) => {
     e.preventDefault();
     
-    // Validate DP non-core subjects require HL+SL hours
-    if (formData.ib_level === 'DP' && !formData.is_core) {
+    // Validate DP subjects require HL+SL hours
+    if (formData.ib_level === 'DP') {
       const hlHours = parseFloat(formData.hoursPerWeekHL) || 0;
       const slHours = parseFloat(formData.hoursPerWeekSL) || 0;
       
@@ -227,9 +225,8 @@ export default function Subjects() {
     subjects: filteredSubjects.filter(s => String(s.ib_group) === String(group.id) && s.ib_level === 'DP')
   }));
 
-  const coreSubjects = filteredSubjects.filter(s => s.is_core);
-  const pypSubjects = filteredSubjects.filter(s => s.ib_level === 'PYP' && !s.is_core);
-  const mypSubjects = filteredSubjects.filter(s => s.ib_level === 'MYP' && !s.is_core);
+  const pypSubjects = filteredSubjects.filter(s => s.ib_level === 'PYP');
+  const mypSubjects = filteredSubjects.filter(s => s.ib_level === 'MYP');
 
   const handleFileUpload = async (file) => {
     if (!file) return;
@@ -324,7 +321,6 @@ ${trainingFeedback ? `LESSONS FROM ADMIN FEEDBACK:\n${trainingFeedback}\n\n` : '
         sl_minutes_per_week_default: 180,
         pyp_myp_minutes_per_week_default: (subject.pyp_myp_hours_per_week || 3) * 60,
         requires_lab: false,
-        is_core: false,
         is_active: true
         });
 
@@ -578,7 +574,7 @@ ${trainingFeedback ? `LESSONS FROM ADMIN FEEDBACK:\n${trainingFeedback}\n\n` : '
                   </Badge>
                 </div>
                 <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
-                  {group.subjects.filter(s => !s.is_core).map((subject, index) => (
+                  {group.subjects.map((subject, index) => (
                     <motion.div
                       key={subject.id}
                       initial={{ opacity: 0, scale: 0.9 }}
@@ -638,78 +634,7 @@ ${trainingFeedback ? `LESSONS FROM ADMIN FEEDBACK:\n${trainingFeedback}\n\n` : '
         </div>
       )}
 
-      {allowedProgrammes.includes('DP') && (
-  <Card className="border-0 shadow-sm">
-    <CardHeader className="bg-gradient-to-r from-blue-50 to-indigo-50">
-      <div className="flex items-center gap-3">
-        <div className="p-2 rounded-lg bg-blue-100">
-          <Sparkles className="w-5 h-5 text-blue-700" />
-        </div>
-        <div>
-          <h3 className="text-lg font-semibold text-slate-900">DP Core Components</h3>
-          <p className="text-sm text-slate-600">
-            Add TOK, CAS, and Extended Essay subjects with their teaching requirements
-          </p>
-        </div>
-      </div>
-    </CardHeader>
-    <CardContent className="pt-6">
-      <div className="space-y-3">
-        {['TOK', 'CAS', 'EE'].map((coreType) => {
-          const existingCore = subjects.find(s => s.code === coreType && s.is_core);
-          
-          return (
-            <div key={coreType} className="flex items-center justify-between p-4 rounded-lg border-2 bg-gradient-to-r from-blue-50 to-indigo-50 border-blue-200">
-              <div className="flex-1">
-                <div className="flex items-center gap-3">
-                  <div className="w-10 h-10 rounded-full bg-blue-200 flex items-center justify-center">
-                    <span className="font-bold text-blue-900 text-sm">{coreType}</span>
-                  </div>
-                  <div>
-                    <h4 className="font-semibold text-blue-900">
-                      {coreType === 'TOK' ? 'Theory of Knowledge' : coreType === 'CAS' ? 'Creativity, Activity, Service' : 'Extended Essay'}
-                    </h4>
-                    {existingCore ? (
-                      <p className="text-sm text-blue-700">
-                        {existingCore.pyp_myp_hours_per_week || 2} hours/week
-                      </p>
-                    ) : (
-                      <p className="text-sm text-blue-600">Not configured yet</p>
-                    )}
-                  </div>
-                </div>
-              </div>
-              <Button
-                onClick={() => {
-                  if (existingCore) {
-                    handleEdit(existingCore);
-                  } else {
-                    setFormData({
-                      name: coreType === 'TOK' ? 'Theory of Knowledge' : coreType === 'CAS' ? 'Creativity, Activity, Service' : 'Extended Essay',
-                      code: coreType,
-                      ib_level: 'DP',
-                      ib_group: 1,
-                      ib_group_name: 'Language & Literature',
-                      is_core: true,
-                      pyp_myp_hours_per_week: coreType === 'TOK' ? 3 : 1,
-                      is_active: true
-                    });
-                    setEditingSubject(null);
-                    setIsDialogOpen(true);
-                  }
-                }}
-                variant={existingCore ? "outline" : "default"}
-                className={existingCore ? "" : "bg-blue-600 hover:bg-blue-700"}
-              >
-                {existingCore ? 'Edit' : 'Add'}
-              </Button>
-            </div>
-          );
-        })}
-      </div>
-    </CardContent>
-  </Card>
-)}
+
 
 <Dialog open={isDialogOpen} onOpenChange={(open) => { if (!open) resetForm(); }}>
         <DialogContent className="sm:max-w-lg">
@@ -785,13 +710,8 @@ ${trainingFeedback ? `LESSONS FROM ADMIN FEEDBACK:\n${trainingFeedback}\n\n` : '
               </Select>
             </div>
 
-            {formData.ib_level === 'DP' && !formData.is_core ? (
+            {formData.ib_level === 'DP' ? (
               <>
-                <div className="p-3 bg-blue-50 border border-blue-200 rounded-lg">
-                  <p className="text-xs text-blue-800">
-                    ⚠️ <strong>OptaPlanner requirement:</strong> Both HL and SL hours must be configured (non-zero) for schedule generation to work.
-                  </p>
-                </div>
                 <div className="grid grid-cols-2 gap-4">
                   <div className="space-y-2">
                     <Label htmlFor="hl_hours">HL Hours/Week *</Label>
@@ -840,61 +760,40 @@ ${trainingFeedback ? `LESSONS FROM ADMIN FEEDBACK:\n${trainingFeedback}\n\n` : '
                   placeholder="e.g., 4"
                 />
                 <p className="text-xs text-slate-500">
-                  {formData.is_core 
-                    ? 'Hours per week for all DP students (applied to entire year group)'
-                    : `Allocated teaching hours per week for this ${formData.ib_level} subject`
-                  }
+                  Allocated teaching hours per week for this {formData.ib_level} subject
                 </p>
               </div>
             )}
 
             <div className="space-y-3">
-              <div className="flex items-center gap-6">
-                <div className="flex items-center gap-2">
-                  <Checkbox 
-                    id="requires_lab"
-                    checked={formData.requires_lab}
-                    onCheckedChange={(checked) => setFormData({ ...formData, requires_lab: checked })}
-                  />
-                  <Label htmlFor="requires_lab" className="font-normal">Requires Lab</Label>
-                </div>
-                <div className="flex items-center gap-2">
-                  <Checkbox 
-                    id="is_core"
-                    checked={formData.is_core}
-                    onCheckedChange={(checked) => setFormData({ ...formData, is_core: checked })}
-                  />
-                  <Label htmlFor="is_core" className="font-normal">Core Component</Label>
-                </div>
+              <div className="flex items-center gap-2">
+                <Checkbox 
+                  id="requires_lab"
+                  checked={formData.requires_lab}
+                  onCheckedChange={(checked) => setFormData({ ...formData, requires_lab: checked })}
+                />
+                <Label htmlFor="requires_lab" className="font-normal">Requires Lab</Label>
               </div>
-              
-              {formData.is_core && (
-                <div className="p-4 bg-purple-50 rounded-lg border border-purple-200">
-                  <p className="text-sm text-purple-900 font-semibold">ℹ️ Core Component</p>
-                  <p className="text-xs text-purple-700 mt-1">
-                    This subject will be automatically assigned to ALL DP1 and DP2 students. Teaching groups will be created per year level.
+              </div>
+
+              {formData.ib_level === 'DP' && (
+              <div className="flex items-center justify-between p-4 bg-gradient-to-r from-blue-50 to-indigo-50 rounded-lg border-2 border-blue-200">
+                <div>
+                  <Label htmlFor="combine_dp1_dp2" className="font-semibold text-slate-900 text-sm">
+                    Combine DP1 & DP2 Teaching Groups
+                  </Label>
+                  <p className="text-xs text-slate-600 mt-1">
+                    Students from both year groups will be scheduled together
                   </p>
                 </div>
+                <Switch 
+                  id="combine_dp1_dp2"
+                  checked={formData.combine_dp1_dp2}
+                  onCheckedChange={(checked) => setFormData({ ...formData, combine_dp1_dp2: checked })}
+                />
+              </div>
               )}
-
-              {formData.ib_level === 'DP' && !formData.is_core && (
-                <div className="flex items-center justify-between p-4 bg-gradient-to-r from-blue-50 to-indigo-50 rounded-lg border-2 border-blue-200">
-                  <div>
-                    <Label htmlFor="combine_dp1_dp2" className="font-semibold text-slate-900 text-sm">
-                      Combine DP1 & DP2 Teaching Groups
-                    </Label>
-                    <p className="text-xs text-slate-600 mt-1">
-                      Students from both year groups will be scheduled together
-                    </p>
-                  </div>
-                  <Switch 
-                    id="combine_dp1_dp2"
-                    checked={formData.combine_dp1_dp2}
-                    onCheckedChange={(checked) => setFormData({ ...formData, combine_dp1_dp2: checked })}
-                  />
-                </div>
-              )}
-            </div>
+              </div>
 
             <DialogFooter>
               <Button type="button" variant="outline" onClick={resetForm}>
@@ -906,7 +805,7 @@ ${trainingFeedback ? `LESSONS FROM ADMIN FEEDBACK:\n${trainingFeedback}\n\n` : '
                 disabled={
                   createMutation.isPending || 
                   updateMutation.isPending ||
-                  (formData.ib_level === 'DP' && !formData.is_core && 
+                  (formData.ib_level === 'DP' && 
                    (parseFloat(formData.hoursPerWeekHL) <= 0 || parseFloat(formData.hoursPerWeekSL) <= 0))
                 }
               >
