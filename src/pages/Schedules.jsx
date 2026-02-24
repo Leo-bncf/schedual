@@ -714,7 +714,7 @@ export default function Schedules() {
                     dayStartTime={school?.day_start_time || '08:00'}
                     dayEndTime={school?.day_end_time || '18:00'}
                     periodDurationMinutes={school?.period_duration_minutes || 60}
-                    breakPeriods={school?.breaks?.map(b => parseInt(b.start)) || []}
+                    scheduleSettings={school}
                     globalView={overviewFilterType === 'all'}
                     onSlotClick={(day, uiRow, actionData) => {
                       if (actionData.action === 'move') {
