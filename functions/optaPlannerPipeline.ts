@@ -642,6 +642,14 @@ Deno.serve(async (req) => {
 
     if (!response.ok) {
       console.error('[Pipeline] OptaPlanner error:', responseText);
+      
+      if (response.status === 429) {
+        return Response.json({
+          ok: false,
+          error: "Rate limit exceeded. Vous avez lancé trop de requêtes récemment. Veuillez patienter quelques instants avant de réessayer."
+        }, { status: 429 });
+      }
+
       let errorDetails;
       try {
         errorDetails = JSON.parse(responseText);
