@@ -159,7 +159,7 @@ export default function ScheduleGenerationDialog({ open, onClose, status, messag
               )}
             </motion.div>
           )}
-          </AnimatePresence>
+        </AnimatePresence>
         </div>
       </DialogContent>
     </Dialog>
