@@ -29,16 +29,11 @@ import {
   Sparkles,
   Loader2,
   CheckCircle,
-  AlertTriangle,
   Clock,
   Users,
-  BookOpen,
   Building2,
-  Eye,
-  Download,
   Search
 } from 'lucide-react';
-import PageHeader from '../components/ui-custom/PageHeader';
 import ScheduleGenerationDialog from '../components/schedule/ScheduleGenerationDialog';
 
 export default function Schedules() {
