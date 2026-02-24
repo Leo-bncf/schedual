@@ -372,6 +372,7 @@ Deno.serve(async (req) => {
         const numExtensionLessons = Math.ceil(extensionMinutes / periodDuration);
 
         const hlExtTgId = `hl_ext_${subjectId}`;
+        syntheticToRealTgMap[hlExtTgId] = hlGroups.map(tg => tg.id);
         
         // Add synthetic teaching group for HL extensions
         teachingGroupsPayload.push({
