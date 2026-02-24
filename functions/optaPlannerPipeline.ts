@@ -147,41 +147,41 @@ Deno.serve(async (req) => {
 
         // HL extension lessons (HL only, DP1 + DP2)
         if (hlGroups.length > 0) {
-          const hlStudents = new Set();
-          const hlTeachers = new Set();
-          
-          hlGroups.forEach(tg => {
-            (tg.student_ids || []).forEach(sid => hlStudents.add(sid));
-            if (tg.teacher_id) hlTeachers.add(tg.teacher_id);
-          });
-          
-          const hlStudentIds = Array.from(hlStudents).map(sid => studentIdMap.get(sid)).filter(id => id != null);
-          const primaryTeacher = Array.from(hlTeachers)[0];
-          const teacherId = teacherIdMap.get(primaryTeacher);
-          
-          // HL extension = HL hours - SL hours (typically 5h - 3h = 2h)
-          const hlMinutes = hlGroups[0]?.minutes_per_week || (subject?.hoursPerWeekHL || 5) * 60;
-          const slMinutes = (subject?.hoursPerWeekSL || 3) * 60;
-          const extensionMinutes = Math.max(0, hlMinutes - slMinutes);
-          const periodDuration = schoolData.period_duration_minutes || 60;
-          const numExtensionLessons = Math.ceil(extensionMinutes / periodDuration);
+        const hlStudents = new Set();
+        const hlTeachers = new Set();
 
-          for (let i = 0; i < numExtensionLessons; i++) {
-            lessons.push({
-              id: lessonId++,
-              teachingGroupId: `hl_ext_${subjectId}`,
-              sectionId: `sec_hl_${subjectId}`,
-              subject: `${subject?.code || subject?.name} HL`,
-              studentGroup: 'DP1+DP2 HL',
-              teacherId: teacherId || null,
-              requiredCapacity: hlStudentIds.length,
-              studentIds: hlStudentIds,
-              timeslotId: null,
-              roomId: null
-            });
-          }
-          
-          hlGroups.forEach(tg => processedTGs.add(tg.id));
+        hlGroups.forEach(tg => {
+          (tg.student_ids || []).forEach(sid => hlStudents.add(sid));
+          if (tg.teacher_id) hlTeachers.add(tg.teacher_id);
+        });
+
+        const hlStudentIds = Array.from(hlStudents).map(sid => studentIdMap.get(sid)).filter(id => id != null);
+        const primaryTeacher = Array.from(hlTeachers)[0];
+        const teacherId = teacherIdMap.get(primaryTeacher);
+
+        // HL extension = HL hours - SL hours (typically 5h - 3h = 2h)
+        const hlMinutes = hlGroups[0]?.minutes_per_week || (subject?.hoursPerWeekHL || 5) * 60;
+        const slMinutes = (subject?.hoursPerWeekSL || 3) * 60;
+        const extensionMinutes = Math.max(0, hlMinutes - slMinutes);
+        const periodDuration = schoolData.period_duration_minutes || 60;
+        const numExtensionLessons = Math.ceil(extensionMinutes / periodDuration);
+
+        for (let i = 0; i < numExtensionLessons; i++) {
+          lessons.push({
+            id: lessonId++,
+            teachingGroupId: `hl_ext_${subjectId}`,
+            sectionId: `sec_hl_${subjectId}`,
+            subject: subject?.code || subject?.name || 'Unknown',
+            studentGroup: 'DP1+DP2 HL',
+            teacherId: teacherId || null,
+            requiredCapacity: hlStudentIds.length,
+            studentIds: hlStudentIds,
+            timeslotId: null,
+            roomId: null
+          });
+        }
+
+        hlGroups.forEach(tg => processedTGs.add(tg.id));
         }
       } else {
         // Regular teaching groups (no combining)
