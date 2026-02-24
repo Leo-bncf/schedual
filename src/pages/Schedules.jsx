@@ -700,20 +700,20 @@ export default function Schedules() {
                                   return (
                                     <td key={day} className="p-2 border-b border-slate-100">
                                       {slot ? (
-                                        <div className="p-3 rounded-lg bg-blue-50 border border-blue-100 hover:border-blue-200 transition-colors">
-                                          <div className="font-semibold text-xs text-slate-900 mb-1">{slot.subject}</div>
-                                          <div className="space-y-0.5 text-xs text-slate-600">
+                                        <div className={`p-2 sm:p-3 rounded-lg border transition-all duration-200 shadow-sm hover:shadow-md hover:scale-[1.02] cursor-default ${slot.colorData.bg} ${slot.colorData.border}`}>
+                                          <div className={`font-semibold text-xs mb-1 line-clamp-2 ${slot.colorData.text}`}>{slot.subject}</div>
+                                          <div className={`space-y-0.5 text-[10px] sm:text-xs opacity-90 ${slot.colorData.text}`}>
                                             <div className="flex items-center gap-1">
-                                              <Users className="w-3 h-3" />
-                                              <span>{slot.teacher}</span>
+                                              <Users className="w-3 h-3 shrink-0 opacity-70" />
+                                              <span className="truncate">{slot.teacher}</span>
                                             </div>
                                             <div className="flex items-center gap-1">
-                                              <Building2 className="w-3 h-3" />
-                                              <span>{slot.room}</span>
+                                              <Building2 className="w-3 h-3 shrink-0 opacity-70" />
+                                              <span className="truncate">{slot.room}</span>
                                             </div>
                                           </div>
                                           {slot.level && (
-                                            <Badge className="mt-1.5 bg-blue-600 text-white text-[10px] px-1.5 py-0.5">
+                                            <Badge className={`mt-1.5 text-[9px] sm:text-[10px] px-1.5 py-0 font-medium ${slot.colorData.badge} border-transparent`}>
                                               {slot.level}
                                             </Badge>
                                           )}
