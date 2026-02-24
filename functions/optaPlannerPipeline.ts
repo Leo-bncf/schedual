@@ -189,11 +189,11 @@ Deno.serve(async (req) => {
 
     console.log('[Pipeline] Calling OptaPlanner:', OPTAPLANNER_ENDPOINT);
     console.log('[Pipeline] Payload summary:', {
-      timeslots: timeslots.length,
       rooms: rooms.length,
       teachers: teachers.length,
-      students: students.length,
-      lessons: lessons.length
+      teachingGroups: teachingGroupsPayload.length,
+      lessons: lessons.length,
+      subjectRequirements: subjectRequirements.length
     });
 
     const response = await fetch(OPTAPLANNER_ENDPOINT, {
