@@ -94,6 +94,7 @@ Deno.serve(async (req) => {
       !tg.subject_id || !tg.year_group || !tg.teacher_id || !tg.student_ids || tg.student_ids.length === 0
     );
     if (invalidTGs.length > 0) {
+      // NOTE: We only push a warning string, but let's see if there's a reason we ignore it later
       validationErrors.push(`⚠️  ${invalidTGs.length} teaching group(s) missing required fields (subject, year_group, teacher, or students)`);
     }
 
