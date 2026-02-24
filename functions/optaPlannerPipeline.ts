@@ -90,7 +90,7 @@ Deno.serve(async (req) => {
     }
 
     // 2. Validate teaching groups have required fields
-    const invalidTGs = teachingGroups.filter(tg => 
+    const invalidTGs = teachingGroupsToProcess.filter(tg => 
       !tg.subject_id || !tg.year_group || !tg.teacher_id || !tg.student_ids || tg.student_ids.length === 0
     );
     if (invalidTGs.length > 0) {
