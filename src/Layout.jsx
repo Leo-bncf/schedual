@@ -39,7 +39,6 @@ const navigation = [
   { name: 'Dashboard', page: 'Dashboard', icon: LayoutDashboard, schoolOnly: true },
   { name: 'Setup Guide', page: 'Onboarding', icon: Sparkles, schoolOnly: true },
   { name: 'Schedules', page: 'Schedules', icon: Calendar, schoolOnly: true },
-  { name: 'Reports', page: 'Reports', icon: FileText, schoolOnly: true },
   { name: 'Class Groups', page: 'ClassGroups', icon: Users, schoolOnly: true },
   { name: 'Teachers', page: 'Teachers', icon: Users, schoolOnly: true },
   { name: 'Students', page: 'Students', icon: GraduationCap, schoolOnly: true },

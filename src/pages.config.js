@@ -62,7 +62,6 @@ import Onboarding from './pages/Onboarding';
 import OptimizationEngine from './pages/OptimizationEngine';
 import Panel from './pages/Panel';
 import PrivacyPolicy from './pages/PrivacyPolicy';
-import Reports from './pages/Reports';
 import Rooms from './pages/Rooms';
 import Schedules from './pages/Schedules';
 import Settings from './pages/Settings';
@@ -96,7 +95,6 @@ export const PAGES = {
     "OptimizationEngine": OptimizationEngine,
     "Panel": Panel,
     "PrivacyPolicy": PrivacyPolicy,
-    "Reports": Reports,
     "Rooms": Rooms,
     "Schedules": Schedules,
     "Settings": Settings,
