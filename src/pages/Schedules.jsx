@@ -163,7 +163,8 @@ export default function Schedules() {
 
     try {
       const { data } = await base44.functions.invoke('optaPlannerPipeline', {
-        schedule_version_id: selectedVersion.id
+        schedule_version_id: selectedVersion.id,
+        constraints: constraints
       });
 
       if (data.ok === true) {
