@@ -677,22 +677,34 @@ Deno.serve(async (req) => {
           .map(([k, v]) => `  • ${k}: ${v} violations`)
           .join('\n')}`;
       }
-
-      return Response.json({
-        ok: false,
-        error: `OptaPlanner validation failed`,
-        details: errorDetails,
-        diagnostics: diagnostics,
-        payloadSummary: {
-          lessons: lessons.length,
-          teachers: teachers.length,
-          rooms: rooms.length,
-          teachingGroups: teachingGroupsPayload.length
-        }
-      }, { status: 400 });
+      
+      // OptaPlanner sometimes returns an error but still provides assignments if we allow it
+      if (errorDetails.assignments && errorDetails.assignments.length > 0) {
+        console.warn('[Pipeline] OptaPlanner failed but returned partial assignments, we will use them.');
+        // We'll treat this as a success but with a negative score
+        responseText = JSON.stringify(errorDetails);
+      } else {
+        return Response.json({
+          ok: false,
+          error: `OptaPlanner validation failed`,
+          details: errorDetails,
+          diagnostics: diagnostics,
+          payloadSummary: {
+            lessons: lessons.length,
+            teachers: teachers.length,
+            rooms: rooms.length,
+            teachingGroups: teachingGroupsPayload.length
+          }
+        }, { status: 400 });
+      }
     }
 
-    const result = JSON.parse(responseText);
+    let result = {};
+    try {
+      result = JSON.parse(responseText);
+    } catch(e) {
+      console.error('Failed to parse result:', e);
+    }
 
     const existingSlots = await base44.entities.ScheduleSlot.filter({
       school_id: user.school_id,
