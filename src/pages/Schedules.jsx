@@ -32,7 +32,8 @@ import {
   Clock,
   Users,
   Building2,
-  Search
+  Search,
+  Trash2
 } from 'lucide-react';
 import ScheduleGenerationDialog from '../components/schedule/ScheduleGenerationDialog';
 
