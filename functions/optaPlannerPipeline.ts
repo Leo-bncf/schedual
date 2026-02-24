@@ -254,7 +254,7 @@ Deno.serve(async (req) => {
     // CRITICAL: Filter out invalid multi-year groups (e.g., 'DP1,DP2', 'DP1+DP2')
     const teachingGroupsPayload = [];
     
-    teachingGroups
+    teachingGroupsToProcess
       .filter(tg => tg.is_active && tg.year_group && !tg.year_group.includes(',') && !tg.year_group.includes('+'))
       .forEach(tg => {
         teachingGroupsPayload.push({
