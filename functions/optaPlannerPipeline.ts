@@ -53,20 +53,22 @@ Deno.serve(async (req) => {
 
     const schoolData = school[0];
 
-    // CRITICAL: Adjust HL teaching group minutes for combine_dp1_dp2 subjects
-    // HL extension = HL hours - SL hours (not the full HL hours)
+    // CRITICAL: Ensure teaching groups use the LATEST configured subject hours.
+    // This fixes the issue where old 6h/4h values were stuck in the database.
     const adjustedTeachingGroups = teachingGroups.map(tg => {
-      if (tg.level === 'HL') {
-        const subject = subjects.find(s => s.id === tg.subject_id);
-        if (subject?.combine_dp1_dp2) {
-          const hlMinutes = (subject?.hoursPerWeekHL || 5) * 60;
-          const slMinutes = (subject?.hoursPerWeekSL || 3) * 60;
-          const extensionMinutes = Math.max(0, hlMinutes - slMinutes);
-          console.log(`[Pipeline] Adjusting HL group "${tg.name}": ${tg.minutes_per_week} → ${extensionMinutes} (extension only)`);
-          return { ...tg, minutes_per_week: extensionMinutes };
-        }
+      const subject = subjects.find(s => s.id === tg.subject_id);
+      if (!subject) return tg;
+
+      let actualMinutes = tg.minutes_per_week || 180;
+      
+      if (subject.ib_level === 'DP') {
+        if (tg.level === 'HL') actualMinutes = (subject.hoursPerWeekHL || 5) * 60;
+        else if (tg.level === 'SL' || tg.level === 'Standard') actualMinutes = (subject.hoursPerWeekSL || 3) * 60;
+      } else if (subject.pyp_myp_minutes_per_week_default) {
+        actualMinutes = subject.pyp_myp_minutes_per_week_default;
       }
-      return tg;
+
+      return { ...tg, minutes_per_week: actualMinutes };
     });
 
     // Use adjusted teaching groups for validation and processing
