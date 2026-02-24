@@ -646,7 +646,7 @@ Deno.serve(async (req) => {
       body: JSON.stringify(payload)
     });
 
-    const responseText = await response.text();
+    let responseText = await response.text();
     console.log('[Pipeline] Response status:', response.status);
     console.log('[Pipeline] Full response:', responseText);
 
