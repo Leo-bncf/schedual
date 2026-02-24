@@ -94,11 +94,23 @@ export default function TimetableGrid({
     timeslots.forEach(ts => {
       const position = timeslotToPosition[ts.id];
       if (position && !times[position]) {
-        times[position] = ts.startTime || '';
+        times[position] = ts.startTime ? `${ts.startTime.substring(0, 5)} - ${ts.endTime.substring(0, 5)}` : '';
       }
     });
     return times;
   }, [timeslots, timeslotToPosition]);
+
+  const breakRowsData = React.useMemo(() => {
+    const breaks = Array.isArray(scheduleSettings?.breaks) ? scheduleSettings.breaks : [];
+    return breaks.map((br, idx) => ({
+      id: `break-${idx}`,
+      label: idx === 0 ? 'Break' : 'Lunch',
+      emoji: idx === 0 ? '☕' : '🍽️',
+      startTime: br.start,
+      endTime: br.end,
+      afterPeriod: timeslots.filter(t => t.endTime <= br.start).length / DAYS.length // Estimate which period row it comes after
+    }));
+  }, [scheduleSettings, timeslots]);
 
   const normalizedSlots = React.useMemo(() => {
     console.log('[TimetableGrid] DEBUG - timeslots.length:', timeslots.length);
