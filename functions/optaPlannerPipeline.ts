@@ -78,9 +78,11 @@ Deno.serve(async (req) => {
 
         return {
           id: tgIdMap.get(tg.id),
-          teachingGroupId: tg.id, // Keep original for mapping back
+          teachingGroupId: tg.id,
+          subject: subject?.code || subject?.name || 'Unknown',
           subjectName: subject?.name || 'Unknown',
           subjectCode: subject?.code || 'UNK',
+          studentGroup: tg.year_group || 'DP1',
           teacherId: teacher ? teacherIdMap.get(teacher.id) : null,
           teacherName: teacher?.full_name || 'Unknown',
           studentIds: (tg.student_ids || []).map(sid => studentIdMap.get(sid)).filter(id => id != null),
@@ -90,6 +92,17 @@ Deno.serve(async (req) => {
           level: tg.level || 'SL'
         };
       });
+
+    // Build subject requirements from subjects
+    const subjectRequirements = subjects
+      .filter(s => s.is_active)
+      .map(s => ({
+        subjectCode: s.code,
+        subjectName: s.name,
+        ibLevel: s.ib_level,
+        hlMinutesPerWeek: s.hoursPerWeekHL ? s.hoursPerWeekHL * 60 : s.hl_minutes_per_week_default || 300,
+        slMinutesPerWeek: s.hoursPerWeekSL ? s.hoursPerWeekSL * 60 : s.sl_minutes_per_week_default || 180
+      }));
 
     const payload = {
       timeslots,
@@ -102,6 +115,7 @@ Deno.serve(async (req) => {
         programme: s.ib_programme
       })),
       lessons,
+      subjectRequirements,
       schoolConfig: {
         periodsPerDay,
         daysPerWeek,
