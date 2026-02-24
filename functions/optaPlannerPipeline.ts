@@ -598,17 +598,8 @@ Deno.serve(async (req) => {
     console.log('[Pipeline] Teacher capacity check:', teacherAssignments);
     
     if (overloadedTeachers.length > 0) {
-      console.error('[Pipeline] Teacher capacity exceeded:', overloadedTeachers);
-      return Response.json({
-        ok: false,
-        error: 'Teacher capacity exceeded',
-        code: 'TEACHER_CAPACITY_EXCEEDED',
-        details: {
-          message: `${overloadedTeachers.length} teacher(s) have been assigned more lessons than their weekly capacity allows.`,
-          overloadedTeachers: overloadedTeachers,
-          solution: 'Either increase the teacher\'s max hours per week, assign some teaching groups to other teachers, or reduce the weekly hours required for some subjects.'
-        }
-      }, { status: 400 });
+      console.warn('[Pipeline] Teacher capacity exceeded for:', overloadedTeachers.map(t => t.name));
+      // We don't block the pipeline anymore, OptaPlanner will try its best
     }
 
     // ===== DETAILED CONSTRAINT VERIFICATION =====
