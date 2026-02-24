@@ -447,8 +447,8 @@ Deno.serve(async (req) => {
         const slGroups = tgs.filter(tg => tg.level === 'SL');
         
         // Combined requirement (SL hours)
-        if (slGroups.length > 0) {
-          const slMinutes = slGroups[0]?.minutes_per_week || (subject?.hoursPerWeekSL || 3) * 60;
+        if (slGroups.length > 0 || hlGroups.length > 0) {
+          const slMinutes = slGroups.length > 0 ? (slGroups[0]?.minutes_per_week || (subject?.hoursPerWeekSL || 3) * 60) : ((subject?.hoursPerWeekSL || 3) * 60);
           const combinedTgId = `combined_${subjectId}`;
           subjectRequirements.push({
             teachingGroupId: combinedTgId,
@@ -458,6 +458,9 @@ Deno.serve(async (req) => {
             minutesPerWeek: slMinutes
           });
           slGroups.forEach(tg => processedReqTGs.add(tg.id));
+          if (slGroups.length === 0) {
+            hlGroups.forEach(tg => processedReqTGs.add(tg.id));
+          }
         }
 
         // HL extension requirement
