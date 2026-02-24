@@ -58,30 +58,54 @@ Deno.serve(async (req) => {
       }
     }
 
-    const lessons = teachingGroups.map((tg, idx) => {
-      const subject = subjects.find(s => s.id === tg.subject_id);
-      const teacher = teachers.find(t => t.id === tg.teacher_id);
-      const room = rooms.find(r => r.id === tg.preferred_room_id);
+    const lessons = teachingGroups
+      .filter(tg => tg.teacher_id && tg.student_ids?.length > 0)
+      .map((tg, idx) => {
+        const subject = subjects.find(s => s.id === tg.subject_id);
+        const teacher = teachers.find(t => t.id === tg.teacher_id);
+        const room = rooms.find(r => r.id === tg.preferred_room_id);
 
-      return {
-        id: idx,
-        teachingGroupId: tg.id,
-        subjectName: subject?.name || 'Unknown',
-        teacherId: teacher?.id || null,
-        studentIds: tg.student_ids || [],
-        roomId: room?.id || null,
-        durationMinutes: tg.minutes_per_week || 180
-      };
-    });
+        return {
+          id: idx,
+          teachingGroupId: tg.id,
+          subjectName: subject?.name || 'Unknown',
+          subjectCode: subject?.code || 'UNK',
+          teacherId: teacher?.id,
+          teacherName: teacher?.full_name || 'Unknown',
+          studentIds: tg.student_ids || [],
+          roomId: room?.id || null,
+          durationMinutes: tg.minutes_per_week || 180,
+          yearGroup: tg.year_group || 'DP1',
+          level: tg.level || 'SL'
+        };
+      });
 
     const payload = {
       timeslots,
       rooms: rooms.map(r => ({ id: r.id, name: r.name, capacity: r.capacity })),
       teachers: teachers.map(t => ({ id: t.id, name: t.full_name })),
-      lessons
+      students: students.map(s => ({
+        id: s.id,
+        name: s.full_name,
+        yearGroup: s.year_group,
+        programme: s.ib_programme
+      })),
+      lessons,
+      schoolConfig: {
+        periodsPerDay,
+        daysPerWeek,
+        schoolId: user.school_id
+      }
     };
 
     console.log('[Pipeline] Calling OptaPlanner:', OPTAPLANNER_ENDPOINT);
+    console.log('[Pipeline] Payload summary:', {
+      timeslots: timeslots.length,
+      rooms: rooms.length,
+      teachers: teachers.length,
+      students: students.length,
+      lessons: lessons.length
+    });
 
     const response = await fetch(OPTAPLANNER_ENDPOINT, {
       method: 'POST',
