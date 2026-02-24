@@ -156,6 +156,7 @@ Deno.serve(async (req) => {
       teachers: teachers.map((t, idx) => ({
         id: idx + 1,
         name: t.full_name,
+        maxPeriodsPerWeek: t.max_hours_per_week || 25,
         unavailableSlotIds: [],
         externalId: t.id
       })),
