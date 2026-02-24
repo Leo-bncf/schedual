@@ -744,18 +744,22 @@ Deno.serve(async (req) => {
             day = days[dayIndex] || 'MONDAY';
             periodIndex = (lesson.timeslotId - 1) % 10;
           }
+
+          const realTgIds = syntheticToRealTgMap[lesson.teachingGroupId] || [lesson.teachingGroupId];
           
-          slotsToInsert.push({
-            school_id: user.school_id,
-            schedule_version: schedule_version_id,
-            teaching_group_id: lesson.teachingGroupId,
-            teacher_id: teacherIdById[lesson.teacherId] || null,
-            room_id: roomIdById[lesson.roomId] || null,
-            timeslot_id: lesson.timeslotId,
-            day: day || 'Monday',
-            period: periodIndex != null ? periodIndex + 1 : 1,
-            status: 'scheduled'
-          });
+          for (const realTgId of realTgIds) {
+            slotsToInsert.push({
+              school_id: user.school_id,
+              schedule_version: schedule_version_id,
+              teaching_group_id: realTgId,
+              teacher_id: teacherIdById[lesson.teacherId] || null,
+              room_id: roomIdById[lesson.roomId] || null,
+              timeslot_id: lesson.timeslotId,
+              day: day || 'Monday',
+              period: periodIndex != null ? periodIndex + 1 : 1,
+              status: 'scheduled'
+            });
+          }
         }
       }
     }
