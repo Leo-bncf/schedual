@@ -131,14 +131,14 @@ Deno.serve(async (req) => {
 
     const result = JSON.parse(responseText);
 
-    const existingSlots = await base44.asServiceRole.entities.ScheduleSlot.filter({
+    const existingSlots = await base44.entities.ScheduleSlot.filter({
       school_id: user.school_id,
       schedule_version: schedule_version_id
     });
 
     if (existingSlots.length > 0) {
       for (const slot of existingSlots) {
-        await base44.asServiceRole.entities.ScheduleSlot.delete(slot.id);
+        await base44.entities.ScheduleSlot.delete(slot.id);
       }
     }
 
