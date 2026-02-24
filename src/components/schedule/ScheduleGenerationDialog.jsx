@@ -74,12 +74,21 @@ export default function ScheduleGenerationDialog({ open, onClose, status, messag
           )}
 
           {status === 'success' && (
-            <div className="text-center">
-              <div className="w-16 h-16 rounded-full bg-green-100 flex items-center justify-center mx-auto mb-4">
-                <CheckCircle className="w-10 h-10 text-green-600" />
+            <motion.div 
+              initial={{ opacity: 0, scale: 0.95 }}
+              animate={{ opacity: 1, scale: 1 }}
+              exit={{ opacity: 0, scale: 0.95 }}
+              className="py-10 text-center flex flex-col items-center justify-center space-y-6"
+            >
+              <div className="w-24 h-24 rounded-full bg-green-50 flex items-center justify-center mx-auto ring-8 ring-green-100/50 shadow-sm">
+                <CheckCircle className="w-12 h-12 text-green-600" />
               </div>
-              <p className="text-sm text-slate-700">{message}</p>
-            </div>
+              <p className="text-lg font-medium text-slate-800">{message}</p>
+              
+              <Button onClick={onClose} size="lg" className="bg-green-600 hover:bg-green-700 w-full max-w-xs shadow-md">
+                Voir l'emploi du temps
+              </Button>
+            </motion.div>
           )}
 
           {status === 'error' && (
