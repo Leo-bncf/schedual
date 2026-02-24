@@ -141,6 +141,19 @@ export default function Schedules() {
     },
   });
 
+  const updateSlotMutation = useMutation({
+    mutationFn: async ({ id, data }) => {
+      return base44.entities.ScheduleSlot.update(id, data);
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['scheduleSlots'] });
+      toast.success("Lesson updated successfully");
+    },
+    onError: (err) => {
+      toast.error("Failed to update lesson: " + err.message);
+    }
+  });
+
   const deleteVersionMutation = useMutation({
     mutationFn: async (versionId) => {
       return base44.entities.ScheduleVersion.delete(versionId);
@@ -704,8 +717,27 @@ export default function Schedules() {
                     breakPeriods={school?.breaks?.map(b => parseInt(b.start)) || []}
                     onSlotClick={(day, uiRow, actionData) => {
                       if (actionData.action === 'move') {
-                        // Implement drag and drop if needed later, right now it just opens details
+                        if (confirm(`Are you sure you want to move this lesson to ${day}, Period ${uiRow}?`)) {
+                          updateSlotMutation.mutate({
+                            id: actionData.sourceSlotId,
+                            data: { day, period: uiRow }
+                          });
+                        }
+                      } else if (actionData.action === 'swap') {
+                        if (confirm(`Are you sure you want to swap these lessons?`)) {
+                          updateSlotMutation.mutate({
+                            id: actionData.sourceSlotId,
+                            data: { day: actionData.targetDay, period: actionData.targetPeriod }
+                          });
+                          updateSlotMutation.mutate({
+                            id: actionData.targetSlotId,
+                            data: { day: actionData.sourceDay, period: actionData.sourcePeriod }
+                          });
+                        }
                       }
+                    }}
+                    onUpdateSlot={(slotId, updates) => {
+                      updateSlotMutation.mutate({ id: slotId, data: updates });
                     }}
                   />
                 </CardContent>

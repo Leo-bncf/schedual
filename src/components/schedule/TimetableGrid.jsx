@@ -29,6 +29,9 @@ const subjectGroupColors = {
   '6': { bg: 'bg-pink-100', border: 'border-l-pink-600', text: 'text-pink-900', name: 'The Arts' },
 };
 
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { Button } from "@/components/ui/button";
+
 export default function TimetableGrid({ 
   slots = [], 
   groups = [], 
@@ -40,6 +43,7 @@ export default function TimetableGrid({
   breakPeriods = [], 
   lunchPeriod = 4, 
   onSlotClick, 
+  onUpdateSlot,
   exportId = "timetable-grid",
   dayStartTime = '08:00',
   dayEndTime = '18:00',
@@ -47,6 +51,8 @@ export default function TimetableGrid({
   timeslots = []
 }) {
   const [selectedSlot, setSelectedSlot] = React.useState(null);
+  const [isEditing, setIsEditing] = React.useState(false);
+  const [editForm, setEditForm] = React.useState({});
   
   // Build timeslot index: timeslot_id → UI row position (chronological per day, includes breaks)
   const DAY_MAP = { MONDAY: 'Monday', TUESDAY: 'Tuesday', WEDNESDAY: 'Wednesday', THURSDAY: 'Thursday', FRIDAY: 'Friday' };
@@ -289,6 +295,7 @@ export default function TimetableGrid({
     
     const room = getRoomInfo(slot.room_id);
     setSelectedSlot({ slot, group, room, subject, teacher });
+    setIsEditing(false);
   };
 
   // Calculate mapping diagnostics for display
@@ -717,15 +724,32 @@ export default function TimetableGrid({
               <>
                 <div className="flex items-start justify-between mb-6">
                   <div className="flex-1">
-                    <h3 className="text-3xl font-bold text-slate-900 mb-2">
-                      {selectedSlot.subject?.name || selectedSlot.slot?.notes || 'Slot'}
-                    </h3>
+                    <div className="flex items-center gap-3 mb-2">
+                      <h3 className="text-3xl font-bold text-slate-900">
+                        {selectedSlot.subject?.name || selectedSlot.slot?.notes || 'Slot'}
+                      </h3>
+                      {!isEditing && onUpdateSlot && (
+                        <Button 
+                          variant="outline" 
+                          size="sm" 
+                          onClick={() => {
+                            setIsEditing(true);
+                            setEditForm({
+                              teacher_id: selectedSlot.slot?.teacher_id || 'unassigned',
+                              room_id: selectedSlot.slot?.room_id || 'unassigned'
+                            });
+                          }}
+                        >
+                          Edit
+                        </Button>
+                      )}
+                    </div>
                     <p className="text-slate-500 text-lg">
                       {selectedSlot.slot?.day}, Period {selectedSlot.slot?.uiRow || selectedSlot.slot?.period}
                     </p>
                   </div>
                   <button 
-                    onClick={() => setSelectedSlot(null)}
+                    onClick={() => { setSelectedSlot(null); setIsEditing(false); }}
                     className="text-slate-400 hover:text-slate-600 transition-colors p-1"
                   >
                     <svg className="w-7 h-7" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -742,29 +766,67 @@ export default function TimetableGrid({
 
                   <div className="bg-gradient-to-br from-blue-50 to-blue-100 rounded-xl p-5 border border-blue-200">
                     <div className="text-sm font-semibold text-blue-600 mb-2">Teacher</div>
-                    <div className="text-xl font-bold text-blue-900">
-                      {selectedSlot.teacher?.full_name || 'Not assigned'}
-                    </div>
-                    {selectedSlot.teacher?.email && (
-                      <div className="text-sm text-blue-700 mt-2">{selectedSlot.teacher.email}</div>
+                    {isEditing ? (
+                      <Select 
+                        value={editForm.teacher_id} 
+                        onValueChange={(val) => setEditForm(prev => ({ ...prev, teacher_id: val }))}
+                      >
+                        <SelectTrigger className="w-full bg-white text-lg h-12">
+                          <SelectValue placeholder="Select teacher" />
+                        </SelectTrigger>
+                        <SelectContent>
+                          <SelectItem value="unassigned">Unassigned</SelectItem>
+                          {teachers.map(t => (
+                            <SelectItem key={t.id} value={t.id}>{t.full_name}</SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
+                    ) : (
+                      <>
+                        <div className="text-xl font-bold text-blue-900">
+                          {selectedSlot.teacher?.full_name || 'Not assigned'}
+                        </div>
+                        {selectedSlot.teacher?.email && (
+                          <div className="text-sm text-blue-700 mt-2">{selectedSlot.teacher.email}</div>
+                        )}
+                      </>
                     )}
                   </div>
 
                   <div className="bg-gradient-to-br from-emerald-50 to-emerald-100 rounded-xl p-5 border border-emerald-200">
                     <div className="text-sm font-semibold text-emerald-600 mb-2">Room</div>
-                    <div className="text-xl font-bold text-emerald-900">
-                      {selectedSlot.room?.name || 'Not assigned'}
-                    </div>
-                    {selectedSlot.room?.building && (
-                      <div className="text-sm text-emerald-700 mt-2">
-                        Building {selectedSlot.room.building}
-                        {selectedSlot.room.floor && `, Floor ${selectedSlot.room.floor}`}
-                      </div>
-                    )}
-                    {selectedSlot.room?.capacity && (
-                      <div className="text-sm text-emerald-700 mt-1">
-                        Capacity: {selectedSlot.room.capacity} students
-                      </div>
+                    {isEditing ? (
+                      <Select 
+                        value={editForm.room_id} 
+                        onValueChange={(val) => setEditForm(prev => ({ ...prev, room_id: val }))}
+                      >
+                        <SelectTrigger className="w-full bg-white text-lg h-12">
+                          <SelectValue placeholder="Select room" />
+                        </SelectTrigger>
+                        <SelectContent>
+                          <SelectItem value="unassigned">Unassigned</SelectItem>
+                          {rooms.map(r => (
+                            <SelectItem key={r.id} value={r.id}>{r.name} ({r.capacity} cap)</SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
+                    ) : (
+                      <>
+                        <div className="text-xl font-bold text-emerald-900">
+                          {selectedSlot.room?.name || 'Not assigned'}
+                        </div>
+                        {selectedSlot.room?.building && (
+                          <div className="text-sm text-emerald-700 mt-2">
+                            Building {selectedSlot.room.building}
+                            {selectedSlot.room.floor && `, Floor ${selectedSlot.room.floor}`}
+                          </div>
+                        )}
+                        {selectedSlot.room?.capacity && (
+                          <div className="text-sm text-emerald-700 mt-1">
+                            Capacity: {selectedSlot.room.capacity} students
+                          </div>
+                        )}
+                      </>
                     )}
                   </div>
 
@@ -777,12 +839,53 @@ export default function TimetableGrid({
                       </div>
                     )}
                   </div>
+
+                  {isEditing && (
+                    <div className="flex items-center gap-3 pt-4">
+                      <Button 
+                        size="lg"
+                        onClick={() => {
+                          if (confirm('Save these changes?')) {
+                            const newTeacherId = editForm.teacher_id === 'unassigned' ? null : editForm.teacher_id;
+                            const newRoomId = editForm.room_id === 'unassigned' ? null : editForm.room_id;
+                            onUpdateSlot?.(selectedSlot.slot.id, {
+                              teacher_id: newTeacherId,
+                              room_id: newRoomId
+                            });
+                            setIsEditing(false);
+                            // Optimistically update local view
+                            const updatedSlot = { 
+                              ...selectedSlot.slot,
+                              teacher_id: newTeacherId,
+                              room_id: newRoomId
+                            };
+                            setSelectedSlot({
+                              ...selectedSlot,
+                              slot: updatedSlot,
+                              teacher: teachers.find(t => t.id === newTeacherId) || null,
+                              room: rooms.find(r => r.id === newRoomId) || null
+                            });
+                          }
+                        }}
+                        className="bg-blue-600 hover:bg-blue-700 text-white"
+                      >
+                        Save Changes
+                      </Button>
+                      <Button 
+                        size="lg"
+                        variant="outline" 
+                        onClick={() => setIsEditing(false)}
+                      >
+                        Cancel
+                      </Button>
+                    </div>
+                  )}
                 </div>
               </>
             )}
 
             <button
-              onClick={() => setSelectedSlot(null)}
+              onClick={() => { setSelectedSlot(null); setIsEditing(false); }}
               className="w-full mt-6 px-6 py-4 bg-slate-900 text-white rounded-xl font-bold text-lg hover:bg-slate-800 transition-colors shadow-lg"
             >
               Close
