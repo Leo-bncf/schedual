@@ -65,18 +65,25 @@ export default function ScheduleGenerationDialog({ open, onClose, status, messag
                         <div key={idx} className="bg-white rounded p-3 border border-amber-200">
                           <div className="flex items-center justify-between mb-2">
                             <span className="font-semibold text-slate-900 text-sm">{teacher.name}</span>
-                            <span className="text-xs text-red-600 font-medium">
-                              {teacher.assigned} / {teacher.max} periods
-                            </span>
-                          </div>
-                          <div className="text-xs text-slate-600 space-y-1">
-                            {teacher.teachingGroups.map((tg, i) => (
-                              <div key={i} className="flex items-center justify-between">
-                                <span>{tg.subject} ({tg.yearGroup})</span>
-                                <span className="text-slate-500">{tg.lessonsNeeded} periods</span>
+                            <div className="text-right">
+                              <div className="text-xs text-red-600 font-medium">
+                                {teacher.assigned} / {teacher.max} periods
                               </div>
-                            ))}
+                              <div className="text-xs text-red-500">
+                                Needs {teacher.shortage} fewer periods
+                              </div>
+                            </div>
                           </div>
+                          {teacher.teachingGroups && teacher.teachingGroups.length > 0 && (
+                            <div className="text-xs text-slate-600 space-y-1">
+                              {teacher.teachingGroups.map((tg, i) => (
+                                <div key={i} className="flex items-center justify-between">
+                                  <span>{tg.subject} ({tg.yearGroup})</span>
+                                  <span className="text-slate-500">{tg.lessonsNeeded} periods</span>
+                                </div>
+                              ))}
+                            </div>
+                          )}
                         </div>
                       ))}
                     </div>

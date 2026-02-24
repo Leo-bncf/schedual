@@ -200,19 +200,24 @@ export default function Schedules() {
         } 
         // Check for teacher capacity error from OptaPlanner
         else if (responseData.details?.code === 'TEACHER_CAPACITY_EXCEEDED') {
-          // OptaPlanner returned the error - use their details array
+          // OptaPlanner returned the error - extract teacher details from their response
           const optaDetails = responseData.details.details || [];
-          console.log('OptaPlanner teacher capacity details:', optaDetails);
+          const bottleneckTeachers = optaDetails.find(d => d.type === 'BOTTLENECK_TEACHERS');
+          const offendingTeachers = bottleneckTeachers?.items || 
+                                    responseData.details.teacherCapacitySummary?.offenders || [];
+          
+          console.log('OptaPlanner teacher capacity details:', offendingTeachers);
           
           teacherDetails = {
             message: responseData.details.message || 'At least one teacher requires more lessons than available timeslots.',
-            overloadedTeachers: optaDetails.map(detail => ({
+            overloadedTeachers: offendingTeachers.map(detail => ({
               name: detail.teacherName || 'Unknown',
               assigned: detail.requiredLessons || 0,
               max: detail.availableTimeslots || 50,
+              shortage: detail.shortage || 0,
               teachingGroups: [] // OptaPlanner doesn't provide this breakdown
             })),
-            solution: 'Either reduce the teaching hours assigned to this teacher, or increase their max hours per week in the Teachers page.'
+            solution: 'Reduce the teaching hours assigned to this teacher, or increase their max hours per week in the Teachers page.'
           };
           errorMsg = teacherDetails.message;
         }
