@@ -532,6 +532,21 @@ Deno.serve(async (req) => {
       lessons: lessons.length,
       subjectRequirements: subjectRequirements.length
     });
+    
+    // Debug: Log core subject handling
+    const coreSubjects = subjects.filter(s => s.is_core);
+    const coreLessons = lessons.filter(l => {
+      const tgId = l.teachingGroupId;
+      return tgId.includes('_DP1') || tgId.includes('_DP2');
+    });
+    console.log('[Pipeline] Core subjects found:', coreSubjects.map(s => s.code));
+    console.log('[Pipeline] Core lessons split by year:', coreLessons.length);
+    console.log('[Pipeline] Sample core lessons:', coreLessons.slice(0, 5).map(l => ({
+      id: l.id,
+      subject: l.subject,
+      teachingGroupId: l.teachingGroupId,
+      studentCount: l.studentIds?.length
+    })));
 
     const response = await fetch(OPTAPLANNER_ENDPOINT, {
       method: 'POST',
