@@ -102,14 +102,19 @@ Deno.serve(async (req) => {
         ibLevel: s.ib_level
       }));
 
-    // Build subject requirements with proper fields
+    // Build subject requirements with proper fields - filter out invalid entries
     const subjectRequirements = teachingGroups
-      .filter(tg => tg.is_active)
+      .filter(tg => {
+        const subject = subjects.find(s => s.id === tg.subject_id);
+        const hasValidSubject = subject && (subject.code || subject.name);
+        const hasValidYearGroup = tg.year_group && tg.year_group.trim().length > 0;
+        return tg.is_active && hasValidSubject && hasValidYearGroup;
+      })
       .map(tg => {
         const subject = subjects.find(s => s.id === tg.subject_id);
         return {
-          subject: subject?.code || subject?.name || 'Unknown',
-          studentGroup: tg.year_group || 'DP1',
+          subject: subject.code || subject.name,
+          studentGroup: tg.year_group,
           level: tg.level || 'SL',
           minutesPerWeek: tg.minutes_per_week || 180
         };
