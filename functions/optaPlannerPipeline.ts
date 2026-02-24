@@ -721,9 +721,24 @@ Deno.serve(async (req) => {
 
 
 
-    if (result.lessons && Array.isArray(result.lessons)) {
-      for (const lesson of result.lessons) {
+    // OptaPlanner sometimes returns `assignments` instead of `lessons` on failure/partial success
+    const finalLessons = result.lessons || result.assignments || [];
+
+    if (finalLessons && Array.isArray(finalLessons)) {
+      for (const lesson of finalLessons) {
         if (lesson.timeslotId != null) {
+          
+          // Reverse-engineer dayOfWeek/periodIndex if missing but timeslotId exists (1-50 standard grid)
+          let day = lesson.dayOfWeek;
+          let periodIndex = lesson.periodIndex;
+          
+          if (!day && lesson.timeslotId) {
+            const days = ['MONDAY', 'TUESDAY', 'WEDNESDAY', 'THURSDAY', 'FRIDAY'];
+            const dayIndex = Math.floor((lesson.timeslotId - 1) / 10);
+            day = days[dayIndex] || 'MONDAY';
+            periodIndex = (lesson.timeslotId - 1) % 10;
+          }
+          
           slotsToInsert.push({
             school_id: user.school_id,
             schedule_version: schedule_version_id,
@@ -731,8 +746,8 @@ Deno.serve(async (req) => {
             teacher_id: teacherIdById[lesson.teacherId] || null,
             room_id: roomIdById[lesson.roomId] || null,
             timeslot_id: lesson.timeslotId,
-            day: lesson.dayOfWeek || 'Monday',
-            period: lesson.periodIndex != null ? lesson.periodIndex + 1 : 1,
+            day: day || 'Monday',
+            period: periodIndex != null ? periodIndex + 1 : 1,
             status: 'scheduled'
           });
         }
