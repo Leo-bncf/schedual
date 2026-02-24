@@ -168,6 +168,10 @@ Deno.serve(async (req) => {
 
     const slotsToInsert = [];
 
+    // Reverse mappings: numeric ID → Base44 string ID
+    const roomIdReverse = new Map(Array.from(roomIdMap.entries()).map(([k, v]) => [v, k]));
+    const teacherIdReverse = new Map(Array.from(teacherIdMap.entries()).map(([k, v]) => [v, k]));
+
     if (result.lessons && Array.isArray(result.lessons)) {
       for (const lesson of result.lessons) {
         if (lesson.timeslot != null) {
@@ -177,8 +181,8 @@ Deno.serve(async (req) => {
               school_id: user.school_id,
               schedule_version: schedule_version_id,
               teaching_group_id: lesson.teachingGroupId,
-              teacher_id: lesson.teacherId,
-              room_id: lesson.roomId || lesson.room,
+              teacher_id: typeof lesson.teacherId === 'number' ? teacherIdReverse.get(lesson.teacherId) : lesson.teacherId,
+              room_id: lesson.roomId != null ? (typeof lesson.roomId === 'number' ? roomIdReverse.get(lesson.roomId) : lesson.roomId) : (lesson.room != null ? roomIdReverse.get(lesson.room) : null),
               timeslot_id: lesson.timeslot,
               day: timeslot.dayOfWeek,
               period: timeslot.periodIndex + 1,
