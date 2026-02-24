@@ -44,6 +44,7 @@ export default function ScheduleGenerationDialog({ open, onClose, status, messag
         <AnimatePresence mode="wait">
           {status === 'generating' && (
             <motion.div 
+              key="generating"
               initial={{ opacity: 0, scale: 0.95 }}
               animate={{ opacity: 1, scale: 1 }}
               exit={{ opacity: 0, scale: 0.95 }}
