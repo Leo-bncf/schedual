@@ -156,7 +156,7 @@ Deno.serve(async (req) => {
       teachers: teachers.map((t, idx) => ({
         id: idx + 1,
         name: t.full_name,
-        maxPeriodsPerWeek: t.max_hours_per_week || 25,
+        maxPeriodsPerWeek: Math.min(t.max_hours_per_week || 25, 45),
         unavailableSlotIds: [],
         externalId: t.id
       })),
@@ -188,6 +188,19 @@ Deno.serve(async (req) => {
       shuffleInputOrder: false
     };
 
+    // Log teacher assignments to debug capacity issues
+    const teacherAssignments = {};
+    teachers.forEach((t, idx) => {
+      const teacherId = idx + 1;
+      const assignedLessons = lessons.filter(l => l.teacherId === teacherId);
+      teacherAssignments[t.full_name] = {
+        maxPeriods: t.max_hours_per_week || 25,
+        assignedLessons: assignedLessons.length,
+        overload: assignedLessons.length > (t.max_hours_per_week || 25)
+      };
+    });
+    
+    console.log('[Pipeline] Teacher capacity check:', teacherAssignments);
     console.log('[Pipeline] Calling OptaPlanner:', OPTAPLANNER_ENDPOINT);
     console.log('[Pipeline] Payload summary:', {
       rooms: rooms.length,
