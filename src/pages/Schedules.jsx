@@ -812,6 +812,31 @@ export default function Schedules() {
         </DialogContent>
       </Dialog>
 
+      {/* Delete Version Dialog */}
+      <Dialog open={isDeleteDialogOpen} onOpenChange={setIsDeleteDialogOpen}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Supprimer la version</DialogTitle>
+            <DialogDescription>
+              Êtes-vous sûr de vouloir supprimer la version "{selectedVersion?.name}" ? Cette action est irréversible.
+            </DialogDescription>
+          </DialogHeader>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setIsDeleteDialogOpen(false)}>
+              Annuler
+            </Button>
+            <Button
+              variant="destructive"
+              onClick={() => deleteVersionMutation.mutate(selectedVersion?.id)}
+              disabled={deleteVersionMutation.isPending}
+            >
+              {deleteVersionMutation.isPending ? <Loader2 className="w-4 h-4 mr-2 animate-spin" /> : <Trash2 className="w-4 h-4 mr-2" />}
+              Supprimer
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
       {/* Generation Dialog */}
       <ScheduleGenerationDialog
         open={genDialogOpen}
