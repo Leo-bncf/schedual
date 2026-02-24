@@ -758,8 +758,16 @@ Deno.serve(async (req) => {
       await base44.entities.ScheduleSlot.bulkCreate(slotsToInsert);
     }
 
+    let scoreToSave = result.score || 0;
+    if (typeof scoreToSave === 'string') {
+       // e.g. "-19hard/-301soft" -> extract -19
+       const match = scoreToSave.match(/(-?\d+)hard/);
+       if (match) scoreToSave = parseInt(match[1], 10);
+       else scoreToSave = 0;
+    }
+
     await base44.entities.ScheduleVersion.update(schedule_version_id, {
-      score: result.score || 0,
+      score: scoreToSave,
       generated_at: new Date().toISOString()
     });
 
@@ -767,7 +775,8 @@ Deno.serve(async (req) => {
       ok: true,
       result: {
         slotsInserted: slotsToInsert.length,
-        score: result.score || 0
+        score: scoreToSave,
+        hardScoreNegative: scoreToSave < 0
       }
     });
 
