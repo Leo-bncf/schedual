@@ -138,7 +138,10 @@ Deno.serve(async (req) => {
         periodsPerDay,
         daysPerWeek,
         schoolId: user.school_id,
-        periodDurationMinutes: school.period_duration_minutes || 60
+        periodDurationMinutes: school.period_duration_minutes || 60,
+        dayStartTime: school.day_start_time || "08:00",
+        dayEndTime: school.day_end_time || "18:00",
+        daysOfWeek: school.days_of_week || ["MONDAY", "TUESDAY", "WEDNESDAY", "THURSDAY", "FRIDAY"]
       }
     };
 
