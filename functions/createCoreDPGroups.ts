@@ -32,7 +32,8 @@ Deno.serve(async (req) => {
       subjectByCode.set(code, s);
     }
 
-    const quotas = { TOK: 2, CAS: 1, EE: 1 };
+    // Minutes per week for core subjects
+    const quotas = { TOK: 60, CAS: 60, EE: 60 }; // 1h each
     const targets = Object.keys(quotas);
 
     const missing = targets.filter(code => !subjectByCode.has(code));
@@ -45,7 +46,9 @@ Deno.serve(async (req) => {
           name: nameByCode[code] || code,
           code,
           ib_level: 'DP',
-          is_core: true,
+          hoursPerWeekHL: 1,
+          hoursPerWeekSL: 1,
+          combine_dp1_dp2: false,
           is_active: true
         });
         subjectByCode.set(code, created);
@@ -65,10 +68,10 @@ Deno.serve(async (req) => {
       let updatedAny = false;
       if (existing && existing.length > 0) {
         for (const tg of existing) {
-          const needsUpdate = (tg.is_active !== true) || (!tg.hours_per_week || tg.hours_per_week < quotas[code]);
+          const needsUpdate = (tg.is_active !== true) || (!tg.minutes_per_week || tg.minutes_per_week < quotas[code]);
           if (needsUpdate) {
-            await client.entities.TeachingGroup.update(tg.id, { is_active: true, hours_per_week: quotas[code] });
-            console.log('[createCoreDPGroups] updated TG', { code, id: tg.id, hours_per_week: quotas[code] });
+            await client.entities.TeachingGroup.update(tg.id, { is_active: true, minutes_per_week: quotas[code] });
+            console.log('[createCoreDPGroups] updated TG', { code, id: tg.id, minutes_per_week: quotas[code] });
             updatedAny = true;
           }
         }
@@ -84,13 +87,13 @@ Deno.serve(async (req) => {
         school_id,
         name: `${subj.name} - DP1+DP2`,
         subject_id: subj.id,
-        year_group: 'DP1+DP2',
-        hours_per_week: quotas[code],
+        year_group: 'DP1,DP2',
+        minutes_per_week: quotas[code],
         is_active: true
         // teacher_id optional (omit)
         // preferred_room_id optional (omit)
       });
-      console.log('[createCoreDPGroups] created TG', { code, id: tg.id, hours_per_week: quotas[code] });
+      console.log('[createCoreDPGroups] created TG', { code, id: tg.id, minutes_per_week: quotas[code] });
       created.push({ code, teaching_group_id: tg.id });
     }
 
@@ -118,7 +121,7 @@ Deno.serve(async (req) => {
       const subj = subjectByCode.get(code);
       const tgs = await client.entities.TeachingGroup.filter({ school_id, subject_id: subj.id });
       const active = (tgs || []).filter(tg => tg.is_active === true);
-      const summary = active.map(tg => ({ id: tg.id, hours_per_week: tg.hours_per_week, year_group: tg.year_group }));
+      const summary = active.map(tg => ({ id: tg.id, minutes_per_week: tg.minutes_per_week, year_group: tg.year_group }));
       verification[code] = { subject_id: subj.id, subject_ib_level: subj.ib_level, total: (tgs || []).length, active_count: active.length, active_summary: summary };
       console.log('[createCoreDPGroups] verification', code, verification[code]);
     }
