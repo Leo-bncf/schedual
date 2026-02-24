@@ -870,20 +870,25 @@ export default function StudentScheduleView({ students, slots, groups, subjects,
                     
                     const room = rooms.find(r => r.id === slot.room_id);
                     const isTestSlot = slot.notes?.includes('Test');
-                    const colorClass = isTestSlot 
-                      ? 'bg-red-200/90 border-red-500' 
-                      : (subject ? subjectColors[subject.ib_group || 1] : '');
+                    
+                    const colorData = isTestSlot 
+                      ? { bg: 'bg-red-50', border: 'border-red-500', text: 'text-red-900', badge: 'bg-red-100 text-red-800' }
+                      : getSubjectColor(subject?.name);
 
                     return (
-                      <div key={`${day}-${period}`} className="border-r border-slate-200 last:border-r-0 hover:bg-slate-50/50">
+                      <div key={`${day}-${period}`} className="border-r border-slate-200 last:border-r-0 p-1.5 hover:bg-slate-50/50 transition-colors">
                         {subject && (
-                          <div className={`h-full p-2 border-l-4 ${colorClass}`}>
-                            <div className={`font-semibold text-xs leading-tight ${isTestSlot ? 'text-red-900' : 'text-slate-900'}`}>
+                          <div className={`h-full p-2 rounded-md border-l-4 shadow-sm hover:shadow hover:scale-[1.02] transition-all duration-200 cursor-default ${colorData.bg} ${colorData.border}`}>
+                            <div className={`font-bold text-xs leading-tight line-clamp-2 mb-1 ${colorData.text}`}>
                               {subject.name}
                             </div>
-                            {level && <div className="text-[10px] text-slate-700 leading-tight">{level}</div>}
-                            {teacher && <div className="text-[10px] text-slate-600 mt-0.5">{teacher.full_name}</div>}
-                            {room && <div className="text-[10px] text-slate-500">{room.name}</div>}
+                            {level && (
+                              <div className={`inline-block mb-1 px-1.5 py-0.5 rounded text-[9px] font-semibold tracking-wide ${colorData.badge}`}>
+                                {level}
+                              </div>
+                            )}
+                            {teacher && <div className={`text-[10px] font-medium opacity-80 truncate ${colorData.text}`}>👤 {teacher.full_name}</div>}
+                            {room && <div className={`text-[10px] font-medium opacity-80 truncate ${colorData.text}`}>📍 {room.name}</div>}
                           </div>
                         )}
                       </div>
