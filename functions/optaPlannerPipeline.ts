@@ -134,10 +134,11 @@ Deno.serve(async (req) => {
       subjects: subjectsList,
       lessons,
       subjectRequirements,
-      schoolConfig: {
+      scheduleSettings: {
         periodsPerDay,
         daysPerWeek,
-        schoolId: user.school_id
+        schoolId: user.school_id,
+        periodDurationMinutes: school.period_duration_minutes || 60
       }
     };
 
