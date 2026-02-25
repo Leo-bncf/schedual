@@ -872,29 +872,45 @@ Deno.serve(async (req) => {
             const key = `${tgId}_${day.toLowerCase()}`;
             const occupiedPeriods = groupDailySlots[key] || new Set();
             
-            let lunchPeriod = null;
-            for (let p = lunchMin; p <= lunchMax; p++) {
-                if (!occupiedPeriods.has(p)) {
-                    lunchPeriod = p;
+            // Determine how many periods needed for lunch
+            const periodDuration = schoolData.period_duration_minutes || 60;
+            const lunchDuration = constraints?.lunchBreakDurationMinutes || 60;
+            const periodsNeeded = Math.ceil(lunchDuration / periodDuration);
+
+            let lunchStartPeriod = null;
+            // Find a contiguous block of empty periods
+            for (let p = lunchMin; p <= lunchMax - periodsNeeded + 1; p++) {
+                let isBlockFree = true;
+                for (let i = 0; i < periodsNeeded; i++) {
+                    if (occupiedPeriods.has(p + i)) {
+                        isBlockFree = false;
+                        break;
+                    }
+                }
+                if (isBlockFree) {
+                    lunchStartPeriod = p;
                     break;
                 }
             }
 
-            if (lunchPeriod !== null) {
-                const timeslotId = (dayIndex * periodsPerDay) + lunchPeriod;
-                slotsToInsert.push({
-                    school_id: user.school_id,
-                    schedule_version: schedule_version_id,
-                    teaching_group_id: tgId,
-                    teacher_id: null,
-                    room_id: null,
-                    timeslot_id: timeslotId,
-                    day: day,
-                    period: lunchPeriod,
-                    status: 'scheduled',
-                    is_break: true,
-                    notes: 'Lunch Break'
-                });
+            if (lunchStartPeriod !== null) {
+                for (let i = 0; i < periodsNeeded; i++) {
+                    const currentPeriod = lunchStartPeriod + i;
+                    const timeslotId = (dayIndex * periodsPerDay) + currentPeriod;
+                    slotsToInsert.push({
+                        school_id: user.school_id,
+                        schedule_version: schedule_version_id,
+                        teaching_group_id: tgId,
+                        teacher_id: null,
+                        room_id: null,
+                        timeslot_id: timeslotId,
+                        day: day,
+                        period: currentPeriod,
+                        status: 'scheduled',
+                        is_break: true,
+                        notes: 'Lunch Break'
+                    });
+                }
             }
         });
     });
