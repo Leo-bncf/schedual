@@ -802,9 +802,10 @@ Deno.serve(async (req) => {
           
           if (!day && lesson.timeslotId) {
             const days = ['MONDAY', 'TUESDAY', 'WEDNESDAY', 'THURSDAY', 'FRIDAY'];
-            const dayIndex = Math.floor((lesson.timeslotId - 1) / 10);
+            const periodsPerDay = schoolData.periods_per_day || 10;
+            const dayIndex = Math.floor((lesson.timeslotId - 1) / periodsPerDay);
             day = days[dayIndex] || 'MONDAY';
-            periodIndex = (lesson.timeslotId - 1) % 10;
+            periodIndex = (lesson.timeslotId - 1) % periodsPerDay;
           }
 
           const realTgIds = syntheticToRealTgMap[lesson.teachingGroupId] || [lesson.teachingGroupId];
