@@ -462,7 +462,12 @@ export default function TimetableGrid({
                     <div className="text-[10px] text-slate-500 mt-1 whitespace-nowrap">{periodTimes[uiRow] || `Period ${uiRow}`}</div>
                   </div>
                 {DAYS.map(day => {
-                  const slotsInCell = getSlotData(day, uiRow);
+                  let slotsInCell = getSlotData(day, uiRow);
+                  
+                  // Deduplicate break slots so they don't stack up for every teaching group a student belongs to
+                  slotsInCell = slotsInCell.filter((slot, index, self) => 
+                    !slot.is_break || index === self.findIndex(s => s.is_break && s.day === slot.day && s.period === slot.period)
+                  );
                   
                   if (slotsInCell.length === 0) {
                     return (
