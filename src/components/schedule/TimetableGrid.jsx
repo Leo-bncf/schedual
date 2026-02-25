@@ -116,7 +116,7 @@ export default function TimetableGrid({
   
   const periodTimes = React.useMemo(() => {
     if (!timeslots || timeslots.length === 0) {
-      return calculatePeriodTimes(dayStartTime, periodDurationMinutes, periodsPerDay);
+      return calculatePeriodTimes(dayStartTime, periodDurationMinutes, periodsPerDay, Array.isArray(scheduleSettings?.breaks) ? scheduleSettings.breaks : []);
     }
     const times = {};
     // Build from actual timeslots for accurate display
