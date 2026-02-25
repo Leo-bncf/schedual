@@ -351,6 +351,10 @@ export default function Schedules() {
 
   const getStudentSchedule = (studentId) => {
     return scheduleSlots.filter(slot => {
+      // Direct student match (e.g. for Lunch Breaks)
+      if (slot.student_id === studentId) return true;
+      
+      // Teaching Group match
       const tg = teachingGroups.find(g => g.id === slot.teaching_group_id);
       return tg?.student_ids?.includes(studentId);
     });
