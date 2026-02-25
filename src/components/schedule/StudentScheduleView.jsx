@@ -951,7 +951,11 @@ export default function StudentScheduleView({ students, slots, groups, subjects,
 
                     return (
                       <div key={`${day}-${period}`} className="border-r border-slate-200 last:border-r-0 p-1.5 hover:bg-slate-50/50 transition-colors">
-                        {subject && (
+                        {slot.is_break ? (
+                          <div className="h-full p-2 rounded-md border-l-4 shadow-sm bg-amber-50 border-amber-400 text-amber-900 flex flex-col items-center justify-center cursor-default">
+                            <div className="font-bold text-xs text-center leading-tight">🍽️ {slot.notes || 'Lunch Break'}</div>
+                          </div>
+                        ) : subject ? (
                           <div className={`h-full p-2 rounded-md border-l-4 shadow-sm hover:shadow hover:scale-[1.02] transition-all duration-200 cursor-default ${colorData.bg} ${colorData.border}`}>
                             <div className={`font-bold text-xs leading-tight line-clamp-2 mb-1 ${colorData.text}`}>
                               {subject.name}
@@ -962,9 +966,9 @@ export default function StudentScheduleView({ students, slots, groups, subjects,
                               </div>
                             )}
                             {teacher && <div className={`text-[10px] font-medium opacity-80 truncate ${colorData.text}`}>👤 {teacher.full_name}</div>}
-                            {room && <div className={`text-[10px] font-medium opacity-80 truncate ${colorData.text}`}>📍 {room.name}</div>}
+                            {room && <div className={`text-[10px] font-medium opacity-80 truncate ${colorData.text}`}>📍 {room?.name}</div>}
                           </div>
-                        )}
+                        ) : null}
                       </div>
                     );
                   })}
