@@ -378,7 +378,7 @@ export default function Schedules() {
 
   return (
     <div className="min-h-screen bg-slate-50">
-      <div className="max-w-[1400px] mx-auto space-y-6">
+      <div className="w-full px-6 space-y-6">
         {/* Compact Header */}
         <div className="flex items-center justify-between">
           <div>
