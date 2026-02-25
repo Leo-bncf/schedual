@@ -794,10 +794,28 @@ Deno.serve(async (req) => {
 
 
     // OptaPlanner sometimes returns `assignments` instead of `lessons` on failure/partial success
-    const finalLessons = result.lessons || result.assignments || [];
+    const finalLessons = result.lessons || result.assignments || (Array.isArray(result) ? result : []);
 
     if (finalLessons && Array.isArray(finalLessons)) {
       for (const lesson of finalLessons) {
+        // Handle new explicit flat format
+        if (lesson.teaching_group_id) {
+            slotsToInsert.push({
+              school_id: user.school_id,
+              schedule_version: schedule_version_id,
+              teaching_group_id: lesson.teaching_group_id,
+              subject_id: lesson.subject_id,
+              teacher_id: lesson.teacher_id,
+              room_id: lesson.room_id,
+              timeslot_id: lesson.timeslot_id || lesson.period,
+              day: lesson.day,
+              period: lesson.period,
+              status: lesson.status || 'scheduled'
+            });
+            continue;
+        }
+
+        // Old format handling
         if (lesson.timeslotId != null) {
           
           // Reverse-engineer dayOfWeek/periodIndex if missing but timeslotId exists (1-50 standard grid)
@@ -833,6 +851,53 @@ Deno.serve(async (req) => {
         }
       }
     }
+
+    // Infer Implicit Lunch Breaks (Midday gaps)
+    const groupDailySlots = {};
+    slotsToInsert.forEach(slot => {
+        if (!slot.teaching_group_id || !slot.day || slot.is_break) return;
+        const key = `${slot.teaching_group_id}_${slot.day.toLowerCase()}`;
+        if (!groupDailySlots[key]) groupDailySlots[key] = new Set();
+        groupDailySlots[key].add(slot.period);
+    });
+
+    const lunchMin = constraints?.lunchBreakMinPeriod ?? 4;
+    const lunchMax = constraints?.lunchBreakMaxPeriod ?? 6;
+    const activeTeachingGroupIds = [...new Set(teachingGroupsToProcess.map(tg => tg.id))];
+    const daysList = ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday'];
+    const periodsPerDay = schoolData.periods_per_day || 10;
+
+    activeTeachingGroupIds.forEach(tgId => {
+        daysList.forEach((day, dayIndex) => {
+            const key = `${tgId}_${day.toLowerCase()}`;
+            const occupiedPeriods = groupDailySlots[key] || new Set();
+            
+            let lunchPeriod = null;
+            for (let p = lunchMin; p <= lunchMax; p++) {
+                if (!occupiedPeriods.has(p)) {
+                    lunchPeriod = p;
+                    break;
+                }
+            }
+
+            if (lunchPeriod !== null) {
+                const timeslotId = (dayIndex * periodsPerDay) + lunchPeriod;
+                slotsToInsert.push({
+                    school_id: user.school_id,
+                    schedule_version: schedule_version_id,
+                    teaching_group_id: tgId,
+                    teacher_id: null,
+                    room_id: null,
+                    timeslot_id: timeslotId,
+                    day: day,
+                    period: lunchPeriod,
+                    status: 'scheduled',
+                    is_break: true,
+                    notes: 'Lunch Break'
+                });
+            }
+        });
+    });
 
     if (slotsToInsert.length > 0) {
       await base44.entities.ScheduleSlot.bulkCreate(slotsToInsert);
