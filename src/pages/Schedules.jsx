@@ -376,6 +376,31 @@ export default function Schedules() {
   const publishedVersion = scheduleVersions.find(v => v.status === 'published');
   const draftVersions = scheduleVersions.filter(v => v.status === 'draft');
 
+  const getProcessedSettings = React.useMemo(() => {
+    if (!school) return null;
+    let breaks = school.breaks || [];
+    
+    // Override with optaplanner decided breaks if available
+    const lunchBreaks = selectedVersion?.generation_params?.lunchBreaks;
+    if (lunchBreaks && Array.isArray(lunchBreaks)) {
+      const uniqueBreaks = [];
+      const seen = new Set();
+      lunchBreaks.forEach(b => {
+        if (!b.startTime || !b.endTime) return;
+        const key = `${b.startTime}-${b.endTime}`;
+        if (!seen.has(key)) {
+          seen.add(key);
+          uniqueBreaks.push({ start: b.startTime, end: b.endTime });
+        }
+      });
+      if (uniqueBreaks.length > 0) {
+        breaks = uniqueBreaks;
+      }
+    }
+    
+    return { ...school, breaks };
+  }, [school, selectedVersion]);
+
   return (
     <div className="min-h-screen bg-slate-50">
       <div className="max-w-[1400px] mx-auto space-y-6">
