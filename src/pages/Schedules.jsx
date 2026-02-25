@@ -774,61 +774,21 @@ export default function Schedules() {
                       </div>
 
                       {/* Timetable Grid */}
-                      <div className="overflow-x-auto rounded-lg border border-slate-200">
-                        <table className="w-full border-collapse text-sm">
-                          <thead>
-                            <tr className="bg-slate-50">
-                              <th className="sticky left-0 z-10 p-3 text-left text-xs font-semibold text-slate-700 bg-slate-50 border-b border-slate-200">
-                                Period
-                              </th>
-                              {Object.keys(studentSchedule).map(day => (
-                                <th key={day} className="p-3 text-center text-xs font-semibold text-slate-700 border-b border-slate-200 min-w-[140px]">
-                                  {day.charAt(0) + day.slice(1).toLowerCase()}
-                                </th>
-                              ))}
-                            </tr>
-                          </thead>
-                          <tbody>
-                            {Array.from({ length: 10 }, (_, i) => i + 1).map(period => (
-                              <tr key={period} className="hover:bg-slate-50 transition-colors">
-                                <td className="sticky left-0 z-10 p-3 text-xs font-semibold text-slate-600 bg-white border-b border-slate-100">
-                                  {period}
-                                </td>
-                                {Object.entries(studentSchedule).map(([day, periods]) => {
-                                  const slot = periods[period - 1];
-                                  return (
-                                    <td key={day} className="p-2 border-b border-slate-100">
-                                      {slot ? (
-                                        <div className={`p-2 sm:p-3 rounded-lg border transition-all duration-200 shadow-sm hover:shadow-md hover:scale-[1.02] cursor-default ${slot.colorData.bg} ${slot.colorData.border}`}>
-                                          <div className={`font-semibold text-xs mb-1 line-clamp-2 ${slot.colorData.text}`}>{slot.subject}</div>
-                                          <div className={`space-y-0.5 text-[10px] sm:text-xs opacity-90 ${slot.colorData.text}`}>
-                                            <div className="flex items-center gap-1">
-                                              <Users className="w-3 h-3 shrink-0 opacity-70" />
-                                              <span className="truncate">{slot.teacher}</span>
-                                            </div>
-                                            <div className="flex items-center gap-1">
-                                              <Building2 className="w-3 h-3 shrink-0 opacity-70" />
-                                              <span className="truncate">{slot.room}</span>
-                                            </div>
-                                          </div>
-                                          {slot.level && (
-                                            <Badge className={`mt-1.5 text-[9px] sm:text-[10px] px-1.5 py-0 font-medium ${slot.colorData.badge} border-transparent`}>
-                                              {slot.level}
-                                            </Badge>
-                                          )}
-                                        </div>
-                                      ) : (
-                                        <div className="h-20 flex items-center justify-center">
-                                          <span className="text-slate-300">—</span>
-                                        </div>
-                                      )}
-                                    </td>
-                                  );
-                                })}
-                              </tr>
-                            ))}
-                          </tbody>
-                        </table>
+                      <div className="mt-4">
+                        <TimetableGrid 
+                          slots={studentSchedule || []}
+                          groups={teachingGroups}
+                          rooms={rooms}
+                          subjects={subjects}
+                          teachers={teachers}
+                          periodsPerDay={school?.periods_per_day || 10}
+                          dayStartTime={school?.day_start_time || '08:00'}
+                          dayEndTime={school?.day_end_time || '18:00'}
+                          periodDurationMinutes={school?.period_duration_minutes || 60}
+                          scheduleSettings={school}
+                          globalView={false}
+                          exportId="student-viewer-timetable"
+                        />
                       </div>
                     </div>
                   )}
