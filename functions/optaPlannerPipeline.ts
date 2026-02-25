@@ -809,6 +809,7 @@ Deno.serve(async (req) => {
           }
 
           const realTgIds = syntheticToRealTgMap[lesson.teachingGroupId] || [lesson.teachingGroupId];
+          const isBreak = lesson.isBreak === true || String(lesson.subject || '').toUpperCase() === 'LUNCH' || String(lesson.subject || '').toUpperCase() === 'BREAK';
           
           for (const realTgId of realTgIds) {
             slotsToInsert.push({
@@ -820,7 +821,9 @@ Deno.serve(async (req) => {
               timeslot_id: lesson.timeslotId,
               day: day || 'Monday',
               period: periodIndex != null ? periodIndex + 1 : 1,
-              status: 'scheduled'
+              status: 'scheduled',
+              is_break: isBreak,
+              notes: isBreak ? (lesson.subject || 'Break') : undefined
             });
           }
         }
