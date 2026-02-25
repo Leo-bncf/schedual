@@ -86,6 +86,11 @@ Deno.serve(async (req) => {
       if (slot.teaching_group_id) {
         return assignedGroupIds.includes(slot.teaching_group_id);
       }
+
+      // Student-specific slots (e.g., individual lunch breaks)
+      if (slot.student_id) {
+        return slot.student_id === student.id;
+      }
       
       return false;
     });

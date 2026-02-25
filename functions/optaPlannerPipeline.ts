@@ -852,25 +852,34 @@ Deno.serve(async (req) => {
       }
     }
 
-    // Infer Implicit Lunch Breaks (Midday gaps)
-    const groupDailySlots = {};
+    // Infer Implicit Lunch Breaks (Midday gaps) PER STUDENT
+    // This prevents lunch breaks from overlapping with actual classes for DP students
+    const studentDailySlots = {};
+    const tgToStudents = {};
+    teachingGroupsToProcess.forEach(tg => {
+      tgToStudents[tg.id] = tg.student_ids || [];
+    });
+
     slotsToInsert.forEach(slot => {
         if (!slot.teaching_group_id || !slot.day || slot.is_break) return;
-        const key = `${slot.teaching_group_id}_${slot.day.toLowerCase()}`;
-        if (!groupDailySlots[key]) groupDailySlots[key] = new Set();
-        groupDailySlots[key].add(slot.period);
+        const studentsInTg = tgToStudents[slot.teaching_group_id] || [];
+        studentsInTg.forEach(studentId => {
+            const key = `${studentId}_${slot.day.toLowerCase()}`;
+            if (!studentDailySlots[key]) studentDailySlots[key] = new Set();
+            studentDailySlots[key].add(slot.period);
+        });
     });
 
     const lunchMin = constraints?.lunchBreakMinPeriod ?? 4;
     const lunchMax = constraints?.lunchBreakMaxPeriod ?? 6;
-    const activeTeachingGroupIds = [...new Set(teachingGroupsToProcess.map(tg => tg.id))];
     const daysList = ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday'];
     const periodsPerDay = schoolData.periods_per_day || 10;
+    const activeStudentIds = students.map(s => s.id);
 
-    activeTeachingGroupIds.forEach(tgId => {
+    activeStudentIds.forEach(studentId => {
         daysList.forEach((day, dayIndex) => {
-            const key = `${tgId}_${day.toLowerCase()}`;
-            const occupiedPeriods = groupDailySlots[key] || new Set();
+            const key = `${studentId}_${day.toLowerCase()}`;
+            const occupiedPeriods = studentDailySlots[key] || new Set();
             
             // Determine how many periods needed for lunch
             const periodDuration = schoolData.period_duration_minutes || 60;
@@ -900,7 +909,7 @@ Deno.serve(async (req) => {
                     slotsToInsert.push({
                         school_id: user.school_id,
                         schedule_version: schedule_version_id,
-                        teaching_group_id: tgId,
+                        student_id: studentId,
                         teacher_id: null,
                         room_id: null,
                         timeslot_id: timeslotId,
