@@ -686,13 +686,14 @@ export default function TimetableGrid({
                 {/* Break Rows mapped from scheduleSettings */}
                 {breakRowsData.filter(br => Math.round(br.afterPeriod) === uiRow).map(breakRow => (
                   <div key={breakRow.id} className="grid grid-cols-[100px_repeat(5,1fr)] border-b-2 border-amber-300 bg-gradient-to-r from-amber-50 to-orange-50">
-                    <div className="p-4 bg-amber-100 border-r border-amber-300 flex flex-col justify-center">
-                      <div className="text-sm font-bold text-amber-900">{breakRow.emoji} {breakRow.label}</div>
-                      <div className="text-sm text-amber-700 mt-1">{breakRow.startTime} - {breakRow.endTime}</div>
+                    <div className="p-4 bg-amber-100 border-r border-amber-300 flex flex-col items-center justify-center text-center">
+                      <div className="text-sm font-bold text-amber-900">{breakRow.emoji}</div>
+                      <div className="text-sm font-bold text-amber-900">{breakRow.label}</div>
                     </div>
                     {DAYS.map(day => (
-                      <div key={`${day}-${breakRow.id}`} className="p-4 border-r border-amber-200 last:border-r-0 flex items-center justify-center">
-                        <span className="text-amber-700 font-medium text-sm">{breakRow.label}</span>
+                      <div key={`${day}-${breakRow.id}`} className="p-4 border-r border-amber-200 last:border-r-0 flex flex-col items-center justify-center">
+                        <span className="text-amber-700 font-medium text-sm uppercase">{breakRow.label}</span>
+                        <div className="text-[10px] text-amber-600 mt-1">{breakRow.startTime} - {breakRow.endTime}</div>
                       </div>
                     ))}
                   </div>
