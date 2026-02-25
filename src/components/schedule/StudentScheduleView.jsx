@@ -276,24 +276,29 @@ export default function StudentScheduleView({ students, slots, groups, subjects,
   const studentSlots = useServerSlots && serverSlots ? serverSlots : 
                        selectedStudent ? getStudentSlots(selectedStudent.id) : [];
 
-  // NORMALIZE EVENTS: Group by timeslot_id, create conflict-groups for overlaps
+  // NORMALIZE EVENTS: Group by day and uiRow, create conflict-groups for overlaps
   const { normalizedEvents, overlaps } = React.useMemo(() => {
-    // Group by timeslot_id (or day+period fallback)
-    const byTimeslot = new Map();
+    // Group by day and uiRow directly
+    const byCell = new Map(); // key: "day_period"
+    
     studentSlots.forEach(slot => {
-      const slotUiRow = slot.timeslot_id ? timeslotToPosition[Number(slot.timeslot_id)]?.uiRow : slot.period;
-      const key = String(slot.timeslot_id || `${slot.day}|${slotUiRow}`);
-      if (!byTimeslot.has(key)) byTimeslot.set(key, []);
-      byTimeslot.get(key).push({ ...slot, uiRow: slotUiRow });
+      // Robustly resolve uiRow (timeslot fallback)
+      const tsId = slot.timeslot_id;
+      const mappedTimeslot = tsId ? (timeslotToPosition[String(tsId)] || timeslotToPosition[Number(tsId)]) : null;
+      const slotUiRow = mappedTimeslot?.uiRow || slot.period;
+      
+      if (!slotUiRow || !slot.day) return; // Skip invalid slots
+      
+      const cellKey = `${slot.day}_${slotUiRow}`;
+      if (!byCell.has(cellKey)) byCell.set(cellKey, []);
+      byCell.get(cellKey).push({ ...slot, uiRow: slotUiRow });
     });
     
-    // Create normalized events: single slots OR conflict-groups
-    const events = new Map(); // key: "day_period"
+    const events = new Map();
     const conflicts = [];
     
-    byTimeslot.forEach((slots, timeslotKey) => {
+    byCell.forEach((slots, cellKey) => {
       const firstSlot = slots[0];
-      const cellKey = `${firstSlot.day}_${firstSlot.uiRow}`;
       
       if (slots.length === 1) {
         // Single slot: normal event
@@ -309,7 +314,7 @@ export default function StudentScheduleView({ students, slots, groups, subjects,
             subj = subjects.find(sub => sub.id === s.subject_id);
             teacher = teachers.find(t => t.id === s.teacher_id);
             level = selectedStudent?.ib_programme || '';
-          } else {
+          } else if (s.teaching_group_id) {
             const group = groups.find(g => g.id === s.teaching_group_id);
             if (group) {
               subj = subjects.find(sub => sub.id === group.subject_id);
@@ -322,7 +327,7 @@ export default function StudentScheduleView({ students, slots, groups, subjects,
           
           return {
             id: s.id,
-            subject: subj?.name || 'Unknown',
+            subject: subj?.name || s.notes || 'Unknown',
             subjectCode: subj?.code || null,
             teacher: teacher?.full_name || 'Unassigned',
             room: room?.name || 'TBD',
