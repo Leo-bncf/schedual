@@ -142,8 +142,22 @@ export default function TimetableGrid({
         : (() => {
             const [startHour, startMin] = (dayStartTime || '08:00').split(':').map(Number);
             const [breakStartHour, breakStartMin] = br.start.split(':').map(Number);
-            const elapsedMins = (breakStartHour * 60 + breakStartMin) - (startHour * 60 + startMin);
-            return Math.round(elapsedMins / (periodDurationMinutes || 60));
+            let elapsedMins = (breakStartHour * 60 + breakStartMin) - (startHour * 60 + startMin);
+            
+            // Subtract duration of earlier breaks
+            const earlierBreaks = breaks.filter(otherBr => {
+              const [oH, oM] = otherBr.start.split(':').map(Number);
+              return (oH * 60 + oM) < (breakStartHour * 60 + breakStartMin);
+            });
+            
+            let previousBreaksDuration = 0;
+            earlierBreaks.forEach(otherBr => {
+              const [sH, sM] = otherBr.start.split(':').map(Number);
+              const [eH, eM] = otherBr.end.split(':').map(Number);
+              previousBreaksDuration += (eH * 60 + eM) - (sH * 60 + sM);
+            });
+            
+            return Math.round((elapsedMins - previousBreaksDuration) / (periodDurationMinutes || 60));
           })()
     }));
   }, [scheduleSettings, timeslots, dayStartTime, periodDurationMinutes]);
