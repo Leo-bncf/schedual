@@ -4,20 +4,42 @@ import { Badge } from "@/components/ui/badge";
 
 const DAYS = ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday'];
 
-// Calculate period times dynamically from dayStartTime + periodDurationMinutes
-const calculatePeriodTimes = (dayStartTime = '08:00', periodDurationMinutes = 60, periodsPerDay = 8) => {
+// Calculate period times dynamically from dayStartTime + periodDurationMinutes, accounting for breaks
+const calculatePeriodTimes = (dayStartTime = '08:00', periodDurationMinutes = 60, periodsPerDay = 8, breaks = []) => {
   const times = {};
   const [startHour, startMin] = (dayStartTime || '08:00').split(':').map(Number);
-  let totalMinutes = startHour * 60 + startMin;
+  let currentMinutes = startHour * 60 + startMin;
   
+  // Sort breaks by start time
+  const sortedBreaks = [...breaks].sort((a, b) => {
+    const [aH, aM] = a.start.split(':').map(Number);
+    const [bH, bM] = b.start.split(':').map(Number);
+    return (aH * 60 + aM) - (bH * 60 + bM);
+  });
+
   for (let i = 1; i <= periodsPerDay; i++) {
-    const h = Math.floor(totalMinutes / 60);
-    const m = totalMinutes % 60;
+    // Check if current time falls exactly on a break start time
+    const currentH = Math.floor(currentMinutes / 60);
+    const currentM = currentMinutes % 60;
+    const currentStr = `${String(currentH).padStart(2, '0')}:${String(currentM).padStart(2, '0')}`;
+    
+    // Find if there's a break starting now
+    const activeBreak = sortedBreaks.find(br => br.start === currentStr);
+    if (activeBreak) {
+      const [endH, endM] = activeBreak.end.split(':').map(Number);
+      currentMinutes = endH * 60 + endM; // Skip to end of break
+    }
+
+    const h = Math.floor(currentMinutes / 60);
+    const m = currentMinutes % 60;
     const startTimeStr = `${String(h).padStart(2, '0')}:${String(m).padStart(2, '0')}`;
-    totalMinutes += (periodDurationMinutes || 60);
-    const endH = Math.floor(totalMinutes / 60);
-    const endM = totalMinutes % 60;
+    
+    currentMinutes += (periodDurationMinutes || 60);
+    
+    const endH = Math.floor(currentMinutes / 60);
+    const endM = currentMinutes % 60;
     const endTimeStr = `${String(endH).padStart(2, '0')}:${String(endM).padStart(2, '0')}`;
+    
     times[i] = `${startTimeStr} - ${endTimeStr}`;
   }
   
