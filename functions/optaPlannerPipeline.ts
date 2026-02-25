@@ -607,7 +607,11 @@ Deno.serve(async (req) => {
         maxSameSubjectPerDayLimit: constraints?.maxSameSubjectPerDayLimit ?? 4,
         exactWeeklyCountEnabled: constraints?.exactWeeklyCountEnabled ?? false,
         allowFlexibleWeeklyCounts: constraints?.allowFlexibleWeeklyCounts ?? true,
-        relaxStudentGroupConflicts: constraints?.relaxStudentGroupConflicts ?? true
+        relaxStudentGroupConflicts: constraints?.relaxStudentGroupConflicts ?? true,
+        lunchBreakEnabled: constraints?.lunchBreakEnabled ?? false,
+        lunchBreakDurationMinutes: constraints?.lunchBreakDurationMinutes ?? 60,
+        lunchBreakMinPeriod: constraints?.lunchBreakMinPeriod ?? 4,
+        lunchBreakMaxPeriod: constraints?.lunchBreakMaxPeriod ?? 6
       },
 
       randomSeed: 42,
