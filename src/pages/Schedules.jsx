@@ -350,41 +350,10 @@ export default function Schedules() {
   };
 
   const getStudentSchedule = (studentId) => {
-    const studentSlots = scheduleSlots.filter(slot => {
+    return scheduleSlots.filter(slot => {
       const tg = teachingGroups.find(g => g.id === slot.teaching_group_id);
       return tg?.student_ids?.includes(studentId);
     });
-
-    const days = school?.days_of_week || ['MONDAY', 'TUESDAY', 'WEDNESDAY', 'THURSDAY', 'FRIDAY'];
-    const periodsPerDay = 10; // Default
-
-    const schedule = {};
-    days.forEach(day => {
-      schedule[day] = Array(periodsPerDay).fill(null);
-    });
-
-    studentSlots.forEach(slot => {
-      const dayKey = slot.day.toUpperCase();
-      if (schedule[dayKey] && slot.period >= 1 && slot.period <= periodsPerDay) {
-        const tg = teachingGroups.find(g => g.id === slot.teaching_group_id);
-        const subject = subjects.find(s => s.id === tg?.subject_id);
-        const teacher = teachers.find(t => t.id === slot.teacher_id);
-        const room = rooms.find(r => r.id === slot.room_id);
-
-        const subjectName = subject?.name || subject?.code || 'Unknown';
-        const colorData = getSubjectColor(subjectName);
-
-        schedule[dayKey][slot.period - 1] = {
-          subject: subjectName,
-          teacher: teacher?.full_name || 'TBD',
-          room: room?.name || 'TBD',
-          level: tg?.level || '',
-          colorData
-        };
-      }
-    });
-
-    return schedule;
   };
 
   const filteredStudents = students.filter(s => 
