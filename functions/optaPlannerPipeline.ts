@@ -770,9 +770,15 @@ Deno.serve(async (req) => {
        else scoreToSave = 0;
     }
 
+    const generationParams = {
+      ...constraints,
+      lunchBreaks: result.meta?.lunchBreaks || result.scheduleSettingsUsed?.breaks || null
+    };
+
     await base44.entities.ScheduleVersion.update(schedule_version_id, {
       score: scoreToSave,
-      generated_at: new Date().toISOString()
+      generated_at: new Date().toISOString(),
+      generation_params: generationParams
     });
 
     return Response.json({
