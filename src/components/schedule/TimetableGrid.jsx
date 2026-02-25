@@ -306,9 +306,13 @@ export default function TimetableGrid({
       // Stop spanning if the next slot is a break or different teaching group
       const matchingNextSlot = nextSlots.find(s => s.teaching_group_id === currentSlot.teaching_group_id);
       
-      if (matchingNextSlot && !matchingNextSlot.is_break && !currentSlot.is_break) {
-        span++;
-        checkPeriod++;
+      if (matchingNextSlot) {
+        if (currentSlot.is_break === matchingNextSlot.is_break) {
+            span++;
+            checkPeriod++;
+        } else {
+            break;
+        }
       } else {
         break;
       }
