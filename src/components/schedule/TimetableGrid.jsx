@@ -418,8 +418,9 @@ export default function TimetableGrid({
             {activePeriods.map(uiRow => (
               <React.Fragment key={uiRow}>
                 <div className="grid grid-cols-[100px_repeat(5,1fr)] border-b border-slate-300">
-                  <div className="p-4 bg-slate-50 border-r border-slate-300 flex flex-col justify-center min-h-[120px]">
-                    <div className="text-sm font-bold text-slate-800">{periodTimes[uiRow] || `Period ${uiRow}`}</div>
+                  <div className="p-4 bg-slate-50 border-r border-slate-300 flex flex-col justify-center items-center text-center min-h-[120px]">
+                    <div className="text-sm font-bold text-slate-800">{uiRow}</div>
+                    <div className="text-[10px] text-slate-500 mt-1 whitespace-nowrap">{periodTimes[uiRow] || `Period ${uiRow}`}</div>
                   </div>
                 {DAYS.map(day => {
                   const slotsInCell = getSlotData(day, uiRow);
