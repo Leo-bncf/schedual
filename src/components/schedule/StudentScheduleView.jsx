@@ -75,6 +75,14 @@ export default function StudentScheduleView({ students, slots, groups, subjects,
       emoji: idx === 0 ? '☕' : '🍽️',
       startTime: br.start,
       endTime: br.end,
+      afterPeriod: timeslots && timeslots.length > 0 
+        ? Math.round(timeslots.filter(t => String(t.endTime).localeCompare(br.start) <= 0).length / DAYS.length) 
+        : (() => {
+            const [startHour, startMin] = (scheduleSettings?.day_start_time || '08:00').split(':').map(Number);
+            const [breakStartHour, breakStartMin] = br.start.split(':').map(Number);
+            const elapsedMins = (breakStartHour * 60 + breakStartMin) - (startHour * 60 + startMin);
+            return Math.max(1, Math.round(elapsedMins / (scheduleSettings?.period_duration_minutes || 60)));
+          })(),
       colorFrom: idx === 0 ? 'from-sky-100' : 'from-amber-100',
       colorTo: idx === 0 ? 'to-blue-100' : 'to-orange-100',
       borderColor: idx === 0 ? 'border-sky-300' : 'border-amber-300',
@@ -850,9 +858,11 @@ export default function StudentScheduleView({ students, slots, groups, subjects,
 
               {/* Dynamic periods based on actual timeslots */}
               {Array.from({ length: maxPeriodsPerDay }, (_, idx) => idx + 1).map(period => (
-                <div key={period} className="grid grid-cols-[80px_repeat(5,1fr)] border-b border-slate-200" style={{ minHeight: '60px' }}>
-                  <div className="p-2 bg-slate-50 border-r border-slate-200 flex flex-col justify-center">
-                    <div className="text-sm font-bold text-slate-800">{periodTimes[period]}</div>
+                <React.Fragment key={period}>
+                <div className="grid grid-cols-[80px_repeat(5,1fr)] border-b border-slate-200" style={{ minHeight: '60px' }}>
+                  <div className="p-2 bg-slate-50 border-r border-slate-200 flex flex-col justify-center items-center text-center">
+                    <div className="text-sm font-bold text-slate-800">{period}</div>
+                    <div className="text-[10px] text-slate-500 mt-1 whitespace-nowrap">{periodTimes[period]}</div>
                   </div>
                   {DAYS.map(day => {
                     const event = getEventForPeriod(day, period);
@@ -954,23 +964,24 @@ export default function StudentScheduleView({ students, slots, groups, subjects,
                     );
                   })}
                 </div>
-              ))}
-              
-              {/* Break rows from scheduleSettings.breaks */}
-              {breakRows.map(breakRow => (
-                <div key={breakRow.id} className={`grid grid-cols-[80px_repeat(5,1fr)] border-b-2 ${breakRow.borderColor} bg-gradient-to-r ${breakRow.colorFrom} ${breakRow.colorTo}`} style={{ minHeight: '50px' }}>
-                  <div className={`p-3 ${breakRow.bgColor} border-r-2 ${breakRow.borderColor} flex items-center justify-center`}>
-                    <div className={`text-sm font-bold ${breakRow.textColor}`}>{breakRow.emoji} {breakRow.label}</div>
-                  </div>
-                  {DAYS.map(day => (
-                    <div key={`${day}-${breakRow.id}`} className={`border-r-2 ${breakRow.borderColor} last:border-r-0 flex items-center justify-center bg-opacity-50`}>
-                      <div className="text-center">
-                        <div className={`text-xs font-bold ${breakRow.textColor}`}>{breakRow.label.toUpperCase()}</div>
-                        <div className="text-[10px] text-slate-700 mt-0.5">{breakRow.startTime} - {breakRow.endTime}</div>
-                      </div>
+                {/* Break rows from scheduleSettings.breaks */}
+                {breakRows.filter(br => br.afterPeriod === period).map(breakRow => (
+                  <div key={breakRow.id} className={`grid grid-cols-[80px_repeat(5,1fr)] border-b-2 ${breakRow.borderColor} bg-gradient-to-r ${breakRow.colorFrom} ${breakRow.colorTo}`} style={{ minHeight: '50px' }}>
+                    <div className={`p-3 ${breakRow.bgColor} border-r-2 ${breakRow.borderColor} flex flex-col items-center justify-center text-center`}>
+                      <div className={`text-xs font-bold ${breakRow.textColor}`}>{breakRow.emoji}</div>
+                      <div className={`text-xs font-bold ${breakRow.textColor}`}>{breakRow.label}</div>
                     </div>
-                  ))}
-                </div>
+                    {DAYS.map(day => (
+                      <div key={`${day}-${breakRow.id}`} className={`border-r-2 ${breakRow.borderColor} last:border-r-0 flex items-center justify-center bg-opacity-50`}>
+                        <div className="text-center">
+                          <div className={`text-xs font-bold ${breakRow.textColor}`}>{breakRow.label.toUpperCase()}</div>
+                          <div className="text-[10px] text-slate-700 mt-0.5">{breakRow.startTime} - {breakRow.endTime}</div>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                ))}
+                </React.Fragment>
               ))}
             </div>
           </div>
