@@ -601,15 +601,28 @@ export default function TimetableGrid({
                             )}
                             {globalView ? (
                               <div 
-                                className={`p-1 border border-slate-200 rounded ${subject ? colorScheme.bg : 'bg-slate-50'} text-[10px] w-full flex flex-col justify-center items-center`}
-                                title={`${subject?.name || slot.notes || 'Unassigned'} | ${teacher?.full_name || 'No teacher'} | ${room?.name || 'TBD'}`}
+                                className={`p-1 border border-slate-200 rounded ${slot.is_break ? 'bg-amber-100 border-amber-300 text-amber-900' : (subject ? colorScheme.bg : 'bg-slate-50')} text-[10px] w-full flex flex-col justify-center items-center`}
+                                title={slot.is_break ? (slot.notes || 'Lunch Break') : (`${subject?.name || slot.notes || 'Unassigned'} | ${teacher?.full_name || 'No teacher'} | ${room?.name || 'TBD'}`)}
                               >
-                                <span className="font-bold text-center truncate w-full block">{subject?.code || subject?.name || '---'}</span>
-                                <span className="text-slate-600 opacity-80 text-center truncate w-full block text-[9px]">{room?.name || 'TBD'}</span>
+                                <span className="font-bold text-center truncate w-full block">
+                                  {slot.is_break ? '🍽️ LUNCH' : (subject?.code || subject?.name || '---')}
+                                </span>
+                                {!slot.is_break && (
+                                  <span className="text-slate-600 opacity-80 text-center truncate w-full block text-[9px]">{room?.name || 'TBD'}</span>
+                                )}
                               </div>
                             ) : (
                               <>
-                                {subject && (
+                                {slot.is_break && (
+                                  <div className="p-3 border-l-4 border-amber-400 bg-amber-50 border border-amber-200 h-full min-h-[80px] flex flex-col justify-center items-center text-center">
+                                    <div className="font-bold text-lg text-amber-900 leading-tight mb-1">
+                                      🍽️ {slot.notes || 'Lunch Break'}
+                                    </div>
+                                    <div className="text-xs font-bold text-amber-700 uppercase tracking-wider">Break</div>
+                                  </div>
+                                )}
+
+                                {subject && !slot.is_break && (
                                   <div className={`p-3 border-l-4 ${colorScheme.bg} ${colorScheme.border} border border-slate-200 relative`}>
                                     <div className="font-bold text-sm text-slate-900 leading-tight mb-1.5">
                                       {subject.name}
@@ -633,7 +646,7 @@ export default function TimetableGrid({
                                   </div>
                                 )}
 
-                                {!subject && slot.notes?.includes('Study') && (
+                                {!subject && !slot.is_break && slot.notes?.includes('Study') && (
                                   <div className="p-3 border-l-4 border-slate-400 bg-slate-50 border border-slate-200">
                                     <div className="font-bold text-sm text-slate-700 leading-tight mb-1.5">
                                       Study / Free Period
@@ -642,7 +655,7 @@ export default function TimetableGrid({
                                   </div>
                                 )}
 
-                                {!subject && !slot.notes?.includes('Study') && (slot.notes?.includes('Test') || slot.notes?.includes('Assessment')) && (
+                                {!subject && !slot.is_break && !slot.notes?.includes('Study') && (slot.notes?.includes('Test') || slot.notes?.includes('Assessment')) && (
                                   <div className="p-3 border-l-4 border-red-400 bg-red-50 border border-red-200">
                                     <div className="font-bold text-sm text-red-900 leading-tight mb-1.5">
                                       📝 {slot.notes}
@@ -653,7 +666,7 @@ export default function TimetableGrid({
                                   </div>
                                 )}
 
-                                {!subject && !slot.notes?.includes('Study') && !(slot.notes?.includes('Test') || slot.notes?.includes('Assessment')) && (
+                                {!subject && !slot.is_break && !slot.notes?.includes('Study') && !(slot.notes?.includes('Test') || slot.notes?.includes('Assessment')) && (
                                   <div className="p-3 border-l-4 border-slate-300 bg-slate-50 border border-slate-200">
                                     <div className="font-bold text-sm text-slate-600 leading-tight mb-1.5">
                                       Unassigned Class
