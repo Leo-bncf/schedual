@@ -6,6 +6,7 @@ import { Badge } from "@/components/ui/badge";
 import { BookOpen, Mail, Clock, Calendar, ArrowLeft, Users, Building2, Briefcase } from 'lucide-react';
 import { Link } from 'react-router-dom';
 import { createPageUrl } from '@/utils';
+import TimetableGrid from '@/components/schedule/TimetableGrid';
 
 export default function TeacherProfile() {
   const urlParams = new URLSearchParams(window.location.search);
@@ -87,44 +88,10 @@ export default function TeacherProfile() {
     return colors[Math.abs(hash) % colors.length];
   };
 
-  const getTeacherSchedule = () => {
-    const teacherSlots = scheduleSlots.filter(slot => slot.teacher_id === teacherId);
-
-    const days = school?.days_of_week || ['MONDAY', 'TUESDAY', 'WEDNESDAY', 'THURSDAY', 'FRIDAY'];
-    const periodsPerDay = school?.periods_per_day || 10;
-
-    const schedule = {};
-    days.forEach(day => {
-      schedule[day] = Array(periodsPerDay).fill(null);
-    });
-
-    teacherSlots.forEach(slot => {
-      const dayKey = slot.day.toUpperCase();
-      if (schedule[dayKey] && slot.period >= 1 && slot.period <= periodsPerDay) {
-        const tg = teachingGroups.find(g => g.id === slot.teaching_group_id);
-        const subject = subjects.find(s => s.id === tg?.subject_id);
-        const room = rooms.find(r => r.id === slot.room_id);
-
-        const subjectName = subject?.name || subject?.code || 'Unknown';
-        const colorData = getSubjectColor(subjectName);
-
-        schedule[dayKey][slot.period - 1] = {
-          subject: subjectName,
-          group: tg?.name || 'TBD',
-          room: room?.name || 'TBD',
-          level: tg?.level || '',
-          colorData
-        };
-      }
-    });
-
-    return { schedule, days, periodsPerDay };
-  };
+  const teacherSlots = scheduleSlots.filter(slot => slot.teacher_id === teacherId);
 
   if (isLoading) return <div className="p-8">Loading...</div>;
   if (!teacher) return <div className="p-8">Teacher not found.</div>;
-
-  const { schedule, days, periodsPerDay } = getTeacherSchedule();
 
   return (
     <div className="space-y-6 max-w-6xl mx-auto">
@@ -220,60 +187,20 @@ export default function TeacherProfile() {
         </CardHeader>
         <CardContent className="p-0 overflow-x-auto">
           {scheduleSlots.length > 0 ? (
-            <table className="w-full border-collapse text-sm min-w-[800px]">
-              <thead>
-                <tr className="bg-slate-50">
-                  <th className="sticky left-0 z-10 p-3 text-left text-xs font-semibold text-slate-700 bg-slate-50 border-b border-slate-200 w-16">
-                    Period
-                  </th>
-                  {days.map(day => (
-                    <th key={day} className="p-3 text-center text-xs font-semibold text-slate-700 border-b border-slate-200 min-w-[140px]">
-                      {day.charAt(0) + day.slice(1).toLowerCase()}
-                    </th>
-                  ))}
-                </tr>
-              </thead>
-              <tbody>
-                {Array.from({ length: periodsPerDay }, (_, i) => i + 1).map(period => (
-                  <tr key={period} className="hover:bg-slate-50/50 transition-colors">
-                    <td className="sticky left-0 z-10 p-3 text-xs font-semibold text-slate-600 bg-white border-b border-slate-100">
-                      {period}
-                    </td>
-                    {days.map(day => {
-                      const slot = schedule[day.toUpperCase()][period - 1];
-                      return (
-                        <td key={day} className="p-2 border-b border-slate-100">
-                          {slot ? (
-                            <div className={`p-2 rounded-lg border shadow-sm ${slot.colorData.bg} ${slot.colorData.border}`}>
-                              <div className={`font-semibold text-xs mb-1 line-clamp-2 ${slot.colorData.text}`}>{slot.subject}</div>
-                              <div className={`space-y-0.5 text-[10px] opacity-90 ${slot.colorData.text}`}>
-                                <div className="flex items-center gap-1 truncate">
-                                  <Users className="w-3 h-3 shrink-0 opacity-70" />
-                                  <span>{slot.group}</span>
-                                </div>
-                                <div className="flex items-center gap-1 truncate">
-                                  <Building2 className="w-3 h-3 shrink-0 opacity-70" />
-                                  <span>{slot.room}</span>
-                                </div>
-                              </div>
-                              {slot.level && (
-                                <Badge className={`mt-1.5 text-[9px] px-1.5 py-0 font-medium ${slot.colorData.badge} border-transparent`}>
-                                  {slot.level}
-                                </Badge>
-                              )}
-                            </div>
-                          ) : (
-                            <div className="h-16 flex items-center justify-center">
-                              <span className="text-slate-200">—</span>
-                            </div>
-                          )}
-                        </td>
-                      );
-                    })}
-                  </tr>
-                ))}
-              </tbody>
-            </table>
+            <TimetableGrid 
+              slots={teacherSlots}
+              groups={teachingGroups}
+              rooms={rooms}
+              subjects={subjects}
+              teachers={teachers}
+              periodsPerDay={school?.periods_per_day || 10}
+              dayStartTime={school?.day_start_time || '08:00'}
+              dayEndTime={school?.day_end_time || '18:00'}
+              periodDurationMinutes={school?.period_duration_minutes || 60}
+              scheduleSettings={school}
+              globalView={false}
+              exportId="teacher-profile-timetable"
+            />
           ) : (
             <div className="text-center py-12">
               <Calendar className="w-12 h-12 text-slate-300 mx-auto mb-3" />
