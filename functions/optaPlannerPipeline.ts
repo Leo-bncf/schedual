@@ -505,13 +505,81 @@ Deno.serve(async (req) => {
         externalId: r.id
       })),
 
-      teachers: teachers.map((t, idx) => ({
-        id: idx + 1,
-        name: t.full_name,
-        maxPeriodsPerWeek: Math.min(t.max_hours_per_week || 25, 50),
-        unavailableSlotIds: [],
-        externalId: t.id
-      })),
+      teachers: teachers.map((t, idx) => {
+        // Calculate unavailable slot IDs based on time ranges
+        const unavailableSlotIds = [];
+        if (t.unavailable_slots && t.unavailable_slots.length > 0) {
+          const dayNames = ['MONDAY', 'TUESDAY', 'WEDNESDAY', 'THURSDAY', 'FRIDAY'];
+          const timeToMins = (timeStr) => {
+            if (!timeStr) return 0;
+            const [h, m] = timeStr.split(':').map(Number);
+            return (h * 60) + (m || 0);
+          };
+
+          const periodDuration = schoolData.period_duration_minutes || 60;
+          const periodsPerDay = schoolData.periods_per_day || 10;
+          const breaks = schoolData.breaks || [];
+          
+          const dayStartMins = timeToMins(schoolData.day_start_time || "08:00");
+          const dayEndMins = timeToMins(schoolData.day_end_time || "18:00");
+
+          const periods = [];
+          let currentMins = dayStartMins;
+          let pCount = 1;
+          
+          while (currentMins < dayEndMins && pCount <= periodsPerDay) {
+            let inBreak = false;
+            for (const b of breaks) {
+              const bStart = timeToMins(b.start);
+              const bEnd = timeToMins(b.end);
+              if (currentMins >= bStart && currentMins < bEnd) {
+                currentMins = bEnd;
+                inBreak = true;
+                break;
+              }
+            }
+            if (inBreak) continue;
+            
+            const periodEnd = currentMins + periodDuration;
+            periods.push({
+              index: pCount,
+              startMins: currentMins,
+              endMins: periodEnd
+            });
+            
+            currentMins = periodEnd;
+            pCount++;
+          }
+
+          t.unavailable_slots.forEach(us => {
+            if (!us.day) return;
+            const dayIdx = dayNames.indexOf(us.day.toUpperCase());
+            if (dayIdx === -1) return;
+
+            if (us.type === 'time_range' && us.start_time && us.end_time) {
+              const startMins = timeToMins(us.start_time);
+              const endMins = timeToMins(us.end_time);
+              
+              periods.forEach(p => {
+                // If any part of the period overlaps with the unavailability range
+                if (Math.max(p.startMins, startMins) < Math.min(p.endMins, endMins)) {
+                  unavailableSlotIds.push((dayIdx * periodsPerDay) + p.index);
+                }
+              });
+            } else if ((us.type === 'period' || !us.type) && us.period) {
+              unavailableSlotIds.push((dayIdx * periodsPerDay) + us.period);
+            }
+          });
+        }
+
+        return {
+          id: idx + 1,
+          name: t.full_name,
+          maxPeriodsPerWeek: Math.min(t.max_hours_per_week || 25, 50),
+          unavailableSlotIds: [...new Set(unavailableSlotIds)],
+          externalId: t.id
+        };
+      }),
 
       subjects: subjects.filter(s => {
         if (!s.is_active) return false;
