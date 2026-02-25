@@ -1,9 +1,14 @@
 import React from 'react';
-import { useQuery } from '@tanstack/react-query';
+import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { base44 } from '@/api/base44Client';
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
-import { BookOpen, Mail, Clock, Calendar, ArrowLeft, Users, Building2, Briefcase } from 'lucide-react';
+import { Button } from "@/components/ui/button";
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import { BookOpen, Mail, Clock, Calendar, ArrowLeft, Users, Building2, Briefcase, Plus, Trash2 } from 'lucide-react';
 import { Link } from 'react-router-dom';
 import { createPageUrl } from '@/utils';
 import TimetableGrid from '@/components/schedule/TimetableGrid';
@@ -64,6 +69,42 @@ export default function TeacherProfile() {
     enabled: !!activeVersion,
   });
 
+  const queryClient = useQueryClient();
+
+  const updateTeacherMutation = useMutation({
+    mutationFn: async (data) => {
+      await base44.entities.Teacher.update(teacherId, data);
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries(['teacher', teacherId]);
+    }
+  });
+
+  const handleAddUnavailableSlot = (e) => {
+    e.preventDefault();
+    const formData = new FormData(e.target);
+    const day = formData.get('day');
+    const startTime = formData.get('start_time');
+    const endTime = formData.get('end_time');
+
+    const newSlot = {
+      day,
+      type: 'time_range',
+      start_time: startTime,
+      end_time: endTime
+    };
+
+    const updatedSlots = [...(teacher.unavailable_slots || []), newSlot];
+    updateTeacherMutation.mutate({ unavailable_slots: updatedSlots });
+    e.target.reset();
+  };
+
+  const handleRemoveUnavailableSlot = (index) => {
+    const updatedSlots = [...(teacher.unavailable_slots || [])];
+    updatedSlots.splice(index, 1);
+    updateTeacherMutation.mutate({ unavailable_slots: updatedSlots });
+  };
+
   const getSubjectColor = (subjectName) => {
     if (!subjectName) return { bg: 'bg-slate-50', border: 'border-slate-200', text: 'text-slate-900', badge: 'bg-slate-100 text-slate-700' };
     const colors = [
@@ -114,37 +155,114 @@ export default function TeacherProfile() {
       </div>
 
       <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-        <Card className="shadow-sm">
-          <CardHeader className="bg-slate-50/50 border-b border-slate-100">
-            <CardTitle className="text-lg flex items-center gap-2">
-              <Briefcase className="w-5 h-5 text-slate-500" />
-              Employment Info
-            </CardTitle>
-          </CardHeader>
-          <CardContent className="p-5 space-y-4">
-            <div>
-              <p className="text-sm font-medium text-slate-500">Max Hours / Week</p>
-              <div className="flex items-center gap-2 mt-1">
-                <Clock className="w-4 h-4 text-slate-400" />
-                <span className="font-medium">{teacher.max_hours_per_week || 25}h</span>
-              </div>
-            </div>
-            {teacher.preferred_free_day && (
+        <div className="space-y-6">
+          <Card className="shadow-sm">
+            <CardHeader className="bg-slate-50/50 border-b border-slate-100">
+              <CardTitle className="text-lg flex items-center gap-2">
+                <Briefcase className="w-5 h-5 text-slate-500" />
+                Employment Info
+              </CardTitle>
+            </CardHeader>
+            <CardContent className="p-5 space-y-4">
               <div>
-                <p className="text-sm font-medium text-slate-500">Preferred Free Day</p>
-                <Badge variant="outline" className="mt-1">{teacher.preferred_free_day}</Badge>
+                <p className="text-sm font-medium text-slate-500">Max Hours / Week</p>
+                <div className="flex items-center gap-2 mt-1">
+                  <Clock className="w-4 h-4 text-slate-400" />
+                  <span className="font-medium">{teacher.max_hours_per_week || 25}h</span>
+                </div>
               </div>
-            )}
-            <div>
-              <p className="text-sm font-medium text-slate-500">Status</p>
-              <Badge className={teacher.is_active !== false ? 'mt-1 bg-emerald-100 text-emerald-700 border-0' : 'mt-1 bg-slate-100 text-slate-600 border-0'}>
-                {teacher.is_active !== false ? 'Active' : 'Inactive'}
-              </Badge>
-            </div>
-          </CardContent>
-        </Card>
+              {teacher.preferred_free_day && (
+                <div>
+                  <p className="text-sm font-medium text-slate-500">Preferred Free Day</p>
+                  <Badge variant="outline" className="mt-1">{teacher.preferred_free_day}</Badge>
+                </div>
+              )}
+              <div>
+                <p className="text-sm font-medium text-slate-500">Status</p>
+                <Badge className={teacher.is_active !== false ? 'mt-1 bg-emerald-100 text-emerald-700 border-0' : 'mt-1 bg-slate-100 text-slate-600 border-0'}>
+                  {teacher.is_active !== false ? 'Active' : 'Inactive'}
+                </Badge>
+              </div>
+            </CardContent>
+          </Card>
 
-        <Card className="md:col-span-2 shadow-sm">
+          <Card className="shadow-sm">
+            <CardHeader className="bg-slate-50/50 border-b border-slate-100 flex flex-row items-center justify-between">
+              <CardTitle className="text-lg flex items-center gap-2">
+                <Clock className="w-5 h-5 text-slate-500" />
+                Unavailability
+              </CardTitle>
+              <Dialog>
+                <DialogTrigger asChild>
+                  <Button variant="outline" size="sm" className="h-8 gap-1">
+                    <Plus className="w-3.5 h-3.5" /> Add
+                  </Button>
+                </DialogTrigger>
+                <DialogContent>
+                  <DialogHeader>
+                    <DialogTitle>Add Unavailable Time</DialogTitle>
+                  </DialogHeader>
+                  <form onSubmit={handleAddUnavailableSlot} className="space-y-4 pt-4">
+                    <div className="space-y-2">
+                      <Label>Day of Week</Label>
+                      <Select name="day" required>
+                        <SelectTrigger>
+                          <SelectValue placeholder="Select day" />
+                        </SelectTrigger>
+                        <SelectContent>
+                          {['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday'].map(d => (
+                            <SelectItem key={d} value={d}>{d}</SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
+                    </div>
+                    <div className="grid grid-cols-2 gap-4">
+                      <div className="space-y-2">
+                        <Label>Start Time</Label>
+                        <Input type="time" name="start_time" required />
+                      </div>
+                      <div className="space-y-2">
+                        <Label>End Time</Label>
+                        <Input type="time" name="end_time" required />
+                      </div>
+                    </div>
+                    <Button type="submit" className="w-full">Add Restriction</Button>
+                  </form>
+                </DialogContent>
+              </Dialog>
+            </CardHeader>
+            <CardContent className="p-5">
+              {teacher.unavailable_slots && teacher.unavailable_slots.length > 0 ? (
+                <div className="space-y-2">
+                  {teacher.unavailable_slots.map((slot, idx) => (
+                    <div key={idx} className="flex items-center justify-between p-2 bg-slate-50 rounded-lg border border-slate-100 text-sm">
+                      <div className="flex items-center gap-2">
+                        <Badge variant="secondary" className="font-normal">{slot.day}</Badge>
+                        <span className="text-slate-600">
+                          {slot.type === 'time_range' ? (
+                            <>{slot.start_time} - {slot.end_time}</>
+                          ) : (
+                            <>Period {slot.period}</>
+                          )}
+                        </span>
+                      </div>
+                      <button 
+                        onClick={() => handleRemoveUnavailableSlot(idx)}
+                        className="text-slate-400 hover:text-red-500 transition-colors"
+                      >
+                        <Trash2 className="w-4 h-4" />
+                      </button>
+                    </div>
+                  ))}
+                </div>
+              ) : (
+                <p className="text-sm text-slate-500 text-center py-4">No unavailable times set.</p>
+              )}
+            </CardContent>
+          </Card>
+        </div>
+
+        <Card className="md:col-span-2 shadow-sm h-fit">
           <CardHeader className="bg-slate-50/50 border-b border-slate-100">
             <CardTitle className="text-lg flex items-center gap-2">
               <BookOpen className="w-5 h-5 text-slate-500" />
