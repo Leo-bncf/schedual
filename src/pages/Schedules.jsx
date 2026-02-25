@@ -376,31 +376,6 @@ export default function Schedules() {
   const publishedVersion = scheduleVersions.find(v => v.status === 'published');
   const draftVersions = scheduleVersions.filter(v => v.status === 'draft');
 
-  const getProcessedSettings = React.useMemo(() => {
-    if (!school) return null;
-    let breaks = school.breaks || [];
-    
-    // Override with optaplanner decided breaks if available
-    const lunchBreaks = selectedVersion?.generation_params?.lunchBreaks;
-    if (lunchBreaks && Array.isArray(lunchBreaks)) {
-      const uniqueBreaks = [];
-      const seen = new Set();
-      lunchBreaks.forEach(b => {
-        if (!b.startTime || !b.endTime) return;
-        const key = `${b.startTime}-${b.endTime}`;
-        if (!seen.has(key)) {
-          seen.add(key);
-          uniqueBreaks.push({ start: b.startTime, end: b.endTime });
-        }
-      });
-      if (uniqueBreaks.length > 0) {
-        breaks = uniqueBreaks;
-      }
-    }
-    
-    return { ...school, breaks };
-  }, [school, selectedVersion]);
-
   return (
     <div className="min-h-screen bg-slate-50">
       <div className="max-w-[1400px] mx-auto space-y-6">
@@ -708,7 +683,7 @@ export default function Schedules() {
                     dayStartTime={school?.day_start_time || '08:00'}
                     dayEndTime={school?.day_end_time || '18:00'}
                     periodDurationMinutes={school?.period_duration_minutes || 60}
-                    scheduleSettings={getProcessedSettings}
+                    scheduleSettings={school}
                     globalView={overviewFilterType === 'all'}
                     onSlotClick={(day, uiRow, actionData) => {
                       if (actionData.action === 'move') {
@@ -810,7 +785,7 @@ export default function Schedules() {
                           dayStartTime={school?.day_start_time || '08:00'}
                           dayEndTime={school?.day_end_time || '18:00'}
                           periodDurationMinutes={school?.period_duration_minutes || 60}
-                          scheduleSettings={getProcessedSettings}
+                          scheduleSettings={school}
                           globalView={false}
                           exportId="student-viewer-timetable"
                         />

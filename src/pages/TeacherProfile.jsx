@@ -55,28 +55,6 @@ export default function TeacherProfile() {
 
   const activeVersion = scheduleVersions.find(v => v.status === 'published') || scheduleVersions[0];
 
-  const getProcessedSettings = React.useMemo(() => {
-    if (!school) return null;
-    let breaks = school.breaks || [];
-    const lunchBreaks = activeVersion?.generation_params?.lunchBreaks;
-    if (lunchBreaks && Array.isArray(lunchBreaks)) {
-      const uniqueBreaks = [];
-      const seen = new Set();
-      lunchBreaks.forEach(b => {
-        if (!b.startTime || !b.endTime) return;
-        const key = `${b.startTime}-${b.endTime}`;
-        if (!seen.has(key)) {
-          seen.add(key);
-          uniqueBreaks.push({ start: b.startTime, end: b.endTime });
-        }
-      });
-      if (uniqueBreaks.length > 0) {
-        breaks = uniqueBreaks;
-      }
-    }
-    return { ...school, breaks };
-  }, [school, activeVersion]);
-
   const { data: scheduleSlots = [] } = useQuery({
     queryKey: ['scheduleSlots', activeVersion?.id],
     queryFn: async () => {
@@ -219,7 +197,7 @@ export default function TeacherProfile() {
               dayStartTime={school?.day_start_time || '08:00'}
               dayEndTime={school?.day_end_time || '18:00'}
               periodDurationMinutes={school?.period_duration_minutes || 60}
-              scheduleSettings={getProcessedSettings}
+              scheduleSettings={school}
               globalView={false}
               exportId="teacher-profile-timetable"
             />

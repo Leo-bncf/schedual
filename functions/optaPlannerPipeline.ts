@@ -485,50 +485,15 @@ Deno.serve(async (req) => {
       }
     });
 
-    const periodDuration = schoolData.period_duration_minutes || 60;
-    const targetPeriods = Math.max(10, schoolData.target_periods_per_day || schoolData.periods_per_day || 10);
-    
-    let startMins = 8 * 60;
-    if (schoolData.day_start_time) {
-      const [h, m] = schoolData.day_start_time.split(':').map(Number);
-      startMins = h * 60 + m;
-    }
-
-    let breakMins = 0;
-    if (schoolData.breaks) {
-      schoolData.breaks.forEach(b => {
-        if (b.start && b.end) {
-          const [sh, sm] = b.start.split(':').map(Number);
-          const [eh, em] = b.end.split(':').map(Number);
-          breakMins += Math.max(0, (eh * 60 + em) - (sh * 60 + sm));
-        }
-      });
-    }
-
-    const requiredTotalMins = targetPeriods * periodDuration + breakMins;
-    let endMins = startMins + requiredTotalMins;
-    
-    let configuredEndMins = 18 * 60;
-    if (schoolData.day_end_time) {
-      const [eh, em] = schoolData.day_end_time.split(':').map(Number);
-      configuredEndMins = eh * 60 + em;
-    }
-    
-    endMins = Math.max(endMins, configuredEndMins);
-    
-    const endH = Math.floor(endMins / 60).toString().padStart(2, '0');
-    const endM = (endMins % 60).toString().padStart(2, '0');
-    const calculatedEndTime = `${endH}:${endM}`;
-
     const payload = {
       schoolId: user.school_id,
       scheduleVersionId: schedule_version_id,
       scheduleVersion: `v${new Date().toISOString().split('T')[0]}`,
       
       scheduleSettings: {
-        periodDurationMinutes: periodDuration,
+        periodDurationMinutes: schoolData.period_duration_minutes || 60,
         dayStartTime: schoolData.day_start_time || "08:00",
-        dayEndTime: calculatedEndTime,
+        dayEndTime: schoolData.day_end_time || "18:00",
         daysOfWeek: schoolData.days_of_week || ["MONDAY", "TUESDAY", "WEDNESDAY", "THURSDAY", "FRIDAY"],
         breaks: schoolData.breaks || []
       },
@@ -805,15 +770,9 @@ Deno.serve(async (req) => {
        else scoreToSave = 0;
     }
 
-    const generationParams = {
-      ...constraints,
-      lunchBreaks: result.meta?.lunchBreaks || result.scheduleSettingsUsed?.breaks || null
-    };
-
     await base44.entities.ScheduleVersion.update(schedule_version_id, {
       score: scoreToSave,
-      generated_at: new Date().toISOString(),
-      generation_params: generationParams
+      generated_at: new Date().toISOString()
     });
 
     return Response.json({
