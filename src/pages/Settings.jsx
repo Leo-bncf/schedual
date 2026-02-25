@@ -505,7 +505,7 @@ export default function Settings() {
                 <Button
                   onClick={() => setInviteDialogOpen(true)}
                   className="bg-indigo-600 hover:bg-indigo-700"
-                  disabled={!school || schoolAdmins.length >= ((school?.max_additional_users || 0) + 1)}
+                  disabled={!school || schoolAdmins.length >= (school?.max_admin_seats || 3)}
                 >
                   <Plus className="w-4 h-4 mr-2" />
                   Invite Admin
@@ -522,14 +522,14 @@ export default function Settings() {
                     </div>
                     <div>
                       <p className="text-2xl font-bold text-blue-900">
-                        {schoolAdmins?.length || 0} / {(school?.max_additional_users || 0) + 1}
+                        {schoolAdmins?.length || 0} / {school?.max_admin_seats || 3}
                       </p>
                       <p className="text-sm text-blue-700 font-medium">
                         Admin seats used
                       </p>
                     </div>
                   </div>
-                  {schoolAdmins && schoolAdmins.length >= ((school?.max_additional_users || 0) + 1) && (
+                  {schoolAdmins && schoolAdmins.length >= (school?.max_admin_seats || 3) && (
                     <Button
                       onClick={() => setBuyUsersDialogOpen(true)}
                       className="bg-blue-600 hover:bg-blue-700"
@@ -1036,7 +1036,7 @@ export default function Settings() {
                   <div className="flex items-start gap-2">
                     <AlertCircle className="w-4 h-4 text-amber-600 mt-0.5 flex-shrink-0" />
                     <p className="text-xs text-amber-800">
-                      <strong>Available seats:</strong> {(school?.max_additional_users || 0) + 1 - schoolAdmins.length} / {(school?.max_additional_users || 0) + 1}
+                      <strong>Available seats:</strong> {(school?.max_admin_seats || 3) - schoolAdmins.length} / {school?.max_admin_seats || 3}
                     </p>
                   </div>
                 </div>
