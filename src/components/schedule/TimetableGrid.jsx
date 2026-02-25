@@ -303,7 +303,10 @@ export default function TimetableGrid({
     // Use computedPeriodsPerDay instead of periodsPerDay to allow spans beyond config limit
     while (checkPeriod <= computedPeriodsPerDay) {
       const nextSlots = getSlotData(day, checkPeriod);
-      if (nextSlots.some(s => s.teaching_group_id === currentSlot.teaching_group_id)) {
+      // Stop spanning if the next slot is a break or different teaching group
+      const matchingNextSlot = nextSlots.find(s => s.teaching_group_id === currentSlot.teaching_group_id);
+      
+      if (matchingNextSlot && !matchingNextSlot.is_break && !currentSlot.is_break) {
         span++;
         checkPeriod++;
       } else {
