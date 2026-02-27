@@ -89,6 +89,14 @@ export default function Students() {
   };
   const allowedProgrammes = getAllowedProgrammes(school);
 
+  const getMaxStudents = (tier) => {
+    if (tier === 'tier1') return 300;
+    if (tier === 'tier2') return 800;
+    if (tier === 'tier3') return 999999;
+    return 300; // default
+  };
+  const maxStudents = school ? getMaxStudents(school.subscription_tier) : 300;
+
   useEffect(() => {
     if (!school) return;
     if (!allowedProgrammes.includes(formData.ib_programme)) {
@@ -230,6 +238,11 @@ export default function Students() {
 
     if (!allowedProgrammes.includes(formData.ib_programme)) {
       alert(`Your plan does not allow creating ${formData.ib_programme} students.`);
+      return;
+    }
+
+    if (!editingStudent && students.length >= maxStudents) {
+      alert(`Student limit reached for your subscription tier (${maxStudents}). Please upgrade your plan to add more students.`);
       return;
     }
     
@@ -709,6 +722,10 @@ Return ONLY students array, no other text.`,
 
       if (studentsData.length === 0) {
         throw new Error('No students found in the document');
+      }
+
+      if (students.length + studentsData.length > maxStudents) {
+        throw new Error(`Cannot import ${studentsData.length} students. This would exceed your plan limit of ${maxStudents} students.`);
       }
 
       const duplicatesRemoved = rawStudents.length - studentsData.length;
