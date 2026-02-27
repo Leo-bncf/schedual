@@ -360,7 +360,7 @@ ${trainingFeedback ? `LESSONS FROM ADMIN FEEDBACK:\n${trainingFeedback}\n\n` : '
             transition={{ delay: index * 0.1 }}
             whileHover={{ scale: 1.05, y: -5 }}
           >
-            <Card className="border-0 shadow-lg hover:shadow-xl transition-shadow bg-white overflow-hidden">
+            <Card className="border-0 shadow-lg bg-white rounded-xl hover:shadow-xl transition-shadow overflow-hidden">
               <CardContent className="p-4 relative">
                 <div className={`absolute inset-0 bg-gradient-to-br ${stat.color} opacity-5`} />
                 <p className="text-sm font-medium text-slate-600">{stat.label}</p>
@@ -378,7 +378,7 @@ ${trainingFeedback ? `LESSONS FROM ADMIN FEEDBACK:\n${trainingFeedback}\n\n` : '
           <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400" />
           <Input 
             placeholder="Search rooms..." 
-            className="pl-10"
+            className="pl-10 h-11 bg-white border-slate-200 shadow-sm rounded-xl"
             value={searchQuery}
             onChange={(e) => setSearchQuery(e.target.value)}
           />
@@ -418,7 +418,7 @@ ${trainingFeedback ? `LESSONS FROM ADMIN FEEDBACK:\n${trainingFeedback}\n\n` : '
                 transition={{ delay: index * 0.05 }}
                 whileHover={{ scale: 1.03, y: -5 }}
               >
-                <Card className="border-0 shadow-lg hover:shadow-2xl transition-all duration-300 overflow-hidden group">
+                <Card className="border-0 shadow-lg bg-white rounded-xl hover:shadow-2xl transition-all duration-300 overflow-hidden group">
                   <div className={`h-1 bg-gradient-to-r ${typeInfo.color}`} />
                   <CardContent className="p-5">
                     <div className="flex items-start justify-between mb-4">
