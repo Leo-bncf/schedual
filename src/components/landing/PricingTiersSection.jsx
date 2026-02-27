@@ -6,9 +6,10 @@ import { CheckCircle2, Zap, Users, Building2, Plug, SlidersHorizontal, LifeBuoy,
 
 const TIERS = {
   tier1: {
-    name: 'Tier 1',
+    name: 'Small',
     subtitle: 'Small IB Schools',
-    price: 1100,
+    price_yearly: 1100,
+    price_monthly: 110,
     description: 'PYP-only or MYP-only schools up to 300 students',
     students: '≤300',
     features: [
@@ -22,9 +23,10 @@ const TIERS = {
     borderColor: 'border-blue-300',
   },
   tier2: {
-    name: 'Tier 2',
+    name: 'Medium',
     subtitle: 'Standard IB Continuum',
-    price: 2200,
+    price_yearly: 2200,
+    price_monthly: 220,
     description: 'PYP + MYP + DP schools (300-800 students)',
     students: '300-800',
     features: [
@@ -40,9 +42,10 @@ const TIERS = {
     featured: true,
   },
   tier3: {
-    name: 'Tier 3',
+    name: 'Large',
     subtitle: 'Large/Multi-Campus',
-    price: 4950,
+    price_yearly: 4950,
+    price_monthly: 495,
     description: 'Large schools with 800+ students, multiple campuses',
     students: '800+',
     features: [
@@ -62,38 +65,38 @@ const ADD_ONS = [
   {
     category: 'Users',
     items: [
-      { id: 'extra_admin_user', name: 'Extra Admin User', price: 275, type: 'yearly' },
-      { id: 'unlimited_admin_users', name: 'Unlimited Admin Users', price: 825, type: 'yearly' },
+      { id: 'extra_admin_user', name: 'Extra Admin User', price_yearly: 275, price_monthly: 28, type: 'recurring' },
+      { id: 'unlimited_admin_users', name: 'Unlimited Admin Users', price_yearly: 825, price_monthly: 83, type: 'recurring' },
     ],
   },
   {
     category: 'School Structure',
     items: [
-      { id: 'additional_campus', name: 'Additional Campus', price: 660, type: 'yearly' },
-      { id: 'unlimited_campuses', name: 'Unlimited Campuses', price: 1650, type: 'yearly' },
-      { id: 'multiple_timetable_scenarios', name: 'Multiple Timetable Scenarios', price: 880, type: 'yearly' },
+      { id: 'additional_campus', name: 'Additional Campus', price_yearly: 660, price_monthly: 66, type: 'recurring' },
+      { id: 'unlimited_campuses', name: 'Unlimited Campuses', price_yearly: 1650, price_monthly: 165, type: 'recurring' },
+      { id: 'multiple_timetable_scenarios', name: 'Multiple Timetable Scenarios', price_yearly: 880, price_monthly: 88, type: 'recurring' },
     ],
   },
   {
     category: 'Integrations',
     items: [
-      { id: 'managebac_integration', name: 'ManageBac Integration (API Sync)', price: 1100, type: 'yearly' },
-      { id: 'custom_sis_integration_yearly', name: 'Custom SIS/LMS Integration', price: 550, type: 'yearly' },
+      { id: 'managebac_integration', name: 'ManageBac Integration (API Sync)', price_yearly: 1100, price_monthly: 110, type: 'recurring' },
+      { id: 'custom_sis_integration_yearly', name: 'Custom SIS/LMS Integration', price_yearly: 550, price_monthly: 55, type: 'recurring' },
     ],
   },
   {
     category: 'Scheduling Features',
     items: [
-      { id: 'advanced_constraint_engine', name: 'Advanced Constraint Engine', price: 660, type: 'yearly' },
-      { id: 'dp_advanced_logic', name: 'DP Advanced Logic', price: 770, type: 'yearly' },
+      { id: 'advanced_constraint_engine', name: 'Advanced Constraint Engine', price_yearly: 660, price_monthly: 66, type: 'recurring' },
+      { id: 'dp_advanced_logic', name: 'DP Advanced Logic', price_yearly: 770, price_monthly: 77, type: 'recurring' },
     ],
   },
   {
     category: 'Support & Services',
     items: [
-      { id: 'priority_support', name: 'Priority Support (24h)', price: 550, type: 'yearly' },
-      { id: 'dedicated_account_manager', name: 'Dedicated Account Manager', price: 1100, type: 'yearly' },
-      { id: 'onboarding_setup', name: 'Onboarding & First Setup', price: 1320, type: 'onetime' },
+      { id: 'priority_support', name: 'Priority Support (24h)', price_yearly: 550, price_monthly: 55, type: 'recurring' },
+      { id: 'dedicated_account_manager', name: 'Dedicated Account Manager', price_yearly: 1100, price_monthly: 110, type: 'recurring' },
+      { id: 'onboarding_setup', name: 'Onboarding & First Setup', price_yearly: 1320, price_monthly: 1320, type: 'onetime' },
     ],
   },
 ];
