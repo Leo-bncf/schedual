@@ -1015,13 +1015,13 @@ Return ONLY students array, no other text.`,
           <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400" />
           <Input 
             placeholder="Search students..." 
-            className="pl-10"
+            className="pl-10 h-11 bg-white border-slate-200 shadow-sm rounded-xl"
             value={searchQuery}
             onChange={(e) => setSearchQuery(e.target.value)}
           />
         </div>
         <Tabs value={yearFilter} onValueChange={setYearFilter}>
-          <TabsList className="bg-slate-100 overflow-x-auto">
+          <TabsList className="bg-white border border-slate-200 shadow-sm p-1 rounded-xl overflow-x-auto">
            <TabsTrigger value="all" className="data-[state=active]:bg-gradient-to-r data-[state=active]:from-indigo-500 data-[state=active]:to-violet-500 data-[state=active]:text-white transition-all">All ({students.length})</TabsTrigger>
            {allowedProgrammes.includes('DP') && (
              <>
@@ -1110,7 +1110,7 @@ Return ONLY students array, no other text.`,
                 transition={{ delay: index * 0.05 }}
                 whileHover={{ scale: 1.05, y: -8, transition: { duration: 0.2 } }}
               >
-                <Card className={`group hover:shadow-2xl transition-all duration-300 border-slate-200 overflow-hidden ${colors.border}`}>
+                <Card className={`group hover:shadow-2xl transition-all duration-300 border-0 shadow-lg bg-white rounded-xl overflow-hidden ${colors.border}`}>
                   <CardHeader className={`pb-3 bg-gradient-to-br ${colors.header}`}>
                     <div className="flex items-start justify-between">
                       <div className="flex items-center gap-3">

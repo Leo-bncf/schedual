@@ -433,7 +433,7 @@ export default function Schedules() {
         </div>
 
         {/* Version Selector */}
-        <Card className="border border-slate-200 shadow-sm">
+        <Card className="border-0 shadow-lg bg-white rounded-xl">
           <CardContent className="p-6">
             <div className="flex flex-col gap-2">
               <Label className="text-sm font-medium text-slate-600">Active Version</Label>
@@ -490,63 +490,63 @@ export default function Schedules() {
       {/* Stats */}
       {selectedVersion && scheduleSlots.length > 0 && (
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
-          <Card className="border border-slate-200">
+          <Card className="border-0 shadow-lg bg-white rounded-xl">
             <CardContent className="p-4">
               <div className="flex items-center justify-between">
                 <div>
-                  <p className="text-xs text-slate-500">Students</p>
-                  <p className="text-2xl font-bold text-slate-900 mt-1">{stats.studentsScheduled}/{students.length}</p>
-                  <p className="text-xs text-emerald-600 font-medium mt-1">{stats.coverage}% coverage</p>
+                  <p className="text-xs text-slate-500 uppercase tracking-wide font-semibold">Students</p>
+                  <p className="text-3xl font-bold text-slate-900 mt-1">{stats.studentsScheduled}<span className="text-lg text-slate-400 font-medium">/{students.length}</span></p>
+                  <Badge variant="outline" className="bg-emerald-50 text-emerald-700 border-0 mt-2">{stats.coverage}% coverage</Badge>
                 </div>
-                <div className="w-10 h-10 rounded-lg bg-blue-50 flex items-center justify-center">
-                  <Users className="w-5 h-5 text-blue-600" />
+                <div className="w-12 h-12 rounded-2xl bg-gradient-to-br from-blue-500 to-blue-600 flex items-center justify-center shadow-md">
+                  <Users className="w-6 h-6 text-white" />
                 </div>
               </div>
             </CardContent>
           </Card>
 
-          <Card className="border border-slate-200">
+          <Card className="border-0 shadow-lg bg-white rounded-xl">
             <CardContent className="p-4">
               <div className="flex items-center justify-between">
                 <div>
-                  <p className="text-xs text-slate-500">Teachers</p>
-                  <p className="text-2xl font-bold text-slate-900 mt-1">{stats.teachersAssigned}/{teachers.length}</p>
-                  <p className="text-xs text-slate-600 font-medium mt-1">{Math.round((stats.teachersAssigned/teachers.length)*100)}% active</p>
+                  <p className="text-xs text-slate-500 uppercase tracking-wide font-semibold">Teachers</p>
+                  <p className="text-3xl font-bold text-slate-900 mt-1">{stats.teachersAssigned}<span className="text-lg text-slate-400 font-medium">/{teachers.length}</span></p>
+                  <Badge variant="outline" className="bg-emerald-50 text-emerald-700 border-0 mt-2">{Math.round((stats.teachersAssigned/teachers.length)*100)}% active</Badge>
                 </div>
-                <div className="w-10 h-10 rounded-lg bg-emerald-50 flex items-center justify-center">
-                  <Users className="w-5 h-5 text-emerald-600" />
+                <div className="w-12 h-12 rounded-2xl bg-gradient-to-br from-emerald-500 to-teal-600 flex items-center justify-center shadow-md">
+                  <Users className="w-6 h-6 text-white" />
                 </div>
               </div>
             </CardContent>
           </Card>
 
-          <Card className="border border-slate-200">
+          <Card className="border-0 shadow-lg bg-white rounded-xl">
             <CardContent className="p-4">
               <div className="flex items-center justify-between">
                 <div>
-                  <p className="text-xs text-slate-500">Total Periods</p>
-                  <p className="text-2xl font-bold text-slate-900 mt-1">{stats.totalSlots}</p>
-                  <p className="text-xs text-slate-600 font-medium mt-1">Scheduled</p>
+                  <p className="text-xs text-slate-500 uppercase tracking-wide font-semibold">Total Periods</p>
+                  <p className="text-3xl font-bold text-slate-900 mt-1">{stats.totalSlots}</p>
+                  <Badge variant="outline" className="bg-amber-50 text-amber-700 border-0 mt-2">Scheduled</Badge>
                 </div>
-                <div className="w-10 h-10 rounded-lg bg-amber-50 flex items-center justify-center">
-                  <Calendar className="w-5 h-5 text-amber-600" />
+                <div className="w-12 h-12 rounded-2xl bg-gradient-to-br from-amber-500 to-orange-500 flex items-center justify-center shadow-md">
+                  <Calendar className="w-6 h-6 text-white" />
                 </div>
               </div>
             </CardContent>
           </Card>
 
-          <Card className="border border-slate-200">
+          <Card className="border-0 shadow-lg bg-white rounded-xl">
             <CardContent className="p-4">
               <div className="flex items-center justify-between">
                 <div>
-                  <p className="text-xs text-slate-500">Rooms Used</p>
-                  <p className="text-2xl font-bold text-slate-900 mt-1">
+                  <p className="text-xs text-slate-500 uppercase tracking-wide font-semibold">Rooms Used</p>
+                  <p className="text-3xl font-bold text-slate-900 mt-1">
                     {new Set(scheduleSlots.map(s => s.room_id).filter(Boolean)).size}
                   </p>
-                  <p className="text-xs text-slate-600 font-medium mt-1">Active spaces</p>
+                  <Badge variant="outline" className="bg-purple-50 text-purple-700 border-0 mt-2">Active spaces</Badge>
                 </div>
-                <div className="w-10 h-10 rounded-lg bg-purple-50 flex items-center justify-center">
-                  <Building2 className="w-5 h-5 text-purple-600" />
+                <div className="w-12 h-12 rounded-2xl bg-gradient-to-br from-violet-500 to-purple-600 flex items-center justify-center shadow-md">
+                  <Building2 className="w-6 h-6 text-white" />
                 </div>
               </div>
             </CardContent>
