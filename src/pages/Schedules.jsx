@@ -91,6 +91,18 @@ export default function Schedules() {
     enabled: !!schoolId,
   });
 
+  const canCreateVersion = () => {
+    if (!school) return false;
+    const tier = school.subscription_tier;
+    const hasAddon = school.active_add_ons?.includes('multiple_timetable_scenarios');
+    
+    if (tier === 'tier3' || hasAddon) return true;
+    
+    const count = scheduleVersions.length;
+    if (tier === 'tier2') return count < 5; // Tier 2 gets history (up to 5 versions)
+    return count < 1; // Tier 1 gets 1 version
+  };
+
   const { data: scheduleSlots = [] } = useQuery({
     queryKey: ['scheduleSlots', selectedVersion?.id],
     queryFn: async () => {
@@ -405,7 +417,13 @@ export default function Schedules() {
             <p className="text-sm text-slate-500 mt-1">Manage and generate timetables</p>
           </div>
           <Button 
-            onClick={() => setIsDialogOpen(true)} 
+            onClick={() => {
+              if (canCreateVersion()) {
+                setIsDialogOpen(true);
+              } else {
+                alert(`Limit reached. ${school?.subscription_tier === 'tier1' ? 'Tier 1 allows only 1 schedule version.' : 'Tier 2 allows up to 5 versions history.'} Upgrade for more.`);
+              }
+            }} 
             size="sm"
             className="bg-blue-600 hover:bg-blue-700"
           >
