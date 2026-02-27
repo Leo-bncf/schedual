@@ -38,6 +38,28 @@ Deno.serve(async (req) => {
         if (!data) {
           return Response.json({ success: false, error: 'data required' }, { status: 400 });
         }
+
+        // Fetch school to check limits
+        const schools = await base44.asServiceRole.entities.School.filter({ id: user.school_id });
+        const school = schools[0];
+        if (!school) {
+          return Response.json({ success: false, error: 'School not found' }, { status: 404 });
+        }
+
+        // Get current student count
+        const currentStudents = await base44.asServiceRole.entities.Student.filter({ school_id: user.school_id });
+        const currentCount = currentStudents.length;
+
+        let maxStudents = 300; // Tier 1
+        if (school.subscription_tier === 'tier2') maxStudents = 800;
+        if (school.subscription_tier === 'tier3') maxStudents = 999999;
+
+        if (currentCount >= maxStudents) {
+          return Response.json({ 
+            success: false, 
+            error: `Student limit reached for your subscription tier (${maxStudents}). Please upgrade your plan.` 
+          }, { status: 400 });
+        }
         
         // Force user's school_id
         const studentData = {
