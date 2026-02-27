@@ -831,6 +831,100 @@ export default function Schedules() {
               </Card>
             </TabsContent>
 
+            {/* Teacher Viewer Tab */}
+            <TabsContent value="teacher" className="space-y-4 mt-4">
+              <Card className="border border-slate-200">
+                <CardHeader className="border-b border-slate-100 pb-4">
+                  <CardTitle className="text-base font-semibold">Teacher Timetable</CardTitle>
+                  <CardDescription>View individual teacher schedules</CardDescription>
+                </CardHeader>
+                <CardContent className="pt-4 space-y-4">
+                  {/* Teacher Search & Select */}
+                  <div className="space-y-2">
+                    <Label className="text-xs font-medium text-slate-600">Select Teacher</Label>
+                    <div className="flex flex-col sm:flex-row gap-2">
+                      <div className="flex-1 relative">
+                        <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400" />
+                        <Input
+                          placeholder="Search by name..."
+                          value={searchTeacher}
+                          onChange={(e) => setSearchTeacher(e.target.value)}
+                          className="pl-9 h-10 border-slate-200"
+                        />
+                      </div>
+                      <Select value={selectedTeacherId || ''} onValueChange={setSelectedTeacherId}>
+                        <SelectTrigger className="sm:w-[280px] h-10 border-slate-200">
+                          <SelectValue placeholder="Choose teacher" />
+                        </SelectTrigger>
+                        <SelectContent>
+                          {filteredTeachers.map(teacher => (
+                            <SelectItem key={teacher.id} value={teacher.id}>
+                              <div className="flex items-center gap-2">
+                                <div className="w-6 h-6 rounded-full bg-emerald-100 flex items-center justify-center text-emerald-700 text-xs font-semibold">
+                                  {teacher.full_name?.charAt(0)?.toUpperCase()}
+                                </div>
+                                <span className="text-sm">{teacher.full_name}</span>
+                              </div>
+                            </SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
+                    </div>
+                  </div>
+
+                  {/* Teacher Schedule Display */}
+                  {selectedTeacher && teacherSchedule && (
+                    <div className="space-y-4">
+                      {/* Teacher Info Card */}
+                      <div className="p-4 rounded-lg border border-slate-200 bg-slate-50">
+                        <div className="flex items-center gap-3">
+                          <div className="w-10 h-10 rounded-lg bg-emerald-100 flex items-center justify-center text-emerald-700 font-bold">
+                            {selectedTeacher.full_name?.charAt(0)?.toUpperCase() || 'T'}
+                          </div>
+                          <div className="flex-1">
+                            <h3 className="text-sm font-semibold text-slate-900">{selectedTeacher.full_name}</h3>
+                            <p className="text-xs text-slate-500">{selectedTeacher.email}</p>
+                          </div>
+                          {selectedTeacher.max_hours_per_week && (
+                            <Badge variant="outline" className="text-xs">
+                              Max {selectedTeacher.max_hours_per_week}h/week
+                            </Badge>
+                          )}
+                        </div>
+                      </div>
+
+                      {/* Timetable Grid */}
+                      <div className="mt-4">
+                        <TimetableGrid 
+                          slots={teacherSchedule || []}
+                          groups={teachingGroups}
+                          rooms={rooms}
+                          subjects={subjects}
+                          teachers={teachers}
+                          periodsPerDay={school?.periods_per_day || 10}
+                          dayStartTime={school?.day_start_time || '08:00'}
+                          dayEndTime={school?.day_end_time || '18:00'}
+                          periodDurationMinutes={school?.period_duration_minutes || 60}
+                          scheduleSettings={school}
+                          globalView={false}
+                          exportId="teacher-viewer-timetable"
+                        />
+                      </div>
+                    </div>
+                  )}
+
+                  {!selectedTeacher && (
+                    <div className="text-center py-12">
+                      <div className="w-12 h-12 rounded-lg bg-slate-100 flex items-center justify-center mx-auto mb-3">
+                        <Users className="w-6 h-6 text-slate-400" />
+                      </div>
+                      <p className="text-sm text-slate-500">Select a teacher to view their timetable</p>
+                    </div>
+                  )}
+                </CardContent>
+              </Card>
+            </TabsContent>
+
             {/* Generation Settings Tab */}
             <TabsContent value="generation" className="space-y-4 mt-4">
               <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
