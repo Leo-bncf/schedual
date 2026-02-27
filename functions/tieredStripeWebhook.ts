@@ -48,7 +48,7 @@ Deno.serve(async (req) => {
 
         let school;
         const maxAdminSeats = addOns.includes('unlimited_admin_users') ? 999 : (addOns.includes('extra_admin_user') ? 4 : 3);
-        const campusCount = addOns.includes('unlimited_campuses') ? 999 : (addOns.includes('additional_campus') ? 2 : 1);
+        const campusCount = (subscriptionTier === 'tier3' || addOns.includes('unlimited_campuses')) ? 999 : (addOns.includes('additional_campus') ? 2 : 1);
 
         if (user?.school_id) {
           // Update existing school for this user
