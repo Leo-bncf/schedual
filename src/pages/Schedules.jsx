@@ -639,6 +639,13 @@ export default function Schedules() {
                 Student View
               </TabsTrigger>
               <TabsTrigger 
+                value="teacher" 
+                className="data-[state=active]:bg-slate-100 data-[state=active]:text-slate-900"
+              >
+                <Users className="w-4 h-4 mr-2" />
+                Teacher View
+              </TabsTrigger>
+              <TabsTrigger 
                 value="generation" 
                 className="data-[state=active]:bg-slate-100 data-[state=active]:text-slate-900"
               >
