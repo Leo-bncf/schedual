@@ -440,114 +440,158 @@ ${trainingFeedback ? `LESSONS FROM ADMIN FEEDBACK:\n${trainingFeedback}\n\n` : '
           {/* PYP Subjects (gated) */}
           {allowedProgrammes.includes('PYP') && pypSubjects.length > 0 && (
             <div>
-              <h3 className="text-lg font-bold text-slate-700 mb-4 flex items-center gap-2">
-                <div className="h-1 w-12 bg-gradient-to-r from-green-500 to-emerald-600 rounded-full" />
-                PYP Programme
-              </h3>
-              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
+              <motion.div 
+                initial={{ opacity: 0, x: -20 }}
+                animate={{ opacity: 1, x: 0 }}
+                className="flex items-center gap-4 mb-6"
+              >
+                <div className="flex items-center gap-3 flex-1">
+                  <motion.div 
+                    className="w-14 h-14 rounded-2xl bg-gradient-to-br from-teal-500 to-cyan-500 flex items-center justify-center shadow-xl"
+                    whileHover={{ rotate: 360, scale: 1.1 }}
+                    transition={{ duration: 0.6 }}
+                  >
+                    <BookOpen className="w-7 h-7 text-white" />
+                  </motion.div>
+                  <div>
+                    <h3 className="text-2xl font-bold bg-gradient-to-r from-teal-600 to-cyan-600 bg-clip-text text-transparent">
+                      PYP Programme
+                    </h3>
+                    <p className="text-sm text-slate-500 mt-1">Primary Years subjects</p>
+                  </div>
+                </div>
+                <Badge className="bg-teal-500 text-white border-0 shadow-md text-base px-4 py-1">
+                  {pypSubjects.length} subjects
+                </Badge>
+              </motion.div>
+              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
                 {pypSubjects.map((subject, index) => (
                   <motion.div
                     key={subject.id}
-                    initial={{ opacity: 0, scale: 0.9 }}
-                    animate={{ opacity: 1, scale: 1 }}
+                    initial={{ opacity: 0, y: 20 }}
+                    animate={{ opacity: 1, y: 0 }}
                     transition={{ delay: index * 0.05 }}
-                    whileHover={{ scale: 1.03, y: -5 }}
+                    whileHover={{ y: -8, transition: { duration: 0.2 } }}
                   >
-                    <Card className="border-0 shadow-lg bg-white rounded-xl hover:shadow-2xl transition-all duration-300 overflow-hidden">
-                      <div className="h-1 bg-gradient-to-r from-green-500 to-emerald-600" />
-                      <CardContent className="p-4">
-                      <div className="flex items-start justify-between">
-                        <div className="flex items-center gap-3">
-                          <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-green-500 to-emerald-600 flex items-center justify-center">
-                            <BookOpen className="w-5 h-5 text-white" />
-                          </div>
-                          <div className="flex-1">
-                            <p className="font-semibold text-slate-900">{subject.name}</p>
-                            <p className="text-sm text-slate-500">{subject.code}</p>
-                            <Badge className="mt-2 bg-green-100 text-green-700 border-0 text-xs">
-                              {subject.pyp_myp_hours_per_week || 4}h/week
-                            </Badge>
-                          </div>
-                          </div>
-                          <DropdownMenu>
-                          <DropdownMenuTrigger asChild>
-                            <Button variant="ghost" size="icon" className="h-8 w-8">
-                              <MoreHorizontal className="w-4 h-4" />
-                            </Button>
-                          </DropdownMenuTrigger>
-                          <DropdownMenuContent align="end">
-                            <DropdownMenuItem onClick={() => handleEdit(subject)}>
-                              <Pencil className="w-4 h-4 mr-2" /> Edit
-                            </DropdownMenuItem>
-                            <DropdownMenuItem className="text-rose-600" onClick={() => deleteMutation.mutate(subject.id)}>
-                              <Trash2 className="w-4 h-4 mr-2" /> Delete
-                            </DropdownMenuItem>
-                          </DropdownMenuContent>
-                          </DropdownMenu>
-                          </div>
-                          </CardContent>
-                          </Card>
+                    <Card className="group border-0 shadow-md bg-white rounded-2xl hover:shadow-2xl transition-all duration-300 overflow-hidden relative">
+                      <div className="absolute inset-0 bg-gradient-to-br from-teal-50 to-cyan-50 opacity-0 group-hover:opacity-100 transition-opacity" />
+                      <CardContent className="p-5 relative">
+                        <div className="flex items-start justify-between mb-3">
+                          <motion.div 
+                            className="w-12 h-12 rounded-xl bg-gradient-to-br from-teal-400 to-cyan-500 flex items-center justify-center shadow-lg"
+                            whileHover={{ rotate: 360 }}
+                            transition={{ duration: 0.6 }}
+                          >
+                            <BookOpen className="w-6 h-6 text-white" />
                           </motion.div>
-                          ))}
-                          </div>
-                          </div>
-                          )}
+                          <DropdownMenu>
+                            <DropdownMenuTrigger asChild>
+                              <Button variant="ghost" size="icon" className="h-8 w-8 opacity-0 group-hover:opacity-100 transition-opacity">
+                                <MoreHorizontal className="w-4 h-4" />
+                              </Button>
+                            </DropdownMenuTrigger>
+                            <DropdownMenuContent align="end">
+                              <DropdownMenuItem onClick={() => handleEdit(subject)}>
+                                <Pencil className="w-4 h-4 mr-2" /> Edit
+                              </DropdownMenuItem>
+                              <DropdownMenuItem className="text-rose-600" onClick={() => deleteMutation.mutate(subject.id)}>
+                                <Trash2 className="w-4 h-4 mr-2" /> Delete
+                              </DropdownMenuItem>
+                            </DropdownMenuContent>
+                          </DropdownMenu>
+                        </div>
+                        <div>
+                          <h4 className="font-bold text-slate-900 text-base mb-1 line-clamp-2 min-h-[3rem]">{subject.name}</h4>
+                          <p className="text-sm text-slate-500 mb-3">{subject.code}</p>
+                          <Badge className="bg-teal-100 text-teal-700 border-0">
+                            {subject.pyp_myp_hours_per_week || 4}h/week
+                          </Badge>
+                        </div>
+                      </CardContent>
+                    </Card>
+                  </motion.div>
+                ))}
+              </div>
+            </div>
+          )}
 
-                        {/* MYP Subjects (always for tier1+) */}
+          {/* MYP Subjects (always for tier1+) */}
           {allowedProgrammes.includes('MYP') && mypSubjects.length > 0 && (
             <div>
-              <h3 className="text-lg font-bold text-slate-700 mb-4 flex items-center gap-2">
-                <div className="h-1 w-12 bg-gradient-to-r from-purple-500 to-fuchsia-600 rounded-full" />
-                MYP Programme
-              </h3>
-              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
+              <motion.div 
+                initial={{ opacity: 0, x: -20 }}
+                animate={{ opacity: 1, x: 0 }}
+                className="flex items-center gap-4 mb-6"
+              >
+                <div className="flex items-center gap-3 flex-1">
+                  <motion.div 
+                    className="w-14 h-14 rounded-2xl bg-gradient-to-br from-purple-500 to-fuchsia-500 flex items-center justify-center shadow-xl"
+                    whileHover={{ rotate: 360, scale: 1.1 }}
+                    transition={{ duration: 0.6 }}
+                  >
+                    <BookOpen className="w-7 h-7 text-white" />
+                  </motion.div>
+                  <div>
+                    <h3 className="text-2xl font-bold bg-gradient-to-r from-purple-600 to-fuchsia-600 bg-clip-text text-transparent">
+                      MYP Programme
+                    </h3>
+                    <p className="text-sm text-slate-500 mt-1">Middle Years subjects</p>
+                  </div>
+                </div>
+                <Badge className="bg-purple-500 text-white border-0 shadow-md text-base px-4 py-1">
+                  {mypSubjects.length} subjects
+                </Badge>
+              </motion.div>
+              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
                 {mypSubjects.map((subject, index) => (
                   <motion.div
                     key={subject.id}
-                    initial={{ opacity: 0, scale: 0.9 }}
-                    animate={{ opacity: 1, scale: 1 }}
+                    initial={{ opacity: 0, y: 20 }}
+                    animate={{ opacity: 1, y: 0 }}
                     transition={{ delay: index * 0.05 }}
-                    whileHover={{ scale: 1.03, y: -5 }}
+                    whileHover={{ y: -8, transition: { duration: 0.2 } }}
                   >
-                    <Card className="border-0 shadow-lg bg-white rounded-xl hover:shadow-2xl transition-all duration-300 overflow-hidden">
-                      <div className="h-1 bg-gradient-to-r from-purple-500 to-fuchsia-600" />
-                      <CardContent className="p-4">
-                      <div className="flex items-start justify-between">
-                        <div className="flex items-center gap-3">
-                          <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-purple-500 to-fuchsia-600 flex items-center justify-center">
-                            <BookOpen className="w-5 h-5 text-white" />
-                          </div>
-                          <div className="flex-1">
-                            <p className="font-semibold text-slate-900">{subject.name}</p>
-                            <p className="text-sm text-slate-500">{subject.code}</p>
-                            <Badge className="mt-2 bg-purple-100 text-purple-700 border-0 text-xs">
-                              {subject.pyp_myp_hours_per_week || 4}h/week
-                            </Badge>
-                          </div>
-                        </div>
-                        <DropdownMenu>
-                          <DropdownMenuTrigger asChild>
-                            <Button variant="ghost" size="icon" className="h-8 w-8">
-                              <MoreHorizontal className="w-4 h-4" />
-                            </Button>
-                          </DropdownMenuTrigger>
-                          <DropdownMenuContent align="end">
-                            <DropdownMenuItem onClick={() => handleEdit(subject)}>
-                              <Pencil className="w-4 h-4 mr-2" /> Edit
-                            </DropdownMenuItem>
-                            <DropdownMenuItem className="text-rose-600" onClick={() => deleteMutation.mutate(subject.id)}>
-                              <Trash2 className="w-4 h-4 mr-2" /> Delete
-                            </DropdownMenuItem>
-                          </DropdownMenuContent>
-                          </DropdownMenu>
-                          </div>
-                          </CardContent>
-                          </Card>
+                    <Card className="group border-0 shadow-md bg-white rounded-2xl hover:shadow-2xl transition-all duration-300 overflow-hidden relative">
+                      <div className="absolute inset-0 bg-gradient-to-br from-purple-50 to-fuchsia-50 opacity-0 group-hover:opacity-100 transition-opacity" />
+                      <CardContent className="p-5 relative">
+                        <div className="flex items-start justify-between mb-3">
+                          <motion.div 
+                            className="w-12 h-12 rounded-xl bg-gradient-to-br from-purple-400 to-fuchsia-500 flex items-center justify-center shadow-lg"
+                            whileHover={{ rotate: 360 }}
+                            transition={{ duration: 0.6 }}
+                          >
+                            <BookOpen className="w-6 h-6 text-white" />
                           </motion.div>
-                          ))}
-                          </div>
-                          </div>
-                          )}
+                          <DropdownMenu>
+                            <DropdownMenuTrigger asChild>
+                              <Button variant="ghost" size="icon" className="h-8 w-8 opacity-0 group-hover:opacity-100 transition-opacity">
+                                <MoreHorizontal className="w-4 h-4" />
+                              </Button>
+                            </DropdownMenuTrigger>
+                            <DropdownMenuContent align="end">
+                              <DropdownMenuItem onClick={() => handleEdit(subject)}>
+                                <Pencil className="w-4 h-4 mr-2" /> Edit
+                              </DropdownMenuItem>
+                              <DropdownMenuItem className="text-rose-600" onClick={() => deleteMutation.mutate(subject.id)}>
+                                <Trash2 className="w-4 h-4 mr-2" /> Delete
+                              </DropdownMenuItem>
+                            </DropdownMenuContent>
+                          </DropdownMenu>
+                        </div>
+                        <div>
+                          <h4 className="font-bold text-slate-900 text-base mb-1 line-clamp-2 min-h-[3rem]">{subject.name}</h4>
+                          <p className="text-sm text-slate-500 mb-3">{subject.code}</p>
+                          <Badge className="bg-purple-100 text-purple-700 border-0">
+                            {subject.pyp_myp_hours_per_week || 4}h/week
+                          </Badge>
+                        </div>
+                      </CardContent>
+                    </Card>
+                  </motion.div>
+                ))}
+              </div>
+            </div>
+          )}
 
 
 
