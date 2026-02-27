@@ -298,24 +298,24 @@ export default function Settings() {
       />
 
       <Tabs defaultValue="school" className="space-y-6">
-        <TabsList className="grid grid-cols-5 w-full max-w-5xl bg-slate-100 p-1 h-auto rounded-2xl">
-          <TabsTrigger value="school" className="flex flex-col items-center gap-1.5 py-3 rounded-xl data-[state=active]:bg-white data-[state=active]:shadow-sm">
+        <TabsList className="grid grid-cols-5 w-full max-w-5xl bg-white border border-slate-200 shadow-sm p-1 h-auto rounded-xl">
+          <TabsTrigger value="school" className="flex flex-col items-center gap-1.5 py-3 rounded-lg data-[state=active]:bg-slate-50 data-[state=active]:text-indigo-600 transition-all">
             <Building2 className="w-5 h-5" />
             <span className="text-xs font-medium">School Info</span>
           </TabsTrigger>
-          <TabsTrigger value="admins" className="flex flex-col items-center gap-1.5 py-3 rounded-xl data-[state=active]:bg-white data-[state=active]:shadow-sm">
+          <TabsTrigger value="admins" className="flex flex-col items-center gap-1.5 py-3 rounded-lg data-[state=active]:bg-slate-50 data-[state=active]:text-indigo-600 transition-all">
             <Users className="w-5 h-5" />
             <span className="text-xs font-medium">Admins</span>
           </TabsTrigger>
-          <TabsTrigger value="academic" className="flex flex-col items-center gap-1.5 py-3 rounded-xl data-[state=active]:bg-white data-[state=active]:shadow-sm">
+          <TabsTrigger value="academic" className="flex flex-col items-center gap-1.5 py-3 rounded-lg data-[state=active]:bg-slate-50 data-[state=active]:text-indigo-600 transition-all">
             <GraduationCap className="w-5 h-5" />
             <span className="text-xs font-medium">Academic</span>
           </TabsTrigger>
-          <TabsTrigger value="subscription" className="flex flex-col items-center gap-1.5 py-3 rounded-xl data-[state=active]:bg-white data-[state=active]:shadow-sm">
+          <TabsTrigger value="subscription" className="flex flex-col items-center gap-1.5 py-3 rounded-lg data-[state=active]:bg-slate-50 data-[state=active]:text-indigo-600 transition-all">
             <CreditCard className="w-5 h-5" />
             <span className="text-xs font-medium">Billing</span>
           </TabsTrigger>
-          <TabsTrigger value="notifications" className="flex flex-col items-center gap-1.5 py-3 rounded-xl data-[state=active]:bg-white data-[state=active]:shadow-sm">
+          <TabsTrigger value="notifications" className="flex flex-col items-center gap-1.5 py-3 rounded-lg data-[state=active]:bg-slate-50 data-[state=active]:text-indigo-600 transition-all">
             <Bell className="w-5 h-5" />
             <span className="text-xs font-medium">Alerts</span>
           </TabsTrigger>
@@ -406,8 +406,8 @@ export default function Settings() {
             </Card>
 
             {/* Location & Timezone */}
-            <Card className="border-0 shadow-md">
-              <CardHeader className="bg-gradient-to-r from-emerald-50 to-teal-50">
+            <Card className="border-0 shadow-sm bg-white rounded-xl">
+              <CardHeader className="bg-gradient-to-r from-emerald-50 to-teal-50 rounded-t-xl">
                 <div className="flex items-center gap-3">
                   <div className="p-2 rounded-lg bg-emerald-100">
                     <Globe className="w-5 h-5 text-emerald-700" />
@@ -457,8 +457,8 @@ export default function Settings() {
             </Card>
 
             {/* System Information */}
-            <Card className="border-0 shadow-md">
-              <CardHeader className="bg-gradient-to-r from-violet-50 to-purple-50">
+            <Card className="border-0 shadow-sm bg-white rounded-xl">
+              <CardHeader className="bg-gradient-to-r from-violet-50 to-purple-50 rounded-t-xl">
                 <div className="flex items-center gap-3">
                   <div className="p-2 rounded-lg bg-violet-100">
                     <Info className="w-5 h-5 text-violet-700" />
@@ -488,8 +488,8 @@ export default function Settings() {
 
 
         <TabsContent value="admins">
-          <Card className="border-0 shadow-md">
-            <CardHeader className="bg-gradient-to-r from-indigo-50 to-violet-50">
+          <Card className="border-0 shadow-sm bg-white rounded-xl">
+            <CardHeader className="bg-gradient-to-r from-indigo-50 to-violet-50 rounded-t-xl">
               <div className="flex items-center justify-between">
                 <div className="flex items-center gap-3">
                   <div className="p-2 rounded-lg bg-indigo-100">
