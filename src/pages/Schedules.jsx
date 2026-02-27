@@ -371,6 +371,19 @@ export default function Schedules() {
   const selectedStudent = students.find(s => s.id === selectedStudentId);
   const studentSchedule = selectedStudentId ? getStudentSchedule(selectedStudentId) : null;
 
+  const getTeacherSchedule = (teacherId) => {
+    return scheduleSlots.filter(slot => slot.teacher_id === teacherId);
+  };
+
+  const filteredTeachers = teachers.filter(t => 
+    t.is_active && 
+    (t.full_name?.toLowerCase().includes(searchTeacher.toLowerCase()) ||
+     t.email?.toLowerCase().includes(searchTeacher.toLowerCase()))
+  );
+
+  const selectedTeacher = teachers.find(t => t.id === selectedTeacherId);
+  const teacherSchedule = selectedTeacherId ? getTeacherSchedule(selectedTeacherId) : null;
+
   const filteredOverviewSlots = React.useMemo(() => {
     if (overviewFilterType === 'all' || overviewFilterId === 'all') return scheduleSlots;
     if (overviewFilterType === 'teacher') return scheduleSlots.filter(s => s.teacher_id === overviewFilterId);
