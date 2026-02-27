@@ -324,8 +324,8 @@ export default function Settings() {
         <TabsContent value="school">
           <div className="space-y-6">
             {/* Basic Information */}
-            <Card className="border-0 shadow-md">
-              <CardHeader className="bg-gradient-to-r from-blue-50 to-indigo-50">
+            <Card className="border-0 shadow-sm bg-white rounded-xl">
+              <CardHeader className="bg-gradient-to-r from-blue-50 to-indigo-50 rounded-t-xl">
                 <div className="flex items-center gap-3">
                   <div className="p-2 rounded-lg bg-blue-100">
                     <School className="w-5 h-5 text-blue-700" />
@@ -876,7 +876,7 @@ export default function Settings() {
         </TabsContent>
 
         <TabsContent value="notifications">
-          <Card className="border-0 shadow-sm">
+          <Card className="border-0 shadow-sm bg-white rounded-xl">
             <CardHeader>
               <CardTitle>Notification Preferences</CardTitle>
               <CardDescription>Configure how you receive updates and alerts</CardDescription>
