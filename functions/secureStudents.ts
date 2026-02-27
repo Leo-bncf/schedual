@@ -61,6 +61,14 @@ Deno.serve(async (req) => {
           }, { status: 400 });
         }
         
+        const allowedProgrammes = school.subscription_tier === 'tier1' ? ['MYP'] : ['PYP', 'MYP', 'DP'];
+        if (!allowedProgrammes.includes(data.ib_programme)) {
+          return Response.json({ 
+            success: false, 
+            error: `Your plan does not allow creating ${data.ib_programme} students.` 
+          }, { status: 400 });
+        }
+
         // Force user's school_id
         const studentData = {
           ...data,
