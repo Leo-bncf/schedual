@@ -2,28 +2,28 @@ import { createClientFromRequest } from 'npm:@base44/sdk@0.8.6';
 import Stripe from 'npm:stripe@17.5.0';
 
 const PRICE_TO_TIER = {
-  'price_1T5PS4Bg94UIyRz5AOiMVMd0': 'tier1',
-  'price_1T5PS3Bg94UIyRz5kv8hajb4': 'tier2',
-  'price_1T5PS4Bg94UIyRz5LABgkbSp': 'tier3',
-  'price_1T5PS4Bg94UIyRz5IQmSUnsb': 'tier1',
-  'price_1T5PS4Bg94UIyRz5wE4V2Ijd': 'tier2',
-  'price_1T5PS4Bg94UIyRz5E7Nucqve': 'tier3',
+  'price_1T5PUiBg94UIyRz5wb482Y1O': 'tier1',
+  'price_1T5PUiBg94UIyRz54jyE6TGX': 'tier2',
+  'price_1T5PUiBg94UIyRz5AvAJojm7': 'tier3',
+  'price_1T5PUiBg94UIyRz5AYfRozR3': 'tier1',
+  'price_1T5PUiBg94UIyRz5uP81QlIe': 'tier2',
+  'price_1T5PUiBg94UIyRz5cW201cCT': 'tier3',
 };
 
 const PRICE_TO_ADDON = {
-  'price_1T5PS4Bg94UIyRz5KYMqHML5': 'extra_admin_user',
-  'price_1T5PS4Bg94UIyRz5x2PKE060': 'unlimited_admin_users',
-  'price_1T5PS4Bg94UIyRz5kNdxbiPO': 'additional_campus',
-  'price_1T5PS4Bg94UIyRz5N61IuJ1G': 'unlimited_campuses',
-  'price_1T5PS4Bg94UIyRz5e42GQGvG': 'multiple_timetable_scenarios',
-  'price_1T5PS4Bg94UIyRz5U5Ct0chF': 'priority_support',
-  'price_1T5PS4Bg94UIyRz5Tkzo4puP': 'onboarding_setup',
-  'price_1T5PS4Bg94UIyRz58jzHqKkN': 'extra_admin_user',
-  'price_1T5PS4Bg94UIyRz5u6e52a8b': 'unlimited_admin_users',
-  'price_1T5PS4Bg94UIyRz5j0aQRguF': 'additional_campus',
-  'price_1T5PS4Bg94UIyRz5O595f0j5': 'unlimited_campuses',
-  'price_1T5PS4Bg94UIyRz58nh8SDYL': 'multiple_timetable_scenarios',
-  'price_1T5PS4Bg94UIyRz52IluR5tD': 'priority_support',
+  'price_1T5PUiBg94UIyRz5gFgQkiHz': 'extra_admin_user',
+  'price_1T5PUiBg94UIyRz5dvlKdjH6': 'unlimited_admin_users',
+  'price_1T5PUiBg94UIyRz52cyGXklz': 'additional_campus',
+  'price_1T5PUiBg94UIyRz59dvgRTF1': 'unlimited_campuses',
+  'price_1T5PUiBg94UIyRz5mdO1tVgA': 'multiple_timetable_scenarios',
+  'price_1T5PUiBg94UIyRz5XSZPThPs': 'priority_support',
+  'price_1T5PUiBg94UIyRz5ZJrZWJCd': 'onboarding_setup',
+  'price_1T5PUiBg94UIyRz5ZEdXPUDu': 'extra_admin_user',
+  'price_1T5PUiBg94UIyRz5wVHBGsxJ': 'unlimited_admin_users',
+  'price_1T5PUiBg94UIyRz5zTIWuzRN': 'additional_campus',
+  'price_1T5PUiBg94UIyRz5mwOMhxW8': 'unlimited_campuses',
+  'price_1T5PUhBg94UIyRz56P8pCLNB': 'multiple_timetable_scenarios',
+  'price_1T5PUiBg94UIyRz53NVQaxS8': 'priority_support',
 };
 
 Deno.serve(async (req) => {

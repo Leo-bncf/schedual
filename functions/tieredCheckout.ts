@@ -5,36 +5,36 @@ import Stripe from 'npm:stripe@17.5.0';
 // Stripe Price IDs for Tiers
 const TIER_PRICES = {
   yearly: {
-    tier1: 'price_1T5PS4Bg94UIyRz5AOiMVMd0',
-    tier2: 'price_1T5PS3Bg94UIyRz5kv8hajb4',
-    tier3: 'price_1T5PS4Bg94UIyRz5LABgkbSp',
+    tier1: 'price_1T5PUiBg94UIyRz5wb482Y1O',
+    tier2: 'price_1T5PUiBg94UIyRz54jyE6TGX',
+    tier3: 'price_1T5PUiBg94UIyRz5AvAJojm7',
   },
   monthly: {
-    tier1: 'price_1T5PS4Bg94UIyRz5IQmSUnsb',
-    tier2: 'price_1T5PS4Bg94UIyRz5wE4V2Ijd',
-    tier3: 'price_1T5PS4Bg94UIyRz5E7Nucqve',
+    tier1: 'price_1T5PUiBg94UIyRz5AYfRozR3',
+    tier2: 'price_1T5PUiBg94UIyRz5uP81QlIe',
+    tier3: 'price_1T5PUiBg94UIyRz5cW201cCT',
   }
 };
 
 // Add-on Price IDs
 const ADDON_PRICES = {
   yearly: {
-    extra_admin_user: 'price_1T5PS4Bg94UIyRz5KYMqHML5',
-    unlimited_admin_users: 'price_1T5PS4Bg94UIyRz5x2PKE060',
-    additional_campus: 'price_1T5PS4Bg94UIyRz5kNdxbiPO',
-    unlimited_campuses: 'price_1T5PS4Bg94UIyRz5N61IuJ1G',
-    multiple_timetable_scenarios: 'price_1T5PS4Bg94UIyRz5e42GQGvG',
-    priority_support: 'price_1T5PS4Bg94UIyRz5U5Ct0chF',
-    onboarding_setup: 'price_1T5PS4Bg94UIyRz5Tkzo4puP',
+    extra_admin_user: 'price_1T5PUiBg94UIyRz5gFgQkiHz',
+    unlimited_admin_users: 'price_1T5PUiBg94UIyRz5dvlKdjH6',
+    additional_campus: 'price_1T5PUiBg94UIyRz52cyGXklz',
+    unlimited_campuses: 'price_1T5PUiBg94UIyRz59dvgRTF1',
+    multiple_timetable_scenarios: 'price_1T5PUiBg94UIyRz5mdO1tVgA',
+    priority_support: 'price_1T5PUiBg94UIyRz5XSZPThPs',
+    onboarding_setup: 'price_1T5PUiBg94UIyRz5ZJrZWJCd',
   },
   monthly: {
-    extra_admin_user: 'price_1T5PS4Bg94UIyRz58jzHqKkN',
-    unlimited_admin_users: 'price_1T5PS4Bg94UIyRz5u6e52a8b',
-    additional_campus: 'price_1T5PS4Bg94UIyRz5j0aQRguF',
-    unlimited_campuses: 'price_1T5PS4Bg94UIyRz5O595f0j5',
-    multiple_timetable_scenarios: 'price_1T5PS4Bg94UIyRz58nh8SDYL',
-    priority_support: 'price_1T5PS4Bg94UIyRz52IluR5tD',
-    onboarding_setup: 'price_1T5PS4Bg94UIyRz5Tkzo4puP',
+    extra_admin_user: 'price_1T5PUiBg94UIyRz5ZEdXPUDu',
+    unlimited_admin_users: 'price_1T5PUiBg94UIyRz5wVHBGsxJ',
+    additional_campus: 'price_1T5PUiBg94UIyRz5zTIWuzRN',
+    unlimited_campuses: 'price_1T5PUiBg94UIyRz5mwOMhxW8',
+    multiple_timetable_scenarios: 'price_1T5PUhBg94UIyRz56P8pCLNB',
+    priority_support: 'price_1T5PUiBg94UIyRz53NVQaxS8',
+    onboarding_setup: 'price_1T5PUiBg94UIyRz5ZJrZWJCd',
   }
 };
 

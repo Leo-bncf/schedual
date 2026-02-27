@@ -260,7 +260,7 @@ export default function SubscriptionTiered() {
               </CardHeader>
               <CardContent className="space-y-4">
                 <div className="text-center">
-                  <div className="text-3xl font-bold text-slate-900">${tier.price}</div>
+                  <div className="text-3xl font-bold text-slate-900">€{tier.price}</div>
                   <div className="text-sm text-slate-600">/year</div>
                 </div>
 
@@ -322,7 +322,7 @@ export default function SubscriptionTiered() {
         <CardContent className="space-y-3">
           <div className="flex justify-between items-center">
             <span className="text-slate-700">{TIERS[selectedTier].subtitle}</span>
-            <span className="font-semibold">${TIERS[selectedTier].price}/year</span>
+            <span className="font-semibold">€{TIERS[selectedTier].price}/year</span>
           </div>
 
           {selectedAddOns.length > 0 && (
@@ -334,7 +334,7 @@ export default function SubscriptionTiered() {
                   return (
                     <div key={addonId} className="flex justify-between text-sm">
                       <span className="text-slate-600">{addon?.name}</span>
-                      <span className="font-medium">${addon?.price}</span>
+                      <span className="font-medium">€{addon?.price}</span>
                     </div>
                   );
                 })}
@@ -344,7 +344,7 @@ export default function SubscriptionTiered() {
 
           <div className="border-t border-blue-300 pt-3 flex justify-between items-center">
             <span className="text-lg font-bold text-slate-900">Total per year:</span>
-            <span className="text-3xl font-bold text-blue-900">${calculateTotal()}</span>
+            <span className="text-3xl font-bold text-blue-900">€{calculateTotal()}</span>
           </div>
 
           <Button
@@ -400,7 +400,7 @@ export default function SubscriptionTiered() {
                       >
                         <div className="font-medium text-slate-900">{addon.name}</div>
                         <div className="text-sm text-slate-600 flex justify-between mt-1">
-                          <span>${addon.price}</span>
+                          <span>€{addon.price}</span>
                           <span className="text-xs">{addon.type === 'onetime' ? 'one-time' : '/year'}</span>
                         </div>
                       </Label>

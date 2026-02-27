@@ -159,7 +159,7 @@ export default function PricingTiersSection() {
                 <div className="mt-1">
                   <div className="flex items-baseline gap-1.5">
                     <span className="text-2xl font-bold text-slate-900">
-                      ${billingInterval === 'yearly' ? tier.price_yearly : tier.price_monthly}
+                      €{billingInterval === 'yearly' ? tier.price_yearly : tier.price_monthly}
                     </span>
                     <span className="text-slate-600 text-sm">/{billingInterval === 'yearly' ? 'year' : 'month'}</span>
                   </div>
@@ -276,7 +276,7 @@ export default function PricingTiersSection() {
                           </Badge>
                         </div>
                         <div className="text-blue-900 font-bold text-2xl">
-                          ${addon.type === 'onetime' ? addon.price_yearly : billingInterval === 'yearly' ? addon.price_yearly : addon.price_monthly}
+                          €{addon.type === 'onetime' ? addon.price_yearly : billingInterval === 'yearly' ? addon.price_yearly : addon.price_monthly}
                         </div>
                       </div>
                     ))}
