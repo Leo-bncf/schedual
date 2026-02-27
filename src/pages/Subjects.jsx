@@ -38,11 +38,11 @@ import DragDropUploadDialog from '../components/upload/DragDropUploadDialog';
 
 const IB_GROUPS = [
   { id: 1, name: 'Language & Literature', icon: FileText, color: 'bg-blue-500' },
-  { id: 2, name: 'Language Acquisition', icon: Languages, color: 'bg-emerald-500' },
-  { id: 3, name: 'Individuals & Societies', icon: Globe, color: 'bg-amber-500' },
+  { id: 2, name: 'Language Acquisition', icon: Languages, color: 'bg-teal-500' },
+  { id: 3, name: 'Individuals & Societies', icon: Globe, color: 'bg-purple-500' },
   { id: 4, name: 'Sciences', icon: FlaskConical, color: 'bg-violet-500' },
   { id: 5, name: 'Mathematics', icon: Calculator, color: 'bg-rose-500' },
-  { id: 6, name: 'The Arts', icon: Palette, color: 'bg-cyan-500' },
+  { id: 6, name: 'The Arts', icon: Palette, color: 'bg-pink-500' },
 ];
 
 export default function Subjects() {
@@ -497,7 +497,7 @@ ${trainingFeedback ? `LESSONS FROM ADMIN FEEDBACK:\n${trainingFeedback}\n\n` : '
           {allowedProgrammes.includes('MYP') && mypSubjects.length > 0 && (
             <div>
               <h3 className="text-lg font-bold text-slate-700 mb-4 flex items-center gap-2">
-                <div className="h-1 w-12 bg-gradient-to-r from-orange-500 to-amber-600 rounded-full" />
+                <div className="h-1 w-12 bg-gradient-to-r from-purple-500 to-fuchsia-600 rounded-full" />
                 MYP Programme
               </h3>
               <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
@@ -510,17 +510,17 @@ ${trainingFeedback ? `LESSONS FROM ADMIN FEEDBACK:\n${trainingFeedback}\n\n` : '
                     whileHover={{ scale: 1.03, y: -5 }}
                   >
                     <Card className="border-0 shadow-lg bg-white rounded-xl hover:shadow-2xl transition-all duration-300 overflow-hidden">
-                      <div className="h-1 bg-gradient-to-r from-orange-500 to-amber-600" />
+                      <div className="h-1 bg-gradient-to-r from-purple-500 to-fuchsia-600" />
                       <CardContent className="p-4">
                       <div className="flex items-start justify-between">
                         <div className="flex items-center gap-3">
-                          <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-orange-500 to-amber-600 flex items-center justify-center">
+                          <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-purple-500 to-fuchsia-600 flex items-center justify-center">
                             <BookOpen className="w-5 h-5 text-white" />
                           </div>
                           <div className="flex-1">
                             <p className="font-semibold text-slate-900">{subject.name}</p>
                             <p className="text-sm text-slate-500">{subject.code}</p>
-                            <Badge className="mt-2 bg-orange-100 text-orange-700 border-0 text-xs">
+                            <Badge className="mt-2 bg-purple-100 text-purple-700 border-0 text-xs">
                               {subject.pyp_myp_hours_per_week || 4}h/week
                             </Badge>
                           </div>

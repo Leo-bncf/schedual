@@ -193,8 +193,8 @@ export default function ClassGroups() {
 
   const programmeColors = {
     DP: 'bg-blue-100 text-blue-800 border-blue-300',
-    MYP: 'bg-emerald-100 text-emerald-800 border-emerald-300',
-    PYP: 'bg-amber-100 text-amber-800 border-amber-300'
+    MYP: 'bg-purple-100 text-purple-800 border-purple-300',
+    PYP: 'bg-teal-100 text-teal-800 border-teal-300'
   };
 
   return (
@@ -322,8 +322,8 @@ export default function ClassGroups() {
                 <Card className="border-0 shadow-lg bg-white rounded-xl hover:shadow-2xl transition-all duration-300 overflow-hidden cursor-pointer">
                   <div className={`h-1 bg-gradient-to-r ${
                     group.ib_programme === 'DP' ? 'from-blue-500 to-cyan-500' :
-                    group.ib_programme === 'MYP' ? 'from-emerald-500 to-teal-500' :
-                    'from-amber-500 to-orange-500'
+                    group.ib_programme === 'MYP' ? 'from-purple-500 to-fuchsia-500' :
+                    'from-teal-500 to-cyan-500'
                   }`} />
                 <CardHeader className="pb-3">
                   <div className="flex items-start justify-between">

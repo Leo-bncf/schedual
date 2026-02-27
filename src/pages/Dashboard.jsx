@@ -175,10 +175,10 @@ export default function Dashboard() {
             className="cursor-pointer"
           >
           <Card className="border-0 shadow-lg bg-white hover:shadow-2xl transition-all duration-300 overflow-hidden relative">
-            <div className="absolute top-0 left-0 right-0 h-1 bg-gradient-to-r from-orange-500 to-orange-600"></div>
+            <div className="absolute top-0 left-0 right-0 h-1 bg-gradient-to-r from-rose-500 to-pink-600"></div>
             <CardContent className="p-8">
               <div className="flex items-center gap-4 mb-4">
-                <div className="w-16 h-16 rounded-2xl bg-gradient-to-br from-orange-500 to-orange-600 flex items-center justify-center shadow-lg">
+                <div className="w-16 h-16 rounded-2xl bg-gradient-to-br from-rose-500 to-pink-600 flex items-center justify-center shadow-lg">
                   <Building2 className="w-8 h-8 text-white" />
                 </div>
                 <div>
