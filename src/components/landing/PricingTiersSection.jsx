@@ -114,6 +114,7 @@ const CATEGORY_ICONS = {
 export default function PricingTiersSection() {
   const [expandedCategory, setExpandedCategory] = useState(null);
   const [expandedTier, setExpandedTier] = useState(null);
+  const [billingInterval, setBillingInterval] = useState('yearly');
   const toggleCategory = (cat) => setExpandedCategory(expandedCategory === cat ? null : cat);
 
 
@@ -128,6 +129,22 @@ export default function PricingTiersSection() {
           <p className="text-lg text-slate-600 max-w-2xl mx-auto">
             Choose the tier that fits your school. All plans include AI-powered scheduling and conflict resolution.
           </p>
+          <div className="flex justify-center mt-8">
+            <div className="bg-slate-100 p-1 rounded-lg inline-flex items-center gap-1">
+              <button
+                className={`px-6 py-2 rounded-md text-sm font-medium transition-colors ${billingInterval === 'monthly' ? 'bg-white text-slate-900 shadow-sm' : 'text-slate-600 hover:text-slate-900'}`}
+                onClick={() => setBillingInterval('monthly')}
+              >
+                Monthly
+              </button>
+              <button
+                className={`px-6 py-2 rounded-md text-sm font-medium transition-colors ${billingInterval === 'yearly' ? 'bg-white text-slate-900 shadow-sm' : 'text-slate-600 hover:text-slate-900'}`}
+                onClick={() => setBillingInterval('yearly')}
+              >
+                Annually
+              </button>
+            </div>
+          </div>
         </div>
 
         {/* Tiers Grid */}
@@ -156,8 +173,10 @@ export default function PricingTiersSection() {
                 <p className="text-sm text-slate-600">{tier.subtitle}</p>
                 <div className="mt-1">
                   <div className="flex items-baseline gap-1.5">
-                    <span className="text-2xl font-bold text-slate-900">${tier.price}</span>
-                    <span className="text-slate-600 text-sm">/year</span>
+                    <span className="text-2xl font-bold text-slate-900">
+                      ${billingInterval === 'yearly' ? tier.price_yearly : tier.price_monthly}
+                    </span>
+                    <span className="text-slate-600 text-sm">/{billingInterval === 'yearly' ? 'year' : 'month'}</span>
                   </div>
                 </div>
               </button>
@@ -268,10 +287,12 @@ export default function PricingTiersSection() {
                         <div className="flex items-start justify-between gap-3 mb-3">
                           <h5 className="font-semibold text-slate-900 text-base leading-snug">{addon.name}</h5>
                           <Badge className={`${addon.type === 'onetime' ? 'bg-amber-100 text-amber-800' : 'bg-indigo-100 text-indigo-800'} text-xs shrink-0`}>
-                            {addon.type === 'onetime' ? 'One-time' : 'Annual'}
+                            {addon.type === 'onetime' ? 'One-time' : billingInterval === 'yearly' ? 'Annual' : 'Monthly'}
                           </Badge>
                         </div>
-                        <div className="text-blue-900 font-bold text-2xl">${addon.price}</div>
+                        <div className="text-blue-900 font-bold text-2xl">
+                          ${addon.type === 'onetime' ? addon.price_yearly : billingInterval === 'yearly' ? addon.price_yearly : addon.price_monthly}
+                        </div>
                       </div>
                     ))}
                   </div>
