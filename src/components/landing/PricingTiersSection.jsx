@@ -84,13 +84,7 @@ const ADD_ONS = [
       { id: 'custom_sis_integration_yearly', name: 'Custom SIS/LMS Integration', price_yearly: 550, price_monthly: 55, type: 'recurring' },
     ],
   },
-  {
-    category: 'Scheduling Features',
-    items: [
-      { id: 'advanced_constraint_engine', name: 'Advanced Constraint Engine', price_yearly: 660, price_monthly: 66, type: 'recurring' },
-      { id: 'dp_advanced_logic', name: 'DP Advanced Logic', price_yearly: 770, price_monthly: 77, type: 'recurring' },
-    ],
-  },
+
   {
     category: 'Support & Services',
     items: [
@@ -105,7 +99,6 @@ const CATEGORY_ICONS = {
   'Users': Users,
   'School Structure': Building2,
   'Integrations': Plug,
-  'Scheduling Features': SlidersHorizontal,
   'Support & Services': LifeBuoy,
 };
 
