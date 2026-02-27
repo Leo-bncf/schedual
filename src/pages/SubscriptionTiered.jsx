@@ -103,18 +103,9 @@ const ADD_ONS = [
     ],
   },
   {
-    category: 'Integrations',
-    items: [
-      { id: 'managebac_integration', name: 'ManageBac Integration (API Sync)', price: 1100, type: 'yearly' },
-      { id: 'custom_sis_integration_yearly', name: 'Custom SIS/LMS Integration (Yearly)', price: 550, type: 'yearly' },
-    ],
-  },
-
-  {
     category: 'Support & Services',
     items: [
       { id: 'priority_support', name: 'Priority Support (24h)', price: 550, type: 'yearly' },
-      { id: 'dedicated_account_manager', name: 'Dedicated Account Manager', price: 1100, type: 'yearly' },
       { id: 'onboarding_setup', name: 'Onboarding & First Setup', price: 1320, type: 'onetime' },
     ],
   },

@@ -77,19 +77,12 @@ const ADD_ONS = [
       { id: 'multiple_timetable_scenarios', name: 'Multiple Timetable Scenarios', price_yearly: 880, price_monthly: 88, type: 'recurring' },
     ],
   },
-  {
-    category: 'Integrations',
-    items: [
-      { id: 'managebac_integration', name: 'ManageBac Integration (API Sync)', price_yearly: 1100, price_monthly: 110, type: 'recurring' },
-      { id: 'custom_sis_integration_yearly', name: 'Custom SIS/LMS Integration', price_yearly: 550, price_monthly: 55, type: 'recurring' },
-    ],
-  },
+
 
   {
     category: 'Support & Services',
     items: [
       { id: 'priority_support', name: 'Priority Support (24h)', price_yearly: 550, price_monthly: 55, type: 'recurring' },
-      { id: 'dedicated_account_manager', name: 'Dedicated Account Manager', price_yearly: 1100, price_monthly: 110, type: 'recurring' },
       { id: 'onboarding_setup', name: 'Onboarding & First Setup', price_yearly: 1320, price_monthly: 1320, type: 'onetime' },
     ],
   },
@@ -98,7 +91,6 @@ const ADD_ONS = [
 const CATEGORY_ICONS = {
   'Users': Users,
   'School Structure': Building2,
-  'Integrations': Plug,
   'Support & Services': LifeBuoy,
 };
 

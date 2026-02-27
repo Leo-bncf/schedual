@@ -24,12 +24,7 @@ const ADDON_PRICES = {
     additional_campus: 'price_1Sp7sTBg94UIyRz5wSmD65KQ',
     unlimited_campuses: 'price_1Sp7sTBg94UIyRz5QPatOiNv',
     multiple_timetable_scenarios: 'price_1Sp7sTBg94UIyRz5Scam19c4',
-    managebac_integration: 'price_1Sp7sTBg94UIyRz5C3TLD51g',
-    custom_sis_integration_yearly: 'price_1Sp7sTBg94UIyRz53iv5qtif',
-    custom_sis_integration_onetime: 'price_1Sp7sTBg94UIyRz5koYvxU95',
-
     priority_support: 'price_1Sp7sTBg94UIyRz59DpBNEKB',
-    dedicated_account_manager: 'price_1Sp7sTBg94UIyRz5taDoIsST',
     onboarding_setup: 'price_1Sp7sTBg94UIyRz5tyz6y98R',
   },
   monthly: {
@@ -38,11 +33,7 @@ const ADDON_PRICES = {
     additional_campus: 'price_1T5OhnBg94UIyRz5itBvA1Ge',
     unlimited_campuses: 'price_1T5OhnBg94UIyRz5MFwq05JD',
     multiple_timetable_scenarios: 'price_1T5OhnBg94UIyRz5ZUyfFIgb',
-    managebac_integration: 'price_1T5OhnBg94UIyRz5lP3MVuXf',
-    custom_sis_integration_yearly: 'price_1T5OhnBg94UIyRz5oxSEhgmp',
-    custom_sis_integration_onetime: 'price_1Sp7sTBg94UIyRz5koYvxU95',
     priority_support: 'price_1T5OhnBg94UIyRz5H6pS58qQ',
-    dedicated_account_manager: 'price_1T5OhnBg94UIyRz59WWoGi0N',
     onboarding_setup: 'price_1Sp7sTBg94UIyRz5tyz6y98R',
   }
 };
