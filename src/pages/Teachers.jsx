@@ -513,7 +513,7 @@ Example: {"full_name": "John Smith", "email": "john@school.com", "subjects": ["P
           <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400" />
           <Input 
             placeholder="Search teachers..." 
-            className="pl-10"
+            className="pl-10 h-11 bg-white border-slate-200 shadow-sm rounded-xl"
             value={searchQuery}
             onChange={(e) => setSearchQuery(e.target.value)}
           />
@@ -548,7 +548,7 @@ Example: {"full_name": "John Smith", "email": "john@school.com", "subjects": ["P
               transition={{ delay: index * 0.05 }}
               whileHover={{ scale: 1.05, y: -8, transition: { duration: 0.2 } }}
             >
-              <Card className="group hover:shadow-2xl transition-all duration-300 border-slate-200 overflow-hidden">
+              <Card className="group hover:shadow-2xl transition-all duration-300 border-0 shadow-lg bg-white rounded-xl overflow-hidden">
                 <CardHeader className="pb-3 bg-gradient-to-br from-indigo-50 to-white">
                   <div className="flex items-start justify-between">
                     <div className="flex items-center gap-3">
