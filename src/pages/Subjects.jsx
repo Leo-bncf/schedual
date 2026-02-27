@@ -595,86 +595,102 @@ ${trainingFeedback ? `LESSONS FROM ADMIN FEEDBACK:\n${trainingFeedback}\n\n` : '
 
 
 
-                          {/* DP Subject Groups (gated) */}
+          {/* DP Subject Groups (gated) */}
           {allowedProgrammes.includes('DP') && groupedSubjects.map(group => {
             if (group.subjects.length === 0) return null;
             const Icon = group.icon;
             
             return (
-              <div key={group.id}>
-                <div className="flex items-center gap-3 mb-4">
-                  <motion.div 
-                    className={`w-10 h-10 rounded-xl ${group.color} flex items-center justify-center shadow-lg`}
-                    whileHover={{ rotate: 360, scale: 1.1 }}
-                    transition={{ duration: 0.6 }}
-                  >
-                    <Icon className="w-5 h-5 text-white" />
-                  </motion.div>
-                  <h3 className="text-lg font-bold text-slate-800">
-                    Group {group.id}: {group.name}
-                  </h3>
-                  <Badge className="bg-slate-800 text-white border-0 shadow-sm">
+              <div key={group.id} className="mb-10">
+                <motion.div 
+                  initial={{ opacity: 0, x: -20 }}
+                  animate={{ opacity: 1, x: 0 }}
+                  className="flex items-center gap-4 mb-6"
+                >
+                  <div className="flex items-center gap-3 flex-1">
+                    <motion.div 
+                      className={`w-14 h-14 rounded-2xl ${group.color} flex items-center justify-center shadow-xl`}
+                      whileHover={{ rotate: 360, scale: 1.1 }}
+                      transition={{ duration: 0.6 }}
+                    >
+                      <Icon className="w-7 h-7 text-white" />
+                    </motion.div>
+                    <div>
+                      <h3 className="text-2xl font-bold text-slate-900">
+                        Group {group.id}: {group.name}
+                      </h3>
+                      <p className="text-sm text-slate-500 mt-1">IB Diploma Programme</p>
+                    </div>
+                  </div>
+                  <Badge className={`${group.color} text-white border-0 shadow-md text-base px-4 py-1`}>
                     {group.subjects.length} subjects
                   </Badge>
-                </div>
-                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
+                </motion.div>
+                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
                   {group.subjects.map((subject, index) => (
                     <motion.div
                       key={subject.id}
-                      initial={{ opacity: 0, scale: 0.9 }}
-                      animate={{ opacity: 1, scale: 1 }}
+                      initial={{ opacity: 0, y: 20 }}
+                      animate={{ opacity: 1, y: 0 }}
                       transition={{ delay: index * 0.05 }}
-                      whileHover={{ scale: 1.03, y: -5 }}
+                      whileHover={{ y: -8, transition: { duration: 0.2 } }}
                     >
-                      <Card className="border-0 shadow-lg bg-white rounded-xl hover:shadow-2xl transition-all duration-300 overflow-hidden">
-                        <div className={`h-1 bg-gradient-to-r ${group.color}`} />
-                        <CardContent className="p-4">
-                        <div className="flex items-start justify-between mb-3">
-                          <div>
-                            <p className="font-semibold text-slate-900">{subject.name}</p>
-                            <p className="text-sm text-slate-500">{subject.code}</p>
-                          </div>
-                          <DropdownMenu>
-                            <DropdownMenuTrigger asChild>
-                              <Button variant="ghost" size="icon" className="h-8 w-8">
-                                <MoreHorizontal className="w-4 h-4" />
-                              </Button>
-                            </DropdownMenuTrigger>
-                            <DropdownMenuContent align="end">
-                              <DropdownMenuItem onClick={() => handleEdit(subject)}>
-                                <Pencil className="w-4 h-4 mr-2" /> Edit
-                              </DropdownMenuItem>
-                              <DropdownMenuItem className="text-rose-600" onClick={() => deleteMutation.mutate(subject.id)}>
-                                <Trash2 className="w-4 h-4 mr-2" /> Delete
-                              </DropdownMenuItem>
-                            </DropdownMenuContent>
-                          </DropdownMenu>
-                        </div>
-                        <div className="flex flex-wrap gap-2">
-                          {subject.available_levels?.includes('HL') && (
-                            <Badge className="bg-rose-100 text-rose-700 border-0">
-                              HL {subject.hoursPerWeekHL || Math.round((subject.hl_minutes_per_week_default || 360) / 60)}h
-                            </Badge>
-                          )}
-                          {subject.available_levels?.includes('SL') && (
-                            <Badge className="bg-amber-100 text-amber-700 border-0">
-                              SL {subject.hoursPerWeekSL || Math.round((subject.sl_minutes_per_week_default || 240) / 60)}h
-                            </Badge>
-                          )}
-                          {subject.requires_lab && (
-                            <Badge variant="outline" className="text-violet-600 border-violet-200">
-                              <FlaskConical className="w-3 h-3 mr-1" /> Lab
-                            </Badge>
-                            )}
-                            </div>
-                            </CardContent>
-                            </Card>
+                      <Card className="group border-0 shadow-md bg-white rounded-2xl hover:shadow-2xl transition-all duration-300 overflow-hidden relative h-full">
+                        <div className={`absolute inset-0 ${group.color} opacity-0 group-hover:opacity-5 transition-opacity`} />
+                        <CardContent className="p-5 relative flex flex-col h-full">
+                          <div className="flex items-start justify-between mb-3">
+                            <motion.div 
+                              className={`w-12 h-12 rounded-xl ${group.color} flex items-center justify-center shadow-lg flex-shrink-0`}
+                              whileHover={{ rotate: 360 }}
+                              transition={{ duration: 0.6 }}
+                            >
+                              <Icon className="w-6 h-6 text-white" />
                             </motion.div>
-                            ))}
-                            </div>
-                            </div>
-                            );
-                            })}
+                            <DropdownMenu>
+                              <DropdownMenuTrigger asChild>
+                                <Button variant="ghost" size="icon" className="h-8 w-8 opacity-0 group-hover:opacity-100 transition-opacity">
+                                  <MoreHorizontal className="w-4 h-4" />
+                                </Button>
+                              </DropdownMenuTrigger>
+                              <DropdownMenuContent align="end">
+                                <DropdownMenuItem onClick={() => handleEdit(subject)}>
+                                  <Pencil className="w-4 h-4 mr-2" /> Edit
+                                </DropdownMenuItem>
+                                <DropdownMenuItem className="text-rose-600" onClick={() => deleteMutation.mutate(subject.id)}>
+                                  <Trash2 className="w-4 h-4 mr-2" /> Delete
+                                </DropdownMenuItem>
+                              </DropdownMenuContent>
+                            </DropdownMenu>
+                          </div>
+                          <div className="flex-1">
+                            <h4 className="font-bold text-slate-900 text-base mb-1 line-clamp-2 min-h-[3rem]">{subject.name}</h4>
+                            <p className="text-sm text-slate-500 mb-3">{subject.code}</p>
+                          </div>
+                          <div className="flex flex-wrap gap-2 mt-auto pt-3 border-t border-slate-100">
+                            {subject.available_levels?.includes('HL') && (
+                              <Badge className="bg-rose-100 text-rose-700 border-0 font-semibold">
+                                HL {subject.hoursPerWeekHL || Math.round((subject.hl_minutes_per_week_default || 360) / 60)}h
+                              </Badge>
+                            )}
+                            {subject.available_levels?.includes('SL') && (
+                              <Badge className="bg-blue-100 text-blue-700 border-0 font-semibold">
+                                SL {subject.hoursPerWeekSL || Math.round((subject.sl_minutes_per_week_default || 240) / 60)}h
+                              </Badge>
+                            )}
+                            {subject.requires_lab && (
+                              <Badge variant="outline" className="text-violet-600 border-violet-300 font-medium">
+                                <FlaskConical className="w-3 h-3 mr-1" /> Lab
+                              </Badge>
+                            )}
+                          </div>
+                        </CardContent>
+                      </Card>
+                    </motion.div>
+                  ))}
+                </div>
+              </div>
+            );
+          })}
         </div>
       )}
 
