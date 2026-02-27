@@ -27,8 +27,7 @@ const ADDON_PRICES = {
     managebac_integration: 'price_1Sp7sTBg94UIyRz5C3TLD51g',
     custom_sis_integration_yearly: 'price_1Sp7sTBg94UIyRz53iv5qtif',
     custom_sis_integration_onetime: 'price_1Sp7sTBg94UIyRz5koYvxU95',
-    advanced_constraint_engine: 'price_1Sp7sSBg94UIyRz5sPqlx1wt',
-    dp_advanced_logic: 'price_1Sp7sTBg94UIyRz5coslgXS7',
+
     priority_support: 'price_1Sp7sTBg94UIyRz59DpBNEKB',
     dedicated_account_manager: 'price_1Sp7sTBg94UIyRz5taDoIsST',
     onboarding_setup: 'price_1Sp7sTBg94UIyRz5tyz6y98R',

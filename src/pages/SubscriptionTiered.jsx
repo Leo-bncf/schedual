@@ -109,13 +109,7 @@ const ADD_ONS = [
       { id: 'custom_sis_integration_yearly', name: 'Custom SIS/LMS Integration (Yearly)', price: 550, type: 'yearly' },
     ],
   },
-  {
-    category: 'Scheduling Features',
-    items: [
-      { id: 'advanced_constraint_engine', name: 'Advanced Constraint Engine', price: 660, type: 'yearly' },
-      { id: 'dp_advanced_logic', name: 'DP Advanced Logic', price: 770, type: 'yearly' },
-    ],
-  },
+
   {
     category: 'Support & Services',
     items: [
