@@ -650,8 +650,8 @@ export default function Settings() {
         <TabsContent value="subscription">
           <div className="space-y-6">
             {/* Current Subscription Status */}
-            <Card className="border-0 shadow-md">
-              <CardHeader className="bg-gradient-to-r from-blue-50 to-indigo-50">
+            <Card className="border-0 shadow-sm bg-white rounded-xl">
+              <CardHeader className="bg-gradient-to-r from-blue-50 to-indigo-50 rounded-t-xl">
                 <div className="flex items-center justify-between">
                   <div className="flex items-center gap-3">
                     <div className="p-2 rounded-lg bg-blue-100">
@@ -803,7 +803,7 @@ export default function Settings() {
             )}
 
             {/* Add-ons Management */}
-            <Card className="border-0 shadow-md">
+            <Card className="border-0 shadow-sm bg-white rounded-xl">
               <CardHeader>
                 <div className="flex items-center justify-between">
                   <div className="flex items-center gap-3">
@@ -846,7 +846,7 @@ export default function Settings() {
 
             {/* School Admins */}
             {schoolAdmins.length > 0 && (
-              <Card className="border-0 shadow-md">
+              <Card className="border-0 shadow-sm bg-white rounded-xl">
                 <CardHeader>
                   <CardTitle className="flex items-center gap-2">
                     <Users className="w-5 h-5" />
