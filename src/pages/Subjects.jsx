@@ -418,7 +418,7 @@ ${trainingFeedback ? `LESSONS FROM ADMIN FEEDBACK:\n${trainingFeedback}\n\n` : '
           <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400" />
           <Input 
             placeholder="Search subjects..." 
-            className="pl-10"
+            className="pl-10 h-11 bg-white border-slate-200 shadow-sm rounded-xl"
             value={searchQuery}
             onChange={(e) => setSearchQuery(e.target.value)}
           />
@@ -453,7 +453,7 @@ ${trainingFeedback ? `LESSONS FROM ADMIN FEEDBACK:\n${trainingFeedback}\n\n` : '
                     transition={{ delay: index * 0.05 }}
                     whileHover={{ scale: 1.03, y: -5 }}
                   >
-                    <Card className="border-0 shadow-lg hover:shadow-2xl transition-all duration-300 overflow-hidden">
+                    <Card className="border-0 shadow-lg bg-white rounded-xl hover:shadow-2xl transition-all duration-300 overflow-hidden">
                       <div className="h-1 bg-gradient-to-r from-green-500 to-emerald-600" />
                       <CardContent className="p-4">
                       <div className="flex items-start justify-between">
@@ -509,7 +509,7 @@ ${trainingFeedback ? `LESSONS FROM ADMIN FEEDBACK:\n${trainingFeedback}\n\n` : '
                     transition={{ delay: index * 0.05 }}
                     whileHover={{ scale: 1.03, y: -5 }}
                   >
-                    <Card className="border-0 shadow-lg hover:shadow-2xl transition-all duration-300 overflow-hidden">
+                    <Card className="border-0 shadow-lg bg-white rounded-xl hover:shadow-2xl transition-all duration-300 overflow-hidden">
                       <div className="h-1 bg-gradient-to-r from-orange-500 to-amber-600" />
                       <CardContent className="p-4">
                       <div className="flex items-start justify-between">
@@ -582,7 +582,7 @@ ${trainingFeedback ? `LESSONS FROM ADMIN FEEDBACK:\n${trainingFeedback}\n\n` : '
                       transition={{ delay: index * 0.05 }}
                       whileHover={{ scale: 1.03, y: -5 }}
                     >
-                      <Card className="border-0 shadow-lg hover:shadow-2xl transition-all duration-300 overflow-hidden">
+                      <Card className="border-0 shadow-lg bg-white rounded-xl hover:shadow-2xl transition-all duration-300 overflow-hidden">
                         <div className={`h-1 bg-gradient-to-r ${group.color}`} />
                         <CardContent className="p-4">
                         <div className="flex items-start justify-between mb-3">
