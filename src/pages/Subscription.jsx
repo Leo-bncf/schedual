@@ -256,10 +256,10 @@ export default function Subscription() {
                 <div className="p-8 rounded-2xl border-2 border-blue-900 bg-gradient-to-br from-blue-50 to-white">
                   <div className="text-center mb-6">
                     <div className="text-5xl font-bold text-blue-900 mb-2">
-                      $1,999
+                      €1,999
                     </div>
                     <p className="text-slate-600">per year</p>
-                    <p className="text-sm text-slate-500 mt-1">Only $166/month billed annually</p>
+                    <p className="text-sm text-slate-500 mt-1">Only €166/month billed annually</p>
                   </div>
 
                   <div className="space-y-3 mb-6">
@@ -295,7 +295,7 @@ export default function Subscription() {
 
                   <div className="p-3 bg-blue-100 rounded-lg mb-6">
                     <p className="text-xs text-blue-900 text-center">
-                      <strong>Need more admins?</strong> Purchase additional seats at $199/year each after subscribing
+                      <strong>Need more admins?</strong> Purchase additional seats at €199/year each after subscribing
                     </p>
                   </div>
 
@@ -313,7 +313,7 @@ export default function Subscription() {
                     ) : (
                       <>
                         <CreditCard className="w-5 h-5 mr-2" />
-                        Subscribe Now - $1,999/year
+                        Subscribe Now - €1,999/year
                       </>
                     )}
                   </Button>
@@ -354,7 +354,7 @@ export default function Subscription() {
           <DialogHeader>
             <DialogTitle>Buy Additional Admin Seats</DialogTitle>
             <DialogDescription>
-              Expand your team with more administrator accounts - $199/year per seat
+              Expand your team with more administrator accounts - €199/year per seat
             </DialogDescription>
           </DialogHeader>
           <div className="space-y-4 py-4">
@@ -391,11 +391,11 @@ export default function Subscription() {
               </div>
               <div className="flex justify-between items-center mb-2">
                 <span className="text-slate-600">Price per seat</span>
-                <span className="font-semibold">$199/year</span>
+                <span className="font-semibold">€199/year</span>
               </div>
               <div className="border-t border-slate-200 mt-3 pt-3 flex justify-between items-center">
                 <span className="font-bold text-lg">Total</span>
-                <span className="font-bold text-2xl text-blue-900">${seatsQuantity * 199}/year</span>
+                <span className="font-bold text-2xl text-blue-900">€{seatsQuantity * 199}/year</span>
               </div>
             </div>
           </div>
