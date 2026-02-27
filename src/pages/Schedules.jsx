@@ -51,6 +51,8 @@ export default function Schedules() {
   const [genError, setGenError] = useState('');
   const [selectedStudentId, setSelectedStudentId] = useState(null);
   const [searchStudent, setSearchStudent] = useState('');
+  const [selectedTeacherId, setSelectedTeacherId] = useState(null);
+  const [searchTeacher, setSearchTeacher] = useState('');
   const [overviewFilterType, setOverviewFilterType] = useState('all');
   const [overviewFilterId, setOverviewFilterId] = useState('all');
   const [formData, setFormData] = useState({
