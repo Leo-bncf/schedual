@@ -1,6 +1,32 @@
 import { createClientFromRequest } from 'npm:@base44/sdk@0.8.6';
 import Stripe from 'npm:stripe@17.5.0';
 
+const PRICE_TO_TIER = {
+  'price_1Sp8n9BSrrEzDDMYT2rMz4gt': 'tier1',
+  'price_1Sp8n9BSrrEzDDMYhd3bxTWY': 'tier2',
+  'price_1Sp8n9BSrrEzDDMY5KQsLjdU': 'tier3',
+  'price_1T5OhnBg94UIyRz5rMoxLvfs': 'tier1',
+  'price_1T5OhnBg94UIyRz5t8TggLA3': 'tier2',
+  'price_1T5OhnBg94UIyRz5FjJJV2MA': 'tier3',
+};
+
+const PRICE_TO_ADDON = {
+  'price_1Sp7sTBg94UIyRz5yhWAjB7w': 'extra_admin_user',
+  'price_1Sp7sTBg94UIyRz54p7fg05F': 'unlimited_admin_users',
+  'price_1Sp7sTBg94UIyRz5wSmD65KQ': 'additional_campus',
+  'price_1Sp7sTBg94UIyRz5QPatOiNv': 'unlimited_campuses',
+  'price_1Sp7sTBg94UIyRz5Scam19c4': 'multiple_timetable_scenarios',
+  'price_1Sp7sTBg94UIyRz5koYvxU95': 'custom_sis_integration_onetime',
+  'price_1Sp7sTBg94UIyRz59DpBNEKB': 'priority_support',
+  'price_1Sp7sTBg94UIyRz5tyz6y98R': 'onboarding_setup',
+  'price_1T5OhnBg94UIyRz54nGunyYC': 'extra_admin_user',
+  'price_1T5OhnBg94UIyRz5jhT6x0N8': 'unlimited_admin_users',
+  'price_1T5OhnBg94UIyRz5itBvA1Ge': 'additional_campus',
+  'price_1T5OhnBg94UIyRz5MFwq05JD': 'unlimited_campuses',
+  'price_1T5OhnBg94UIyRz5ZUyfFIgb': 'multiple_timetable_scenarios',
+  'price_1T5OhnBg94UIyRz5H6pS58qQ': 'priority_support',
+};
+
 Deno.serve(async (req) => {
   try {
     const stripe = new Stripe(Deno.env.get("STRIPE_SECRET_KEY"));
@@ -114,12 +140,34 @@ Deno.serve(async (req) => {
 
         if (schools.length > 0) {
           const school = schools[0];
+          
+          let subscriptionTier = school.subscription_tier;
+          const addOns = [];
+          
+          if (subscription.items && subscription.items.data) {
+            for (const item of subscription.items.data) {
+              const priceId = item.price.id;
+              if (PRICE_TO_TIER[priceId]) {
+                subscriptionTier = PRICE_TO_TIER[priceId];
+              } else if (PRICE_TO_ADDON[priceId]) {
+                addOns.push(PRICE_TO_ADDON[priceId]);
+              }
+            }
+          }
+
+          const maxAdminSeats = addOns.includes('unlimited_admin_users') ? 999 : (addOns.includes('extra_admin_user') ? 4 : 3);
+          const campusCount = (subscriptionTier === 'tier3' || addOns.includes('unlimited_campuses')) ? 999 : (addOns.includes('additional_campus') ? 2 : 1);
+
           await base44.asServiceRole.entities.School.update(school.id, {
             subscription_status: subscription.status,
             subscription_current_period_end: new Date(subscription.current_period_end * 1000).toISOString(),
+            subscription_tier: subscriptionTier,
+            active_add_ons: addOns,
+            max_admin_seats: maxAdminSeats,
+            campus_count: campusCount,
           });
 
-          console.log(`✅ Subscription updated for school ${school.id}: ${subscription.status}`);
+          console.log(`✅ Subscription updated for school ${school.id}: ${subscription.status}, Tier: ${subscriptionTier}, Addons: ${addOns.join(',')}`);
         }
         break;
       }
