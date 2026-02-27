@@ -234,7 +234,7 @@ export default function ClassGroups() {
         }
       />
 
-      <Card className="border-blue-200 bg-blue-50">
+      <Card className="border-0 shadow-sm bg-gradient-to-br from-blue-50 to-indigo-50 rounded-xl">
         <CardContent className="p-6">
           <div className="flex items-center justify-between">
             <div>
@@ -247,7 +247,7 @@ export default function ClassGroups() {
       </Card>
 
       {studentsWithoutClassGroup.length > 0 && (
-        <Card className="border-amber-200 bg-amber-50">
+        <Card className="border-0 shadow-sm bg-amber-50 rounded-xl">
           <CardContent className="p-4">
             <div className="flex items-center gap-3">
               <Users className="w-5 h-5 text-amber-600" />
@@ -271,7 +271,7 @@ export default function ClassGroups() {
             placeholder="Search ClassGroups..."
             value={searchQuery}
             onChange={(e) => setSearchQuery(e.target.value)}
-            className="pl-10"
+            className="pl-10 h-11 bg-white border-slate-200 shadow-sm rounded-xl"
           />
         </div>
         <Button
@@ -319,7 +319,7 @@ export default function ClassGroups() {
                 transition={{ delay: index * 0.05 }}
                 whileHover={{ scale: 1.03, y: -5 }}
               >
-                <Card className="border-0 shadow-lg hover:shadow-2xl transition-all duration-300 overflow-hidden cursor-pointer">
+                <Card className="border-0 shadow-lg bg-white rounded-xl hover:shadow-2xl transition-all duration-300 overflow-hidden cursor-pointer">
                   <div className={`h-1 bg-gradient-to-r ${
                     group.ib_programme === 'DP' ? 'from-blue-500 to-cyan-500' :
                     group.ib_programme === 'MYP' ? 'from-emerald-500 to-teal-500' :
