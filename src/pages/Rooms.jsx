@@ -348,23 +348,32 @@ ${trainingFeedback ? `LESSONS FROM ADMIN FEEDBACK:\n${trainingFeedback}\n\n` : '
       {/* Stats */}
       <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">
         {[
-          { label: 'Total Rooms', value: rooms.length, color: 'from-blue-500 to-cyan-500' },
-          { label: 'Total Capacity', value: totalCapacity, color: 'from-violet-500 to-purple-500' },
-          { label: 'Laboratories', value: labCount, color: 'from-rose-500 to-pink-500' },
-          { label: 'Avg. Capacity', value: rooms.length > 0 ? Math.round(totalCapacity / rooms.length) : 0, color: 'from-emerald-500 to-teal-500' }
+          { label: 'Total Rooms', value: rooms.length, color: 'from-blue-500 to-cyan-500', icon: Building2 },
+          { label: 'Total Capacity', value: totalCapacity, color: 'from-violet-500 to-purple-500', icon: Users },
+          { label: 'Laboratories', value: labCount, color: 'from-rose-500 to-pink-500', icon: FlaskConical },
+          { label: 'Avg. Capacity', value: rooms.length > 0 ? Math.round(totalCapacity / rooms.length) : 0, color: 'from-emerald-500 to-teal-500', icon: Users }
         ].map((stat, index) => (
           <motion.div
             key={stat.label}
             initial={{ opacity: 0, y: 20 }}
             animate={{ opacity: 1, y: 0 }}
             transition={{ delay: index * 0.1 }}
-            whileHover={{ scale: 1.05, y: -5 }}
+            whileHover={{ y: -5 }}
           >
-            <Card className="border-0 shadow-lg bg-white rounded-xl hover:shadow-xl transition-shadow overflow-hidden">
-              <CardContent className="p-4 relative">
-                <div className={`absolute inset-0 bg-gradient-to-br ${stat.color} opacity-5`} />
-                <p className="text-sm font-medium text-slate-600">{stat.label}</p>
-                <p className="text-3xl font-bold bg-gradient-to-r from-slate-900 to-slate-700 bg-clip-text text-transparent">
+            <Card className="border-0 shadow-md bg-white rounded-2xl hover:shadow-xl transition-all overflow-hidden group">
+              <CardContent className="p-6 relative">
+                <div className={`absolute inset-0 bg-gradient-to-br ${stat.color} opacity-0 group-hover:opacity-5 transition-opacity`} />
+                <div className="flex items-start justify-between mb-3">
+                  <motion.div 
+                    className={`w-12 h-12 rounded-xl bg-gradient-to-br ${stat.color} flex items-center justify-center shadow-lg`}
+                    whileHover={{ rotate: 360 }}
+                    transition={{ duration: 0.6 }}
+                  >
+                    <stat.icon className="w-6 h-6 text-white" />
+                  </motion.div>
+                </div>
+                <p className="text-sm font-medium text-slate-600 mb-1">{stat.label}</p>
+                <p className="text-4xl font-bold text-slate-900">
                   {stat.value}
                 </p>
               </CardContent>
@@ -409,58 +418,64 @@ ${trainingFeedback ? `LESSONS FROM ADMIN FEEDBACK:\n${trainingFeedback}\n\n` : '
           {filteredRooms.map((room, index) => {
             const typeInfo = getRoomTypeInfo(room.room_type);
             const Icon = typeInfo.icon;
-            
+
             return (
               <motion.div
                 key={room.id}
-                initial={{ opacity: 0, scale: 0.9 }}
-                animate={{ opacity: 1, scale: 1 }}
+                initial={{ opacity: 0, y: 20 }}
+                animate={{ opacity: 1, y: 0 }}
                 transition={{ delay: index * 0.05 }}
-                whileHover={{ scale: 1.03, y: -5 }}
+                whileHover={{ y: -8, transition: { duration: 0.2 } }}
               >
-                <Card className="border-0 shadow-lg bg-white rounded-xl hover:shadow-2xl transition-all duration-300 overflow-hidden group">
-                  <div className={`h-1 bg-gradient-to-r ${typeInfo.color}`} />
-                  <CardContent className="p-5">
+                <Card className="group border-0 shadow-md bg-white rounded-2xl hover:shadow-2xl transition-all duration-300 overflow-hidden relative h-full">
+                  <div className={`absolute inset-0 ${typeInfo.color} opacity-0 group-hover:opacity-5 transition-opacity`} />
+                  <CardContent className="p-5 relative">
                     <div className="flex items-start justify-between mb-4">
-                      <div className="flex items-center gap-3 flex-1">
+                      <div className="flex items-center gap-3 flex-1 min-w-0">
                         <motion.div 
-                          className={`w-12 h-12 rounded-xl ${typeInfo.color} flex items-center justify-center shadow-md`}
+                          className={`w-14 h-14 rounded-xl ${typeInfo.color} flex items-center justify-center shadow-lg flex-shrink-0`}
                           whileHover={{ rotate: 360 }}
                           transition={{ duration: 0.6 }}
                         >
-                          <Icon className="w-6 h-6 text-white" />
+                          <Icon className="w-7 h-7 text-white" />
                         </motion.div>
-                        <div>
-                          <p className="font-bold text-slate-900 text-lg">{room.name}</p>
-                          <p className="text-sm text-slate-500">
+                        <div className="min-w-0 flex-1">
+                          <p className="font-bold text-slate-900 text-base mb-1 truncate">{room.name}</p>
+                          <p className="text-sm text-slate-500 truncate">
                             {room.building && `${room.building}`}
                             {room.floor && `, Floor ${room.floor}`}
+                            {!room.building && !room.floor && 'No location'}
                           </p>
                         </div>
                       </div>
                       <DropdownMenu>
-                      <DropdownMenuTrigger asChild>
-                        <Button variant="ghost" size="icon" className="h-8 w-8">
-                          <MoreHorizontal className="w-4 h-4" />
-                        </Button>
-                      </DropdownMenuTrigger>
-                      <DropdownMenuContent align="end">
-                        <DropdownMenuItem onClick={() => handleEdit(room)}>
-                          <Pencil className="w-4 h-4 mr-2" /> Edit
-                        </DropdownMenuItem>
-                        <DropdownMenuItem className="text-rose-600" onClick={() => deleteMutation.mutate(room.id)}>
-                          <Trash2 className="w-4 h-4 mr-2" /> Delete
-                        </DropdownMenuItem>
-                      </DropdownMenuContent>
-                    </DropdownMenu>
-                  </div>
-                  
-                    <div className="flex items-center justify-between pt-3 border-t border-slate-100">
+                        <DropdownMenuTrigger asChild>
+                          <Button variant="ghost" size="icon" className="h-8 w-8 opacity-0 group-hover:opacity-100 transition-opacity">
+                            <MoreHorizontal className="w-4 h-4" />
+                          </Button>
+                        </DropdownMenuTrigger>
+                        <DropdownMenuContent align="end">
+                          <DropdownMenuItem onClick={() => handleEdit(room)}>
+                            <Pencil className="w-4 h-4 mr-2" /> Edit
+                          </DropdownMenuItem>
+                          <DropdownMenuItem className="text-rose-600" onClick={() => deleteMutation.mutate(room.id)}>
+                            <Trash2 className="w-4 h-4 mr-2" /> Delete
+                          </DropdownMenuItem>
+                        </DropdownMenuContent>
+                      </DropdownMenu>
+                    </div>
+
+                    <div className="flex items-center justify-between pt-4 border-t border-slate-100">
                       <div className="flex items-center gap-2">
-                        <Users className="w-4 h-4 text-slate-400" />
-                        <span className="text-sm font-medium text-slate-700">Capacity: {room.capacity}</span>
+                        <div className={`w-8 h-8 rounded-lg ${typeInfo.color} bg-opacity-10 flex items-center justify-center`}>
+                          <Users className="w-4 h-4 text-slate-700" />
+                        </div>
+                        <div>
+                          <p className="text-xs text-slate-500">Capacity</p>
+                          <p className="text-lg font-bold text-slate-900">{room.capacity}</p>
+                        </div>
                       </div>
-                      <Badge className={`border-0 ${typeInfo.color} text-white shadow-sm`}>
+                      <Badge className={`${typeInfo.color} text-white border-0 shadow-sm font-semibold`}>
                         {typeInfo.label}
                       </Badge>
                     </div>
