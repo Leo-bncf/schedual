@@ -30,7 +30,7 @@ Deno.serve(async (req) => {
     const currentAdmins = await base44.asServiceRole.entities.User.filter({ 
       school_id: schoolId 
     });
-    const maxSeats = (school.max_additional_users || 0) + 1;
+    const maxSeats = school.max_admin_seats || 3;
 
     if (currentAdmins.length >= maxSeats) {
       return Response.json({ 

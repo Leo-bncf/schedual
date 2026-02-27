@@ -47,6 +47,9 @@ Deno.serve(async (req) => {
         }
 
         let school;
+        const maxAdminSeats = addOns.includes('unlimited_admin_users') ? 999 : (addOns.includes('extra_admin_user') ? 4 : 3);
+        const campusCount = addOns.includes('unlimited_campuses') ? 999 : (addOns.includes('additional_campus') ? 2 : 1);
+
         if (user?.school_id) {
           // Update existing school for this user
           console.log(`✅ User already has school ${user.school_id}, updating subscription`);
@@ -58,6 +61,8 @@ Deno.serve(async (req) => {
             stripe_subscription_id: subscriptionId,
             subscription_start_date: subscription ? new Date(subscription.current_period_start * 1000).toISOString() : new Date().toISOString(),
             subscription_current_period_end: subscription ? new Date(subscription.current_period_end * 1000).toISOString() : null,
+            max_admin_seats: maxAdminSeats,
+            campus_count: campusCount,
           });
         } else {
           // Create a new school record
@@ -71,8 +76,8 @@ Deno.serve(async (req) => {
             stripe_subscription_id: subscriptionId,
             subscription_start_date: subscription ? new Date(subscription.current_period_start * 1000).toISOString() : new Date().toISOString(),
             subscription_current_period_end: subscription ? new Date(subscription.current_period_end * 1000).toISOString() : null,
-            max_admin_seats: addOns.includes('unlimited_admin_users') ? 999 : 3,
-            campus_count: addOns.includes('unlimited_campuses') ? 999 : 1,
+            max_admin_seats: maxAdminSeats,
+            campus_count: campusCount,
           });
           console.log(`✅ School ${school.id} created with tier: ${subscriptionTier}`);
 
