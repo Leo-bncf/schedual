@@ -427,27 +427,29 @@ ${trainingFeedback ? `LESSONS FROM ADMIN FEEDBACK:\n${trainingFeedback}\n\n` : '
                 transition={{ delay: index * 0.05 }}
                 whileHover={{ y: -8, transition: { duration: 0.2 } }}
               >
-                <Card className="border-0 shadow-sm hover:shadow-md transition-shadow bg-white rounded-xl overflow-hidden flex flex-col h-full">
-                  <div className={`h-1.5 w-full ${typeInfo.color}`} />
-                  <CardContent className="p-4 flex flex-col flex-1">
-                    <div className="flex items-start justify-between mb-6">
+                <Card className="border border-slate-200 shadow-sm bg-white rounded-xl hover:shadow-md transition-all duration-200 overflow-hidden h-full flex flex-col">
+                  <div className={`h-1 w-full ${typeInfo.color}`} />
+                  <CardContent className="p-5 flex-1 flex flex-col">
+                    <div className="flex items-start justify-between mb-4">
                       <div className="flex items-center gap-3 flex-1 min-w-0">
                         <div className={`w-10 h-10 rounded-lg ${typeInfo.color} flex items-center justify-center flex-shrink-0`}>
                           <Icon className="w-5 h-5 text-white" />
                         </div>
                         <div className="min-w-0 flex-1">
-                          <h3 className="font-bold text-slate-900 text-base truncate">{room.name}</h3>
-                          <p className="text-xs text-slate-500 truncate">
-                            {room.building && `${room.building}`}
-                            {room.floor && `, Floor ${room.floor}`}
-                            {!room.building && !room.floor && 'No location'}
-                          </p>
+                          <p className="font-bold text-slate-900 text-base truncate">{room.name}</p>
+                          {(room.building || room.floor) && (
+                            <p className="text-xs text-slate-500 truncate">
+                              {room.building && `${room.building}`}
+                              {room.building && room.floor && ', '}
+                              {room.floor && `Floor ${room.floor}`}
+                            </p>
+                          )}
                         </div>
                       </div>
                       <DropdownMenu>
                         <DropdownMenuTrigger asChild>
-                          <Button variant="ghost" size="icon" className="h-8 w-8 -mr-2 text-slate-400 hover:text-slate-600">
-                            <MoreHorizontal className="w-5 h-5" />
+                          <Button variant="ghost" size="icon" className="h-8 w-8 -mr-2 -mt-2">
+                            <MoreHorizontal className="w-4 h-4 text-slate-400" />
                           </Button>
                         </DropdownMenuTrigger>
                         <DropdownMenuContent align="end">
@@ -460,13 +462,13 @@ ${trainingFeedback ? `LESSONS FROM ADMIN FEEDBACK:\n${trainingFeedback}\n\n` : '
                         </DropdownMenuContent>
                       </DropdownMenu>
                     </div>
-                   
-                    <div className="flex items-center justify-between mt-auto pt-4 border-t border-slate-50">
+
+                    <div className="flex items-center justify-between mt-auto pt-2">
                       <div className="flex items-center gap-2 text-slate-500">
                         <Users className="w-4 h-4" />
                         <span className="text-sm">Capacity: {room.capacity}</span>
                       </div>
-                      <Badge className={`${typeInfo.color} text-white border-0 hover:${typeInfo.color} rounded-md px-2 py-0.5 text-xs font-medium`}>
+                      <Badge className={`${typeInfo.color} text-white border-0 font-medium`}>
                         {typeInfo.label}
                       </Badge>
                     </div>
