@@ -212,24 +212,6 @@ export default function ClassGroups() {
               <Sparkles className="w-4 h-4 mr-2" />
               Create Batches
             </Button>
-            <Button
-              variant="outline"
-              onClick={async () => {
-                try {
-                  setDiagLoading(true);
-                  const res = await base44.functions.invoke('diagnoseStudents');
-                  setDiagData(res.data);
-                  setDiagOpen(true);
-                } catch (e) {
-                  alert('Diagnostics failed');
-                } finally {
-                  setDiagLoading(false);
-                }
-              }}
-            >
-              <Search className="w-4 h-4 mr-2" />
-              {diagLoading ? 'Diagnosing…' : 'Diagnose Data'}
-            </Button>
           </div>
         }
       />
