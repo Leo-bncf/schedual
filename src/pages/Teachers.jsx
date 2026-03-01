@@ -493,7 +493,7 @@ Example: {"full_name": "John Smith", "email": "john@school.com", "subjects": ["P
               )}
             </Button>
             <motion.div whileHover={{ scale: 1.05 }} whileTap={{ scale: 0.95 }}>
-              <Button onClick={() => setIsDialogOpen(true)} className="bg-gradient-to-r from-indigo-600 to-violet-600 hover:from-indigo-700 hover:to-violet-700 shadow-lg">
+              <Button onClick={() => setIsDialogOpen(true)} className="bg-blue-600 hover:bg-blue-700 text-white rounded-full px-6 h-10 font-medium transition-all shadow-sm">
                 <Plus className="w-4 h-4 mr-2" />
                 Add Teacher
               </Button>

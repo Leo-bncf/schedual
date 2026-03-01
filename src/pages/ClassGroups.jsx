@@ -207,7 +207,7 @@ export default function ClassGroups() {
             <Button
               onClick={() => setShowGenerateDialog(true)}
               disabled={isGenerating}
-              className="bg-indigo-600 hover:bg-indigo-700"
+              className="bg-blue-600 hover:bg-blue-700 text-white rounded-full px-6 h-10 font-medium transition-all shadow-sm"
             >
               <Sparkles className="w-4 h-4 mr-2" />
               Create Batches
