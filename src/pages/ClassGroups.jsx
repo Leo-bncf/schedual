@@ -311,51 +311,38 @@ export default function ClassGroups() {
             const groupStudents = students.filter(s => group.student_ids?.includes(s.id));
             const homeroomTeacher = teachers.find(t => t.id === group.homeroom_teacher_id);
 
+            const colorClass = group.ib_programme === 'DP' ? 'bg-blue-500' :
+                               group.ib_programme === 'MYP' ? 'bg-purple-500' :
+                               'bg-teal-500';
+
             return (
               <motion.div
                 key={group.id}
-                initial={{ opacity: 0, scale: 0.9 }}
-                animate={{ opacity: 1, scale: 1 }}
+                initial={{ opacity: 0, y: 20 }}
+                animate={{ opacity: 1, y: 0 }}
                 transition={{ delay: index * 0.05 }}
-                whileHover={{ scale: 1.03, y: -5 }}
+                whileHover={{ y: -8, transition: { duration: 0.2 } }}
+                onClick={() => setSelectedGroup(group)}
               >
-                <Card className="border-0 shadow-lg bg-white rounded-xl hover:shadow-2xl transition-all duration-300 overflow-hidden cursor-pointer">
-                  <div className={`h-1 bg-gradient-to-r ${
-                    group.ib_programme === 'DP' ? 'from-blue-500 to-cyan-500' :
-                    group.ib_programme === 'MYP' ? 'from-purple-500 to-fuchsia-500' :
-                    'from-teal-500 to-cyan-500'
-                  }`} />
-                <CardHeader className="pb-3">
-                  <div className="flex items-start justify-between">
-                    <div 
-                      className="flex-1 cursor-pointer"
-                      onClick={() => setSelectedGroup(group)}
-                    >
-                      <CardTitle className="text-lg font-bold text-slate-900 mb-2">
-                        {group.name}
-                      </CardTitle>
-                      <div className="flex items-center gap-2 flex-wrap">
-                        <Badge className={programmeColors[group.ib_programme]}>
-                          {group.ib_programme}
-                        </Badge>
-                        <Badge variant="outline">
-                          {group.year_group}
-                        </Badge>
-                      </div>
-                    </div>
-                    <div className="flex items-start gap-2">
-                      <div className="text-right">
-                        <div className="text-2xl font-bold text-indigo-600">
-                          {groupStudents.length}
+                <Card className="border-0 shadow-sm bg-white rounded-xl hover:shadow-md transition-all duration-200 overflow-hidden h-full flex flex-col cursor-pointer">
+                  <div className={`h-1 ${colorClass}`} />
+                  <CardContent className="p-5 flex-1 flex flex-col">
+                    <div className="flex items-start justify-between mb-4">
+                      <div className="flex items-center gap-3 flex-1 min-w-0">
+                        <div className={`w-12 h-12 rounded-xl ${colorClass} flex items-center justify-center flex-shrink-0`}>
+                          <Users className="w-6 h-6 text-white" />
                         </div>
-                        <div className="text-xs text-slate-500">
-                          / {group.max_students}
+                        <div className="min-w-0 flex-1">
+                          <p className="font-bold text-slate-900 text-lg truncate">{group.name}</p>
+                          <p className="text-sm text-slate-500 truncate">
+                            {homeroomTeacher ? `Homeroom: ${homeroomTeacher.full_name}` : 'No homeroom teacher'}
+                          </p>
                         </div>
                       </div>
                       <Button
                         variant="ghost"
                         size="icon"
-                        className="text-rose-600 hover:text-rose-700 hover:bg-rose-50 h-8 w-8"
+                        className="text-slate-400 hover:text-rose-600 h-8 w-8 -mr-2 -mt-2"
                         onClick={(e) => {
                           e.stopPropagation();
                           if (confirm(`Delete ${group.name}? Students will be unassigned.`)) {
@@ -366,28 +353,19 @@ export default function ClassGroups() {
                         <Trash2 className="w-4 h-4" />
                       </Button>
                     </div>
-                  </div>
-                </CardHeader>
-                <CardContent>
-                  <div className="space-y-2">
-                    {homeroomTeacher && (
-                      <div className="text-sm">
-                        <span className="text-slate-500">Homeroom: </span>
-                        <span className="font-medium text-slate-700">
-                          {homeroomTeacher.full_name}
-                        </span>
+                    
+                    <div className="flex items-center justify-between mt-auto pt-4">
+                      <div className="flex items-center gap-2 text-slate-600">
+                        <Users className="w-4 h-4" />
+                        <span className="text-sm font-medium">{groupStudents.length} / {group.max_students}</span>
                       </div>
-                    )}
-                    <div className="flex items-center gap-2 text-sm">
-                      <Users className="w-4 h-4 text-slate-400" />
-                      <span className="text-slate-600">
-                        {groupStudents.length} students
-                      </span>
+                      <Badge className={`${colorClass} text-white border-0 font-medium`}>
+                        {group.ib_programme} {group.year_group}
+                      </Badge>
                     </div>
-                  </div>
-                </CardContent>
-              </Card>
-            </motion.div>
+                  </CardContent>
+                </Card>
+              </motion.div>
             );
           })}
         </div>

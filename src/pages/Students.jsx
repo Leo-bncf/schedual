@@ -381,7 +381,7 @@ export default function Students() {
       cell: (row) => (
         <DropdownMenu>
           <DropdownMenuTrigger asChild>
-            <Button variant="ghost" size="icon">
+            <Button variant="ghost" size="icon" className="text-slate-400 hover:text-slate-600 h-8 w-8 -mr-2 -mt-2">
               <MoreHorizontal className="w-4 h-4" />
             </Button>
           </DropdownMenuTrigger>
