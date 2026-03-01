@@ -70,14 +70,14 @@ export default function Dashboard() {
   const draftSchedules = scheduleVersions.filter(s => s.status === 'draft');
 
   const programmeData = [
-    { name: 'DP', value: students.filter(s => s.ib_programme === 'DP').length, color: '#0f172a' },
-    { name: 'MYP', value: students.filter(s => s.ib_programme === 'MYP').length, color: '#64748b' },
-    { name: 'PYP', value: students.filter(s => s.ib_programme === 'PYP').length, color: '#cbd5e1' },
+    { name: 'DP', value: students.filter(s => s.ib_programme === 'DP').length, color: '#1e40af' },
+    { name: 'MYP', value: students.filter(s => s.ib_programme === 'MYP').length, color: '#3b82f6' },
+    { name: 'PYP', value: students.filter(s => s.ib_programme === 'PYP').length, color: '#93c5fd' },
   ].filter(d => d.value > 0);
 
   const teacherLoadData = [
-    { name: 'Full-time (>20h)', value: teachers.filter(t => (t.max_hours_per_week || 0) > 20).length, color: '#0f172a' },
-    { name: 'Part-time (≤20h)', value: teachers.filter(t => (t.max_hours_per_week || 0) <= 20).length, color: '#94a3b8' },
+    { name: 'Full-time (>20h)', value: teachers.filter(t => (t.max_hours_per_week || 0) > 20).length, color: '#1e40af' },
+    { name: 'Part-time (≤20h)', value: teachers.filter(t => (t.max_hours_per_week || 0) <= 20).length, color: '#93c5fd' },
   ].filter(d => d.value > 0);
 
   const hasTeacherLoadData = teacherLoadData.reduce((sum, d) => sum + d.value, 0) > 0;
@@ -90,7 +90,7 @@ export default function Dashboard() {
           <p className="text-slate-500 mt-1">Overview of your scheduling system</p>
         </div>
         <Link to={createPageUrl('Schedules')}>
-          <Button className="bg-slate-900 hover:bg-slate-800 text-white rounded-full px-6 h-10 font-medium transition-all shadow-sm">
+          <Button className="bg-blue-600 hover:bg-blue-700 text-white rounded-full px-6 h-10 font-medium transition-all shadow-sm">
             <Calendar className="w-4 h-4 mr-2" />
             Scheduling Engine
           </Button>
@@ -121,7 +121,7 @@ export default function Dashboard() {
                     </Pie>
                     <RechartsTooltip 
                       contentStyle={{ borderRadius: '12px', border: 'none', boxShadow: '0 10px 15px -3px rgb(0 0 0 / 0.1)' }}
-                      itemStyle={{ color: '#0f172a', fontSize: '14px', fontWeight: 500 }}
+                      itemStyle={{ color: '#1e40af', fontSize: '14px', fontWeight: 500 }}
                     />
                   </PieChart>
                 </ResponsiveContainer>
@@ -237,7 +237,7 @@ export default function Dashboard() {
 
             <div className="flex-1 flex flex-col gap-4">
               {publishedSchedule ? (
-                <div className="p-6 rounded-2xl bg-slate-900 text-white flex items-center justify-between">
+                <div className="p-6 rounded-2xl bg-blue-900 text-white flex items-center justify-between">
                   <div>
                     <div className="flex items-center gap-2 mb-2">
                       <div className="w-2 h-2 rounded-full bg-emerald-400"></div>
