@@ -381,7 +381,7 @@ export default function Students() {
       cell: (row) => (
         <DropdownMenu>
           <DropdownMenuTrigger asChild>
-            <Button variant="ghost" size="icon" className="text-slate-400 hover:text-slate-600 h-8 w-8 -mr-2 -mt-2">
+            <Button variant="ghost" size="icon">
               <MoreHorizontal className="w-4 h-4" />
             </Button>
           </DropdownMenuTrigger>
@@ -1110,26 +1110,27 @@ Return ONLY students array, no other text.`,
                 transition={{ delay: index * 0.05 }}
                 whileHover={{ scale: 1.05, y: -8, transition: { duration: 0.2 } }}
               >
-                <Card className={`group hover:shadow-2xl transition-all duration-300 border-0 shadow-lg bg-white rounded-xl overflow-hidden ${colors.border}`}>
-                  <CardHeader className={`pb-3 bg-gradient-to-br ${colors.header}`}>
-                    <div className="flex items-start justify-between">
-                      <div className="flex items-center gap-3">
-                        <div className={`w-12 h-12 rounded-full bg-gradient-to-br ${colors.avatar} flex items-center justify-center text-white font-semibold text-lg shadow-lg`}>
+                <Card className="border-0 shadow-sm hover:shadow-md transition-shadow bg-white rounded-xl overflow-hidden flex flex-col h-full">
+                  <div className={`h-1.5 w-full ${colors.border.replace('border-l-4 border-l-', 'bg-')}`} />
+                  <CardContent className="p-4 flex flex-col flex-1">
+                    <div className="flex items-start justify-between mb-4">
+                      <div className="flex items-center gap-3 flex-1 min-w-0">
+                        <div className={`w-10 h-10 rounded-lg ${colors.border.replace('border-l-4 border-l-', 'bg-')} flex items-center justify-center text-white font-semibold text-base flex-shrink-0`}>
                           {student.full_name?.split(' ').map(n => n[0]).join('').slice(0, 2)}
                         </div>
-                        <div>
-                          <CardTitle className="text-base font-semibold text-slate-900 hover:text-blue-600 hover:underline cursor-pointer">
-                            <Link to={`${createPageUrl('StudentProfile')}?id=${student.id}`}>
+                        <div className="min-w-0 flex-1">
+                          <h3 className="font-bold text-slate-900 text-base truncate">
+                            <Link to={`${createPageUrl('StudentProfile')}?id=${student.id}`} className="hover:text-blue-600 hover:underline">
                               {student.full_name}
                             </Link>
-                          </CardTitle>
-                          <p className="text-xs text-slate-500 mt-0.5">{student.student_id}</p>
+                          </h3>
+                          <p className="text-xs text-slate-500 truncate">{student.student_id || student.email}</p>
                         </div>
                       </div>
                       <DropdownMenu>
                         <DropdownMenuTrigger asChild>
-                          <Button variant="ghost" size="icon" className="opacity-0 group-hover:opacity-100 transition-opacity">
-                            <MoreHorizontal className="w-4 h-4" />
+                          <Button variant="ghost" size="icon" className="h-8 w-8 -mr-2 text-slate-400 hover:text-slate-600">
+                            <MoreHorizontal className="w-5 h-5" />
                           </Button>
                         </DropdownMenuTrigger>
                         <DropdownMenuContent align="end">
@@ -1147,33 +1148,15 @@ Return ONLY students array, no other text.`,
                         </DropdownMenuContent>
                       </DropdownMenu>
                     </div>
-                  </CardHeader>
-                  <CardContent className="pt-4 space-y-3">
-                    <div className="flex items-center gap-2 text-sm">
-                      <GraduationCap className="w-4 h-4 text-slate-400" />
-                      <span className="text-slate-600 truncate">{student.email}</span>
-                    </div>
-                    
-                    <div className="flex items-center gap-2">
-                      <Badge className={`${colors.badge} border-0`}>
-                        {student.ib_programme}
-                      </Badge>
-                      <Badge variant="outline" className="text-slate-600">
-                        {normalizeYearGroup(student.year_group, student.ib_programme)}
-                      </Badge>
-                    </div>
 
                     {student.subject_choices && student.subject_choices.length > 0 && (
-                      <div className="pt-2 border-t border-slate-100">
-                        <p className="text-xs font-medium text-slate-500 mb-2">
-                          {student.ib_programme === 'DP' ? 'Subjects' : `${student.subject_choices.length} Subjects`}
-                        </p>
+                      <div className="mb-4">
                         {student.ib_programme === 'DP' ? (
                           <div className="flex gap-2">
-                            <Badge variant="secondary" className="bg-rose-50 text-rose-700 border-0">
+                            <Badge variant="secondary" className="bg-slate-100 text-slate-700 border-0 font-medium">
                               {getSubjectInfo(student.subject_choices).hl} HL
                             </Badge>
-                            <Badge variant="secondary" className="bg-amber-50 text-amber-700 border-0">
+                            <Badge variant="secondary" className="bg-slate-100 text-slate-700 border-0 font-medium">
                               {getSubjectInfo(student.subject_choices).sl} SL
                             </Badge>
                           </div>
@@ -1182,13 +1165,13 @@ Return ONLY students array, no other text.`,
                             {student.subject_choices.slice(0, 3).map((choice, i) => {
                               const subject = subjects.find(s => s.id === choice.subject_id);
                               return subject ? (
-                                <Badge key={i} variant="secondary" className="bg-indigo-50 text-indigo-700 border-0 text-xs">
+                                <Badge key={i} variant="secondary" className="bg-slate-100 text-slate-700 border-0 text-xs font-medium">
                                   {subject.name}
                                 </Badge>
                               ) : null;
                             })}
                             {student.subject_choices.length > 3 && (
-                              <Badge variant="secondary" className="bg-slate-100 text-slate-600 border-0 text-xs">
+                              <Badge variant="secondary" className="bg-slate-100 text-slate-600 border-0 text-xs font-medium">
                                 +{student.subject_choices.length - 3}
                               </Badge>
                             )}
@@ -1196,6 +1179,16 @@ Return ONLY students array, no other text.`,
                         )}
                       </div>
                     )}
+
+                    <div className="flex items-center justify-between mt-auto pt-4 border-t border-slate-50">
+                      <div className="flex items-center gap-2 text-slate-500">
+                        <GraduationCap className="w-4 h-4" />
+                        <span className="text-sm">{normalizeYearGroup(student.year_group, student.ib_programme)}</span>
+                      </div>
+                      <Badge className={`${colors.border.replace('border-l-4 border-l-', 'bg-')} text-white border-0 hover:${colors.border.replace('border-l-4 border-l-', 'bg-')} rounded-md px-2 py-0.5 text-xs font-medium`}>
+                        {student.ib_programme}
+                      </Badge>
+                    </div>
                   </CardContent>
                 </Card>
               </motion.div>

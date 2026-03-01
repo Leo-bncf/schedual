@@ -311,38 +311,42 @@ export default function ClassGroups() {
             const groupStudents = students.filter(s => group.student_ids?.includes(s.id));
             const homeroomTeacher = teachers.find(t => t.id === group.homeroom_teacher_id);
 
-            const colorClass = group.ib_programme === 'DP' ? 'bg-blue-500' :
-                               group.ib_programme === 'MYP' ? 'bg-purple-500' :
-                               'bg-teal-500';
-
             return (
               <motion.div
                 key={group.id}
-                initial={{ opacity: 0, y: 20 }}
-                animate={{ opacity: 1, y: 0 }}
+                initial={{ opacity: 0, scale: 0.9 }}
+                animate={{ opacity: 1, scale: 1 }}
                 transition={{ delay: index * 0.05 }}
-                whileHover={{ y: -8, transition: { duration: 0.2 } }}
-                onClick={() => setSelectedGroup(group)}
+                whileHover={{ scale: 1.03, y: -5 }}
               >
-                <Card className="border-0 shadow-sm bg-white rounded-xl hover:shadow-md transition-all duration-200 overflow-hidden h-full flex flex-col cursor-pointer">
-                  <div className={`h-1 ${colorClass}`} />
-                  <CardContent className="p-5 flex-1 flex flex-col">
+                <Card 
+                  className="border-0 shadow-sm hover:shadow-md transition-shadow bg-white rounded-xl overflow-hidden flex flex-col h-full cursor-pointer"
+                  onClick={() => setSelectedGroup(group)}
+                >
+                  <div className={`h-1.5 w-full ${
+                    group.ib_programme === 'DP' ? 'bg-blue-500' :
+                    group.ib_programme === 'MYP' ? 'bg-purple-500' :
+                    'bg-teal-500'
+                  }`} />
+                  <CardContent className="p-4 flex flex-col flex-1">
                     <div className="flex items-start justify-between mb-4">
                       <div className="flex items-center gap-3 flex-1 min-w-0">
-                        <div className={`w-12 h-12 rounded-xl ${colorClass} flex items-center justify-center flex-shrink-0`}>
-                          <Users className="w-6 h-6 text-white" />
+                        <div className={`w-10 h-10 rounded-lg ${
+                          group.ib_programme === 'DP' ? 'bg-blue-500' :
+                          group.ib_programme === 'MYP' ? 'bg-purple-500' :
+                          'bg-teal-500'
+                        } flex items-center justify-center text-white flex-shrink-0`}>
+                          <Users className="w-5 h-5" />
                         </div>
                         <div className="min-w-0 flex-1">
-                          <p className="font-bold text-slate-900 text-lg truncate">{group.name}</p>
-                          <p className="text-sm text-slate-500 truncate">
-                            {homeroomTeacher ? `Homeroom: ${homeroomTeacher.full_name}` : 'No homeroom teacher'}
-                          </p>
+                          <h3 className="font-bold text-slate-900 text-base truncate">{group.name}</h3>
+                          <p className="text-xs text-slate-500 truncate">{group.year_group}</p>
                         </div>
                       </div>
                       <Button
                         variant="ghost"
                         size="icon"
-                        className="text-slate-400 hover:text-rose-600 h-8 w-8 -mr-2 -mt-2"
+                        className="h-8 w-8 -mr-2 text-slate-400 hover:text-rose-600"
                         onClick={(e) => {
                           e.stopPropagation();
                           if (confirm(`Delete ${group.name}? Students will be unassigned.`)) {
@@ -353,19 +357,31 @@ export default function ClassGroups() {
                         <Trash2 className="w-4 h-4" />
                       </Button>
                     </div>
-                    
-                    <div className="flex items-center justify-between mt-auto pt-4">
-                      <div className="flex items-center gap-2 text-slate-600">
-                        <Users className="w-4 h-4" />
-                        <span className="text-sm font-medium">{groupStudents.length} / {group.max_students}</span>
+
+                    {homeroomTeacher && (
+                      <div className="mb-4">
+                        <Badge variant="secondary" className="bg-slate-100 text-slate-700 border-0 font-medium">
+                          {homeroomTeacher.full_name}
+                        </Badge>
                       </div>
-                      <Badge className={`${colorClass} text-white border-0 font-medium`}>
-                        {group.ib_programme} {group.year_group}
+                    )}
+
+                    <div className="flex items-center justify-between mt-auto pt-4 border-t border-slate-50">
+                      <div className="flex items-center gap-2 text-slate-500">
+                        <Users className="w-4 h-4" />
+                        <span className="text-sm">Capacity: {groupStudents.length} / {group.max_students}</span>
+                      </div>
+                      <Badge className={`${
+                        group.ib_programme === 'DP' ? 'bg-blue-500' :
+                        group.ib_programme === 'MYP' ? 'bg-purple-500' :
+                        'bg-teal-500'
+                      } text-white border-0 rounded-md px-2 py-0.5 text-xs font-medium`}>
+                        {group.ib_programme}
                       </Badge>
                     </div>
                   </CardContent>
                 </Card>
-              </motion.div>
+            </motion.div>
             );
           })}
         </div>

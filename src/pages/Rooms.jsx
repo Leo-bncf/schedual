@@ -427,21 +427,17 @@ ${trainingFeedback ? `LESSONS FROM ADMIN FEEDBACK:\n${trainingFeedback}\n\n` : '
                 transition={{ delay: index * 0.05 }}
                 whileHover={{ y: -8, transition: { duration: 0.2 } }}
               >
-                <Card className="group border-0 shadow-md bg-white rounded-2xl hover:shadow-2xl transition-all duration-300 overflow-hidden relative h-full">
-                  <div className={`absolute inset-0 ${typeInfo.color} opacity-0 group-hover:opacity-5 transition-opacity`} />
-                  <CardContent className="p-5 relative">
-                    <div className="flex items-start justify-between mb-4">
+                <Card className="border-0 shadow-sm hover:shadow-md transition-shadow bg-white rounded-xl overflow-hidden flex flex-col h-full">
+                  <div className={`h-1.5 w-full ${typeInfo.color}`} />
+                  <CardContent className="p-4 flex flex-col flex-1">
+                    <div className="flex items-start justify-between mb-6">
                       <div className="flex items-center gap-3 flex-1 min-w-0">
-                        <motion.div 
-                          className={`w-14 h-14 rounded-xl ${typeInfo.color} flex items-center justify-center shadow-lg flex-shrink-0`}
-                          whileHover={{ rotate: 360 }}
-                          transition={{ duration: 0.6 }}
-                        >
-                          <Icon className="w-7 h-7 text-white" />
-                        </motion.div>
+                        <div className={`w-10 h-10 rounded-lg ${typeInfo.color} flex items-center justify-center flex-shrink-0`}>
+                          <Icon className="w-5 h-5 text-white" />
+                        </div>
                         <div className="min-w-0 flex-1">
-                          <p className="font-bold text-slate-900 text-base mb-1 truncate">{room.name}</p>
-                          <p className="text-sm text-slate-500 truncate">
+                          <h3 className="font-bold text-slate-900 text-base truncate">{room.name}</h3>
+                          <p className="text-xs text-slate-500 truncate">
                             {room.building && `${room.building}`}
                             {room.floor && `, Floor ${room.floor}`}
                             {!room.building && !room.floor && 'No location'}
@@ -450,8 +446,8 @@ ${trainingFeedback ? `LESSONS FROM ADMIN FEEDBACK:\n${trainingFeedback}\n\n` : '
                       </div>
                       <DropdownMenu>
                         <DropdownMenuTrigger asChild>
-                          <Button variant="ghost" size="icon" className="h-8 w-8 opacity-0 group-hover:opacity-100 transition-opacity">
-                            <MoreHorizontal className="w-4 h-4" />
+                          <Button variant="ghost" size="icon" className="h-8 w-8 -mr-2 text-slate-400 hover:text-slate-600">
+                            <MoreHorizontal className="w-5 h-5" />
                           </Button>
                         </DropdownMenuTrigger>
                         <DropdownMenuContent align="end">
@@ -464,18 +460,13 @@ ${trainingFeedback ? `LESSONS FROM ADMIN FEEDBACK:\n${trainingFeedback}\n\n` : '
                         </DropdownMenuContent>
                       </DropdownMenu>
                     </div>
-
-                    <div className="flex items-center justify-between pt-4 border-t border-slate-100">
-                      <div className="flex items-center gap-2">
-                        <div className={`w-8 h-8 rounded-lg ${typeInfo.color} bg-opacity-10 flex items-center justify-center`}>
-                          <Users className="w-4 h-4 text-slate-700" />
-                        </div>
-                        <div>
-                          <p className="text-xs text-slate-500">Capacity</p>
-                          <p className="text-lg font-bold text-slate-900">{room.capacity}</p>
-                        </div>
+                   
+                    <div className="flex items-center justify-between mt-auto pt-4 border-t border-slate-50">
+                      <div className="flex items-center gap-2 text-slate-500">
+                        <Users className="w-4 h-4" />
+                        <span className="text-sm">Capacity: {room.capacity}</span>
                       </div>
-                      <Badge className={`${typeInfo.color} text-white border-0 shadow-sm font-semibold`}>
+                      <Badge className={`${typeInfo.color} text-white border-0 hover:${typeInfo.color} rounded-md px-2 py-0.5 text-xs font-medium`}>
                         {typeInfo.label}
                       </Badge>
                     </div>
