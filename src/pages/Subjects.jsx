@@ -473,23 +473,21 @@ ${trainingFeedback ? `LESSONS FROM ADMIN FEEDBACK:\n${trainingFeedback}\n\n` : '
                     transition={{ delay: index * 0.05 }}
                     whileHover={{ y: -8, transition: { duration: 0.2 } }}
                   >
-                    <Card className="border-0 shadow-sm hover:shadow-md transition-shadow bg-white rounded-xl overflow-hidden flex flex-col h-full">
-                      <div className="h-1.5 w-full bg-teal-500" />
-                      <CardContent className="p-4 flex flex-col flex-1">
-                        <div className="flex items-start justify-between mb-4">
-                          <div className="flex items-center gap-3 flex-1 min-w-0">
-                            <div className="w-10 h-10 rounded-lg bg-teal-500 flex items-center justify-center flex-shrink-0">
-                              <BookOpen className="w-5 h-5 text-white" />
-                            </div>
-                            <div className="min-w-0 flex-1">
-                              <h3 className="font-bold text-slate-900 text-base truncate">{subject.name}</h3>
-                              <p className="text-xs text-slate-500 truncate">{subject.code}</p>
-                            </div>
-                          </div>
+                    <Card className="group border-0 shadow-md bg-white rounded-2xl hover:shadow-2xl transition-all duration-300 overflow-hidden relative">
+                      <div className="absolute inset-0 bg-gradient-to-br from-teal-50 to-cyan-50 opacity-0 group-hover:opacity-100 transition-opacity" />
+                      <CardContent className="p-5 relative">
+                        <div className="flex items-start justify-between mb-3">
+                          <motion.div 
+                            className="w-12 h-12 rounded-xl bg-gradient-to-br from-teal-400 to-cyan-500 flex items-center justify-center shadow-lg"
+                            whileHover={{ rotate: 360 }}
+                            transition={{ duration: 0.6 }}
+                          >
+                            <BookOpen className="w-6 h-6 text-white" />
+                          </motion.div>
                           <DropdownMenu>
                             <DropdownMenuTrigger asChild>
-                              <Button variant="ghost" size="icon" className="h-8 w-8 -mr-2 text-slate-400 hover:text-slate-600">
-                                <MoreHorizontal className="w-5 h-5" />
+                              <Button variant="ghost" size="icon" className="text-slate-400 hover:text-slate-600 h-8 w-8 -mr-2 -mt-2">
+                                <MoreHorizontal className="w-4 h-4" />
                               </Button>
                             </DropdownMenuTrigger>
                             <DropdownMenuContent align="end">
@@ -502,13 +500,11 @@ ${trainingFeedback ? `LESSONS FROM ADMIN FEEDBACK:\n${trainingFeedback}\n\n` : '
                             </DropdownMenuContent>
                           </DropdownMenu>
                         </div>
-                        <div className="flex items-center justify-between mt-auto pt-4 border-t border-slate-50">
-                          <div className="flex items-center gap-2 text-slate-500">
-                            <Clock className="w-4 h-4" />
-                            <span className="text-sm">{subject.pyp_myp_hours_per_week || 4}h/week</span>
-                          </div>
-                          <Badge className="bg-teal-500 text-white border-0 hover:bg-teal-600 rounded-md px-2 py-0.5 text-xs font-medium">
-                            PYP
+                        <div>
+                          <h4 className="font-bold text-slate-900 text-base mb-1 line-clamp-2 min-h-[3rem]">{subject.name}</h4>
+                          <p className="text-sm text-slate-500 mb-3">{subject.code}</p>
+                          <Badge className="bg-teal-100 text-teal-700 border-0">
+                            {subject.pyp_myp_hours_per_week || 4}h/week
                           </Badge>
                         </div>
                       </CardContent>
@@ -555,23 +551,21 @@ ${trainingFeedback ? `LESSONS FROM ADMIN FEEDBACK:\n${trainingFeedback}\n\n` : '
                     transition={{ delay: index * 0.05 }}
                     whileHover={{ y: -8, transition: { duration: 0.2 } }}
                   >
-                    <Card className="border-0 shadow-sm hover:shadow-md transition-shadow bg-white rounded-xl overflow-hidden flex flex-col h-full">
-                      <div className="h-1.5 w-full bg-purple-500" />
-                      <CardContent className="p-4 flex flex-col flex-1">
-                        <div className="flex items-start justify-between mb-4">
-                          <div className="flex items-center gap-3 flex-1 min-w-0">
-                            <div className="w-10 h-10 rounded-lg bg-purple-500 flex items-center justify-center flex-shrink-0">
-                              <BookOpen className="w-5 h-5 text-white" />
-                            </div>
-                            <div className="min-w-0 flex-1">
-                              <h3 className="font-bold text-slate-900 text-base truncate">{subject.name}</h3>
-                              <p className="text-xs text-slate-500 truncate">{subject.code}</p>
-                            </div>
-                          </div>
+                    <Card className="group border-0 shadow-md bg-white rounded-2xl hover:shadow-2xl transition-all duration-300 overflow-hidden relative">
+                      <div className="absolute inset-0 bg-gradient-to-br from-purple-50 to-fuchsia-50 opacity-0 group-hover:opacity-100 transition-opacity" />
+                      <CardContent className="p-5 relative">
+                        <div className="flex items-start justify-between mb-3">
+                          <motion.div 
+                            className="w-12 h-12 rounded-xl bg-gradient-to-br from-purple-400 to-fuchsia-500 flex items-center justify-center shadow-lg"
+                            whileHover={{ rotate: 360 }}
+                            transition={{ duration: 0.6 }}
+                          >
+                            <BookOpen className="w-6 h-6 text-white" />
+                          </motion.div>
                           <DropdownMenu>
                             <DropdownMenuTrigger asChild>
-                              <Button variant="ghost" size="icon" className="h-8 w-8 -mr-2 text-slate-400 hover:text-slate-600">
-                                <MoreHorizontal className="w-5 h-5" />
+                              <Button variant="ghost" size="icon" className="text-slate-400 hover:text-slate-600 h-8 w-8 -mr-2 -mt-2">
+                                <MoreHorizontal className="w-4 h-4" />
                               </Button>
                             </DropdownMenuTrigger>
                             <DropdownMenuContent align="end">
@@ -584,13 +578,11 @@ ${trainingFeedback ? `LESSONS FROM ADMIN FEEDBACK:\n${trainingFeedback}\n\n` : '
                             </DropdownMenuContent>
                           </DropdownMenu>
                         </div>
-                        <div className="flex items-center justify-between mt-auto pt-4 border-t border-slate-50">
-                          <div className="flex items-center gap-2 text-slate-500">
-                            <Clock className="w-4 h-4" />
-                            <span className="text-sm">{subject.pyp_myp_hours_per_week || 4}h/week</span>
-                          </div>
-                          <Badge className="bg-purple-500 text-white border-0 hover:bg-purple-600 rounded-md px-2 py-0.5 text-xs font-medium">
-                            MYP
+                        <div>
+                          <h4 className="font-bold text-slate-900 text-base mb-1 line-clamp-2 min-h-[3rem]">{subject.name}</h4>
+                          <p className="text-sm text-slate-500 mb-3">{subject.code}</p>
+                          <Badge className="bg-purple-100 text-purple-700 border-0">
+                            {subject.pyp_myp_hours_per_week || 4}h/week
                           </Badge>
                         </div>
                       </CardContent>
@@ -643,23 +635,21 @@ ${trainingFeedback ? `LESSONS FROM ADMIN FEEDBACK:\n${trainingFeedback}\n\n` : '
                       transition={{ delay: index * 0.05 }}
                       whileHover={{ y: -8, transition: { duration: 0.2 } }}
                     >
-                      <Card className="border-0 shadow-sm hover:shadow-md transition-shadow bg-white rounded-xl overflow-hidden flex flex-col h-full">
-                        <div className={`h-1.5 w-full ${group.color}`} />
-                        <CardContent className="p-4 flex flex-col flex-1">
-                          <div className="flex items-start justify-between mb-4">
-                            <div className="flex items-center gap-3 flex-1 min-w-0">
-                              <div className={`w-10 h-10 rounded-lg ${group.color} flex items-center justify-center flex-shrink-0`}>
-                                <Icon className="w-5 h-5 text-white" />
-                              </div>
-                              <div className="min-w-0 flex-1">
-                                <h3 className="font-bold text-slate-900 text-base truncate">{subject.name}</h3>
-                                <p className="text-xs text-slate-500 truncate">{subject.code}</p>
-                              </div>
-                            </div>
+                      <Card className="group border-0 shadow-md bg-white rounded-2xl hover:shadow-2xl transition-all duration-300 overflow-hidden relative h-full">
+                        <div className={`absolute inset-0 ${group.color} opacity-0 group-hover:opacity-5 transition-opacity`} />
+                        <CardContent className="p-5 relative flex flex-col h-full">
+                          <div className="flex items-start justify-between mb-3">
+                            <motion.div 
+                              className={`w-12 h-12 rounded-xl ${group.color} flex items-center justify-center shadow-lg flex-shrink-0`}
+                              whileHover={{ rotate: 360 }}
+                              transition={{ duration: 0.6 }}
+                            >
+                              <Icon className="w-6 h-6 text-white" />
+                            </motion.div>
                             <DropdownMenu>
                               <DropdownMenuTrigger asChild>
-                                <Button variant="ghost" size="icon" className="h-8 w-8 -mr-2 text-slate-400 hover:text-slate-600">
-                                  <MoreHorizontal className="w-5 h-5" />
+                                <Button variant="ghost" size="icon" className="text-slate-400 hover:text-slate-600 h-8 w-8 -mr-2 -mt-2">
+                                  <MoreHorizontal className="w-4 h-4" />
                                 </Button>
                               </DropdownMenuTrigger>
                               <DropdownMenuContent align="end">
@@ -672,31 +662,26 @@ ${trainingFeedback ? `LESSONS FROM ADMIN FEEDBACK:\n${trainingFeedback}\n\n` : '
                               </DropdownMenuContent>
                             </DropdownMenu>
                           </div>
-                          
-                          <div className="mb-4 flex flex-wrap gap-2">
+                          <div className="flex-1">
+                            <h4 className="font-bold text-slate-900 text-base mb-1 line-clamp-2 min-h-[3rem]">{subject.name}</h4>
+                            <p className="text-sm text-slate-500 mb-3">{subject.code}</p>
+                          </div>
+                          <div className="flex flex-wrap gap-2 mt-auto pt-3 border-t border-slate-100">
                             {subject.available_levels?.includes('HL') && (
-                              <Badge className="bg-slate-100 text-slate-700 border-0 font-medium text-xs">
+                              <Badge className="bg-rose-100 text-rose-700 border-0 font-semibold">
                                 HL {subject.hoursPerWeekHL || Math.round((subject.hl_minutes_per_week_default || 360) / 60)}h
                               </Badge>
                             )}
                             {subject.available_levels?.includes('SL') && (
-                              <Badge className="bg-slate-100 text-slate-700 border-0 font-medium text-xs">
+                              <Badge className="bg-blue-100 text-blue-700 border-0 font-semibold">
                                 SL {subject.hoursPerWeekSL || Math.round((subject.sl_minutes_per_week_default || 240) / 60)}h
                               </Badge>
                             )}
-                          </div>
-
-                          <div className="flex items-center justify-between mt-auto pt-4 border-t border-slate-50">
-                            <div className="flex items-center gap-2">
-                              {subject.requires_lab && (
-                                <Badge className={`${group.color} text-white border-0 hover:${group.color} rounded-md px-2 py-0.5 text-xs font-medium`}>
-                                  Lab
-                                </Badge>
-                              )}
-                            </div>
-                            <Badge className={`${group.color} text-white border-0 hover:${group.color} rounded-md px-2 py-0.5 text-xs font-medium`}>
-                              Group {group.id}
-                            </Badge>
+                            {subject.requires_lab && (
+                              <Badge variant="outline" className="text-violet-600 border-violet-300 font-medium">
+                                <FlaskConical className="w-3 h-3 mr-1" /> Lab
+                              </Badge>
+                            )}
                           </div>
                         </CardContent>
                       </Card>
