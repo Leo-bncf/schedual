@@ -106,8 +106,8 @@ export default function Dashboard() {
                 <h3 className="text-slate-500 font-semibold text-xs uppercase tracking-widest">Students</h3>
                 <div className="text-4xl font-light text-slate-900 mt-2">{activeStudents}</div>
               </div>
-              <div className="p-3 bg-slate-50 rounded-2xl">
-                <GraduationCap className="w-5 h-5 text-slate-600" />
+              <div className="w-12 h-12 rounded-2xl bg-gradient-to-br from-emerald-500 to-emerald-600 flex items-center justify-center shadow-md">
+                <GraduationCap className="w-6 h-6 text-white" />
               </div>
             </div>
             <div className="flex-1 mt-6 min-h-[180px]">
@@ -148,8 +148,8 @@ export default function Dashboard() {
                 <h3 className="text-slate-500 font-semibold text-xs uppercase tracking-widest">Teachers</h3>
                 <div className="text-4xl font-light text-slate-900 mt-2">{activeTeachers}</div>
               </div>
-              <div className="p-3 bg-slate-50 rounded-2xl">
-                <Users className="w-5 h-5 text-slate-600" />
+              <div className="w-12 h-12 rounded-2xl bg-gradient-to-br from-blue-500 to-blue-600 flex items-center justify-center shadow-md">
+                <Users className="w-6 h-6 text-white" />
               </div>
             </div>
             <div className="mt-8 flex-1 flex flex-col justify-center">
@@ -192,8 +192,8 @@ export default function Dashboard() {
                     <h3 className="text-slate-500 font-semibold text-xs uppercase tracking-widest">Subjects</h3>
                     <div className="text-3xl font-light text-slate-900 mt-1">{activeSubjects}</div>
                   </div>
-                  <div className="p-3 bg-slate-50 rounded-2xl group-hover:bg-slate-100 transition-colors">
-                    <BookOpen className="w-5 h-5 text-slate-600" />
+                  <div className="w-12 h-12 rounded-2xl bg-gradient-to-br from-violet-500 to-violet-600 flex items-center justify-center shadow-md transition-transform group-hover:scale-105">
+                    <BookOpen className="w-6 h-6 text-white" />
                   </div>
                 </div>
               </CardContent>
@@ -211,8 +211,8 @@ export default function Dashboard() {
                     <h3 className="text-slate-500 font-semibold text-xs uppercase tracking-widest">Rooms</h3>
                     <div className="text-3xl font-light text-slate-900 mt-1">{activeRooms}</div>
                   </div>
-                  <div className="p-3 bg-slate-50 rounded-2xl group-hover:bg-slate-100 transition-colors">
-                    <Building2 className="w-5 h-5 text-slate-600" />
+                  <div className="w-12 h-12 rounded-2xl bg-gradient-to-br from-rose-500 to-pink-600 flex items-center justify-center shadow-md transition-transform group-hover:scale-105">
+                    <Building2 className="w-6 h-6 text-white" />
                   </div>
                 </div>
               </CardContent>
@@ -290,21 +290,21 @@ export default function Dashboard() {
         </Card>
 
         {/* Need Help */}
-        <Card className="md:col-span-12 lg:col-span-5 rounded-3xl shadow-sm border-slate-200 bg-slate-50 overflow-hidden relative group hover:shadow-md transition-all duration-300">
+        <Card className="md:col-span-12 lg:col-span-5 rounded-3xl shadow-sm border-0 bg-gradient-to-br from-blue-50 to-indigo-50 overflow-hidden relative group hover:shadow-md transition-all duration-300">
           <div className="absolute top-0 right-0 p-8 opacity-5 transition-transform group-hover:scale-110 duration-700">
-            <Sparkles className="w-32 h-32 text-slate-900" />
+            <Sparkles className="w-32 h-32 text-blue-900" />
           </div>
           <CardContent className="p-8 h-full flex flex-col relative z-10">
-            <div className="w-12 h-12 rounded-2xl bg-white shadow-sm flex items-center justify-center mb-6">
-              <Sparkles className="w-5 h-5 text-slate-700" />
+            <div className="w-12 h-12 rounded-2xl bg-gradient-to-br from-blue-600 to-indigo-600 shadow-md flex items-center justify-center mb-6">
+              <Sparkles className="w-6 h-6 text-white" />
             </div>
             <h3 className="text-xl font-medium text-slate-900 mb-2">System Support</h3>
-            <p className="text-slate-500 text-sm leading-relaxed max-w-[280px] mb-8">
+            <p className="text-slate-600 text-sm leading-relaxed max-w-[280px] mb-8">
               Need assistance with configuration or have questions about the scheduling engine?
             </p>
             <div className="mt-auto">
               <Link to={createPageUrl('Support')}>
-                <Button variant="outline" className="bg-white hover:bg-slate-100 text-slate-900 rounded-full px-6 h-10 font-medium border-slate-200 shadow-sm transition-all">
+                <Button className="bg-blue-600 hover:bg-blue-700 text-white rounded-full px-6 h-10 font-medium shadow-sm transition-all">
                   Contact Support
                 </Button>
               </Link>
