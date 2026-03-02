@@ -564,145 +564,19 @@ Deno.serve(async (req) => {
       };
     });
 
-    const programs = ['DP', 'MYP', 'PYP'];
-    const schoolsPayload = [];
-    const sharedRoomIds = [];
-
-    programs.forEach(prog => {
-       const progSubjects = subjects.filter(s => s.ib_level === prog);
-       const progSubjectIds = new Set(progSubjects.map(s => s.id));
-       const progSubjectCodes = new Set(progSubjects.map(s => s.code || s.name));
-
-       const progTGs = teachingGroupsPayload.filter(tg => progSubjectIds.has(tg.subjectId));
-       const progReqs = subjectRequirements.filter(req => progSubjectCodes.has(req.subject));
-       const progLessons = lessons.filter(l => {
-          const subject = subjects.find(s => (s.code || s.name) === l.subject);
-          return subject && subject.ib_level === prog;
-       });
-
-       if (progLessons.length > 0) {
-           const schoolId = `${user.school_id}_${prog.toLowerCase()}`;
-           
-           // Filter teachers who actually teach in this program
-           const teacherIdsInProg = new Set(progLessons.filter(l => l.teacherId).map(l => l.teacherId));
-           const progTeachers = formattedTeachers.filter(t => teacherIdsInProg.has(t.id));
-
-           const progRooms = rooms.map(r => {
-             const extId = `${schoolId}:${r.id}`;
-             sharedRoomIds.push(extId);
-             return {
-               id: r.id,
-               name: r.name,
-               capacity: r.capacity,
-               externalId: extId
-             };
-           });
-
-           const schoolPayload = {
-               schoolId: schoolId,
-               programType: prog,
-               timezone: schoolData.timezone || "UTC",
-               calendar: {
-                   academicYear: schoolData.academic_year || "2024-2025",
-                   termId: "T1"
-               },
-               scheduleVersion: `v${new Date().toISOString().split('T')[0]}`,
-               scheduleVersionId: schedule_version_id,
-               scheduleSettings: {
-                   periodDurationMinutes: schoolData.period_duration_minutes || 60,
-                   dayStartTime: schoolData.day_start_time || "08:00",
-                   dayEndTime: schoolData.day_end_time || "18:00",
-                   daysOfWeek: schoolData.days_of_week || ["MONDAY", "TUESDAY", "WEDNESDAY", "THURSDAY", "FRIDAY"],
-                   breaks: schoolData.breaks || []
-               },
-               rooms: progRooms,
-               teachers: progTeachers,
-               subjects: progSubjects.filter(s => s.is_active && progReqs.some(req => req.subject === (s.code || s.name))).map(s => ({
-                  id: s.id,
-                  code: s.code || s.name,
-                  name: s.name
-               })),
-               subjectRequirements: progReqs,
-               teachingGroups: progTGs.map(tg => ({
-                   id: tg.id,
-                   subject_id: tg.subjectId,
-                   student_group: tg.studentGroup,
-                   level: tg.level
-               })),
-               lessons: progLessons,
-               blockedSlotIds: [],
-               constraints: {
-                 maxSameSubjectPerDayHardEnabled: constraints?.maxSameSubjectPerDayHardEnabled ?? false,
-                 maxSameSubjectPerDayLimit: constraints?.maxSameSubjectPerDayLimit ?? 4,
-                 exactWeeklyCountEnabled: constraints?.exactWeeklyCountEnabled ?? false,
-                 allowFlexibleWeeklyCounts: constraints?.allowFlexibleWeeklyCounts ?? true,
-                 relaxStudentGroupConflicts: constraints?.relaxStudentGroupConflicts ?? true,
-                 lunchBreakEnabled: constraints?.lunchBreakEnabled ?? false,
-                 lunchBreakDurationMinutes: constraints?.lunchBreakDurationMinutes ?? 60,
-                 lunchBreakMinPeriod: constraints?.lunchBreakMinPeriod ?? 4,
-                 lunchBreakMaxPeriod: constraints?.lunchBreakMaxPeriod ?? 6
-               },
-               studentSubjectChoices: [],
-               randomSeed: 42,
-               randomizeSearch: false,
-               numSearchWorkers: 1,
-               shuffleInputOrder: false
-           };
-
-           if (prog === 'DP') {
-               schoolPayload.dpConfig = {
-                   years: ["DP1", "DP2"],
-                   levels: ["HL", "SL"],
-                   core: { tokRequired: true, casRequired: true, eeRequired: true },
-                   weeklyMinutesTargets: { HL: 250, SL: 150, TOK: 100, CAS: 60, EE: 60 },
-                   subjectGroupRules: []
-               };
-           } else if (prog === 'MYP') {
-               schoolPayload.mypConfig = {
-                   years: ["MYP1", "MYP2", "MYP3", "MYP4", "MYP5"],
-                   requiredSubjectGroups: [
-                     "LANG_AND_LIT", "LANG_ACQ", "INDIVIDUALS_AND_SOCIETIES", 
-                     "SCIENCES", "MATHEMATICS", "ARTS", "PE", "DESIGN"
-                   ],
-                   serviceLearningMinutesPerWeek: 40,
-                   interdisciplinaryUnitsPerTerm: 1,
-                   weeklyMinutesTargetsByYear: {}
-               };
-           } else if (prog === 'PYP') {
-               schoolPayload.pypConfig = {
-                   grades: ["PYP1", "PYP2", "PYP3", "PYP4", "PYP5", "PYP6"],
-                   homeroomModel: "SELF_CONTAINED",
-                   transdisciplinaryThemes: [
-                     "WHO_WE_ARE", "WHERE_WE_ARE_IN_PLACE_AND_TIME", 
-                     "HOW_WE_EXPRESS_OURSELVES", "HOW_THE_WORLD_WORKS", 
-                     "HOW_WE_ORGANIZE_OURSELVES", "SHARING_THE_PLANET"
-                   ],
-                   specialistSubjects: [],
-                   dailyHomeroomMinutes: 240
-               };
-           }
-
-           schoolsPayload.push(schoolPayload);
-       }
-    });
-
-    let crossSchoolPreferenceRules = [];
+    let aiUnavailability = [];
     if (constraints?.aiPreferences && constraints.aiPreferences.trim().length > 0) {
-      console.log('[Pipeline] Parsing AI Preferences with LLM...');
+      console.log('[Pipeline] Parsing AI Preferences with LLM for teacher unavailabilities...');
       try {
         const teacherContext = teachers.map(t => ({ id: t.id, name: t.full_name }));
         const llmPrompt = `
-You are an expert scheduling assistant. Convert the following user preferences into a JSON array of rules for OptaPlanner.
+You are an expert scheduling assistant. Extract teacher unavailability from the following user preferences.
 User preferences: "${constraints.aiPreferences}"
 
-Rules for parsing:
-1. Free-text user preferences default to "SOFT" resolvedAs, with weight 25.
-2. If text has strict language (must, never, required), you can classify as "HARD", but try to use SOFT if possible.
-3. applyToAllSchools should be true.
-4. Extract the exact days, and start/end times. If "afternoon", use 12:00 to 18:00. If "morning", use 08:00 to 12:00. If "evening", use 15:00 to 18:30.
-5. timezoneMode should be "SCHOOL_LOCAL".
-6. type is "TEACHER_AVOID_TIME_WINDOW".
-7. Match the teacher name to the following list to get the teacherId and teacherExternalId (use the same ID for both):
+Rules:
+1. Extract exact days and start/end times for when teachers are UNAVAILABLE.
+2. If "afternoon", use "12:00" to "18:00". If "morning", use "08:00" to "12:00". If "evening", use "15:00" to "18:30".
+3. Match the teacher name to the following list to get the teacherId:
 ${JSON.stringify(teacherContext)}
 `;
 
@@ -711,73 +585,140 @@ ${JSON.stringify(teacherContext)}
           response_json_schema: {
             type: "object",
             properties: {
-              crossSchoolPreferenceRules: {
+              teacherUnavailability: {
                 type: "array",
                 items: {
                   type: "object",
                   properties: {
-                    id: { type: "string" },
-                    sourceText: { type: "string" },
-                    enabled: { type: "boolean" },
-                    classification: {
-                      type: "object",
-                      properties: {
-                        resolvedAs: { type: "string", enum: ["SOFT", "HARD"] },
-                        weight: { type: "number" }
-                      },
-                      required: ["resolvedAs", "weight"]
-                    },
-                    type: { type: "string", enum: ["TEACHER_AVOID_TIME_WINDOW"] },
-                    scope: {
-                      type: "object",
-                      properties: {
-                        applyToAllSchools: { type: "boolean" },
-                        teacherId: { type: "string" },
-                        teacherExternalId: { type: "string" }
-                      },
-                      required: ["applyToAllSchools", "teacherId", "teacherExternalId"]
-                    },
-                    timeWindow: {
-                      type: "object",
-                      properties: {
-                        daysOfWeek: {
-                          type: "array",
-                          items: { type: "string", enum: ["MONDAY", "TUESDAY", "WEDNESDAY", "THURSDAY", "FRIDAY"] }
-                        },
-                        startTime: { type: "string" },
-                        endTime: { type: "string" },
-                        timezoneMode: { type: "string" }
-                      },
-                      required: ["daysOfWeek", "startTime", "endTime", "timezoneMode"]
-                    }
+                    teacherId: { type: "string" },
+                    dayOfWeek: { type: "string", enum: ["MONDAY", "TUESDAY", "WEDNESDAY", "THURSDAY", "FRIDAY"] },
+                    startTime: { type: "string" },
+                    endTime: { type: "string" }
                   },
-                  required: ["id", "sourceText", "enabled", "classification", "type", "scope", "timeWindow"]
+                  required: ["teacherId", "dayOfWeek", "startTime", "endTime"]
                 }
               }
             },
-            required: ["crossSchoolPreferenceRules"]
+            required: ["teacherUnavailability"]
           }
         });
         
-        if (llmResponse && llmResponse.crossSchoolPreferenceRules) {
-          crossSchoolPreferenceRules = llmResponse.crossSchoolPreferenceRules;
-          console.log('[Pipeline] Parsed rules:', JSON.stringify(crossSchoolPreferenceRules, null, 2));
+        if (llmResponse && llmResponse.teacherUnavailability) {
+          aiUnavailability = llmResponse.teacherUnavailability;
+          console.log('[Pipeline] Parsed AI unavailability:', JSON.stringify(aiUnavailability, null, 2));
         }
       } catch (llmError) {
         console.error('[Pipeline] Failed to parse AI preferences:', llmError);
       }
     }
 
+    const timeToMins = (timeStr) => {
+      if (!timeStr) return 0;
+      const [h, m] = timeStr.split(':').map(Number);
+      return (h * 60) + (m || 0);
+    };
+
+    const periodDuration = schoolData.period_duration_minutes || 60;
+    const periodsPerDay = schoolData.periods_per_day || 10;
+    const dayNames = ['MONDAY', 'TUESDAY', 'WEDNESDAY', 'THURSDAY', 'FRIDAY'];
+    const breaks = schoolData.breaks || [];
+    const dayStartMins = timeToMins(schoolData.day_start_time || "08:00");
+    const dayEndMins = timeToMins(schoolData.day_end_time || "18:00");
+
+    const periods = [];
+    let currentMins = dayStartMins;
+    let pCount = 1;
+    
+    while (currentMins < dayEndMins && pCount <= periodsPerDay) {
+      let inBreak = false;
+      for (const b of breaks) {
+        const bStart = timeToMins(b.start);
+        const bEnd = timeToMins(b.end);
+        if (currentMins >= bStart && currentMins < bEnd) {
+          currentMins = bEnd;
+          inBreak = true;
+          break;
+        }
+      }
+      if (inBreak) {
+        // Just advance loop without registering a period slot
+        continue;
+      }
+      
+      const periodEnd = currentMins + periodDuration;
+      periods.push({
+        index: pCount,
+        startMins: currentMins,
+        endMins: periodEnd
+      });
+      currentMins = periodEnd;
+      pCount++;
+    }
+
+    formattedTeachers.forEach(t => {
+      const aiSlots = aiUnavailability.filter(u => u.teacherId === t.id);
+      aiSlots.forEach(us => {
+        const dayIdx = dayNames.indexOf(us.dayOfWeek.toUpperCase());
+        if (dayIdx === -1) return;
+        
+        const startMins = timeToMins(us.startTime);
+        const endMins = timeToMins(us.endTime);
+        
+        periods.forEach(p => {
+          if (Math.max(p.startMins, startMins) < Math.min(p.endMins, endMins)) {
+            const slotId = (dayIdx * periodsPerDay) + p.index;
+            if (!t.unavailableSlotIds.includes(slotId)) {
+              t.unavailableSlotIds.push(slotId);
+            }
+          }
+        });
+      });
+    });
+
     const payload = {
       organizationId: user.school_id,
       runId: schedule_version_id,
-      schools: schoolsPayload,
-      crossSchoolRules: {
-          sharedTeacherIds: formattedTeachers.map(t => t.id),
-          sharedRoomIds: sharedRoomIds,
-          transportWindows: []
+      scheduleVersion: \`v\${new Date().toISOString().split('T')[0]}\`,
+      timezone: schoolData.timezone || "UTC",
+      scheduleSettings: {
+          periodDurationMinutes: schoolData.period_duration_minutes || 60,
+          dayStartTime: schoolData.day_start_time || "08:00",
+          dayEndTime: schoolData.day_end_time || "18:00",
+          daysOfWeek: schoolData.days_of_week || ["MONDAY", "TUESDAY", "WEDNESDAY", "THURSDAY", "FRIDAY"],
+          breaks: schoolData.breaks || []
       },
-      crossSchoolPreferenceRules: crossSchoolPreferenceRules
+      rooms: rooms.map(r => ({
+          id: r.id,
+          name: r.name,
+          capacity: r.capacity
+      })),
+      teachers: formattedTeachers,
+      subjects: subjects.filter(s => s.is_active && subjectRequirements.some(req => req.subject === (s.code || s.name))).map(s => ({
+          id: s.id,
+          code: s.code || s.name,
+          name: s.name
+      })),
+      subjectRequirements: subjectRequirements,
+      teachingGroups: teachingGroupsPayload.map(tg => ({
+          id: tg.id,
+          subject_id: tg.subjectId,
+          student_group: tg.studentGroup,
+          level: tg.level
+      })),
+      lessons: lessons,
+      blockedSlotIds: [],
+      constraints: {
+          maxSameSubjectPerDayHardEnabled: constraints?.maxSameSubjectPerDayHardEnabled ?? false,
+          maxSameSubjectPerDayLimit: constraints?.maxSameSubjectPerDayLimit ?? 4,
+          exactWeeklyCountEnabled: constraints?.exactWeeklyCountEnabled ?? false,
+          allowFlexibleWeeklyCounts: constraints?.allowFlexibleWeeklyCounts ?? true,
+          relaxStudentGroupConflicts: constraints?.relaxStudentGroupConflicts ?? true,
+          lunchBreakEnabled: constraints?.lunchBreakEnabled ?? false,
+          lunchBreakDurationMinutes: constraints?.lunchBreakDurationMinutes ?? 60,
+          lunchBreakMinPeriod: constraints?.lunchBreakMinPeriod ?? 4,
+          lunchBreakMaxPeriod: constraints?.lunchBreakMaxPeriod ?? 6
+      },
+      studentSubjectChoices: []
     };
 
     // Validate teacher capacity before sending to OptaPlanner
