@@ -923,29 +923,24 @@ ${JSON.stringify(teacherContext)}
       finalLessons = result.lessons || result.assignments || (Array.isArray(result) ? result : []);
     }
 
+    // Create reverse mappings for mapping back from numeric IDs to Base44 IDs
+    const reverseTeacherMap = {};
+    finalTeachers.forEach(t => { reverseTeacherMap[t.id] = t.externalId; });
+    
+    const reverseRoomMap = {};
+    finalRooms.forEach(r => { reverseRoomMap[r.id] = r.externalId; });
+    
+    const safeLessonMap = {};
+    safeLessons.forEach(l => { safeLessonMap[l.id] = l; });
+
     if (finalLessons && Array.isArray(finalLessons)) {
       for (const lesson of finalLessons) {
-        // Handle new explicit flat format
-        if (lesson.teaching_group_id) {
-            slotsToInsert.push({
-              school_id: user.school_id,
-              schedule_version: schedule_version_id,
-              teaching_group_id: lesson.teaching_group_id,
-              subject_id: lesson.subject_id,
-              teacher_id: lesson.teacher_id,
-              room_id: lesson.room_id,
-              timeslot_id: lesson.timeslot_id || lesson.period,
-              day: lesson.day,
-              period: lesson.period,
-              status: lesson.status || 'scheduled'
-            });
-            continue;
-        }
-
-        // Old format handling
-        if (lesson.timeslotId != null) {
+        
+        // Match the lesson returned by OptaPlanner back to our safeLessons array to get original IDs
+        const originalLesson = safeLessonMap[lesson.id];
+        
+        if (originalLesson && lesson.timeslotId != null) {
           
-          // Reverse-engineer dayOfWeek/periodIndex if missing but timeslotId exists (1-50 standard grid)
           let day = lesson.dayOfWeek;
           let periodIndex = lesson.periodIndex;
           
@@ -957,16 +952,20 @@ ${JSON.stringify(teacherContext)}
             periodIndex = (lesson.timeslotId - 1) % periodsPerDay;
           }
 
-          const realTgIds = syntheticToRealTgMap[lesson.teachingGroupId] || [lesson.teachingGroupId];
-          const isBreak = lesson.isBreak === true || String(lesson.subject || '').toUpperCase() === 'LUNCH' || String(lesson.subject || '').toUpperCase() === 'BREAK';
+          const realTgIds = syntheticToRealTgMap[originalLesson.originalTeachingGroupId] || [originalLesson.originalTeachingGroupId];
+          const isBreak = String(lesson.subject || '').toUpperCase() === 'LUNCH' || String(lesson.subject || '').toUpperCase() === 'BREAK';
           
+          // Map back to external IDs using our reverse maps
+          const finalTeacherId = reverseTeacherMap[lesson.teacherId] || null;
+          const finalRoomId = reverseRoomMap[lesson.roomId] || null;
+
           for (const realTgId of realTgIds) {
             slotsToInsert.push({
               school_id: user.school_id,
               schedule_version: schedule_version_id,
               teaching_group_id: realTgId,
-              teacher_id: teacherIdById[lesson.teacherId] || null,
-              room_id: roomIdById[lesson.roomId] || null,
+              teacher_id: finalTeacherId,
+              room_id: finalRoomId,
               timeslot_id: lesson.timeslotId,
               day: day || 'Monday',
               period: periodIndex != null ? periodIndex + 1 : 1,
