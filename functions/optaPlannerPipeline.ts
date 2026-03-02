@@ -870,8 +870,20 @@ Deno.serve(async (req) => {
 
 
 
-    // OptaPlanner sometimes returns `assignments` instead of `lessons` on failure/partial success
-    const finalLessons = result.lessons || result.assignments || (Array.isArray(result) ? result : []);
+    // Handle multi-school results format
+    let finalLessons = [];
+    if (result.schoolResults && Array.isArray(result.schoolResults)) {
+      result.schoolResults.forEach(schoolRes => {
+        if (schoolRes.result && schoolRes.result.assignments) {
+          finalLessons = finalLessons.concat(schoolRes.result.assignments);
+        } else if (schoolRes.result && schoolRes.result.lessons) {
+          finalLessons = finalLessons.concat(schoolRes.result.lessons);
+        }
+      });
+    } else {
+      // Fallback for single-school format or failures
+      finalLessons = result.lessons || result.assignments || (Array.isArray(result) ? result : []);
+    }
 
     if (finalLessons && Array.isArray(finalLessons)) {
       for (const lesson of finalLessons) {
