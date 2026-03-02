@@ -252,7 +252,7 @@ export default function Schedules() {
         console.log('Error details:', responseData.details);
         console.log('Full error details object:', JSON.stringify(responseData.details, null, 2));
         
-        errorMsg = responseData.error || errorMsg;
+        errorMsg = responseData.summary || responseData.error || errorMsg;
 
         if (errorMsg === 'Rate limit exceeded') {
           errorMsg = "Vous avez lancé trop de requêtes récemment. Veuillez patienter quelques instants avant de réessayer (Rate limit exceeded).";
