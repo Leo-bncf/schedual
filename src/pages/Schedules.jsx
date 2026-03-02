@@ -235,8 +235,9 @@ export default function Schedules() {
           }
         }
 
-        setGenError(errorMsg);
-        toast.error(errorMsg, { duration: 10000 });
+        const safeErrorMsg = typeof errorMsg === 'string' ? errorMsg : JSON.stringify(errorMsg);
+        setGenError(safeErrorMsg);
+        toast.error(safeErrorMsg, { duration: 10000 });
       }
     } catch (error) {
       console.error('Generation error:', error);
