@@ -635,8 +635,8 @@ Deno.serve(async (req) => {
     const teacherAssignments = {};
     const overloadedTeachers = [];
     
-    teachers.forEach((t, idx) => {
-      const teacherId = idx + 1;
+    teachers.forEach((t) => {
+      const teacherId = t.id;
       const assignedLessons = lessons.filter(l => l.teacherId === teacherId);
       const maxPeriods = Math.min(t.max_hours_per_week || 25, 45);
       const isOverloaded = assignedLessons.length > maxPeriods;
