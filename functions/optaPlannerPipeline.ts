@@ -850,25 +850,9 @@ ${JSON.stringify(teacherContext)}
       console.warn('[Pipeline] Constraint warnings:', constraintWarnings);
     }
     
-    let endpointUrl = OPTAPLANNER_ENDPOINT.replace(/\/+$/, ''); // remove trailing slashes
-    
-    // Clean up any double solve paths that might occur from misconfiguration
-    endpointUrl = endpointUrl.replace(/\/solve\/solve/g, '/solve');
-    
-    // If they have /solve-and-push, they shouldn't append /solve/multi on top of it unless specifically handled by their backend.
-    // Assuming the new endpoint is simply /solve/multi from the root or /api/solve/multi
-    
-    if (endpointUrl.includes('/solve-and-push')) {
-      endpointUrl = endpointUrl.replace('/solve-and-push', '/solve/multi');
-    } else if (!endpointUrl.endsWith('/multi')) {
-      if (endpointUrl.endsWith('/solve')) {
-        endpointUrl += '/multi';
-      } else if (endpointUrl.endsWith('/api')) {
-        endpointUrl += '/solve/multi';
-      } else {
-        endpointUrl += '/solve/multi';
-      }
-    }
+    // Always use the exact endpoint provided by the user in the secret, 
+    // to avoid messing up their specific backend routing setup.
+    let endpointUrl = OPTAPLANNER_ENDPOINT;
 
     console.log('[Pipeline] Calling OptaPlanner:', endpointUrl);
     console.log('[Pipeline] Payload summary:', {
