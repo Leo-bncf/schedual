@@ -637,6 +637,22 @@ export default function Schedules() {
                     onCheckedChange={(c) => setConstraints(prev => ({ ...prev, relaxStudentGroupConflicts: c }))} 
                   />
                 </div>
+
+                <div className="space-y-2 pt-4 border-t border-slate-100">
+                  <Label className="text-base font-medium flex items-center gap-2">
+                    <Sparkles className="w-4 h-4 text-purple-500" />
+                    AI Scheduling Preferences
+                  </Label>
+                  <p className="text-sm text-slate-500">
+                    Describe any specific rules in plain English (e.g., "I don't want Danny Muller to have lessons on Friday afternoon").
+                  </p>
+                  <textarea
+                    className="flex min-h-[100px] w-full rounded-md border border-input bg-transparent px-3 py-2 text-sm shadow-sm placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring disabled:cursor-not-allowed disabled:opacity-50"
+                    placeholder="Enter preferences here..."
+                    value={constraints.aiPreferences || ''}
+                    onChange={(e) => setConstraints(prev => ({ ...prev, aiPreferences: e.target.value }))}
+                  />
+                </div>
               </CardContent>
             </Card>
           </div>
