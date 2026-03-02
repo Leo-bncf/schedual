@@ -850,7 +850,18 @@ ${JSON.stringify(teacherContext)}
       console.warn('[Pipeline] Constraint warnings:', constraintWarnings);
     }
     
-    console.log('[Pipeline] Calling OptaPlanner:', OPTAPLANNER_ENDPOINT);
+    let endpointUrl = OPTAPLANNER_ENDPOINT.replace(/\/+$/, ''); // remove trailing slashes
+    if (!endpointUrl.endsWith('/multi')) {
+      if (endpointUrl.endsWith('/solve')) {
+        endpointUrl += '/multi';
+      } else if (endpointUrl.endsWith('/api')) {
+        endpointUrl += '/solve/multi';
+      } else {
+        endpointUrl += '/solve/multi';
+      }
+    }
+
+    console.log('[Pipeline] Calling OptaPlanner:', endpointUrl);
     console.log('[Pipeline] Payload summary:', {
       rooms: rooms.length,
       teachers: teachers.length,
@@ -859,9 +870,7 @@ ${JSON.stringify(teacherContext)}
       subjectRequirements: subjectRequirements.length
     });
     
-
-
-    const response = await fetch(OPTAPLANNER_ENDPOINT, {
+    const response = await fetch(endpointUrl, {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
