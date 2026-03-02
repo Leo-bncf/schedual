@@ -493,6 +493,20 @@ Deno.serve(async (req) => {
     const formattedTeachers = teachers.map(t => {
       // Calculate unavailable slot IDs based on time ranges
       const unavailableSlotIds = [];
+      const unavailableDays = [];
+      const preferredDays = [];
+      const avoidDays = [];
+      
+      if (t.preferred_free_day) {
+        avoidDays.push(t.preferred_free_day.toUpperCase());
+      }
+      
+      if (t.preferences) {
+         if (Array.isArray(t.preferences.unavailableDays)) unavailableDays.push(...t.preferences.unavailableDays);
+         if (Array.isArray(t.preferences.preferredDays)) preferredDays.push(...t.preferences.preferredDays);
+         if (Array.isArray(t.preferences.avoidDays)) avoidDays.push(...t.preferences.avoidDays);
+      }
+
       if (t.unavailable_slots && t.unavailable_slots.length > 0) {
         const dayNames = ['MONDAY', 'TUESDAY', 'WEDNESDAY', 'THURSDAY', 'FRIDAY'];
         const timeToMins = (timeStr) => {
