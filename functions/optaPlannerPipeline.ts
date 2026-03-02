@@ -733,6 +733,20 @@ ${JSON.stringify(teacherContext)}
       blockedSlotIds: []
     };
 
+    // TEMPORARY: Ensure OptaPlanner structure perfectly matches the example payload provided
+    // This is strictly matching exactly what OptaPlanner requested
+    const optaPlannerPayload = {
+      schoolId: payload.schoolId,
+      scheduleVersionId: payload.scheduleVersionId,
+      scheduleSettings: payload.scheduleSettings,
+      rooms: payload.rooms,
+      teachers: payload.teachers,
+      subjects: payload.subjects,
+      subjectRequirements: payload.subjectRequirements,
+      lessons: payload.lessons,
+      blockedSlotIds: payload.blockedSlotIds
+    };
+
     // Validate teacher capacity before sending to OptaPlanner
     const teacherAssignments = {};
     const overloadedTeachers = [];
