@@ -686,6 +686,88 @@ Deno.serve(async (req) => {
        }
     });
 
+    let crossSchoolPreferenceRules = [];
+    if (constraints?.aiPreferences && constraints.aiPreferences.trim().length > 0) {
+      console.log('[Pipeline] Parsing AI Preferences with LLM...');
+      try {
+        const teacherContext = teachers.map(t => ({ id: t.id, name: t.full_name }));
+        const llmPrompt = `
+You are an expert scheduling assistant. Convert the following user preferences into a JSON array of rules for OptaPlanner.
+User preferences: "${constraints.aiPreferences}"
+
+Rules for parsing:
+1. Free-text user preferences default to "SOFT" resolvedAs, with weight 25.
+2. If text has strict language (must, never, required), you can classify as "HARD", but try to use SOFT if possible.
+3. applyToAllSchools should be true.
+4. Extract the exact days, and start/end times. If "afternoon", use 12:00 to 18:00. If "morning", use 08:00 to 12:00. If "evening", use 15:00 to 18:30.
+5. timezoneMode should be "SCHOOL_LOCAL".
+6. type is "TEACHER_AVOID_TIME_WINDOW".
+7. Match the teacher name to the following list to get the teacherId and teacherExternalId (use the same ID for both):
+${JSON.stringify(teacherContext)}
+`;
+
+        const llmResponse = await base44.asServiceRole.integrations.Core.InvokeLLM({
+          prompt: llmPrompt,
+          response_json_schema: {
+            type: "object",
+            properties: {
+              crossSchoolPreferenceRules: {
+                type: "array",
+                items: {
+                  type: "object",
+                  properties: {
+                    id: { type: "string" },
+                    sourceText: { type: "string" },
+                    enabled: { type: "boolean" },
+                    classification: {
+                      type: "object",
+                      properties: {
+                        resolvedAs: { type: "string", enum: ["SOFT", "HARD"] },
+                        weight: { type: "number" }
+                      },
+                      required: ["resolvedAs", "weight"]
+                    },
+                    type: { type: "string", enum: ["TEACHER_AVOID_TIME_WINDOW"] },
+                    scope: {
+                      type: "object",
+                      properties: {
+                        applyToAllSchools: { type: "boolean" },
+                        teacherId: { type: "string" },
+                        teacherExternalId: { type: "string" }
+                      },
+                      required: ["applyToAllSchools", "teacherId", "teacherExternalId"]
+                    },
+                    timeWindow: {
+                      type: "object",
+                      properties: {
+                        daysOfWeek: {
+                          type: "array",
+                          items: { type: "string", enum: ["MONDAY", "TUESDAY", "WEDNESDAY", "THURSDAY", "FRIDAY"] }
+                        },
+                        startTime: { type: "string" },
+                        endTime: { type: "string" },
+                        timezoneMode: { type: "string" }
+                      },
+                      required: ["daysOfWeek", "startTime", "endTime", "timezoneMode"]
+                    }
+                  },
+                  required: ["id", "sourceText", "enabled", "classification", "type", "scope", "timeWindow"]
+                }
+              }
+            },
+            required: ["crossSchoolPreferenceRules"]
+          }
+        });
+        
+        if (llmResponse && llmResponse.crossSchoolPreferenceRules) {
+          crossSchoolPreferenceRules = llmResponse.crossSchoolPreferenceRules;
+          console.log('[Pipeline] Parsed rules:', JSON.stringify(crossSchoolPreferenceRules, null, 2));
+        }
+      } catch (llmError) {
+        console.error('[Pipeline] Failed to parse AI preferences:', llmError);
+      }
+    }
+
     const payload = {
       organizationId: user.school_id,
       runId: schedule_version_id,
@@ -694,7 +776,8 @@ Deno.serve(async (req) => {
           sharedTeacherIds: formattedTeachers.map(t => t.id),
           sharedRoomIds: sharedRoomIds,
           transportWindows: []
-      }
+      },
+      crossSchoolPreferenceRules: crossSchoolPreferenceRules
     };
 
     // Validate teacher capacity before sending to OptaPlanner
