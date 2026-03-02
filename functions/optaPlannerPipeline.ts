@@ -485,13 +485,7 @@ Deno.serve(async (req) => {
       }
     });
 
-    const globalRooms = rooms.map(r => ({
-      id: `${user.school_id}:${r.id}`,
-      name: r.name,
-      capacity: r.capacity
-    }));
-
-    const globalTeachers = teachers.map(t => {
+    const formattedTeachers = teachers.map(t => {
       // Calculate unavailable slot IDs based on time ranges
       const unavailableSlotIds = [];
       if (t.unavailable_slots && t.unavailable_slots.length > 0) {
@@ -561,12 +555,14 @@ Deno.serve(async (req) => {
         id: t.id,
         name: t.full_name,
         maxPeriodsPerWeek: Math.min(t.max_hours_per_week || 25, 50),
-        unavailableSlotIds: [...new Set(unavailableSlotIds)]
+        unavailableSlotIds: [...new Set(unavailableSlotIds)],
+        externalId: t.id
       };
     });
 
     const programs = ['DP', 'MYP', 'PYP'];
     const schoolsPayload = [];
+    const sharedRoomIds = [];
 
     programs.forEach(prog => {
        const progSubjects = subjects.filter(s => s.ib_level === prog);
@@ -581,26 +577,108 @@ Deno.serve(async (req) => {
        });
 
        if (progLessons.length > 0) {
-           schoolsPayload.push({
-               schoolId: `${user.school_id}_${prog}`,
+           const schoolId = `${user.school_id}_${prog.toLowerCase()}`;
+           
+           // Filter teachers who actually teach in this program
+           const teacherIdsInProg = new Set(progLessons.filter(l => l.teacherId).map(l => l.teacherId));
+           const progTeachers = formattedTeachers.filter(t => teacherIdsInProg.has(t.id));
+
+           const progRooms = rooms.map(r => {
+             const extId = `${schoolId}:${r.id}`;
+             sharedRoomIds.push(extId);
+             return {
+               id: r.id,
+               name: r.name,
+               capacity: r.capacity,
+               externalId: extId
+             };
+           });
+
+           const schoolPayload = {
+               schoolId: schoolId,
                programType: prog,
                timezone: schoolData.timezone || "UTC",
                calendar: {
+                   academicYear: schoolData.academic_year || "2024-2025",
+                   termId: "T1"
+               },
+               scheduleVersion: `v${new Date().toISOString().split('T')[0]}`,
+               scheduleVersionId: schedule_version_id,
+               scheduleSettings: {
                    periodDurationMinutes: schoolData.period_duration_minutes || 60,
                    dayStartTime: schoolData.day_start_time || "08:00",
                    dayEndTime: schoolData.day_end_time || "18:00",
                    daysOfWeek: schoolData.days_of_week || ["MONDAY", "TUESDAY", "WEDNESDAY", "THURSDAY", "FRIDAY"],
                    breaks: schoolData.breaks || []
                },
-               teachingGroups: progTGs,
-               lessons: progLessons,
-               subjectRequirements: progReqs,
+               rooms: progRooms,
+               teachers: progTeachers,
                subjects: progSubjects.filter(s => s.is_active && progReqs.some(req => req.subject === (s.code || s.name))).map(s => ({
                   id: s.id,
                   code: s.code || s.name,
                   name: s.name
-               }))
-           });
+               })),
+               subjectRequirements: progReqs,
+               teachingGroups: progTGs.map(tg => ({
+                   id: tg.id,
+                   subject_id: tg.subjectId,
+                   student_group: tg.studentGroup,
+                   level: tg.level
+               })),
+               lessons: progLessons,
+               blockedSlotIds: [],
+               constraints: {
+                 maxSameSubjectPerDayHardEnabled: constraints?.maxSameSubjectPerDayHardEnabled ?? false,
+                 maxSameSubjectPerDayLimit: constraints?.maxSameSubjectPerDayLimit ?? 4,
+                 exactWeeklyCountEnabled: constraints?.exactWeeklyCountEnabled ?? false,
+                 allowFlexibleWeeklyCounts: constraints?.allowFlexibleWeeklyCounts ?? true,
+                 relaxStudentGroupConflicts: constraints?.relaxStudentGroupConflicts ?? true,
+                 lunchBreakEnabled: constraints?.lunchBreakEnabled ?? false,
+                 lunchBreakDurationMinutes: constraints?.lunchBreakDurationMinutes ?? 60,
+                 lunchBreakMinPeriod: constraints?.lunchBreakMinPeriod ?? 4,
+                 lunchBreakMaxPeriod: constraints?.lunchBreakMaxPeriod ?? 6
+               },
+               studentSubjectChoices: [],
+               randomSeed: 42,
+               randomizeSearch: false,
+               numSearchWorkers: 1,
+               shuffleInputOrder: false
+           };
+
+           if (prog === 'DP') {
+               schoolPayload.dpConfig = {
+                   years: ["DP1", "DP2"],
+                   levels: ["HL", "SL"],
+                   core: { tokRequired: true, casRequired: true, eeRequired: true },
+                   weeklyMinutesTargets: { HL: 250, SL: 150, TOK: 100, CAS: 60, EE: 60 },
+                   subjectGroupRules: []
+               };
+           } else if (prog === 'MYP') {
+               schoolPayload.mypConfig = {
+                   years: ["MYP1", "MYP2", "MYP3", "MYP4", "MYP5"],
+                   requiredSubjectGroups: [
+                     "LANG_AND_LIT", "LANG_ACQ", "INDIVIDUALS_AND_SOCIETIES", 
+                     "SCIENCES", "MATHEMATICS", "ARTS", "PE", "DESIGN"
+                   ],
+                   serviceLearningMinutesPerWeek: 40,
+                   interdisciplinaryUnitsPerTerm: 1,
+                   weeklyMinutesTargetsByYear: {}
+               };
+           } else if (prog === 'PYP') {
+               schoolPayload.pypConfig = {
+                   grades: ["PYP1", "PYP2", "PYP3", "PYP4", "PYP5", "PYP6"],
+                   homeroomModel: "SELF_CONTAINED",
+                   transdisciplinaryThemes: [
+                     "WHO_WE_ARE", "WHERE_WE_ARE_IN_PLACE_AND_TIME", 
+                     "HOW_WE_EXPRESS_OURSELVES", "HOW_THE_WORLD_WORKS", 
+                     "HOW_WE_ORGANIZE_OURSELVES", "SHARING_THE_PLANET"
+                   ],
+                   specialistSubjects: [],
+                   dailyHomeroomMinutes: 240
+               };
+           }
+
+           schoolsPayload.push(schoolPayload);
        }
     });
 
@@ -608,27 +686,11 @@ Deno.serve(async (req) => {
       organizationId: user.school_id,
       runId: schedule_version_id,
       schools: schoolsPayload,
-      teachers: globalTeachers,
-      rooms: globalRooms,
       crossSchoolRules: {
-          sharedTeachersEnabled: true,
-          sharedRoomsEnabled: true
-      },
-      constraints: {
-        maxSameSubjectPerDayHardEnabled: constraints?.maxSameSubjectPerDayHardEnabled ?? false,
-        maxSameSubjectPerDayLimit: constraints?.maxSameSubjectPerDayLimit ?? 4,
-        exactWeeklyCountEnabled: constraints?.exactWeeklyCountEnabled ?? false,
-        allowFlexibleWeeklyCounts: constraints?.allowFlexibleWeeklyCounts ?? true,
-        relaxStudentGroupConflicts: constraints?.relaxStudentGroupConflicts ?? true,
-        lunchBreakEnabled: constraints?.lunchBreakEnabled ?? false,
-        lunchBreakDurationMinutes: constraints?.lunchBreakDurationMinutes ?? 60,
-        lunchBreakMinPeriod: constraints?.lunchBreakMinPeriod ?? 4,
-        lunchBreakMaxPeriod: constraints?.lunchBreakMaxPeriod ?? 6
-      },
-      randomSeed: 42,
-      randomizeSearch: false,
-      numSearchWorkers: 1,
-      shuffleInputOrder: false
+          sharedTeacherIds: formattedTeachers.map(t => t.id),
+          sharedRoomIds: sharedRoomIds,
+          transportWindows: []
+      }
     };
 
     // Validate teacher capacity before sending to OptaPlanner
