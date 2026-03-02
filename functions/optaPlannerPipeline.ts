@@ -595,7 +595,8 @@ User preferences: "${constraints.aiPreferences}"
 Rules:
 1. Extract exact days and start/end times for when teachers are UNAVAILABLE.
 2. If "afternoon", use "12:00" to "18:00". If "morning", use "08:00" to "12:00". If "evening", use "15:00" to "18:30".
-3. Match the teacher name to the following list to get the teacherId:
+3. Extract full days that a teacher is unavailable (unavailableDays), prefers to work (preferredDays), or wants to avoid (avoidDays).
+4. Match the teacher name to the following list to get the teacherId:
 ${JSON.stringify(teacherContext)}
 `;
 
@@ -616,15 +617,34 @@ ${JSON.stringify(teacherContext)}
                   },
                   required: ["teacherId", "dayOfWeek", "startTime", "endTime"]
                 }
+              },
+              teacherPreferences: {
+                type: "array",
+                items: {
+                  type: "object",
+                  properties: {
+                    teacherId: { type: "string" },
+                    unavailableDays: { type: "array", items: { type: "string", enum: ["MONDAY", "TUESDAY", "WEDNESDAY", "THURSDAY", "FRIDAY"] } },
+                    preferredDays: { type: "array", items: { type: "string", enum: ["MONDAY", "TUESDAY", "WEDNESDAY", "THURSDAY", "FRIDAY"] } },
+                    avoidDays: { type: "array", items: { type: "string", enum: ["MONDAY", "TUESDAY", "WEDNESDAY", "THURSDAY", "FRIDAY"] } }
+                  },
+                  required: ["teacherId"]
+                }
               }
             },
-            required: ["teacherUnavailability"]
+            required: ["teacherUnavailability", "teacherPreferences"]
           }
         });
         
-        if (llmResponse && llmResponse.teacherUnavailability) {
-          aiUnavailability = llmResponse.teacherUnavailability;
-          console.log('[Pipeline] Parsed AI unavailability:', JSON.stringify(aiUnavailability, null, 2));
+        if (llmResponse) {
+          if (llmResponse.teacherUnavailability) {
+            aiUnavailability = llmResponse.teacherUnavailability;
+            console.log('[Pipeline] Parsed AI unavailability:', JSON.stringify(aiUnavailability, null, 2));
+          }
+          if (llmResponse.teacherPreferences) {
+            aiPreferences = llmResponse.teacherPreferences;
+            console.log('[Pipeline] Parsed AI preferences:', JSON.stringify(aiPreferences, null, 2));
+          }
         }
       } catch (llmError) {
         console.error('[Pipeline] Failed to parse AI preferences:', llmError);
