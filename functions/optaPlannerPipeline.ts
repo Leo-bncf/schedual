@@ -675,6 +675,17 @@ ${JSON.stringify(teacherContext)}
       });
     });
 
+    const finalTeachers = formattedTeachers.length > 0 ? formattedTeachers : [{ id: "dummy_teacher", name: "Dummy Teacher", maxPeriodsPerWeek: 40, unavailableSlotIds: [] }];
+    const finalRooms = rooms.length > 0 ? rooms.map(r => ({id: r.id, name: r.name, capacity: r.capacity})) : [{id: "dummy_room", name: "Dummy", capacity: 30}];
+    
+    // Ensure lessons have non-null teachers and rooms if required by the model
+    // OptaPlanner model does not like null teacher/room if the structure defines them strictly
+    const safeLessons = lessons.map(l => ({
+        ...l,
+        teacherId: l.teacherId || finalTeachers[0].id,
+        roomId: l.roomId || null
+    }));
+
     const payload = {
       organizationId: user.school_id,
       runId: schedule_version_id,
@@ -687,12 +698,8 @@ ${JSON.stringify(teacherContext)}
           daysOfWeek: schoolData.days_of_week || ["MONDAY", "TUESDAY", "WEDNESDAY", "THURSDAY", "FRIDAY"],
           breaks: schoolData.breaks || []
       },
-      rooms: rooms.map(r => ({
-          id: r.id,
-          name: r.name,
-          capacity: r.capacity
-      })),
-      teachers: formattedTeachers,
+      rooms: finalRooms,
+      teachers: finalTeachers,
       subjects: subjects.filter(s => s.is_active && subjectRequirements.some(req => req.subject === (s.code || s.name))).map(s => ({
           id: s.id,
           code: s.code || s.name,
@@ -705,7 +712,18 @@ ${JSON.stringify(teacherContext)}
           student_group: tg.studentGroup,
           level: tg.level
       })),
-      lessons: lessons,
+      lessons: safeLessons.length > 0 ? safeLessons : [{
+        id: 99999,
+        teachingGroupId: teachingGroupsPayload[0]?.id || "dummy",
+        sectionId: "dummy_sec",
+        subject: "DUMMY",
+        studentGroup: "Dummy",
+        teacherId: finalTeachers[0].id,
+        requiredCapacity: 1,
+        studentIds: [],
+        timeslotId: null,
+        roomId: null
+      }],
       blockedSlotIds: [],
       constraints: {
           maxSameSubjectPerDayHardEnabled: constraints?.maxSameSubjectPerDayHardEnabled ?? false,
