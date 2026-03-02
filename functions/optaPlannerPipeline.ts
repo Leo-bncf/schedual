@@ -256,7 +256,11 @@ Deno.serve(async (req) => {
     });
 
     rooms.forEach(r => {
-      roomIdById[`${user.school_id}:${r.id}`] = r.id;
+      roomIdById[r.id] = r.id;
+      // Also map the external ID format just in case it returns that
+      roomIdById[`${user.school_id}_dp:${r.id}`] = r.id;
+      roomIdById[`${user.school_id}_myp:${r.id}`] = r.id;
+      roomIdById[`${user.school_id}_pyp:${r.id}`] = r.id;
     });
 
     // Build teachingGroups array - include both real and synthetic groups
