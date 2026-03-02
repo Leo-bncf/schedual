@@ -851,7 +851,16 @@ ${JSON.stringify(teacherContext)}
     }
     
     let endpointUrl = OPTAPLANNER_ENDPOINT.replace(/\/+$/, ''); // remove trailing slashes
-    if (!endpointUrl.endsWith('/multi')) {
+    
+    // Clean up any double solve paths that might occur from misconfiguration
+    endpointUrl = endpointUrl.replace(/\/solve\/solve/g, '/solve');
+    
+    // If they have /solve-and-push, they shouldn't append /solve/multi on top of it unless specifically handled by their backend.
+    // Assuming the new endpoint is simply /solve/multi from the root or /api/solve/multi
+    
+    if (endpointUrl.includes('/solve-and-push')) {
+      endpointUrl = endpointUrl.replace('/solve-and-push', '/solve/multi');
+    } else if (!endpointUrl.endsWith('/multi')) {
       if (endpointUrl.endsWith('/solve')) {
         endpointUrl += '/multi';
       } else if (endpointUrl.endsWith('/api')) {
