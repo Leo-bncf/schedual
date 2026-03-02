@@ -85,7 +85,7 @@ export default function ScheduleGenerationDialog({ open, onClose, status, messag
               <div className="w-24 h-24 rounded-full bg-green-50 flex items-center justify-center mx-auto ring-8 ring-green-100/50 shadow-sm">
                 <CheckCircle className="w-12 h-12 text-green-600" />
               </div>
-              <p className="text-lg font-medium text-slate-800">{message}</p>
+              <p className="text-lg font-medium text-slate-800">{typeof message === 'string' ? message : 'Success!'}</p>
               
               <Button onClick={onClose} size="lg" className="bg-green-600 hover:bg-green-700 w-full max-w-xs shadow-md">
                 Voir l'emploi du temps
