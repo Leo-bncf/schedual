@@ -78,17 +78,18 @@ Deno.serve(async (req) => {
     const validationErrors = [];
 
     // 1. Check minimum data availability
+    // TEMPORARY: Allow empty arrays to pass validation so we can send dummy data to OptaPlanner for testing the shape.
     if (!rooms || rooms.length === 0) {
-      validationErrors.push('❌ No active rooms configured. Please add rooms first.');
+      console.warn('⚠️ No active rooms configured. Will use dummy data.');
     }
     if (!teachers || teachers.length === 0) {
-      validationErrors.push('❌ No active teachers configured. Please add teachers first.');
+      console.warn('⚠️ No active teachers configured. Will use dummy data.');
     }
     if (!subjects || subjects.length === 0) {
-      validationErrors.push('❌ No active subjects configured. Please add subjects first.');
+      console.warn('⚠️ No active subjects configured. Will use dummy data.');
     }
     if (!teachingGroups || teachingGroups.length === 0) {
-      validationErrors.push('❌ No active teaching groups. Please create teaching groups first.');
+      console.warn('⚠️ No active teaching groups. Will use dummy data.');
     }
 
     // 2. Validate teaching groups have required fields
