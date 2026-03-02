@@ -238,9 +238,9 @@ Deno.serve(async (req) => {
     const teacherIdMap = new Map();
     const studentIdMap = new Map();
 
-    rooms.forEach((r, idx) => roomIdMap.set(r.id, idx + 1));
-    teachers.forEach((t, idx) => teacherIdMap.set(t.id, idx + 1));
-    students.forEach((s, idx) => studentIdMap.set(s.id, idx + 1000));
+    rooms.forEach(r => roomIdMap.set(r.id, `${user.school_id}:${r.id}`));
+    teachers.forEach(t => teacherIdMap.set(t.id, t.id));
+    students.forEach(s => studentIdMap.set(s.id, s.id));
 
     // Build reverse mappings
     const subjectIdByCode = {};
@@ -251,12 +251,12 @@ Deno.serve(async (req) => {
       if (s.code) subjectIdByCode[s.code] = s.id;
     });
 
-    teachers.forEach((t, idx) => {
-      teacherIdById[idx + 1] = t.id;
+    teachers.forEach(t => {
+      teacherIdById[t.id] = t.id;
     });
 
-    rooms.forEach((r, idx) => {
-      roomIdById[idx + 1] = r.id;
+    rooms.forEach(r => {
+      roomIdById[`${user.school_id}:${r.id}`] = r.id;
     });
 
     // Build teachingGroups array - include both real and synthetic groups
@@ -485,123 +485,135 @@ Deno.serve(async (req) => {
       }
     });
 
-    const payload = {
-      schoolId: user.school_id,
-      scheduleVersionId: schedule_version_id,
-      scheduleVersion: `v${new Date().toISOString().split('T')[0]}`,
-      
-      scheduleSettings: {
-        periodDurationMinutes: schoolData.period_duration_minutes || 60,
-        dayStartTime: schoolData.day_start_time || "08:00",
-        dayEndTime: schoolData.day_end_time || "18:00",
-        daysOfWeek: schoolData.days_of_week || ["MONDAY", "TUESDAY", "WEDNESDAY", "THURSDAY", "FRIDAY"],
-        breaks: schoolData.breaks || []
-      },
+    const globalRooms = rooms.map(r => ({
+      id: `${user.school_id}:${r.id}`,
+      name: r.name,
+      capacity: r.capacity
+    }));
 
-      rooms: rooms.map((r, idx) => ({
-        id: idx + 1,
-        name: r.name,
-        capacity: r.capacity,
-        externalId: r.id
-      })),
+    const globalTeachers = teachers.map(t => {
+      // Calculate unavailable slot IDs based on time ranges
+      const unavailableSlotIds = [];
+      if (t.unavailable_slots && t.unavailable_slots.length > 0) {
+        const dayNames = ['MONDAY', 'TUESDAY', 'WEDNESDAY', 'THURSDAY', 'FRIDAY'];
+        const timeToMins = (timeStr) => {
+          if (!timeStr) return 0;
+          const [h, m] = timeStr.split(':').map(Number);
+          return (h * 60) + (m || 0);
+        };
 
-      teachers: teachers.map((t, idx) => {
-        // Calculate unavailable slot IDs based on time ranges
-        const unavailableSlotIds = [];
-        if (t.unavailable_slots && t.unavailable_slots.length > 0) {
-          const dayNames = ['MONDAY', 'TUESDAY', 'WEDNESDAY', 'THURSDAY', 'FRIDAY'];
-          const timeToMins = (timeStr) => {
-            if (!timeStr) return 0;
-            const [h, m] = timeStr.split(':').map(Number);
-            return (h * 60) + (m || 0);
-          };
+        const periodDuration = schoolData.period_duration_minutes || 60;
+        const periodsPerDay = schoolData.periods_per_day || 10;
+        const breaks = schoolData.breaks || [];
+        
+        const dayStartMins = timeToMins(schoolData.day_start_time || "08:00");
+        const dayEndMins = timeToMins(schoolData.day_end_time || "18:00");
 
-          const periodDuration = schoolData.period_duration_minutes || 60;
-          const periodsPerDay = schoolData.periods_per_day || 10;
-          const breaks = schoolData.breaks || [];
-          
-          const dayStartMins = timeToMins(schoolData.day_start_time || "08:00");
-          const dayEndMins = timeToMins(schoolData.day_end_time || "18:00");
-
-          const periods = [];
-          let currentMins = dayStartMins;
-          let pCount = 1;
-          
-          while (currentMins < dayEndMins && pCount <= periodsPerDay) {
-            let inBreak = false;
-            for (const b of breaks) {
-              const bStart = timeToMins(b.start);
-              const bEnd = timeToMins(b.end);
-              if (currentMins >= bStart && currentMins < bEnd) {
-                currentMins = bEnd;
-                inBreak = true;
-                break;
-              }
+        const periods = [];
+        let currentMins = dayStartMins;
+        let pCount = 1;
+        
+        while (currentMins < dayEndMins && pCount <= periodsPerDay) {
+          let inBreak = false;
+          for (const b of breaks) {
+            const bStart = timeToMins(b.start);
+            const bEnd = timeToMins(b.end);
+            if (currentMins >= bStart && currentMins < bEnd) {
+              currentMins = bEnd;
+              inBreak = true;
+              break;
             }
-            if (inBreak) continue;
-            
-            const periodEnd = currentMins + periodDuration;
-            periods.push({
-              index: pCount,
-              startMins: currentMins,
-              endMins: periodEnd
-            });
-            
-            currentMins = periodEnd;
-            pCount++;
           }
-
-          t.unavailable_slots.forEach(us => {
-            if (!us.day) return;
-            const dayIdx = dayNames.indexOf(us.day.toUpperCase());
-            if (dayIdx === -1) return;
-
-            if (us.type === 'time_range' && us.start_time && us.end_time) {
-              const startMins = timeToMins(us.start_time);
-              const endMins = timeToMins(us.end_time);
-              
-              periods.forEach(p => {
-                // If any part of the period overlaps with the unavailability range
-                if (Math.max(p.startMins, startMins) < Math.min(p.endMins, endMins)) {
-                  unavailableSlotIds.push((dayIdx * periodsPerDay) + p.index);
-                }
-              });
-            } else if ((us.type === 'period' || !us.type) && us.period) {
-              unavailableSlotIds.push((dayIdx * periodsPerDay) + us.period);
-            }
+          if (inBreak) continue;
+          
+          const periodEnd = currentMins + periodDuration;
+          periods.push({
+            index: pCount,
+            startMins: currentMins,
+            endMins: periodEnd
           });
+          
+          currentMins = periodEnd;
+          pCount++;
         }
 
-        return {
-          id: idx + 1,
-          name: t.full_name,
-          maxPeriodsPerWeek: Math.min(t.max_hours_per_week || 25, 50),
-          unavailableSlotIds: [...new Set(unavailableSlotIds)],
-          externalId: t.id
-        };
-      }),
+        t.unavailable_slots.forEach(us => {
+          if (!us.day) return;
+          const dayIdx = dayNames.indexOf(us.day.toUpperCase());
+          if (dayIdx === -1) return;
 
-      subjects: subjects.filter(s => {
-        if (!s.is_active) return false;
-        // OptaPlanner fails if a subject is defined but has no subjectRequirements
-        const codeOrName = s.code || s.name;
-        return subjectRequirements.some(req => req.subject === codeOrName);
-      }).map(s => ({
-        id: s.id,
-        code: s.code || s.name,
-        name: s.name
-      })),
+          if (us.type === 'time_range' && us.start_time && us.end_time) {
+            const startMins = timeToMins(us.start_time);
+            const endMins = timeToMins(us.end_time);
+            
+            periods.forEach(p => {
+              if (Math.max(p.startMins, startMins) < Math.min(p.endMins, endMins)) {
+                unavailableSlotIds.push((dayIdx * periodsPerDay) + p.index);
+              }
+            });
+          } else if ((us.type === 'period' || !us.type) && us.period) {
+            unavailableSlotIds.push((dayIdx * periodsPerDay) + us.period);
+          }
+        });
+      }
 
-      subjectIdByCode,
-      teacherIdById,
-      roomIdById,
+      return {
+        id: t.id,
+        name: t.full_name,
+        maxPeriodsPerWeek: Math.min(t.max_hours_per_week || 25, 50),
+        unavailableSlotIds: [...new Set(unavailableSlotIds)]
+      };
+    });
 
-      teachingGroups: teachingGroupsPayload,
-      lessons,
-      subjectRequirements,
+    const programs = ['DP', 'MYP', 'PYP'];
+    const schoolsPayload = [];
 
-      blockedSlotIds: [],
-      
+    programs.forEach(prog => {
+       const progSubjects = subjects.filter(s => s.ib_level === prog);
+       const progSubjectIds = new Set(progSubjects.map(s => s.id));
+       const progSubjectCodes = new Set(progSubjects.map(s => s.code || s.name));
+
+       const progTGs = teachingGroupsPayload.filter(tg => progSubjectIds.has(tg.subjectId));
+       const progReqs = subjectRequirements.filter(req => progSubjectCodes.has(req.subject));
+       const progLessons = lessons.filter(l => {
+          const subject = subjects.find(s => (s.code || s.name) === l.subject);
+          return subject && subject.ib_level === prog;
+       });
+
+       if (progLessons.length > 0) {
+           schoolsPayload.push({
+               schoolId: `${user.school_id}_${prog}`,
+               programType: prog,
+               timezone: schoolData.timezone || "UTC",
+               calendar: {
+                   periodDurationMinutes: schoolData.period_duration_minutes || 60,
+                   dayStartTime: schoolData.day_start_time || "08:00",
+                   dayEndTime: schoolData.day_end_time || "18:00",
+                   daysOfWeek: schoolData.days_of_week || ["MONDAY", "TUESDAY", "WEDNESDAY", "THURSDAY", "FRIDAY"],
+                   breaks: schoolData.breaks || []
+               },
+               teachingGroups: progTGs,
+               lessons: progLessons,
+               subjectRequirements: progReqs,
+               subjects: progSubjects.filter(s => s.is_active && progReqs.some(req => req.subject === (s.code || s.name))).map(s => ({
+                  id: s.id,
+                  code: s.code || s.name,
+                  name: s.name
+               }))
+           });
+       }
+    });
+
+    const payload = {
+      organizationId: user.school_id,
+      runId: schedule_version_id,
+      schools: schoolsPayload,
+      teachers: globalTeachers,
+      rooms: globalRooms,
+      crossSchoolRules: {
+          sharedTeachersEnabled: true,
+          sharedRoomsEnabled: true
+      },
       constraints: {
         maxSameSubjectPerDayHardEnabled: constraints?.maxSameSubjectPerDayHardEnabled ?? false,
         maxSameSubjectPerDayLimit: constraints?.maxSameSubjectPerDayLimit ?? 4,
@@ -613,7 +625,6 @@ Deno.serve(async (req) => {
         lunchBreakMinPeriod: constraints?.lunchBreakMinPeriod ?? 4,
         lunchBreakMaxPeriod: constraints?.lunchBreakMaxPeriod ?? 6
       },
-
       randomSeed: 42,
       randomizeSearch: false,
       numSearchWorkers: 1,
