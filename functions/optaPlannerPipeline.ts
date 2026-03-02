@@ -675,22 +675,33 @@ ${JSON.stringify(teacherContext)}
       });
     });
 
-    const finalTeachers = formattedTeachers.length > 0 ? formattedTeachers : [{ id: "dummy_teacher", name: "Dummy Teacher", maxPeriodsPerWeek: 40, unavailableSlotIds: [] }];
-    const finalRooms = rooms.length > 0 ? rooms.map(r => ({id: r.id, name: r.name, capacity: r.capacity})) : [{id: "dummy_room", name: "Dummy", capacity: 30}];
+    const finalTeachers = formattedTeachers.length > 0 ? formattedTeachers.map((t, idx) => ({ ...t, id: idx + 1, externalId: t.id })) : [{ id: 1, name: "Dummy Teacher", unavailableSlotIds: [], externalId: "dummy_teacher" }];
+    const finalRooms = rooms.length > 0 ? rooms.map((r, idx) => ({id: idx + 1, name: r.name, capacity: r.capacity || 30, externalId: r.id})) : [{id: 1, name: "Dummy", capacity: 30, externalId: "dummy_room"}];
     
-    // Ensure lessons have non-null teachers and rooms if required by the model
-    // OptaPlanner model does not like null teacher/room if the structure defines them strictly
-    const safeLessons = lessons.map(l => ({
-        ...l,
-        teacherId: l.teacherId || finalTeachers[0].id,
-        roomId: l.roomId || null
+    // Create maps to translate string IDs to numeric IDs expected by the Java backend
+    const numericTeacherMap = {};
+    finalTeachers.forEach(t => { numericTeacherMap[t.externalId] = t.id; });
+    
+    const numericRoomMap = {};
+    finalRooms.forEach(r => { numericRoomMap[r.externalId] = r.id; });
+
+    // Ensure lessons have non-null teachers and use numeric IDs
+    const safeLessons = lessons.map((l, idx) => ({
+        id: idx + 1000,
+        subject: l.subject,
+        studentGroup: l.studentGroup,
+        requiredCapacity: l.requiredCapacity || 1,
+        timeslotId: null,
+        roomId: null,
+        teacherId: numericTeacherMap[l.teacherId] || finalTeachers[0].id,
+        // Keep these around for our own processing after OptaPlanner returns
+        originalTeacherId: l.teacherId,
+        originalTeachingGroupId: l.teachingGroupId
     }));
 
     const payload = {
-      organizationId: user.school_id,
-      runId: schedule_version_id,
-      scheduleVersion: \`v\${new Date().toISOString().split('T')[0]}\`,
-      timezone: schoolData.timezone || "UTC",
+      schoolId: user.school_id,
+      scheduleVersionId: schedule_version_id,
       scheduleSettings: {
           periodDurationMinutes: schoolData.period_duration_minutes || 60,
           dayStartTime: schoolData.day_start_time || "08:00",
@@ -705,38 +716,21 @@ ${JSON.stringify(teacherContext)}
           code: s.code || s.name,
           name: s.name
       })),
-      subjectRequirements: subjectRequirements,
-      teachingGroups: teachingGroupsPayload.map(tg => ({
-          id: tg.id,
-          subject_id: tg.subjectId,
-          student_group: tg.studentGroup,
-          level: tg.level
+      subjectRequirements: subjectRequirements.map(req => ({
+        studentGroup: req.studentGroup,
+        subject: req.subject,
+        minutesPerWeek: req.minutesPerWeek
       })),
       lessons: safeLessons.length > 0 ? safeLessons : [{
-        id: 99999,
-        teachingGroupId: teachingGroupsPayload[0]?.id || "dummy",
-        sectionId: "dummy_sec",
+        id: 1001,
         subject: "DUMMY",
         studentGroup: "Dummy",
-        teacherId: finalTeachers[0].id,
         requiredCapacity: 1,
-        studentIds: [],
         timeslotId: null,
-        roomId: null
+        roomId: null,
+        teacherId: finalTeachers[0].id
       }],
-      blockedSlotIds: [],
-      constraints: {
-          maxSameSubjectPerDayHardEnabled: constraints?.maxSameSubjectPerDayHardEnabled ?? false,
-          maxSameSubjectPerDayLimit: constraints?.maxSameSubjectPerDayLimit ?? 4,
-          exactWeeklyCountEnabled: constraints?.exactWeeklyCountEnabled ?? false,
-          allowFlexibleWeeklyCounts: constraints?.allowFlexibleWeeklyCounts ?? true,
-          relaxStudentGroupConflicts: constraints?.relaxStudentGroupConflicts ?? true,
-          lunchBreakEnabled: constraints?.lunchBreakEnabled ?? false,
-          lunchBreakDurationMinutes: constraints?.lunchBreakDurationMinutes ?? 60,
-          lunchBreakMinPeriod: constraints?.lunchBreakMinPeriod ?? 4,
-          lunchBreakMaxPeriod: constraints?.lunchBreakMaxPeriod ?? 6
-      },
-      studentSubjectChoices: []
+      blockedSlotIds: []
     };
 
     // Validate teacher capacity before sending to OptaPlanner
