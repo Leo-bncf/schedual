@@ -1018,7 +1018,24 @@ Deno.serve(async (req) => {
     }
 
     let scoreToSave = result.score || 0;
-    if (typeof scoreToSave === 'string') {
+    
+    // If it's a multi-school response, aggregate the scores
+    if (result.schoolResults && Array.isArray(result.schoolResults)) {
+      let totalHard = 0;
+      let totalSoft = 0;
+      result.schoolResults.forEach(sr => {
+        const s = sr.result?.score || "0hard/0soft";
+        const match = String(s).match(/(-?\d+)hard\/(-?\d+)soft/);
+        if (match) {
+          totalHard += parseInt(match[1], 10);
+          totalSoft += parseInt(match[2], 10);
+        } else {
+          const hardOnly = String(s).match(/(-?\d+)hard/);
+          if (hardOnly) totalHard += parseInt(hardOnly[1], 10);
+        }
+      });
+      scoreToSave = totalHard;
+    } else if (typeof scoreToSave === 'string') {
        // e.g. "-19hard/-301soft" -> extract -19
        const match = scoreToSave.match(/(-?\d+)hard/);
        if (match) scoreToSave = parseInt(match[1], 10);
