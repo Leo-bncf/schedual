@@ -150,7 +150,7 @@ export default function ScheduleGenerationDialog({ open, onClose, status, messag
                       <XCircle className="w-5 h-5 text-red-600 shrink-0" />
                       <p className="font-semibold text-red-900 text-base">Détails de l'erreur</p>
                     </div>
-                    <p className="text-sm text-red-800 whitespace-pre-wrap leading-relaxed">{error}</p>
+                    <p className="text-sm text-red-800 whitespace-pre-wrap leading-relaxed">{typeof error === 'string' ? error : JSON.stringify(error, null, 2)}</p>
                   </div>
                   <Button variant="outline" onClick={onClose} className="w-full border-red-200 text-red-700 hover:bg-red-50">
                     Fermer
