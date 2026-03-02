@@ -575,11 +575,15 @@ Deno.serve(async (req) => {
         name: t.full_name,
         maxPeriodsPerWeek: Math.min(t.max_hours_per_week || 25, 50),
         unavailableSlotIds: [...new Set(unavailableSlotIds)],
+        unavailableDays: [...new Set(unavailableDays)],
+        preferredDays: [...new Set(preferredDays)],
+        avoidDays: [...new Set(avoidDays)],
         externalId: t.id
       };
     });
 
     let aiUnavailability = [];
+    let aiPreferences = [];
     if (constraints?.aiPreferences && constraints.aiPreferences.trim().length > 0) {
       console.log('[Pipeline] Parsing AI Preferences with LLM for teacher unavailabilities...');
       try {
