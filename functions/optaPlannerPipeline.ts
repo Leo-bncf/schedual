@@ -836,7 +836,7 @@ ${JSON.stringify(teacherContext)}
         'Content-Type': 'application/json',
         'X-API-Key': OPTAPLANNER_API_KEY
       },
-      body: JSON.stringify(payload)
+      body: JSON.stringify(optaPlannerPayload)
     });
 
     let responseText = await response.text();
