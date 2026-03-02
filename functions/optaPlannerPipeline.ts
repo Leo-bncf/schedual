@@ -769,58 +769,15 @@ ${JSON.stringify(teacherContext)}
     }
 
     const payload = {
-      schoolId: user.school_id,
-      timezone: schoolData.timezone || "UTC",
-      calendar: {
-          academicYear: schoolData.academic_year || "2024-2025",
-          termId: "T1"
+      organizationId: user.school_id,
+      runId: schedule_version_id,
+      schools: schoolsPayload,
+      crossSchoolRules: {
+          sharedTeacherIds: formattedTeachers.map(t => t.id),
+          sharedRoomIds: sharedRoomIds,
+          transportWindows: []
       },
-      scheduleVersion: `v${new Date().toISOString().split('T')[0]}`,
-      scheduleVersionId: schedule_version_id,
-      scheduleSettings: {
-          periodDurationMinutes: schoolData.period_duration_minutes || 60,
-          dayStartTime: schoolData.day_start_time || "08:00",
-          dayEndTime: schoolData.day_end_time || "18:00",
-          daysOfWeek: schoolData.days_of_week || ["MONDAY", "TUESDAY", "WEDNESDAY", "THURSDAY", "FRIDAY"],
-          breaks: schoolData.breaks || []
-      },
-      rooms: rooms.map(r => ({
-          id: r.id,
-          name: r.name,
-          capacity: r.capacity
-      })),
-      teachers: formattedTeachers,
-      subjects: subjects.filter(s => s.is_active).map(s => ({
-          id: s.id,
-          code: s.code || s.name,
-          name: s.name
-      })),
-      subjectRequirements: subjectRequirements,
-      teachingGroups: teachingGroupsPayload.map(tg => ({
-          id: tg.id,
-          subject_id: tg.subjectId,
-          student_group: tg.studentGroup,
-          level: tg.level
-      })),
-      lessons: lessons,
-      blockedSlotIds: [],
-      constraints: {
-        maxSameSubjectPerDayHardEnabled: constraints?.maxSameSubjectPerDayHardEnabled ?? false,
-        maxSameSubjectPerDayLimit: constraints?.maxSameSubjectPerDayLimit ?? 4,
-        exactWeeklyCountEnabled: constraints?.exactWeeklyCountEnabled ?? false,
-        allowFlexibleWeeklyCounts: constraints?.allowFlexibleWeeklyCounts ?? true,
-        relaxStudentGroupConflicts: constraints?.relaxStudentGroupConflicts ?? true,
-        lunchBreakEnabled: constraints?.lunchBreakEnabled ?? false,
-        lunchBreakDurationMinutes: constraints?.lunchBreakDurationMinutes ?? 60,
-        lunchBreakMinPeriod: constraints?.lunchBreakMinPeriod ?? 4,
-        lunchBreakMaxPeriod: constraints?.lunchBreakMaxPeriod ?? 6
-      },
-      studentSubjectChoices: [],
-      randomSeed: 42,
-      randomizeSearch: false,
-      numSearchWorkers: 1,
-      shuffleInputOrder: false,
-      preferenceRules: crossSchoolPreferenceRules
+      crossSchoolPreferenceRules: crossSchoolPreferenceRules
     };
 
     // Validate teacher capacity before sending to OptaPlanner
