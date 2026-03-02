@@ -66,7 +66,8 @@ export default function Schedules() {
     maxSameSubjectPerDayLimit: 4,
     exactWeeklyCountEnabled: false,
     allowFlexibleWeeklyCounts: true,
-    relaxStudentGroupConflicts: true
+    relaxStudentGroupConflicts: true,
+    aiPreferences: ""
   });
 
   const queryClient = useQueryClient();
