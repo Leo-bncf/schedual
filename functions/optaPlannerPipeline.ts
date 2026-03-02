@@ -712,9 +712,28 @@ ${JSON.stringify(teacherContext)}
           }
         });
       });
+
+      const aiPrefs = aiPreferences.filter(p => p.teacherId === t.id);
+      aiPrefs.forEach(pref => {
+        if (Array.isArray(pref.unavailableDays)) {
+          pref.unavailableDays.forEach(d => {
+            if (!t.unavailableDays.includes(d)) t.unavailableDays.push(d);
+          });
+        }
+        if (Array.isArray(pref.preferredDays)) {
+          pref.preferredDays.forEach(d => {
+            if (!t.preferredDays.includes(d)) t.preferredDays.push(d);
+          });
+        }
+        if (Array.isArray(pref.avoidDays)) {
+          pref.avoidDays.forEach(d => {
+            if (!t.avoidDays.includes(d)) t.avoidDays.push(d);
+          });
+        }
+      });
     });
 
-    const finalTeachers = formattedTeachers.length > 0 ? formattedTeachers.map((t, idx) => ({ ...t, id: idx + 1, externalId: t.id })) : [{ id: 1, name: "Dummy Teacher", unavailableSlotIds: [], externalId: "dummy_teacher" }];
+    const finalTeachers = formattedTeachers.length > 0 ? formattedTeachers.map((t, idx) => ({ ...t, id: idx + 1, externalId: t.id })) : [{ id: 1, name: "Dummy Teacher", unavailableSlotIds: [], unavailableDays: [], preferredDays: [], avoidDays: [], externalId: "dummy_teacher" }];
     const finalRooms = rooms.length > 0 ? rooms.map((r, idx) => ({id: idx + 1, name: r.name, capacity: r.capacity || 30, externalId: r.id})) : [{id: 1, name: "Dummy", capacity: 30, externalId: "dummy_room"}];
     
     // Create maps to translate string IDs to numeric IDs expected by the Java backend
