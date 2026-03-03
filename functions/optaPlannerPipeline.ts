@@ -124,7 +124,23 @@ Deno.serve(async (req) => {
     const subjectRequirements = [];
     let lessonIdCounter = 1;
 
-    const activeTGs = teachingGroups.filter(tg => tg.is_active && tg.year_group && !tg.year_group.includes(','));
+    const activeTGs = teachingGroups.filter(tg => {
+        if (!tg.is_active || !tg.year_group || tg.year_group.includes(',')) return false;
+        
+        // Put aside Core subjects (TOK, CAS, EE)
+        const subject = subjects.find(s => s.id === tg.subject_id);
+        if (!subject) return false;
+        if (subject.is_core) return false;
+        
+        const nameUpper = String(subject.name || '').toUpperCase();
+        if (nameUpper === 'TOK' || nameUpper.includes('THEORY OF KNOWLEDGE') || 
+            nameUpper === 'CAS' || nameUpper.includes('CREATIVITY, ACTIVITY, SERVICE') || 
+            nameUpper.includes('EXTENDED ESSAY') || nameUpper === 'EE') {
+            return false;
+        }
+        
+        return true;
+    });
     
     activeTGs.forEach(tg => {
         const numId = generateNum();
