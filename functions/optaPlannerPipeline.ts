@@ -198,6 +198,9 @@ Deno.serve(async (req) => {
     // 3. Build Student Subject Choices (only for DP)
     const studentSubjectChoices = [];
     if (programType === 'DP') {
+        const studentChoiceSet = new Set();
+        
+        // 1. First add explicit student choices
         students.filter(s => s.is_active).forEach(student => {
             if (student.subject_choices) {
                 student.subject_choices.forEach(choice => {
@@ -205,6 +208,7 @@ Deno.serve(async (req) => {
                     if (activeSubjectOriginalIds.has(choiceSubId)) {
                         const subject = subjects.find(sub => String(sub.id) === choiceSubId);
                         if (subject) {
+                            studentChoiceSet.add(`${student.id}_${choiceSubId}`);
                             studentSubjectChoices.push({
                                 studentId: String(student.id),
                                 originalSubjectId: choiceSubId,
@@ -216,6 +220,28 @@ Deno.serve(async (req) => {
                     }
                 });
             }
+        });
+
+        // 2. Inject missing choices based on actual lessons (for Core subjects like TOK/EE/CAS or misconfigured students)
+        mappedLessons.forEach(lesson => {
+            const subId = lesson.originalSubjectId;
+            const subject = subjects.find(sub => String(sub.id) === subId);
+            if (!subject) return;
+
+            (lesson.studentIds || []).forEach(studentId => {
+                const key = `${studentId}_${subId}`;
+                if (!studentChoiceSet.has(key)) {
+                    studentChoiceSet.add(key);
+                    const student = students.find(s => s.id === studentId);
+                    studentSubjectChoices.push({
+                        studentId: String(studentId),
+                        originalSubjectId: subId,
+                        subject: getSafeSubjectName(subject),
+                        level: String(lesson.level || 'SL'), // fallback to lesson level
+                        yearGroup: String(student?.year_group || lesson.yearGroup || 'DP1')
+                    });
+                }
+            });
         });
     }
 
