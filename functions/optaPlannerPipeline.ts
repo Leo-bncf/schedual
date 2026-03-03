@@ -1163,7 +1163,8 @@ ${JSON.stringify(teacherContext)}
             teachers: teachers.length,
             rooms: rooms.length,
             teachingGroups: teachingGroupsPayload.length
-          }
+          },
+          requestPayload: optaPlannerPayload
         }, { status: 400 });
       }
     }
