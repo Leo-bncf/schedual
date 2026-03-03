@@ -378,6 +378,10 @@ Deno.serve(async (req) => {
     // Ensure all references are using correctly prefixed IDs as in template
     console.log('[Pipeline] Generated Payload Type:', finalPayload.payloadType);
 
+    if (mock_school_id) {
+        return Response.json({ ok: true, payload: finalPayload });
+    }
+
     // 6. Call Solver
     // Force exact endpoint as requested
     const endpointUrl = 'http://87.106.27.27:8080/base44/ingest';
