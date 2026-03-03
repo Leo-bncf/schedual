@@ -838,13 +838,13 @@ ${JSON.stringify(teacherContext)}
         blockId: l.blockId ? String(l.blockId) : null,
         teacherId: tNumId,
         teacher_id: tNumId,
-        teacher: tNumId,
+        teacher: { id: tNumId },
         timeslotId: tSlotId,
         timeslot_id: tSlotId,
-        timeslot: tSlotId,
+        timeslot: { id: tSlotId },
         roomId: rNumId,
         room_id: rNumId,
-        room: rNumId
+        room: { id: rNumId }
       };
     }) : [{
       id: "1001",
@@ -863,8 +863,14 @@ ${JSON.stringify(teacherContext)}
       requiredCapacity: 1,
       blockId: null,
       teacherId: dummyTeacherNumId,
+      teacher_id: dummyTeacherNumId,
+      teacher: { id: dummyTeacherNumId },
       timeslotId: "1",
-      roomId: defaultRoomId
+      timeslot_id: "1",
+      timeslot: { id: "1" },
+      roomId: defaultRoomId,
+      room_id: defaultRoomId,
+      room: { id: defaultRoomId }
     }];
 
     const mappedTeachingGroups = teachingGroupsPayload.map(tg => {
@@ -880,7 +886,7 @@ ${JSON.stringify(teacherContext)}
         subject_id: String(tg.subject_id),
         level: String(tg.level),
         requiredMinutesPerWeek: Number(tg.required_minutes_per_week),
-        lessons: tgLessons,
+        lessons: tgLessons.map(id => ({ id: id })),
         lessonIds: tgLessons,
         lesson_ids: tgLessons
       };
