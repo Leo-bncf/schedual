@@ -51,6 +51,12 @@ Deno.serve(async (req) => {
     let numIdGen = 1;
     const generateNum = () => numIdGen++;
     
+    // Fix subjectId mapping logic to use UUID strings as required by the template
+    const subjectIdMap = {};
+    subjects.forEach(s => {
+        subjectIdMap[s.id] = s.id; // use original string ID
+    });
+    
     const roomIdMap = {};
     const mappedRooms = rooms.map(r => {
         const numId = generateNum();
@@ -100,11 +106,8 @@ Deno.serve(async (req) => {
         };
     });
 
-    const subjectIdMap = {};
     const mappedSubjects = subjects.map(s => {
-        const numId = generateNum();
-        subjectIdMap[s.id] = numId;
-        return { id: numId, code: String(s.id), name: String(s.name || s.code) };
+        return { id: s.id, code: String(s.id), name: String(s.name || s.code) };
     });
 
     // 2. Build Teaching Groups and Lessons
@@ -243,28 +246,65 @@ Deno.serve(async (req) => {
             dayStartTime: String(schoolData.day_start_time || "08:00"),
             dayEndTime: String(schoolData.day_end_time || "18:00"),
             daysOfWeek: schoolData.days_of_week || ["MONDAY", "TUESDAY", "WEDNESDAY", "THURSDAY", "FRIDAY"],
-            breaks: schoolData.breaks || []
+            breaks: (schoolData.breaks || []).map(b => ({
+                startTime: b.start,
+                endTime: b.end
+            }))
         },
-        rooms: mappedRooms,
-        teachers: mappedTeachers,
-        subjects: mappedSubjects,
-        teachingGroups: mappedTeachingGroups,
-        lessons: mappedLessons,
-        subjectRequirements: subjectRequirements,
+        rooms: mappedRooms.map(r => ({ id: r.id, name: r.name, capacity: r.capacity, externalId: r.code })),
+        teachers: mappedTeachers.map(t => ({
+            id: t.id,
+            name: t.name,
+            unavailableSlotIds: t.unavailableSlotIds,
+            preferredDays: t.preferredDays,
+            avoidDays: t.avoidDays,
+            externalId: t.code
+        })),
+        subjects: mappedSubjects.map(s => {
+            const subject = subjects.find(sub => sub.id === s.code);
+            return {
+                id: `sub_${s.code}`,
+                code: s.code.substring(0, 5).toUpperCase(), // simplified code
+                name: s.name,
+                ...(programType === 'DP' ? { 
+                    hoursPerWeekHL: subject?.hoursPerWeekHL || 5, 
+                    hoursPerWeekSL: subject?.hoursPerWeekSL || 3 
+                } : {})
+            };
+        }),
+        teachingGroups: mappedTeachingGroups.map(tg => ({
+            id: `tg_${tg.code}`,
+            sectionId: tg.sectionId,
+            studentGroup: tg.studentGroup,
+            subjectId: `sub_${tg.subjectId}`, // Note: mapping needs slight tweak here
+            ...(programType === 'DP' ? { level: tg.level } : {}),
+            requiredMinutesPerWeek: tg.requiredMinutesPerWeek
+        })),
+        lessons: mappedLessons.map(l => ({
+            id: l.id,
+            subject: l.subject.substring(0, 5).toUpperCase(),
+            studentGroup: l.studentGroup,
+            teachingGroupId: `tg_${mappedTeachingGroups.find(tg => tg.id === l.teachingGroupId)?.code || l.teachingGroupId}`,
+            sectionId: l.sectionId,
+            subjectId: `sub_${mappedSubjects.find(s => s.id === l.subjectId)?.code || l.subjectId}`,
+            yearGroup: l.yearGroup,
+            requiredCapacity: l.requiredCapacity,
+            teacherId: l.teacherId,
+            ...(programType === 'DP' ? { 
+                studentIds: l.studentIds.map(sid => String(sid)),
+                level: l.level
+            } : {})
+        })),
+        subjectRequirements: subjectRequirements.map(req => ({
+            ...(programType === 'DP' ? { teachingGroupId: `tg_${mappedTeachingGroups.find(tg => tg.id === req.teachingGroupId)?.code || req.teachingGroupId}` } : { studentGroup: req.studentGroup }),
+            subject: req.subject.substring(0, 5).toUpperCase(),
+            minutesPerWeek: req.minutesPerWeek
+        })),
         blockedSlotIds: [],
-        randomSeed: 123456,
-        randomizeSearch: true,
-        numSearchWorkers: 1,
-        shuffleInputOrder: false,
         constraints: {
-            hard: {
-                spreadAcrossDaysPerTeachingGroupSection: true,
-                avoidSamePeriodRepetition: constraints?.maxSameSubjectPerDayHardEnabled !== false,
-                avoidTeacherLatePeriods: true,
-                respectTeacherUnavailability: true,
-                enforceRoomCapacity: true
-            },
-            soft: softConstraints
+            spreadAcrossDaysPerTeachingGroupSection: true,
+            avoidSamePeriodRepetition: constraints?.maxSameSubjectPerDayHardEnabled !== false,
+            avoidTeacherLatePeriods: true
         }
     };
 
@@ -274,20 +314,36 @@ Deno.serve(async (req) => {
             ...basePayload,
             payloadType: "individual_payload",
             programType: "DP",
-            studentSubjectChoices: studentSubjectChoices.length > 0 ? studentSubjectChoices : [{ studentId: "dummy", subjectId: "dummy", subject: "dummy", level: "SL", yearGroup: "DP1" }]
+            studentSubjectChoices: studentSubjectChoices.length > 0 ? studentSubjectChoices.map(c => ({
+                studentId: c.studentId,
+                subjectId: `sub_${c.subjectId}`,
+                subject: c.subject.substring(0, 5).toUpperCase(),
+                level: c.level,
+                yearGroup: c.yearGroup
+            })) : [{ studentId: "dummy", subjectId: "sub_dummy", subject: "DUMMY", level: "SL", yearGroup: "DP1" }],
+            llmSoftConstraints: {
+                studentWindows: [] // Populate from LLM if needed
+            },
+            dpConfig: {
+                blocks: [],
+                notes: "Auto-generated DP schedule"
+            }
         };
     } else {
-        // Strip studentIds from lessons for cohort payload
-        const cohortLessons = mappedLessons.map(l => {
-            const { studentIds, ...rest } = l;
-            return rest;
-        });
         finalPayload = {
             ...basePayload,
             payloadType: "cohort_payload",
             programType: programType,
-            lessons: cohortLessons
+            llmSoftConstraints: {
+                teacherPreferences: [] // Populate from LLM if needed
+            },
+            mypConfig: {
+                campus: "Main",
+                notes: `Auto-generated ${programType} schedule`
+            }
         };
+        // Ensure studentIds are removed (already handled by ternary map above, but double check)
+        finalPayload.lessons.forEach(l => delete l.studentIds);
     }
 
     const multiPayload = {
@@ -376,13 +432,14 @@ Deno.serve(async (req) => {
             const subjectNameStr = String(lesson.subject || '').toUpperCase();
             const isBreak = subjectNameStr === 'LUNCH' || subjectNameStr === 'BREAK';
 
-            const tId = lesson.teacherId || lesson.teacher?.id;
-            const rId = lesson.roomId || lesson.room?.id;
-            
+            const tId = lesson.teacherId;
+            const rId = lesson.roomId;
+
             let realTgId = null;
-            const tgNumId = originalLesson.teachingGroupId;
-            const tg = mappedTeachingGroups.find(g => g.id === tgNumId);
-            if (tg) realTgId = tg.code;
+            const mappedTgId = originalLesson.teachingGroupId; 
+            // mappedTgId will look like "tg_12345...", we need to strip "tg_" if we prefixed it, or find the original code
+            const originalTgCode = mappedTgId.startsWith('tg_') ? mappedTgId.substring(3) : mappedTgId;
+            realTgId = originalTgCode;
 
             slotsToInsert.push({
                 school_id: user.school_id,
