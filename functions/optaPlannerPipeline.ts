@@ -115,16 +115,13 @@ Deno.serve(async (req) => {
     });
 
     const getSafeSubjectName = (subj) => {
-        // Optaplanner est très strict, on ne va garder QUE les lettres majuscules du nom
-        // Si le nom contient des accents, on les enlève. On limite à 15 caractères.
         const normalized = String(subj.name || subj.code)
             .normalize("NFD").replace(/[\u0300-\u036f]/g, "")
-            .replace(/[^a-zA-Z]/g, '')
+            .replace(/[^a-zA-Z0-9]/g, '')
             .toUpperCase()
             .substring(0, 15);
             
-        // On ajoute un hash court de l'ID pour garantir l'unicité
-        return `${normalized}${String(subj.id).replace(/[^a-zA-Z0-9]/g, '').substring(0, 4).toUpperCase()}`;
+        return `${normalized}_${String(subj.id).slice(-6).toUpperCase()}`;
     };
 
     const mappedSubjects = subjects.map(s => {
