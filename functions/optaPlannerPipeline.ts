@@ -240,18 +240,20 @@ Deno.serve(async (req) => {
 
     if (constraints?.aiPreferences && constraints.aiPreferences.trim().length > 0) {
         try {
-            const llmPrompt = `Extract soft constraints and teacher preferences from: "${constraints.aiPreferences}". Format as JSON fitting constraints.soft schema.`;
-            const llmResponse = await base44.asServiceRole.integrations.Core.InvokeLLM({
-                prompt: llmPrompt,
-                response_json_schema: {
-                    type: "object",
-                    properties: {
-                        softConstraints: { type: "object" }
+            if (!mock_school_id) {
+                const llmPrompt = `Extract soft constraints and teacher preferences from: "${constraints.aiPreferences}". Format as JSON fitting constraints.soft schema.`;
+                const llmResponse = await base44.asServiceRole.integrations.Core.InvokeLLM({
+                    prompt: llmPrompt,
+                    response_json_schema: {
+                        type: "object",
+                        properties: {
+                            softConstraints: { type: "object" }
+                        }
                     }
+                });
+                if (llmResponse?.softConstraints) {
+                    softConstraints = { ...softConstraints, ...llmResponse.softConstraints };
                 }
-            });
-            if (llmResponse?.softConstraints) {
-                softConstraints = { ...softConstraints, ...llmResponse.softConstraints };
             }
         } catch (e) {
             console.error('[Pipeline] LLM constraint extraction failed:', e);
