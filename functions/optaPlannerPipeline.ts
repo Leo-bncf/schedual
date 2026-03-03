@@ -504,7 +504,12 @@ Deno.serve(async (req) => {
         result: {
             slotsInserted: slotsToInsert.length,
             score: scoreToSave,
-            hardScoreNegative: scoreToSave < 0
+            hardScoreNegative: scoreToSave < 0,
+            debug: {
+                assignmentsFound: finalAssignments.length,
+                sampleAssignment: finalAssignments.length > 0 ? finalAssignments[0] : null,
+                resultKeys: Object.keys(result)
+            }
         }
     });
 
