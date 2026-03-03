@@ -510,7 +510,7 @@ Deno.serve(async (req) => {
     }
 
     if (slotsToInsert.length > 0) {
-        await base44.entities.ScheduleSlot.bulkCreate(slotsToInsert);
+        await b44Entities.ScheduleSlot.bulkCreate(slotsToInsert);
     }
 
     let scoreToSave = 0;
@@ -529,7 +529,7 @@ Deno.serve(async (req) => {
         scoreToSave = result.score || 0;
     }
 
-    await base44.entities.ScheduleVersion.update(schedule_version_id, {
+    await b44Entities.ScheduleVersion.update(schedule_version_id, {
         score: scoreToSave,
         generated_at: new Date().toISOString()
     });
