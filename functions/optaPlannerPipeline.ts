@@ -278,7 +278,7 @@ Deno.serve(async (req) => {
         teachingGroups: mappedTeachingGroups.map(tg => ({
             id: `tg_${tg.code}`,
             sectionId: tg.sectionId,
-            studentGroup: tg.studentGroup,
+            studentGroup: String(tg.studentGroup),
             subjectId: `sub_${Object.keys(subjectIdMap).find(key => subjectIdMap[key] === tg.subjectId) || tg.subjectId}`,
             ...(programType === 'DP' ? { level: tg.level } : {}),
             requiredMinutesPerWeek: tg.requiredMinutesPerWeek
