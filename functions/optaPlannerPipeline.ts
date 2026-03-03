@@ -1023,6 +1023,7 @@ ${JSON.stringify(teacherContext)}
       endpointUrl = endpointUrl.replace(/\/$/, '') + '/solve/multi';
     }
 
+    console.log('[Pipeline] Original Endpoint:', OPTAPLANNER_ENDPOINT);
     console.log('[Pipeline] Calling OptaPlanner:', endpointUrl);
     console.log('[Pipeline] Payload summary:', {
       rooms: rooms.length,
