@@ -43,7 +43,8 @@ Deno.serve(async (req) => {
         
         const optaPlannerPayload = {
             schoolId: String(school_id),
-            programType: "ALL",
+            programType: "DP",
+            dpConfig: {},
             timezone: schoolData.timezone || "UTC",
             calendar: { academicYear: schoolData.academic_year || "2025-2026", termId: "T1" },
             scheduleVersion: scheduleVersion[0]?.name || "Draft",
