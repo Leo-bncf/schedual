@@ -359,11 +359,13 @@ Deno.serve(async (req) => {
     };
 
     // 6. Call Solver
-    let endpointUrl = OPTAPLANNER_ENDPOINT;
-    if (endpointUrl.includes('/solve-and-push')) {
+    let endpointUrl = OPTAPLANNER_ENDPOINT.replace(/\/+$/, '');
+    if (endpointUrl.endsWith('/solve-and-push')) {
         endpointUrl = endpointUrl.replace('/solve-and-push', '/solve/multi');
+    } else if (endpointUrl.endsWith('/solve')) {
+        endpointUrl = endpointUrl + '/multi';
     } else if (!endpointUrl.endsWith('/solve/multi')) {
-        endpointUrl = endpointUrl.replace(/\/$/, '') + '/solve/multi';
+        endpointUrl = endpointUrl + '/solve/multi';
     }
 
     console.log('[Pipeline] Calling OptaPlanner:', endpointUrl);
