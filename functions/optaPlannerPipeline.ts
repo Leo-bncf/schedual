@@ -267,7 +267,7 @@ Deno.serve(async (req) => {
             const subject = subjects.find(sub => sub.id === s.code);
             return {
                 id: `sub_${s.code}`,
-                code: (s.code || s.name).substring(0, 5).toUpperCase(),
+                code: String(s.name).substring(0, 10).toUpperCase().replace(/[^A-Z0-9]/g, ''),
                 name: s.name,
                 ...(programType === 'DP' ? { 
                     hoursPerWeekHL: subject?.hoursPerWeekHL || 5, 
@@ -285,7 +285,7 @@ Deno.serve(async (req) => {
         })),
         lessons: mappedLessons.map(l => ({
             id: l.id,
-            subject: l.subject.substring(0, 5).toUpperCase(),
+            subject: String(l.subject).substring(0, 10).toUpperCase().replace(/[^A-Z0-9]/g, ''),
             studentGroup: l.studentGroup,
             teachingGroupId: `tg_${mappedTeachingGroups.find(tg => tg.id === l.teachingGroupId)?.code || l.teachingGroupId}`,
             sectionId: l.sectionId,
@@ -301,7 +301,7 @@ Deno.serve(async (req) => {
         subjectRequirements: subjectRequirements.map(req => ({
             studentGroup: req.studentGroup || "Unknown",
             ...(programType === 'DP' ? { teachingGroupId: `tg_${mappedTeachingGroups.find(tg => tg.id === req.teachingGroupId)?.code || req.teachingGroupId}` } : {}),
-            subject: req.subject.substring(0, 5).toUpperCase(),
+            subject: String(req.subject).substring(0, 10).toUpperCase().replace(/[^A-Z0-9]/g, ''),
             minutesPerWeek: req.minutesPerWeek
         })),
         blockedSlotIds: [],
