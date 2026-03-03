@@ -355,31 +355,35 @@ Deno.serve(async (req) => {
           
           teachingGroupsPayload.push({
             id: combinedTgId,
-            subjectId: subjectId,
-            studentGroup: studentGroupLabel,
-            sectionId: `sec_combined_${groupKey}`,
+            section_id: `sec_combined_${groupKey}`,
+            student_group: studentGroupLabel,
+            subject_id: subjectId,
             level: 'COMBINED',
-            requiredMinutesPerWeek: slMinutes
+            required_minutes_per_week: slMinutes
           });
           
           subjectRequirements.push({
+            studentGroup: studentGroupLabel,
             teachingGroupId: combinedTgId,
             sectionId: `sec_combined_${groupKey}`,
-            studentGroup: studentGroupLabel,
             subject: subject.code || subject.name,
-            minutesPerWeek: slMinutes
+            minutes_per_week: slMinutes
           });
           
           for (let i = 0; i < numCombinedLessons; i++) {
             lessons.push({
               id: lessonId++,
-              teachingGroupId: combinedTgId,
-              sectionId: `sec_combined_${groupKey}`,
               subject: subject?.code || subject?.name || 'Unknown',
               studentGroup: studentGroupLabel,
-              teacherId: teacherId || null,
-              requiredCapacity: Math.min(combinedStudentIds.length, maxRoomCapacity),
+              teachingGroupId: combinedTgId,
+              sectionId: `sec_combined_${groupKey}`,
+              subjectId: subjectId,
+              level: 'COMBINED',
+              yearGroup: studentGroupLabel,
               studentIds: combinedStudentIds,
+              requiredCapacity: Math.min(combinedStudentIds.length, maxRoomCapacity),
+              blockId: tgs[0].block_id || null,
+              teacherId: teacherId || null,
               timeslotId: null,
               roomId: null
             });
