@@ -804,9 +804,11 @@ ${JSON.stringify(teacherContext)}
     const defaultTeacherNumId = mappedTeachers[0]?.id || 1;
     const defaultTeacherCode = mappedTeachers[0]?.code || "dummy_teacher_1";
 
+    const subjectNumericMap = {};
     const mappedSubjects = subjects.filter(s => s.is_active && subjectRequirements.some(req => req.subject === (s.code || s.name))).map(s => {
       const dbId = String(s.id);
       const numId = generateNum();
+      subjectNumericMap[s.id] = numId;
       return {
         id: numId,
         code: String(s.code || s.name),
@@ -839,8 +841,8 @@ ${JSON.stringify(teacherContext)}
         externalId: dbId,
         sectionId: String(tg.section_id),
         studentGroup: String(tg.student_group),
-        subjectId: String(tg.subject_id),
-        subject_id: String(tg.subject_id),
+        subjectId: subjectNumericMap[tg.subject_id] || null,
+        subject_id: subjectNumericMap[tg.subject_id] || null,
         level: String(tg.level),
         requiredMinutesPerWeek: Number(tg.required_minutes_per_week),
         lessons: [],
@@ -879,7 +881,7 @@ ${JSON.stringify(teacherContext)}
       const tNumId = l.teacherId ? teacherNumericMap[l.teacherId] : defaultTeacherNumId;
       const tCode = l.teacherId ? teacherCodeMap[l.teacherId] : defaultTeacherCode;
       
-      const rNumId = l.roomId ? roomNumericMap[l.roomId] : defaultRoomId;
+      const rNumId = l.roomId ? roomNumericMap[l.roomId] : defaultRoomNumId;
       const rCode = l.roomId ? roomCodeMap[l.roomId] : defaultRoomCode;
       
       const tgNumId = l.teachingGroupId ? tgNumericMap[l.teachingGroupId] : null;
@@ -905,7 +907,7 @@ ${JSON.stringify(teacherContext)}
         teachingGroupCode: tgCode,
         teachingGroup: { id: tgNumId, code: tgCode },
         sectionId: String(l.sectionId),
-        subjectId: l.subjectId ? String(l.subjectId) : null,
+        subjectId: l.subjectId ? (subjectNumericMap[l.subjectId] || null) : null,
         level: String(l.level),
         yearGroup: String(l.yearGroup),
         studentIds: l.studentIds || [],
@@ -962,9 +964,9 @@ ${JSON.stringify(teacherContext)}
       timeslotId: 1,
       timeslotCode: "1",
       timeslot: { id: 1, code: "1" },
-      roomId: defaultRoomId,
+      roomId: defaultRoomNumId,
       roomCode: defaultRoomCode,
-      room: { id: defaultRoomId, code: defaultRoomCode }
+      room: { id: defaultRoomNumId, code: defaultRoomCode }
     }];
 
     const optaPlannerPayload = {
