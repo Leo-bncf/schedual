@@ -422,31 +422,35 @@ Deno.serve(async (req) => {
             
             teachingGroupsPayload.push({
               id: hlExtTgId,
-              subjectId: subjectId,
-              studentGroup: studentGroupLabel,
-              sectionId: `sec_hl_${groupKey}`,
+              section_id: `sec_hl_${groupKey}`,
+              student_group: studentGroupLabel,
+              subject_id: subjectId,
               level: 'HL_EXTENSION',
-              requiredMinutesPerWeek: extensionMinutes
+              required_minutes_per_week: extensionMinutes
             });
             
             subjectRequirements.push({
+              studentGroup: studentGroupLabel,
               teachingGroupId: hlExtTgId,
               sectionId: `sec_hl_${groupKey}`,
-              studentGroup: studentGroupLabel,
               subject: subject.code || subject.name,
-              minutesPerWeek: extensionMinutes
+              minutes_per_week: extensionMinutes
             });
             
             for (let i = 0; i < numExtensionLessons; i++) {
               lessons.push({
                 id: lessonId++,
-                teachingGroupId: hlExtTgId,
-                sectionId: `sec_hl_${groupKey}`,
                 subject: subject?.code || subject?.name || 'Unknown',
                 studentGroup: studentGroupLabel,
-                teacherId: teacherId || null,
-                requiredCapacity: Math.min(hlStudentIds.length, maxRoomCapacity),
+                teachingGroupId: hlExtTgId,
+                sectionId: `sec_hl_${groupKey}`,
+                subjectId: subjectId,
+                level: 'HL_EXTENSION',
+                yearGroup: studentGroupLabel,
                 studentIds: hlStudentIds,
+                requiredCapacity: Math.min(hlStudentIds.length, maxRoomCapacity),
+                blockId: hlGroups[0].block_id || null,
+                teacherId: teacherId || null,
                 timeslotId: null,
                 roomId: null
               });
