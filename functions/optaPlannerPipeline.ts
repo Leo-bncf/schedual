@@ -1001,6 +1001,68 @@ ${JSON.stringify(teacherContext)}
       room: { id: defaultRoomNumId, code: defaultRoomCode }
     }];
 
+    // Ensure subjects can be resolved by code or name for fallbacks
+    const subjectNumericByCodeOrName = {};
+    mappedSubjects.forEach(s => {
+      if (s.code) subjectNumericByCodeOrName[String(s.code)] = s.id;
+      if (s.name) subjectNumericByCodeOrName[String(s.name)] = s.id;
+    });
+
+    // Backfill missing subjectId on TeachingGroups
+    mappedTeachingGroups.forEach(tg => {
+      if (tg.subjectId == null) {
+        const fallbackSubj = mappedSubjects[0]?.id ?? 9999;
+        tg.subjectId = fallbackSubj;
+        tg.subject_id = fallbackSubj;
+      }
+    });
+
+    // Guarantee each TeachingGroup has at least one lesson (avoids empty TG validation errors)
+    mappedTeachingGroups.forEach(tg => {
+      if (!Array.isArray(tg.lessons) || tg.lessons.length === 0) {
+        const lessonNumId = generateNum();
+        const lessonDbId = `auto_${tg.code}_${lessonNumId}`;
+        const autoLesson = {
+          id: lessonNumId,
+          code: lessonDbId,
+          uuid: lessonDbId,
+          identifier: lessonDbId,
+          externalId: lessonDbId,
+          lessonId: lessonNumId,
+          lesson_id: lessonNumId,
+          subject: 'AUTO',
+          studentGroup: String(tg.studentGroup || 'Group'),
+          teachingGroupId: tg.id,
+          teaching_group_id: tg.id,
+          teachingGroupCode: tg.code,
+          teachingGroup: { id: tg.id, code: tg.code },
+          sectionId: String(tg.sectionId || 'SEC'),
+          subjectId: tg.subjectId || (mappedSubjects[0]?.id ?? 9999),
+          level: String(tg.level || 'SL'),
+          yearGroup: 'DP1',
+          studentIds: [],
+          requiredCapacity: 1,
+          blockId: null,
+          teacherId: defaultTeacherNumId,
+          teacher_id: defaultTeacherNumId,
+          teacherCode: defaultTeacherCode,
+          teacher: { id: defaultTeacherNumId, code: defaultTeacherCode },
+          timeslotId: 1,
+          timeslot_id: 1,
+          timeslotCode: '1',
+          timeslot: { id: 1, code: '1' },
+          roomId: defaultRoomNumId,
+          room_id: defaultRoomNumId,
+          roomCode: defaultRoomCode,
+          room: { id: defaultRoomNumId, code: defaultRoomCode }
+        };
+        mappedLessons.push(autoLesson);
+        tg.lessons = [{ id: lessonNumId, code: lessonDbId }];
+        tg.lessonIds = [lessonNumId];
+        tg.lesson_ids = [lessonNumId];
+      }
+    });
+
     const optaPlannerPayload = {
       schoolId: String(user.school_id),
       programType: "DP",
