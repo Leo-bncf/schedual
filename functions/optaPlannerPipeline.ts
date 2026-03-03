@@ -432,7 +432,8 @@ Deno.serve(async (req) => {
         return Response.json({
             ok: false,
             error: result.title || result.errorMessage || result.message || 'OptaPlanner Validation Error',
-            details: result.validationErrors || result.details || result
+            details: result.validationErrors || result.details || result,
+            debug_payload: finalPayload // Inject payload so we can see it on error
         }, { status: 400 });
     }
 
