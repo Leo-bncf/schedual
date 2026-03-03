@@ -438,7 +438,9 @@ Deno.serve(async (req) => {
         const lessonId = lesson.id || lesson.lessonId || lesson.lesson_id;
         const originalLesson = safeLessonMap[lessonId];
         
-        if (originalLesson && lesson.timeslotId != null) {
+        const timeslotId = lesson.timeslotId != null ? lesson.timeslotId : (lesson.timeslot?.id != null ? lesson.timeslot.id : null);
+        
+        if (originalLesson && timeslotId != null) {
             const days = ['MONDAY', 'TUESDAY', 'WEDNESDAY', 'THURSDAY', 'FRIDAY'];
             const periodsPerDay = schoolData.periods_per_day || 10;
             const dayIndex = Math.floor((lesson.timeslotId - 1) / periodsPerDay);
