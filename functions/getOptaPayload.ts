@@ -43,6 +43,9 @@ Deno.serve(async (req) => {
         
         const optaPlannerPayload = {
             schoolId: String(school_id),
+            programType: "ALL",
+            timezone: schoolData.timezone || "UTC",
+            calendar: { academicYear: schoolData.academic_year || "2025-2026", termId: "T1" },
             scheduleVersion: scheduleVersion[0]?.name || "Draft",
             scheduleVersionId: String(schedule_version_id),
             scheduleSettings: {
@@ -59,7 +62,17 @@ Deno.serve(async (req) => {
             teachingGroupsCount: teachingGroups.length
         };
         
-        return Response.json({ requests: [optaPlannerPayload] });
+        const multiPayload = {
+            organizationId: `org_${school_id}`,
+            runId: `run_${schedule_version_id}`,
+            crossSchoolRules: {
+                sharedTeacherIds: [],
+                transportWindows: []
+            },
+            schools: [ optaPlannerPayload ]
+        };
+        
+        return Response.json(multiPayload);
     } catch (error) {
         return Response.json({ error: error.message }, { status: 500 });
     }
