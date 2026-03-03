@@ -796,10 +796,7 @@ ${JSON.stringify(teacherContext)}
       roomNumericMap[r.id] = numId;
       return {
         id: numId,
-        room_id: numId,
-        roomId: numId,
         externalId: String(r.id),
-        external_id: String(r.id),
         name: String(r.name || "Room"),
         capacity: Number(r.capacity || 30)
       };
@@ -811,40 +808,35 @@ ${JSON.stringify(teacherContext)}
       teacherNumericMap[t.id] = numId;
       return {
         id: numId,
-        teacher_id: numId,
-        teacherId: numId,
         externalId: String(t.id),
-        external_id: String(t.id),
         name: String(t.name || "Teacher"),
         maxPeriodsPerWeek: Number(t.maxPeriodsPerWeek || 40),
-        max_periods_per_week: Number(t.maxPeriodsPerWeek || 40),
         unavailableSlotIds: t.unavailableSlotIds || [],
-        unavailable_slot_ids: t.unavailableSlotIds || [],
         unavailableDays: t.unavailableDays || [],
-        unavailable_days: t.unavailableDays || [],
         preferredDays: t.preferredDays || [],
-        preferred_days: t.preferredDays || [],
-        avoidDays: t.avoidDays || [],
-        avoid_days: t.avoidDays || []
+        avoidDays: t.avoidDays || []
       };
     });
 
-    const subjectNumericMap = {};
+    // We filter subjects but also fallback if empty, to guarantee subjectRequirements matches
     const mappedSubjects = subjects.filter(s => s.is_active && subjectRequirements.some(req => req.subject === (s.code || s.name))).map(s => {
-      const numId = generateNumericId();
-      subjectNumericMap[s.id] = numId;
       return {
-        id: numId,
-        subject_id: numId,
-        subjectId: numId,
-        externalId: String(s.id),
-        external_id: String(s.id),
+        id: String(s.id), // Base44 style 24-hex string
         code: String(s.code || s.name),
         name: String(s.name),
-        hl_hours_per_week: Number(s.hoursPerWeekHL || 5),
-        sl_hours_per_week: Number(s.hoursPerWeekSL || 3)
+        hlHoursPerWeek: Number(s.hoursPerWeekHL || 5),
+        slHoursPerWeek: Number(s.hoursPerWeekSL || 3)
       };
     });
+    if (mappedSubjects.length === 0) {
+      mappedSubjects.push({
+        id: "69733f5f0b775e6fa2db95b9",
+        code: "DUMMY",
+        name: "DUMMY",
+        hlHoursPerWeek: 5,
+        slHoursPerWeek: 3
+      });
+    }
 
     const tgNumericMap = {};
     const mappedTeachingGroups = teachingGroupsPayload.map(tg => {
@@ -852,35 +844,48 @@ ${JSON.stringify(teacherContext)}
       tgNumericMap[tg.id] = numId;
       return {
         id: numId,
-        teaching_group_id: numId,
-        teachingGroupId: numId,
         externalId: String(tg.id),
-        external_id: String(tg.id),
-        section_id: String(tg.section_id),
         sectionId: String(tg.section_id),
-        student_group: String(tg.student_group),
         studentGroup: String(tg.student_group),
-        subject_id: subjectNumericMap[tg.subject_id] || generateNumericId(),
-        subjectId: subjectNumericMap[tg.subject_id] || generateNumericId(),
+        subjectId: String(tg.subject_id), // string ID matching the 24 hex
         level: String(tg.level),
-        required_minutes_per_week: Number(tg.required_minutes_per_week),
         requiredMinutesPerWeek: Number(tg.required_minutes_per_week),
-        lessons: [] // Provided explicitly just in case OptaPlanner wants it initialized
+        lessons: []
       };
     });
+    if (mappedTeachingGroups.length === 0) {
+      const numId = generateNumericId();
+      tgNumericMap[999] = numId;
+      mappedTeachingGroups.push({
+        id: numId,
+        externalId: "dummy_tg",
+        sectionId: "dummy_sec",
+        studentGroup: "Dummy",
+        subjectId: "69733f5f0b775e6fa2db95b9",
+        level: "SL",
+        requiredMinutesPerWeek: 180,
+        lessons: []
+      });
+    }
 
     const mappedSubjectRequirements = subjectRequirements.map(req => ({
       id: generateNumericId(),
       studentGroup: String(req.studentGroup),
-      student_group: String(req.studentGroup),
       teachingGroupId: tgNumericMap[req.teachingGroupId] || generateNumericId(),
-      teaching_group_id: tgNumericMap[req.teachingGroupId] || generateNumericId(),
       sectionId: String(req.sectionId),
-      section_id: String(req.sectionId),
       subject: String(req.subject),
-      minutes_per_week: Number(req.minutes_per_week),
       minutesPerWeek: Number(req.minutes_per_week)
     }));
+    if (mappedSubjectRequirements.length === 0) {
+      mappedSubjectRequirements.push({
+        id: generateNumericId(),
+        studentGroup: "Dummy",
+        teachingGroupId: tgNumericMap[999] || 999,
+        sectionId: "dummy_sec",
+        subject: "DUMMY",
+        minutesPerWeek: 180
+      });
+    }
 
     const dummyTeacherNumId = teacherNumericMap[finalTeachers[0].id] || 1;
     const mappedLessons = safeLessons.length > 0 ? safeLessons.map(l => {
@@ -891,128 +896,67 @@ ${JSON.stringify(teacherContext)}
 
       return {
         id: lessonNumId,
-        lesson_id: lessonNumId,
-        lessonId: lessonNumId,
         externalId: String(l.id),
-        external_id: String(l.id),
         subject: String(l.subject || "Subj"),
         studentGroup: String(l.studentGroup || "Group"),
-        student_group: String(l.studentGroup || "Group"),
-        teachingGroupId: tgNumId,
-        teaching_group_id: tgNumId,
         teachingGroup: tgNumId ? { id: tgNumId } : null,
         sectionId: String(l.sectionId),
-        section_id: String(l.sectionId),
-        subjectId: l.subjectId ? subjectNumericMap[l.subjectId] : null,
-        subject_id: l.subjectId ? subjectNumericMap[l.subjectId] : null,
+        subjectId: l.subjectId ? String(l.subjectId) : null,
         level: String(l.level),
         yearGroup: String(l.yearGroup),
-        year_group: String(l.yearGroup),
         studentIds: l.studentIds || [],
-        student_ids: l.studentIds || [],
         requiredCapacity: Number(l.requiredCapacity || 1),
-        required_capacity: Number(l.requiredCapacity || 1),
         blockId: l.blockId ? String(l.blockId) : null,
-        block_id: l.blockId ? String(l.blockId) : null,
-        teacherId: tNumId,
-        teacher_id: tNumId,
         teacher: tNumId ? { id: tNumId } : null,
-        timeslotId: l.timeslotId ? Number(l.timeslotId) : null,
-        timeslot_id: l.timeslotId ? Number(l.timeslotId) : null,
         timeslot: l.timeslotId ? { id: Number(l.timeslotId) } : null,
-        roomId: rNumId,
-        room_id: rNumId,
         room: rNumId ? { id: rNumId } : null
       };
     }) : [{
-      id: 1001, lesson_id: 1001, lessonId: 1001, externalId: "1001", external_id: "1001",
-      subject: "DUMMY", studentGroup: "Dummy", student_group: "Dummy",
-      teachingGroupId: 999, teaching_group_id: 999, teachingGroup: { id: 999 },
-      sectionId: "dummy_sec", section_id: "dummy_sec",
-      subjectId: 999, subject_id: 999,
-      level: "SL", yearGroup: "DP1", year_group: "DP1",
-      studentIds: [], student_ids: [],
-      requiredCapacity: 1, required_capacity: 1,
-      blockId: null, block_id: null,
-      teacherId: dummyTeacherNumId, teacher_id: dummyTeacherNumId, teacher: { id: dummyTeacherNumId },
-      timeslotId: null, timeslot_id: null, timeslot: null,
-      roomId: null, room_id: null, room: null
+      id: 1001,
+      externalId: "1001",
+      subject: "DUMMY",
+      studentGroup: "Dummy",
+      teachingGroup: { id: tgNumericMap[999] || 999 },
+      sectionId: "dummy_sec",
+      subjectId: "69733f5f0b775e6fa2db95b9",
+      level: "SL",
+      yearGroup: "DP1",
+      studentIds: [],
+      requiredCapacity: 1,
+      blockId: null,
+      teacher: { id: dummyTeacherNumId },
+      timeslot: null,
+      room: null
     }];
 
     const optaPlannerPayload = {
       schoolId: String(user.school_id),
-      school_id: String(user.school_id),
       scheduleVersion: scheduleVersion[0]?.name || "Draft",
-      schedule_version: scheduleVersion[0]?.name || "Draft",
       scheduleVersionId: String(schedule_version_id),
-      schedule_version_id: String(schedule_version_id),
       scheduleSettings: {
           periodDurationMinutes: Number(schoolData.period_duration_minutes || 60),
-          period_duration_minutes: Number(schoolData.period_duration_minutes || 60),
           dayStartTime: String(schoolData.day_start_time || "08:00"),
-          day_start_time: String(schoolData.day_start_time || "08:00"),
           dayEndTime: String(schoolData.day_end_time || "18:00"),
-          day_end_time: String(schoolData.day_end_time || "18:00"),
           daysOfWeek: schoolData.days_of_week || ["MONDAY", "TUESDAY", "WEDNESDAY", "THURSDAY", "FRIDAY"],
-          days_of_week: schoolData.days_of_week || ["MONDAY", "TUESDAY", "WEDNESDAY", "THURSDAY", "FRIDAY"],
           breaks: schoolData.breaks || []
       },
-      schedule_settings: {
-          periodDurationMinutes: Number(schoolData.period_duration_minutes || 60),
-          period_duration_minutes: Number(schoolData.period_duration_minutes || 60),
-          dayStartTime: String(schoolData.day_start_time || "08:00"),
-          day_start_time: String(schoolData.day_start_time || "08:00"),
-          dayEndTime: String(schoolData.day_end_time || "18:00"),
-          day_end_time: String(schoolData.day_end_time || "18:00"),
-          daysOfWeek: schoolData.days_of_week || ["MONDAY", "TUESDAY", "WEDNESDAY", "THURSDAY", "FRIDAY"],
-          days_of_week: schoolData.days_of_week || ["MONDAY", "TUESDAY", "WEDNESDAY", "THURSDAY", "FRIDAY"],
-          breaks: schoolData.breaks || []
-      },
-      
       rooms: mappedRooms,
-      roomList: mappedRooms,
-      room_list: mappedRooms,
-      
       teachers: mappedTeachers,
-      teacherList: mappedTeachers,
-      teacher_list: mappedTeachers,
-      
       subjects: mappedSubjects,
-      subjectList: mappedSubjects,
-      subject_list: mappedSubjects,
-      
       teachingGroups: mappedTeachingGroups,
-      teachingGroupList: mappedTeachingGroups,
-      teaching_group_list: mappedTeachingGroups,
-      
       subjectRequirements: mappedSubjectRequirements,
-      subjectRequirementList: mappedSubjectRequirements,
-      subject_requirement_list: mappedSubjectRequirements,
-      
       lessons: mappedLessons,
-      lessonList: mappedLessons,
-      lesson_list: mappedLessons,
-      
       blockedSlotIds: [],
-      blocked_slot_ids: [],
       constraints: {
         spreadAcrossDaysPerTeachingGroupSection: true,
-        spread_across_days_per_teaching_group_section: true,
         avoidSamePeriodRepetition: constraints?.maxSameSubjectPerDayHardEnabled || true,
-        avoid_same_period_repetition: constraints?.maxSameSubjectPerDayHardEnabled || true,
-        avoidTeacherLatePeriods: true,
-        avoid_teacher_late_periods: true
+        avoidTeacherLatePeriods: true
       },
       studentSubjectChoices: studentSubjectChoices,
-      student_subject_choices: studentSubjectChoices,
       randomSeed: 123456,
-      random_seed: 123456,
       randomizeSearch: true,
-      randomize_search: true,
       numSearchWorkers: 1,
-      num_search_workers: 1,
-      shuffleInputOrder: false,
-      shuffle_input_order: false
+      shuffleInputOrder: false
     };
 
     // Validate teacher capacity before sending to OptaPlanner
