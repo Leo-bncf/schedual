@@ -429,11 +429,34 @@ Deno.serve(async (req) => {
     if (missingSubjects.length > 0) {
         return Response.json({
             ok: false,
-            error: 'Pre-validation failed: invalid subject references',
+            error: 'Pre-validation failed: invalid subject references (IDs)',
             details: {
                 missing_subject_ids: missingSubjects,
                 referenced_subject_ids: Array.from(referencedSubjectIds),
                 defined_subject_ids: Array.from(definedSubjectIds)
+            },
+            debug_payload_preview: {
+                subjects: (finalPayload.subjects || []).slice(0, 5),
+                lessons: (finalPayload.lessons || []).slice(0, 3),
+                subjectRequirements: (finalPayload.subjectRequirements || []).slice(0, 3)
+            }
+        }, { status: 400 });
+    }
+
+    // Also validate subject string names (code/name) alignment across payload
+    const definedSubjectNames = new Set((finalPayload.subjects || []).map(s => (s.code || s.name)));
+    const referencedSubjectNames = new Set();
+    (finalPayload.lessons || []).forEach(l => { if (l.subject) referencedSubjectNames.add(l.subject); });
+    (finalPayload.subjectRequirements || []).forEach(r => { if (r.subject) referencedSubjectNames.add(r.subject); });
+    const missingSubjectNames = Array.from(referencedSubjectNames).filter(n => !definedSubjectNames.has(n));
+    if (missingSubjectNames.length > 0) {
+        return Response.json({
+            ok: false,
+            error: 'Pre-validation failed: subject names not defined in subjects list',
+            details: {
+                missing_subject_names: missingSubjectNames,
+                referenced_subject_names: Array.from(referencedSubjectNames),
+                defined_subject_names: Array.from(definedSubjectNames)
             },
             debug_payload_preview: {
                 subjects: (finalPayload.subjects || []).slice(0, 5),
