@@ -745,15 +745,8 @@ ${JSON.stringify(teacherContext)}
       });
     });
 
-    const finalTeachers = formattedTeachers.length > 0 ? formattedTeachers.map((t, idx) => ({ ...t, id: String(idx + 1), externalId: t.id })) : [{ id: "1", name: "Dummy Teacher", maxPeriodsPerWeek: 40, unavailableSlotIds: [], unavailableDays: [], preferredDays: [], avoidDays: [], externalId: "dummy_teacher" }];
-    const finalRooms = rooms.length > 0 ? rooms.map((r, idx) => ({id: String(idx + 1), name: r.name, capacity: r.capacity || 30, externalId: r.id})) : [{id: "1", name: "Dummy", capacity: 30, externalId: "dummy_room"}];
-    
-    // Create maps to translate string IDs to numeric IDs expected by the Java backend
-    const numericTeacherMap = {};
-    finalTeachers.forEach(t => { numericTeacherMap[t.externalId] = t.id; });
-    
-    const numericRoomMap = {};
-    finalRooms.forEach(r => { numericRoomMap[r.externalId] = r.id; });
+    const finalTeachers = formattedTeachers.length > 0 ? formattedTeachers : [{ id: "dummy_teacher", name: "Dummy Teacher", maxPeriodsPerWeek: 40, unavailableSlotIds: [], unavailableDays: [], preferredDays: [], avoidDays: [] }];
+    const finalRooms = rooms.length > 0 ? rooms : [{ id: "dummy_room", name: "Dummy", capacity: 30 }];
 
     const studentSubjectChoices = [];
     students.filter(s => s.is_active).forEach(student => {
