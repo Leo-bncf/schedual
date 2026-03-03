@@ -136,8 +136,15 @@ export default function Layout({ children, currentPageName }) {
         // Skip JWT school_id sync check - rely on JWT token from auth.me()
 
         // Check if superadmin FIRST
-        const { data } = await base44.functions.invoke('getSuperAdminEmails');
-        const isSuperAdminUser = data?.isSuperAdmin || false;
+        let isSuperAdminUser = false;
+        try {
+          const { data } = await base44.functions.invoke('getSuperAdminEmails');
+          isSuperAdminUser = data?.isSuperAdmin || false;
+        } catch (adminErr) {
+          console.error('Error fetching super admin status:', adminErr);
+          const hardAllowed = ["erik.gerbst@gmail.com", "leo.bancroft34@icloud.com"];
+          isSuperAdminUser = hardAllowed.includes(userData?.email?.toLowerCase());
+        }
         setIsSuperAdmin(isSuperAdminUser);
 
         // Superadmins skip verification and school fetching
