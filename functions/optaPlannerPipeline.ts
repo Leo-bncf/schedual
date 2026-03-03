@@ -359,11 +359,15 @@ Deno.serve(async (req) => {
     };
 
     // 6. Call Solver
-    let endpointUrl = OPTAPLANNER_ENDPOINT || 'http://87.106.27.27:8080/base44/ingest';
-    if (endpointUrl.includes('/solve-and-push')) {
-        endpointUrl = endpointUrl.replace('/solve-and-push', '/solve/multi');
-    } else if (!endpointUrl.endsWith('/solve/multi') && !endpointUrl.endsWith('/ingest')) {
-        endpointUrl = endpointUrl.replace(/\/$/, '') + '/solve/multi';
+    let endpointUrl = 'http://87.106.27.27:8080/base44/ingest';
+    if (OPTAPLANNER_ENDPOINT) {
+        try {
+            const url = new URL(OPTAPLANNER_ENDPOINT);
+            url.pathname = '/base44/ingest';
+            endpointUrl = url.toString();
+        } catch(e) {
+            endpointUrl = 'http://87.106.27.27:8080/base44/ingest';
+        }
     }
 
     console.log('[Pipeline] Calling OptaPlanner:', endpointUrl);
