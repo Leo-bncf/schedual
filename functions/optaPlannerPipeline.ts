@@ -759,8 +759,6 @@ ${JSON.stringify(teacherContext)}
       roomNumericMap[r.id] = numId;
       return {
         id: numId,
-        roomId: numId,
-        room_id: numId,
         externalId: String(r.id),
         name: String(r.name || "Room"),
         capacity: Number(r.capacity || 30)
@@ -775,8 +773,6 @@ ${JSON.stringify(teacherContext)}
       teacherNumericMap[t.id] = numId;
       return {
         id: numId,
-        teacherId: numId,
-        teacher_id: numId,
         externalId: String(t.id),
         name: String(t.name || "Teacher"),
         maxPeriodsPerWeek: Number(t.maxPeriodsPerWeek || 40),
@@ -791,8 +787,6 @@ ${JSON.stringify(teacherContext)}
       const numId = generateIdStr();
       return {
         id: numId,
-        subjectId: numId,
-        subject_id: numId,
         code: String(s.code || s.name),
         name: String(s.name)
       };
@@ -822,55 +816,35 @@ ${JSON.stringify(teacherContext)}
 
       return {
         id: lessonNumId,
-        lessonId: lessonNumId,
-        lesson_id: lessonNumId,
         subject: String(l.subject || "Subj"),
         studentGroup: String(l.studentGroup || "Group"),
         teachingGroupId: tgStringId,
-        teaching_group_id: tgStringId,
         sectionId: String(l.sectionId),
         subjectId: l.subjectId ? String(l.subjectId) : null,
-        subject_id: l.subjectId ? String(l.subjectId) : null,
         level: String(l.level),
         yearGroup: String(l.yearGroup),
         studentIds: l.studentIds || [],
         requiredCapacity: Number(l.requiredCapacity || 1),
         blockId: l.blockId ? String(l.blockId) : null,
         teacherId: tNumId,
-        teacher_id: tNumId,
-        teacher: { id: tNumId },
         timeslotId: tSlotId,
-        timeslot_id: tSlotId,
-        timeslot: { id: tSlotId },
-        roomId: rNumId,
-        room_id: rNumId,
-        room: { id: rNumId }
+        roomId: rNumId
       };
     }) : [{
       id: "1001",
-      lessonId: "1001",
-      lesson_id: "1001",
       subject: "DUMMY",
       studentGroup: "Dummy",
       teachingGroupId: "dummy_tg",
-      teaching_group_id: "dummy_tg",
       sectionId: "dummy_sec",
       subjectId: "9999",
-      subject_id: "9999",
       level: "SL",
       yearGroup: "DP1",
       studentIds: [],
       requiredCapacity: 1,
       blockId: null,
       teacherId: dummyTeacherNumId,
-      teacher_id: dummyTeacherNumId,
-      teacher: { id: dummyTeacherNumId },
       timeslotId: "1",
-      timeslot_id: "1",
-      timeslot: { id: "1" },
-      roomId: defaultRoomId,
-      room_id: defaultRoomId,
-      room: { id: defaultRoomId }
+      roomId: defaultRoomId
     }];
 
     const mappedTeachingGroups = teachingGroupsPayload.map(tg => {
@@ -878,17 +852,12 @@ ${JSON.stringify(teacherContext)}
       const numId = String(tg.id); // Must use actual ID so lessons reference it correctly
       return {
         id: numId,
-        teachingGroupId: numId,
-        teaching_group_id: numId,
         sectionId: String(tg.section_id),
         studentGroup: String(tg.student_group),
         subjectId: String(tg.subject_id),
-        subject_id: String(tg.subject_id),
         level: String(tg.level),
         requiredMinutesPerWeek: Number(tg.required_minutes_per_week),
-        lessons: tgLessons.map(id => ({ id: id })),
-        lessonIds: tgLessons,
-        lesson_ids: tgLessons
+        lessons: tgLessons
       };
     });
     if (mappedTeachingGroups.length === 0) {
@@ -899,9 +868,7 @@ ${JSON.stringify(teacherContext)}
         subjectId: "dummy_subj",
         level: "SL",
         requiredMinutesPerWeek: 180,
-        lessons: [],
-        lessonIds: [],
-        lesson_ids: []
+        lessons: []
       });
     }
 
@@ -923,17 +890,11 @@ ${JSON.stringify(teacherContext)}
           breaks: schoolData.breaks || []
       },
       rooms: mappedRooms,
-      roomList: mappedRooms,
       teachers: mappedTeachers,
-      teacherList: mappedTeachers,
       subjects: mappedSubjects,
-      subjectList: mappedSubjects,
       teachingGroups: mappedTeachingGroups,
-      teachingGroupList: mappedTeachingGroups,
       subjectRequirements: mappedSubjectRequirements,
-      subjectRequirementList: mappedSubjectRequirements,
       lessons: mappedLessons,
-      lessonList: mappedLessons,
       blockedSlotIds: [],
       constraints: {
         spreadAcrossDaysPerTeachingGroupSection: true,
@@ -1039,18 +1000,6 @@ ${JSON.stringify(teacherContext)}
     const multiPayload = {
       organizationId: `org_${user.school_id}`,
       runId: `run_${schedule_version_id}`,
-      rooms: mappedRooms,
-      roomList: mappedRooms,
-      teachers: mappedTeachers,
-      teacherList: mappedTeachers,
-      subjects: mappedSubjects,
-      subjectList: mappedSubjects,
-      teachingGroups: mappedTeachingGroups,
-      teachingGroupList: mappedTeachingGroups,
-      subjectRequirements: mappedSubjectRequirements,
-      subjectRequirementList: mappedSubjectRequirements,
-      lessons: mappedLessons,
-      lessonList: mappedLessons,
       schools: [ optaPlannerPayload ],
       crossSchoolRules: {
         sharedTeacherIds: [],
