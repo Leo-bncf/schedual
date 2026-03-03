@@ -796,13 +796,31 @@ ${JSON.stringify(teacherContext)}
 
     const optaPlannerPayload = {
       schoolId: user.school_id,
+      school_id: user.school_id,
       scheduleVersion: scheduleVersion[0]?.name || "Draft",
+      schedule_version: scheduleVersion[0]?.name || "Draft",
       scheduleVersionId: schedule_version_id,
+      schedule_version_id: schedule_version_id,
       scheduleSettings: {
           periodDurationMinutes: schoolData.period_duration_minutes || 60,
+          period_duration_minutes: schoolData.period_duration_minutes || 60,
           dayStartTime: schoolData.day_start_time || "08:00",
+          day_start_time: schoolData.day_start_time || "08:00",
           dayEndTime: schoolData.day_end_time || "18:00",
+          day_end_time: schoolData.day_end_time || "18:00",
           daysOfWeek: schoolData.days_of_week || ["MONDAY", "TUESDAY", "WEDNESDAY", "THURSDAY", "FRIDAY"],
+          days_of_week: schoolData.days_of_week || ["MONDAY", "TUESDAY", "WEDNESDAY", "THURSDAY", "FRIDAY"],
+          breaks: schoolData.breaks || []
+      },
+      schedule_settings: {
+          periodDurationMinutes: schoolData.period_duration_minutes || 60,
+          period_duration_minutes: schoolData.period_duration_minutes || 60,
+          dayStartTime: schoolData.day_start_time || "08:00",
+          day_start_time: schoolData.day_start_time || "08:00",
+          dayEndTime: schoolData.day_end_time || "18:00",
+          day_end_time: schoolData.day_end_time || "18:00",
+          daysOfWeek: schoolData.days_of_week || ["MONDAY", "TUESDAY", "WEDNESDAY", "THURSDAY", "FRIDAY"],
+          days_of_week: schoolData.days_of_week || ["MONDAY", "TUESDAY", "WEDNESDAY", "THURSDAY", "FRIDAY"],
           breaks: schoolData.breaks || []
       },
       rooms: finalRooms.map(r => ({
