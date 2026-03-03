@@ -31,40 +31,25 @@ Deno.serve(async (req) => {
           teacherNumericMap[t.id] = numId;
           return {
             id: numId,
-            teacher_id: numId,
-            teacherId: numId,
             externalId: String(t.id),
-            external_id: String(t.id),
             name: String(t.full_name || "Teacher"),
             maxPeriodsPerWeek: Number(t.max_hours_per_week || 40),
-            max_periods_per_week: Number(t.max_hours_per_week || 40),
             unavailableSlotIds: [],
-            unavailable_slot_ids: [],
             unavailableDays: [],
-            unavailable_days: [],
             preferredDays: [],
-            preferred_days: [],
-            avoidDays: [],
-            avoid_days: []
+            avoidDays: []
           };
         });
         
         const optaPlannerPayload = {
             schoolId: String(school_id),
-            school_id: String(school_id),
             scheduleVersion: scheduleVersion[0]?.name || "Draft",
-            schedule_version: scheduleVersion[0]?.name || "Draft",
             scheduleVersionId: String(schedule_version_id),
-            schedule_version_id: String(schedule_version_id),
             scheduleSettings: {
                 periodDurationMinutes: Number(schoolData.period_duration_minutes || 60),
-                period_duration_minutes: Number(schoolData.period_duration_minutes || 60),
                 dayStartTime: String(schoolData.day_start_time || "08:00"),
-                day_start_time: String(schoolData.day_start_time || "08:00"),
                 dayEndTime: String(schoolData.day_end_time || "18:00"),
-                day_end_time: String(schoolData.day_end_time || "18:00"),
                 daysOfWeek: schoolData.days_of_week || ["MONDAY", "TUESDAY", "WEDNESDAY", "THURSDAY", "FRIDAY"],
-                days_of_week: schoolData.days_of_week || ["MONDAY", "TUESDAY", "WEDNESDAY", "THURSDAY", "FRIDAY"],
                 breaks: schoolData.breaks || []
             },
             teachers: mappedTeachers,
