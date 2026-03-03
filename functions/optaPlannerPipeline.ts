@@ -759,6 +759,11 @@ ${JSON.stringify(teacherContext)}
       roomNumericMap[r.id] = numId;
       return {
         id: numId,
+        code: numId,
+        uuid: numId,
+        identifier: numId,
+        roomId: numId,
+        room_id: numId,
         externalId: String(r.id),
         name: String(r.name || "Room"),
         capacity: Number(r.capacity || 30)
@@ -773,6 +778,11 @@ ${JSON.stringify(teacherContext)}
       teacherNumericMap[t.id] = numId;
       return {
         id: numId,
+        code: numId,
+        uuid: numId,
+        identifier: numId,
+        teacherId: numId,
+        teacher_id: numId,
         externalId: String(t.id),
         name: String(t.name || "Teacher"),
         maxPeriodsPerWeek: Number(t.maxPeriodsPerWeek || 40),
@@ -788,11 +798,15 @@ ${JSON.stringify(teacherContext)}
       return {
         id: numId,
         code: String(s.code || s.name),
+        uuid: numId,
+        identifier: numId,
+        subjectId: numId,
+        subject_id: numId,
         name: String(s.name)
       };
     });
     if (mappedSubjects.length === 0) {
-      mappedSubjects.push({ id: "9999", code: "DUMMY", name: "DUMMY" });
+      mappedSubjects.push({ id: "9999", code: "DUMMY", uuid: "9999", identifier: "9999", name: "DUMMY" });
     }
 
     const mappedSubjectRequirements = subjectRequirements.map(req => ({
@@ -816,22 +830,43 @@ ${JSON.stringify(teacherContext)}
 
       return {
         id: lessonNumId,
+        code: lessonNumId,
+        uuid: lessonNumId,
+        identifier: lessonNumId,
+        lessonId: lessonNumId,
+        lesson_id: lessonNumId,
         subject: String(l.subject || "Subj"),
         studentGroup: String(l.studentGroup || "Group"),
         teachingGroupId: tgStringId,
+        teaching_group_id: tgStringId,
+        teachingGroupCode: tgStringId,
+        teachingGroup: { id: tgStringId, code: tgStringId },
         sectionId: String(l.sectionId),
         subjectId: l.subjectId ? String(l.subjectId) : null,
+        subject_id: l.subjectId ? String(l.subjectId) : null,
         level: String(l.level),
         yearGroup: String(l.yearGroup),
         studentIds: l.studentIds || [],
         requiredCapacity: Number(l.requiredCapacity || 1),
         blockId: l.blockId ? String(l.blockId) : null,
         teacherId: tNumId,
+        teacher_id: tNumId,
+        teacherCode: tNumId,
+        teacher: { id: tNumId, code: tNumId },
         timeslotId: tSlotId,
-        roomId: rNumId
+        timeslot_id: tSlotId,
+        timeslotCode: tSlotId,
+        timeslot: { id: tSlotId, code: tSlotId },
+        roomId: rNumId,
+        room_id: rNumId,
+        roomCode: rNumId,
+        room: { id: rNumId, code: rNumId }
       };
     }) : [{
       id: "1001",
+      code: "1001",
+      uuid: "1001",
+      identifier: "1001",
       subject: "DUMMY",
       studentGroup: "Dummy",
       teachingGroupId: "dummy_tg",
@@ -843,8 +878,14 @@ ${JSON.stringify(teacherContext)}
       requiredCapacity: 1,
       blockId: null,
       teacherId: dummyTeacherNumId,
+      teacherCode: dummyTeacherNumId,
+      teacher: { id: dummyTeacherNumId, code: dummyTeacherNumId },
       timeslotId: "1",
-      roomId: defaultRoomId
+      timeslotCode: "1",
+      timeslot: { id: "1", code: "1" },
+      roomId: defaultRoomId,
+      roomCode: defaultRoomId,
+      room: { id: defaultRoomId, code: defaultRoomId }
     }];
 
     const mappedTeachingGroups = teachingGroupsPayload.map(tg => {
@@ -852,12 +893,20 @@ ${JSON.stringify(teacherContext)}
       const numId = String(tg.id); // Must use actual ID so lessons reference it correctly
       return {
         id: numId,
+        code: numId,
+        uuid: numId,
+        identifier: numId,
+        teachingGroupId: numId,
+        teaching_group_id: numId,
         sectionId: String(tg.section_id),
         studentGroup: String(tg.student_group),
         subjectId: String(tg.subject_id),
+        subject_id: String(tg.subject_id),
         level: String(tg.level),
         requiredMinutesPerWeek: Number(tg.required_minutes_per_week),
-        lessons: tgLessons
+        lessons: tgLessons.map(id => ({ id: id, code: id })),
+        lessonIds: tgLessons,
+        lesson_ids: tgLessons
       };
     });
     if (mappedTeachingGroups.length === 0) {
