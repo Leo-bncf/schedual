@@ -829,9 +829,9 @@ ${JSON.stringify(teacherContext)}
     }));
 
     const mappedTeachingGroups = teachingGroupsPayload.map(tg => ({
-      id: String(tg.id),
-      teaching_group_id: String(tg.id),
-      teachingGroupId: String(tg.id),
+      id: parseInt(tg.id.replace(/\D/g, '')) || Math.floor(Math.random() * 100000),
+      teaching_group_id: parseInt(tg.id.replace(/\D/g, '')) || Math.floor(Math.random() * 100000),
+      teachingGroupId: parseInt(tg.id.replace(/\D/g, '')) || Math.floor(Math.random() * 100000),
       externalId: String(tg.id),
       external_id: String(tg.id),
       section_id: String(tg.section_id),
