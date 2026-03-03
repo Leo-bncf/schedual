@@ -937,15 +937,24 @@ ${JSON.stringify(teacherContext)}
         room_id: null
       }],
       blockedSlotIds: [],
+      blocked_slot_ids: [],
       constraints: {
         spreadAcrossDaysPerTeachingGroupSection: true,
+        spread_across_days_per_teaching_group_section: true,
         avoidSamePeriodRepetition: constraints?.maxSameSubjectPerDayHardEnabled || true,
-        avoidTeacherLatePeriods: true
+        avoid_same_period_repetition: constraints?.maxSameSubjectPerDayHardEnabled || true,
+        avoidTeacherLatePeriods: true,
+        avoid_teacher_late_periods: true
       },
       studentSubjectChoices: studentSubjectChoices,
+      student_subject_choices: studentSubjectChoices,
+      randomSeed: 123456,
       random_seed: 123456,
+      randomizeSearch: true,
       randomize_search: true,
+      numSearchWorkers: 1,
       num_search_workers: 1,
+      shuffleInputOrder: false,
       shuffle_input_order: false
     };
 
