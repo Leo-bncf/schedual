@@ -853,9 +853,9 @@ ${JSON.stringify(teacherContext)}
         studentIds: l.studentIds,
         requiredCapacity: l.requiredCapacity,
         blockId: l.blockId,
-        teacherId: l.teacherId,
-        timeslotId: l.timeslotId,
-        roomId: l.roomId
+        teacherId: l.teacherId ? parseInt(l.teacherId, 10) : null,
+        timeslotId: l.timeslotId ? parseInt(l.timeslotId, 10) : null,
+        roomId: l.roomId ? parseInt(l.roomId, 10) : null
       })) : [{
         id: 1001,
         subject: "DUMMY",
@@ -868,7 +868,7 @@ ${JSON.stringify(teacherContext)}
         studentIds: [],
         requiredCapacity: 1,
         blockId: null,
-        teacherId: finalTeachers[0].id,
+        teacherId: parseInt(finalTeachers[0].id, 10),
         timeslotId: null,
         roomId: null
       }],
