@@ -774,6 +774,20 @@ ${JSON.stringify(teacherContext)}
       };
     });
     
+    if (mappedRooms.length === 0) {
+      mappedRooms.push({
+        id: 1,
+        code: 'dummy_room_1',
+        uuid: 'dummy_room_1',
+        identifier: 'dummy_room_1',
+        roomId: 1,
+        room_id: 1,
+        externalId: 'dummy_room_1',
+        name: 'Dummy Room',
+        capacity: 999
+      });
+    }
+    
     const defaultRoomNumId = mappedRooms[0]?.id || 1;
     const defaultRoomCode = mappedRooms[0]?.code || "dummy_room_1";
 
@@ -800,6 +814,24 @@ ${JSON.stringify(teacherContext)}
         avoidDays: t.avoidDays || []
       };
     });
+    
+    if (mappedTeachers.length === 0) {
+      mappedTeachers.push({
+        id: 1,
+        code: 'dummy_teacher_1',
+        uuid: 'dummy_teacher_1',
+        identifier: 'dummy_teacher_1',
+        teacherId: 1,
+        teacher_id: 1,
+        externalId: 'dummy_teacher_1',
+        name: 'Dummy Teacher',
+        maxPeriodsPerWeek: 40,
+        unavailableSlotIds: [],
+        unavailableDays: [],
+        preferredDays: [],
+        avoidDays: []
+      });
+    }
     
     const defaultTeacherNumId = mappedTeachers[0]?.id || 1;
     const defaultTeacherCode = mappedTeachers[0]?.code || "dummy_teacher_1";
@@ -878,13 +910,13 @@ ${JSON.stringify(teacherContext)}
     }
 
     const mappedLessons = safeLessons.length > 0 ? safeLessons.map((l, index) => {
-      const tNumId = l.teacherId ? teacherNumericMap[l.teacherId] : defaultTeacherNumId;
+      const tNumId = l.teacherId ? (teacherNumericMap[l.teacherId] ?? defaultTeacherNumId) : defaultTeacherNumId;
       const tCode = l.teacherId ? teacherCodeMap[l.teacherId] : defaultTeacherCode;
       
-      const rNumId = l.roomId ? roomNumericMap[l.roomId] : defaultRoomNumId;
+      const rNumId = l.roomId ? (roomNumericMap[l.roomId] ?? defaultRoomNumId) : defaultRoomNumId;
       const rCode = l.roomId ? roomCodeMap[l.roomId] : defaultRoomCode;
       
-      const tgNumId = l.teachingGroupId ? tgNumericMap[l.teachingGroupId] : null;
+      const tgNumId = l.teachingGroupId ? (tgNumericMap[l.teachingGroupId] ?? null) : null;
       const tgCode = l.teachingGroupId ? tgCodeMap[l.teachingGroupId] : null;
       
       const lessonNumId = generateNum();
