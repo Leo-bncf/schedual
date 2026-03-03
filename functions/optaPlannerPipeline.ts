@@ -263,6 +263,10 @@ Deno.serve(async (req) => {
             avoidDays: t.avoidDays,
             externalId: t.code
         })),
+        studentGroups: [...new Set(mappedTeachingGroups.map(tg => tg.studentGroup))].map(sg => ({
+            id: sg,
+            name: sg
+        })),
         subjects: mappedSubjects.map(s => {
             const subject = subjects.find(sub => sub.id === s.code);
             return {
