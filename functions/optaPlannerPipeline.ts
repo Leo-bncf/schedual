@@ -1205,21 +1205,31 @@ ${JSON.stringify(teacherContext)}
       finalLessons = result.lessons || result.assignments || (Array.isArray(result) ? result : []);
     }
 
-    // String IDs maps (since we send them as strings, we just use the ID as is)
+    // Reverse Numeric Maps
     const reverseTeacherMap = {};
-    finalTeachers.forEach(t => { reverseTeacherMap[t.id] = t.id; });
+    Object.keys(teacherNumericMap).forEach(key => {
+      reverseTeacherMap[teacherNumericMap[key]] = key;
+    });
     
     const reverseRoomMap = {};
-    finalRooms.forEach(r => { reverseRoomMap[r.id] = r.id; });
+    Object.keys(roomNumericMap).forEach(key => {
+      reverseRoomMap[roomNumericMap[key]] = key;
+    });
     
     const safeLessonMap = {};
-    safeLessons.forEach(l => { safeLessonMap[l.id] = l; });
+    // map the numeric ID or the id string used in mappedLessons back to the safeLesson
+    mappedLessons.forEach((ml, index) => { 
+      // mappedLessons match safeLessons by index, safeLessons have original properties
+      safeLessonMap[ml.id] = safeLessons[index]; 
+    });
 
     if (finalLessons && Array.isArray(finalLessons)) {
       for (const lesson of finalLessons) {
         
         // Match the lesson returned by OptaPlanner back to our safeLessons array to get original IDs
-        const originalLesson = safeLessonMap[lesson.id];
+        // The lesson might come back with the numeric ID
+        const lessonId = lesson.id || lesson.lessonId || lesson.lesson_id;
+        const originalLesson = safeLessonMap[lessonId];
         
         if (originalLesson && lesson.timeslotId != null) {
           
@@ -1237,9 +1247,11 @@ ${JSON.stringify(teacherContext)}
           const realTgIds = syntheticToRealTgMap[originalLesson.originalTeachingGroupId] || [originalLesson.originalTeachingGroupId];
           const isBreak = String(lesson.subject || '').toUpperCase() === 'LUNCH' || String(lesson.subject || '').toUpperCase() === 'BREAK';
           
-          // Use ID directly (no translation needed)
-          const finalTeacherId = lesson.teacherId || null;
-          const finalRoomId = lesson.roomId || null;
+          // Use reverse map
+          const tId = lesson.teacherId || (lesson.teacher ? lesson.teacher.id : null);
+          const rId = lesson.roomId || (lesson.room ? lesson.room.id : null);
+          const finalTeacherId = tId ? (reverseTeacherMap[tId] || null) : null;
+          const finalRoomId = rId ? (reverseRoomMap[rId] || null) : null;
 
           for (const realTgId of realTgIds) {
             slotsToInsert.push({
