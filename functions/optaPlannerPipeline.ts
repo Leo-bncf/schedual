@@ -1040,7 +1040,14 @@ ${JSON.stringify(teacherContext)}
         sharedTeacherIds: [],
         transportWindows: []
       },
-      schools: [ optaPlannerPayload ]
+      schools: [ optaPlannerPayload ],
+      // Adding these to the root level just in case the backend MultiSchoolSchedule wrapper expects them here
+      teachers: mappedTeachers,
+      rooms: mappedRooms,
+      lessons: mappedLessons,
+      teachingGroups: mappedTeachingGroups,
+      subjectRequirements: mappedSubjectRequirements,
+      subjects: mappedSubjects
     };
 
     console.log('[Pipeline] Full sending payload (first 2000 chars):', JSON.stringify(multiPayload).substring(0, 2000));
