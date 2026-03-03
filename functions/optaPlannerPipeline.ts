@@ -872,7 +872,7 @@ ${JSON.stringify(teacherContext)}
 
     const dummyTeacherNumId = teacherNumericMap[finalTeachers[0].id] || 1;
     const mappedLessons = safeLessons.length > 0 ? safeLessons.map(l => {
-      const tNumId = l.teacherId ? teacherNumericMap[l.teacherId] : null;
+      const tNumId = l.teacherId ? (teacherNumericMap[l.teacherId] || dummyTeacherNumId) : dummyTeacherNumId;
       const rNumId = l.roomId ? roomNumericMap[l.roomId] : null;
       const tgStringId = l.teachingGroupId ? String(l.teachingGroupId) : null;
       const lessonNumId = parseInt(l.id) || generateNumericId();
