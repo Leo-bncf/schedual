@@ -190,11 +190,13 @@ Deno.serve(async (req) => {
     // 3. Build Student Subject Choices (only for DP)
     const studentSubjectChoices = [];
     if (programType === 'DP') {
+        const activeSubjectIdsWithLessons = new Set(mappedLessons.map(l => l.subjectId));
+
         students.filter(s => s.is_active).forEach(student => {
             if (student.subject_choices) {
                 student.subject_choices.forEach(choice => {
                     const subject = subjects.find(sub => sub.id === choice.subject_id);
-                    if (subject) {
+                    if (subject && activeSubjectIdsWithLessons.has(subject.id)) {
                         studentSubjectChoices.push({
                             studentId: String(student.id),
                             subjectId: String(subject.id),
