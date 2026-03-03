@@ -798,9 +798,9 @@ ${JSON.stringify(teacherContext)}
     }));
 
     const mappedTeachers = finalTeachers.map(t => ({
-      id: String(t.id),
-      teacher_id: String(t.id),
-      teacherId: String(t.id),
+      id: parseInt(t.id.replace(/\D/g, '')) || Math.floor(Math.random() * 100000),
+      teacher_id: parseInt(t.id.replace(/\D/g, '')) || Math.floor(Math.random() * 100000),
+      teacherId: parseInt(t.id.replace(/\D/g, '')) || Math.floor(Math.random() * 100000),
       externalId: String(t.id),
       external_id: String(t.id),
       name: String(t.name || "Teacher"),
