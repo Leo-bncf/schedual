@@ -325,7 +325,7 @@ Deno.serve(async (req) => {
             studentSubjectChoices: studentSubjectChoices.length > 0 ? studentSubjectChoices.map(c => ({
                 studentId: c.studentId,
                 subjectId: `sub_${c.subjectId}`,
-                subject: String(c.subject).substring(0, 10).toUpperCase().replace(/[^A-Z0-9]/g, ''),
+                subject: c.subject,
                 level: c.level,
                 yearGroup: c.yearGroup
             })) : [], // No dummy! Dummy causes missing subject error
