@@ -829,14 +829,8 @@ ${JSON.stringify(teacherContext)}
     if (mappedSubjects.length === 0) {
       mappedSubjects.push({
         id: "69733f5f0b775e6fa2db95b9",
-        subject_id: "69733f5f0b775e6fa2db95b9",
-        subjectId: "69733f5f0b775e6fa2db95b9",
         code: "DUMMY",
-        name: "DUMMY",
-        hlHoursPerWeek: 5,
-        slHoursPerWeek: 3,
-        hl_hours_per_week: 5,
-        sl_hours_per_week: 3
+        name: "DUMMY"
       });
     }
 
