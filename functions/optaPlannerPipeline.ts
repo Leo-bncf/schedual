@@ -325,6 +325,7 @@ Deno.serve(async (req) => {
             studentGroup: req.studentGroup || "Unknown",
             ...(programType === 'DP' ? { teachingGroupId: `tg_${mappedTeachingGroups.find(tg => tg.id === req.teachingGroupId)?.code || req.teachingGroupId}` } : {}),
             subject: req.subject,
+            subjectId: req.subjectId,
             minutesPerWeek: req.minutesPerWeek
         })),
         blockedSlotIds: [],
