@@ -106,8 +106,12 @@ Deno.serve(async (req) => {
         };
     });
 
+    const getSafeSubjectName = (subj) => {
+        return String(subj.name || subj.code).replace(/[^a-zA-Z0-9]/g, '') + "_" + String(subj.id).substring(0, 4);
+    };
+
     const mappedSubjects = subjects.map(s => {
-        return { id: s.id, code: String(s.id), name: String(s.name || s.code) };
+        return { id: s.id, code: String(s.id), name: getSafeSubjectName(s) };
     });
 
     // 2. Build Teaching Groups and Lessons
@@ -140,7 +144,7 @@ Deno.serve(async (req) => {
             studentGroup: String(tg.year_group),
             teachingGroupId: numId,
             sectionId: `sec_${tg.id}`,
-            subject: String(subject.name || subject.code),
+            subject: getSafeSubjectName(subject),
             minutesPerWeek: requiredMinutes
         });
 
@@ -153,7 +157,7 @@ Deno.serve(async (req) => {
             mappedLessons.push({
                 id: lessonNumId,
                 code: `lesson_${tg.id}_${i}`,
-                subject: String(subject.name || subject.code),
+                subject: getSafeSubjectName(subject),
                 studentGroup: String(tg.year_group),
                 teachingGroupId: numId,
                 sectionId: `sec_${tg.id}`,
@@ -194,7 +198,7 @@ Deno.serve(async (req) => {
                         studentSubjectChoices.push({
                             studentId: String(student.id),
                             subjectId: String(subject.id),
-                            subject: String(subject.name || subject.code),
+                            subject: getSafeSubjectName(subject),
                             level: String(choice.level || 'SL'),
                             yearGroup: String(student.year_group || 'DP1')
                         });
