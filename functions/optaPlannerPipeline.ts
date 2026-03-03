@@ -323,13 +323,15 @@ Deno.serve(async (req) => {
                 level: l.level
             } : {})
         })),
-        subjectRequirements: subjectRequirements.map(req => ({
-            studentGroup: req.studentGroup || "Unknown",
-            ...(programType === 'DP' ? { teachingGroupId: `tg_${mappedTeachingGroups.find(tg => tg.id === req.teachingGroupId)?.code || req.teachingGroupId}` } : {}),
-            subject: req.subject,
-            subjectId: req.subjectId,
-            minutesPerWeek: req.minutesPerWeek
-        })),
+        subjectRequirements: subjectRequirements
+            .filter(req => mappedLessons.some(l => `sub_${Object.keys(subjectIdMap).find(key => subjectIdMap[key] === l.subjectId) || l.subjectId}` === req.subjectId))
+            .map(req => ({
+                studentGroup: req.studentGroup || "Unknown",
+                ...(programType === 'DP' ? { teachingGroupId: `tg_${mappedTeachingGroups.find(tg => tg.id === req.teachingGroupId)?.code || req.teachingGroupId}` } : {}),
+                subject: req.subject,
+                subjectId: req.subjectId,
+                minutesPerWeek: req.minutesPerWeek
+            })),
         blockedSlotIds: [],
         constraints: {
             spreadAcrossDaysPerTeachingGroupSection: true,
