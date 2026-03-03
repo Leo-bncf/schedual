@@ -267,7 +267,7 @@ Deno.serve(async (req) => {
             const subject = subjects.find(sub => sub.id === s.code);
             return {
                 id: `sub_${s.code}`,
-                code: s.code.substring(0, 5).toUpperCase(), // simplified code
+                code: (s.code || s.name).substring(0, 5).toUpperCase(),
                 name: s.name,
                 ...(programType === 'DP' ? { 
                     hoursPerWeekHL: subject?.hoursPerWeekHL || 5, 
@@ -279,7 +279,7 @@ Deno.serve(async (req) => {
             id: `tg_${tg.code}`,
             sectionId: tg.sectionId,
             studentGroup: tg.studentGroup,
-            subjectId: `sub_${tg.subjectId}`, // Note: mapping needs slight tweak here
+            subjectId: `sub_${subjects.find(s => s.id === tg.subjectId)?.id || tg.subjectId}`,
             ...(programType === 'DP' ? { level: tg.level } : {}),
             requiredMinutesPerWeek: tg.requiredMinutesPerWeek
         })),
