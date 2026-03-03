@@ -781,7 +781,7 @@ ${JSON.stringify(teacherContext)}
         blockId: l.blockId || null,
         timeslotId: null,
         roomId: null,
-        teacherId: String(numericTeacherMap[l.teacherId] || finalTeachers[0].id),
+        teacherId: l.teacherId || finalTeachers[0].id,
         // Keep these around for our own processing after OptaPlanner returns
         originalTeacherId: l.teacherId,
         originalTeachingGroupId: l.teachingGroupId
