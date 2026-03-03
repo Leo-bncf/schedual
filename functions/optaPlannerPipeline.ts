@@ -817,9 +817,9 @@ ${JSON.stringify(teacherContext)}
     }));
 
     const mappedSubjects = subjects.filter(s => s.is_active && subjectRequirements.some(req => req.subject === (s.code || s.name))).map(s => ({
-      id: String(s.id),
-      subject_id: String(s.id),
-      subjectId: String(s.id),
+      id: parseInt(s.id.replace(/\D/g, '')) || Math.floor(Math.random() * 100000),
+      subject_id: parseInt(s.id.replace(/\D/g, '')) || Math.floor(Math.random() * 100000),
+      subjectId: parseInt(s.id.replace(/\D/g, '')) || Math.floor(Math.random() * 100000),
       externalId: String(s.id),
       external_id: String(s.id),
       code: String(s.code || s.name),
