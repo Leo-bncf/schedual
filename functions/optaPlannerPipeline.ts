@@ -299,7 +299,8 @@ Deno.serve(async (req) => {
             } : {})
         })),
         subjectRequirements: subjectRequirements.map(req => ({
-            ...(programType === 'DP' ? { teachingGroupId: `tg_${mappedTeachingGroups.find(tg => tg.id === req.teachingGroupId)?.code || req.teachingGroupId}` } : { studentGroup: req.studentGroup }),
+            studentGroup: req.studentGroup || "Unknown",
+            ...(programType === 'DP' ? { teachingGroupId: `tg_${mappedTeachingGroups.find(tg => tg.id === req.teachingGroupId)?.code || req.teachingGroupId}` } : {}),
             subject: req.subject.substring(0, 5).toUpperCase(),
             minutesPerWeek: req.minutesPerWeek
         })),
