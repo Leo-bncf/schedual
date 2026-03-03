@@ -773,9 +773,9 @@ ${JSON.stringify(teacherContext)}
       }
     });
 
-    // Ensure lessons have non-null teachers and use numeric IDs
+    // Ensure lessons have non-null teachers and use string IDs
     const safeLessons = lessons.map((l, idx) => ({
-        id: idx + 1000,
+        id: String(idx + 1000),
         subject: l.subject,
         studentGroup: l.studentGroup,
         teachingGroupId: l.teachingGroupId,
@@ -788,7 +788,7 @@ ${JSON.stringify(teacherContext)}
         blockId: l.blockId || null,
         timeslotId: null,
         roomId: null,
-        teacherId: numericTeacherMap[l.teacherId] || finalTeachers[0].id,
+        teacherId: String(numericTeacherMap[l.teacherId] || finalTeachers[0].id),
         // Keep these around for our own processing after OptaPlanner returns
         originalTeacherId: l.teacherId,
         originalTeachingGroupId: l.teachingGroupId
