@@ -159,6 +159,7 @@ Deno.serve(async (req) => {
             teachingGroupId: numId,
             sectionId: `sec_${tg.id}`,
             subject: getSafeSubjectName(subject),
+            subjectId: `sub_${subject.id}`,
             minutesPerWeek: requiredMinutes
         });
 
