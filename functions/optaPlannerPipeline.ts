@@ -359,18 +359,17 @@ Deno.serve(async (req) => {
     };
 
     // 6. Call Solver
-    let endpointUrl = 'http://87.106.27.27:8080/base44/ingest';
-    if (OPTAPLANNER_ENDPOINT) {
-        try {
-            const url = new URL(OPTAPLANNER_ENDPOINT);
-            url.pathname = '/base44/ingest';
-            endpointUrl = url.toString();
-        } catch(e) {
-            endpointUrl = 'http://87.106.27.27:8080/base44/ingest';
-        }
-    }
+    // Force exact endpoint as requested
+    const endpointUrl = 'http://87.106.27.27:8080/base44/ingest';
 
-    console.log('[Pipeline] Calling OptaPlanner:', endpointUrl);
+    const requestBody = JSON.stringify(multiPayload);
+    
+    console.log('[Pipeline] === OPTAPLANNER REQUEST ===');
+    console.log(`[Pipeline] URL: ${endpointUrl}`);
+    console.log(`[Pipeline] Method: POST`);
+    console.log(`[Pipeline] Request body present: ${!!requestBody}`);
+    console.log(`[Pipeline] Body length: ${requestBody.length} chars`);
+    console.log('[Pipeline] ==============================');
 
     const response = await fetch(endpointUrl, {
         method: 'POST',
@@ -378,7 +377,7 @@ Deno.serve(async (req) => {
             'Content-Type': 'application/json',
             'X-API-Key': OPTAPLANNER_API_KEY
         },
-        body: JSON.stringify(multiPayload)
+        body: requestBody
     });
 
     let responseText = await response.text();
