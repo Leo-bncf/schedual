@@ -746,7 +746,7 @@ ${JSON.stringify(teacherContext)}
     });
 
     const finalTeachers = formattedTeachers.length > 0 ? formattedTeachers : [{ id: "dummy_teacher", name: "Dummy Teacher", maxPeriodsPerWeek: 40, unavailableSlotIds: [], unavailableDays: [], preferredDays: [], avoidDays: [] }];
-    const finalRooms = rooms.length > 0 ? rooms : [{ id: "dummy_room", name: "Dummy", capacity: 30 }];
+    const finalRooms = rooms.length > 0 ? rooms.map(r => ({ id: r.id, name: r.name, capacity: r.capacity || 30 })) : [{ id: "dummy_room", name: "Dummy", capacity: 30 }];
 
     const studentSubjectChoices = [];
     students.filter(s => s.is_active).forEach(student => {
