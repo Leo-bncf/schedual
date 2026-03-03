@@ -787,71 +787,94 @@ ${JSON.stringify(teacherContext)}
         originalTeachingGroupId: l.teachingGroupId
     }));
 
-    const mappedRooms = finalRooms.map(r => ({
-      id: parseInt(r.id.replace(/\D/g, '')) || Math.floor(Math.random() * 100000),
-      room_id: parseInt(r.id.replace(/\D/g, '')) || Math.floor(Math.random() * 100000),
-      roomId: parseInt(r.id.replace(/\D/g, '')) || Math.floor(Math.random() * 100000),
-      externalId: String(r.id),
-      external_id: String(r.id),
-      name: String(r.name || "Room"),
-      capacity: Number(r.capacity || 30)
-    }));
+    let numericIdCounter = 1;
+    const generateNumericId = () => numericIdCounter++;
 
-    const mappedTeachers = finalTeachers.map(t => ({
-      id: parseInt(t.id.replace(/\D/g, '')) || Math.floor(Math.random() * 100000),
-      teacher_id: parseInt(t.id.replace(/\D/g, '')) || Math.floor(Math.random() * 100000),
-      teacherId: parseInt(t.id.replace(/\D/g, '')) || Math.floor(Math.random() * 100000),
-      externalId: String(t.id),
-      external_id: String(t.id),
-      name: String(t.name || "Teacher"),
-      maxPeriodsPerWeek: Number(t.maxPeriodsPerWeek || 40),
-      max_periods_per_week: Number(t.maxPeriodsPerWeek || 40),
-      unavailableSlotIds: t.unavailableSlotIds || [],
-      unavailable_slot_ids: t.unavailableSlotIds || [],
-      unavailableDays: t.unavailableDays || [],
-      unavailable_days: t.unavailableDays || [],
-      preferredDays: t.preferredDays || [],
-      preferred_days: t.preferredDays || [],
-      avoidDays: t.avoidDays || [],
-      avoid_days: t.avoidDays || []
-    }));
+    const roomNumericMap = {};
+    const mappedRooms = finalRooms.map(r => {
+      const numId = generateNumericId();
+      roomNumericMap[r.id] = numId;
+      return {
+        id: numId,
+        room_id: numId,
+        roomId: numId,
+        externalId: String(r.id),
+        external_id: String(r.id),
+        name: String(r.name || "Room"),
+        capacity: Number(r.capacity || 30)
+      };
+    });
 
-    const mappedSubjects = subjects.filter(s => s.is_active && subjectRequirements.some(req => req.subject === (s.code || s.name))).map(s => ({
-      id: parseInt(s.id.replace(/\D/g, '')) || Math.floor(Math.random() * 100000),
-      subject_id: parseInt(s.id.replace(/\D/g, '')) || Math.floor(Math.random() * 100000),
-      subjectId: parseInt(s.id.replace(/\D/g, '')) || Math.floor(Math.random() * 100000),
-      externalId: String(s.id),
-      external_id: String(s.id),
-      code: String(s.code || s.name),
-      name: String(s.name),
-      hl_hours_per_week: Number(s.hoursPerWeekHL || 5),
-      sl_hours_per_week: Number(s.hoursPerWeekSL || 3)
-    }));
+    const teacherNumericMap = {};
+    const mappedTeachers = finalTeachers.map(t => {
+      const numId = generateNumericId();
+      teacherNumericMap[t.id] = numId;
+      return {
+        id: numId,
+        teacher_id: numId,
+        teacherId: numId,
+        externalId: String(t.id),
+        external_id: String(t.id),
+        name: String(t.name || "Teacher"),
+        maxPeriodsPerWeek: Number(t.maxPeriodsPerWeek || 40),
+        max_periods_per_week: Number(t.maxPeriodsPerWeek || 40),
+        unavailableSlotIds: t.unavailableSlotIds || [],
+        unavailable_slot_ids: t.unavailableSlotIds || [],
+        unavailableDays: t.unavailableDays || [],
+        unavailable_days: t.unavailableDays || [],
+        preferredDays: t.preferredDays || [],
+        preferred_days: t.preferredDays || [],
+        avoidDays: t.avoidDays || [],
+        avoid_days: t.avoidDays || []
+      };
+    });
 
-    const mappedTeachingGroups = teachingGroupsPayload.map(tg => ({
-      id: parseInt(tg.id.replace(/\D/g, '')) || Math.floor(Math.random() * 100000),
-      teaching_group_id: parseInt(tg.id.replace(/\D/g, '')) || Math.floor(Math.random() * 100000),
-      teachingGroupId: parseInt(tg.id.replace(/\D/g, '')) || Math.floor(Math.random() * 100000),
-      externalId: String(tg.id),
-      external_id: String(tg.id),
-      section_id: String(tg.section_id),
-      sectionId: String(tg.section_id),
-      student_group: String(tg.student_group),
-      studentGroup: String(tg.student_group),
-      subject_id: String(tg.subject_id),
-      subjectId: String(tg.subject_id),
-      level: String(tg.level),
-      required_minutes_per_week: Number(tg.required_minutes_per_week),
-      requiredMinutesPerWeek: Number(tg.required_minutes_per_week),
-      lessons: [] // Provided explicitly just in case OptaPlanner wants it initialized
-    }));
+    const subjectNumericMap = {};
+    const mappedSubjects = subjects.filter(s => s.is_active && subjectRequirements.some(req => req.subject === (s.code || s.name))).map(s => {
+      const numId = generateNumericId();
+      subjectNumericMap[s.id] = numId;
+      return {
+        id: numId,
+        subject_id: numId,
+        subjectId: numId,
+        externalId: String(s.id),
+        external_id: String(s.id),
+        code: String(s.code || s.name),
+        name: String(s.name),
+        hl_hours_per_week: Number(s.hoursPerWeekHL || 5),
+        sl_hours_per_week: Number(s.hoursPerWeekSL || 3)
+      };
+    });
+
+    const tgNumericMap = {};
+    const mappedTeachingGroups = teachingGroupsPayload.map(tg => {
+      const numId = generateNumericId();
+      tgNumericMap[tg.id] = numId;
+      return {
+        id: numId,
+        teaching_group_id: numId,
+        teachingGroupId: numId,
+        externalId: String(tg.id),
+        external_id: String(tg.id),
+        section_id: String(tg.section_id),
+        sectionId: String(tg.section_id),
+        student_group: String(tg.student_group),
+        studentGroup: String(tg.student_group),
+        subject_id: subjectNumericMap[tg.subject_id] || generateNumericId(),
+        subjectId: subjectNumericMap[tg.subject_id] || generateNumericId(),
+        level: String(tg.level),
+        required_minutes_per_week: Number(tg.required_minutes_per_week),
+        requiredMinutesPerWeek: Number(tg.required_minutes_per_week),
+        lessons: [] // Provided explicitly just in case OptaPlanner wants it initialized
+      };
+    });
 
     const mappedSubjectRequirements = subjectRequirements.map(req => ({
-      id: req.id ? String(req.id) : String(Math.random()),
+      id: generateNumericId(),
       studentGroup: String(req.studentGroup),
       student_group: String(req.studentGroup),
-      teachingGroupId: String(req.teachingGroupId),
-      teaching_group_id: String(req.teachingGroupId),
+      teachingGroupId: tgNumericMap[req.teachingGroupId] || generateNumericId(),
+      teaching_group_id: tgNumericMap[req.teachingGroupId] || generateNumericId(),
       sectionId: String(req.sectionId),
       section_id: String(req.sectionId),
       subject: String(req.subject),
@@ -859,52 +882,59 @@ ${JSON.stringify(teacherContext)}
       minutesPerWeek: Number(req.minutes_per_week)
     }));
 
-    const dummyTeacherId = String(finalTeachers[0].id);
-    const mappedLessons = safeLessons.length > 0 ? safeLessons.map(l => ({
-      id: String(l.id),
-      lesson_id: String(l.id),
-      lessonId: String(l.id),
-      externalId: String(l.id),
-      external_id: String(l.id),
-      subject: String(l.subject || "Subj"),
-      studentGroup: String(l.studentGroup || "Group"),
-      student_group: String(l.studentGroup || "Group"),
-      teachingGroupId: String(l.teachingGroupId),
-      teaching_group_id: String(l.teachingGroupId),
-      teachingGroup: { id: String(l.teachingGroupId) },
-      sectionId: String(l.sectionId),
-      section_id: String(l.sectionId),
-      subjectId: String(l.subjectId),
-      subject_id: String(l.subjectId),
-      level: String(l.level),
-      yearGroup: String(l.yearGroup),
-      year_group: String(l.yearGroup),
-      studentIds: l.studentIds || [],
-      student_ids: l.studentIds || [],
-      requiredCapacity: Number(l.requiredCapacity || 1),
-      required_capacity: Number(l.requiredCapacity || 1),
-      blockId: l.blockId ? String(l.blockId) : null,
-      block_id: l.blockId ? String(l.blockId) : null,
-      teacherId: l.teacherId ? String(l.teacherId) : null,
-      teacher_id: l.teacherId ? String(l.teacherId) : null,
-      teacher: l.teacherId ? { id: String(l.teacherId) } : null,
-      timeslotId: l.timeslotId ? String(l.timeslotId) : null,
-      timeslot_id: l.timeslotId ? String(l.timeslotId) : null,
-      timeslot: l.timeslotId ? { id: String(l.timeslotId) } : null,
-      roomId: l.roomId ? String(l.roomId) : null,
-      room_id: l.roomId ? String(l.roomId) : null,
-      room: l.roomId ? { id: String(l.roomId) } : null
-    })) : [{
-      id: "1001", lesson_id: "1001", lessonId: "1001", externalId: "1001", external_id: "1001",
+    const dummyTeacherNumId = teacherNumericMap[finalTeachers[0].id] || 1;
+    const mappedLessons = safeLessons.length > 0 ? safeLessons.map(l => {
+      const tNumId = l.teacherId ? teacherNumericMap[l.teacherId] : null;
+      const rNumId = l.roomId ? roomNumericMap[l.roomId] : null;
+      const tgNumId = l.teachingGroupId ? tgNumericMap[l.teachingGroupId] : null;
+      const lessonNumId = parseInt(l.id) || generateNumericId();
+
+      return {
+        id: lessonNumId,
+        lesson_id: lessonNumId,
+        lessonId: lessonNumId,
+        externalId: String(l.id),
+        external_id: String(l.id),
+        subject: String(l.subject || "Subj"),
+        studentGroup: String(l.studentGroup || "Group"),
+        student_group: String(l.studentGroup || "Group"),
+        teachingGroupId: tgNumId,
+        teaching_group_id: tgNumId,
+        teachingGroup: tgNumId ? { id: tgNumId } : null,
+        sectionId: String(l.sectionId),
+        section_id: String(l.sectionId),
+        subjectId: l.subjectId ? subjectNumericMap[l.subjectId] : null,
+        subject_id: l.subjectId ? subjectNumericMap[l.subjectId] : null,
+        level: String(l.level),
+        yearGroup: String(l.yearGroup),
+        year_group: String(l.yearGroup),
+        studentIds: l.studentIds || [],
+        student_ids: l.studentIds || [],
+        requiredCapacity: Number(l.requiredCapacity || 1),
+        required_capacity: Number(l.requiredCapacity || 1),
+        blockId: l.blockId ? String(l.blockId) : null,
+        block_id: l.blockId ? String(l.blockId) : null,
+        teacherId: tNumId,
+        teacher_id: tNumId,
+        teacher: tNumId ? { id: tNumId } : null,
+        timeslotId: l.timeslotId ? Number(l.timeslotId) : null,
+        timeslot_id: l.timeslotId ? Number(l.timeslotId) : null,
+        timeslot: l.timeslotId ? { id: Number(l.timeslotId) } : null,
+        roomId: rNumId,
+        room_id: rNumId,
+        room: rNumId ? { id: rNumId } : null
+      };
+    }) : [{
+      id: 1001, lesson_id: 1001, lessonId: 1001, externalId: "1001", external_id: "1001",
       subject: "DUMMY", studentGroup: "Dummy", student_group: "Dummy",
-      teachingGroupId: "dummy_tg", teaching_group_id: "dummy_tg", teachingGroup: { id: "dummy_tg" },
+      teachingGroupId: 999, teaching_group_id: 999, teachingGroup: { id: 999 },
       sectionId: "dummy_sec", section_id: "dummy_sec",
-      subjectId: "dummy_sub", subject_id: "dummy_sub",
+      subjectId: 999, subject_id: 999,
       level: "SL", yearGroup: "DP1", year_group: "DP1",
       studentIds: [], student_ids: [],
       requiredCapacity: 1, required_capacity: 1,
       blockId: null, block_id: null,
-      teacherId: dummyTeacherId, teacher_id: dummyTeacherId, teacher: { id: dummyTeacherId },
+      teacherId: dummyTeacherNumId, teacher_id: dummyTeacherNumId, teacher: { id: dummyTeacherNumId },
       timeslotId: null, timeslot_id: null, timeslot: null,
       roomId: null, room_id: null, room: null
     }];
