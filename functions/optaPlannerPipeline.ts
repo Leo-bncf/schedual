@@ -1142,12 +1142,12 @@ ${JSON.stringify(teacherContext)}
       finalLessons = result.lessons || result.assignments || (Array.isArray(result) ? result : []);
     }
 
-    // Create reverse mappings for mapping back from numeric IDs to Base44 IDs
+    // String IDs maps (since we send them as strings, we just use the ID as is)
     const reverseTeacherMap = {};
-    finalTeachers.forEach(t => { reverseTeacherMap[t.id] = t.externalId; });
+    finalTeachers.forEach(t => { reverseTeacherMap[t.id] = t.id; });
     
     const reverseRoomMap = {};
-    finalRooms.forEach(r => { reverseRoomMap[r.id] = r.externalId; });
+    finalRooms.forEach(r => { reverseRoomMap[r.id] = r.id; });
     
     const safeLessonMap = {};
     safeLessons.forEach(l => { safeLessonMap[l.id] = l; });
@@ -1174,9 +1174,9 @@ ${JSON.stringify(teacherContext)}
           const realTgIds = syntheticToRealTgMap[originalLesson.originalTeachingGroupId] || [originalLesson.originalTeachingGroupId];
           const isBreak = String(lesson.subject || '').toUpperCase() === 'LUNCH' || String(lesson.subject || '').toUpperCase() === 'BREAK';
           
-          // Map back to external IDs using our reverse maps
-          const finalTeacherId = reverseTeacherMap[lesson.teacherId] || null;
-          const finalRoomId = reverseRoomMap[lesson.roomId] || null;
+          // Use ID directly (no translation needed)
+          const finalTeacherId = lesson.teacherId || null;
+          const finalRoomId = lesson.roomId || null;
 
           for (const realTgId of realTgIds) {
             slotsToInsert.push({
