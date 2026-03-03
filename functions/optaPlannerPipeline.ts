@@ -796,10 +796,7 @@ ${JSON.stringify(teacherContext)}
       roomNumericMap[r.id] = numId;
       return {
         id: numId,
-        room_id: numId,
-        roomId: numId,
         externalId: String(r.id),
-        external_id: String(r.id),
         name: String(r.name || "Room"),
         capacity: Number(r.capacity || 30)
       };
@@ -811,21 +808,13 @@ ${JSON.stringify(teacherContext)}
       teacherNumericMap[t.id] = numId;
       return {
         id: numId,
-        teacher_id: numId,
-        teacherId: numId,
         externalId: String(t.id),
-        external_id: String(t.id),
         name: String(t.name || "Teacher"),
         maxPeriodsPerWeek: Number(t.maxPeriodsPerWeek || 40),
-        max_periods_per_week: Number(t.maxPeriodsPerWeek || 40),
         unavailableSlotIds: t.unavailableSlotIds || [],
-        unavailable_slot_ids: t.unavailableSlotIds || [],
         unavailableDays: t.unavailableDays || [],
-        unavailable_days: t.unavailableDays || [],
         preferredDays: t.preferredDays || [],
-        preferred_days: t.preferredDays || [],
-        avoidDays: t.avoidDays || [],
-        avoid_days: t.avoidDays || []
+        avoidDays: t.avoidDays || []
       };
     });
 
@@ -833,14 +822,8 @@ ${JSON.stringify(teacherContext)}
     const mappedSubjects = subjects.filter(s => s.is_active && subjectRequirements.some(req => req.subject === (s.code || s.name))).map(s => {
       return {
         id: String(s.id), // Base44 style 24-hex string
-        subject_id: String(s.id),
-        subjectId: String(s.id),
         code: String(s.code || s.name),
-        name: String(s.name),
-        hlHoursPerWeek: Number(s.hoursPerWeekHL || 5),
-        slHoursPerWeek: Number(s.hoursPerWeekSL || 3),
-        hl_hours_per_week: Number(s.hoursPerWeekHL || 5),
-        sl_hours_per_week: Number(s.hoursPerWeekSL || 3)
+        name: String(s.name)
       };
     });
     if (mappedSubjects.length === 0) {
