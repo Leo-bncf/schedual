@@ -414,9 +414,17 @@ Deno.serve(async (req) => {
         result.schoolResults.forEach(sr => {
             if (sr.result?.assignments) finalAssignments = finalAssignments.concat(sr.result.assignments);
             else if (sr.result?.lessons) finalAssignments = finalAssignments.concat(sr.result.lessons);
+            else if (sr.result?.assignedLessons) finalAssignments = finalAssignments.concat(sr.result.assignedLessons);
         });
     } else {
-        finalAssignments = result.lessons || result.assignments || (Array.isArray(result) ? result : []);
+        finalAssignments = result.assignedLessons || result.lessons || result.assignments || (Array.isArray(result) ? result : []);
+    }
+    
+    console.log(`[Pipeline] Found ${finalAssignments.length} assignments to process.`);
+    if (finalAssignments.length > 0) {
+        console.log(`[Pipeline] Sample assignment:`, JSON.stringify(finalAssignments[0]));
+    } else {
+        console.log(`[Pipeline] Result keys:`, Object.keys(result));
     }
 
     // Reverse maps
