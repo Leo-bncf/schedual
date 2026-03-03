@@ -944,7 +944,7 @@ ${JSON.stringify(teacherContext)}
     subjectRequirements.forEach(req => {
       const lessonsForSubject = lessonsBySubject[req.subject] || 0;
       const periodDuration = schoolData.period_duration_minutes || 60;
-      const expectedLessons = Math.ceil(req.minutesPerWeek / periodDuration);
+      const expectedLessons = Math.ceil(req.minutes_per_week / periodDuration);
       if (lessonsForSubject < expectedLessons) {
         constraintWarnings.push(`⚠️  ${req.subject} expects ${expectedLessons} lessons/week but only ${lessonsForSubject} lessons defined`);
       }
