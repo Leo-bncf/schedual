@@ -471,6 +471,24 @@ Deno.serve(async (req) => {
         }, { status: 400 });
     }
 
+    // Validate uniqueness and id<->code alignment
+    const subjectIdToCode = Object.fromEntries((finalPayload.subjects || []).map(s => [s.id, s.code || s.name]));
+    const subjectCodes = (finalPayload.subjects || []).map(s => s.code || s.name).filter(Boolean);
+    const duplicateCodes = [...new Set(subjectCodes.filter((c, i, arr) => arr.indexOf(c) !== i))];
+    if (duplicateCodes.length > 0) {
+        return Response.json({ ok:false, error:'Pre-validation failed: duplicate subject codes', details: { duplicate_codes: duplicateCodes } }, { status:400 });
+    }
+    const mismatchedPairs = [];
+    (finalPayload.lessons || []).forEach(l => {
+        if (l.subjectId && l.subject) { const exp = subjectIdToCode[l.subjectId]; if (exp && exp !== l.subject) mismatchedPairs.push({ where:'lesson', lessonId: l.id, subjectId:l.subjectId, subject:l.subject, expected: exp }); }
+    });
+    (finalPayload.subjectRequirements || []).forEach(r => {
+        if (r.subjectId && r.subject) { const exp = subjectIdToCode[r.subjectId]; if (exp && exp !== r.subject) mismatchedPairs.push({ where:'subjectRequirement', subjectId:r.subjectId, subject:r.subject, expected: exp }); }
+    });
+    if (mismatchedPairs.length > 0) {
+        return Response.json({ ok:false, error:'Pre-validation failed: subjectId/name mismatch', details: { mismatches: mismatchedPairs.slice(0,50) } }, { status:400 });
+    }
+
     if (mock_school_id) {
         return Response.json({ ok: true, payload: finalPayload });
     }
