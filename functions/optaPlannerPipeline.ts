@@ -353,17 +353,15 @@ Deno.serve(async (req) => {
     // Ensure all references are using correctly prefixed IDs as in template
     console.log('[Pipeline] Generated Payload Type:', finalPayload.payloadType);
 
-    const multiPayload = {
-        organizationId: `org_${user.school_id}`,
-        runId: `run_${schedule_version_id}`,
-        schools: [ finalPayload ]
-    };
-
     // 6. Call Solver
     // Force exact endpoint as requested
     const endpointUrl = 'http://87.106.27.27:8080/base44/ingest';
 
-    const requestBody = JSON.stringify(multiPayload);
+    // The backend expects a single payload object per request, not wrapped in a multi-school array
+    finalPayload.organizationId = `org_${user.school_id}`;
+    finalPayload.runId = `run_${schedule_version_id}`;
+
+    const requestBody = JSON.stringify(finalPayload);
     
     console.log('[Pipeline] === OPTAPLANNER REQUEST ===');
     console.log(`[Pipeline] URL: ${endpointUrl}`);
