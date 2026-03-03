@@ -434,12 +434,12 @@ Deno.serve(async (req) => {
     }
 
     // 7. Process Results & Save
-    const existingSlots = await base44.entities.ScheduleSlot.filter({
+    const existingSlots = await b44Entities.ScheduleSlot.filter({
         school_id: user.school_id,
         schedule_version: schedule_version_id
     });
     if (existingSlots.length > 0) {
-        for (const slot of existingSlots) await base44.entities.ScheduleSlot.delete(slot.id);
+        for (const slot of existingSlots) await b44Entities.ScheduleSlot.delete(slot.id);
     }
 
     let finalAssignments = [];
