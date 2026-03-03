@@ -300,14 +300,16 @@ Deno.serve(async (req) => {
                     } : {})
                 };
             }),
-        teachingGroups: mappedTeachingGroups.map(tg => ({
-            id: `tg_${tg.code}`,
-            sectionId: tg.sectionId,
-            studentGroup: tg.studentGroup,
-            subjectId: `sub_${Object.keys(subjectIdMap).find(key => subjectIdMap[key] === tg.subjectId) || tg.subjectId}`,
-            ...(programType === 'DP' ? { level: tg.level } : {}),
-            requiredMinutesPerWeek: tg.requiredMinutesPerWeek
-        })),
+        teachingGroups: mappedTeachingGroups
+            .filter(tg => tg.lessonIds && tg.lessonIds.length > 0)
+            .map(tg => ({
+                id: `tg_${tg.code}`,
+                sectionId: tg.sectionId,
+                studentGroup: tg.studentGroup,
+                subjectId: `sub_${Object.keys(subjectIdMap).find(key => subjectIdMap[key] === tg.subjectId) || tg.subjectId}`,
+                ...(programType === 'DP' ? { level: tg.level } : {}),
+                requiredMinutesPerWeek: tg.requiredMinutesPerWeek
+            })),
         lessons: mappedLessons.map(l => ({
             id: l.id,
             subject: l.subject,
