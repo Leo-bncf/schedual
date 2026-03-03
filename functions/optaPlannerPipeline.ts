@@ -400,6 +400,16 @@ Deno.serve(async (req) => {
     let result = {};
     try { result = JSON.parse(responseText); } catch(e) {}
 
+    // Check if OptaPlanner returned a logical error within a 200 OK response
+    if (result.ok === false || result.errorCode || result.errorMessage || (Array.isArray(result.validationErrors) && result.validationErrors.length > 0)) {
+        console.error('[Pipeline] OptaPlanner validation/logical error:', result.errorMessage, result.validationErrors);
+        return Response.json({
+            ok: false,
+            error: result.title || result.errorMessage || result.message || 'OptaPlanner Validation Error',
+            details: result.validationErrors || result.details || result
+        }, { status: 400 });
+    }
+
     // 7. Process Results & Save
     const existingSlots = await base44.entities.ScheduleSlot.filter({
         school_id: user.school_id,
