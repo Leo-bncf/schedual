@@ -1191,6 +1191,12 @@ ${JSON.stringify(teacherContext)}
     const multiPayload = {
       organizationId: `org_${user.school_id}`,
       runId: `run_${schedule_version_id}`,
+      rooms: mappedRooms,
+      teachers: mappedTeachers,
+      lessons: mappedLessons,
+      teachingGroups: mappedTeachingGroups,
+      subjects: mappedSubjects,
+      subjectRequirements: mappedSubjectRequirements,
       schools: [ optaPlannerPayload ],
       crossSchoolRules: {
         sharedTeacherIds: [],
