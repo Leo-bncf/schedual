@@ -6,43 +6,39 @@ Deno.serve(async (req) => {
     const user = { school_id: '696e113f47bd4dd652e12917' };
     const schedule_version_id = '69a6185adc65bc2b8a116442';
     
-    const [teachingGroups, subjects, students, lessons] = await Promise.all([
+    const [teachingGroups, subjects, students] = await Promise.all([
       base44.asServiceRole.entities.TeachingGroup.filter({ school_id: user.school_id, is_active: true }),
       base44.asServiceRole.entities.Subject.filter({ school_id: user.school_id, is_active: true }),
       base44.asServiceRole.entities.Student.filter({ school_id: user.school_id, is_active: true }),
-      base44.asServiceRole.entities.ScheduleVersion.filter({ id: schedule_version_id }) // just dummy fetch to keep same layout
     ]);
 
     const activeSubjectOriginalIds = new Set(teachingGroups.map(tg => tg.subject_id));
-    const activeSubjects = subjects.filter(s => activeSubjectOriginalIds.has(s.id));
-
-    // For each student subject choice, check if there is a teaching group for that subject AND level
-    const validationErrors = [];
-    const missingLevelGroups = [];
     
-    students.forEach(student => {
-        if (!student.is_active || !student.subject_choices) return;
-        student.subject_choices.forEach(choice => {
-            if (!activeSubjectOriginalIds.has(choice.subject_id)) return; // Skipped if not scheduled
+    const missingChoices = [];
+    
+    // Check if any student is in a teaching group but doesn't have it in their subject choices
+    teachingGroups.forEach(tg => {
+        if (!tg.student_ids) return;
+        const subject = subjects.find(s => s.id === tg.subject_id);
+        
+        tg.student_ids.forEach(studentId => {
+            const student = students.find(s => s.id === studentId);
+            if (!student) return;
             
-            const subject = subjects.find(s => s.id === choice.subject_id);
-            const level = choice.level || 'SL';
-            
-            const matchingTg = teachingGroups.find(tg => tg.subject_id === choice.subject_id && tg.level === level);
-            if (!matchingTg) {
-                const tgLevelsForSubject = [...new Set(teachingGroups.filter(tg => tg.subject_id === choice.subject_id).map(tg => tg.level))];
-                missingLevelGroups.push({
+            const hasChoice = student.subject_choices && student.subject_choices.some(c => c.subject_id === tg.subject_id);
+            if (!hasChoice) {
+                missingChoices.push({
                     student: student.full_name,
-                    subject: subject ? subject.name : choice.subject_id,
-                    requestedLevel: level,
-                    availableLevels: tgLevelsForSubject
+                    subject: subject ? subject.name : tg.subject_id,
+                    isCore: subject?.is_core
                 });
             }
         });
     });
 
     return Response.json({
-        missingLevelGroups
+        missingChoicesCount: missingChoices.length,
+        missingChoicesSample: missingChoices.slice(0, 10)
     });
   } catch (e) {
     return Response.json({ error: e.stack });
