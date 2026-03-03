@@ -758,7 +758,9 @@ ${JSON.stringify(teacherContext)}
       const numId = generateNumericId();
       roomNumericMap[r.id] = numId;
       return {
-        id: numId,
+        id: String(numId),
+        roomId: String(numId),
+        room_id: String(numId),
         externalId: String(r.id),
         name: String(r.name || "Room"),
         capacity: Number(r.capacity || 30)
@@ -770,7 +772,9 @@ ${JSON.stringify(teacherContext)}
       const numId = generateNumericId();
       teacherNumericMap[t.id] = numId;
       return {
-        id: numId,
+        id: String(numId),
+        teacherId: String(numId),
+        teacher_id: String(numId),
         externalId: String(t.id),
         name: String(t.name || "Teacher"),
         maxPeriodsPerWeek: Number(t.maxPeriodsPerWeek || 40),
@@ -785,6 +789,8 @@ ${JSON.stringify(teacherContext)}
     const mappedSubjects = subjects.filter(s => s.is_active && subjectRequirements.some(req => req.subject === (s.code || s.name))).map(s => {
       return {
         id: String(s.id), // Base44 style 24-hex string
+        subjectId: String(s.id),
+        subject_id: String(s.id),
         code: String(s.code || s.name),
         name: String(s.name)
       };
@@ -799,9 +805,12 @@ ${JSON.stringify(teacherContext)}
 
     const mappedTeachingGroups = teachingGroupsPayload.map(tg => ({
       id: String(tg.id),
+      teachingGroupId: String(tg.id),
+      teaching_group_id: String(tg.id),
       sectionId: String(tg.section_id),
       studentGroup: String(tg.student_group),
       subjectId: String(tg.subject_id), // string ID matching the 24 hex
+      subject_id: String(tg.subject_id),
       level: String(tg.level),
       requiredMinutesPerWeek: Number(tg.required_minutes_per_week)
     }));
@@ -841,36 +850,50 @@ ${JSON.stringify(teacherContext)}
       const lessonNumId = parseInt(l.id) || generateNumericId();
 
       return {
-        id: lessonNumId,
+        id: String(lessonNumId),
+        lessonId: String(lessonNumId),
+        lesson_id: String(lessonNumId),
         subject: String(l.subject || "Subj"),
         studentGroup: String(l.studentGroup || "Group"),
         teachingGroupId: tgStringId,
+        teaching_group_id: tgStringId,
         sectionId: String(l.sectionId),
         subjectId: l.subjectId ? String(l.subjectId) : null,
+        subject_id: l.subjectId ? String(l.subjectId) : null,
         level: String(l.level),
         yearGroup: String(l.yearGroup),
         studentIds: l.studentIds || [],
         requiredCapacity: Number(l.requiredCapacity || 1),
         blockId: l.blockId ? String(l.blockId) : null,
-        teacherId: tNumId,
+        teacherId: String(tNumId),
+        teacher_id: String(tNumId),
         timeslotId: l.timeslotId ? Number(l.timeslotId) : null,
-        roomId: rNumId
+        timeslot_id: l.timeslotId ? Number(l.timeslotId) : null,
+        roomId: rNumId ? String(rNumId) : null,
+        room_id: rNumId ? String(rNumId) : null
       };
     }) : [{
-      id: 1001,
+      id: "1001",
+      lessonId: "1001",
+      lesson_id: "1001",
       subject: "DUMMY",
       studentGroup: "Dummy",
       teachingGroupId: "dummy_tg",
+      teaching_group_id: "dummy_tg",
       sectionId: "dummy_sec",
       subjectId: "69733f5f0b775e6fa2db95b9",
+      subject_id: "69733f5f0b775e6fa2db95b9",
       level: "SL",
       yearGroup: "DP1",
       studentIds: [],
       requiredCapacity: 1,
       blockId: null,
-      teacherId: dummyTeacherNumId,
+      teacherId: String(dummyTeacherNumId),
+      teacher_id: String(dummyTeacherNumId),
       timeslotId: null,
-      roomId: null
+      timeslot_id: null,
+      roomId: null,
+      room_id: null
     }];
 
     const optaPlannerPayload = {
@@ -1001,6 +1024,12 @@ ${JSON.stringify(teacherContext)}
     const multiPayload = {
       organizationId: `org_${user.school_id}`,
       runId: `run_${schedule_version_id}`,
+      rooms: mappedRooms,
+      teachers: mappedTeachers,
+      subjects: mappedSubjects,
+      teachingGroups: mappedTeachingGroups,
+      subjectRequirements: mappedSubjectRequirements,
+      lessons: mappedLessons,
       schools: [ optaPlannerPayload ],
       crossSchoolRules: {
         sharedTeacherIds: [],
