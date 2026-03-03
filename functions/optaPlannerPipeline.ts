@@ -1129,13 +1129,17 @@ ${JSON.stringify(teacherContext)}
       subjectRequirements: subjectRequirements.length
     });
     
+    const multiPayload = {
+      requests: [ optaPlannerPayload ]
+    };
+
     const response = await fetch(endpointUrl, {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
         'X-API-Key': OPTAPLANNER_API_KEY
       },
-      body: JSON.stringify(optaPlannerPayload)
+      body: JSON.stringify(multiPayload)
     });
 
     let responseText = await response.text();
