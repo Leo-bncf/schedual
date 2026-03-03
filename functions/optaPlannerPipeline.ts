@@ -443,9 +443,9 @@ Deno.serve(async (req) => {
         if (originalLesson && timeslotId != null) {
             const days = ['MONDAY', 'TUESDAY', 'WEDNESDAY', 'THURSDAY', 'FRIDAY'];
             const periodsPerDay = schoolData.periods_per_day || 10;
-            const dayIndex = Math.floor((lesson.timeslotId - 1) / periodsPerDay);
-            const day = lesson.dayOfWeek || days[dayIndex] || 'MONDAY';
-            const periodIndex = lesson.periodIndex != null ? lesson.periodIndex : (lesson.timeslotId - 1) % periodsPerDay;
+            const dayIndex = Math.floor((timeslotId - 1) / periodsPerDay);
+            const day = lesson.dayOfWeek || lesson.timeslot?.dayOfWeek || days[dayIndex] || 'MONDAY';
+            const periodIndex = lesson.periodIndex != null ? lesson.periodIndex : (timeslotId - 1) % periodsPerDay;
 
             const subjectNameStr = String(lesson.subject || '').toUpperCase();
             const isBreak = subjectNameStr === 'LUNCH' || subjectNameStr === 'BREAK';
@@ -466,7 +466,7 @@ Deno.serve(async (req) => {
                 teaching_group_id: realTgId,
                 teacher_id: tId ? revTeacherMap[tId] : null,
                 room_id: rId ? revRoomMap[rId] : null,
-                timeslot_id: lesson.timeslotId,
+                timeslot_id: timeslotId,
                 day: day || 'Monday',
                 period: periodIndex + 1,
                 status: 'scheduled',
