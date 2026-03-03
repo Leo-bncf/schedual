@@ -59,12 +59,6 @@ Deno.serve(async (req) => {
     let numIdGen = 1;
     const generateNum = () => numIdGen++;
     
-    // Fix subjectId mapping logic to use UUID strings as required by the template
-    const subjectIdMap = {};
-    subjects.forEach(s => {
-        subjectIdMap[s.id] = s.id; // use original string ID
-    });
-    
     const roomIdMap = {};
     const mappedRooms = rooms.map(r => {
         const numId = generateNum();
@@ -115,7 +109,7 @@ Deno.serve(async (req) => {
     });
 
     const getSafeSubjectName = (subj) => {
-        const normalized = String(subj.name || subj.code)
+        const normalized = String(subj.name || subj.code || "SUBJ")
             .normalize("NFD").replace(/[\u0300-\u036f]/g, "")
             .replace(/[^a-zA-Z0-9]/g, '')
             .toUpperCase()
@@ -123,10 +117,6 @@ Deno.serve(async (req) => {
             
         return `${normalized}_${String(subj.id).slice(-6).toUpperCase()}`;
     };
-
-    const mappedSubjects = subjects.map(s => {
-        return { id: s.id, code: String(s.id), name: getSafeSubjectName(s) };
-    });
 
     // 2. Build Teaching Groups and Lessons
     const mappedTeachingGroups = [];
@@ -138,7 +128,6 @@ Deno.serve(async (req) => {
     
     activeTGs.forEach(tg => {
         const numId = generateNum();
-        const tgId = tg.id;
         const subject = subjects.find(s => s.id === tg.subject_id);
         if (!subject) return;
 
@@ -152,6 +141,8 @@ Deno.serve(async (req) => {
         const periodDuration = schoolData.period_duration_minutes || 60;
         const numLessons = Math.ceil(requiredMinutes / periodDuration);
         
+        if (numLessons <= 0) return; // Skip zero-lesson groups completely
+        
         const tgLessonIds = [];
         
         subjectRequirements.push({
@@ -159,7 +150,7 @@ Deno.serve(async (req) => {
             teachingGroupId: numId,
             sectionId: `sec_${tg.id}`,
             subject: getSafeSubjectName(subject),
-            subjectId: `sub_${subject.id}`,
+            originalSubjectId: String(subject.id), // explicit string ID
             minutesPerWeek: requiredMinutes
         });
 
@@ -176,7 +167,7 @@ Deno.serve(async (req) => {
                 studentGroup: String(tg.year_group),
                 teachingGroupId: numId,
                 sectionId: `sec_${tg.id}`,
-                subjectId: subjectIdMap[subject.id],
+                originalSubjectId: String(subject.id), // explicit string ID
                 level: String(tg.level || 'SL'),
                 yearGroup: String(tg.year_group),
                 studentIds: studentIds,
@@ -185,7 +176,6 @@ Deno.serve(async (req) => {
                 teacherId: tg.teacher_id ? teacherIdMap[tg.teacher_id] : null,
                 timeslotId: null,
                 roomId: null,
-                // Keep original ID for reverse mapping later
                 originalTgId: tg.id
             });
         }
@@ -195,30 +185,34 @@ Deno.serve(async (req) => {
             code: String(tg.id),
             sectionId: `sec_${tg.id}`,
             studentGroup: String(tg.year_group),
-            subjectId: subjectIdMap[subject.id],
+            originalSubjectId: String(subject.id), // explicit string ID
             level: String(tg.level || 'SL'),
             requiredMinutesPerWeek: requiredMinutes,
             lessonIds: tgLessonIds
         });
     });
 
+    // Determine exactly which subjects are actively used in generated lessons
+    const activeSubjectOriginalIds = new Set(mappedLessons.map(l => l.originalSubjectId));
+
     // 3. Build Student Subject Choices (only for DP)
     const studentSubjectChoices = [];
     if (programType === 'DP') {
-        const activeSubjectIdsWithLessons = new Set(mappedLessons.map(l => l.subjectId));
-
         students.filter(s => s.is_active).forEach(student => {
             if (student.subject_choices) {
                 student.subject_choices.forEach(choice => {
-                    const subject = subjects.find(sub => sub.id === choice.subject_id);
-                    if (subject && activeSubjectIdsWithLessons.has(subject.id)) {
-                        studentSubjectChoices.push({
-                            studentId: String(student.id),
-                            subjectId: String(subject.id),
-                            subject: getSafeSubjectName(subject),
-                            level: String(choice.level || 'SL'),
-                            yearGroup: String(student.year_group || 'DP1')
-                        });
+                    const choiceSubId = String(choice.subject_id);
+                    if (activeSubjectOriginalIds.has(choiceSubId)) {
+                        const subject = subjects.find(sub => String(sub.id) === choiceSubId);
+                        if (subject) {
+                            studentSubjectChoices.push({
+                                studentId: String(student.id),
+                                originalSubjectId: choiceSubId,
+                                subject: getSafeSubjectName(subject),
+                                level: String(choice.level || 'SL'),
+                                yearGroup: String(student.year_group || 'DP1')
+                            });
+                        }
                     }
                 });
             }
@@ -260,14 +254,10 @@ Deno.serve(async (req) => {
 
     // 5. Construct Payload
     
-    // PRE-FILTERING FOR REFERENTIAL INTEGRITY
-    // 1. Valid Teaching Groups (must have lessons)
-    const validTeachingGroups = mappedTeachingGroups.filter(tg => tg.lessonIds && tg.lessonIds.length > 0);
-    const validTgNumIds = new Set(validTeachingGroups.map(tg => tg.id));
-
-    // 2. Valid Lessons (from the initial map, which technically matches valid TGs, but we keep it consistent)
-    const activeLessons = mappedLessons;
-    const activeSubjectOriginalIds = new Set(activeLessons.map(l => l.subjectId));
+    // If no active subjects, we can't solve
+    if (activeSubjectOriginalIds.size === 0) {
+        return Response.json({ ok: false, error: 'No active lessons or subjects to schedule. Please check Teaching Groups.' }, { status: 400 });
+    }
 
     const basePayload = {
         schoolId: String(user.school_id),
@@ -296,35 +286,32 @@ Deno.serve(async (req) => {
             avoidDays: t.avoidDays,
             externalId: t.code
         })),
-        subjects: mappedSubjects
-            .filter(s => activeSubjectOriginalIds.has(s.code))
-            .map(s => {
-                const subject = subjects.find(sub => sub.id === s.code);
-                return {
-                    id: `sub_${s.code}`,
-                    code: s.name,
-                    name: s.name,
-                    ...(programType === 'DP' ? { 
-                        hoursPerWeekHL: subject?.hoursPerWeekHL || 5, 
-                        hoursPerWeekSL: subject?.hoursPerWeekSL || 3 
-                    } : {})
-                };
-            }),
-        teachingGroups: validTeachingGroups.map(tg => ({
+        subjects: subjects
+            .filter(sub => activeSubjectOriginalIds.has(String(sub.id)))
+            .map(sub => ({
+                id: `sub_${sub.id}`,
+                code: getSafeSubjectName(sub),
+                name: getSafeSubjectName(sub),
+                ...(programType === 'DP' ? { 
+                    hoursPerWeekHL: Number(sub.hoursPerWeekHL || 5), 
+                    hoursPerWeekSL: Number(sub.hoursPerWeekSL || 3) 
+                } : {})
+            })),
+        teachingGroups: mappedTeachingGroups.map(tg => ({
             id: `tg_${tg.code}`,
             sectionId: tg.sectionId,
             studentGroup: tg.studentGroup,
-            subjectId: `sub_${Object.keys(subjectIdMap).find(key => subjectIdMap[key] === tg.subjectId) || tg.subjectId}`,
+            subjectId: `sub_${tg.originalSubjectId}`,
             ...(programType === 'DP' ? { level: tg.level } : {}),
             requiredMinutesPerWeek: tg.requiredMinutesPerWeek
         })),
-        lessons: activeLessons.map(l => ({
+        lessons: mappedLessons.map(l => ({
             id: l.id,
             subject: l.subject,
             studentGroup: l.studentGroup,
             teachingGroupId: `tg_${mappedTeachingGroups.find(tg => tg.id === l.teachingGroupId)?.code || l.teachingGroupId}`,
             sectionId: l.sectionId,
-            subjectId: `sub_${Object.keys(subjectIdMap).find(key => subjectIdMap[key] === l.subjectId) || l.subjectId}`,
+            subjectId: `sub_${l.originalSubjectId}`,
             yearGroup: l.yearGroup,
             requiredCapacity: l.requiredCapacity,
             teacherId: l.teacherId,
@@ -333,15 +320,13 @@ Deno.serve(async (req) => {
                 level: l.level
             } : {})
         })),
-        subjectRequirements: subjectRequirements
-            .filter(req => validTgNumIds.has(req.teachingGroupId))
-            .map(req => ({
-                studentGroup: req.studentGroup || "Unknown",
-                ...(programType === 'DP' ? { teachingGroupId: `tg_${mappedTeachingGroups.find(tg => tg.id === req.teachingGroupId)?.code || req.teachingGroupId}` } : {}),
-                subject: req.subject,
-                subjectId: req.subjectId,
-                minutesPerWeek: req.minutesPerWeek
-            })),
+        subjectRequirements: subjectRequirements.map(req => ({
+            studentGroup: req.studentGroup || "Unknown",
+            ...(programType === 'DP' ? { teachingGroupId: `tg_${mappedTeachingGroups.find(tg => tg.id === req.teachingGroupId)?.code || req.teachingGroupId}` } : {}),
+            subject: req.subject,
+            subjectId: `sub_${req.originalSubjectId}`,
+            minutesPerWeek: req.minutesPerWeek
+        })),
         blockedSlotIds: [],
         constraints: {
             spreadAcrossDaysPerTeachingGroupSection: true,
@@ -352,15 +337,13 @@ Deno.serve(async (req) => {
 
     let finalPayload = {};
     if (programType === 'DP') {
-        const filteredChoices = studentSubjectChoices.filter(c => activeSubjectOriginalIds.has(c.subjectId));
-        
         finalPayload = {
             ...basePayload,
             payloadType: "individual_payload",
             programType: "DP",
-            studentSubjectChoices: filteredChoices.map(c => ({
+            studentSubjectChoices: studentSubjectChoices.map(c => ({
                 studentId: c.studentId,
-                subjectId: `sub_${c.subjectId}`,
+                subjectId: `sub_${c.originalSubjectId}`,
                 subject: c.subject,
                 level: c.level,
                 yearGroup: c.yearGroup
