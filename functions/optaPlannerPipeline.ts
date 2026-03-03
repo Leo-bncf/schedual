@@ -120,6 +120,7 @@ Deno.serve(async (req) => {
     
     activeTGs.forEach(tg => {
         const numId = generateNum();
+        const tgId = tg.id;
         const subject = subjects.find(s => s.id === tg.subject_id);
         if (!subject) return;
 
@@ -164,7 +165,9 @@ Deno.serve(async (req) => {
                 blockId: tg.block_id ? String(tg.block_id) : null,
                 teacherId: tg.teacher_id ? teacherIdMap[tg.teacher_id] : null,
                 timeslotId: null,
-                roomId: null
+                roomId: null,
+                // Keep original ID for reverse mapping later
+                originalTgId: tg.id
             });
         }
 
@@ -432,14 +435,10 @@ Deno.serve(async (req) => {
             const subjectNameStr = String(lesson.subject || '').toUpperCase();
             const isBreak = subjectNameStr === 'LUNCH' || subjectNameStr === 'BREAK';
 
-            const tId = lesson.teacherId;
-            const rId = lesson.roomId;
+            const tId = lesson.teacherId || lesson.teacher?.id;
+            const rId = lesson.roomId || lesson.room?.id;
 
-            let realTgId = null;
-            const mappedTgId = originalLesson.teachingGroupId; 
-            // mappedTgId will look like "tg_12345...", we need to strip "tg_" if we prefixed it, or find the original code
-            const originalTgCode = mappedTgId.startsWith('tg_') ? mappedTgId.substring(3) : mappedTgId;
-            realTgId = originalTgCode;
+            let realTgId = originalLesson.originalTgId; // Extracted directly from our safemap
 
             slotsToInsert.push({
                 school_id: user.school_id,
