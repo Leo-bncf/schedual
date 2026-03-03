@@ -279,7 +279,7 @@ Deno.serve(async (req) => {
             id: `tg_${tg.code}`,
             sectionId: tg.sectionId,
             studentGroup: tg.studentGroup,
-            subjectId: `sub_${subjects.find(s => s.id === tg.subjectId)?.id || tg.subjectId}`,
+            subjectId: `sub_${Object.keys(subjectIdMap).find(key => subjectIdMap[key] === tg.subjectId) || tg.subjectId}`,
             ...(programType === 'DP' ? { level: tg.level } : {}),
             requiredMinutesPerWeek: tg.requiredMinutesPerWeek
         })),
@@ -289,7 +289,7 @@ Deno.serve(async (req) => {
             studentGroup: l.studentGroup,
             teachingGroupId: `tg_${mappedTeachingGroups.find(tg => tg.id === l.teachingGroupId)?.code || l.teachingGroupId}`,
             sectionId: l.sectionId,
-            subjectId: `sub_${mappedSubjects.find(s => s.id === l.subjectId)?.code || l.subjectId}`,
+            subjectId: `sub_${Object.keys(subjectIdMap).find(key => subjectIdMap[key] === l.subjectId) || l.subjectId}`,
             yearGroup: l.yearGroup,
             requiredCapacity: l.requiredCapacity,
             teacherId: l.teacherId,
