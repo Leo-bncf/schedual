@@ -31,13 +31,13 @@ Deno.serve(async (req) => {
 
     // Fetch data
     const [scheduleVersion, teachers, students, rooms, teachingGroups, subjects, school] = await Promise.all([
-      base44.entities.ScheduleVersion.filter({ id: schedule_version_id }),
-      base44.entities.Teacher.filter({ school_id: user.school_id, is_active: true }),
-      base44.entities.Student.filter({ school_id: user.school_id, is_active: true }),
-      base44.entities.Room.filter({ school_id: user.school_id, is_active: true }),
-      base44.entities.TeachingGroup.filter({ school_id: user.school_id, is_active: true }),
-      base44.entities.Subject.filter({ school_id: user.school_id, is_active: true }),
-      base44.entities.School.filter({ id: user.school_id })
+      b44Entities.ScheduleVersion.filter({ id: schedule_version_id }),
+      b44Entities.Teacher.filter({ school_id: user.school_id, is_active: true }),
+      b44Entities.Student.filter({ school_id: user.school_id, is_active: true }),
+      b44Entities.Room.filter({ school_id: user.school_id, is_active: true }),
+      b44Entities.TeachingGroup.filter({ school_id: user.school_id, is_active: true }),
+      b44Entities.Subject.filter({ school_id: user.school_id, is_active: true }),
+      b44Entities.School.filter({ id: user.school_id })
     ]);
 
     if (!scheduleVersion?.[0]) {
