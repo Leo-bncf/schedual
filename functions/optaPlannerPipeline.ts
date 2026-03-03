@@ -1037,8 +1037,13 @@ ${JSON.stringify(teacherContext)}
     }
     
     // Always use the exact endpoint provided by the user in the secret, 
-    // to avoid messing up their specific backend routing setup.
+    // but ensure it targets /solve/multi for the new multi-tenant wrapper.
     let endpointUrl = OPTAPLANNER_ENDPOINT;
+    if (endpointUrl.endsWith('/solve-and-push')) {
+      endpointUrl = endpointUrl.replace('/solve-and-push', '/solve/multi');
+    } else if (!endpointUrl.endsWith('/solve/multi')) {
+      endpointUrl = endpointUrl.replace(/\/$/, '') + '/solve/multi';
+    }
 
     console.log('[Pipeline] Calling OptaPlanner:', endpointUrl);
     console.log('[Pipeline] Payload summary:', {
@@ -1050,7 +1055,13 @@ ${JSON.stringify(teacherContext)}
     });
     
     const multiPayload = {
-      requests: [ optaPlannerPayload ]
+      organizationId: `org_${user.school_id}`,
+      runId: `run_${schedule_version_id}`,
+      crossSchoolRules: {
+        sharedTeacherIds: [],
+        transportWindows: []
+      },
+      schools: [ optaPlannerPayload ]
     };
 
     const response = await fetch(endpointUrl, {
