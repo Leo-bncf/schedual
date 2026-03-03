@@ -107,7 +107,7 @@ Deno.serve(async (req) => {
     });
 
     const getSafeSubjectName = (subj) => {
-        return String(subj.name || subj.code).replace(/[^a-zA-Z0-9]/g, '') + "_" + String(subj.id).substring(0, 4);
+        return (String(subj.name || subj.code).replace(/[^a-zA-Z0-9]/g, '') + String(subj.id).substring(0, 4)).toUpperCase();
     };
 
     const mappedSubjects = subjects.map(s => {
