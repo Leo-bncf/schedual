@@ -321,10 +321,10 @@ Deno.serve(async (req) => {
             studentSubjectChoices: studentSubjectChoices.length > 0 ? studentSubjectChoices.map(c => ({
                 studentId: c.studentId,
                 subjectId: `sub_${c.subjectId}`,
-                subject: c.subject.substring(0, 5).toUpperCase(),
+                subject: String(c.subject).substring(0, 10).toUpperCase().replace(/[^A-Z0-9]/g, ''),
                 level: c.level,
                 yearGroup: c.yearGroup
-            })) : [{ studentId: "dummy", subjectId: "sub_dummy", subject: "DUMMY", level: "SL", yearGroup: "DP1" }],
+            })) : [], // No dummy! Dummy causes missing subject error
             llmSoftConstraints: {
                 studentWindows: [] // Populate from LLM if needed
             },
