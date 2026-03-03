@@ -750,11 +750,12 @@ ${JSON.stringify(teacherContext)}
         originalTeachingGroupId: l.teachingGroupId
     }));
 
-    const generateUUID = () => crypto.randomUUID();
+    let numericIdCounter = 1;
+    const generateNumericId = () => numericIdCounter++;
 
     const roomNumericMap = {};
     const mappedRooms = finalRooms.map(r => {
-      const numId = generateUUID();
+      const numId = generateNumericId();
       roomNumericMap[r.id] = numId;
       return {
         id: numId,
@@ -765,10 +766,12 @@ ${JSON.stringify(teacherContext)}
         capacity: Number(r.capacity || 30)
       };
     });
+    
+    const defaultRoomId = mappedRooms[0]?.id || 1;
 
     const teacherNumericMap = {};
     const mappedTeachers = finalTeachers.map(t => {
-      const numId = generateUUID();
+      const numId = generateNumericId();
       teacherNumericMap[t.id] = numId;
       return {
         id: numId,
@@ -785,16 +788,17 @@ ${JSON.stringify(teacherContext)}
     });
 
     const mappedSubjects = subjects.filter(s => s.is_active && subjectRequirements.some(req => req.subject === (s.code || s.name))).map(s => {
+      const numId = generateNumericId();
       return {
-        id: String(s.id),
-        subjectId: String(s.id),
-        subject_id: String(s.id),
+        id: numId,
+        subjectId: numId,
+        subject_id: numId,
         code: String(s.code || s.name),
         name: String(s.name)
       };
     });
     if (mappedSubjects.length === 0) {
-      mappedSubjects.push({ id: generateUUID(), code: "DUMMY", name: "DUMMY" });
+      mappedSubjects.push({ id: 9999, code: "DUMMY", name: "DUMMY" });
     }
 
     const mappedSubjectRequirements = subjectRequirements.map(req => ({
@@ -808,12 +812,13 @@ ${JSON.stringify(teacherContext)}
       mappedSubjectRequirements.push({ studentGroup: "Dummy", teachingGroupId: "dummy_tg", sectionId: "dummy_sec", subject: "DUMMY", minutesPerWeek: 180 });
     }
 
-    const dummyTeacherNumId = teacherNumericMap[finalTeachers[0].id] || generateUUID();
+    const dummyTeacherNumId = teacherNumericMap[finalTeachers[0].id] || 1;
     const mappedLessons = safeLessons.length > 0 ? safeLessons.map(l => {
       const tNumId = l.teacherId ? (teacherNumericMap[l.teacherId] || dummyTeacherNumId) : dummyTeacherNumId;
-      const rNumId = l.roomId ? roomNumericMap[l.roomId] : null;
+      const rNumId = l.roomId ? roomNumericMap[l.roomId] : defaultRoomId;
       const tgStringId = l.teachingGroupId ? String(l.teachingGroupId) : null;
-      const lessonNumId = generateUUID();
+      const lessonNumId = generateNumericId();
+      const tSlotId = l.timeslotId ? Number(l.timeslotId) : 1; // Default to 1 to avoid empty
 
       return {
         id: lessonNumId,
@@ -833,34 +838,39 @@ ${JSON.stringify(teacherContext)}
         blockId: l.blockId ? String(l.blockId) : null,
         teacherId: tNumId,
         teacher_id: tNumId,
-        timeslotId: l.timeslotId ? Number(l.timeslotId) : null,
-        timeslot_id: l.timeslotId ? Number(l.timeslotId) : null,
+        timeslotId: tSlotId,
+        timeslot_id: tSlotId,
         roomId: rNumId,
         room_id: rNumId
       };
     }) : [{
-      id: generateUUID(),
+      id: 1001,
+      lessonId: 1001,
+      lesson_id: 1001,
       subject: "DUMMY",
       studentGroup: "Dummy",
       teachingGroupId: "dummy_tg",
+      teaching_group_id: "dummy_tg",
       sectionId: "dummy_sec",
-      subjectId: "dummy_subj",
+      subjectId: 9999,
+      subject_id: 9999,
       level: "SL",
       yearGroup: "DP1",
       studentIds: [],
       requiredCapacity: 1,
       blockId: null,
       teacherId: dummyTeacherNumId,
-      timeslotId: null,
-      roomId: null
+      timeslotId: 1,
+      roomId: defaultRoomId
     }];
 
     const mappedTeachingGroups = teachingGroupsPayload.map(tg => {
       const tgLessons = mappedLessons.filter(l => l.teachingGroupId === String(tg.id)).map(l => l.id);
+      const numId = generateNumericId();
       return {
-        id: String(tg.id),
-        teachingGroupId: String(tg.id),
-        teaching_group_id: String(tg.id),
+        id: numId,
+        teachingGroupId: numId,
+        teaching_group_id: numId,
         sectionId: String(tg.section_id),
         studentGroup: String(tg.student_group),
         subjectId: String(tg.subject_id),
@@ -874,7 +884,7 @@ ${JSON.stringify(teacherContext)}
     });
     if (mappedTeachingGroups.length === 0) {
       mappedTeachingGroups.push({
-        id: "dummy_tg",
+        id: 2001,
         sectionId: "dummy_sec",
         studentGroup: "Dummy",
         subjectId: "dummy_subj",
