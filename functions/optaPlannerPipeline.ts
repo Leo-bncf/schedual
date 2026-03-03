@@ -449,6 +449,10 @@ Deno.serve(async (req) => {
     (finalPayload.lessons || []).forEach(l => { if (l.subject) referencedSubjectNames.add(l.subject); });
     (finalPayload.subjectRequirements || []).forEach(r => { if (r.subject) referencedSubjectNames.add(r.subject); });
     const missingSubjectNames = Array.from(referencedSubjectNames).filter(n => !definedSubjectNames.has(n));
+
+    // Build a compact subject mapping hint to help fix data quickly
+    const subjectNameHints = (finalPayload.subjects || []).map(s => ({ id: s.id, code: s.code, name: s.name })).slice(0, 50);
+
     if (missingSubjectNames.length > 0) {
         return Response.json({
             ok: false,
@@ -456,7 +460,8 @@ Deno.serve(async (req) => {
             details: {
                 missing_subject_names: missingSubjectNames,
                 referenced_subject_names: Array.from(referencedSubjectNames),
-                defined_subject_names: Array.from(definedSubjectNames)
+                defined_subject_names: Array.from(definedSubjectNames),
+                subject_name_hints: subjectNameHints
             },
             debug_payload_preview: {
                 subjects: (finalPayload.subjects || []).slice(0, 5),
