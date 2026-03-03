@@ -59,7 +59,7 @@ Deno.serve(async (req) => {
             teachingGroupsCount: teachingGroups.length
         };
         
-        return Response.json(optaPlannerPayload);
+        return Response.json({ requests: [optaPlannerPayload] });
     } catch (error) {
         return Response.json({ error: error.message }, { status: 500 });
     }
