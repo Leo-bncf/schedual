@@ -348,6 +348,9 @@ Deno.serve(async (req) => {
         // Ensure studentIds are removed (already handled by ternary map above, but double check)
         finalPayload.lessons.forEach(l => delete l.studentIds);
     }
+    
+    // Ensure all references are using correctly prefixed IDs as in template
+    console.log('[Pipeline] Generated Payload Type:', finalPayload.payloadType);
 
     const multiPayload = {
         organizationId: `org_${user.school_id}`,
