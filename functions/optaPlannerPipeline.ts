@@ -271,7 +271,7 @@ Deno.serve(async (req) => {
             const subject = subjects.find(sub => sub.id === s.code);
             return {
                 id: `sub_${s.code}`,
-                code: String(s.name).substring(0, 10).toUpperCase().replace(/[^A-Z0-9]/g, ''),
+                code: s.name,
                 name: s.name,
                 ...(programType === 'DP' ? { 
                     hoursPerWeekHL: subject?.hoursPerWeekHL || 5, 
@@ -289,7 +289,7 @@ Deno.serve(async (req) => {
         })),
         lessons: mappedLessons.map(l => ({
             id: l.id,
-            subject: String(l.subject).substring(0, 10).toUpperCase().replace(/[^A-Z0-9]/g, ''),
+            subject: l.subject,
             studentGroup: l.studentGroup,
             teachingGroupId: `tg_${mappedTeachingGroups.find(tg => tg.id === l.teachingGroupId)?.code || l.teachingGroupId}`,
             sectionId: l.sectionId,
@@ -305,7 +305,7 @@ Deno.serve(async (req) => {
         subjectRequirements: subjectRequirements.map(req => ({
             studentGroup: req.studentGroup || "Unknown",
             ...(programType === 'DP' ? { teachingGroupId: `tg_${mappedTeachingGroups.find(tg => tg.id === req.teachingGroupId)?.code || req.teachingGroupId}` } : {}),
-            subject: String(req.subject).substring(0, 10).toUpperCase().replace(/[^A-Z0-9]/g, ''),
+            subject: req.subject,
             minutesPerWeek: req.minutesPerWeek
         })),
         blockedSlotIds: [],
