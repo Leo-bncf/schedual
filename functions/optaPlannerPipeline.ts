@@ -273,11 +273,11 @@ Deno.serve(async (req) => {
       .forEach(tg => {
         teachingGroupsPayload.push({
           id: tg.id,
-          subjectId: tg.subject_id,
-          studentGroup: tg.year_group || 'DP1',
-          sectionId: `sec_${tg.year_group || 'DP1'}_${tg.id.slice(-4)}`,
+          section_id: `sec_${tg.year_group || 'DP1'}_${tg.id.slice(-4)}`,
+          student_group: tg.year_group || 'DP1',
+          subject_id: tg.subject_id,
           level: tg.level || 'SL',
-          requiredMinutesPerWeek: tg.minutes_per_week || 180
+          required_minutes_per_week: tg.minutes_per_week || 180
         });
       });
 
