@@ -745,8 +745,8 @@ ${JSON.stringify(teacherContext)}
       });
     });
 
-    const finalTeachers = formattedTeachers.length > 0 ? formattedTeachers.map((t, idx) => ({ ...t, id: String(idx + 1), externalId: t.id })) : [{ id: "1", name: "Dummy Teacher", unavailableSlotIds: [], unavailableDays: [], preferredDays: [], avoidDays: [], externalId: "dummy_teacher" }];
-    const finalRooms = rooms.length > 0 ? rooms.map((r, idx) => ({id: String(idx + 1), name: r.name, capacity: r.capacity || 30, externalId: r.id})) : [{id: "1", name: "Dummy", capacity: 30, externalId: "dummy_room"}];
+    const finalTeachers = formattedTeachers.length > 0 ? formattedTeachers.map((t, idx) => ({ ...t, id: idx + 1, externalId: t.id })) : [{ id: 1, name: "Dummy Teacher", maxPeriodsPerWeek: 40, unavailableSlotIds: [], unavailableDays: [], preferredDays: [], avoidDays: [], externalId: "dummy_teacher" }];
+    const finalRooms = rooms.length > 0 ? rooms.map((r, idx) => ({id: idx + 1, name: r.name, capacity: r.capacity || 30, externalId: r.id})) : [{id: 1, name: "Dummy", capacity: 30, externalId: "dummy_room"}];
     
     // Create maps to translate string IDs to numeric IDs expected by the Java backend
     const numericTeacherMap = {};
