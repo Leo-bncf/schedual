@@ -1040,7 +1040,7 @@ ${JSON.stringify(teacherContext)}
         sharedTeacherIds: [],
         transportWindows: []
       },
-      schools: [ optaPlannerPayload ]
+      requests: [ optaPlannerPayload ]
     };
 
     console.log('[Pipeline] Full sending payload (first 2000 chars):', JSON.stringify(multiPayload).substring(0, 2000));
