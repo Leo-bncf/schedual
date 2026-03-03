@@ -788,9 +788,9 @@ ${JSON.stringify(teacherContext)}
     }));
 
     const mappedRooms = finalRooms.map(r => ({
-      id: String(r.id),
-      room_id: String(r.id),
-      roomId: String(r.id),
+      id: parseInt(r.id.replace(/\D/g, '')) || Math.floor(Math.random() * 100000),
+      room_id: parseInt(r.id.replace(/\D/g, '')) || Math.floor(Math.random() * 100000),
+      roomId: parseInt(r.id.replace(/\D/g, '')) || Math.floor(Math.random() * 100000),
       externalId: String(r.id),
       external_id: String(r.id),
       name: String(r.name || "Room"),
