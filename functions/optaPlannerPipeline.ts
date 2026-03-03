@@ -440,6 +440,11 @@ Deno.serve(async (req) => {
 
             let realTgId = originalLesson.originalTgId; // Extracted directly from our safemap
 
+            if (!realTgId && originalLesson.teachingGroupId) {
+                const numTg = mappedTeachingGroups.find(g => g.id === originalLesson.teachingGroupId);
+                if (numTg) realTgId = numTg.code;
+            }
+
             slotsToInsert.push({
                 school_id: user.school_id,
                 schedule_version: schedule_version_id,
