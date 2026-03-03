@@ -3,16 +3,20 @@ import { createClientFromRequest } from 'npm:@base44/sdk@0.8.6';
 Deno.serve(async (req) => {
   try {
     const base44 = createClientFromRequest(req);
-    let user = await base44.auth.me();
+    const body = await req.json();
+    const { schedule_version_id, constraints, mock_school_id } = body;
     
-    const { schedule_version_id, constraints, mock_school_id } = await req.json();
+    let user = null;
+    let b44Entities = base44.entities;
 
     if (mock_school_id) {
         user = { school_id: mock_school_id };
-    }
-
-    if (!user?.school_id) {
-      return Response.json({ ok: false, error: 'Unauthorized' }, { status: 401 });
+        b44Entities = base44.asServiceRole.entities;
+    } else {
+        user = await base44.auth.me();
+        if (!user?.school_id) {
+          return Response.json({ ok: false, error: 'Unauthorized' }, { status: 401 });
+        }
     }
     if (!schedule_version_id) {
       return Response.json({ ok: false, error: 'Missing schedule_version_id' }, { status: 400 });
