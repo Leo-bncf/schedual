@@ -1017,7 +1017,7 @@ ${JSON.stringify(teacherContext)}
     // Always use the exact endpoint provided by the user in the secret, 
     // but ensure it targets /solve/multi for the new multi-tenant wrapper.
     let endpointUrl = OPTAPLANNER_ENDPOINT;
-    if (endpointUrl.endsWith('/solve-and-push')) {
+    if (endpointUrl.includes('/solve-and-push')) {
       endpointUrl = endpointUrl.replace('/solve-and-push', '/solve/multi');
     } else if (!endpointUrl.endsWith('/solve/multi')) {
       endpointUrl = endpointUrl.replace(/\/$/, '') + '/solve/multi';
