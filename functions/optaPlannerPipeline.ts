@@ -359,10 +359,10 @@ Deno.serve(async (req) => {
     };
 
     // 6. Call Solver
-    let endpointUrl = OPTAPLANNER_ENDPOINT;
+    let endpointUrl = OPTAPLANNER_ENDPOINT || 'http://87.106.27.27:8080/base44/ingest';
     if (endpointUrl.includes('/solve-and-push')) {
         endpointUrl = endpointUrl.replace('/solve-and-push', '/solve/multi');
-    } else if (!endpointUrl.endsWith('/solve/multi')) {
+    } else if (!endpointUrl.endsWith('/solve/multi') && !endpointUrl.endsWith('/ingest')) {
         endpointUrl = endpointUrl.replace(/\/$/, '') + '/solve/multi';
     }
 
