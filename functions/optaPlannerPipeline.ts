@@ -919,6 +919,8 @@ ${JSON.stringify(teacherContext)}
       scheduleVersion: scheduleVersion[0]?.name || "Draft",
       scheduleVersionId: String(schedule_version_id),
       scheduleSettings: {
+          daysPerWeek: schoolData.days_of_week?.length || 5,
+          periodsPerDay: Number(schoolData.periods_per_day || 10),
           periodDurationMinutes: Number(schoolData.period_duration_minutes || 60),
           dayStartTime: String(schoolData.day_start_time || "08:00"),
           dayEndTime: String(schoolData.day_end_time || "18:00"),
