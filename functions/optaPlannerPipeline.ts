@@ -750,17 +750,16 @@ ${JSON.stringify(teacherContext)}
         originalTeachingGroupId: l.teachingGroupId
     }));
 
-    let numericIdCounter = 1;
-    const generateNumericId = () => numericIdCounter++;
+    const generateUUID = () => crypto.randomUUID();
 
     const roomNumericMap = {};
     const mappedRooms = finalRooms.map(r => {
-      const numId = generateNumericId();
+      const numId = generateUUID();
       roomNumericMap[r.id] = numId;
       return {
-        id: String(numId),
-        roomId: String(numId),
-        room_id: String(numId),
+        id: numId,
+        roomId: numId,
+        room_id: numId,
         externalId: String(r.id),
         name: String(r.name || "Room"),
         capacity: Number(r.capacity || 30)
@@ -769,12 +768,12 @@ ${JSON.stringify(teacherContext)}
 
     const teacherNumericMap = {};
     const mappedTeachers = finalTeachers.map(t => {
-      const numId = generateNumericId();
+      const numId = generateUUID();
       teacherNumericMap[t.id] = numId;
       return {
-        id: String(numId),
-        teacherId: String(numId),
-        teacher_id: String(numId),
+        id: numId,
+        teacherId: numId,
+        teacher_id: numId,
         externalId: String(t.id),
         name: String(t.name || "Teacher"),
         maxPeriodsPerWeek: Number(t.maxPeriodsPerWeek || 40),
@@ -785,10 +784,9 @@ ${JSON.stringify(teacherContext)}
       };
     });
 
-    // We filter subjects but also fallback if empty, to guarantee subjectRequirements matches
     const mappedSubjects = subjects.filter(s => s.is_active && subjectRequirements.some(req => req.subject === (s.code || s.name))).map(s => {
       return {
-        id: String(s.id), // Base44 style 24-hex string
+        id: String(s.id),
         subjectId: String(s.id),
         subject_id: String(s.id),
         code: String(s.code || s.name),
@@ -796,33 +794,7 @@ ${JSON.stringify(teacherContext)}
       };
     });
     if (mappedSubjects.length === 0) {
-      mappedSubjects.push({
-        id: "69733f5f0b775e6fa2db95b9",
-        code: "DUMMY",
-        name: "DUMMY"
-      });
-    }
-
-    const mappedTeachingGroups = teachingGroupsPayload.map(tg => ({
-      id: String(tg.id),
-      teachingGroupId: String(tg.id),
-      teaching_group_id: String(tg.id),
-      sectionId: String(tg.section_id),
-      studentGroup: String(tg.student_group),
-      subjectId: String(tg.subject_id), // string ID matching the 24 hex
-      subject_id: String(tg.subject_id),
-      level: String(tg.level),
-      requiredMinutesPerWeek: Number(tg.required_minutes_per_week)
-    }));
-    if (mappedTeachingGroups.length === 0) {
-      mappedTeachingGroups.push({
-        id: "dummy_tg",
-        sectionId: "dummy_sec",
-        studentGroup: "Dummy",
-        subjectId: "69733f5f0b775e6fa2db95b9",
-        level: "SL",
-        requiredMinutesPerWeek: 180
-      });
+      mappedSubjects.push({ id: generateUUID(), code: "DUMMY", name: "DUMMY" });
     }
 
     const mappedSubjectRequirements = subjectRequirements.map(req => ({
@@ -833,26 +805,20 @@ ${JSON.stringify(teacherContext)}
       minutesPerWeek: Number(req.minutes_per_week)
     }));
     if (mappedSubjectRequirements.length === 0) {
-      mappedSubjectRequirements.push({
-        studentGroup: "Dummy",
-        teachingGroupId: "dummy_tg",
-        sectionId: "dummy_sec",
-        subject: "DUMMY",
-        minutesPerWeek: 180
-      });
+      mappedSubjectRequirements.push({ studentGroup: "Dummy", teachingGroupId: "dummy_tg", sectionId: "dummy_sec", subject: "DUMMY", minutesPerWeek: 180 });
     }
 
-    const dummyTeacherNumId = teacherNumericMap[finalTeachers[0].id] || 1;
+    const dummyTeacherNumId = teacherNumericMap[finalTeachers[0].id] || generateUUID();
     const mappedLessons = safeLessons.length > 0 ? safeLessons.map(l => {
       const tNumId = l.teacherId ? (teacherNumericMap[l.teacherId] || dummyTeacherNumId) : dummyTeacherNumId;
       const rNumId = l.roomId ? roomNumericMap[l.roomId] : null;
       const tgStringId = l.teachingGroupId ? String(l.teachingGroupId) : null;
-      const lessonNumId = parseInt(l.id) || generateNumericId();
+      const lessonNumId = generateUUID();
 
       return {
-        id: String(lessonNumId),
-        lessonId: String(lessonNumId),
-        lesson_id: String(lessonNumId),
+        id: lessonNumId,
+        lessonId: lessonNumId,
+        lesson_id: lessonNumId,
         subject: String(l.subject || "Subj"),
         studentGroup: String(l.studentGroup || "Group"),
         teachingGroupId: tgStringId,
@@ -865,36 +831,60 @@ ${JSON.stringify(teacherContext)}
         studentIds: l.studentIds || [],
         requiredCapacity: Number(l.requiredCapacity || 1),
         blockId: l.blockId ? String(l.blockId) : null,
-        teacherId: String(tNumId),
-        teacher_id: String(tNumId),
+        teacherId: tNumId,
+        teacher_id: tNumId,
         timeslotId: l.timeslotId ? Number(l.timeslotId) : null,
         timeslot_id: l.timeslotId ? Number(l.timeslotId) : null,
-        roomId: rNumId ? String(rNumId) : null,
-        room_id: rNumId ? String(rNumId) : null
+        roomId: rNumId,
+        room_id: rNumId
       };
     }) : [{
-      id: "1001",
-      lessonId: "1001",
-      lesson_id: "1001",
+      id: generateUUID(),
       subject: "DUMMY",
       studentGroup: "Dummy",
       teachingGroupId: "dummy_tg",
-      teaching_group_id: "dummy_tg",
       sectionId: "dummy_sec",
-      subjectId: "69733f5f0b775e6fa2db95b9",
-      subject_id: "69733f5f0b775e6fa2db95b9",
+      subjectId: "dummy_subj",
       level: "SL",
       yearGroup: "DP1",
       studentIds: [],
       requiredCapacity: 1,
       blockId: null,
-      teacherId: String(dummyTeacherNumId),
-      teacher_id: String(dummyTeacherNumId),
+      teacherId: dummyTeacherNumId,
       timeslotId: null,
-      timeslot_id: null,
-      roomId: null,
-      room_id: null
+      roomId: null
     }];
+
+    const mappedTeachingGroups = teachingGroupsPayload.map(tg => {
+      const tgLessons = mappedLessons.filter(l => l.teachingGroupId === String(tg.id)).map(l => l.id);
+      return {
+        id: String(tg.id),
+        teachingGroupId: String(tg.id),
+        teaching_group_id: String(tg.id),
+        sectionId: String(tg.section_id),
+        studentGroup: String(tg.student_group),
+        subjectId: String(tg.subject_id),
+        subject_id: String(tg.subject_id),
+        level: String(tg.level),
+        requiredMinutesPerWeek: Number(tg.required_minutes_per_week),
+        lessons: tgLessons,
+        lessonIds: tgLessons,
+        lesson_ids: tgLessons
+      };
+    });
+    if (mappedTeachingGroups.length === 0) {
+      mappedTeachingGroups.push({
+        id: "dummy_tg",
+        sectionId: "dummy_sec",
+        studentGroup: "Dummy",
+        subjectId: "dummy_subj",
+        level: "SL",
+        requiredMinutesPerWeek: 180,
+        lessons: [],
+        lessonIds: [],
+        lesson_ids: []
+      });
+    }
 
     const optaPlannerPayload = {
       schoolId: String(user.school_id),
