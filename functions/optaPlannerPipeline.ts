@@ -417,6 +417,32 @@ Deno.serve(async (req) => {
     // Ensure all references are using correctly prefixed IDs as in template
     console.log('[Pipeline] Generated Payload Type:', finalPayload.payloadType);
 
+    // Pre-validate that all referenced subjectIds exist in subjects[] to avoid opaque solver errors
+    const definedSubjectIds = new Set((finalPayload.subjects || []).map(s => s.id));
+    const referencedSubjectIds = new Set();
+    (finalPayload.lessons || []).forEach(l => { if (l.subjectId) referencedSubjectIds.add(l.subjectId); });
+    (finalPayload.subjectRequirements || []).forEach(r => { if (r.subjectId) referencedSubjectIds.add(r.subjectId); });
+    if (finalPayload.payloadType === 'individual_payload') {
+        (finalPayload.studentSubjectChoices || []).forEach(c => { if (c.subjectId) referencedSubjectIds.add(c.subjectId); });
+    }
+    const missingSubjects = Array.from(referencedSubjectIds).filter(id => !definedSubjectIds.has(id));
+    if (missingSubjects.length > 0) {
+        return Response.json({
+            ok: false,
+            error: 'Pre-validation failed: invalid subject references',
+            details: {
+                missing_subject_ids: missingSubjects,
+                referenced_subject_ids: Array.from(referencedSubjectIds),
+                defined_subject_ids: Array.from(definedSubjectIds)
+            },
+            debug_payload_preview: {
+                subjects: (finalPayload.subjects || []).slice(0, 5),
+                lessons: (finalPayload.lessons || []).slice(0, 3),
+                subjectRequirements: (finalPayload.subjectRequirements || []).slice(0, 3)
+            }
+        }, { status: 400 });
+    }
+
     if (mock_school_id) {
         return Response.json({ ok: true, payload: finalPayload });
     }
