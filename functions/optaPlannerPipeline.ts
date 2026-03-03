@@ -259,6 +259,16 @@ Deno.serve(async (req) => {
     }
 
     // 5. Construct Payload
+    
+    // PRE-FILTERING FOR REFERENTIAL INTEGRITY
+    // 1. Valid Teaching Groups (must have lessons)
+    const validTeachingGroups = mappedTeachingGroups.filter(tg => tg.lessonIds && tg.lessonIds.length > 0);
+    const validTgNumIds = new Set(validTeachingGroups.map(tg => tg.id));
+
+    // 2. Valid Lessons (from the initial map, which technically matches valid TGs, but we keep it consistent)
+    const activeLessons = mappedLessons;
+    const activeSubjectOriginalIds = new Set(activeLessons.map(l => l.subjectId));
+
     const basePayload = {
         schoolId: String(user.school_id),
         timezone: schoolData.timezone || "UTC",
@@ -287,7 +297,7 @@ Deno.serve(async (req) => {
             externalId: t.code
         })),
         subjects: mappedSubjects
-            .filter(s => mappedLessons.some(l => l.subjectId === s.code)) // ONLY subjects that have active lessons
+            .filter(s => activeSubjectOriginalIds.has(s.code))
             .map(s => {
                 const subject = subjects.find(sub => sub.id === s.code);
                 return {
@@ -300,17 +310,15 @@ Deno.serve(async (req) => {
                     } : {})
                 };
             }),
-        teachingGroups: mappedTeachingGroups
-            .filter(tg => tg.lessonIds && tg.lessonIds.length > 0)
-            .map(tg => ({
-                id: `tg_${tg.code}`,
-                sectionId: tg.sectionId,
-                studentGroup: tg.studentGroup,
-                subjectId: `sub_${Object.keys(subjectIdMap).find(key => subjectIdMap[key] === tg.subjectId) || tg.subjectId}`,
-                ...(programType === 'DP' ? { level: tg.level } : {}),
-                requiredMinutesPerWeek: tg.requiredMinutesPerWeek
-            })),
-        lessons: mappedLessons.map(l => ({
+        teachingGroups: validTeachingGroups.map(tg => ({
+            id: `tg_${tg.code}`,
+            sectionId: tg.sectionId,
+            studentGroup: tg.studentGroup,
+            subjectId: `sub_${Object.keys(subjectIdMap).find(key => subjectIdMap[key] === tg.subjectId) || tg.subjectId}`,
+            ...(programType === 'DP' ? { level: tg.level } : {}),
+            requiredMinutesPerWeek: tg.requiredMinutesPerWeek
+        })),
+        lessons: activeLessons.map(l => ({
             id: l.id,
             subject: l.subject,
             studentGroup: l.studentGroup,
@@ -326,7 +334,7 @@ Deno.serve(async (req) => {
             } : {})
         })),
         subjectRequirements: subjectRequirements
-            .filter(req => mappedLessons.some(l => `sub_${Object.keys(subjectIdMap).find(key => subjectIdMap[key] === l.subjectId) || l.subjectId}` === req.subjectId))
+            .filter(req => validTgNumIds.has(req.teachingGroupId))
             .map(req => ({
                 studentGroup: req.studentGroup || "Unknown",
                 ...(programType === 'DP' ? { teachingGroupId: `tg_${mappedTeachingGroups.find(tg => tg.id === req.teachingGroupId)?.code || req.teachingGroupId}` } : {}),
@@ -344,19 +352,21 @@ Deno.serve(async (req) => {
 
     let finalPayload = {};
     if (programType === 'DP') {
+        const filteredChoices = studentSubjectChoices.filter(c => activeSubjectOriginalIds.has(c.subjectId));
+        
         finalPayload = {
             ...basePayload,
             payloadType: "individual_payload",
             programType: "DP",
-            studentSubjectChoices: studentSubjectChoices.length > 0 ? studentSubjectChoices.map(c => ({
+            studentSubjectChoices: filteredChoices.map(c => ({
                 studentId: c.studentId,
                 subjectId: `sub_${c.subjectId}`,
                 subject: c.subject,
                 level: c.level,
                 yearGroup: c.yearGroup
-            })) : [], // No dummy! Dummy causes missing subject error
+            })),
             llmSoftConstraints: {
-                studentWindows: [] // Populate from LLM if needed
+                studentWindows: []
             },
             dpConfig: {
                 blocks: [],
@@ -369,14 +379,13 @@ Deno.serve(async (req) => {
             payloadType: "cohort_payload",
             programType: programType,
             llmSoftConstraints: {
-                teacherPreferences: [] // Populate from LLM if needed
+                teacherPreferences: []
             },
             mypConfig: {
                 campus: "Main",
                 notes: `Auto-generated ${programType} schedule`
             }
         };
-        // Ensure studentIds are removed (already handled by ternary map above, but double check)
         finalPayload.lessons.forEach(l => delete l.studentIds);
     }
     
