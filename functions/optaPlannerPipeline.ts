@@ -813,6 +813,7 @@ ${JSON.stringify(teacherContext)}
       teachers: finalTeachers.map(t => ({
         id: t.id,
         name: t.name,
+        maxPeriodsPerWeek: t.maxPeriodsPerWeek,
         unavailableSlotIds: t.unavailableSlotIds,
         unavailableDays: t.unavailableDays,
         preferredDays: t.preferredDays,
