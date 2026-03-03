@@ -286,18 +286,20 @@ Deno.serve(async (req) => {
             avoidDays: t.avoidDays,
             externalId: t.code
         })),
-        subjects: mappedSubjects.map(s => {
-            const subject = subjects.find(sub => sub.id === s.code);
-            return {
-                id: `sub_${s.code}`,
-                code: s.name,
-                name: s.name,
-                ...(programType === 'DP' ? { 
-                    hoursPerWeekHL: subject?.hoursPerWeekHL || 5, 
-                    hoursPerWeekSL: subject?.hoursPerWeekSL || 3 
-                } : {})
-            };
-        }),
+        subjects: mappedSubjects
+            .filter(s => mappedLessons.some(l => l.subjectId === s.code)) // ONLY subjects that have active lessons
+            .map(s => {
+                const subject = subjects.find(sub => sub.id === s.code);
+                return {
+                    id: `sub_${s.code}`,
+                    code: s.name,
+                    name: s.name,
+                    ...(programType === 'DP' ? { 
+                        hoursPerWeekHL: subject?.hoursPerWeekHL || 5, 
+                        hoursPerWeekSL: subject?.hoursPerWeekSL || 3 
+                    } : {})
+                };
+            }),
         teachingGroups: mappedTeachingGroups.map(tg => ({
             id: `tg_${tg.code}`,
             sectionId: tg.sectionId,
