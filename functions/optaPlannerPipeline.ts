@@ -263,10 +263,6 @@ Deno.serve(async (req) => {
             avoidDays: t.avoidDays,
             externalId: t.code
         })),
-        studentGroups: [...new Set(mappedTeachingGroups.map(tg => tg.studentGroup).filter(Boolean))].map(sg => ({
-            id: sg,
-            name: sg
-        })),
         subjects: mappedSubjects.map(s => {
             const subject = subjects.find(sub => sub.id === s.code);
             return {
@@ -282,7 +278,7 @@ Deno.serve(async (req) => {
         teachingGroups: mappedTeachingGroups.map(tg => ({
             id: `tg_${tg.code}`,
             sectionId: tg.sectionId,
-            studentGroup: String(tg.studentGroup),
+            studentGroup: tg.studentGroup,
             subjectId: `sub_${Object.keys(subjectIdMap).find(key => subjectIdMap[key] === tg.subjectId) || tg.subjectId}`,
             ...(programType === 'DP' ? { level: tg.level } : {}),
             requiredMinutesPerWeek: tg.requiredMinutesPerWeek
@@ -363,13 +359,11 @@ Deno.serve(async (req) => {
     };
 
     // 6. Call Solver
-    let endpointUrl = OPTAPLANNER_ENDPOINT.replace(/\/+$/, '');
-    if (endpointUrl.endsWith('/solve-and-push')) {
+    let endpointUrl = OPTAPLANNER_ENDPOINT;
+    if (endpointUrl.includes('/solve-and-push')) {
         endpointUrl = endpointUrl.replace('/solve-and-push', '/solve/multi');
-    } else if (endpointUrl.endsWith('/solve')) {
-        endpointUrl = endpointUrl + '/multi';
     } else if (!endpointUrl.endsWith('/solve/multi')) {
-        endpointUrl = endpointUrl + '/solve/multi';
+        endpointUrl = endpointUrl.replace(/\/$/, '') + '/solve/multi';
     }
 
     console.log('[Pipeline] Calling OptaPlanner:', endpointUrl);
