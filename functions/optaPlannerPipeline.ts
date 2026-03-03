@@ -470,24 +470,28 @@ Deno.serve(async (req) => {
           const numLessons = Math.ceil(requiredMinutes / periodDuration);
 
           subjectRequirements.push({
+            studentGroup: tg.year_group,
             teachingGroupId: tg.id,
             sectionId: `sec_${tg.year_group || 'DP1'}_${tg.id.slice(-4)}`,
-            studentGroup: tg.year_group,
             subject: subject.code || subject.name,
-            minutesPerWeek: requiredMinutes
+            minutes_per_week: requiredMinutes
           });
           processedReqTGs.add(tg.id);
 
           for (let i = 0; i < numLessons; i++) {
             lessons.push({
               id: lessonId++,
-              teachingGroupId: tg.id,
-              sectionId: `sec_${tg.year_group || 'DP1'}_${tg.id.slice(-4)}`,
               subject: subject?.code || subject?.name || 'Unknown',
               studentGroup: tg.year_group || 'DP1',
-              teacherId: teacherId || null,
-              requiredCapacity: Math.min(studentIds.length, maxRoomCapacity),
+              teachingGroupId: tg.id,
+              sectionId: `sec_${tg.year_group || 'DP1'}_${tg.id.slice(-4)}`,
+              subjectId: subjectId,
+              level: tg.level || 'SL',
+              yearGroup: tg.year_group || 'DP1',
               studentIds: studentIds,
+              requiredCapacity: Math.min(studentIds.length, maxRoomCapacity),
+              blockId: tg.block_id || null,
+              teacherId: teacherId || null,
               timeslotId: null,
               roomId: null
             });
