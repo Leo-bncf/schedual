@@ -38,7 +38,6 @@ import {
   Settings2,
   Play
 } from 'lucide-react';
-import ScheduleGenerationDialog from '../components/schedule/ScheduleGenerationDialog';
 import TimetableGrid from '../components/schedule/TimetableGrid';
 
 export default function Schedules() {
@@ -1183,14 +1182,7 @@ export default function Schedules() {
         </DialogContent>
       </Dialog>
 
-      {/* Generation Dialog */}
-      <ScheduleGenerationDialog
-        open={genDialogOpen}
-        onClose={() => setGenDialogOpen(false)}
-        status={genStatus}
-        message={genMessage}
-        error={genError}
-      />
+
       </div>
     </div>
   );
