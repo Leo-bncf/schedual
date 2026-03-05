@@ -513,7 +513,7 @@ Deno.serve(async (req) => {
     }
 
     // ─── Call solver ──────────────────────────────────────────────────────────
-    const endpointUrl = 'http://87.106.27.27:8080/base44/ingest';
+    const endpointUrl = OPTAPLANNER_ENDPOINT;
     const requestBody = JSON.stringify(finalPayload);
 
     console.log('[Pipeline] POST to', endpointUrl, '| body length:', requestBody.length);
