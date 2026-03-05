@@ -369,7 +369,7 @@ Deno.serve(async (req) => {
             subject: req.subject,
             subjectId: `sub_${req.originalSubjectId}`,
             minutesPerWeek: req.minutesPerWeek
-        })),
+        })), // temporary subjectId, will remap below
         blockedSlotIds: [],
         constraints: {
             spreadAcrossDaysPerTeachingGroupSection: true,
