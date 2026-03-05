@@ -571,6 +571,12 @@ Deno.serve(async (req) => {
 
     // Validate uniqueness and id<->code alignment
     const subjectIdToCode = Object.fromEntries((finalPayload.subjects || []).map(s => [s.id, s.code || s.name]));
+    // Auto-correct mismatches by aligning to canonical code
+    (finalPayload.lessons || []).forEach(l => { if (l.subjectId) l.subject = subjectIdToCode[l.subjectId] || l.subject; });
+    (finalPayload.subjectRequirements || []).forEach(r => { if (r.subjectId) r.subject = subjectIdToCode[r.subjectId] || r.subject; });
+    if (finalPayload.payloadType === 'individual_payload') {
+        (finalPayload.studentSubjectChoices || []).forEach(c => { if (c.subjectId) c.subject = subjectIdToCode[c.subjectId] || c.subject; });
+    }
     const subjectCodes = (finalPayload.subjects || []).map(s => s.code || s.name).filter(Boolean);
     const duplicateCodes = [...new Set(subjectCodes.filter((c, i, arr) => arr.indexOf(c) !== i))];
     if (duplicateCodes.length > 0) {
