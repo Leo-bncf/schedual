@@ -630,10 +630,33 @@ Deno.serve(async (req) => {
             console.warn('[Pipeline] OptaPlanner failed but returned partial assignments.');
             responseText = JSON.stringify(errorDetails);
         } else {
+            const subjectDiagnostics = (() => {
+                const subjectsList = (finalPayload.subjects || []).map(s => ({ id: s.id, code: s.code || s.name }));
+                const refIds = [];
+                const refNames = [];
+                (finalPayload.lessons || []).forEach(l => { if (l.subjectId != null) refIds.push(l.subjectId); if (l.subject) refNames.push(l.subject); });
+                (finalPayload.subjectRequirements || []).forEach(r => { if (r.subjectId != null) refIds.push(r.subjectId); if (r.subject) refNames.push(r.subject); });
+                if (finalPayload.payloadType === 'individual_payload') {
+                    (finalPayload.studentSubjectChoices || []).forEach(c => { if (c.subjectId != null) refIds.push(c.subjectId); if (c.subject) refNames.push(c.subject); });
+                }
+                const definedIds = new Set(subjectsList.map(s => s.id));
+                const definedNames = new Set(subjectsList.map(s => s.code));
+                const missingIds = Array.from(new Set(refIds.filter(id => !definedIds.has(id))));
+                const missingNames = Array.from(new Set(refNames.filter(n => !definedNames.has(n))));
+                const nonNumericIds = Array.from(new Set(refIds.filter(id => typeof id !== 'number')));
+                return { subjectsList: subjectsList.slice(0, 50), missingIds, missingNames: missingNames.slice(0, 50), nonNumericIds: nonNumericIds.slice(0, 50) };
+            })();
+
             return Response.json({
                 ok: false,
                 error: `OptaPlanner validation failed`,
-                details: errorDetails
+                details: errorDetails,
+                subject_diagnostics: subjectDiagnostics,
+                debug_payload_preview: {
+                    subjects: (finalPayload.subjects || []).slice(0, 5),
+                    lessons: (finalPayload.lessons || []).slice(0, 3),
+                    subjectRequirements: (finalPayload.subjectRequirements || []).slice(0, 3)
+                }
             }, { status: 400 });
         }
     }
@@ -644,10 +667,28 @@ Deno.serve(async (req) => {
     // Check if OptaPlanner returned a logical error within a 200 OK response
     if (result.ok === false || result.errorCode || result.errorMessage || (Array.isArray(result.validationErrors) && result.validationErrors.length > 0)) {
         console.error('[Pipeline] OptaPlanner validation/logical error:', result.errorMessage, result.validationErrors);
+        const subjectDiagnostics = (() => {
+            const subjectsList = (finalPayload.subjects || []).map(s => ({ id: s.id, code: s.code || s.name }));
+            const refIds = [];
+            const refNames = [];
+            (finalPayload.lessons || []).forEach(l => { if (l.subjectId != null) refIds.push(l.subjectId); if (l.subject) refNames.push(l.subject); });
+            (finalPayload.subjectRequirements || []).forEach(r => { if (r.subjectId != null) refIds.push(r.subjectId); if (r.subject) refNames.push(r.subject); });
+            if (finalPayload.payloadType === 'individual_payload') {
+                (finalPayload.studentSubjectChoices || []).forEach(c => { if (c.subjectId != null) refIds.push(c.subjectId); if (c.subject) refNames.push(c.subject); });
+            }
+            const definedIds = new Set(subjectsList.map(s => s.id));
+            const definedNames = new Set(subjectsList.map(s => s.code));
+            const missingIds = Array.from(new Set(refIds.filter(id => !definedIds.has(id))));
+            const missingNames = Array.from(new Set(refNames.filter(n => !definedNames.has(n))));
+            const nonNumericIds = Array.from(new Set(refIds.filter(id => typeof id !== 'number')));
+            return { subjectsList: subjectsList.slice(0, 50), missingIds, missingNames: missingNames.slice(0, 50), nonNumericIds: nonNumericIds.slice(0, 50) };
+        })();
+
         return Response.json({
             ok: false,
             error: result.title || result.errorMessage || result.message || 'OptaPlanner Validation Error',
             details: result.validationErrors || result.details || result,
+            subject_diagnostics: subjectDiagnostics,
             debug_payload: finalPayload // Inject payload so we can see it on error
         }, { status: 400 });
     }
