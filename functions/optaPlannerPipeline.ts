@@ -531,45 +531,7 @@ Deno.serve(async (req) => {
         }));
     }
 
-    // Hard-coded scope-timeslot uniqueness enforcement
-    (() => {
-        const lessons = finalPayload.lessons || [];
-        if (lessons.length === 0) return;
 
-        const seen = new Set();
-        let dedupedCount = 0;
-        for (const l of lessons) {
-            if (l.timeslotId == null) continue;
-            const scope = `${l.sectionId}||${l.studentGroup}||${l.subject}`;
-            const key = `${scope}||${l.timeslotId}`;
-            if (seen.has(key)) {
-                l.timeslotId = null; // force solver placement for duplicates
-                dedupedCount++;
-            } else {
-                seen.add(key);
-            }
-        }
-
-        // Hard block if any duplicates still remain (paranoia check)
-        const postSeen = new Set();
-        let residualDupes = 0;
-        for (const l of lessons) {
-            if (l.timeslotId == null) continue;
-            const scope = `${l.sectionId}||${l.studentGroup}||${l.subject}`;
-            const key = `${scope}||${l.timeslotId}`;
-            if (postSeen.has(key)) {
-                residualDupes++;
-            } else {
-                postSeen.add(key);
-            }
-        }
-        if (dedupedCount > 0) {
-            console.log('[Pipeline] Hard-coded dedupe nullified duplicates:', dedupedCount);
-        }
-        if (residualDupes > 0) {
-            throw new Error(`Preflight failed: residual duplicate pre-assigned timeslots (${residualDupes})`);
-        }
-    })();
 
     // Pre-validate subjects using codes and real IDs
     const definedSubjectIds = new Set((finalPayload.subjects || []).map(s => s.id));
@@ -635,48 +597,52 @@ Deno.serve(async (req) => {
     finalPayload.organizationId = `org_${user.school_id}`;
     finalPayload.runId = `run_${schedule_version_id}`;
 
-    // Final scope-timeslot uniqueness enforcement right before POST
+    // Final sanitize: enforce unique timeslot per scope (sectionId||studentGroup||subject)
     (() => {
-        const lessons = finalPayload.lessons || [];
-        if (lessons.length === 0) return;
+      const lessons = finalPayload.lessons || [];
+      if (lessons.length === 0) return;
 
-        const seen = new Set();
-        let dedupedCount = 0;
-        for (const l of lessons) {
-            if (l.timeslotId == null) continue;
-            const scope = `${l.sectionId}||${l.studentGroup}||${l.subject}`;
-            const key = `${scope}||${l.timeslotId}`;
-            if (seen.has(key)) {
-                l.timeslotId = null; // or reassign to a free slot in this scope
-                dedupedCount++;
-            } else {
-                seen.add(key);
-            }
-        }
+      const byScope = new Map();
+      let dedupedCount = 0;
 
-        const postSeen = new Set();
-        let residualDupes = 0;
-        for (const l of lessons) {
-            if (l.timeslotId == null) continue;
-            const scope = `${l.sectionId}||${l.studentGroup}||${l.subject}`;
-            const key = `${scope}||${l.timeslotId}`;
-            if (postSeen.has(key)) {
-                residualDupes++;
-            } else {
-                postSeen.add(key);
-            }
+      for (const l of lessons) {
+        if (l?.timeslotId == null) continue;
+        const scope = `${l.sectionId}||${l.studentGroup}||${l.subject}`;
+        let used = byScope.get(scope);
+        if (!used) { used = new Set(); byScope.set(scope, used); }
+        if (used.has(l.timeslotId)) {
+          l.timeslotId = null; // drop duplicate; solver will place
+          dedupedCount++;
+        } else {
+          used.add(l.timeslotId);
         }
-        if (dedupedCount > 0) {
-            console.log('[Pipeline] Final preflight dedupe nullified duplicates:', dedupedCount);
+      }
+
+      // Hard fail if any duplicate still remains
+      const seenByScope = new Map();
+      let residualDupes = 0;
+      for (const l of lessons) {
+        if (l?.timeslotId == null) continue;
+        const scope = `${l.sectionId}||${l.studentGroup}||${l.subject}`;
+        let used = seenByScope.get(scope);
+        if (!used) { used = new Set(); seenByScope.set(scope, used); }
+        if (used.has(l.timeslotId)) {
+          residualDupes++;
+        } else {
+          used.add(l.timeslotId);
         }
-        if (residualDupes > 0) {
-            throw new Error(`Preflight failed (final): duplicate pre-assigned timeslots (${residualDupes}) remain`);
-        }
+      }
+
+      if (dedupedCount > 0) {
+        console.log('[Pipeline] Final sanitize: nullified duplicate prefilled timeslots', { dedupedCount });
+      }
+      if (residualDupes > 0) {
+        console.error('[Pipeline] Hard fail: duplicates remain after sanitize', { residualDupes });
+        throw new Error(`Preflight failed: duplicate pre-assigned timeslots remain (${residualDupes})`);
+      }
     })();
 
-    // Safety: strip ALL prefilled timeslotIds to avoid any stale duplicates sneaking in
-    finalPayload.lessons = (finalPayload.lessons || []).map(l => ({ ...l, timeslotId: null }));
-    console.log('[Pipeline] Safety strip: cleared all lesson.timeslotId before POST');
+
 
     const requestBody = JSON.stringify(finalPayload);
     
