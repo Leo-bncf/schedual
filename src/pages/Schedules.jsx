@@ -300,6 +300,19 @@ export default function Schedules() {
         }
       }
       
+      const subjDiag = responseData?.subject_diagnostics;
+      if (subjDiag) {
+        const sampleSubjects = (subjDiag.subjectsList || []).slice(0,5).map(s => `${s.id}:${s.code}`).join(', ');
+        const diagText = [
+          'Subject diagnostics:',
+          subjDiag.missingIds?.length ? `Missing subjectIds in references: ${subjDiag.missingIds.join(', ')}` : null,
+          subjDiag.nonNumericIds?.length ? `Non-numeric subjectIds found: ${subjDiag.nonNumericIds.join(', ')}` : null,
+          subjDiag.missingNames?.length ? `Unrecognized subject names: ${subjDiag.missingNames.join(', ')}` : null,
+          sampleSubjects ? `Defined subjects (first 5): ${sampleSubjects}` : null
+        ].filter(Boolean).join('\n');
+        errorMsg = `${errorMsg}\n\n${diagText}`;
+        console.log('[Schedules] Subject diagnostics:', subjDiag);
+      }
       setGenError(errorMsg);
       setGenMessage(teacherDetails);
       toast.error(errorMsg, { duration: 10000 });
