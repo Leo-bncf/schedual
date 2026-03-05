@@ -525,6 +525,51 @@ Deno.serve(async (req) => {
       return Response.json({ ok: false, error: 'Preflight failed', errors: preflight.errors }, { status: 400 });
     }
 
+    // ─── PRECHECK: Feasibility validation for each student ──────────────────
+    // Verify no student is forced into incompatible lessons per week
+    const feasibilityErrors = [];
+    const maxSlotsPerWeek = (schoolData.days_of_week?.length || 5) * (schoolData.periods_per_day || 10);
+
+    choicesByStudent.forEach((subjCodes, rawStudentId) => {
+      const student = students.find(s => s.id === rawStudentId);
+      if (!student) return;
+
+      // For each student, sum the weekly minutes required across all their subject choices
+      let totalMinutesPerWeek = 0;
+      subjCodes.forEach(subjCode => {
+        const matchingReqs = finalPayload.subject_requirements.filter(r => r.subject === subjCode && r.studentGroup === student.year_group);
+        matchingReqs.forEach(req => {
+          totalMinutesPerWeek += (Number(req.minutesPerWeek) || 0);
+        });
+      });
+
+      const totalPeriodsNeeded = Math.ceil(totalMinutesPerWeek / (schoolData.period_duration_minutes || 60));
+      if (totalPeriodsNeeded > maxSlotsPerWeek) {
+        feasibilityErrors.push({
+          studentName: student.full_name,
+          studentId: rawStudentId,
+          yearGroup: student.year_group,
+          subjects: Array.from(subjCodes),
+          minutesPerWeek: totalMinutesPerWeek,
+          periodsNeeded: totalPeriodsNeeded,
+          maxAvailable: maxSlotsPerWeek,
+          message: `${student.full_name} (${student.year_group}) assigned ${totalPeriodsNeeded} periods/week but only ${maxSlotsPerWeek} available`
+        });
+      }
+    });
+
+    if (feasibilityErrors.length > 0) {
+      console.error('[Pipeline] PREFEASIBILITY CHECK FAILED:', feasibilityErrors);
+      return Response.json({
+        ok: false,
+        error: 'Schedule infeasible: student overload detected',
+        code: 'STUDENT_OVERLOAD',
+        details: feasibilityErrors,
+        explanation: 'One or more students have been assigned more lessons per week than available timeslots. Please reduce required hours or increase periods per day.'
+      }, { status: 400 });
+    }
+
+    console.log('[Pipeline] Feasibility check passed for', choicesByStudent.size, 'DP students');
     console.log('[Pipeline] Payload type:', finalPayload.payloadType, '| programType:', finalPayload.programType);
     console.log('[Pipeline] subjects:', finalPayload.subjects?.length, '| lessons:', finalPayload.lessons?.length, '| requirements:', finalPayload.subject_requirements?.length);
 
