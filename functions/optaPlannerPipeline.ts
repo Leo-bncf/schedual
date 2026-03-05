@@ -781,6 +781,8 @@ Deno.serve(async (req) => {
         slotsInserted: slotsToInsert.length,
         score: scoreToSave,
         hardScoreNegative: scoreToSave < 0,
+        partialRecovery,
+        dedupDropped,
         debug: {
           assignmentsFound: finalAssignments.length,
           sampleAssignment: finalAssignments.length > 0 ? finalAssignments[0] : null,
