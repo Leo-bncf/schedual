@@ -330,30 +330,29 @@ Deno.serve(async (req) => {
         })),
         subjects: subjects
             .filter(sub => activeSubjectOriginalIds.has(String(sub.id)))
-            .map((sub, idx) => ({
-                id: idx + 1, // contiguous numeric IDs required by solver
+            .map((sub) => ({
+                id: String(sub.id),
                 code: getSafeSubjectName(sub),
-                name: getSafeSubjectName(sub),
+                name: String(sub.name || sub.code || getSafeSubjectName(sub)),
                 ...(programType === 'DP' ? { 
                     hoursPerWeekHL: Number(sub.hoursPerWeekHL || 5), 
                     hoursPerWeekSL: Number(sub.hoursPerWeekSL || 3) 
                 } : {})
             })),
-        teachingGroups: mappedTeachingGroups.map(tg => ({
+        teaching_groups: mappedTeachingGroups.map(tg => ({
             id: `tg_${tg.code}`,
             sectionId: tg.sectionId,
-            studentGroup: tg.studentGroup,
-            subjectId: `sub_${tg.originalSubjectId}`,
+            student_group: tg.studentGroup,
+            subject_id: String(tg.originalSubjectId),
             ...(programType === 'DP' ? { level: tg.level } : {}),
             requiredMinutesPerWeek: tg.requiredMinutesPerWeek
-        })), // temporary subjectId, will remap below
+        })),
         lessons: mappedLessons.map(l => ({
             id: l.id,
-            subject: l.subject,
+            subject: l.subject, // must match subjects[].code
             studentGroup: l.studentGroup,
             teachingGroupId: `tg_${mappedTeachingGroups.find(tg => tg.id === l.teachingGroupId)?.code || l.teachingGroupId}`,
             sectionId: l.sectionId,
-            subjectId: `sub_${l.originalSubjectId}`,
             yearGroup: l.yearGroup,
             requiredCapacity: l.requiredCapacity,
             teacherId: l.teacherId,
@@ -361,14 +360,13 @@ Deno.serve(async (req) => {
                 studentIds: l.studentIds.map(sid => String(sid)),
                 level: l.level
             } : {})
-        })), // temporary subjectId, will remap below
-        subjectRequirements: subjectRequirements.map(req => ({
+        })),
+        subject_requirements: subjectRequirements.map(req => ({
             studentGroup: req.studentGroup || "Unknown",
             ...(programType === 'DP' ? { teachingGroupId: `tg_${mappedTeachingGroups.find(tg => tg.id === req.teachingGroupId)?.code || req.teachingGroupId}` } : {}),
-            subject: req.subject,
-            subjectId: `sub_${req.originalSubjectId}`,
+            subject: req.subject, // must match subjects[].code
             minutesPerWeek: req.minutesPerWeek
-        })), // temporary subjectId, will remap below
+        })),
         blockedSlotIds: [],
         constraints: {
             spreadAcrossDaysPerTeachingGroupSection: true,
@@ -437,111 +435,79 @@ Deno.serve(async (req) => {
     const beforeCounts = {
         subjects: (finalPayload.subjects || []).length,
         lessons: (finalPayload.lessons || []).length,
-        subjectRequirements: (finalPayload.subjectRequirements || []).length,
+        subject_requirements: (finalPayload.subject_requirements || []).length,
         choices: (finalPayload.studentSubjectChoices || []).length,
-        teachingGroups: (finalPayload.teachingGroups || []).length
+        teaching_groups: (finalPayload.teaching_groups || []).length
     };
 
-    finalPayload.subjects = (finalPayload.subjects || []).filter(s => !corePrefixedIds.has(s.id) && !isCoreName(s.code || s.name));
-    finalPayload.lessons = (finalPayload.lessons || []).filter(l => !corePrefixedIds.has(l.subjectId) && !isCoreName(l.subject));
-    finalPayload.subjectRequirements = (finalPayload.subjectRequirements || []).filter(r => !corePrefixedIds.has(r.subjectId) && !isCoreName(r.subject));
-    finalPayload.teachingGroups = (finalPayload.teachingGroups || []).filter(tg => !corePrefixedIds.has(tg.subjectId));
+    finalPayload.subjects = (finalPayload.subjects || []).filter(s => !isCoreName(s.code || s.name));
+    finalPayload.lessons = (finalPayload.lessons || []).filter(l => !isCoreName(l.subject));
+    finalPayload.subject_requirements = (finalPayload.subject_requirements || []).filter(r => !isCoreName(r.subject));
+    finalPayload.teaching_groups = (finalPayload.teaching_groups || []).filter(tg => {
+        const subj = (finalPayload.subjects || []).find(s => s.id === tg.subject_id);
+        return subj ? !isCoreName(subj.code || subj.name) : true;
+    });
     if (finalPayload.payloadType === 'individual_payload') {
-        finalPayload.studentSubjectChoices = (finalPayload.studentSubjectChoices || []).filter(c => !corePrefixedIds.has(c.subjectId) && !isCoreName(c.subject));
+        finalPayload.studentSubjectChoices = (finalPayload.studentSubjectChoices || []).filter(c => !isCoreName(c.subject));
     }
 
     const afterCounts = {
         subjects: (finalPayload.subjects || []).length,
         lessons: (finalPayload.lessons || []).length,
-        subjectRequirements: (finalPayload.subjectRequirements || []).length,
+        subject_requirements: (finalPayload.subject_requirements || []).length,
         choices: (finalPayload.studentSubjectChoices || []).length,
-        teachingGroups: (finalPayload.teachingGroups || []).length
+        teaching_groups: (finalPayload.teaching_groups || []).length
     };
     if (Object.values(beforeCounts).some((v, i) => v !== Object.values(afterCounts)[i])) {
         console.log('[Pipeline] Core subjects purged from payload:', { beforeCounts, afterCounts, corePrefixedIds: Array.from(corePrefixedIds) });
     }
 
-    // Build mapping from temporary `sub_<original>` to contiguous numeric IDs assigned above
-    const subjIdMap = new Map();
-    // Build map from `sub_<originalId>` to assigned numeric id using subjects[] code/name
-    const byCode = new Map((finalPayload.subjects || []).map(s => [s.code || s.name, s.id]));
-    const buildTemp = (orig) => `sub_${String(orig).replace(/^sub_/, '')}`;
-    const allOriginals = new Set();
-    (finalPayload.lessons || []).forEach(l => { if (l.subjectId && String(l.subjectId).startsWith('sub_')) allOriginals.add(l.subjectId); });
-    (finalPayload.subjectRequirements || []).forEach(r => { if (r.subjectId && String(r.subjectId).startsWith('sub_')) allOriginals.add(r.subjectId); });
-    if (finalPayload.payloadType === 'individual_payload') {
-        (finalPayload.studentSubjectChoices || []).forEach(c => { if (c.subjectId && String(c.subjectId).startsWith('sub_')) allOriginals.add(c.subjectId); });
-    }
-    // Try to map by comparing lesson/requirement subject string to subjects[] code
-    allOriginals.forEach(tmp => {
-        (finalPayload.lessons || []).forEach(l => { if (l.subjectId === tmp && (l.subject) && byCode.has(l.subject)) subjIdMap.set(tmp, byCode.get(l.subject)); });
-        (finalPayload.subjectRequirements || []).forEach(r => { if (r.subjectId === tmp && (r.subject) && byCode.has(r.subject)) subjIdMap.set(tmp, byCode.get(r.subject)); });
-    });
-    const remapFromTemp = (id) => subjIdMap.has(id) ? subjIdMap.get(id) : id;
+    // Build direct maps based on subjects list
+    const idToCode = Object.fromEntries((finalPayload.subjects || []).map(s => [s.id, s.code || s.name]));
+    const codeToId = Object.fromEntries((finalPayload.subjects || []).map(s => [s.code || s.name, s.id]));
+    // expose for solver consumption
+    finalPayload.subjectIdByCode = codeToId;
 
-    finalPayload.teachingGroups = (finalPayload.teachingGroups || []).map(tg => ({
-        ...tg,
-        subjectId: remapFromTemp(tg.subjectId)
-    }));
-    finalPayload.lessons = (finalPayload.lessons || []).map(l => ({
-        ...l,
-        subjectId: remapFromTemp(l.subjectId)
-    }));
-    finalPayload.subjectRequirements = (finalPayload.subjectRequirements || []).map(r => ({
-        ...r,
-        subjectId: remapFromTemp(r.subjectId)
-    }));
-    if (finalPayload.payloadType === 'individual_payload') {
-        finalPayload.studentSubjectChoices = (finalPayload.studentSubjectChoices || []).map(c => ({
-            ...c,
-            subjectId: remapFromTemp(c.subjectId)
-        }));
-    }
+    console.log('[Pipeline] Subject map ready:', { subjects: (finalPayload.subjects || []).length });
 
-    console.log('[Pipeline] Subject ID remap completed:', { subjects: (finalPayload.subjects || []).length, mappingSize: (finalPayload.subjects || []).length });
-
-    // Align all subject name strings to canonical subject codes based on (possibly remapped) subjectId
+    // Ensure all subject strings are canonical (use code)
     const idToCode = Object.fromEntries((finalPayload.subjects || []).map(s => [s.id, s.code || s.name]));
     finalPayload.lessons = (finalPayload.lessons || []).map(l => ({
         ...l,
-        subject: idToCode[l.subjectId] || l.subject
+        subject: l.subject && idToCode[finalPayload.subjectIdByCode[l.subject]] ? l.subject : l.subject
     }));
-    finalPayload.subjectRequirements = (finalPayload.subjectRequirements || []).map(r => ({
+    finalPayload.subject_requirements = (finalPayload.subject_requirements || []).map(r => ({
         ...r,
-        subject: idToCode[r.subjectId] || r.subject
+        subject: r.subject && idToCode[finalPayload.subjectIdByCode[r.subject]] ? r.subject : r.subject
     }));
     if (finalPayload.payloadType === 'individual_payload') {
         finalPayload.studentSubjectChoices = (finalPayload.studentSubjectChoices || []).map(c => ({
             ...c,
-            subject: idToCode[c.subjectId] || c.subject
+            subject: c.subject && idToCode[finalPayload.subjectIdByCode[c.subject]] ? c.subject : c.subject
         }));
     }
 
-    // Pre-validate that all referenced subjectIds exist in subjects[] to avoid opaque solver errors
+    // Pre-validate subjects using codes and real IDs
     const definedSubjectIds = new Set((finalPayload.subjects || []).map(s => s.id));
-    // IDs are now numeric; core strings no longer apply
-    const isCoreId = (_id) => false;
-    const referencedSubjectIds = new Set();
-    (finalPayload.lessons || []).forEach(l => { if (l.subjectId) referencedSubjectIds.add(l.subjectId); });
-    (finalPayload.subjectRequirements || []).forEach(r => { if (r.subjectId) referencedSubjectIds.add(r.subjectId); });
-    if (finalPayload.payloadType === 'individual_payload') {
-        (finalPayload.studentSubjectChoices || []).forEach(c => { if (c.subjectId) referencedSubjectIds.add(c.subjectId); });
-    }
-    let missingSubjects = Array.from(referencedSubjectIds).filter(id => !definedSubjectIds.has(id));
-    missingSubjects = missingSubjects.filter(id => !isCoreId(id));
-    if (missingSubjects.length > 0) {
+    const definedSubjectCodes = new Set((finalPayload.subjects || []).map(s => s.code || s.name));
+    const lessonCodes = new Set((finalPayload.lessons || []).map(l => l.subject).filter(Boolean));
+    const reqCodes = new Set((finalPayload.subject_requirements || []).map(r => r.subject).filter(Boolean));
+    const invalidLessonCodes = Array.from(lessonCodes).filter(c => !definedSubjectCodes.has(c));
+    const invalidReqCodes = Array.from(reqCodes).filter(c => !definedSubjectCodes.has(c));
+    const invalidTgSubjects = (finalPayload.teaching_groups || []).filter(tg => tg.subject_id && !definedSubjectIds.has(tg.subject_id)).map(tg => ({ tg_id: tg.id, subject_id: tg.subject_id }));
+    if (invalidLessonCodes.length > 0 || invalidReqCodes.length > 0 || invalidTgSubjects.length > 0) {
         return Response.json({
             ok: false,
-            error: 'Pre-validation failed: invalid subject references (IDs)',
+            error: 'Pre-validation failed: invalid subjects',
             details: {
-                missing_subject_ids: missingSubjects,
-                referenced_subject_ids: Array.from(referencedSubjectIds),
-                defined_subject_ids: Array.from(definedSubjectIds)
+                invalid_lesson_subjects: invalidLessonCodes,
+                invalid_requirement_subjects: invalidReqCodes,
+                invalid_teaching_group_subject_ids: invalidTgSubjects
             },
             debug_payload_preview: {
                 subjects: (finalPayload.subjects || []).slice(0, 5),
                 lessons: (finalPayload.lessons || []).slice(0, 3),
-                subjectRequirements: (finalPayload.subjectRequirements || []).slice(0, 3)
+                subject_requirements: (finalPayload.subject_requirements || []).slice(0, 3)
             }
         }, { status: 400 });
     }
@@ -567,27 +533,10 @@ Deno.serve(async (req) => {
     }
 
     // Validate uniqueness and id<->code alignment
-    const subjectIdToCode = Object.fromEntries((finalPayload.subjects || []).map(s => [s.id, s.code || s.name]));
-    // Auto-correct mismatches by aligning to canonical code
-    (finalPayload.lessons || []).forEach(l => { if (l.subjectId) l.subject = subjectIdToCode[l.subjectId] || l.subject; });
-    (finalPayload.subjectRequirements || []).forEach(r => { if (r.subjectId) r.subject = subjectIdToCode[r.subjectId] || r.subject; });
-    if (finalPayload.payloadType === 'individual_payload') {
-        (finalPayload.studentSubjectChoices || []).forEach(c => { if (c.subjectId) c.subject = subjectIdToCode[c.subjectId] || c.subject; });
-    }
     const subjectCodes = (finalPayload.subjects || []).map(s => s.code || s.name).filter(Boolean);
     const duplicateCodes = [...new Set(subjectCodes.filter((c, i, arr) => arr.indexOf(c) !== i))];
     if (duplicateCodes.length > 0) {
         return Response.json({ ok:false, error:'Pre-validation failed: duplicate subject codes', details: { duplicate_codes: duplicateCodes } }, { status:400 });
-    }
-    const mismatchedPairs = [];
-    (finalPayload.lessons || []).forEach(l => {
-        if (l.subjectId && l.subject) { const exp = subjectIdToCode[l.subjectId]; if (exp && exp !== l.subject) mismatchedPairs.push({ where:'lesson', lessonId: l.id, subjectId:l.subjectId, subject:l.subject, expected: exp }); }
-    });
-    (finalPayload.subjectRequirements || []).forEach(r => {
-        if (r.subjectId && r.subject) { const exp = subjectIdToCode[r.subjectId]; if (exp && exp !== r.subject) mismatchedPairs.push({ where:'subjectRequirement', subjectId:r.subjectId, subject:r.subject, expected: exp }); }
-    });
-    if (mismatchedPairs.length > 0) {
-        return Response.json({ ok:false, error:'Pre-validation failed: subjectId/name mismatch', details: { mismatches: mismatchedPairs.slice(0,50) } }, { status:400 });
     }
 
     if (mock_school_id) {
@@ -655,7 +604,7 @@ Deno.serve(async (req) => {
                 debug_payload_preview: {
                     subjects: (finalPayload.subjects || []).slice(0, 5),
                     lessons: (finalPayload.lessons || []).slice(0, 3),
-                    subjectRequirements: (finalPayload.subjectRequirements || []).slice(0, 3)
+                    subject_requirements: (finalPayload.subject_requirements || []).slice(0, 3)
                 }
             }, { status: 400 });
         }
