@@ -115,7 +115,7 @@ Deno.serve(async (req) => {
             .toUpperCase()
             .substring(0, 15);
             
-        return `${normalized}_${String(subj.id).slice(-6).toUpperCase()}`;
+        return `${normalized}${String(subj.id).slice(-6).toUpperCase()}`;
     };
 
     // 2. Build Teaching Groups and Lessons
