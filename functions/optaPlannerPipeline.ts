@@ -462,38 +462,33 @@ Deno.serve(async (req) => {
         console.log('[Pipeline] Core subjects purged from payload:', { beforeCounts, afterCounts, corePrefixedIds: Array.from(corePrefixedIds) });
     }
 
-    // Normalize subject IDs to numeric to satisfy solver expectations
+    // Build mapping from temporary `sub_<original>` to contiguous numeric IDs assigned above
     const subjIdMap = new Map();
-    let subjNum = 1;
     (finalPayload.subjects || []).forEach(s => {
-        const oldId = s.id;
-        if (!subjIdMap.has(oldId)) {
-            subjIdMap.set(oldId, subjNum++);
-        }
-        s.id = subjIdMap.get(oldId);
+        if (s.originalId) subjIdMap.set(s.originalId, s.id);
     });
-    const remapSubjId = (id) => subjIdMap.has(id) ? subjIdMap.get(id) : id;
+    const remapFromTemp = (id) => subjIdMap.has(id) ? subjIdMap.get(id) : id;
 
     finalPayload.teachingGroups = (finalPayload.teachingGroups || []).map(tg => ({
         ...tg,
-        subjectId: remapSubjId(tg.subjectId)
+        subjectId: remapFromTemp(tg.subjectId)
     }));
     finalPayload.lessons = (finalPayload.lessons || []).map(l => ({
         ...l,
-        subjectId: remapSubjId(l.subjectId)
+        subjectId: remapFromTemp(l.subjectId)
     }));
     finalPayload.subjectRequirements = (finalPayload.subjectRequirements || []).map(r => ({
         ...r,
-        subjectId: remapSubjId(r.subjectId)
+        subjectId: remapFromTemp(r.subjectId)
     }));
     if (finalPayload.payloadType === 'individual_payload') {
         finalPayload.studentSubjectChoices = (finalPayload.studentSubjectChoices || []).map(c => ({
             ...c,
-            subjectId: remapSubjId(c.subjectId)
+            subjectId: remapFromTemp(c.subjectId)
         }));
     }
 
-    console.log('[Pipeline] Subject ID remap completed:', { subjects: (finalPayload.subjects || []).length, mappingSize: subjIdMap.size });
+    console.log('[Pipeline] Subject ID remap completed:', { subjects: (finalPayload.subjects || []).length, mappingSize: (finalPayload.subjects || []).length });
 
     // Align all subject name strings to canonical subject codes based on (possibly remapped) subjectId
     const idToCode = Object.fromEntries((finalPayload.subjects || []).map(s => [s.id, s.code || s.name]));
