@@ -384,7 +384,7 @@ Deno.serve(async (req) => {
             programType: "DP",
             studentSubjectChoices: studentSubjectChoices.map(c => ({
                 studentId: c.studentId,
-                subjectId: `sub_${c.originalSubjectId}`,
+                subjectId: c.originalSubjectId,
                 subject: c.subject, // matches subjects[].code
                 level: c.level,
                 yearGroup: c.yearGroup
