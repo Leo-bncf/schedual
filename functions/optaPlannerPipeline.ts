@@ -496,11 +496,8 @@ Deno.serve(async (req) => {
 
     // Pre-validate that all referenced subjectIds exist in subjects[] to avoid opaque solver errors
     const definedSubjectIds = new Set((finalPayload.subjects || []).map(s => s.id));
-    // Skip validation errors for core subjects that were intentionally purged
-    const isCoreId = (id) => {
-        const idStr = String(id || '');
-        return idStr.includes('TOK') || idStr.includes('EXTENDEDESSAY') || idStr.includes('THEORYOFKNOWLEDGE') || idStr.includes('CAS');
-    };
+    // IDs are now numeric; core strings no longer apply
+    const isCoreId = (_id) => false;
     const referencedSubjectIds = new Set();
     (finalPayload.lessons || []).forEach(l => { if (l.subjectId) referencedSubjectIds.add(l.subjectId); });
     (finalPayload.subjectRequirements || []).forEach(r => { if (r.subjectId) referencedSubjectIds.add(r.subjectId); });
