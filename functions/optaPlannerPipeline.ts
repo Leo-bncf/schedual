@@ -355,7 +355,6 @@ Deno.serve(async (req) => {
             sectionId: l.sectionId,
             yearGroup: l.yearGroup,
             requiredCapacity: l.requiredCapacity,
-            timeslotId: l.timeslotId ?? null,
             teacherId: l.teacherId,
             ...(programType === 'DP' ? { 
                 studentIds: l.studentIds.map(sid => String(sid)),
