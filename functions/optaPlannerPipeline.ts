@@ -638,6 +638,45 @@ Deno.serve(async (req) => {
     finalPayload.organizationId = `org_${user.school_id}`;
     finalPayload.runId = `run_${schedule_version_id}`;
 
+    // Final scope-timeslot uniqueness enforcement right before POST
+    (() => {
+        const lessons = finalPayload.lessons || [];
+        if (lessons.length === 0) return;
+
+        const seen = new Set();
+        let dedupedCount = 0;
+        for (const l of lessons) {
+            if (l.timeslotId == null) continue;
+            const scope = `${l.sectionId}||${l.studentGroup}||${l.subject}`;
+            const key = `${scope}||${l.timeslotId}`;
+            if (seen.has(key)) {
+                l.timeslotId = null; // or reassign to a free slot in this scope
+                dedupedCount++;
+            } else {
+                seen.add(key);
+            }
+        }
+
+        const postSeen = new Set();
+        let residualDupes = 0;
+        for (const l of lessons) {
+            if (l.timeslotId == null) continue;
+            const scope = `${l.sectionId}||${l.studentGroup}||${l.subject}`;
+            const key = `${scope}||${l.timeslotId}`;
+            if (postSeen.has(key)) {
+                residualDupes++;
+            } else {
+                postSeen.add(key);
+            }
+        }
+        if (dedupedCount > 0) {
+            console.log('[Pipeline] Final preflight dedupe nullified duplicates:', dedupedCount);
+        }
+        if (residualDupes > 0) {
+            throw new Error(`Preflight failed (final): duplicate pre-assigned timeslots (${residualDupes}) remain`);
+        }
+    })();
+
     const requestBody = JSON.stringify(finalPayload);
     
     console.log('[Pipeline] === OPTAPLANNER REQUEST ===');
