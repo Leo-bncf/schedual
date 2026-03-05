@@ -110,12 +110,27 @@ Deno.serve(async (req) => {
     });
 
     // ─── Subject code helper ──────────────────────────────────────────────────
+    // Build a unique code per subject using name only (no hex suffix in display).
+    // We guarantee uniqueness by tracking used codes and appending a counter only when there's a collision.
+    const _usedSubjectCodes = new Map(); // code → subjectId (first owner)
+    const _subjectCodeCache = new Map(); // subjectId → assigned code
     const getSafeSubjectCode = (subj) => {
-      return String(subj.name || subj.code || 'SUBJ')
+      if (_subjectCodeCache.has(subj.id)) return _subjectCodeCache.get(subj.id);
+      const base = String(subj.name || subj.code || 'SUBJ')
         .normalize('NFD').replace(/[\u0300-\u036f]/g, '')
-        .replace(/[^a-zA-Z0-9]/g, '')
+        .replace(/[^a-zA-Z0-9 ]/g, '')
+        .trim()
         .toUpperCase()
-        .substring(0, 15) + String(subj.id).slice(-6).toUpperCase();
+        .substring(0, 20);
+      let candidate = base;
+      let counter = 2;
+      while (_usedSubjectCodes.has(candidate) && _usedSubjectCodes.get(candidate) !== subj.id) {
+        candidate = base.substring(0, 17) + counter;
+        counter++;
+      }
+      _usedSubjectCodes.set(candidate, subj.id);
+      _subjectCodeCache.set(subj.id, candidate);
+      return candidate;
     };
 
     // ─── Filter active teaching groups ───────────────────────────────────────
