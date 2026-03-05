@@ -1016,11 +1016,32 @@ Deno.serve(async (req) => {
       }, { status: 400 });
     }
 
-    // ─── FEASIBLE: Save the schedule ──────────────────────────────────────
+    // ─── FEASIBLE: PERSIST & LOG ──────────────────────────────────────────────
     await b44Entities.ScheduleVersion.update(schedule_version_id, {
       score: scoreToSave,
       generated_at: new Date().toISOString()
     });
+
+    // Calculate input/output duplicate metrics
+    const inputDupCount = (() => {
+      const seen = new Set();
+      let dups = 0;
+      const codeNorm = (v) => v == null ? '' : String(v).trim().toUpperCase();
+      for (const l of finalPayload.lessons) {
+        const key = `${codeNorm(l.sectionId)}||${codeNorm(l.studentGroup)}||${codeNorm(l.subject)}`;
+        if (seen.has(key)) dups++;
+        seen.add(key);
+      }
+      return dups;
+    })();
+
+    const outputDupCount = dedupDropped || 0;
+
+    const studentConflictCount = unassignedByStudent?.size || 0;
+
+    console.log(`[Pipeline] ✓ FEASIBLE | hardScore=${scoreToSave} | slotsInserted=${slotsToInsert.length}`);
+    console.log(`[Pipeline] Metrics: inputDupCount=${inputDupCount} | outputDupCount=${outputDupCount} | studentConflictCount=${studentConflictCount}`);
+    console.log(`[Pipeline] TG coverage: ${finalAssignments.filter(l => l.timeslotId != null).length}/${finalAssignments.length} lessons scheduled`);
 
     return Response.json({
       ok: true,
@@ -1029,7 +1050,13 @@ Deno.serve(async (req) => {
         score: scoreToSave,
         hardScoreNegative: false,
         partialRecovery,
-        dedupDropped,
+        metrics: {
+          inputDuplicateCount: inputDupCount,
+          outputDuplicateCount: outputDupCount,
+          studentConflictCount: studentConflictCount,
+          assignedLessons: finalAssignments.filter(l => l.timeslotId != null).length,
+          totalLessons: finalAssignments.length
+        },
         debug: {
           assignmentsFound: finalAssignments.length,
           sampleAssignment: finalAssignments.length > 0 ? finalAssignments[0] : null,
