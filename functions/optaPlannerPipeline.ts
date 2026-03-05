@@ -474,7 +474,8 @@ Deno.serve(async (req) => {
     if (finalPayload.payloadType === 'individual_payload') {
         (finalPayload.studentSubjectChoices || []).forEach(c => { if (c.subjectId) referencedSubjectIds.add(c.subjectId); });
     }
-    const missingSubjects = Array.from(referencedSubjectIds).filter(id => !definedSubjectIds.has(id));
+    let missingSubjects = Array.from(referencedSubjectIds).filter(id => !definedSubjectIds.has(id));
+    missingSubjects = missingSubjects.filter(id => !isCoreId(id));
     if (missingSubjects.length > 0) {
         return Response.json({
             ok: false,
