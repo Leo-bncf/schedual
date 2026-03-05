@@ -548,154 +548,168 @@ Deno.serve(async (req) => {
     let result = {};
     try { result = JSON.parse(responseText); } catch(e) {}
 
-    if (!response.ok) {
-      // Solver returned HTTP 400. Check if it contains partial assignments we can salvage.
-      const partialAssignments = result.assignedLessons || result.lessons || result.assignments ||
-        (result.schoolResults && Array.isArray(result.schoolResults)
-          ? result.schoolResults.flatMap(sr => sr.result?.assignments || sr.result?.lessons || sr.result?.assignedLessons || [])
-          : []);
+    // ─── Helper: extract a flat assignments list from any solver response shape ──
+    const extractAssignments = (r) => {
+      if (r.schoolResults && Array.isArray(r.schoolResults)) {
+        return r.schoolResults.flatMap(sr =>
+          sr.result?.assignments || sr.result?.lessons || sr.result?.assignedLessons || []
+        );
+      }
+      return r.assignedLessons || r.lessons || r.assignments || (Array.isArray(r) ? r : []);
+    };
 
-      if (partialAssignments.length > 0) {
-        console.warn(`[Pipeline] Solver returned ${response.status} but has ${partialAssignments.length} partial assignments — attempting dedup and save.`);
-        result = { ...result, _partialRecovery: true, assignedLessons: partialAssignments };
-        // Fall through to normal processing below
+    // ─── Helper: build a deduplicated scope-key → lessonId map from lessonMappings in error details ──
+    const codeNorm = (v) => v == null ? '' : String(v).trim().toUpperCase();
+    const scopeKey = (sectionId, studentGroup, subject, timeslotId) =>
+      `${codeNorm(sectionId)}||${codeNorm(studentGroup)}||${codeNorm(subject)}||${timeslotId}`;
+
+    // Build a fast lookup: lessonId (numeric) → mappedLesson metadata
+    const lessonMetaMap = new Map(mappedLessons.map(l => [l.id, l]));
+
+    // ─── Handle solver response ────────────────────────────────────────────────
+    let rawAssignments = [];
+    let partialRecovery = false;
+
+    if (!response.ok) {
+      const bodyAssignments = extractAssignments(result);
+
+      if (bodyAssignments.length > 0) {
+        // Solver returned 400 but included assignment list — use it (dedup below)
+        console.warn(`[Pipeline] Solver ${response.status} but has ${bodyAssignments.length} assignments — will dedup and save.`);
+        rawAssignments = bodyAssignments;
+        partialRecovery = true;
 
       } else if (Array.isArray(result.details) && result.details.some(d => Array.isArray(d.lessonMappings))) {
-        // Solver returned 400 with duplicate-scope details but no full assignment list.
-        // Reconstruct a de-duplicated assignment list from the lessonMappings in the error details,
-        // keeping only the FIRST unique (sectionId, studentGroup, subject, timeslotId) per scope.
-        console.warn(`[Pipeline] Solver 400 with duplicate-scope details — reconstructing assignments from lessonMappings.`);
-
-        // Build a map: lessonId → { timeslotId, sectionId, studentGroup, subject }
-        const lessonTimeslotMap = new Map();
+        // Solver returned 400 with only lessonMappings diagnostics — reconstruct from those,
+        // picking the FIRST (non-duplicate) timeslot per scope.
+        console.warn(`[Pipeline] Solver 400 with lessonMappings — reconstructing deduplicated assignments.`);
+        const lessonTimeslotMap = new Map(); // lessonId → timeslotId (first-seen)
         for (const detail of result.details) {
           if (!Array.isArray(detail.lessonMappings)) continue;
-          const seenTimeslots = new Set();
+          const seenTs = new Set();
           for (const lm of detail.lessonMappings) {
             if (lm.timeslotId == null) continue;
-            if (seenTimeslots.has(lm.timeslotId)) {
-              // duplicate — skip this lesson
-              console.warn(`[Pipeline] Skipping duplicate lessonId=${lm.lessonId} timeslotId=${lm.timeslotId} in section=${detail.sectionId}`);
+            if (seenTs.has(lm.timeslotId)) {
+              console.warn(`[Pipeline] Dropping dup lessonId=${lm.lessonId} timeslotId=${lm.timeslotId} sectionId=${detail.sectionId}`);
               continue;
             }
-            seenTimeslots.add(lm.timeslotId);
+            seenTs.add(lm.timeslotId);
             lessonTimeslotMap.set(lm.lessonId, lm.timeslotId);
           }
         }
-
-        // Also include any lessons NOT mentioned in the error details (they have no duplicates)
-        // by checking which lesson IDs appear in the details at all
-        const mentionedLessonIds = new Set(
-          result.details.flatMap(d => (d.lessonMappings || []).map(lm => lm.lessonId))
-        );
-
-        // Build synthetic assignment list from our mappedLessons
-        const reconstructed = [];
-        for (const lesson of mappedLessons) {
-          if (lessonTimeslotMap.has(lesson.id)) {
-            // Was mentioned — use the de-duped timeslotId
-            reconstructed.push({ id: lesson.id, timeslotId: lessonTimeslotMap.get(lesson.id), sectionId: lesson.sectionId, studentGroup: lesson.studentGroup, subject: lesson.subject });
-          }
-          // Lessons not mentioned in error details had no duplicate problem
-          // but we also have no timeslotId for them from the solver's 400 body, so skip them
+        // Synthesise assignment objects for the lessons that had a confirmed (deduped) timeslot
+        for (const [lessonId, timeslotId] of lessonTimeslotMap.entries()) {
+          const meta = lessonMetaMap.get(lessonId);
+          if (!meta) continue;
+          rawAssignments.push({
+            id: lessonId,
+            timeslotId,
+            sectionId: meta.sectionId,
+            studentGroup: meta.studentGroup,
+            subject: meta.subject,
+            teacherId: meta.teacherId,
+          });
         }
-
-        console.log(`[Pipeline] Reconstructed ${reconstructed.length} de-duped assignments from error details.`);
-        result = { _partialRecovery: true, assignedLessons: reconstructed, score: 0 };
-        // Fall through to normal processing below
+        console.log(`[Pipeline] Reconstructed ${rawAssignments.length} assignments from lessonMappings.`);
+        partialRecovery = true;
 
       } else {
-        console.error('[Pipeline] OptaPlanner error (no assignments to recover):', responseText.slice(0, 500));
+        // No assignments recoverable at all
+        console.error('[Pipeline] OptaPlanner error — no assignments to recover:', responseText.slice(0, 500));
         return Response.json({
           ok: false,
           error: result.error || 'OptaPlanner validation failed',
           details: result.details || result,
-          debug_payload_preview: {
-            subjects: (finalPayload.subjects || []).slice(0, 5),
-            lessons: (finalPayload.lessons || []).slice(0, 3),
-            subject_requirements: (finalPayload.subject_requirements || []).slice(0, 3)
-          }
         }, { status: 400 });
       }
-    }
 
-    if (result.ok === false || result.errorCode || result.errorMessage || (Array.isArray(result.validationErrors) && result.validationErrors.length > 0)) {
-      // Check again if there are assignments to salvage before giving up
-      const partialAssignments = result.assignedLessons || result.lessons || result.assignments ||
-        (result.schoolResults && Array.isArray(result.schoolResults)
-          ? result.schoolResults.flatMap(sr => sr.result?.assignments || sr.result?.lessons || sr.result?.assignedLessons || [])
-          : []);
-
-      if (partialAssignments.length > 0) {
-        console.warn(`[Pipeline] Solver logical error but has ${partialAssignments.length} assignments — attempting dedup and save.`);
-        result = { ...result, _partialRecovery: true };
+    } else if (result.ok === false || result.errorCode || result.errorMessage ||
+               (Array.isArray(result.validationErrors) && result.validationErrors.length > 0)) {
+      const bodyAssignments = extractAssignments(result);
+      if (bodyAssignments.length > 0) {
+        console.warn(`[Pipeline] Solver logical error but has ${bodyAssignments.length} assignments — will dedup and save.`);
+        rawAssignments = bodyAssignments;
+        partialRecovery = true;
       } else {
         console.error('[Pipeline] OptaPlanner logical error:', result.errorMessage, result.validationErrors);
         return Response.json({
           ok: false,
           error: result.title || result.errorMessage || result.message || 'OptaPlanner Validation Error',
           details: result.validationErrors || result.details || result,
-          debug_payload: finalPayload
         }, { status: 400 });
       }
-    }
-
-    // ─── Process results & save ───────────────────────────────────────────────
-    const existingSlots = await b44Entities.ScheduleSlot.filter({
-      school_id: user.school_id,
-      schedule_version: schedule_version_id
-    });
-    if (existingSlots.length > 0) {
-      for (const slot of existingSlots) await b44Entities.ScheduleSlot.delete(slot.id);
-    }
-
-    let finalAssignments = [];
-    if (result.schoolResults && Array.isArray(result.schoolResults)) {
-      result.schoolResults.forEach(sr => {
-        if (sr.result?.assignments) finalAssignments = finalAssignments.concat(sr.result.assignments);
-        else if (sr.result?.lessons) finalAssignments = finalAssignments.concat(sr.result.lessons);
-        else if (sr.result?.assignedLessons) finalAssignments = finalAssignments.concat(sr.result.assignedLessons);
-      });
     } else {
-      finalAssignments = result.assignedLessons || result.lessons || result.assignments || (Array.isArray(result) ? result : []);
+      rawAssignments = extractAssignments(result);
     }
 
-    // ── Diagnostic: count duplicate scopes in OUTPUT (solver-generated) ──
+    console.log(`[Pipeline] rawAssignments before dedup: ${rawAssignments.length}`);
+
+    // ── STEP 1: Enrich assignments with metadata from lessonMetaMap (fills missing sectionId/studentGroup/subject) ──
+    // The solver sometimes omits these fields on output assignments; fill them from our known lesson list.
+    rawAssignments = rawAssignments.map(lesson => {
+      const lessonId = lesson.id ?? lesson.lessonId ?? lesson.lesson_id;
+      const meta = lessonMetaMap.get(lessonId);
+      return {
+        ...lesson,
+        id: lessonId,
+        sectionId: lesson.sectionId ?? meta?.sectionId ?? null,
+        studentGroup: lesson.studentGroup ?? meta?.studentGroup ?? null,
+        subject: lesson.subject ?? meta?.subject ?? null,
+        teacherId: lesson.teacherId ?? meta?.teacherId ?? null,
+      };
+    });
+
+    // ── STEP 2: Deduplicate on (sectionId || studentGroup || subject || timeslotId) ──
+    // This is the core sanitizer. Any assignment the solver assigned to the same scope+timeslot twice
+    // is stripped here — keeping the first occurrence and nullifying the timeslot on duplicates.
+    let dedupDropped = 0;
+    const dedupSeen = new Set();
+    let finalAssignments = rawAssignments.map(lesson => {
+      const tsId = lesson.timeslotId != null ? lesson.timeslotId : (lesson.timeslot?.id != null ? lesson.timeslot.id : null);
+      if (tsId == null) return lesson; // unassigned — keep as-is
+
+      const key = scopeKey(lesson.sectionId, lesson.studentGroup, lesson.subject, tsId);
+      if (dedupSeen.has(key)) {
+        dedupDropped++;
+        console.warn(`[Pipeline] Dedup: nullifying timeslot for lessonId=${lesson.id} scope=${key}`);
+        return { ...lesson, timeslotId: null }; // nullify instead of drop, to preserve unscheduled count
+      }
+      dedupSeen.add(key);
+      return lesson;
+    });
+
+    console.log(`[Pipeline] After dedup: ${finalAssignments.length} total, ${dedupDropped} timeslots nullified.`);
+
+    // ── STEP 3: FINAL GUARD — assert zero duplicates remain before save ──
     {
-      const outputDupSeen = new Set();
-      let outputDuplicateScopeCount = 0;
-      const codeNorm = (v) => v == null ? '' : String(v).trim().toUpperCase();
+      const assertSeen = new Set();
+      const assertErrors = [];
       for (const lesson of finalAssignments) {
         const tsId = lesson.timeslotId != null ? lesson.timeslotId : (lesson.timeslot?.id != null ? lesson.timeslot.id : null);
         if (tsId == null) continue;
-        const key = `${codeNorm(lesson.sectionId)}||${codeNorm(lesson.studentGroup)}||${codeNorm(lesson.subject)}||${tsId}`;
-        if (outputDupSeen.has(key)) outputDuplicateScopeCount++;
-        else outputDupSeen.add(key);
-      }
-      console.log(`[Pipeline] outputDuplicateScopeCount=${outputDuplicateScopeCount} (solver-generated duplicates)`);
-    }
-
-    console.log(`[Pipeline] Found ${finalAssignments.length} assignments to process.`);
-
-    // ── Sanitize solver output: deduplicate (sectionId, studentGroup, subject, timeslotId).
-    // The solver is returning duplicate scope assignments; we strip them here so the
-    // pipeline can still save a partial result rather than failing with 400.
-    {
-      const solverDupSeen = new Set();
-      const codeNorm = (v) => v == null ? '' : String(v).trim().toUpperCase();
-      finalAssignments = finalAssignments.filter(lesson => {
-        const tsId = lesson.timeslotId != null ? lesson.timeslotId : (lesson.timeslot?.id != null ? lesson.timeslot.id : null);
-        if (tsId == null) return true; // unassigned lessons are always kept
-        const key = `${codeNorm(lesson.sectionId)}||${codeNorm(lesson.studentGroup)}||${codeNorm(lesson.subject)}||${tsId}`;
-        if (solverDupSeen.has(key)) {
-          console.warn(`[Pipeline] Dropping duplicate solver output: lessonId=${lesson.id} scope=${key}`);
-          return false;
+        const key = scopeKey(lesson.sectionId, lesson.studentGroup, lesson.subject, tsId);
+        if (assertSeen.has(key)) {
+          assertErrors.push(`ASSERT FAIL: lessonId=${lesson.id} key=${key}`);
         }
-        solverDupSeen.add(key);
-        return true;
-      });
-      console.log(`[Pipeline] After output dedup: ${finalAssignments.length} assignments`);
+        assertSeen.add(key);
+      }
+      if (assertErrors.length > 0) {
+        console.error('[Pipeline] PRE-SAVE ASSERT FAILED:', assertErrors);
+        return Response.json({
+          ok: false,
+          error: 'Internal pipeline error: duplicate timeslots remain after sanitization. Save blocked.',
+          details: assertErrors,
+        }, { status: 500 });
+      }
+      console.log(`[Pipeline] Pre-save assert passed — 0 duplicate scopes.`);
     }
+
+    // Keep only assigned lessons for slot insertion
+    finalAssignments = finalAssignments.filter(l => {
+      const tsId = l.timeslotId != null ? l.timeslotId : (l.timeslot?.id != null ? l.timeslot.id : null);
+      return tsId != null;
+    });
+    console.log(`[Pipeline] Assigned lessons to save: ${finalAssignments.length}`);
 
     // Reverse maps
     const revTeacherMap = Object.fromEntries(Object.entries(teacherIdMap).map(([k, v]) => [v, k]));
