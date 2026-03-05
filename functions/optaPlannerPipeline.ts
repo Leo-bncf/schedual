@@ -390,7 +390,7 @@ Deno.serve(async (req) => {
                 subject: c.subject,
                 level: c.level,
                 yearGroup: c.yearGroup
-            })),
+            })), // temporary subjectId, will remap below
             llmSoftConstraints: {
                 studentWindows: []
             },
