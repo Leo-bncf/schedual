@@ -579,26 +579,41 @@ Deno.serve(async (req) => {
       finalAssignments = result.assignedLessons || result.lessons || result.assignments || (Array.isArray(result) ? result : []);
     }
 
+    // ── Diagnostic: count duplicate scopes in OUTPUT (solver-generated) ──
+    {
+      const outputDupSeen = new Set();
+      let outputDuplicateScopeCount = 0;
+      const codeNorm = (v) => v == null ? '' : String(v).trim().toUpperCase();
+      for (const lesson of finalAssignments) {
+        const tsId = lesson.timeslotId != null ? lesson.timeslotId : (lesson.timeslot?.id != null ? lesson.timeslot.id : null);
+        if (tsId == null) continue;
+        const key = `${codeNorm(lesson.sectionId)}||${codeNorm(lesson.studentGroup)}||${codeNorm(lesson.subject)}||${tsId}`;
+        if (outputDupSeen.has(key)) outputDuplicateScopeCount++;
+        else outputDupSeen.add(key);
+      }
+      console.log(`[Pipeline] outputDuplicateScopeCount=${outputDuplicateScopeCount} (solver-generated duplicates)`);
+    }
+
     console.log(`[Pipeline] Found ${finalAssignments.length} assignments to process.`);
 
-    // ── Deduplicate solver output: if solver returns duplicate timeslotId within
-    // the same (sectionId, studentGroup, subject) scope, keep only the first occurrence.
-    // This guards against solver bugs where two lessons in the same scope get the same slot.
+    // ── Sanitize solver output: deduplicate (sectionId, studentGroup, subject, timeslotId).
+    // The solver is returning duplicate scope assignments; we strip them here so the
+    // pipeline can still save a partial result rather than failing with 400.
     {
       const solverDupSeen = new Set();
       const codeNorm = (v) => v == null ? '' : String(v).trim().toUpperCase();
       finalAssignments = finalAssignments.filter(lesson => {
         const tsId = lesson.timeslotId != null ? lesson.timeslotId : (lesson.timeslot?.id != null ? lesson.timeslot.id : null);
-        if (tsId == null) return true; // unassigned, always keep
+        if (tsId == null) return true; // unassigned lessons are always kept
         const key = `${codeNorm(lesson.sectionId)}||${codeNorm(lesson.studentGroup)}||${codeNorm(lesson.subject)}||${tsId}`;
         if (solverDupSeen.has(key)) {
-          console.warn(`[Pipeline] Dropping duplicate solver assignment: lessonId=${lesson.id} scope=${key}`);
+          console.warn(`[Pipeline] Dropping duplicate solver output: lessonId=${lesson.id} scope=${key}`);
           return false;
         }
         solverDupSeen.add(key);
         return true;
       });
-      console.log(`[Pipeline] After dedup: ${finalAssignments.length} assignments`);
+      console.log(`[Pipeline] After output dedup: ${finalAssignments.length} assignments`);
     }
 
     // Reverse maps
