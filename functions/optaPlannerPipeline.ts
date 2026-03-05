@@ -160,7 +160,7 @@ Deno.serve(async (req) => {
       if (numLessons <= 0) return;
 
       const subjectCode = getSafeSubjectCode(subject);
-      const sectionId = `sec_${tg.id}`;
+      const sectionId = String(tg.id);
       const tgLessonIds = [];
 
       subjectRequirements.push({
