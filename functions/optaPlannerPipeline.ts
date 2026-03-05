@@ -802,6 +802,7 @@ Deno.serve(async (req) => {
       await b44Entities.ScheduleSlot.bulkCreate(slotsToInsert);
     }
 
+    // ─── Extract & validate score ────────────────────────────────────────────
     let scoreToSave = 0;
     if (result.schoolResults && Array.isArray(result.schoolResults)) {
       let totalHard = 0;
@@ -818,6 +819,45 @@ Deno.serve(async (req) => {
       scoreToSave = result.score || 0;
     }
 
+    // ─── Check for infeasible result (negative hard score) ─────────────────
+    if (scoreToSave < 0) {
+      console.error('[Pipeline] INFEASIBLE SCHEDULE: negative hard score detected', scoreToSave);
+
+      // Extract diagnostics from solver response
+      const diagnostics = {
+        hardScore: scoreToSave,
+        totalAssigned: finalAssignments.filter(l => {
+          const tsId = l.timeslotId != null ? l.timeslotId : (l.timeslot?.id != null ? l.timeslot.id : null);
+          return tsId != null;
+        }).length,
+        totalLessons: finalAssignments.length,
+        unassignedLessons: finalAssignments.filter(l => {
+          const tsId = l.timeslotId != null ? l.timeslotId : (l.timeslot?.id != null ? l.timeslot.id : null);
+          return tsId == null;
+        }).length,
+        partialRecovery
+      };
+
+      // Try to extract conflict details from solver response
+      if (Array.isArray(result.details)) {
+        diagnostics.solverDetails = result.details.slice(0, 5).map(d => ({
+          type: d.type || d.conflictType || 'unknown',
+          message: d.message || d.description || String(d).slice(0, 100)
+        }));
+      }
+
+      return Response.json({
+        ok: false,
+        error: 'Schedule generation produced infeasible result',
+        code: 'INFEASIBLE_SCHEDULE',
+        hardScore: scoreToSave,
+        diagnostics,
+        explanation: 'The solver could not find a valid schedule satisfying all hard constraints. Try reducing teaching hours, adding more timeslots, or relaxing constraints.',
+        details: result.validationErrors || result.details || []
+      }, { status: 400 });
+    }
+
+    // ─── FEASIBLE: Save the schedule ──────────────────────────────────────
     await b44Entities.ScheduleVersion.update(schedule_version_id, {
       score: scoreToSave,
       generated_at: new Date().toISOString()
@@ -828,7 +868,7 @@ Deno.serve(async (req) => {
       result: {
         slotsInserted: slotsToInsert.length,
         score: scoreToSave,
-        hardScoreNegative: scoreToSave < 0,
+        hardScoreNegative: false,
         partialRecovery,
         dedupDropped,
         debug: {
