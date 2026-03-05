@@ -347,7 +347,7 @@ Deno.serve(async (req) => {
             subjectId: `sub_${tg.originalSubjectId}`,
             ...(programType === 'DP' ? { level: tg.level } : {}),
             requiredMinutesPerWeek: tg.requiredMinutesPerWeek
-        })),
+        })), // temporary subjectId, will remap below
         lessons: mappedLessons.map(l => ({
             id: l.id,
             subject: l.subject,
