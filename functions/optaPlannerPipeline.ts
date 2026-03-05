@@ -721,6 +721,7 @@ Deno.serve(async (req) => {
     }
 
     // 7. Process Results & Save
+    // Clear any old/cached assignments for this version before inserting new ones
     const existingSlots = await b44Entities.ScheduleSlot.filter({
         school_id: user.school_id,
         schedule_version: schedule_version_id
