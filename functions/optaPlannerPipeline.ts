@@ -493,6 +493,23 @@ Deno.serve(async (req) => {
     console.log('[Pipeline] Payload type:', finalPayload.payloadType, '| programType:', finalPayload.programType);
     console.log('[Pipeline] subjects:', finalPayload.subjects?.length, '| lessons:', finalPayload.lessons?.length, '| requirements:', finalPayload.subject_requirements?.length);
 
+    // ── Diagnostic: count duplicate scopes in INPUT (should always be 0 after our strip) ──
+    {
+      const inputDupSeen = new Set();
+      let inputDuplicateScopeCount = 0;
+      const codeNorm = (v) => v == null ? '' : String(v).trim().toUpperCase();
+      for (const l of (finalPayload.lessons || [])) {
+        if (l.timeslotId == null) continue;
+        const key = `${codeNorm(l.sectionId)}||${codeNorm(l.studentGroup)}||${codeNorm(l.subject)}||${l.timeslotId}`;
+        if (inputDupSeen.has(key)) inputDuplicateScopeCount++;
+        else inputDupSeen.add(key);
+      }
+      console.log(`[Pipeline] inputDuplicateScopeCount=${inputDuplicateScopeCount} (should be 0)`);
+      if (inputDuplicateScopeCount > 0) {
+        console.error('[Pipeline] INPUT HAS DUPLICATES — strip failed upstream!');
+      }
+    }
+
     if (mock_school_id) {
       return Response.json({ ok: true, payload: finalPayload });
     }
