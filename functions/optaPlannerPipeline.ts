@@ -561,6 +561,8 @@ Deno.serve(async (req) => {
         if (dedupedCount > 0) {
             console.log('[Pipeline] Removed duplicate prefilled timeslots:', dedupedCount);
         }
+        // Force solver placement: explicitly set timeslotId to null for all lessons
+        finalPayload.lessons = (finalPayload.lessons || []).map(l => ({ ...l, timeslotId: null }));
     })();
 
     // Pre-validate subjects using codes and real IDs
