@@ -463,8 +463,19 @@ Deno.serve(async (req) => {
 
     // Build mapping from temporary `sub_<original>` to contiguous numeric IDs assigned above
     const subjIdMap = new Map();
-    (finalPayload.subjects || []).forEach(s => {
-        if (s.originalId) subjIdMap.set(s.originalId, s.id);
+    // Build map from `sub_<originalId>` to assigned numeric id using subjects[] code/name
+    const byCode = new Map((finalPayload.subjects || []).map(s => [s.code || s.name, s.id]));
+    const buildTemp = (orig) => `sub_${String(orig).replace(/^sub_/, '')}`;
+    const allOriginals = new Set();
+    (finalPayload.lessons || []).forEach(l => { if (l.subjectId && String(l.subjectId).startsWith('sub_')) allOriginals.add(l.subjectId); });
+    (finalPayload.subjectRequirements || []).forEach(r => { if (r.subjectId && String(r.subjectId).startsWith('sub_')) allOriginals.add(r.subjectId); });
+    if (finalPayload.payloadType === 'individual_payload') {
+        (finalPayload.studentSubjectChoices || []).forEach(c => { if (c.subjectId && String(c.subjectId).startsWith('sub_')) allOriginals.add(c.subjectId); });
+    }
+    // Try to map by comparing lesson/requirement subject string to subjects[] code
+    allOriginals.forEach(tmp => {
+        (finalPayload.lessons || []).forEach(l => { if (l.subjectId === tmp && (l.subject) && byCode.has(l.subject)) subjIdMap.set(tmp, byCode.get(l.subject)); });
+        (finalPayload.subjectRequirements || []).forEach(r => { if (r.subjectId === tmp && (r.subject) && byCode.has(r.subject)) subjIdMap.set(tmp, byCode.get(r.subject)); });
     });
     const remapFromTemp = (id) => subjIdMap.has(id) ? subjIdMap.get(id) : id;
 
