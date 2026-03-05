@@ -525,16 +525,98 @@ Deno.serve(async (req) => {
       return Response.json({ ok: false, error: 'Preflight failed', errors: preflight.errors }, { status: 400 });
     }
 
-    // ─── PRECHECK: Feasibility validation for each student ──────────────────
-    // Verify no student is forced into incompatible lessons per week
-    const feasibilityErrors = [];
+    // ─── COMPREHENSIVE PRECHECK ──────────────────────────────────────────────
+    const preCheckErrors = [];
+    const preCheckWarnings = [];
     const maxSlotsPerWeek = (schoolData.days_of_week?.length || 5) * (schoolData.periods_per_day || 10);
 
+    // 1️⃣ STUDENT COHERENCE: For each DP student, validate choice ↔ TG ↔ lesson membership
+    const studentTGMap = new Map(); // student raw id → Set of TG IDs they're assigned to
+    activeTGs.forEach(tg => {
+      (tg.student_ids || []).forEach(sid => {
+        if (!studentTGMap.has(sid)) studentTGMap.set(sid, new Set());
+        studentTGMap.get(sid).add(String(tg.id));
+      });
+    });
+
+    if (programType === 'DP') {
+      choicesByStudent.forEach((subjCodes, rawStudentId) => {
+        const student = students.find(s => s.id === rawStudentId);
+        if (!student) return;
+
+        const assignedTGs = studentTGMap.get(rawStudentId) || new Set();
+        const assignedSubjects = new Set();
+
+        assignedTGs.forEach(tgId => {
+          const tg = activeTGs.find(t => String(t.id) === tgId);
+          if (tg) {
+            const subj = subjects.find(s => String(s.id) === tg.subject_id);
+            if (subj) assignedSubjects.add(getSafeSubjectCode(subj));
+          }
+        });
+
+        // Check: student's choices should match their assigned TGs
+        const choicesNotInTGs = Array.from(subjCodes).filter(code => !assignedSubjects.has(code));
+        if (choicesNotInTGs.length > 0) {
+          preCheckWarnings.push({
+            studentName: student.full_name,
+            issue: 'choice_tg_mismatch',
+            details: `Choices ${choicesNotInTGs.join(', ')} not found in assigned teaching groups`
+          });
+        }
+      });
+    }
+
+    // 2️⃣ BLOCK CONFLICTS: Check if student is forced into incompatible TGs (same block_id)
+    studentTGMap.forEach((tgIdSet, rawStudentId) => {
+      const student = students.find(s => s.id === rawStudentId);
+      if (!student) return;
+
+      const blockAssignments = new Map(); // block_id → Array of TGs
+      tgIdSet.forEach(tgId => {
+        const tg = activeTGs.find(t => String(t.id) === tgId);
+        if (tg && tg.block_id) {
+          if (!blockAssignments.has(tg.block_id)) blockAssignments.set(tg.block_id, []);
+          blockAssignments.get(tg.block_id).push(tg.name || tgId);
+        }
+      });
+
+      blockAssignments.forEach((tgNames, blockId) => {
+        if (tgNames.length > 1) {
+          preCheckErrors.push({
+            studentName: student.full_name,
+            studentId: rawStudentId,
+            issue: 'block_conflict',
+            blockId,
+            conflictingGroups: tgNames,
+            message: `${student.full_name} assigned to multiple groups in same elective block: ${tgNames.join(', ')}`
+          });
+        }
+      });
+    });
+
+    // 3️⃣ UNDER-ASSIGNMENT: Check if any TG has too few enrolled students
+    activeTGs.forEach(tg => {
+      const actualStudents = (tg.student_ids || []).filter(sid => students.some(s => s.id === sid)).length;
+      if (actualStudents < (tg.min_students || 1)) {
+        const subject = subjects.find(s => String(s.id) === tg.subject_id);
+        preCheckWarnings.push({
+          tgName: tg.name,
+          tgId: tg.id,
+          issue: 'under_enrolled',
+          enrolled: actualStudents,
+          minimum: tg.min_students || 1,
+          subject: subject?.name || 'Unknown',
+          message: `Teaching group "${tg.name}" has only ${actualStudents} student(s) but requires ${tg.min_students || 1}`
+        });
+      }
+    });
+
+    // 4️⃣ STUDENT OVERLOAD: Sum weekly minutes per student
     choicesByStudent.forEach((subjCodes, rawStudentId) => {
       const student = students.find(s => s.id === rawStudentId);
       if (!student) return;
 
-      // For each student, sum the weekly minutes required across all their subject choices
       let totalMinutesPerWeek = 0;
       subjCodes.forEach(subjCode => {
         const matchingReqs = finalPayload.subject_requirements.filter(r => r.subject === subjCode && r.studentGroup === student.year_group);
@@ -545,29 +627,61 @@ Deno.serve(async (req) => {
 
       const totalPeriodsNeeded = Math.ceil(totalMinutesPerWeek / (schoolData.period_duration_minutes || 60));
       if (totalPeriodsNeeded > maxSlotsPerWeek) {
-        feasibilityErrors.push({
+        preCheckErrors.push({
           studentName: student.full_name,
           studentId: rawStudentId,
-          yearGroup: student.year_group,
-          subjects: Array.from(subjCodes),
+          issue: 'student_overload',
           minutesPerWeek: totalMinutesPerWeek,
           periodsNeeded: totalPeriodsNeeded,
           maxAvailable: maxSlotsPerWeek,
-          message: `${student.full_name} (${student.year_group}) assigned ${totalPeriodsNeeded} periods/week but only ${maxSlotsPerWeek} available`
+          message: `${student.full_name} needs ${totalPeriodsNeeded} periods/week but only ${maxSlotsPerWeek} exist`
         });
       }
     });
 
-    if (feasibilityErrors.length > 0) {
-      console.error('[Pipeline] PREFEASIBILITY CHECK FAILED:', feasibilityErrors);
+    // 5️⃣ LESSON STUDENT COHERENCE: Verify lessons[].studentIds match TG membership
+    mappedLessons.forEach(lesson => {
+      const tg = activeTGs.find(t => String(t.id) === lesson.originalTgId);
+      if (!tg) return;
+
+      const validStudentIds = new Set((tg.student_ids || []).filter(sid => students.some(s => s.id === sid)));
+      const lessonStudentSet = new Set(
+        (lesson.studentIds || []).map(numId => {
+          return Object.keys(studentIdMap).find(k => studentIdMap[k] === numId);
+        }).filter(Boolean)
+      );
+
+      const extraStudents = Array.from(lessonStudentSet).filter(sid => !validStudentIds.has(sid));
+      if (extraStudents.length > 0) {
+        preCheckErrors.push({
+          lessonId: lesson.id,
+          tgId: lesson.originalTgId,
+          issue: 'lesson_student_mismatch',
+          extraStudents: extraStudents.length,
+          message: `Lesson ${lesson.id} has ${extraStudents.length} student(s) not enrolled in TG`
+        });
+      }
+    });
+
+    // BLOCK if hard errors found
+    if (preCheckErrors.length > 0) {
+      console.error('[Pipeline] PRECHECK HARD ERRORS:', preCheckErrors);
       return Response.json({
         ok: false,
-        error: 'Schedule infeasible: student overload detected',
-        code: 'STUDENT_OVERLOAD',
-        details: feasibilityErrors,
-        explanation: 'One or more students have been assigned more lessons per week than available timeslots. Please reduce required hours or increase periods per day.'
+        error: 'Schedule validation failed: structural conflicts detected',
+        code: 'PRECHECK_FAILED',
+        errors: preCheckErrors,
+        warnings: preCheckWarnings,
+        explanation: 'One or more students are assigned to incompatible teaching groups, or have scheduling conflicts. Please review group assignments and subject choices.'
       }, { status: 400 });
     }
+
+    // WARN if soft issues found
+    if (preCheckWarnings.length > 0) {
+      console.warn('[Pipeline] PRECHECK WARNINGS:', preCheckWarnings);
+    }
+
+    console.log('[Pipeline] Precheck passed:', choicesByStudent.size, 'DP students,', activeTGs.length, 'teaching groups');
 
     console.log('[Pipeline] Feasibility check passed for', choicesByStudent.size, 'DP students');
     console.log('[Pipeline] Payload type:', finalPayload.payloadType, '| programType:', finalPayload.programType);
