@@ -540,7 +540,7 @@ Deno.serve(async (req) => {
         finalPayload.lessons = lessons.map(l => {
             const hasPrefill = Object.prototype.hasOwnProperty.call(l, 'timeslotId') && l.timeslotId != null;
             if (!hasPrefill) return l; // nothing to dedupe
-            const k = `${l.sectionId || ''}|${l.studentGroup || ''}|${l.subject || ''}|${l.timeslotId}`;
+            const k = `${l.sectionId || ''}||${l.studentGroup || ''}||${l.subject || ''}||${l.timeslotId}`;
             if (seen.has(k)) {
                 // Remove the conflicting prefill and let the solver place it
                 const { timeslotId, ...rest } = l;
