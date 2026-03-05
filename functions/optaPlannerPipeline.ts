@@ -454,14 +454,35 @@ Deno.serve(async (req) => {
       return { ok: errors.length === 0, errors };
     }
 
-    // Force timeslotId = null and strip roomId on ALL lessons unconditionally.
-    // This is the definitive fix for duplicate-timeslot-per-scope solver errors.
-    // No prefill is ever sent — the solver always assigns fresh slots.
+    // ── MANDATORY: Force timeslotId = null and strip roomId on ALL lessons. ──
+    // This is applied unconditionally here as the final authoritative strip,
+    // regardless of what any upstream builder set.
     if (Array.isArray(finalPayload.lessons)) {
       finalPayload.lessons = finalPayload.lessons.map(l => {
         const { timeslotId, roomId, ...rest } = l;
         return { ...rest, timeslotId: null };
       });
+    }
+
+    // ── HARD ASSERT: No duplicate (sectionId|studentGroup|subject|timeslotId) ──
+    // Catches any non-null prefill that survived the strip above.
+    {
+      const dupSeen = new Set();
+      const codeNorm = (v) => v == null ? '' : String(v).trim().toUpperCase();
+      const dupErrors = [];
+      for (const l of (finalPayload.lessons || [])) {
+        if (l.timeslotId == null) continue; // nulls are fine, skip
+        const key = `${codeNorm(l.sectionId)}||${codeNorm(l.studentGroup)}||${codeNorm(l.subject)}||${l.timeslotId}`;
+        if (dupSeen.has(key)) {
+          dupErrors.push(`duplicate prefilled timeslotId=${l.timeslotId} for scope: ${key} (lesson id=${l.id})`);
+        } else {
+          dupSeen.add(key);
+        }
+      }
+      if (dupErrors.length > 0) {
+        console.error('[Pipeline] ASSERT FAILED - duplicate timeslotIds detected:', dupErrors);
+        return Response.json({ ok: false, error: 'Duplicate prefilled timeslotId detected', details: dupErrors }, { status: 400 });
+      }
     }
 
     const preflight = preflightPayload(finalPayload);
