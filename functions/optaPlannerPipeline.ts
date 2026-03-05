@@ -531,38 +531,46 @@ Deno.serve(async (req) => {
         }));
     }
 
-    // Ensure no duplicate pre-assigned timeslots within same scope and default to solver placement
+    // Ensure no duplicate pre-assigned timeslots within same scope; fix duplicates and hard-preflight validate
     (() => {
         const lessons = finalPayload.lessons || [];
         if (lessons.length === 0) return;
+
+        // First pass: fix duplicates by nulling conflicting prefilled timeslots
         const seen = new Set();
         let dedupedCount = 0;
-        finalPayload.lessons = lessons.map(l => {
-            const hasPrefill = Object.prototype.hasOwnProperty.call(l, 'timeslotId') && l.timeslotId != null;
-            if (!hasPrefill) return l; // nothing to dedupe
-            const k = `${l.sectionId || ''}||${l.studentGroup || ''}||${l.subject || ''}||${l.timeslotId}`;
-            if (seen.has(k)) {
-                // Remove the conflicting prefill and let the solver place it
-                const { timeslotId, ...rest } = l;
+        for (const l of lessons) {
+            if (l.timeslotId == null) continue;
+            const scope = `${l.sectionId}||${l.studentGroup}||${l.subject}`;
+            const key = `${scope}||${l.timeslotId}`;
+            if (seen.has(key)) {
+                // Recommended fix: remove prefill and let solver place it
+                l.timeslotId = null;
                 dedupedCount++;
-                return rest;
+            } else {
+                seen.add(key);
             }
-            seen.add(k);
-            return l;
-        });
-        // Optional: if we decide to never send prefills, strip them all
-        finalPayload.lessons = (finalPayload.lessons || []).map(l => {
-            if (Object.prototype.hasOwnProperty.call(l, 'timeslotId')) {
-                const { timeslotId, ...rest } = l;
-                return rest;
-            }
-            return l;
-        });
-        if (dedupedCount > 0) {
-            console.log('[Pipeline] Removed duplicate prefilled timeslots:', dedupedCount);
         }
-        // Force solver placement: explicitly set timeslotId to null for all lessons
-        finalPayload.lessons = (finalPayload.lessons || []).map(l => ({ ...l, timeslotId: null }));
+
+        // Second pass: hard preflight validation - block if any duplicates remain
+        const postSeen = new Set();
+        let residualDupes = 0;
+        for (const l of lessons) {
+            if (l.timeslotId == null) continue;
+            const scope = `${l.sectionId}||${l.studentGroup}||${l.subject}`;
+            const key = `${scope}||${l.timeslotId}`;
+            if (postSeen.has(key)) {
+                residualDupes++;
+            } else {
+                postSeen.add(key);
+            }
+        }
+        if (dedupedCount > 0) {
+            console.log('[Pipeline] Dedupe fixed duplicate prefilled timeslots:', dedupedCount);
+        }
+        if (residualDupes > 0) {
+            throw new Error(`Preflight failed: duplicate pre-assigned timeslots (${residualDupes}) remain after dedupe`);
+        }
     })();
 
     // Pre-validate subjects using codes and real IDs
