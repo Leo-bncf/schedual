@@ -384,10 +384,10 @@ Deno.serve(async (req) => {
             studentSubjectChoices: studentSubjectChoices.map(c => ({
                 studentId: c.studentId,
                 subjectId: `sub_${c.originalSubjectId}`,
-                subject: c.subject,
+                subject: c.subject, // matches subjects[].code
                 level: c.level,
                 yearGroup: c.yearGroup
-            })), // temporary subjectId, will remap below
+                })),
             llmSoftConstraints: {
                 studentWindows: []
             },
@@ -471,7 +471,6 @@ Deno.serve(async (req) => {
     console.log('[Pipeline] Subject map ready:', { subjects: (finalPayload.subjects || []).length });
 
     // Ensure all subject strings are canonical (use code)
-    const idToCode = Object.fromEntries((finalPayload.subjects || []).map(s => [s.id, s.code || s.name]));
     finalPayload.lessons = (finalPayload.lessons || []).map(l => ({
         ...l,
         subject: l.subject && idToCode[finalPayload.subjectIdByCode[l.subject]] ? l.subject : l.subject
@@ -520,7 +519,7 @@ Deno.serve(async (req) => {
     };
     const referencedSubjectNames = new Set();
     (finalPayload.lessons || []).forEach(l => { if (l.subject) referencedSubjectNames.add(l.subject); });
-    (finalPayload.subjectRequirements || []).forEach(r => { if (r.subject) referencedSubjectNames.add(r.subject); });
+    (finalPayload.subject_requirements || []).forEach(r => { if (r.subject) referencedSubjectNames.add(r.subject); });
     let missingSubjectNames = Array.from(referencedSubjectNames).filter(n => !definedSubjectNames.has(n));
     missingSubjectNames = missingSubjectNames.filter(n => !isCoreNameStrict(n));
 
@@ -584,7 +583,7 @@ Deno.serve(async (req) => {
                 const refIds = [];
                 const refNames = [];
                 (finalPayload.lessons || []).forEach(l => { if (l.subjectId != null) refIds.push(l.subjectId); if (l.subject) refNames.push(l.subject); });
-                (finalPayload.subjectRequirements || []).forEach(r => { if (r.subjectId != null) refIds.push(r.subjectId); if (r.subject) refNames.push(r.subject); });
+                (finalPayload.subject_requirements || []).forEach(r => { if (r.subjectId != null) refIds.push(r.subjectId); if (r.subject) refNames.push(r.subject); });
                 if (finalPayload.payloadType === 'individual_payload') {
                     (finalPayload.studentSubjectChoices || []).forEach(c => { if (c.subjectId != null) refIds.push(c.subjectId); if (c.subject) refNames.push(c.subject); });
                 }
@@ -621,7 +620,7 @@ Deno.serve(async (req) => {
             const refIds = [];
             const refNames = [];
             (finalPayload.lessons || []).forEach(l => { if (l.subjectId != null) refIds.push(l.subjectId); if (l.subject) refNames.push(l.subject); });
-            (finalPayload.subjectRequirements || []).forEach(r => { if (r.subjectId != null) refIds.push(r.subjectId); if (r.subject) refNames.push(r.subject); });
+            (finalPayload.subject_requirements || []).forEach(r => { if (r.subjectId != null) refIds.push(r.subjectId); if (r.subject) refNames.push(r.subject); });
             if (finalPayload.payloadType === 'individual_payload') {
                 (finalPayload.studentSubjectChoices || []).forEach(c => { if (c.subjectId != null) refIds.push(c.subjectId); if (c.subject) refNames.push(c.subject); });
             }
