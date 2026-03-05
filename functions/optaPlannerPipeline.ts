@@ -150,7 +150,19 @@ Deno.serve(async (req) => {
       return true;
     });
 
-    // ─── Build teaching groups + lessons ─────────────────────────────────────
+    // ═══════════════════════════════════════════════════════════════════════════
+    // ★ STEP 1: BUILD DETERMINISTIC (NO SOLVER YET)
+    // ═══════════════════════════════════════════════════════════════════════════
+
+    // ─── STUDENT MEMBERSHIP ENGINE: Single source of truth ────────────────────
+    // Maps each teaching group → actual enrolled student raw IDs
+    const tgStudentEnrollment = new Map(); // tg.id (raw) → Set of student raw IDs
+    activeTGs.forEach(tg => {
+      const validStudents = (tg.student_ids || []).filter(sid => students.some(s => s.id === sid));
+      tgStudentEnrollment.set(String(tg.id), new Set(validStudents));
+    });
+
+    // ─── Build teaching groups + lessons ──────────────────────────────────────
     const mappedTeachingGroups = [];
     const mappedLessons = [];
     const subjectRequirements = [];
@@ -187,12 +199,13 @@ Deno.serve(async (req) => {
         minutesPerWeek: requiredMinutes
       });
 
+      // Get enrolled students from the SINGLE SOURCE OF TRUTH
+      const enrolledRawIds = Array.from(tgStudentEnrollment.get(String(tg.id)) || []);
+      const enrolledNumericIds = enrolledRawIds.map(sid => studentIdMap[sid]).filter(Boolean);
+
       for (let i = 0; i < numLessons; i++) {
         const lessonNumId = lessonIdCounter++;
         tgLessonIds.push(lessonNumId);
-
-        const rawStudentIds = (tg.student_ids || []).filter(sid => students.some(s => s.id === sid));
-        const numericStudentIds = rawStudentIds.map(sid => studentIdMap[sid]).filter(Boolean);
 
         mappedLessons.push({
           id: lessonNumId,
@@ -202,9 +215,9 @@ Deno.serve(async (req) => {
           sectionId,
           yearGroup: String(tg.year_group),
           level: String(tg.level || 'SL'),
-          requiredCapacity: Math.max(1, rawStudentIds.length),
+          requiredCapacity: Math.max(1, enrolledRawIds.length),
           teacherId: tg.teacher_id ? (teacherIdMap[tg.teacher_id] || null) : null,
-          studentIds: numericStudentIds, // numeric 1001+
+          studentIds: enrolledNumericIds, // ONLY from enrollment engine (numeric 1001+)
           timeslotId: null,
           roomId: null,
           originalTgId: tg.id,
@@ -220,7 +233,8 @@ Deno.serve(async (req) => {
         subject_id: String(subject.id),
         level: String(tg.level || 'SL'),
         requiredMinutesPerWeek: requiredMinutes,
-        lessonIds: tgLessonIds
+        lessonIds: tgLessonIds,
+        enrolledStudentCount: enrolledRawIds.length  // Track for diagnostics
       });
     });
 
