@@ -330,10 +330,11 @@ Deno.serve(async (req) => {
         })),
         subjects: subjects
             .filter(sub => activeSubjectOriginalIds.has(String(sub.id)))
-            .map(sub => ({
-                id: `sub_${sub.id}`,
+            .map((sub, idx) => ({
+                id: idx + 1, // contiguous numeric IDs required by solver
                 code: getSafeSubjectName(sub),
                 name: getSafeSubjectName(sub),
+                originalId: `sub_${sub.id}`,
                 ...(programType === 'DP' ? { 
                     hoursPerWeekHL: Number(sub.hoursPerWeekHL || 5), 
                     hoursPerWeekSL: Number(sub.hoursPerWeekSL || 3) 
