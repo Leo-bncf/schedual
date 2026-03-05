@@ -244,8 +244,16 @@ Deno.serve(async (req) => {
     const subjectIdByCode = Object.fromEntries(mappedSubjects.map(s => [s.code, s.id]));
     const subjectCodeById = Object.fromEntries(mappedSubjects.map(s => [s.id, s.code]));
 
-    // ─── DP: Student subject choices ──────────────────────────────────────────
+    // ─── Build a Teaching Group membership map for validation ─────────────────
+    const tgStudentMap = new Map(); // tg.id → Set of student raw IDs in that group
+    activeTGs.forEach(tg => {
+      const studentSet = new Set((tg.student_ids || []).filter(sid => students.some(s => s.id === sid)));
+      tgStudentMap.set(String(tg.id), studentSet);
+    });
+
+    // ─── DP: Student subject choices with coherence validation ───────────────
     const studentSubjectChoices = [];
+    const choicesByStudent = new Map(); // rawStudentId → Set of subject codes to detect overlaps
     if (programType === 'DP') {
       const choiceSet = new Set();
 
@@ -259,10 +267,15 @@ Deno.serve(async (req) => {
             const key = `${student.id}_${choiceSubId}`;
             if (choiceSet.has(key)) return;
             choiceSet.add(key);
+
+            const subjCode = getSafeSubjectCode(subject);
+            if (!choicesByStudent.has(student.id)) choicesByStudent.set(student.id, new Set());
+            choicesByStudent.get(student.id).add(subjCode);
+
             studentSubjectChoices.push({
               studentId: studentIdMap[student.id] || String(student.id),
               subjectId: choiceSubId,
-              subject: getSafeSubjectCode(subject),
+              subject: subjCode,
               level: String(choice.level || 'SL'),
               yearGroup: String(student.year_group || 'DP1')
             });
@@ -270,23 +283,30 @@ Deno.serve(async (req) => {
         }
       });
 
-      // Inject missing choices from lesson membership
+      // Inject missing choices from lesson membership (only if student is in that TG)
       mappedLessons.forEach(lesson => {
         const subId = lesson.originalSubjectId;
         const subject = subjects.find(sub => String(sub.id) === subId);
         if (!subject) return;
+        const tgStudents = tgStudentMap.get(lesson.sectionId) || new Set();
+
         (lesson.studentIds || []).forEach(numericStudentId => {
-          // reverse map numeric → raw id
           const rawStudentId = Object.keys(studentIdMap).find(k => studentIdMap[k] === numericStudentId);
-          if (!rawStudentId) return;
+          if (!rawStudentId || !tgStudents.has(rawStudentId)) return; // Only inject if student is actually in this TG
+
           const key = `${rawStudentId}_${subId}`;
           if (choiceSet.has(key)) return;
           choiceSet.add(key);
+
+          const subjCode = getSafeSubjectCode(subject);
+          if (!choicesByStudent.has(rawStudentId)) choicesByStudent.set(rawStudentId, new Set());
+          choicesByStudent.get(rawStudentId).add(subjCode);
+
           const student = students.find(s => s.id === rawStudentId);
           studentSubjectChoices.push({
             studentId: numericStudentId,
             subjectId: subId,
-            subject: getSafeSubjectCode(subject),
+            subject: subjCode,
             level: String(lesson.level || 'SL'),
             yearGroup: String(student?.year_group || lesson.yearGroup || 'DP1')
           });
