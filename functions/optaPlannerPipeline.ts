@@ -584,6 +584,121 @@ Deno.serve(async (req) => {
         return Response.json({ ok:false, error:'Pre-validation failed: duplicate subject codes', details: { duplicate_codes: duplicateCodes } }, { status:400 });
     }
 
+    // === Preflight validator (blocks bad payloads before POST or mock return) ===
+    function preflightPayload(payload) {
+      const errors = [];
+      const warnings = [];
+
+      const HEX24 = /^[a-f0-9]{24}$/i;
+      const clean = (v) => (v == null ? null : String(v).trim());
+      const codeNorm = (v) => clean(v)?.replace(/_/g, " ").replace(/\s+/g, " ").toUpperCase() || null;
+      const scopeKey = (x) => `${clean(x.sectionId) || ""}||${clean(x.studentGroup) || ""}||${codeNorm(x.subject) || ""}`;
+
+      const subjects = Array.isArray(payload.subjects) ? payload.subjects : [];
+      const lessons = Array.isArray(payload.lessons) ? payload.lessons : [];
+      const reqs = Array.isArray(payload.subject_requirements) ? payload.subject_requirements : (Array.isArray(payload.subjectRequirements) ? payload.subjectRequirements : []);
+      const tgs = Array.isArray(payload.teaching_groups) ? payload.teaching_groups : (Array.isArray(payload.teachingGroups) ? payload.teachingGroups : []);
+      const subjectIdByCode = payload.subjectIdByCode || {};
+
+      // 1) Subjects: id/code validity
+      const subjectCodeToId = new Map();
+      for (const s of subjects) {
+        const id = clean(s?.id);
+        const code = codeNorm(s?.code || s?.name);
+        if (!id || !HEX24.test(id)) errors.push(`subjects[] invalid id: ${id}`);
+        if (!code) errors.push(`subjects[] missing code/name for id=${id}`);
+        if (code && id) subjectCodeToId.set(code, id);
+      }
+
+      // 2) subjectIdByCode consistency
+      for (const [rawCode, rawId] of Object.entries(subjectIdByCode)) {
+        const code = codeNorm(rawCode);
+        const id = clean(rawId);
+        if (!code) errors.push(`subjectIdByCode has empty code key`);
+        if (!id || !HEX24.test(id)) errors.push(`subjectIdByCode invalid id for code=${rawCode}: ${rawId}`);
+        const sId = subjectCodeToId.get(code);
+        if (sId && id && sId !== id) {
+          errors.push(`subjectIdByCode mismatch for code=${code}: map=${id} subjects[]=${sId}`);
+        }
+      }
+
+      // 3) teaching_groups subject_id validity
+      for (const tg of tgs) {
+        const tgId = clean(tg?.id);
+        const sid = clean(tg?.subject_id || tg?.subjectId);
+        if (!tgId) errors.push(`teaching_groups[] missing id`);
+        if (!sid || !HEX24.test(sid)) errors.push(`teaching_groups[] invalid subject_id for id=${tgId}: ${sid}`);
+      }
+
+      // 4) Lessons: required fields + duplicate timeslot per scope
+      const seenScopeTimeslot = new Set();
+      for (const l of lessons) {
+        const lid = l?.id;
+        const subj = codeNorm(l?.subject);
+        const sg = clean(l?.studentGroup);
+        if (lid == null) errors.push(`lessons[] missing id`);
+        if (!subj) errors.push(`lessons[] missing subject id=${lid}`);
+        if (!sg) errors.push(`lessons[] missing studentGroup id=${lid}`);
+        if (subj && !subjectCodeToId.has(subj)) {
+          errors.push(`lessons[] subject not in subjects[]: lessonId=${lid} subject=${subj}`);
+        }
+        if (l?.timeslotId != null) {
+          const k = `${scopeKey(l)}||${l.timeslotId}`;
+          if (seenScopeTimeslot.has(k)) errors.push(`duplicate timeslot in scope: lessonId=${lid} key=${k}`);
+          else seenScopeTimeslot.add(k);
+        }
+      }
+
+      // 5) Requirements: positive load + alignment with lessons
+      const reqByScope = new Map();
+      for (const r of reqs) {
+        const k = scopeKey(r);
+        const mpw = Number(r?.minutesPerWeek ?? 0);
+        const rppw = Number(r?.requiredPeriodsPerWeek ?? 0);
+        if (!(mpw > 0 || rppw > 0)) {
+          errors.push(`subject_requirements non-positive load for scope=${k}`);
+        }
+        reqByScope.set(k, { mpw, rppw });
+        const subj = codeNorm(r?.subject);
+        if (subj && !subjectCodeToId.has(subj)) {
+          errors.push(`subject_requirements subject not in subjects[]: scope=${k} subject=${subj}`);
+        }
+      }
+
+      const lessonScopes = new Set(lessons.map(scopeKey));
+      for (const k of lessonScopes) {
+        const rr = reqByScope.get(k);
+        if (!rr) errors.push(`missing requirement for lesson scope=${k}`);
+        else if (!(rr.mpw > 0 || rr.rppw > 0)) errors.push(`zero requirement load for lesson scope=${k}`);
+      }
+
+      if ("subjectsMapping" in payload && payload.subjectsMapping === undefined) {
+        warnings.push(`remove subjectsMapping: undefined before JSON.stringify`);
+      }
+
+      return { ok: errors.length === 0, errors, warnings };
+    }
+
+    function clearDuplicatePrefilledTimeslots(payload) {
+      const lessons = Array.isArray(payload.lessons) ? payload.lessons : [];
+      const seen = new Set();
+      const codeNorm = (v) => (v == null ? null : String(v).trim().replace(/_/g, " ").replace(/\s+/g, " ").toUpperCase());
+      const clean = (v) => (v == null ? "" : String(v).trim());
+      for (const l of lessons) {
+        if (l.timeslotId == null) continue;
+        const key = `${clean(l.sectionId)}||${clean(l.studentGroup)}||${codeNorm(l.subject)}||${l.timeslotId}`;
+        if (seen.has(key)) l.timeslotId = null;
+        else seen.add(key);
+      }
+    }
+
+    // Optional auto-fix (harmless now that we strip timeslotId earlier)
+    clearDuplicatePrefilledTimeslots(finalPayload);
+    const preflight = preflightPayload(finalPayload);
+    if (!preflight.ok) {
+      return Response.json({ ok: false, error: 'Preflight failed', errors: preflight.errors, warnings: preflight.warnings }, { status: 400 });
+    }
+
     if (mock_school_id) {
         return Response.json({ ok: true, payload: finalPayload });
     }
