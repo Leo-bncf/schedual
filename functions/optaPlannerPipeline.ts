@@ -530,33 +530,55 @@ Deno.serve(async (req) => {
     });
 
     let responseText = await response.text();
-    if (!response.ok) {
-      console.error('[Pipeline] OptaPlanner error:', responseText);
-      let errorDetails;
-      try { errorDetails = JSON.parse(responseText); } catch { errorDetails = responseText; }
-      return Response.json({
-        ok: false,
-        error: 'OptaPlanner validation failed',
-        details: errorDetails,
-        debug_payload_preview: {
-          subjects: (finalPayload.subjects || []).slice(0, 5),
-          lessons: (finalPayload.lessons || []).slice(0, 3),
-          subject_requirements: (finalPayload.subject_requirements || []).slice(0, 3)
-        }
-      }, { status: 400 });
-    }
-
     let result = {};
     try { result = JSON.parse(responseText); } catch(e) {}
 
+    if (!response.ok) {
+      // Solver returned HTTP 400. Check if it contains partial assignments we can salvage.
+      // The solver sometimes returns duplicate-slot errors but still includes solved lessons.
+      const partialAssignments = result.assignedLessons || result.lessons || result.assignments ||
+        (result.schoolResults && Array.isArray(result.schoolResults)
+          ? result.schoolResults.flatMap(sr => sr.result?.assignments || sr.result?.lessons || sr.result?.assignedLessons || [])
+          : []);
+
+      if (partialAssignments.length > 0) {
+        console.warn(`[Pipeline] Solver returned ${response.status} but has ${partialAssignments.length} partial assignments — attempting dedup and save.`);
+        result = { ...result, _partialRecovery: true, assignedLessons: partialAssignments };
+        // Fall through to normal processing below
+      } else {
+        console.error('[Pipeline] OptaPlanner error (no assignments to recover):', responseText.slice(0, 500));
+        return Response.json({
+          ok: false,
+          error: 'OptaPlanner validation failed',
+          details: result,
+          debug_payload_preview: {
+            subjects: (finalPayload.subjects || []).slice(0, 5),
+            lessons: (finalPayload.lessons || []).slice(0, 3),
+            subject_requirements: (finalPayload.subject_requirements || []).slice(0, 3)
+          }
+        }, { status: 400 });
+      }
+    }
+
     if (result.ok === false || result.errorCode || result.errorMessage || (Array.isArray(result.validationErrors) && result.validationErrors.length > 0)) {
-      console.error('[Pipeline] OptaPlanner logical error:', result.errorMessage, result.validationErrors);
-      return Response.json({
-        ok: false,
-        error: result.title || result.errorMessage || result.message || 'OptaPlanner Validation Error',
-        details: result.validationErrors || result.details || result,
-        debug_payload: finalPayload
-      }, { status: 400 });
+      // Check again if there are assignments to salvage before giving up
+      const partialAssignments = result.assignedLessons || result.lessons || result.assignments ||
+        (result.schoolResults && Array.isArray(result.schoolResults)
+          ? result.schoolResults.flatMap(sr => sr.result?.assignments || sr.result?.lessons || sr.result?.assignedLessons || [])
+          : []);
+
+      if (partialAssignments.length > 0) {
+        console.warn(`[Pipeline] Solver logical error but has ${partialAssignments.length} assignments — attempting dedup and save.`);
+        result = { ...result, _partialRecovery: true };
+      } else {
+        console.error('[Pipeline] OptaPlanner logical error:', result.errorMessage, result.validationErrors);
+        return Response.json({
+          ok: false,
+          error: result.title || result.errorMessage || result.message || 'OptaPlanner Validation Error',
+          details: result.validationErrors || result.details || result,
+          debug_payload: finalPayload
+        }, { status: 400 });
+      }
     }
 
     // ─── Process results & save ───────────────────────────────────────────────
