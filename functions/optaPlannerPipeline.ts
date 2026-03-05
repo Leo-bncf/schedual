@@ -550,7 +550,6 @@ Deno.serve(async (req) => {
 
     if (!response.ok) {
       // Solver returned HTTP 400. Check if it contains partial assignments we can salvage.
-      // The solver sometimes returns duplicate-slot errors but still includes solved lessons.
       const partialAssignments = result.assignedLessons || result.lessons || result.assignments ||
         (result.schoolResults && Array.isArray(result.schoolResults)
           ? result.schoolResults.flatMap(sr => sr.result?.assignments || sr.result?.lessons || sr.result?.assignedLessons || [])
@@ -560,12 +559,57 @@ Deno.serve(async (req) => {
         console.warn(`[Pipeline] Solver returned ${response.status} but has ${partialAssignments.length} partial assignments — attempting dedup and save.`);
         result = { ...result, _partialRecovery: true, assignedLessons: partialAssignments };
         // Fall through to normal processing below
+
+      } else if (Array.isArray(result.details) && result.details.some(d => Array.isArray(d.lessonMappings))) {
+        // Solver returned 400 with duplicate-scope details but no full assignment list.
+        // Reconstruct a de-duplicated assignment list from the lessonMappings in the error details,
+        // keeping only the FIRST unique (sectionId, studentGroup, subject, timeslotId) per scope.
+        console.warn(`[Pipeline] Solver 400 with duplicate-scope details — reconstructing assignments from lessonMappings.`);
+
+        // Build a map: lessonId → { timeslotId, sectionId, studentGroup, subject }
+        const lessonTimeslotMap = new Map();
+        for (const detail of result.details) {
+          if (!Array.isArray(detail.lessonMappings)) continue;
+          const seenTimeslots = new Set();
+          for (const lm of detail.lessonMappings) {
+            if (lm.timeslotId == null) continue;
+            if (seenTimeslots.has(lm.timeslotId)) {
+              // duplicate — skip this lesson
+              console.warn(`[Pipeline] Skipping duplicate lessonId=${lm.lessonId} timeslotId=${lm.timeslotId} in section=${detail.sectionId}`);
+              continue;
+            }
+            seenTimeslots.add(lm.timeslotId);
+            lessonTimeslotMap.set(lm.lessonId, lm.timeslotId);
+          }
+        }
+
+        // Also include any lessons NOT mentioned in the error details (they have no duplicates)
+        // by checking which lesson IDs appear in the details at all
+        const mentionedLessonIds = new Set(
+          result.details.flatMap(d => (d.lessonMappings || []).map(lm => lm.lessonId))
+        );
+
+        // Build synthetic assignment list from our mappedLessons
+        const reconstructed = [];
+        for (const lesson of mappedLessons) {
+          if (lessonTimeslotMap.has(lesson.id)) {
+            // Was mentioned — use the de-duped timeslotId
+            reconstructed.push({ id: lesson.id, timeslotId: lessonTimeslotMap.get(lesson.id), sectionId: lesson.sectionId, studentGroup: lesson.studentGroup, subject: lesson.subject });
+          }
+          // Lessons not mentioned in error details had no duplicate problem
+          // but we also have no timeslotId for them from the solver's 400 body, so skip them
+        }
+
+        console.log(`[Pipeline] Reconstructed ${reconstructed.length} de-duped assignments from error details.`);
+        result = { _partialRecovery: true, assignedLessons: reconstructed, score: 0 };
+        // Fall through to normal processing below
+
       } else {
         console.error('[Pipeline] OptaPlanner error (no assignments to recover):', responseText.slice(0, 500));
         return Response.json({
           ok: false,
-          error: 'OptaPlanner validation failed',
-          details: result,
+          error: result.error || 'OptaPlanner validation failed',
+          details: result.details || result,
           debug_payload_preview: {
             subjects: (finalPayload.subjects || []).slice(0, 5),
             lessons: (finalPayload.lessons || []).slice(0, 3),
