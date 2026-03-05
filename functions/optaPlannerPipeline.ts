@@ -471,18 +471,14 @@ Deno.serve(async (req) => {
 
     console.log('[Pipeline] Subject map ready:', { subjects: (finalPayload.subjects || []).length });
 
-    // Ensure subject_requirements align with lesson scopes
+    // Ensure subject_requirements align with lesson scopes (positive minutes when lessons exist)
     (() => {
         const pdur = Number(basePayload.scheduleSettings.periodDurationMinutes || 60);
         const key = (o) => `${o.teachingGroupId || ''}|${o.sectionId || ''}|${o.studentGroup || ''}|${o.subject || ''}`;
         const reqs = finalPayload.subject_requirements || [];
         const reqMap = new Map(reqs.map(r => [key(r), r]));
-        const zeroReqKeys = new Set(reqs.filter(r => (Number(r.minutesPerWeek || r.requiredPeriodsPerWeek || 0) <= 0)).map(r => key(r)));
-        // Remove lessons for truly-zero requirement scopes
-        if (zeroReqKeys.size > 0) {
-            finalPayload.lessons = (finalPayload.lessons || []).filter(l => !zeroReqKeys.has(key(l)));
-        }
-        // Rebuild map of remaining lessons
+
+        // Build lessons map per scope
         const lessonsByKey = new Map();
         (finalPayload.lessons || []).forEach(l => {
             const k = key(l);
@@ -490,24 +486,27 @@ Deno.serve(async (req) => {
             arr.push(l);
             lessonsByKey.set(k, arr);
         });
+
         const ensured = [];
         lessonsByKey.forEach((arr, k) => {
             const l0 = arr[0];
             let req = reqMap.get(k);
+            const inferredMinutes = arr.length * pdur;
             if (!req) {
                 req = {
                     studentGroup: l0.studentGroup || 'Unknown',
                     teachingGroupId: l0.teachingGroupId,
                     sectionId: l0.sectionId,
                     subject: l0.subject,
-                    minutesPerWeek: arr.length * pdur
+                    minutesPerWeek: inferredMinutes
                 };
                 ensured.push(req);
-            } else if (Number(req.minutesPerWeek || 0) <= 0 && !zeroReqKeys.has(k)) {
-                // No explicit zero rule but minutes not set; infer from lessons
-                req.minutesPerWeek = arr.length * pdur;
+            } else if (Number(req.minutesPerWeek || 0) <= 0) {
+                // If lessons exist, requirement must be positive
+                req.minutesPerWeek = inferredMinutes;
             }
         });
+
         if (ensured.length > 0) {
             finalPayload.subject_requirements = [...reqs, ...ensured];
         } else {
@@ -597,49 +596,13 @@ Deno.serve(async (req) => {
     finalPayload.organizationId = `org_${user.school_id}`;
     finalPayload.runId = `run_${schedule_version_id}`;
 
-    // Final sanitize: enforce unique timeslot per scope (sectionId||studentGroup||subject)
+    // Final sanitize: remove any prefilled timeslotId to avoid scope duplicates entirely
     (() => {
-      const lessons = finalPayload.lessons || [];
-      if (lessons.length === 0) return;
-
-      const byScope = new Map();
-      let dedupedCount = 0;
-
-      for (const l of lessons) {
-        if (l?.timeslotId == null) continue;
-        const scope = `${l.sectionId}||${l.studentGroup}||${l.subject}`;
-        let used = byScope.get(scope);
-        if (!used) { used = new Set(); byScope.set(scope, used); }
-        if (used.has(l.timeslotId)) {
-          l.timeslotId = null; // drop duplicate; solver will place
-          dedupedCount++;
-        } else {
-          used.add(l.timeslotId);
-        }
-      }
-
-      // Hard fail if any duplicate still remains
-      const seenByScope = new Map();
-      let residualDupes = 0;
-      for (const l of lessons) {
-        if (l?.timeslotId == null) continue;
-        const scope = `${l.sectionId}||${l.studentGroup}||${l.subject}`;
-        let used = seenByScope.get(scope);
-        if (!used) { used = new Set(); seenByScope.set(scope, used); }
-        if (used.has(l.timeslotId)) {
-          residualDupes++;
-        } else {
-          used.add(l.timeslotId);
-        }
-      }
-
-      if (dedupedCount > 0) {
-        console.log('[Pipeline] Final sanitize: nullified duplicate prefilled timeslots', { dedupedCount });
-      }
-      if (residualDupes > 0) {
-        console.error('[Pipeline] Hard fail: duplicates remain after sanitize', { residualDupes });
-        throw new Error(`Preflight failed: duplicate pre-assigned timeslots remain (${residualDupes})`);
-      }
+      if (!finalPayload.lessons || finalPayload.lessons.length === 0) return;
+      finalPayload.lessons = finalPayload.lessons.map(l => {
+        const { timeslotId, ...rest } = l;
+        return rest; // strip timeslotId key completely
+      });
     })();
 
 
