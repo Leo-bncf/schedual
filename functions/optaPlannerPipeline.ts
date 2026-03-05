@@ -410,6 +410,10 @@ Deno.serve(async (req) => {
       };
     }
 
+    // ═══════════════════════════════════════════════════════════════════════════
+    // ★ STEP 2: HARD PREFLIGHT (BLOCKING)
+    // ═══════════════════════════════════════════════════════════════════════════
+
     // ─── Preflight validator ──────────────────────────────────────────────────
     function preflightPayload(payload) {
       const errors = [];
@@ -427,6 +431,7 @@ Deno.serve(async (req) => {
       const lessons = Array.isArray(payload.lessons) ? payload.lessons : [];
       const reqs = Array.isArray(payload.subject_requirements) ? payload.subject_requirements : [];
 
+      // SUBJECTS: IDs must be valid hex24, codes must be present
       const subjectCodeToId = new Map();
       for (const s of subjs) {
         const id = clean(s?.id);
@@ -436,18 +441,37 @@ Deno.serve(async (req) => {
         if (code && id) subjectCodeToId.set(code, id);
       }
 
+      // LESSONS: IDs present, subject exists, studentGroup exists, studentIds cohere with TG
       for (const l of lessons) {
         const lid = l?.id;
         const subj = codeNorm(l?.subject);
         const sg = clean(l?.studentGroup);
+        const si = l?.sectionId;
+        const studIds = Array.isArray(l?.studentIds) ? l.studentIds : [];
+
         if (lid == null) errors.push(`lessons[] missing id`);
         if (!subj) errors.push(`lessons[] missing subject id=${lid}`);
         if (!sg) errors.push(`lessons[] missing studentGroup id=${lid}`);
         if (subj && !subjectCodeToId.has(subj)) {
           errors.push(`lessons[] subject not in subjects[]: lessonId=${lid} subject=${subj}`);
         }
+
+        // For DP: validate studentIds match enrollment
+        if (payload.payloadType === 'individual_payload' && si) {
+          const enrolledSet = tgStudentEnrollment.get(si);
+          if (enrolledSet) {
+            const enrolledNumericIds = Array.from(enrolledSet).map(rawId => studentIdMap[rawId]).filter(Boolean);
+            const enrolledSet_num = new Set(enrolledNumericIds);
+            for (const studentNumId of studIds) {
+              if (!enrolledSet_num.has(studentNumId)) {
+                errors.push(`lessons[] student ${studentNumId} not enrolled in TG ${si}: lessonId=${lid}`);
+              }
+            }
+          }
+        }
       }
 
+      // REQUIREMENTS: positive load, subject exists
       const reqByScope = new Map();
       for (const r of reqs) {
         const k = scopeKey(r);
@@ -460,9 +484,25 @@ Deno.serve(async (req) => {
         }
       }
 
+      // SCOPE COHERENCE: every lesson scope must have a matching requirement
       const lessonScopes = new Set(lessons.map(scopeKey));
       for (const k of lessonScopes) {
         if (!reqByScope.has(k)) errors.push(`missing requirement for lesson scope=${k}`);
+      }
+
+      // DUPLICATE TIMESLOTS: if any lesson has prefilled timeslotId, check no duplicates
+      {
+        const tsSeenByScope = new Map(); // scope + tsId → true
+        for (const l of lessons) {
+          const tsId = l?.timeslotId;
+          if (tsId == null) continue;
+          const scope = scopeKey(l);
+          const dupKey = `${scope}||${tsId}`;
+          if (tsSeenByScope.has(dupKey)) {
+            errors.push(`duplicate prefilled timeslotId=${tsId} for scope ${scope}`);
+          }
+          tsSeenByScope.set(dupKey, true);
+        }
       }
 
       return { ok: errors.length === 0, errors };
