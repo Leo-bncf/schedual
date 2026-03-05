@@ -31,7 +31,7 @@ Deno.serve(async (req) => {
     }
 
     // Call the existing pipeline in DRY mode (mock_school_id short-circuits to return payload)
-    const { data } = await base44.asServiceRole.functions.invoke('optaPlannerPipeline', {
+    const { data } = await base44.functions.invoke('optaPlannerPipeline', {
       schedule_version_id: targetVersionId,
       constraints,
       mock_school_id: user.school_id,
