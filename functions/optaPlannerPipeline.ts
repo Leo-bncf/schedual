@@ -362,7 +362,7 @@ Deno.serve(async (req) => {
                 studentIds: l.studentIds.map(sid => String(sid)),
                 level: l.level
             } : {})
-        })),
+        })), // temporary subjectId, will remap below
         subjectRequirements: subjectRequirements.map(req => ({
             studentGroup: req.studentGroup || "Unknown",
             ...(programType === 'DP' ? { teachingGroupId: `tg_${mappedTeachingGroups.find(tg => tg.id === req.teachingGroupId)?.code || req.teachingGroupId}` } : {}),
