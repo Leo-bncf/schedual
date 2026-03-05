@@ -714,41 +714,40 @@ Deno.serve(async (req) => {
     // Reverse maps
     const revTeacherMap = Object.fromEntries(Object.entries(teacherIdMap).map(([k, v]) => [v, k]));
     const revRoomMap = Object.fromEntries(Object.entries(roomIdMap).map(([k, v]) => [v, k]));
-    const safeLessonMap = Object.fromEntries(mappedLessons.map(l => [l.id, l]));
 
     const slotsToInsert = [];
     for (const lesson of finalAssignments) {
-      const lessonId = lesson.id || lesson.lessonId || lesson.lesson_id;
-      const originalLesson = safeLessonMap[lessonId];
+      const lessonId = lesson.id ?? lesson.lessonId ?? lesson.lesson_id;
+      const originalLesson = lessonMetaMap.get(lessonId);
       const timeslotId = lesson.timeslotId != null ? lesson.timeslotId : (lesson.timeslot?.id != null ? lesson.timeslot.id : null);
 
-      if (originalLesson && timeslotId != null) {
-        const days = ['MONDAY', 'TUESDAY', 'WEDNESDAY', 'THURSDAY', 'FRIDAY'];
-        const periodsPerDay = schoolData.periods_per_day || 10;
-        const dayIndex = Math.floor((timeslotId - 1) / periodsPerDay);
-        const day = lesson.dayOfWeek || lesson.timeslot?.dayOfWeek || days[dayIndex] || 'MONDAY';
-        const periodIndex = lesson.periodIndex != null ? lesson.periodIndex : (timeslotId - 1) % periodsPerDay;
+      if (timeslotId == null) continue;
 
-        const subjectNameStr = String(lesson.subject || '').toUpperCase();
-        const isBreak = subjectNameStr === 'LUNCH' || subjectNameStr === 'BREAK';
+      const days = ['MONDAY', 'TUESDAY', 'WEDNESDAY', 'THURSDAY', 'FRIDAY'];
+      const periodsPerDay = schoolData.periods_per_day || 10;
+      const dayIndex = Math.floor((timeslotId - 1) / periodsPerDay);
+      const day = lesson.dayOfWeek || lesson.timeslot?.dayOfWeek || days[dayIndex] || 'MONDAY';
+      const periodIndex = lesson.periodIndex != null ? lesson.periodIndex : (timeslotId - 1) % periodsPerDay;
 
-        const tId = lesson.teacherId || lesson.teacher?.id;
-        const rId = lesson.roomId || lesson.room?.id;
+      const subjectNameStr = String(lesson.subject || '').toUpperCase();
+      const isBreak = subjectNameStr === 'LUNCH' || subjectNameStr === 'BREAK';
 
-        slotsToInsert.push({
-          school_id: user.school_id,
-          schedule_version: schedule_version_id,
-          teaching_group_id: originalLesson.originalTgId || null,
-          teacher_id: tId ? revTeacherMap[tId] : null,
-          room_id: rId ? revRoomMap[rId] : null,
-          timeslot_id: timeslotId,
-          day: day || 'Monday',
-          period: periodIndex + 1,
-          status: 'scheduled',
-          is_break: isBreak,
-          notes: isBreak ? (lesson.subject || 'Break') : undefined
-        });
-      }
+      const tId = lesson.teacherId || lesson.teacher?.id;
+      const rId = lesson.roomId || lesson.room?.id;
+
+      slotsToInsert.push({
+        school_id: user.school_id,
+        schedule_version: schedule_version_id,
+        teaching_group_id: originalLesson?.originalTgId || null,
+        teacher_id: tId ? revTeacherMap[tId] : null,
+        room_id: rId ? revRoomMap[rId] : null,
+        timeslot_id: timeslotId,
+        day: day || 'Monday',
+        period: periodIndex + 1,
+        status: 'scheduled',
+        is_break: isBreak,
+        notes: isBreak ? (lesson.subject || 'Break') : undefined
+      });
     }
 
     if (slotsToInsert.length > 0) {
