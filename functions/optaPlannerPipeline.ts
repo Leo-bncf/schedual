@@ -495,6 +495,10 @@ Deno.serve(async (req) => {
 
     // Also validate subject string names (code/name) alignment across payload
     const definedSubjectNames = new Set((finalPayload.subjects || []).map(s => (s.code || s.name)));
+    const isCoreNameStrict = (str) => {
+        const u = String(str || '').toUpperCase().replace(/\s+/g, '');
+        return u === 'TOK' || u.includes('THEORYOFKNOWLEDGE') || u === 'CAS' || u.includes('CREATIVITYACTIVITYSERVICE') || u === 'EE' || u.includes('EXTENDEDESSAY');
+    };
     const referencedSubjectNames = new Set();
     (finalPayload.lessons || []).forEach(l => { if (l.subject) referencedSubjectNames.add(l.subject); });
     (finalPayload.subjectRequirements || []).forEach(r => { if (r.subject) referencedSubjectNames.add(r.subject); });
