@@ -920,6 +920,10 @@ Deno.serve(async (req) => {
       });
     }
 
+    // ═══════════════════════════════════════════════════════════════════════════
+    // ★ STEP 4: SAFE OUTPUT PIPELINE
+    // ═══════════════════════════════════════════════════════════════════════════
+
     if (slotsToInsert.length > 0) {
       await b44Entities.ScheduleSlot.bulkCreate(slotsToInsert);
     }
