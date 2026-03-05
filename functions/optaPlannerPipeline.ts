@@ -45,8 +45,6 @@ Deno.serve(async (req) => {
     }
 
     const schoolData = school[0];
-    const totalSlotsPerWeek = (schoolData.days_of_week?.length || 5) * (schoolData.periods_per_day || 10);
-    const teacherAvailableSlotsCount = {};
     
     // Determine program type
     let programType = 'DP'; 
@@ -98,11 +96,8 @@ Deno.serve(async (req) => {
             });
         }
 
-const teacherAvailable = (schoolData.days_of_week?.length || 5) * (schoolData.periods_per_day || 10) - unavailableSlotIds.length;
-teacherAvailableSlotsCount[t.id] = Math.max(0, teacherAvailable);
-
-return {
-    id: numId,
+        return {
+            id: numId,
             code: String(t.id),
             name: String(t.full_name),
             maxPeriodsPerWeek: Number(t.max_hours_per_week || 25),
@@ -160,12 +155,7 @@ return {
         }
 
         const periodDuration = schoolData.period_duration_minutes || 60;
-        let numLessons = Math.ceil(requiredMinutes / periodDuration);
-        const maxByTeacher = tg.teacher_id ? (teacherAvailableSlotsCount[tg.teacher_id] ?? Infinity) : Infinity;
-        if (numLessons > maxByTeacher) {
-            numLessons = maxByTeacher;
-            requiredMinutes = numLessons * periodDuration;
-        }
+        const numLessons = Math.ceil(requiredMinutes / periodDuration);
         
         if (numLessons <= 0) return; // Skip zero-lesson groups completely
         
@@ -646,8 +636,7 @@ return {
                 const definedNames = new Set(subjectsList.map(s => s.code));
                 const missingIds = Array.from(new Set(refIds.filter(id => !definedIds.has(id))));
                 const missingNames = Array.from(new Set(refNames.filter(n => !definedNames.has(n))));
-                const isHex24 = (v) => typeof v === 'string' && /^[a-f0-9]{24}$/i.test(v);
-                const nonNumericIds = Array.from(new Set(refIds.filter(id => typeof id !== 'number' && !isHex24(id))));
+                const nonNumericIds = Array.from(new Set(refIds.filter(id => typeof id !== 'number')));
                 return { subjectsList: subjectsList.slice(0, 50), missingIds, missingNames: missingNames.slice(0, 50), nonNumericIds: nonNumericIds.slice(0, 50) };
             })();
 
@@ -684,8 +673,7 @@ return {
             const definedNames = new Set(subjectsList.map(s => s.code));
             const missingIds = Array.from(new Set(refIds.filter(id => !definedIds.has(id))));
             const missingNames = Array.from(new Set(refNames.filter(n => !definedNames.has(n))));
-            const isHex24 = (v) => typeof v === 'string' && /^[a-f0-9]{24}$/i.test(v);
-            const nonNumericIds = Array.from(new Set(refIds.filter(id => typeof id !== 'number' && !isHex24(id))));
+            const nonNumericIds = Array.from(new Set(refIds.filter(id => typeof id !== 'number')));
             return { subjectsList: subjectsList.slice(0, 50), missingIds, missingNames: missingNames.slice(0, 50), nonNumericIds: nonNumericIds.slice(0, 50) };
         })();
 
