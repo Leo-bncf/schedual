@@ -334,7 +334,6 @@ Deno.serve(async (req) => {
                 id: idx + 1, // contiguous numeric IDs required by solver
                 code: getSafeSubjectName(sub),
                 name: getSafeSubjectName(sub),
-                originalId: `sub_${sub.id}`,
                 ...(programType === 'DP' ? { 
                     hoursPerWeekHL: Number(sub.hoursPerWeekHL || 5), 
                     hoursPerWeekSL: Number(sub.hoursPerWeekSL || 3) 
