@@ -531,12 +531,11 @@ Deno.serve(async (req) => {
         }));
     }
 
-    // Ensure no duplicate pre-assigned timeslots within same scope; fix duplicates and hard-preflight validate
+    // Hard-coded scope-timeslot uniqueness enforcement
     (() => {
         const lessons = finalPayload.lessons || [];
         if (lessons.length === 0) return;
 
-        // First pass: fix duplicates by nulling conflicting prefilled timeslots
         const seen = new Set();
         let dedupedCount = 0;
         for (const l of lessons) {
@@ -544,15 +543,14 @@ Deno.serve(async (req) => {
             const scope = `${l.sectionId}||${l.studentGroup}||${l.subject}`;
             const key = `${scope}||${l.timeslotId}`;
             if (seen.has(key)) {
-                // Recommended fix: remove prefill and let solver place it
-                l.timeslotId = null;
+                l.timeslotId = null; // force solver placement for duplicates
                 dedupedCount++;
             } else {
                 seen.add(key);
             }
         }
 
-        // Second pass: hard preflight validation - block if any duplicates remain
+        // Hard block if any duplicates still remain (paranoia check)
         const postSeen = new Set();
         let residualDupes = 0;
         for (const l of lessons) {
@@ -566,10 +564,10 @@ Deno.serve(async (req) => {
             }
         }
         if (dedupedCount > 0) {
-            console.log('[Pipeline] Dedupe fixed duplicate prefilled timeslots:', dedupedCount);
+            console.log('[Pipeline] Hard-coded dedupe nullified duplicates:', dedupedCount);
         }
         if (residualDupes > 0) {
-            throw new Error(`Preflight failed: duplicate pre-assigned timeslots (${residualDupes}) remain after dedupe`);
+            throw new Error(`Preflight failed: residual duplicate pre-assigned timeslots (${residualDupes})`);
         }
     })();
 
