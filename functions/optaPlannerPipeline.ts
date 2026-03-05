@@ -677,6 +677,10 @@ Deno.serve(async (req) => {
         }
     })();
 
+    // Safety: strip ALL prefilled timeslotIds to avoid any stale duplicates sneaking in
+    finalPayload.lessons = (finalPayload.lessons || []).map(l => ({ ...l, timeslotId: null }));
+    console.log('[Pipeline] Safety strip: cleared all lesson.timeslotId before POST');
+
     const requestBody = JSON.stringify(finalPayload);
     
     console.log('[Pipeline] === OPTAPLANNER REQUEST ===');
