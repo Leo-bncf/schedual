@@ -564,6 +564,26 @@ Deno.serve(async (req) => {
 
     console.log(`[Pipeline] Found ${finalAssignments.length} assignments to process.`);
 
+    // ── Deduplicate solver output: if solver returns duplicate timeslotId within
+    // the same (sectionId, studentGroup, subject) scope, keep only the first occurrence.
+    // This guards against solver bugs where two lessons in the same scope get the same slot.
+    {
+      const solverDupSeen = new Set();
+      const codeNorm = (v) => v == null ? '' : String(v).trim().toUpperCase();
+      finalAssignments = finalAssignments.filter(lesson => {
+        const tsId = lesson.timeslotId != null ? lesson.timeslotId : (lesson.timeslot?.id != null ? lesson.timeslot.id : null);
+        if (tsId == null) return true; // unassigned, always keep
+        const key = `${codeNorm(lesson.sectionId)}||${codeNorm(lesson.studentGroup)}||${codeNorm(lesson.subject)}||${tsId}`;
+        if (solverDupSeen.has(key)) {
+          console.warn(`[Pipeline] Dropping duplicate solver assignment: lessonId=${lesson.id} scope=${key}`);
+          return false;
+        }
+        solverDupSeen.add(key);
+        return true;
+      });
+      console.log(`[Pipeline] After dedup: ${finalAssignments.length} assignments`);
+    }
+
     // Reverse maps
     const revTeacherMap = Object.fromEntries(Object.entries(teacherIdMap).map(([k, v]) => [v, k]));
     const revRoomMap = Object.fromEntries(Object.entries(roomIdMap).map(([k, v]) => [v, k]));
