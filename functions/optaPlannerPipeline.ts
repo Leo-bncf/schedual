@@ -494,6 +494,23 @@ Deno.serve(async (req) => {
 
     console.log('[Pipeline] Subject ID remap completed:', { subjects: (finalPayload.subjects || []).length, mappingSize: subjIdMap.size });
 
+    // Align all subject name strings to canonical subject codes based on (possibly remapped) subjectId
+    const idToCode = Object.fromEntries((finalPayload.subjects || []).map(s => [s.id, s.code || s.name]));
+    finalPayload.lessons = (finalPayload.lessons || []).map(l => ({
+        ...l,
+        subject: idToCode[l.subjectId] || l.subject
+    }));
+    finalPayload.subjectRequirements = (finalPayload.subjectRequirements || []).map(r => ({
+        ...r,
+        subject: idToCode[r.subjectId] || r.subject
+    }));
+    if (finalPayload.payloadType === 'individual_payload') {
+        finalPayload.studentSubjectChoices = (finalPayload.studentSubjectChoices || []).map(c => ({
+            ...c,
+            subject: idToCode[c.subjectId] || c.subject
+        }));
+    }
+
     // Pre-validate that all referenced subjectIds exist in subjects[] to avoid opaque solver errors
     const definedSubjectIds = new Set((finalPayload.subjects || []).map(s => s.id));
     // IDs are now numeric; core strings no longer apply
