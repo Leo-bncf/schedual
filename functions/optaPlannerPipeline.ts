@@ -417,6 +417,50 @@ Deno.serve(async (req) => {
     // Ensure all references are using correctly prefixed IDs as in template
     console.log('[Pipeline] Generated Payload Type:', finalPayload.payloadType);
 
+    // Purge core subjects (TOK, EE, CAS) from payload entirely
+    const isCoreByMeta = (s) => {
+        const n = String(s?.name || s?.code || '').toUpperCase();
+        return Boolean(s?.is_core) ||
+            n === 'TOK' || n.includes('THEORY OF KNOWLEDGE') ||
+            n === 'CAS' || n.includes('CREATIVITY, ACTIVITY, SERVICE') ||
+            n === 'EE' || n.includes('EXTENDED ESSAY');
+    };
+    const corePrefixedIds = new Set(
+        (subjects || []).filter(isCoreByMeta).map(s => `sub_${s.id}`)
+    );
+    const isCoreName = (str) => {
+        const u = String(str || '').toUpperCase();
+        return u.includes('TOK') || u.includes('EXTENDEDESSAY') || u.includes('THEORYOFKNOWLEDGE') ||
+               u.includes('CAS') || u.includes('CREATIVITYACTIVITYSERVICE') || u === 'EE';
+    };
+
+    const beforeCounts = {
+        subjects: (finalPayload.subjects || []).length,
+        lessons: (finalPayload.lessons || []).length,
+        subjectRequirements: (finalPayload.subjectRequirements || []).length,
+        choices: (finalPayload.studentSubjectChoices || []).length,
+        teachingGroups: (finalPayload.teachingGroups || []).length
+    };
+
+    finalPayload.subjects = (finalPayload.subjects || []).filter(s => !corePrefixedIds.has(s.id) && !isCoreName(s.code || s.name));
+    finalPayload.lessons = (finalPayload.lessons || []).filter(l => !corePrefixedIds.has(l.subjectId) && !isCoreName(l.subject));
+    finalPayload.subjectRequirements = (finalPayload.subjectRequirements || []).filter(r => !corePrefixedIds.has(r.subjectId) && !isCoreName(r.subject));
+    finalPayload.teachingGroups = (finalPayload.teachingGroups || []).filter(tg => !corePrefixedIds.has(tg.subjectId));
+    if (finalPayload.payloadType === 'individual_payload') {
+        finalPayload.studentSubjectChoices = (finalPayload.studentSubjectChoices || []).filter(c => !corePrefixedIds.has(c.subjectId) && !isCoreName(c.subject));
+    }
+
+    const afterCounts = {
+        subjects: (finalPayload.subjects || []).length,
+        lessons: (finalPayload.lessons || []).length,
+        subjectRequirements: (finalPayload.subjectRequirements || []).length,
+        choices: (finalPayload.studentSubjectChoices || []).length,
+        teachingGroups: (finalPayload.teachingGroups || []).length
+    };
+    if (Object.values(beforeCounts).some((v, i) => v !== Object.values(afterCounts)[i])) {
+        console.log('[Pipeline] Core subjects purged from payload:', { beforeCounts, afterCounts, corePrefixedIds: Array.from(corePrefixedIds) });
+    }
+
     // Pre-validate that all referenced subjectIds exist in subjects[] to avoid opaque solver errors
     const definedSubjectIds = new Set((finalPayload.subjects || []).map(s => s.id));
     const referencedSubjectIds = new Set();
