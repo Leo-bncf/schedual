@@ -468,7 +468,19 @@ Deno.serve(async (req) => {
       }
     }
 
-    clearDuplicatePrefilledTimeslots(finalPayload);
+    // Force timeslotId = null on ALL lessons unconditionally before any validation or POST
+    // This prevents any stale slot assignments from leaking into the solver payload
+    if (Array.isArray(finalPayload.lessons)) {
+      finalPayload.lessons = finalPayload.lessons.map(l => ({ ...l, timeslotId: null }));
+    }
+
+    // Also clear roomId on all lessons for the same reason
+    if (Array.isArray(finalPayload.lessons)) {
+      finalPayload.lessons = finalPayload.lessons.map(l => {
+        const { roomId, ...rest } = l;
+        return { ...rest, timeslotId: null };
+      });
+    }
 
     const preflight = preflightPayload(finalPayload);
     if (!preflight.ok) {
