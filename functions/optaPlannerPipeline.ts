@@ -945,88 +945,74 @@ Deno.serve(async (req) => {
       scoreToSave = result.score || 0;
     }
 
-    // ─── Check for infeasible result (negative hard score) ─────────────────
+    // ─── INFEASIBLE DETECTION: negative hard score means schedule not valid ────
     if (scoreToSave < 0) {
-      console.error('[Pipeline] INFEASIBLE SCHEDULE: negative hard score detected', scoreToSave);
+      console.error('[Pipeline] ✗ INFEASIBLE: hardScore =', scoreToSave);
 
-      // Analyze which TGs and students have unassigned lessons
-      const unassignedByTG = new Map(); // tg.id → count
+      // Analyze unassigned lessons
+      const unassignedByTG = new Map(); // tg raw id → count
       const unassignedByStudent = new Map(); // raw student id → count
 
       finalAssignments.forEach(lesson => {
         const tsId = lesson.timeslotId != null ? lesson.timeslotId : (lesson.timeslot?.id != null ? lesson.timeslot.id : null);
-        if (tsId != null) return; // assigned, skip
+        if (tsId != null) return;
 
         const tgId = lesson.sectionId;
         if (tgId) {
           unassignedByTG.set(tgId, (unassignedByTG.get(tgId) || 0) + 1);
-        }
 
-        // For each student in this lesson's group, mark as conflicted
-        const tg = activeTGs.find(t => String(t.id) === tgId);
-        if (tg && tg.student_ids) {
-          tg.student_ids.forEach(sid => {
+          // Mark all enrolled students as conflicted
+          const enrolledSet = tgStudentEnrollment.get(tgId) || new Set();
+          enrolledSet.forEach(sid => {
             unassignedByStudent.set(sid, (unassignedByStudent.get(sid) || 0) + 1);
           });
         }
       });
 
-      const unassignedTGDiags = Array.from(unassignedByTG.entries()).map(([tgId, count]) => {
-        const tg = activeTGs.find(t => String(t.id) === tgId);
+      const tgWantVsGot = mappedTeachingGroups.map(tg => {
+        const unassignedCount = unassignedByTG.get(tg.sectionId) || 0;
+        const assignedCount = mappedLessons.filter(l => l.sectionId === tg.sectionId).length - unassignedCount;
         return {
-          tgName: tg?.name || tgId,
-          tgId,
-          unassignedLessons: count,
-          enrolledStudents: (tg?.student_ids || []).length
+          tgId: tg.sectionId,
+          want: mappedLessons.filter(l => l.sectionId === tg.sectionId).length,
+          got: assignedCount,
+          unassigned: unassignedCount
         };
-      });
+      }).filter(x => x.want > 0);
 
-      const unassignedStudentDiags = Array.from(unassignedByStudent.entries())
+      const studentConflicts = Array.from(unassignedByStudent.entries())
         .sort((a, b) => b[1] - a[1])
         .slice(0, 10)
         .map(([sid, count]) => {
           const student = students.find(s => s.id === sid);
-          return {
-            studentName: student?.full_name || sid,
-            studentId: sid,
-            conflictingLessons: count
-          };
+          return { student: student?.full_name || sid, conflicts: count };
         });
-
-      // Extract conflict details from solver response
-      const solverDetails = [];
-      if (Array.isArray(result.details)) {
-        solverDetails.push(...result.details.slice(0, 5).map(d => ({
-          type: d.type || d.conflictType || 'unknown',
-          message: d.message || d.description || String(d).slice(0, 100)
-        })));
-      }
 
       const diagnostics = {
         hardScore: scoreToSave,
-        totalAssigned: finalAssignments.filter(l => {
-          const tsId = l.timeslotId != null ? l.timeslotId : (l.timeslot?.id != null ? l.timeslot.id : null);
-          return tsId != null;
-        }).length,
-        totalLessons: finalAssignments.length,
-        unassignedLessons: finalAssignments.filter(l => {
-          const tsId = l.timeslotId != null ? l.timeslotId : (l.timeslot?.id != null ? l.timeslot.id : null);
-          return tsId == null;
-        }).length,
-        underAssignedTeachingGroups: unassignedTGDiags,
-        studentsWithConflicts: unassignedStudentDiags,
-        solverValidationErrors: solverDetails,
+        outputStats: {
+          totalAssigned: finalAssignments.filter(l => {
+            const ts = l.timeslotId != null ? l.timeslotId : (l.timeslot?.id != null ? l.timeslot.id : null);
+            return ts != null;
+          }).length,
+          totalLessons: finalAssignments.length,
+          unassignedLessons: finalAssignments.filter(l => {
+            const ts = l.timeslotId != null ? l.timeslotId : (l.timeslot?.id != null ? l.timeslot.id : null);
+            return ts == null;
+          }).length
+        },
+        tgWantVsGot,
+        studentConflicts,
         partialRecovery
       };
 
       return Response.json({
         ok: false,
-        error: 'Schedule generation failed: constraints cannot be satisfied',
-        code: 'INFEASIBLE_SCHEDULE',
+        error: 'Schedule infeasible: constraints cannot be satisfied',
+        code: 'INFEASIBLE_RESULT',
         hardScore: scoreToSave,
         diagnostics,
-        explanation: `${diagnostics.unassignedLessons} lesson(s) could not be scheduled. ${unassignedTGDiags.length > 0 ? 'Some teaching groups are under-resourced.' : ''} ${unassignedStudentDiags.length > 0 ? 'Some students have conflicting schedule demands.' : ''} Review teaching group assignments, reduce required hours, or add more timeslots.`,
-        details: result.validationErrors || result.details || []
+        explanation: `Failed to schedule all lessons. ${diagnostics.outputStats.unassignedLessons}/${diagnostics.outputStats.totalLessons} lessons unassigned.`
       }, { status: 400 });
     }
 
