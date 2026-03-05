@@ -454,30 +454,12 @@ Deno.serve(async (req) => {
       return { ok: errors.length === 0, errors };
     }
 
-    // Null out duplicate timeslotIds (keep the key as null)
-    function clearDuplicatePrefilledTimeslots(payload) {
-      const lessons = Array.isArray(payload.lessons) ? payload.lessons : [];
-      const seen = new Set();
-      const codeNorm = (v) => (v == null ? null : String(v).trim().replace(/_/g, ' ').replace(/\s+/g, ' ').toUpperCase());
-      const clean = (v) => (v == null ? '' : String(v).trim());
-      for (const l of lessons) {
-        if (l.timeslotId == null) continue;
-        const key = `${clean(l.sectionId || '')}||${clean(l.studentGroup)}||${codeNorm(l.subject)}||${l.timeslotId}`;
-        if (seen.has(key)) l.timeslotId = null;
-        else seen.add(key);
-      }
-    }
-
-    // Force timeslotId = null on ALL lessons unconditionally before any validation or POST
-    // This prevents any stale slot assignments from leaking into the solver payload
-    if (Array.isArray(finalPayload.lessons)) {
-      finalPayload.lessons = finalPayload.lessons.map(l => ({ ...l, timeslotId: null }));
-    }
-
-    // Also clear roomId on all lessons for the same reason
+    // Force timeslotId = null and strip roomId on ALL lessons unconditionally.
+    // This is the definitive fix for duplicate-timeslot-per-scope solver errors.
+    // No prefill is ever sent — the solver always assigns fresh slots.
     if (Array.isArray(finalPayload.lessons)) {
       finalPayload.lessons = finalPayload.lessons.map(l => {
-        const { roomId, ...rest } = l;
+        const { timeslotId, roomId, ...rest } = l;
         return { ...rest, timeslotId: null };
       });
     }
