@@ -461,6 +461,39 @@ Deno.serve(async (req) => {
         console.log('[Pipeline] Core subjects purged from payload:', { beforeCounts, afterCounts, corePrefixedIds: Array.from(corePrefixedIds) });
     }
 
+    // Normalize subject IDs to numeric to satisfy solver expectations
+    const subjIdMap = new Map();
+    let subjNum = 1;
+    (finalPayload.subjects || []).forEach(s => {
+        const oldId = s.id;
+        if (!subjIdMap.has(oldId)) {
+            subjIdMap.set(oldId, subjNum++);
+        }
+        s.id = subjIdMap.get(oldId);
+    });
+    const remapSubjId = (id) => subjIdMap.has(id) ? subjIdMap.get(id) : id;
+
+    finalPayload.teachingGroups = (finalPayload.teachingGroups || []).map(tg => ({
+        ...tg,
+        subjectId: remapSubjId(tg.subjectId)
+    }));
+    finalPayload.lessons = (finalPayload.lessons || []).map(l => ({
+        ...l,
+        subjectId: remapSubjId(l.subjectId)
+    }));
+    finalPayload.subjectRequirements = (finalPayload.subjectRequirements || []).map(r => ({
+        ...r,
+        subjectId: remapSubjId(r.subjectId)
+    }));
+    if (finalPayload.payloadType === 'individual_payload') {
+        finalPayload.studentSubjectChoices = (finalPayload.studentSubjectChoices || []).map(c => ({
+            ...c,
+            subjectId: remapSubjId(c.subjectId)
+        }));
+    }
+
+    console.log('[Pipeline] Subject ID remap completed:', { subjects: (finalPayload.subjects || []).length, mappingSize: subjIdMap.size });
+
     // Pre-validate that all referenced subjectIds exist in subjects[] to avoid opaque solver errors
     const definedSubjectIds = new Set((finalPayload.subjects || []).map(s => s.id));
     // Skip validation errors for core subjects that were intentionally purged
