@@ -227,50 +227,7 @@ function buildDPPayload({ schoolId, scheduleVersionId, school, students, teacher
     }
   }
 
-  // Validate per-teacher lesson load — if a teacher has more lessons than available timeslots,
-  // unassign them (set teacherId=null) so OptaPlanner can auto-assign
-  const teacherLessonCount = {};
-  for (const lesson of lessons) {
-    if (lesson.teacherId) {
-      teacherLessonCount[lesson.teacherId] = (teacherLessonCount[lesson.teacherId] || 0) + 1;
-    }
-  }
-  const estimatedTimeslots = scheduleSettings.daysOfWeek.length * Math.floor(
-    (parseTimeToMinutes(scheduleSettings.dayEndTime) - parseTimeToMinutes(scheduleSettings.dayStartTime)) / scheduleSettings.periodDurationMinutes
-  );
-  console.log(`[buildDPPayload] lessons=${lessons.length}, teachers=${teacherList.length}, estimated timeslots=${estimatedTimeslots}`);
-
-  const overloadedTeachers = new Set();
-  for (const [tid, count] of Object.entries(teacherLessonCount)) {
-    const teacher = teacherList.find(t => t.id === Number(tid));
-    const max = Math.min(teacher?.maxLessonsPerWeek || 25, estimatedTimeslots);
-    if (count > max) {
-      console.warn(`[buildDPPayload] OVERLOAD: Teacher ${teacher?.name} (id=${tid}) has ${count} lessons but max is ${max} — will unassign teacher from excess lessons`);
-      overloadedTeachers.add(Number(tid));
-    } else {
-      console.log(`[buildDPPayload] Teacher ${teacher?.name}: ${count} lessons / ${max} max OK`);
-    }
-  }
-
-  // For overloaded teachers, set teacherId=null (let solver auto-assign)
-  if (overloadedTeachers.size > 0) {
-    const teacherGroupCount = {};
-    for (const lesson of lessons) {
-      if (overloadedTeachers.has(lesson.teacherId)) {
-        const key = `${lesson.teacherId}_${lesson.teachingGroupId}`;
-        teacherGroupCount[key] = (teacherGroupCount[key] || 0) + 1;
-      }
-    }
-    // Nullify teacherId on all lessons for overloaded teachers
-    let unassigned = 0;
-    for (const lesson of lessons) {
-      if (overloadedTeachers.has(lesson.teacherId)) {
-        lesson.teacherId = null;
-        unassigned++;
-      }
-    }
-    console.warn(`[buildDPPayload] Unassigned teacherId from ${unassigned} lessons due to teacher overload`);
-  }
+  console.log(`[buildDPPayload] lessons=${lessons.length}, teachers=${teacherList.length}`);
 
   return {
     payloadType: 'individual_payload',
