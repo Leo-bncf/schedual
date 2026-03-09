@@ -218,7 +218,26 @@ function buildDPPayload({ schoolId, scheduleVersionId, school, students, teacher
     }
   }
 
-  console.log(`[buildDPPayload] lessons=${lessons.length}, teachers=${teacherList.length}, timeslots estimated=${scheduleSettings.daysOfWeek.length * Math.floor((parseTimeToMinutes(scheduleSettings.dayEndTime) - parseTimeToMinutes(scheduleSettings.dayStartTime)) / scheduleSettings.periodDurationMinutes)}`);
+  // Validate per-teacher lesson load
+  const teacherLessonCount = {};
+  for (const lesson of lessons) {
+    if (lesson.teacherId) {
+      teacherLessonCount[lesson.teacherId] = (teacherLessonCount[lesson.teacherId] || 0) + 1;
+    }
+  }
+  const estimatedTimeslots = scheduleSettings.daysOfWeek.length * Math.floor(
+    (parseTimeToMinutes(scheduleSettings.dayEndTime) - parseTimeToMinutes(scheduleSettings.dayStartTime)) / scheduleSettings.periodDurationMinutes
+  );
+  console.log(`[buildDPPayload] lessons=${lessons.length}, teachers=${teacherList.length}, estimated timeslots=${estimatedTimeslots}`);
+  for (const [tid, count] of Object.entries(teacherLessonCount)) {
+    const teacher = teacherList.find(t => t.id === Number(tid));
+    const max = teacher?.maxLessonsPerWeek || 25;
+    if (count > estimatedTimeslots) {
+      console.warn(`[buildDPPayload] OVERLOAD: Teacher ${teacher?.name} (id=${tid}) has ${count} lessons but only ${estimatedTimeslots} timeslots available`);
+    } else {
+      console.log(`[buildDPPayload] Teacher ${teacher?.name}: ${count} lessons / ${max} max`);
+    }
+  }
 
   return {
     payloadType: 'individual_payload',
