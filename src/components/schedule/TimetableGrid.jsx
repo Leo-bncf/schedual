@@ -104,12 +104,15 @@ export default function TimetableGrid({
     });
     
     // Map each timeslot to its UI row position (1-based, chronological)
-    // CRITICAL: Use String(ts.id) as key to avoid NaN when timeslot_id is UUID/string
-    Object.values(timeslotsByDay).forEach(daySlots => {
+    // CRITICAL: Store EVERY timeslot by ID (string key) → position number
+    Object.entries(timeslotsByDay).forEach(([day, daySlots]) => {
       daySlots.forEach((ts, idx) => {
+        // Key is string ID, value is 1-based position within that day
         map[String(ts.id)] = idx + 1;
       });
     });
+    
+    console.log('[TimetableGrid] Built timeslotToPosition map with', Object.keys(map).length, 'entries. Sample:', Object.entries(map).slice(0, 10));
     
     return map;
   }, [timeslots]);
