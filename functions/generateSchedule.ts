@@ -525,10 +525,12 @@ function parseResponseToSlots({ responseData, payload, scheduleVersionId, school
       slot.subject_id = payload.subjectIdByCode[entry.subject] ?? null;
     }
 
-    // For DP: teachingGroupId from solver is already the raw base44 id (mapper strips TG_ prefix)
-    // Our payload sends `tg_<id>` so the mapper returns the bare `<id>` back
+    // teachingGroupId from solver still has our `tg_` prefix (mapper only strips `TG_` uppercase prefix)
+    // Strip our `tg_` prefix to get the raw base44 entity ID
     if (entry.teachingGroupId) {
-      slot.teaching_group_id = entry.teachingGroupId;
+      slot.teaching_group_id = entry.teachingGroupId.startsWith('tg_') 
+        ? entry.teachingGroupId.slice(3) 
+        : entry.teachingGroupId;
     }
 
     slots.push(slot);
