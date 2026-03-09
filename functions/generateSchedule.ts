@@ -451,8 +451,11 @@ async function sendToOptaPlanner(payload) {
 // ─── Parse OptaPlanner response → ScheduleSlots ──────────────────────────────
 
 function parseResponseToSlots({ responseData, payload, scheduleVersionId, schoolId, teacherMap, roomMap }) {
+  // Server returns either `lessons` (cohort) or `assignments` (DP/individual) 
   const lessons = responseData?.lessons || responseData?.data?.lessons || [];
-  const timeslots = responseData?.timeslots || responseData?.data?.timeslots || [];
+  const assignments = responseData?.assignments || responseData?.data?.assignments || [];
+  const timeslots = responseData?.timeslots || responseData?.data?.timeslots || 
+                    responseData?.solverTimeslots || responseData?.data?.solverTimeslots || [];
 
   const teacherReverseMap = new Map();
   teacherMap.forEach((numId, base44Id) => teacherReverseMap.set(numId, base44Id));
@@ -463,7 +466,7 @@ function parseResponseToSlots({ responseData, payload, scheduleVersionId, school
   const timeslotById = new Map();
   for (const ts of timeslots) timeslotById.set(ts.id, ts);
 
-  // For DP: build tg reverse map
+  // For DP: build tg reverse map (strip tg_ prefix to get base44 id)
   const tgPayloadMap = new Map();
   if (payload.payloadType === 'individual_payload') {
     for (const tg of (payload.teaching_groups || [])) {
@@ -478,33 +481,44 @@ function parseResponseToSlots({ responseData, payload, scheduleVersionId, school
 
   const slots = [];
 
-  for (const lesson of lessons) {
-    if (lesson.timeslotId == null) continue;
+  // Unified: process both `lessons` (cohort) and `assignments` (DP) arrays
+  const allEntries = [...lessons, ...assignments];
+  console.log(`[parseResponseToSlots] lessons=${lessons.length}, assignments=${assignments.length}, timeslots=${timeslots.length}`);
 
-    const ts = timeslotById.get(lesson.timeslotId);
-    const day = ts ? DAY_MAP[ts.day] || ts.day : null;
-    if (!day) continue;
+  for (const entry of allEntries) {
+    if (entry.timeslotId == null) continue;
 
-    const teacherBase44Id = lesson.teacherId ? teacherReverseMap.get(lesson.teacherId) ?? null : null;
-    const roomBase44Id = lesson.roomId ? roomReverseMap.get(lesson.roomId) ?? null : null;
+    const ts = timeslotById.get(entry.timeslotId);
+    // For assignments, day/period may be directly on the entry OR via timeslot lookup
+    const rawDay = ts?.day || entry.day;
+    const day = rawDay ? (DAY_MAP[rawDay] || rawDay) : null;
+    if (!day) {
+      console.warn(`[parseResponseToSlots] No day for timeslotId=${entry.timeslotId}, entry keys=${Object.keys(entry).join(',')}`);
+      continue;
+    }
+
+    const teacherBase44Id = entry.teacherId ? teacherReverseMap.get(entry.teacherId) ?? null : null;
+    const roomBase44Id = entry.roomId ? roomReverseMap.get(entry.roomId) ?? null : null;
 
     const slot = {
       school_id: schoolId,
       schedule_version: scheduleVersionId,
       day,
-      period: ts?.period ?? null,
-      timeslot_id: lesson.timeslotId,
+      period: ts?.period ?? entry.period ?? null,
+      timeslot_id: entry.timeslotId,
       teacher_id: teacherBase44Id,
       room_id: roomBase44Id,
       status: 'scheduled',
     };
 
-    if (lesson.subject && payload.subjectIdByCode) {
-      slot.subject_id = payload.subjectIdByCode[lesson.subject] ?? null;
+    if (entry.subject && payload.subjectIdByCode) {
+      slot.subject_id = payload.subjectIdByCode[entry.subject] ?? null;
     }
 
-    if (lesson.teachingGroupId) {
-      const base44TgId = tgPayloadMap.get(lesson.teachingGroupId);
+    // teachingGroupId on assignment may be the full `tg_xxx` id or the raw base44 id
+    const tgId = entry.teachingGroupId;
+    if (tgId) {
+      const base44TgId = tgPayloadMap.get(tgId) || (tgId.startsWith('tg_') ? tgId.replace(/^tg_/, '') : tgId);
       if (base44TgId) slot.teaching_group_id = base44TgId;
     }
 
