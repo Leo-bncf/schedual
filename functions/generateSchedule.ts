@@ -438,6 +438,13 @@ async function sendToOptaPlanner(payload) {
   try { json = JSON.parse(text); } catch { json = { raw: text }; }
   console.log(`[OptaPlanner] ${programType} parsed response keys: ${Object.keys(json || {}).join(', ')}`);
   console.log(`[OptaPlanner] ${programType} response.ok=${json?.ok}, response.errorCode=${json?.errorCode}, response.validationErrors=${JSON.stringify(json?.validationErrors)}`);
+
+  // Detect server-level NOT_FOUND / routing errors returned as HTTP 200 with an error body
+  if (json?.error && !json?.lessons && !json?.data?.lessons) {
+    console.error(`[OptaPlanner] ${programType} server-level error in body: ${JSON.stringify(json)}`);
+    return { ok: false, programType, status: res.status, error: JSON.stringify(json) };
+  }
+
   return { ok: true, programType, data: json };
 }
 
