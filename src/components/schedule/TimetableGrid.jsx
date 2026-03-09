@@ -371,24 +371,7 @@ export default function TimetableGrid({
     setIsEditing(false);
   };
 
-  // Calculate mapping diagnostics for display
-  const mappingDiagnostics = React.useMemo(() => {
-    const invalidTimeslotId = normalizedSlots.filter(s => 
-      s.timeslot_id && !timeslotToPosition[Number(s.timeslot_id)]
-    ).length;
-    
-    const missingDay = normalizedSlots.filter(s => !s.day).length;
-    
-    const unmappable = normalizedSlots.filter(s => !s.day || !s.uiRow).length;
-    
-    return {
-      totalSlots: slots.length,
-      rendered: normalizedSlots.filter(s => s.day && s.uiRow).length,
-      invalidTimeslotId,
-      missingDay,
-      unmappable
-    };
-  }, [normalizedSlots, timeslotToPosition, slots.length]);
+
 
   return (
     <>
