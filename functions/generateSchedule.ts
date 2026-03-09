@@ -156,12 +156,14 @@ function buildDPPayload({ schoolId, scheduleVersionId, school, students, teacher
     return { id: subj.id, code: subj.code, name: subj.name };
   });
 
-  // teaching_groups: we register one entry per TG; sectionIds used in lessons are
-  // sec_hl_{id} (HL-only) and sec_shared_{hlId} (shared) — built dynamically per lesson.
-  // This array is used by the solver for metadata; the sectionId on each lesson is what matters.
+  // teaching_groups metadata — the sectionId on each lesson is the authoritative grouping.
+  // We still register each TG so the solver can look up metadata by tg id.
   const teachingGroupsPayload = dpGroups.map(tg => {
     const subj = subjectMap.get(tg.subject_id);
-    const effectiveGroup = subj?.combine_dp1_dp2 ? 'DP1_DP2' : tg.year_group;
+    // Count how many TGs share this subject+level to detect cross-year merges
+    const sameSubjectLevel = dpGroups.filter(g => g.subject_id === tg.subject_id && (g.level || 'HL') === (tg.level || 'HL'));
+    const crossYear = sameSubjectLevel.some(g => g.year_group !== tg.year_group);
+    const effectiveGroup = (subj?.combine_dp1_dp2 || crossYear) ? 'DP1_DP2' : tg.year_group;
     return {
       id: `tg_${tg.id}`,
       section_id: `sec_${tg.id}`,
