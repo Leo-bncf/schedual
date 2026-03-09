@@ -273,7 +273,9 @@ export default function TimetableGrid({
     // Also check max period in normalized slots
     const maxPeriodInSlots = normalizedSlots.reduce((max, s) => Math.max(max, s.uiRow || 0), 0);
     
-    const computed = Math.max(periodsPerDay, maxTimeslotsPerDay, maxPeriodInSlots);
+    // Cap maxPeriodInSlots to a reasonable range to prevent runaway grid expansion from bad data
+    const cappedMaxPeriod = Math.min(maxPeriodInSlots, 20);
+    const computed = Math.max(periodsPerDay, maxTimeslotsPerDay, cappedMaxPeriod);
     
     if (computed > periodsPerDay) {
       console.warn(`[TimetableGrid] ⚠️ GRID EXPANSION: periodsPerDay=${periodsPerDay} but timeslots/slots require ${computed} rows. Expanding grid to prevent hiding slots.`);
