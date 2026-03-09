@@ -470,6 +470,24 @@ export default function Schedules() {
         </div>
       )}
 
+      {/* Generation Loading Overlay */}
+      {genStatus === 'generating' && (
+        <div className="fixed inset-0 z-50 bg-slate-900/60 backdrop-blur-sm flex items-center justify-center">
+          <div className="bg-white rounded-2xl shadow-2xl p-10 flex flex-col items-center gap-6 max-w-sm w-full mx-4">
+            <div className="w-20 h-20 rounded-full bg-blue-100 flex items-center justify-center">
+              <Loader2 className="w-10 h-10 text-blue-600 animate-spin" />
+            </div>
+            <div className="text-center">
+              <h3 className="text-xl font-bold text-slate-900 mb-2">Generating Timetable</h3>
+              <p className="text-sm text-slate-500">OptaPlanner is optimizing your schedule. This may take a moment...</p>
+            </div>
+            <div className="w-full bg-slate-100 rounded-full h-2 overflow-hidden">
+              <div className="h-2 bg-blue-500 rounded-full animate-pulse w-3/4" />
+            </div>
+          </div>
+        </div>
+      )}
+
       {/* Main Content */}
       {selectedVersion ? (
         scheduleSlots.length === 0 ? (
