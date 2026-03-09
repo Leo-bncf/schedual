@@ -106,7 +106,7 @@ export default function Schedules() {
     queryKey: ['scheduleSlots', selectedVersion?.id],
     queryFn: async () => {
       if (!selectedVersion) return [];
-      return await base44.entities.ScheduleSlot.filter({ schedule_version: selectedVersion.id });
+      return await base44.entities.ScheduleSlot.filter({ schedule_version: selectedVersion.id }, '-created_date', 500);
     },
     enabled: !!selectedVersion,
   });
