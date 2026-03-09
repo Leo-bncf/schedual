@@ -547,18 +547,31 @@ Deno.serve(async (req) => {
 
       console.log(`[generateSchedule] ${payload.programType} success, parsing response...`);
 
-      // Check if solver returned ok:false with a validation error
-      // Only treat as failure if ok is explicitly false OR errorCode is present
+      // Check if this is a hard pre-solve validation failure (no assignments at all)
+      // vs a soft solver failure (ran but has conflicts) — the latter still has assignments to save
       const solverOk = result.data?.ok;
-      const solverErrorCode = result.data?.errorCode || result.data?.code;
-      if (solverOk === false || solverErrorCode) {
-        const errMsg = result.data?.message || result.data?.errorCode || 'Solver validation failed';
-        const validationErrors = result.data?.validationErrors || [];
-        console.error(`[generateSchedule] ${payload.programType} solver rejected: ${errMsg}`);
+      const solverErrorCode = result.data?.errorCode;
+      const solverReason = result.data?.reason;
+      const hasAssignments = (result.data?.assignments?.length || 0) > 0;
+
+      console.log(`[generateSchedule] ${payload.programType} solverOk=${solverOk}, reason=${solverReason}, assignments=${result.data?.assignments?.length}, score=${result.data?.score}`);
+
+      // Pre-solve validation failure: no assignments produced at all — hard stop
+      if (solverErrorCode || (!hasAssignments && solverOk === false)) {
+        const errMsg = result.data?.message || result.data?.errorCode || result.data?.reason || 'Solver validation failed';
+        const validationErrors = result.data?.validationErrors || result.data?.validationErrorSamples || [];
+        console.error(`[generateSchedule] ${payload.programType} pre-solve failure: ${errMsg}`);
         console.error(`[generateSchedule] ${payload.programType} validationErrors: ${JSON.stringify(validationErrors)}`);
-        console.error(`[generateSchedule] ${payload.programType} full solver response: ${JSON.stringify(result.data)}`);
-        failedProgrammes.push({ programme: payload.programType, error: `${errMsg}${validationErrors.length ? ' | ' + validationErrors.join(', ') : ''}` });
+        failedProgrammes.push({ programme: payload.programType, error: `${errMsg}${validationErrors.length ? ' | ' + JSON.stringify(validationErrors).slice(0, 300) : ''}` });
         continue;
+      }
+
+      // Solver ran but has constraint violations — log details and continue to save slots
+      if (solverOk === false && hasAssignments) {
+        console.warn(`[generateSchedule] ${payload.programType} solver finished with conflicts: reason=${solverReason}, score=${result.data?.score}, studentConflicts=${result.data?.studentConflictCount}, hardViolations=${result.data?.conflictsCount}`);
+        console.warn(`[generateSchedule] ${payload.programType} violations: ${JSON.stringify(result.data?.violations || result.data?.violatingConstraints || []).slice(0, 500)}`);
+        console.warn(`[generateSchedule] ${payload.programType} unmet requirements: ${JSON.stringify(result.data?.unmetRequirements || []).slice(0, 500)}`);
+        // Don't continue — fall through to save the partial schedule
       }
 
       const slots = parseResponseToSlots({
