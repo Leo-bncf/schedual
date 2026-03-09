@@ -338,7 +338,8 @@ function buildDPPayload({ schoolId, scheduleVersionId, school, students, teacher
       const tgsForLevel = hlTgs.length > 0 ? hlTgs : slTgs;
       const level = hlTgs.length > 0 ? 'HL' : 'SL';
       const allStudentIds = hlTgs.length > 0 ? allHLStudentIds : allSLStudentIds;
-      const effectiveYear = hlTgs.length > 0 ? hlEffectiveYear : slEffectiveYear;
+      // Use the subject-scoped group name to avoid studentGroupConflict across subjects
+      const singleLevelGroup = hlTgs.length > 0 ? hlStudentGroup : slStudentGroup;
       const teacherId = hlTgs.length > 0 ? hlTeacherId : slTeacherId;
       const repTg = tgsForLevel[0];
 
