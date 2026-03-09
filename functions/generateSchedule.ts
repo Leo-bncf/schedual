@@ -435,6 +435,17 @@ Deno.serve(async (req) => {
 
       console.log(`[generateSchedule] ${payload.programType} success, parsing response...`);
 
+      // Check if solver returned ok:false with a validation error
+      const solverOk = result.data?.ok;
+      const solverError = result.data?.errorCode || result.data?.code || result.data?.message;
+      if (solverOk === false || solverError) {
+        const errMsg = result.data?.message || result.data?.errorCode || 'Solver validation failed';
+        const validationErrors = result.data?.validationErrors || [];
+        console.error(`[generateSchedule] ${payload.programType} solver rejected: ${errMsg} | ${validationErrors.join(', ')}`);
+        failedProgrammes.push({ programme: payload.programType, error: `${errMsg} (${validationErrors.join(', ')})` });
+        continue;
+      }
+
       const slots = parseResponseToSlots({
         responseData: result.data,
         payload,
