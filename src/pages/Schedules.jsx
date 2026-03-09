@@ -484,11 +484,21 @@ export default function Schedules() {
               </p>
               <Button
                 onClick={handleGenerateSchedule}
+                disabled={genStatus === 'generating'}
                 className="bg-blue-600 hover:bg-blue-700 h-12 px-8 text-base shadow-md hover:shadow-lg transition-all"
               >
-                <Play className="w-5 h-5 mr-2 fill-current" />
-                Start Generation
+                {genStatus === 'generating' ? (
+                  <><Loader2 className="w-5 h-5 mr-2 animate-spin" />Generating...</>
+                ) : (
+                  <><Play className="w-5 h-5 mr-2 fill-current" />Start Generation</>
+                )}
               </Button>
+              {genStatus === 'success' && genMessage && (
+                <p className="text-sm text-emerald-600 mt-3 font-medium">{genMessage}</p>
+              )}
+              {genStatus === 'error' && genError && (
+                <p className="text-sm text-red-500 mt-3">{genError}</p>
+              )}
             </Card>
             
             <Card className="border border-slate-200 shadow-sm">
