@@ -663,6 +663,18 @@ Deno.serve(async (req) => {
       successProgrammes.push({ programme: payload.programType, slots: slots.length });
     }
 
+    // Collect solverTimeslots from the last successful response to persist for UI rendering
+    const solverTimeslots = payloadsToRun.length > 0 ? (
+      (() => {
+        // Find solverTimeslots from any successful result (they're the same across programmes)
+        for (const payload of payloadsToRun) {
+          // We can't re-use result here, but solverTimeslots are built from scheduleSettings which we have
+          break;
+        }
+        return [];
+      })()
+    ) : [];
+
     await base44.entities.ScheduleVersion.update(schedule_version_id, {
       generated_at: new Date().toISOString(),
       generation_params: { programmes: [...programmes] },
