@@ -390,59 +390,6 @@ export default function TimetableGrid({
 
   return (
     <>
-      <div className="mb-3 space-y-2">
-        <div className="p-3 bg-blue-50 border border-blue-200 rounded-lg text-xs text-blue-900">
-          <div className="grid grid-cols-3 gap-4 font-mono">
-            <div>
-              <span className="font-bold">dayStartTime:</span> {dayStartTime}
-            </div>
-            <div>
-              <span className="font-bold">periodDurationMinutes:</span> {periodDurationMinutes}
-            </div>
-            <div>
-              <span className="font-bold">dayEndTime:</span> {dayEndTime}
-            </div>
-          </div>
-        </div>
-        
-        {/* MAPPING DIAGNOSTICS */}
-        {mappingDiagnostics.unmappable > 0 && (
-          <div className="p-3 bg-rose-100 border-2 border-rose-400 rounded-lg text-xs space-y-2">
-            <div className="font-bold text-rose-900 flex items-center gap-2">
-              <span>⚠️ UI MAPPING FAILURE:</span>
-              <Badge variant="destructive">{mappingDiagnostics.unmappable} slots non rendus</Badge>
-            </div>
-            <div className="grid grid-cols-3 gap-2 text-rose-900">
-              <div>
-                <span className="font-semibold">Total slots:</span> {mappingDiagnostics.totalSlots}
-              </div>
-              <div>
-                <span className="font-semibold">Rendered:</span> {mappingDiagnostics.rendered}
-              </div>
-              <div>
-                <span className="font-semibold">Unmappable:</span> {mappingDiagnostics.unmappable}
-              </div>
-            </div>
-            <div className="grid grid-cols-2 gap-2 mt-2">
-              <div className="p-2 bg-white rounded border border-rose-300">
-                <span className="font-semibold">Invalid timeslot_id:</span> {mappingDiagnostics.invalidTimeslotId}
-              </div>
-              <div className="p-2 bg-white rounded border border-rose-300">
-                <span className="font-semibold">Missing day:</span> {mappingDiagnostics.missingDay}
-              </div>
-            </div>
-            <div className="text-[10px] text-rose-800 bg-white p-2 rounded border border-rose-300 mt-2">
-              Ces slots existent dans ScheduleSlot mais ne peuvent pas être affichés. Vérifier: timeslot_id valide, day présent.
-            </div>
-          </div>
-        )}
-        
-        {mappingDiagnostics.unmappable === 0 && mappingDiagnostics.totalSlots > 0 && (
-          <div className="p-2 bg-green-100 border border-green-300 rounded-lg text-xs text-green-900">
-            <span className="font-semibold">✅ All {mappingDiagnostics.totalSlots} slots successfully mapped and rendered</span>
-          </div>
-        )}
-      </div>
       
       <Card className="overflow-hidden border-0 shadow-sm" id={exportId}>
         <div className="overflow-x-auto">
