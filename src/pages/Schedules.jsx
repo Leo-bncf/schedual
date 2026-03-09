@@ -355,8 +355,24 @@ export default function Schedules() {
             <h1 className="text-2xl font-bold text-slate-900">Schedules</h1>
             <p className="text-sm text-slate-500 mt-1">Manage and generate timetables</p>
           </div>
-          <Button 
-            onClick={() => {
+          <div className="flex items-center gap-2">
+            {subjects.length > 0 && subjects.some(s => !s.school_id) && (
+              <Button 
+                variant="outline" 
+                size="sm"
+                onClick={async () => {
+                  const res = await base44.functions.invoke('fixSubjectSchoolIds', {});
+                  alert(`Fixed ${res.data?.fixed} subjects`);
+                  window.location.reload();
+                }}
+                className="gap-2 border-amber-200 hover:bg-amber-50"
+              >
+                <AlertCircle className="w-4 h-4 text-amber-600" />
+                <span className="text-amber-700">Fix Subject Permissions</span>
+              </Button>
+            )}
+            <Button 
+              onClick={() => {
               if (canCreateVersion()) {
                 setIsDialogOpen(true);
               } else {
@@ -368,8 +384,9 @@ export default function Schedules() {
           >
             <Plus className="w-4 h-4 mr-2" />
             New Version
-          </Button>
-        </div>
+            </Button>
+            </div>
+            </div>
 
         {/* Version Selector */}
         <Card className="border-0 shadow-lg bg-white rounded-xl">
