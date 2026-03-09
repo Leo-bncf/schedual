@@ -156,14 +156,18 @@ function buildDPPayload({ schoolId, scheduleVersionId, school, students, teacher
     return { id: subj.id, code: subj.code, name: subj.name };
   });
 
-  // teaching_groups with consistent id, section_id, subject_id
-  const teachingGroupsPayload = dpGroups.map(tg => ({
-    id: `tg_${tg.id}`,
-    section_id: `sec_${tg.id}`,
-    student_group: tg.year_group,
-    subject_id: tg.subject_id,
-    level: tg.level || 'HL',
-  }));
+  // teaching_groups: use effective year group (DP1_DP2 if combined) so solver knows the cohort scope
+  const teachingGroupsPayload = dpGroups.map(tg => {
+    const subj = subjectMap.get(tg.subject_id);
+    const effectiveGroup = subj?.combine_dp1_dp2 ? 'DP1_DP2' : tg.year_group;
+    return {
+      id: `tg_${tg.id}`,
+      section_id: `sec_${tg.id}`,
+      student_group: effectiveGroup,
+      subject_id: tg.subject_id,
+      level: tg.level || 'HL',
+    };
+  });
 
   const lessons = [];
   const subject_requirements = [];
