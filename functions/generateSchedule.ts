@@ -395,7 +395,8 @@ async function sendToOptaPlanner(payload) {
   });
 
   const text = await res.text();
-  console.log(`[OptaPlanner] ${programType} HTTP ${res.status}: ${text.slice(0, 1000)}`);
+  console.log(`[OptaPlanner] ${programType} HTTP ${res.status}: ${text.slice(0, 3000)}`);
+  if (text.length > 3000) console.log(`[OptaPlanner] ${programType} response truncated, full length: ${text.length}`);
 
   if (!res.ok) {
     return { ok: false, programType, status: res.status, error: text };
@@ -403,6 +404,8 @@ async function sendToOptaPlanner(payload) {
 
   let json;
   try { json = JSON.parse(text); } catch { json = { raw: text }; }
+  console.log(`[OptaPlanner] ${programType} parsed response keys: ${Object.keys(json || {}).join(', ')}`);
+  console.log(`[OptaPlanner] ${programType} response.ok=${json?.ok}, response.errorCode=${json?.errorCode}, response.validationErrors=${JSON.stringify(json?.validationErrors)}`);
   return { ok: true, programType, data: json };
 }
 
