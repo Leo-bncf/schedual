@@ -307,15 +307,16 @@ function buildDPPayload({ schoolId, scheduleVersionId, school, students, teacher
         const numericTeacherId = tg.teacher_id ? teacherMap.get(tg.teacher_id) ?? null : null;
 
         const tgStudentNumericIds = (tg.student_ids || []).map(sid => studentMap.get(sid)).filter(Boolean);
+        const effectiveYear = subject.combine_dp1_dp2 ? 'DP1_DP2' : tg.year_group;
 
         for (let i = 0; i < periodsPerWeek; i++) {
           lessons.push({
             id: lessonId++,
             subject: subject.code,
-            studentGroup: tg.year_group,
+            studentGroup: effectiveYear,
             teachingGroupId: `tg_${tg.id}`,
             sectionId: `sec_${tg.id}`,
-            yearGroup: tg.year_group,
+            yearGroup: effectiveYear,
             level,
             requiredCapacity: tgStudentNumericIds.length || 10,
             teacherId: numericTeacherId,
