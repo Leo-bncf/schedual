@@ -1,6 +1,7 @@
 import React, { useState, useEffect, useMemo } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { base44 } from '@/api/base44Client';
+import { AlertCircle } from 'lucide-react';
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -52,6 +53,7 @@ export default function Schedules() {
   const [selectedTeacherId, setSelectedTeacherId] = useState(null);
   const [searchTeacher, setSearchTeacher] = useState('');
   const [overviewFilterType, setOverviewFilterType] = useState('all');
+  const [isFixingSubjects, setIsFixingSubjects] = useState(false);
   const [overviewFilterId, setOverviewFilterId] = useState('all');
   const [formData, setFormData] = useState({
     name: '',
