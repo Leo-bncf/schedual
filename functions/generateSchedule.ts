@@ -351,7 +351,7 @@ function buildDPPayload({ schoolId, scheduleVersionId, school, students, teacher
         }
 
         processedTgIds.add(tg.id);
-        console.log(`[buildDPPayload] ${subject.code} ${tg.year_group} (${level} only): ${periodsPerWeek} lessons`);
+        console.log(`[buildDPPayload] ${subject.code} ${effectiveYear} (${level} only): ${periodsPerWeek} lessons`);
       }
     }
   }
