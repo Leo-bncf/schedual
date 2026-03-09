@@ -382,12 +382,6 @@ function buildDPPayload({ schoolId, scheduleVersionId, school, students, teacher
   };
 }
 
-function parseTimeToMinutes(t) {
-  if (!t) return 0;
-  const [h, m] = t.split(':').map(Number);
-  return h * 60 + (m || 0);
-}
-
 // ─── OptaPlanner call — ONE payload per call ──────────────────────────────────
 
 async function sendToOptaPlanner(payload) {
