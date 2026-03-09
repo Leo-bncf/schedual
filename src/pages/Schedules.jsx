@@ -44,7 +44,6 @@ export default function Schedules() {
   const [isDialogOpen, setIsDialogOpen] = useState(false);
   const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false);
   const [selectedVersion, setSelectedVersion] = useState(null);
-  const [genDialogOpen, setGenDialogOpen] = useState(false);
   const [genStatus, setGenStatus] = useState('idle'); // idle | generating | success | error
   const [genMessage, setGenMessage] = useState('');
   const [genError, setGenError] = useState('');
