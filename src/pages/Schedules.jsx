@@ -210,10 +210,10 @@ export default function Schedules() {
         queryClient.invalidateQueries({ queryKey: ['scheduleVersions'] });
       } else {
         setGenStatus('error');
-        const failDetails = data?.failed?.map(f => `${f.programme}: ${f.error}`).join('\n') || '';
-        const errorMsg = data?.error || (failDetails ? `Solver errors:\n${failDetails}` : 'Generation returned 0 slots. Check OptaPlanner endpoint and payload.');
+        const failDetails = data?.failed?.map(f => `${f.programme}: ${f.error}`).join(' | ') || '';
+        const errorMsg = data?.error || failDetails || 'Generation returned 0 slots.';
         setGenError(errorMsg);
-        toast.error('Generation failed — see error below.', { duration: 10000 });
+        toast.error('Schedule generation failed', { duration: 10000 });
       }
     } catch (error) {
       console.error('Generation error:', error);
