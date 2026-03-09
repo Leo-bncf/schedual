@@ -246,8 +246,9 @@ function buildDPPayload({ schoolId, scheduleVersionId, school, students, teacher
 
     if (hlTgs.length > 0 && slTgs.length > 0) {
       // ── Paired HL + SL: shared periods + HL-only extra periods ──
-      const minutesSL = repSLTg?.minutes_per_week || hoursSL * 60;
-      const minutesHL = repHLTg?.minutes_per_week || hoursHL * 60;
+      // Use subject hours as authoritative source; only use TG minutes_per_week if subject hours are missing
+      const minutesSL = (hoursSL > 0 ? hoursSL * 60 : null) || repSLTg?.minutes_per_week || 180;
+      const minutesHL = (hoursHL > 0 ? hoursHL * 60 : null) || repHLTg?.minutes_per_week || 300;
       const minutesHLOnly = Math.max(0, minutesHL - minutesSL);
 
       const sharedPeriods = Math.max(1, Math.round(minutesSL / periodDuration));
