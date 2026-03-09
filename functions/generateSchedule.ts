@@ -23,7 +23,6 @@ function buildTeacherMap(teachers) {
       name: t.full_name,
       unavailableSlotIds: [],
       externalId: t.id,
-      maxLessonsPerWeek: t.max_hours_per_week || 25,
     });
   });
   return { teacherList: list, teacherMap: map };
