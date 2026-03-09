@@ -319,7 +319,7 @@ function buildDPPayload({ schoolId, scheduleVersionId, school, students, teacher
       const tgsForLevel = hlTgs.length > 0 ? hlTgs : slTgs;
       const level = hlTgs.length > 0 ? 'HL' : 'SL';
       const allStudentIds = hlTgs.length > 0 ? allHLStudentIds : allSLStudentIds;
-      const effectiveYear = hlTgs.length > 0 ? hlEffectiveYear : slEffectiveYear;
+      const effectiveYear = effectiveYear || (hlTgs.length > 0 ? hlEffectiveYear : slEffectiveYear);
       const teacherId = hlTgs.length > 0 ? hlTeacherId : slTeacherId;
       const repTg = tgsForLevel[0];
 
