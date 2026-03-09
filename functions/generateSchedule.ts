@@ -171,10 +171,14 @@ function buildDPPayload({ schoolId, scheduleVersionId, school, students, teacher
   let lessonId = 1;
 
   // Group teaching groups by subject + year_group to detect HL/SL pairs
-  // Key: `${subject_id}__${year_group}`
+  // If the subject has combine_dp1_dp2=true, DP1 and DP2 share the same bucket
+  const subjectMap = new Map(dpSubjects.map(s => [s.id, s]));
+
   const tgBySubjectYear = new Map();
   for (const tg of dpGroups) {
-    const key = `${tg.subject_id}__${tg.year_group}`;
+    const subject = subjectMap.get(tg.subject_id);
+    const combinedYear = (subject?.combine_dp1_dp2 === true) ? 'DP1_DP2' : tg.year_group;
+    const key = `${tg.subject_id}__${combinedYear}`;
     if (!tgBySubjectYear.has(key)) tgBySubjectYear.set(key, []);
     tgBySubjectYear.get(key).push(tg);
   }
