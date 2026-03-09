@@ -35,39 +35,52 @@ Deno.serve(async (req) => {
     
     console.log('[getStudentScheduleSlots] 📋 Request:', { student_id, schedule_version_id, school_id: user.school_id });
     
-    // Step 1: Get student and their assigned teaching groups
+    // Step 1: Get student, schedule slots, groups and subjects
     const [student] = await base44.entities.Student.filter({ id: student_id });
     
     if (!student) {
       return Response.json({ error: 'Student not found' }, { status: 404 });
     }
-    
+
     const assignedGroupIds = Array.isArray(student.assigned_groups) ? student.assigned_groups : [];
+    const subjectChoices = Array.isArray(student.subject_choices) ? student.subject_choices : [];
+
+    const [allSlots, teachingGroups, subjects] = await Promise.all([
+      base44.entities.ScheduleSlot.filter({ 
+        school_id: user.school_id,
+        schedule_version: schedule_version_id 
+      }),
+      base44.entities.TeachingGroup.filter({ school_id: user.school_id }),
+      base44.entities.Subject.filter({ school_id: user.school_id })
+    ]);
+
+    const tgById = {};
+    teachingGroups.forEach(tg => { tgById[tg.id] = tg; });
+
+    const subjectById = {};
+    subjects.forEach(s => { subjectById[s.id] = s; });
+
     console.log('[getStudentScheduleSlots] 🎓 Student:', { 
       name: student.full_name, 
       year_group: student.year_group,
       assigned_groups_count: assignedGroupIds.length,
-      assigned_groups: assignedGroupIds
+      assigned_groups: assignedGroupIds,
+      subject_choices_count: subjectChoices.length
     });
-    
-    if (assignedGroupIds.length === 0) {
-      console.warn('[getStudentScheduleSlots] ⚠️ Student has no assigned_groups');
+
+    if (assignedGroupIds.length === 0 && subjectChoices.length === 0) {
+      console.warn('[getStudentScheduleSlots] ⚠️ Student has no assigned_groups and no subject_choices');
       return Response.json({
         ok: true,
         slots: [],
         diagnostics: {
           student_name: student.full_name,
           assigned_groups_count: 0,
-          warning: 'Student has no assigned teaching groups - schedule will be empty'
+          subject_choices_count: 0,
+          warning: 'Student has no assigned teaching groups or subject choices - schedule will be empty'
         }
       });
     }
-    
-    // Step 2: Get all slots for this schedule version
-    const allSlots = await base44.entities.ScheduleSlot.filter({ 
-      school_id: user.school_id,
-      schedule_version: schedule_version_id 
-    });
     
     console.log('[getStudentScheduleSlots] 📊 Total slots in schedule:', allSlots.length);
     console.log('[getStudentScheduleSlots] 🔍 Filters applied:', { 
@@ -75,30 +88,42 @@ Deno.serve(async (req) => {
       schedule_version: schedule_version_id 
     });
     
-    // Step 3: Filter slots by student's assigned teaching groups
+    // Step 3: Filter slots by exact group membership plus merged-DP subject fallback
     const studentSlots = allSlots.filter(slot => {
-      // PYP/MYP: match by classgroup_id
       if (slot.classgroup_id && student.classgroup_id) {
         return slot.classgroup_id === student.classgroup_id;
       }
       
-      // DP test slots: include DP1/DP2 test slots by year_group marker in notes
       if (slot?.notes?.includes('Test') && (slot?.notes?.includes('DP1') || slot?.notes?.includes('DP2'))) {
         return student?.year_group && slot.notes.includes(student.year_group);
       }
-      
-      // DP: Use student.assigned_groups
-      if (slot.teaching_group_id) {
-        return assignedGroupIds.includes(slot.teaching_group_id);
-      }
 
-      // Student-specific slots (e.g., individual lunch breaks)
       if (slot.student_id) {
         return slot.student_id === student.id;
       }
-      
-      return false;
-    });
+
+      if (!slot.teaching_group_id) {
+        return false;
+      }
+
+      if (assignedGroupIds.includes(slot.teaching_group_id)) {
+        return true;
+      }
+
+      const slotGroup = tgById[slot.teaching_group_id];
+      if (student?.ib_programme === 'DP' && slot.subject_id) {
+        const subjectChoice = subjectChoices.find(choice => choice.subject_id === slot.subject_id);
+        if (subjectChoice) {
+          const slotLevel = normalizeLevel(slotGroup?.level);
+          const choiceLevel = normalizeLevel(subjectChoice.level);
+          if (slotLevel === 'HL') return choiceLevel === 'HL';
+          if (slotLevel === 'SL') return true;
+          return true;
+        }
+      }
+
+      return Array.isArray(slotGroup?.student_ids) && slotGroup.student_ids.includes(student.id);
+    }).filter((slot, index, self) => index === self.findIndex(s => s.id === slot.id));
     
     console.log('[getStudentScheduleSlots] ✅ Filtered slots for student:', studentSlots.length);
     
@@ -128,17 +153,7 @@ Deno.serve(async (req) => {
       slots_with_unknown_tg: slotsWithUnknownTG
     });
     
-    // Step 5: Get teaching groups for diagnostics
-    const teachingGroups = await base44.entities.TeachingGroup.filter({ school_id: user.school_id });
-    const tgById = {};
-    teachingGroups.forEach(tg => { tgById[tg.id] = tg; });
-    
-    // Step 6: Get subjects for diagnostics
-    const subjects = await base44.entities.Subject.filter({ school_id: user.school_id });
-    const subjectById = {};
-    subjects.forEach(s => { subjectById[s.id] = s; });
-    
-    // Step 7: Analyze missing teaching groups (assigned but no slots)
+    // Step 5: Analyze missing teaching groups (assigned but no slots)
     const missingTGIds = assignedGroupIds.filter(tgId => !uniqueTGIds.has(tgId));
     const missingTGDetails = missingTGIds.map(tgId => {
       const tg = tgById[tgId];

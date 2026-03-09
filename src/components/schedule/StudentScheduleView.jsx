@@ -416,8 +416,8 @@ export default function StudentScheduleView({ students, slots, groups, subjects,
     return colors[Math.abs(hash) % colors.length];
   };
 
-  // Hard check: block render if student has no assigned_groups
-  const hasNoAssignedGroups = selectedStudent && (!selectedStudent.assigned_groups || selectedStudent.assigned_groups.length === 0);
+  // Only hard-block if the student has neither assigned groups nor subject choices.
+  const hasNoAssignedGroups = selectedStudent && (!selectedStudent.assigned_groups || selectedStudent.assigned_groups.length === 0) && (!selectedStudent.subject_choices || selectedStudent.subject_choices.length === 0);
   
   const handleResyncStudent = async () => {
     try {
