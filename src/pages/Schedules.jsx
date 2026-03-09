@@ -284,13 +284,30 @@ export default function Schedules() {
   };
 
   const getStudentSchedule = (studentId) => {
+    const student = students.find(s => s.id === studentId);
+    const assignedGroups = Array.isArray(student?.assigned_groups) ? student.assigned_groups : [];
+    
     return scheduleSlots.filter(slot => {
-      // Direct student match (e.g. for Lunch Breaks)
+      // Direct student match (e.g. for individual slots)
       if (slot.student_id === studentId) return true;
       
-      // Teaching Group match
-      const tg = teachingGroups.find(g => g.id === slot.teaching_group_id);
-      return tg?.student_ids?.includes(studentId);
+      // PYP/MYP: match by classgroup_id
+      if (slot.classgroup_id && student?.classgroup_id) {
+        return slot.classgroup_id === student.classgroup_id;
+      }
+      
+      // DP: match by student's assigned_groups (most reliable)
+      if (slot.teaching_group_id && assignedGroups.length > 0) {
+        return assignedGroups.includes(slot.teaching_group_id);
+      }
+      
+      // Fallback: match via teaching group's student_ids list
+      if (slot.teaching_group_id) {
+        const tg = teachingGroups.find(g => g.id === slot.teaching_group_id);
+        return tg?.student_ids?.includes(studentId);
+      }
+      
+      return false;
     });
   };
 
