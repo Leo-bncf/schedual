@@ -617,9 +617,9 @@ export default function TimetableGrid({
                                 title={slot.is_break ? (slot.notes || 'Lunch Break') : (`${subject?.name || slot.notes || 'Unassigned'} | ${teacher?.full_name || 'No teacher'} | ${room?.name || 'TBD'}`)}
                               >
                                 <span className="font-bold text-center truncate w-full block">
-                                  {slot.is_break ? '🍽️ LUNCH' : (subject?.code || subject?.name || '---')}
+                                  {slot.is_break ? '🍽️ LUNCH' : (subject?.code || subject?.name || slot.notes || '---')}
                                 </span>
-                                {!slot.is_break && (
+                                {!slot.is_break && subject && (
                                   <span className="text-slate-600 opacity-80 text-center truncate w-full block text-[9px]">{room?.name || 'TBD'}</span>
                                 )}
                               </div>
