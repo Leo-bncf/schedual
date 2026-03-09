@@ -829,6 +829,7 @@ Deno.serve(async (req) => {
       slotsInserted: totalSlotsInserted,
       programmes: successProgrammes,
       failed: failedProgrammes,
+      solverTimeslots: solverTimeslots,
       error: allFailed ? failedProgrammes.map(f => `${f.programme}: ${f.error}`).join('\n') : null,
     });
 
