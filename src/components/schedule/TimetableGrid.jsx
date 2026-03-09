@@ -556,7 +556,7 @@ export default function TimetableGrid({
                           }
                         }
                         // PYP/MYP style: subject_id directly on slot
-                        else if (slot.subject_id) {
+                        if (!subject && slot.subject_id) {
                           subject = getSubjectInfo(slot.subject_id);
                           teacher = slot.teacher_id ? getTeacherInfo(slot.teacher_id) : null;
                           const classGroup = classGroups.find(cg => cg.id === slot.classgroup_id);
@@ -564,7 +564,7 @@ export default function TimetableGrid({
                           displayName = classGroup?.name || '';
                         }
                         // Fallback: slot with direct teacher_id only
-                        else if (slot.teacher_id) {
+                        if (!subject && !level && slot.teacher_id) {
                           teacher = getTeacherInfo(slot.teacher_id);
                         }
                         
