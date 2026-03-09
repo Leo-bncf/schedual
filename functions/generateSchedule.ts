@@ -212,15 +212,19 @@ function buildDPPayload({ schoolId, scheduleVersionId, school, students, teacher
       const hlTeacherId = hlTg.teacher_id ? teacherMap.get(hlTg.teacher_id) ?? null : null;
       const slTeacherId = slTg.teacher_id ? teacherMap.get(slTg.teacher_id) ?? null : null;
 
+      // If combine_dp1_dp2, use a unified year group label so solver treats DP1+DP2 as one cohort
+      const effectiveHLYear = subject.combine_dp1_dp2 ? 'DP1_DP2' : hlTg.year_group;
+      const effectiveSLYear = subject.combine_dp1_dp2 ? 'DP1_DP2' : slTg.year_group;
+
       // HL-only lessons: (hlPeriods - slPeriods) periods, only HL studentIds, under HL's sectionId
       for (let i = 0; i < hlOnlyPeriods; i++) {
         lessons.push({
           id: lessonId++,
           subject: subject.code,
-          studentGroup: hlTg.year_group,
+          studentGroup: effectiveHLYear,
           teachingGroupId: `tg_${hlTg.id}`,
           sectionId: `sec_${hlTg.id}`,
-          yearGroup: hlTg.year_group,
+          yearGroup: effectiveHLYear,
           level: 'HL',
           requiredCapacity: hlStudentIds.length || 10,
           teacherId: hlTeacherId,
@@ -234,10 +238,10 @@ function buildDPPayload({ schoolId, scheduleVersionId, school, students, teacher
         lessons.push({
           id: lessonId++,
           subject: subject.code,
-          studentGroup: slTg.year_group,
+          studentGroup: effectiveSLYear,
           teachingGroupId: `tg_${slTg.id}`,
           sectionId: `sec_${slTg.id}`,
-          yearGroup: slTg.year_group,
+          yearGroup: effectiveSLYear,
           level: 'SL',
           requiredCapacity: sharedStudentIds.length || 10,
           teacherId: slTeacherId || hlTeacherId,
