@@ -562,11 +562,13 @@ Deno.serve(async (req) => {
       const solverOk = result.data?.ok;
       const solverErrorCode = result.data?.errorCode;
       const solverReason = result.data?.reason;
-      const hasAssignments = (result.data?.assignments?.length || 0) > 0;
+      // Check for assigned lessons — solver returns them in `lessons` with timeslotId set
+      const allLessons = result.data?.lessons || result.data?.data?.lessons || [];
+      const hasAssignments = allLessons.some(l => l.timeslotId != null);
 
-      console.log(`[generateSchedule] ${payload.programType} solverOk=${solverOk}, reason=${solverReason}, assignments=${result.data?.assignments?.length}, score=${result.data?.score}`);
+      console.log(`[generateSchedule] ${payload.programType} solverOk=${solverOk}, reason=${solverReason}, totalLessons=${allLessons.length}, assignedLessons=${allLessons.filter(l => l.timeslotId != null).length}, score=${result.data?.score}`);
 
-      // Pre-solve validation failure: no assignments produced at all — hard stop
+      // Pre-solve validation failure: errorCode present OR solver explicitly failed with no assignments at all
       if (solverErrorCode || (!hasAssignments && solverOk === false)) {
         const errMsg = result.data?.message || result.data?.errorCode || result.data?.reason || 'Solver validation failed';
         const validationErrors = result.data?.validationErrors || result.data?.validationErrorSamples || [];
