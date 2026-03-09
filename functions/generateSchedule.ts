@@ -739,11 +739,14 @@ Deno.serve(async (req) => {
     const { teacherMap } = buildTeacherMap(teachers);
     const { roomMap } = buildRoomMap(rooms);
 
+    // ── Build solverTimeslots from school config ──
+    const solverTimeslots = buildSolverTimeslots(school);
+    console.log(`[generateSchedule] Built ${solverTimeslots.length} solverTimeslots from school schedule`);
+
     // ── Send ONE payload at a time (rule: one programme shape per run) ──
     let totalSlotsInserted = 0;
     const failedProgrammes = [];
     const successProgrammes = [];
-    let solverTimeslots = []; // Capture from first successful run
 
     for (const payload of payloadsToRun) {
       console.log(`[generateSchedule] Processing ${payload.programType}...`);
@@ -756,12 +759,6 @@ Deno.serve(async (req) => {
       }
 
       console.log(`[generateSchedule] ${payload.programType} success, parsing response...`);
-
-      // Capture solverTimeslots from first successful run
-      if (solverTimeslots.length === 0) {
-        solverTimeslots = result.data?.solverTimeslots || result.data?.data?.solverTimeslots || [];
-        console.log(`[generateSchedule] Captured ${solverTimeslots.length} solverTimeslots for UI mapping`);
-      }
 
       // Check if this is a hard pre-solve validation failure (no assignments at all)
       // vs a soft solver failure (ran but has conflicts) — the latter still has assignments to save
