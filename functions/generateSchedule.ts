@@ -582,7 +582,12 @@ Deno.serve(async (req) => {
     const programmes = new Set(activeStudents.map(s => s.ib_programme).filter(Boolean));
     console.log(`[generateSchedule] Programmes with students: ${[...programmes].join(', ')}`);
 
-    const common = { schoolId, scheduleVersionId: schedule_version_id, school, students, teachers, subjects, rooms, teachingGroups };
+    // ── AUTO-SYNC: Create/update teaching groups based on student subject choices ──
+    console.log(`[generateSchedule] Syncing students to teaching groups...`);
+    const updatedTeachingGroups = await syncStudentsToTeachingGroups(base44, schoolId, activeStudents, subjects, teachingGroups);
+    console.log(`[generateSchedule] Sync complete: ${Object.keys(updatedTeachingGroups).length} teaching groups updated`);
+
+    const common = { schoolId, scheduleVersionId: schedule_version_id, school, students, teachers, subjects, rooms, teachingGroups: Object.values(updatedTeachingGroups) };
 
     // Build payloads — ONE per programme
     const payloadsToRun = [];
