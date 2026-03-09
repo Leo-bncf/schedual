@@ -250,6 +250,9 @@ function buildDPPayload({ schoolId, scheduleVersionId, school, students, teacher
       const hlOnlySectionId = `sec_hl_${subjectKey}`;
       const sharedSectionId = `sec_shared_${subjectKey}`;
 
+      // HL-only lessons: no studentIds — rely on sectionId for conflict isolation.
+      // Including HL studentIds here would cause STUDENT_CONFLICT since those same
+      // students also appear in the shared lessons.
       for (let i = 0; i < hlOnlyPeriods; i++) {
         lessons.push({
           id: lessonId++,
@@ -262,10 +265,11 @@ function buildDPPayload({ schoolId, scheduleVersionId, school, students, teacher
           requiredCapacity: allHLStudentIds.length || 10,
           teacherId: hlTeacherId,
           timeslotId: null,
-          studentIds: allHLStudentIds,
+          studentIds: [],
         });
       }
 
+      // Shared lessons: ALL students (HL+SL) — solver uses these for student conflict checks.
       for (let i = 0; i < sharedPeriods; i++) {
         lessons.push({
           id: lessonId++,
