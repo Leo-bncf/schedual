@@ -755,9 +755,22 @@ Deno.serve(async (req) => {
       successProgrammes.push({ programme: payload.programType, slots: slots.length });
     }
 
+    // Extract solverTimeslots from the last successful response for timeslot mapping
+    let allSolverTimeslots = [];
+    for (const payload of payloadsToRun) {
+      const result = await sendToOptaPlanner(payload);
+      if (result.ok && result.data?.solverTimeslots) {
+        allSolverTimeslots = result.data.solverTimeslots;
+        break; // Use first available solverTimeslots (they're the same for all programmes)
+      }
+    }
+
     await base44.entities.ScheduleVersion.update(schedule_version_id, {
       generated_at: new Date().toISOString(),
-      generation_params: { programmes: [...programmes] },
+      generation_params: { 
+        programmes: [...programmes],
+        solverTimeslots: allSolverTimeslots
+      },
       notes: `Generated: ${successProgrammes.map(s => `${s.programme}(${s.slots} slots)`).join(', ')}`,
     });
 
