@@ -18,7 +18,13 @@ function buildTeacherMap(teachers) {
   teachers.filter(t => t.is_active !== false).forEach((t, idx) => {
     const numericId = idx + 1;
     map.set(t.id, numericId);
-    list.push({ id: numericId, name: t.full_name, unavailableSlotIds: [], externalId: t.id });
+    list.push({
+      id: numericId,
+      name: t.full_name,
+      unavailableSlotIds: [],
+      externalId: t.id,
+      maxLessonsPerWeek: t.max_hours_per_week || 25,
+    });
   });
   return { teacherList: list, teacherMap: map };
 }
