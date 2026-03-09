@@ -220,14 +220,20 @@ function buildDPPayload({ schoolId, scheduleVersionId, school, students, teacher
       const effectiveHLYear = subject.combine_dp1_dp2 ? 'DP1_DP2' : hlTg.year_group;
       const effectiveSLYear = subject.combine_dp1_dp2 ? 'DP1_DP2' : slTg.year_group;
 
-      // HL-only lessons: (hlPeriods - slPeriods) periods, only HL studentIds, under HL's sectionId
+      // Each lesson bucket gets its own sectionId so the solver can track them independently:
+      //   sec_hl_{id}     → HL-only periods (HL students only)
+      //   sec_shared_{id} → shared HL+SL periods (all students from both TGs)
+      const hlOnlySectionId = `sec_hl_${hlTg.id}`;
+      const sharedSectionId = `sec_shared_${hlTg.id}`;
+
+      // HL-only lessons: HL students only, own section
       for (let i = 0; i < hlOnlyPeriods; i++) {
         lessons.push({
           id: lessonId++,
           subject: subject.code,
           studentGroup: effectiveHLYear,
           teachingGroupId: `tg_${hlTg.id}`,
-          sectionId: `sec_${hlTg.id}`,
+          sectionId: hlOnlySectionId,
           yearGroup: effectiveHLYear,
           level: 'HL',
           requiredCapacity: hlStudentIds.length || 10,
@@ -237,14 +243,15 @@ function buildDPPayload({ schoolId, scheduleVersionId, school, students, teacher
         });
       }
 
-      // Shared lessons: slPeriods periods, HL+SL studentIds combined, under SL's sectionId
+      // Shared lessons: HL+SL students together, own section
+      // studentGroup uses the broader year (effectiveSLYear = effectiveHLYear when combine_dp1_dp2)
       for (let i = 0; i < sharedPeriods; i++) {
         lessons.push({
           id: lessonId++,
           subject: subject.code,
           studentGroup: effectiveSLYear,
           teachingGroupId: `tg_${slTg.id}`,
-          sectionId: `sec_${slTg.id}`,
+          sectionId: sharedSectionId,
           yearGroup: effectiveSLYear,
           level: 'SL',
           requiredCapacity: sharedStudentIds.length || 10,
@@ -254,18 +261,18 @@ function buildDPPayload({ schoolId, scheduleVersionId, school, students, teacher
         });
       }
 
-      // subject_requirements: exactly lessonCount * periodDuration per sectionId
+      // subject_requirements: one entry per section so solver knows how many minutes each needs
       subject_requirements.push({
         studentGroup: effectiveHLYear,
         teachingGroupId: `tg_${hlTg.id}`,
-        sectionId: `sec_${hlTg.id}`,
+        sectionId: hlOnlySectionId,
         subject: subject.code,
         minutesPerWeek: hlOnlyPeriods * periodDuration,
       });
       subject_requirements.push({
         studentGroup: effectiveSLYear,
         teachingGroupId: `tg_${slTg.id}`,
-        sectionId: `sec_${slTg.id}`,
+        sectionId: sharedSectionId,
         subject: subject.code,
         minutesPerWeek: sharedPeriods * periodDuration,
       });
