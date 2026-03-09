@@ -351,10 +351,10 @@ function buildDPPayload({ schoolId, scheduleVersionId, school, students, teacher
         lessons.push({
           id: lessonId++,
           subject: subject.code,
-          studentGroup: effectiveYear,
+          studentGroup: singleLevelGroup,
           teachingGroupId: repTg ? `tg_${repTg.id}` : null,
           sectionId,
-          yearGroup: effectiveYear,
+          yearGroup: baseYear,
           level,
           requiredCapacity: allStudentIds.length || 10,
           teacherId,
@@ -364,7 +364,7 @@ function buildDPPayload({ schoolId, scheduleVersionId, school, students, teacher
       }
 
       subject_requirements.push({
-        studentGroup: effectiveYear,
+        studentGroup: singleLevelGroup,
         teachingGroupId: repTg ? `tg_${repTg.id}` : null,
         sectionId,
         subject: subject.code,
@@ -376,12 +376,12 @@ function buildDPPayload({ schoolId, scheduleVersionId, school, students, teacher
           const numericStudentId = studentMap.get(base44StudentId);
           if (!numericStudentId) continue;
           if (!studentSubjectChoices.find(c => c.studentId === numericStudentId && c.subjectId === subject.id)) {
-            studentSubjectChoices.push({ studentId: numericStudentId, subjectId: subject.id, subject: subject.code, level, yearGroup: effectiveYear });
+            studentSubjectChoices.push({ studentId: numericStudentId, subjectId: subject.id, subject: subject.code, level, yearGroup: baseYear });
           }
         }
       }
 
-      console.log(`[buildDPPayload] ${subject.code} ${effectiveYear} (${level} only): ${periodsPerWeek} lessons | students: ${allStudentIds.length}`);
+      console.log(`[buildDPPayload] ${subject.code} ${singleLevelGroup} (${level} only): ${periodsPerWeek} lessons | students: ${allStudentIds.length}`);
     }
   }
 
