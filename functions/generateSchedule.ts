@@ -691,6 +691,7 @@ Deno.serve(async (req) => {
     let totalSlotsInserted = 0;
     const failedProgrammes = [];
     const successProgrammes = [];
+    let solverTimeslots = []; // Capture from first successful run
 
     for (const payload of payloadsToRun) {
       console.log(`[generateSchedule] Processing ${payload.programType}...`);
@@ -703,6 +704,12 @@ Deno.serve(async (req) => {
       }
 
       console.log(`[generateSchedule] ${payload.programType} success, parsing response...`);
+
+      // Capture solverTimeslots from first successful run
+      if (solverTimeslots.length === 0) {
+        solverTimeslots = result.data?.solverTimeslots || result.data?.data?.solverTimeslots || [];
+        console.log(`[generateSchedule] Captured ${solverTimeslots.length} solverTimeslots for UI mapping`);
+      }
 
       // Check if this is a hard pre-solve validation failure (no assignments at all)
       // vs a soft solver failure (ran but has conflicts) — the latter still has assignments to save
@@ -755,26 +762,16 @@ Deno.serve(async (req) => {
       successProgrammes.push({ programme: payload.programType, slots: slots.length });
     }
 
-    // Extract solverTimeslots from the last successful response for timeslot mapping
-    let allSolverTimeslots = [];
-    for (const payload of payloadsToRun) {
-      const result = await sendToOptaPlanner(payload);
-      if (result.ok && result.data?.solverTimeslots) {
-        allSolverTimeslots = result.data.solverTimeslots;
-        break; // Use first available solverTimeslots (they're the same for all programmes)
-      }
-    }
-
     await base44.entities.ScheduleVersion.update(schedule_version_id, {
       generated_at: new Date().toISOString(),
       generation_params: { 
         programmes: [...programmes],
-        solverTimeslots: allSolverTimeslots
+        solverTimeslots: solverTimeslots
       },
       notes: `Generated: ${successProgrammes.map(s => `${s.programme}(${s.slots} slots)`).join(', ')}`,
     });
 
-    console.log(`[generateSchedule] Done. Total slots inserted: ${totalSlotsInserted}`);
+    console.log(`[generateSchedule] Done. Total slots inserted: ${totalSlotsInserted}, solverTimeslots saved: ${solverTimeslots.length}`);
 
     const allFailed = failedProgrammes.length > 0 && successProgrammes.length === 0;
     return Response.json({
