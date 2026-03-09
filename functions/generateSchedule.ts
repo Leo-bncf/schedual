@@ -156,6 +156,8 @@ function buildDPPayload({ schoolId, scheduleVersionId, school, students, teacher
     return { id: subj.id, code: subj.code, name: subj.name };
   });
 
+  const subjectMap = new Map(dpSubjects.map(s => [s.id, s]));
+
   // teaching_groups metadata — the sectionId on each lesson is the authoritative grouping.
   // We still register each TG so the solver can look up metadata by tg id.
   const teachingGroupsPayload = dpGroups.map(tg => {
