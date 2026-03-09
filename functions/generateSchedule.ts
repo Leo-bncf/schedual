@@ -209,6 +209,8 @@ function buildDPPayload({ schoolId, scheduleVersionId, school, students, teacher
     }
   }
 
+  console.log(`[buildDPPayload] lessons=${lessons.length}, teachers=${teacherList.length}, timeslots estimated=${scheduleSettings.daysOfWeek.length * Math.floor((parseTimeToMinutes(scheduleSettings.dayEndTime) - parseTimeToMinutes(scheduleSettings.dayStartTime)) / scheduleSettings.periodDurationMinutes)}`);
+
   return {
     payloadType: 'individual_payload',
     programType: 'DP',
@@ -231,6 +233,12 @@ function buildDPPayload({ schoolId, scheduleVersionId, school, students, teacher
       avoidTeacherLatePeriods: true,
     },
   };
+}
+
+function parseTimeToMinutes(t) {
+  if (!t) return 0;
+  const [h, m] = t.split(':').map(Number);
+  return h * 60 + (m || 0);
 }
 
 // ─── OptaPlanner call — ONE payload per call ──────────────────────────────────
