@@ -208,25 +208,27 @@ function buildDPPayload({ schoolId, scheduleVersionId, school, students, teacher
       const hlTeacherId = hlTg.teacher_id ? teacherMap.get(hlTg.teacher_id) ?? null : null;
       const slTeacherId = slTg.teacher_id ? teacherMap.get(slTg.teacher_id) ?? null : null;
 
-      // Shared lessons (HL + SL together) — use HL teacher if same teacher, else HL teacher
+      // SL lessons: all SL students attend (sharedPeriods lessons under SL's own sectionId)
       for (let i = 0; i < sharedPeriods; i++) {
         lessons.push({
           id: lessonId++,
           subject: subject.code,
-          studentGroup: hlTg.year_group,
-          teachingGroupId: `tg_${hlTg.id}`, // link to HL group as primary
-          sectionId: `sec_shared_${hlTg.id}_${slTg.id}`,
-          yearGroup: hlTg.year_group,
-          level: 'SHARED', // both attend
+          studentGroup: slTg.year_group,
+          teachingGroupId: `tg_${slTg.id}`,
+          sectionId: `sec_${slTg.id}`,
+          yearGroup: slTg.year_group,
+          level: 'SL',
           requiredCapacity: sharedStudentIds.length || 10,
-          teacherId: hlTeacherId || slTeacherId,
+          teacherId: slTeacherId || hlTeacherId,
           timeslotId: null,
-          studentIds: sharedStudentIds,
+          studentIds: sharedStudentIds, // HL students also attend these
         });
       }
 
-      // HL-only extra lessons
-      for (let i = 0; i < hlOnlyPeriods; i++) {
+      // HL lessons: ALL HL periods under HL's own sectionId
+      // The first sharedPeriods are shared with SL students, the extra hlOnlyPeriods are HL-only
+      for (let i = 0; i < sharedPeriods + hlOnlyPeriods; i++) {
+        const isShared = i < sharedPeriods;
         lessons.push({
           id: lessonId++,
           subject: subject.code,
@@ -235,27 +237,27 @@ function buildDPPayload({ schoolId, scheduleVersionId, school, students, teacher
           sectionId: `sec_${hlTg.id}`,
           yearGroup: hlTg.year_group,
           level: 'HL',
-          requiredCapacity: hlStudentIds.length || 10,
+          requiredCapacity: (isShared ? sharedStudentIds.length : hlStudentIds.length) || 10,
           teacherId: hlTeacherId,
           timeslotId: null,
-          studentIds: hlStudentIds,
+          studentIds: isShared ? sharedStudentIds : hlStudentIds,
         });
       }
 
-      // subject_requirements for both TGs
-      subject_requirements.push({
-        studentGroup: hlTg.year_group,
-        teachingGroupId: `tg_${hlTg.id}`,
-        sectionId: `sec_${hlTg.id}`,
-        subject: subject.code,
-        minutesPerWeek: minutesHL,
-      });
+      // subject_requirements: lessonCount * periodDuration must equal minutesPerWeek exactly
       subject_requirements.push({
         studentGroup: slTg.year_group,
         teachingGroupId: `tg_${slTg.id}`,
         sectionId: `sec_${slTg.id}`,
         subject: subject.code,
-        minutesPerWeek: minutesSL,
+        minutesPerWeek: sharedPeriods * periodDuration,
+      });
+      subject_requirements.push({
+        studentGroup: hlTg.year_group,
+        teachingGroupId: `tg_${hlTg.id}`,
+        sectionId: `sec_${hlTg.id}`,
+        subject: subject.code,
+        minutesPerWeek: (sharedPeriods + hlOnlyPeriods) * periodDuration,
       });
 
       // studentSubjectChoices for all students
