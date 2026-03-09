@@ -131,7 +131,18 @@ function buildDPPayload({ schoolId, scheduleVersionId, school, students, teacher
   const periodDuration = school.period_duration_minutes || 60;
 
   const dpStudents = students.filter(s => s.ib_programme === 'DP' && s.is_active !== false);
-  const dpGroups = teachingGroups.filter(tg => tg.is_active !== false && (tg.year_group === 'DP1' || tg.year_group === 'DP2'));
+
+  // Exclude TOK, CAS, EE core components from scheduling
+  const coreSubjectCodes = new Set(['TOK', 'CAS', 'EE', 'tok', 'cas', 'ee']);
+  const coreSubjectIds = new Set(
+    subjects.filter(s => s.is_core === true || coreSubjectCodes.has(s.code?.toUpperCase())).map(s => s.id)
+  );
+
+  const dpGroups = teachingGroups.filter(tg =>
+    tg.is_active !== false &&
+    (tg.year_group === 'DP1' || tg.year_group === 'DP2') &&
+    !coreSubjectIds.has(tg.subject_id)
+  );
 
   const studentMap = new Map();
   dpStudents.forEach((s, idx) => studentMap.set(s.id, idx + 1));
