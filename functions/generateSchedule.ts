@@ -455,6 +455,7 @@ async function sendToOptaPlanner(payload) {
 
 async function syncStudentsToTeachingGroups(base44, schoolId, students, subjects, existingTeachingGroups) {
   const tgMap = new Map(); // key: "${subjectId}__${level}__${yearGroup}" → teaching group
+  const missingSubjectIds = new Set();
   
   // Index existing teaching groups
   for (const tg of existingTeachingGroups) {
@@ -474,7 +475,11 @@ async function syncStudentsToTeachingGroups(base44, schoolId, students, subjects
       if (!tgMap.has(key)) {
         // Create new teaching group for this subject/level/year combo
         const subject = subjects.find(s => s.id === subject_id);
-        if (!subject) continue;
+        if (!subject) {
+          missingSubjectIds.add(subject_id);
+          console.warn(`[syncStudentsToTeachingGroups] Student ${student.full_name} chose subject ${subject_id} which does not exist in database`);
+          continue;
+        }
         
         const tgName = `${subject.name} ${level} - ${yearGroup}`;
         const newTg = {
@@ -500,6 +505,12 @@ async function syncStudentsToTeachingGroups(base44, schoolId, students, subjects
         }
       }
     }
+  }
+
+  // Log missing subjects
+  if (missingSubjectIds.size > 0) {
+    console.error(`[syncStudentsToTeachingGroups] MISSING SUBJECTS: ${Array.from(missingSubjectIds).join(', ')}`);
+    console.error(`[syncStudentsToTeachingGroups] Students chose subjects not in database. Please add these subjects in Settings > Subjects.`);
   }
 
   // Update all modified teaching groups
