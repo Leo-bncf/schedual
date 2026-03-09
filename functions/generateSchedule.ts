@@ -210,6 +210,12 @@ function buildDPPayload({ schoolId, scheduleVersionId, school, students, teacher
     // Merge all student IDs across all TGs for each level
     const allHLStudentIds = [...new Set(hlTgs.flatMap(tg => (tg.student_ids || []).map(sid => studentMap.get(sid)).filter(Boolean)))];
     const allSLStudentIds = [...new Set(slTgs.flatMap(tg => (tg.student_ids || []).map(sid => studentMap.get(sid)).filter(Boolean)))];
+    // SL-only students: those in SL but NOT in HL (HL students attend HL-only + shared, SL students attend shared only)
+    // To avoid STUDENT_CONFLICT, each student must appear in exactly one section's studentIds per lesson bucket.
+    // Model: shared lesson studentIds = ALL students (HL+SL), HL-only lesson studentIds = empty (no student tracking)
+    // because the solver checks student conflicts per lesson, not per section.
+    // Simplest correct model: treat ALL lessons as having the full combined student list,
+    // but give each lesson bucket a unique sectionId so the solver tracks them as separate sections.
     const allSharedStudentIds = [...new Set([...allHLStudentIds, ...allSLStudentIds])];
 
     // Pick a representative TG for metadata (first one per level)
