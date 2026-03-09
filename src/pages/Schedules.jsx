@@ -202,6 +202,18 @@ export default function Schedules() {
         const programmes = data.programmes?.map(p => `${p.programme}: ${p.slots} slots`).join(', ') || '';
         setGenMessage(`${data.slotsInserted} slots created. ${programmes}`);
         setGenStatus('success');
+        
+        // Update selectedVersion with returned timeslots immediately
+        if (data.solverTimeslots && Array.isArray(data.solverTimeslots)) {
+          setSelectedVersion(prev => ({
+            ...prev,
+            generation_params: {
+              programmes: data.programmes?.map(p => p.programme) || [],
+              solverTimeslots: data.solverTimeslots
+            }
+          }));
+        }
+        
         if (data.failed?.length > 0) {
           toast.warning(`Some programmes failed: ${data.failed.map(f => `${f.programme} (${f.error})`).join(', ')}`);
         } else {
