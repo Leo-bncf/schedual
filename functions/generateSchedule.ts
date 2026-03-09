@@ -474,11 +474,13 @@ Deno.serve(async (req) => {
 
     console.log(`[generateSchedule] Done. Total slots inserted: ${totalSlotsInserted}`);
 
+    const allFailed = failedProgrammes.length > 0 && successProgrammes.length === 0;
     return Response.json({
-      ok: totalSlotsInserted > 0 || failedProgrammes.length === 0,
+      ok: !allFailed && totalSlotsInserted > 0,
       slotsInserted: totalSlotsInserted,
       programmes: successProgrammes,
       failed: failedProgrammes,
+      error: allFailed ? failedProgrammes.map(f => `${f.programme}: ${f.error}`).join('\n') : null,
     });
 
   } catch (error) {
