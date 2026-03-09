@@ -271,12 +271,14 @@ function buildDPPayload({ schoolId, scheduleVersionId, school, students, teacher
       });
 
       // studentSubjectChoices for all students
+      // yearGroup must match the lesson's studentGroup so the solver resolves conflicts correctly
       for (const [tg, level] of [[hlTg, 'HL'], [slTg, 'SL']]) {
+        const effectiveYearForChoice = subject.combine_dp1_dp2 ? 'DP1_DP2' : tg.year_group;
         for (const base44StudentId of (tg.student_ids || [])) {
           const numericStudentId = studentMap.get(base44StudentId);
           if (!numericStudentId) continue;
           const alreadyAdded = studentSubjectChoices.find(
-            c => c.studentId === numericStudentId && c.subjectId === subject.id && c.yearGroup === tg.year_group
+            c => c.studentId === numericStudentId && c.subjectId === subject.id && c.yearGroup === effectiveYearForChoice
           );
           if (!alreadyAdded) {
             studentSubjectChoices.push({
@@ -284,7 +286,7 @@ function buildDPPayload({ schoolId, scheduleVersionId, school, students, teacher
               subjectId: subject.id,
               subject: subject.code,
               level,
-              yearGroup: tg.year_group,
+              yearGroup: effectiveYearForChoice,
             });
           }
         }
