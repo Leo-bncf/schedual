@@ -210,13 +210,14 @@ function buildDPPayload({ schoolId, scheduleVersionId, school, students, teacher
     // Merge all student IDs across all TGs for each level
     const allHLStudentIds = [...new Set(hlTgs.flatMap(tg => (tg.student_ids || []).map(sid => studentMap.get(sid)).filter(Boolean)))];
     const allSLStudentIds = [...new Set(slTgs.flatMap(tg => (tg.student_ids || []).map(sid => studentMap.get(sid)).filter(Boolean)))];
-    // SL-only students: those in SL but NOT in HL (HL students attend HL-only + shared, SL students attend shared only)
-    // To avoid STUDENT_CONFLICT, each student must appear in exactly one section's studentIds per lesson bucket.
-    // Model: shared lesson studentIds = ALL students (HL+SL), HL-only lesson studentIds = empty (no student tracking)
-    // because the solver checks student conflicts per lesson, not per section.
-    // Simplest correct model: treat ALL lessons as having the full combined student list,
-    // but give each lesson bucket a unique sectionId so the solver tracks them as separate sections.
+    // For shared lessons: ALL students (HL+SL together in same room).
     const allSharedStudentIds = [...new Set([...allHLStudentIds, ...allSLStudentIds])];
+    // SL-only students (not in HL): used nowhere currently but kept for clarity.
+    // CRITICAL: HL-only lessons must NOT include studentIds to avoid STUDENT_CONFLICT.
+    // The solver fires STUDENT_CONFLICT when the same studentId appears in two lessons at the same timeslot.
+    // HL students attend BOTH hl-only and shared lessons — but at DIFFERENT timeslots (by design).
+    // However the solver doesn't know that at validation time, so we strip studentIds from HL-only lessons
+    // and rely purely on sectionId + requiredCapacity for conflict avoidance there.
 
     // Pick a representative TG for metadata (first one per level)
     const repHLTg = hlTgs[0];
