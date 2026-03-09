@@ -326,7 +326,7 @@ function buildDPPayload({ schoolId, scheduleVersionId, school, students, teacher
         }
 
         subject_requirements.push({
-          studentGroup: tg.year_group,
+          studentGroup: effectiveYear,
           teachingGroupId: `tg_${tg.id}`,
           sectionId: `sec_${tg.id}`,
           subject: subject.code,
