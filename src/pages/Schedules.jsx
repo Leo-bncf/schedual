@@ -186,134 +186,37 @@ export default function Schedules() {
   const handleGenerateSchedule = async () => {
     if (!selectedVersion) return;
 
-    setGenDialogOpen(true);
     setGenStatus('generating');
     setGenMessage('');
     setGenError('');
 
     try {
-      const { data } = await base44.functions.invoke('optaPlannerPipeline', {
+      const { data } = await base44.functions.invoke('generateSchedule', {
         schedule_version_id: selectedVersion.id,
-        constraints: constraints
       });
 
       if (data.ok === true) {
         setGenStatus('success');
-        const inserted = data.result?.slotsInserted || 0;
-        setGenMessage(`✅ ${inserted} slots created successfully! Score: ${data.result?.score || 'N/A'}`);
+        const programmes = data.programmes?.map(p => `${p.programme}: ${p.slots} slots`).join(', ') || '';
+        setGenMessage(`✅ ${data.slotsInserted} slots created. ${programmes}`);
+        if (data.failed?.length > 0) {
+          toast.warning(`Some programmes failed: ${data.failed.map(f => f.programme).join(', ')}`);
+        } else {
+          toast.success(`Schedule generated: ${data.slotsInserted} slots`);
+        }
         await queryClient.invalidateQueries({ queryKey: ['scheduleSlots'] });
         await queryClient.invalidateQueries({ queryKey: ['scheduleVersions'] });
       } else {
-        console.error('Generation failed:', data);
         setGenStatus('error');
-
-        let errorMsg = data.error || 'Generation failed';
-
-        if (data.details) {
-          console.log('OptaPlanner details:', data.details);
-
-          // Check for validation errors array
-          if (data.details.validationErrors && Array.isArray(data.details.validationErrors)) {
-            const validationErrors = data.details.validationErrors;
-            console.log('Validation errors:', validationErrors);
-            errorMsg = `Validation failed:\n${validationErrors.slice(0, 5).join('\n')}${validationErrors.length > 5 ? `\n... and ${validationErrors.length - 5} more errors` : ''}`;
-          } else if (typeof data.details === 'object' && data.details.message) {
-            errorMsg = data.details.message;
-          } else if (typeof data.details === 'string') {
-            try {
-              const parsed = JSON.parse(data.details);
-              if (parsed.validationErrors && Array.isArray(parsed.validationErrors)) {
-                const validationErrors = parsed.validationErrors;
-                errorMsg = `Validation failed:\n${validationErrors.slice(0, 5).join('\n')}${validationErrors.length > 5 ? `\n... and ${validationErrors.length - 5} more errors` : ''}`;
-              } else if (parsed.message) {
-                errorMsg = parsed.message;
-              }
-            } catch (e) {
-              // Keep original error
-            }
-          }
-        }
-
-        const safeErrorMsg = typeof errorMsg === 'string' ? errorMsg : JSON.stringify(errorMsg);
-        setGenError(safeErrorMsg);
-        toast.error(safeErrorMsg, { duration: 10000 });
+        const errorMsg = data.error || 'Generation failed';
+        setGenError(errorMsg);
+        toast.error(errorMsg, { duration: 10000 });
       }
     } catch (error) {
       console.error('Generation error:', error);
       setGenStatus('error');
-      
-      const responseData = error.response?.data;
-      let errorMsg = error.message || 'Failed to generate schedule';
-      let teacherDetails = null;
-      
-      if (responseData) {
-        console.log('Error response:', responseData);
-        console.log('Error details:', responseData.details);
-        console.log('Full error details object:', JSON.stringify(responseData.details, null, 2));
-        
-        errorMsg = responseData.summary || responseData.error || errorMsg;
-
-        if (errorMsg === 'Rate limit exceeded') {
-          errorMsg = "Vous avez lancé trop de requêtes récemment. Veuillez patienter quelques instants avant de réessayer (Rate limit exceeded).";
-        }
-        
-        // Check for teacher capacity error from our backend
-        if (responseData.code === 'TEACHER_CAPACITY_EXCEEDED' && responseData.details) {
-          teacherDetails = responseData.details;
-          errorMsg = teacherDetails.message || 'Teacher capacity exceeded';
-        } 
-        // Check for teacher capacity error from OptaPlanner
-        else if (responseData.details?.code === 'TEACHER_CAPACITY_EXCEEDED') {
-          // OptaPlanner returned the error - extract teacher details from their response
-          const optaDetails = responseData.details.details || [];
-          const bottleneckTeachers = optaDetails.find(d => d.type === 'BOTTLENECK_TEACHERS');
-          const offendingTeachers = bottleneckTeachers?.items || 
-                                    responseData.details.teacherCapacitySummary?.offenders || [];
-          
-          console.log('OptaPlanner teacher capacity details:', offendingTeachers);
-          
-          teacherDetails = {
-            message: responseData.details.message || 'At least one teacher requires more lessons than available timeslots.',
-            overloadedTeachers: offendingTeachers.map(detail => ({
-              name: detail.teacherName || 'Unknown',
-              assigned: detail.requiredLessons || 0,
-              max: detail.availableTimeslots || 50,
-              shortage: detail.shortage || 0,
-              teachingGroups: [] // OptaPlanner doesn't provide this breakdown
-            })),
-            solution: 'Reduce the teaching hours assigned to this teacher, or increase their max hours per week in the Teachers page.'
-          };
-          errorMsg = teacherDetails.message;
-        }
-        else if (responseData.details) {
-          if (typeof responseData.details === 'string') {
-            try {
-              const parsed = JSON.parse(responseData.details);
-              if (parsed.message) errorMsg = parsed.message;
-            } catch (e) {
-              // Keep original error
-            }
-          } else if (responseData.details.message) {
-            errorMsg = responseData.details.message;
-          }
-        }
-      }
-      
-      const subjDiag = responseData?.subject_diagnostics;
-      if (subjDiag) {
-        const sampleSubjects = (subjDiag.subjectsList || []).slice(0,5).map(s => `${s.id}:${s.code}`).join(', ');
-        const diagText = [
-          'Subject diagnostics:',
-          subjDiag.missingIds?.length ? `Missing subjectIds in references: ${subjDiag.missingIds.join(', ')}` : null,
-          subjDiag.nonNumericIds?.length ? `Non-numeric subjectIds found: ${subjDiag.nonNumericIds.join(', ')}` : null,
-          subjDiag.missingNames?.length ? `Unrecognized subject names: ${subjDiag.missingNames.join(', ')}` : null,
-          sampleSubjects ? `Defined subjects (first 5): ${sampleSubjects}` : null
-        ].filter(Boolean).join('\n');
-        errorMsg = `${errorMsg}\n\n${diagText}`;
-        console.log('[Schedules] Subject diagnostics:', subjDiag);
-      }
+      const errorMsg = error.response?.data?.error || error.message || 'Failed to generate schedule';
       setGenError(errorMsg);
-      setGenMessage(teacherDetails);
       toast.error(errorMsg, { duration: 10000 });
     }
   };
