@@ -484,6 +484,9 @@ function parseResponseToSlots({ responseData, payload, scheduleVersionId, school
   // Unified: process both `lessons` (cohort) and `assignments` (DP) arrays
   const allEntries = [...lessons, ...assignments];
   console.log(`[parseResponseToSlots] lessons=${lessons.length}, assignments=${assignments.length}, timeslots=${timeslots.length}`);
+  if (timeslots.length > 0) console.log(`[parseResponseToSlots] sample timeslot: ${JSON.stringify(timeslots[0])}`);
+  if (allEntries.length > 0) console.log(`[parseResponseToSlots] sample entry: ${JSON.stringify(allEntries[0])}`);
+  if (timeslots.length === 0 && allEntries.length > 0) console.warn(`[parseResponseToSlots] WARNING: no timeslots array — entries have timeslotId but no day lookup. Entry keys: ${Object.keys(allEntries[0]).join(',')}`);
 
   for (const entry of allEntries) {
     if (entry.timeslotId == null) continue;
