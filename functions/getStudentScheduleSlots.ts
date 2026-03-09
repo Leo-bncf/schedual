@@ -6,8 +6,13 @@ import { createClientFromRequest } from 'npm:@base44/sdk@0.8.6';
  * Performs server-side join: Student → assigned_groups → ScheduleSlot.teaching_group_id
  * Avoids fragile client-side joins and provides accurate slot loading
  */
+function normalizeLevel(raw) {
+  if (!raw) return '';
+  return String(raw).toUpperCase().trim();
+}
+
 Deno.serve(async (req) => {
-  const FUNCTION_VERSION = '2026-02-16T12:00:00Z';
+  const FUNCTION_VERSION = '2026-03-09T21:05:00Z';
   console.log('[getStudentScheduleSlots] 🚀 VERSION:', FUNCTION_VERSION);
   
   try {

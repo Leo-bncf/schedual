@@ -143,6 +143,7 @@ export default function StudentScheduleView({ students, slots, groups, subjects,
   const getStudentSlots = (studentId) => {
     const student = students.find(s => s.id === studentId);
     const assignedGroupIds = Array.isArray(student?.assigned_groups) ? student.assigned_groups : [];
+    const subjectChoices = Array.isArray(student?.subject_choices) ? student.subject_choices : [];
     
     const matchedSlots = slots.filter(slot => {
       // PYP/MYP: match by classgroup_id
@@ -153,18 +154,32 @@ export default function StudentScheduleView({ students, slots, groups, subjects,
       if (slot?.notes?.includes('Test') && (slot?.notes?.includes('DP1') || slot?.notes?.includes('DP2'))) {
         return student?.year_group && slot.notes.includes(student.year_group);
       }
-      // DP: Use student.assigned_groups instead of teachingGroup.student_ids
-      if (slot.teaching_group_id) {
-        return assignedGroupIds.includes(slot.teaching_group_id);
-      }
-
       // Student-specific slots (e.g., individual lunch breaks)
       if (slot.student_id) {
         return slot.student_id === student?.id;
       }
-      
-      return false;
-    });
+      if (!slot.teaching_group_id) {
+        return false;
+      }
+
+      if (assignedGroupIds.includes(slot.teaching_group_id)) {
+        return true;
+      }
+
+      const slotGroup = groups.find(g => g.id === slot.teaching_group_id);
+      if (student?.ib_programme === 'DP' && slot.subject_id) {
+        const subjectChoice = subjectChoices.find(choice => choice.subject_id === slot.subject_id);
+        if (subjectChoice) {
+          const slotLevel = String(slotGroup?.level || '').toUpperCase().trim();
+          const choiceLevel = String(subjectChoice.level || '').toUpperCase().trim();
+          if (slotLevel === 'HL') return choiceLevel === 'HL';
+          if (slotLevel === 'SL') return true;
+          return true;
+        }
+      }
+
+      return slotGroup?.student_ids?.includes(student.id);
+    }).filter((slot, index, self) => index === self.findIndex(s => s.id === slot.id));
 
     // ENHANCED DEBUG: Expected vs actual periods by teaching group and subject
     const expectedByTG = {};

@@ -349,7 +349,20 @@ export default function Schedules() {
   );
 
   const selectedStudent = students.find(s => s.id === selectedStudentId);
-  const studentSchedule = selectedStudentId ? getStudentSchedule(selectedStudentId) : null;
+  const { data: studentScheduleResponse } = useQuery({
+    queryKey: ['studentScheduleSlots', selectedStudentId, selectedVersion?.id],
+    queryFn: async () => {
+      const response = await base44.functions.invoke('getStudentScheduleSlots', {
+        student_id: selectedStudentId,
+        schedule_version_id: selectedVersion.id,
+      });
+      return response.data;
+    },
+    enabled: !!selectedStudentId && !!selectedVersion?.id,
+  });
+  const studentSchedule = selectedStudentId
+    ? (studentScheduleResponse?.slots ?? getStudentSchedule(selectedStudentId))
+    : null;
 
   const getTeacherSchedule = (teacherId) => {
     return scheduleSlots.filter(slot => slot.teacher_id === teacherId);
