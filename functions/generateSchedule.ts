@@ -49,6 +49,58 @@ function buildScheduleSettings(school) {
   };
 }
 
+// Build solverTimeslots array from school schedule config
+function buildSolverTimeslots(school) {
+  const daysOfWeek = school.days_of_week || ['MONDAY', 'TUESDAY', 'WEDNESDAY', 'THURSDAY', 'FRIDAY'];
+  const dayStartTime = school.day_start_time || '08:00';
+  const dayEndTime = school.day_end_time || '18:00';
+  const periodDurationMinutes = school.period_duration_minutes || 60;
+  const breaks = school.breaks || [];
+
+  const timeslots = [];
+  let timeslotId = 1;
+
+  const [startHour, startMin] = dayStartTime.split(':').map(Number);
+  const [endHour, endMin] = dayEndTime.split(':').map(Number);
+  const startTotalMins = startHour * 60 + startMin;
+  const endTotalMins = endHour * 60 + endMin;
+
+  for (const day of daysOfWeek) {
+    let currentMins = startTotalMins;
+
+    while (currentMins < endTotalMins) {
+      const slotEndMins = currentMins + periodDurationMinutes;
+
+      // Check if this slot overlaps with any breaks
+      const isBreak = breaks.some(brk => {
+        const [brkStartHour, brkStartMin] = brk.start.split(':').map(Number);
+        const [brkEndHour, brkEndMin] = brk.end.split(':').map(Number);
+        const brkStartMins = brkStartHour * 60 + brkStartMin;
+        const brkEndMins = brkEndHour * 60 + brkEndMin;
+        return currentMins < brkEndMins && slotEndMins > brkStartMins;
+      });
+
+      if (!isBreak) {
+        const startHour2 = Math.floor(currentMins / 60);
+        const startMin2 = currentMins % 60;
+        const endHour2 = Math.floor(slotEndMins / 60);
+        const endMin2 = slotEndMins % 60;
+
+        timeslots.push({
+          id: timeslotId++,
+          dayOfWeek: day,
+          startTime: `${String(startHour2).padStart(2, '0')}:${String(startMin2).padStart(2, '0')}`,
+          endTime: `${String(endHour2).padStart(2, '0')}:${String(endMin2).padStart(2, '0')}`,
+        });
+      }
+
+      currentMins = slotEndMins;
+    }
+  }
+
+  return timeslots;
+}
+
 // ─── PYP / MYP cohort_payload builder ────────────────────────────────────────
 
 function buildCohortPayload({ programType, schoolId, scheduleVersionId, school, students, teachers, subjects, rooms, teachingGroups }) {
