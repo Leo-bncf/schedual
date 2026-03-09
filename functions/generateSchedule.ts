@@ -282,7 +282,7 @@ function buildDPPayload({ schoolId, scheduleVersionId, school, students, teacher
 
       processedTgIds.add(hlTg.id);
       processedTgIds.add(slTg.id);
-      console.log(`[buildDPPayload] ${subject.code} ${hlTg.year_group}: ${sharedPeriods} shared (HL+SL) + ${hlOnlyPeriods} HL-only lessons`);
+      console.log(`[buildDPPayload] ${subject.code} ${hlTg.year_group}: ${sharedPeriods} SL lessons (HL+SL students) + ${sharedPeriods + hlOnlyPeriods} HL lessons (${sharedPeriods} shared + ${hlOnlyPeriods} HL-only)`);
 
     } else {
       // ── Single-level group (only HL or only SL, no pair) ──
