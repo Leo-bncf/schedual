@@ -252,14 +252,14 @@ function buildDPPayload({ schoolId, scheduleVersionId, school, students, teacher
 
       // subject_requirements: exactly lessonCount * periodDuration per sectionId
       subject_requirements.push({
-        studentGroup: hlTg.year_group,
+        studentGroup: effectiveHLYear,
         teachingGroupId: `tg_${hlTg.id}`,
         sectionId: `sec_${hlTg.id}`,
         subject: subject.code,
         minutesPerWeek: hlOnlyPeriods * periodDuration,
       });
       subject_requirements.push({
-        studentGroup: slTg.year_group,
+        studentGroup: effectiveSLYear,
         teachingGroupId: `tg_${slTg.id}`,
         sectionId: `sec_${slTg.id}`,
         subject: subject.code,
