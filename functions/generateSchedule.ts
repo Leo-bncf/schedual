@@ -772,6 +772,7 @@ Deno.serve(async (req) => {
     });
 
     console.log(`[generateSchedule] Done. Total slots inserted: ${totalSlotsInserted}, solverTimeslots saved: ${solverTimeslots.length}`);
+    console.log(`[generateSchedule] First 3 solverTimeslots: ${JSON.stringify(solverTimeslots.slice(0, 3))}`);
 
     const allFailed = failedProgrammes.length > 0 && successProgrammes.length === 0;
     return Response.json({
