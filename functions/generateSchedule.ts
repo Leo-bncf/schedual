@@ -176,198 +176,189 @@ function buildDPPayload({ schoolId, scheduleVersionId, school, students, teacher
   const studentSubjectChoices = [];
   let lessonId = 1;
 
-  // Group teaching groups by subject + year_group to detect HL/SL pairs
-  // If the subject has combine_dp1_dp2=true, DP1 and DP2 share the same bucket
   const subjectMap = new Map(dpSubjects.map(s => [s.id, s]));
 
-  const tgBySubjectYear = new Map();
+  // ── Group ALL teaching groups by subject + level, merging DP1 and DP2 together.
+  // A subject can have DP1-HL and DP2-HL TGs — they should become ONE combined lesson bucket
+  // because those students share the same classroom. Same for SL.
+  // combine_dp1_dp2 flag only controls the studentGroup label sent to the solver.
+  const tgBySubjectLevel = new Map(); // key: `{subjectId}__{level}`
   for (const tg of dpGroups) {
-    const subject = subjectMap.get(tg.subject_id);
-    const combinedYear = (subject?.combine_dp1_dp2 === true) ? 'DP1_DP2' : tg.year_group;
-    const key = `${tg.subject_id}__${combinedYear}`;
-    if (!tgBySubjectYear.has(key)) tgBySubjectYear.set(key, []);
-    tgBySubjectYear.get(key).push(tg);
+    const level = tg.level || 'HL';
+    const key = `${tg.subject_id}__${level}`;
+    if (!tgBySubjectLevel.has(key)) tgBySubjectLevel.set(key, []);
+    tgBySubjectLevel.get(key).push(tg);
   }
 
-  const processedTgIds = new Set();
+  // Now group by subject only to pair HL + SL buckets
+  const tgBySubject = new Map(); // key: subjectId → { HL: [tgs], SL: [tgs] }
+  for (const [key, tgs] of tgBySubjectLevel) {
+    const [subjectId, level] = key.split('__');
+    if (!tgBySubject.has(subjectId)) tgBySubject.set(subjectId, { HL: [], SL: [] });
+    tgBySubject.get(subjectId)[level] = tgs;
+  }
 
-  for (const [, groupsForSubject] of tgBySubjectYear) {
-    const hlTg = groupsForSubject.find(tg => tg.level === 'HL');
-    const slTg = groupsForSubject.find(tg => tg.level === 'SL');
+  for (const [subjectId, { HL: hlTgs, SL: slTgs }] of tgBySubject) {
+    const subject = subjectMap.get(subjectId);
+    if (!subject) continue;
 
-    if (hlTg && slTg) {
-      // ── Paired HL + SL group for the same subject + year ──
-      const subject = dpSubjects.find(s => s.id === hlTg.subject_id);
-      if (!subject) continue;
+    const hoursHL = subject.hoursPerWeekHL > 0 ? subject.hoursPerWeekHL : 5;
+    const hoursSL = subject.hoursPerWeekSL > 0 ? subject.hoursPerWeekSL : 3;
 
-      const hoursHL = subject.hoursPerWeekHL > 0 ? subject.hoursPerWeekHL : 5;
-      const hoursSL = subject.hoursPerWeekSL > 0 ? subject.hoursPerWeekSL : 3;
+    // Merge all student IDs across all TGs for each level
+    const allHLStudentIds = [...new Set(hlTgs.flatMap(tg => (tg.student_ids || []).map(sid => studentMap.get(sid)).filter(Boolean)))];
+    const allSLStudentIds = [...new Set(slTgs.flatMap(tg => (tg.student_ids || []).map(sid => studentMap.get(sid)).filter(Boolean)))];
+    const allSharedStudentIds = [...new Set([...allHLStudentIds, ...allSLStudentIds])];
 
-      // Use minutes_per_week override on the TG if set, otherwise use subject config
-      const minutesSL = slTg.minutes_per_week || hoursSL * 60;
-      const minutesHL = hlTg.minutes_per_week || hoursHL * 60;
+    // Pick a representative TG for metadata (first one per level)
+    const repHLTg = hlTgs[0];
+    const repSLTg = slTgs[0];
+
+    // Determine the studentGroup label for the solver
+    // If combine_dp1_dp2 OR students from both year groups are present → use DP1_DP2
+    const hlYearGroups = new Set(hlTgs.map(tg => tg.year_group));
+    const slYearGroups = new Set(slTgs.map(tg => tg.year_group));
+    const hlEffectiveYear = (subject.combine_dp1_dp2 || hlYearGroups.size > 1) ? 'DP1_DP2' : (repHLTg?.year_group || 'DP1');
+    const slEffectiveYear = (subject.combine_dp1_dp2 || slYearGroups.size > 1) ? 'DP1_DP2' : (repSLTg?.year_group || 'DP1');
+
+    // Determine teacher: prefer first TG that has one assigned
+    const hlTeacherId = hlTgs.reduce((acc, tg) => acc || (tg.teacher_id ? teacherMap.get(tg.teacher_id) ?? null : null), null);
+    const slTeacherId = slTgs.reduce((acc, tg) => acc || (tg.teacher_id ? teacherMap.get(tg.teacher_id) ?? null : null), null);
+
+    // Use a stable section key derived from subjectId (not a single TG id) since we merged TGs
+    const subjectKey = subjectId.replace(/-/g, '');
+
+    if (hlTgs.length > 0 && slTgs.length > 0) {
+      // ── Paired HL + SL: shared periods + HL-only extra periods ──
+      const minutesSL = repSLTg?.minutes_per_week || hoursSL * 60;
+      const minutesHL = repHLTg?.minutes_per_week || hoursHL * 60;
       const minutesHLOnly = Math.max(0, minutesHL - minutesSL);
 
       const sharedPeriods = Math.max(1, Math.round(minutesSL / periodDuration));
       const hlOnlyPeriods = Math.max(0, Math.round(minutesHLOnly / periodDuration));
 
-      const hlStudentIds = (hlTg.student_ids || []).map(sid => studentMap.get(sid)).filter(Boolean);
-      const slStudentIds = (slTg.student_ids || []).map(sid => studentMap.get(sid)).filter(Boolean);
-      const sharedStudentIds = [...new Set([...hlStudentIds, ...slStudentIds])];
+      const hlOnlySectionId = `sec_hl_${subjectKey}`;
+      const sharedSectionId = `sec_shared_${subjectKey}`;
 
-      const hlTeacherId = hlTg.teacher_id ? teacherMap.get(hlTg.teacher_id) ?? null : null;
-      const slTeacherId = slTg.teacher_id ? teacherMap.get(slTg.teacher_id) ?? null : null;
-
-      // If combine_dp1_dp2, use a unified year group label so solver treats DP1+DP2 as one cohort
-      const effectiveHLYear = subject.combine_dp1_dp2 ? 'DP1_DP2' : hlTg.year_group;
-      const effectiveSLYear = subject.combine_dp1_dp2 ? 'DP1_DP2' : slTg.year_group;
-
-      // Each lesson bucket gets its own sectionId so the solver can track them independently:
-      //   sec_hl_{id}     → HL-only periods (HL students only)
-      //   sec_shared_{id} → shared HL+SL periods (all students from both TGs)
-      const hlOnlySectionId = `sec_hl_${hlTg.id}`;
-      const sharedSectionId = `sec_shared_${hlTg.id}`;
-
-      // HL-only lessons: HL students only, own section
       for (let i = 0; i < hlOnlyPeriods; i++) {
         lessons.push({
           id: lessonId++,
           subject: subject.code,
-          studentGroup: effectiveHLYear,
-          teachingGroupId: `tg_${hlTg.id}`,
+          studentGroup: hlEffectiveYear,
+          teachingGroupId: repHLTg ? `tg_${repHLTg.id}` : null,
           sectionId: hlOnlySectionId,
-          yearGroup: effectiveHLYear,
+          yearGroup: hlEffectiveYear,
           level: 'HL',
-          requiredCapacity: hlStudentIds.length || 10,
+          requiredCapacity: allHLStudentIds.length || 10,
           teacherId: hlTeacherId,
           timeslotId: null,
-          studentIds: hlStudentIds,
+          studentIds: allHLStudentIds,
         });
       }
 
-      // Shared lessons: HL+SL students together, own section
-      // studentGroup uses the broader year (effectiveSLYear = effectiveHLYear when combine_dp1_dp2)
       for (let i = 0; i < sharedPeriods; i++) {
         lessons.push({
           id: lessonId++,
           subject: subject.code,
-          studentGroup: effectiveSLYear,
-          teachingGroupId: `tg_${slTg.id}`,
+          studentGroup: slEffectiveYear,
+          teachingGroupId: repSLTg ? `tg_${repSLTg.id}` : null,
           sectionId: sharedSectionId,
-          yearGroup: effectiveSLYear,
+          yearGroup: slEffectiveYear,
           level: 'SL',
-          requiredCapacity: sharedStudentIds.length || 10,
+          requiredCapacity: allSharedStudentIds.length || 10,
           teacherId: slTeacherId || hlTeacherId,
           timeslotId: null,
-          studentIds: sharedStudentIds,
+          studentIds: allSharedStudentIds,
         });
       }
 
-      // subject_requirements: one entry per section so solver knows how many minutes each needs
       subject_requirements.push({
-        studentGroup: effectiveHLYear,
-        teachingGroupId: `tg_${hlTg.id}`,
+        studentGroup: hlEffectiveYear,
+        teachingGroupId: repHLTg ? `tg_${repHLTg.id}` : null,
         sectionId: hlOnlySectionId,
         subject: subject.code,
         minutesPerWeek: hlOnlyPeriods * periodDuration,
       });
       subject_requirements.push({
-        studentGroup: effectiveSLYear,
-        teachingGroupId: `tg_${slTg.id}`,
+        studentGroup: slEffectiveYear,
+        teachingGroupId: repSLTg ? `tg_${repSLTg.id}` : null,
         sectionId: sharedSectionId,
         subject: subject.code,
         minutesPerWeek: sharedPeriods * periodDuration,
       });
 
-      // studentSubjectChoices for all students
-      // yearGroup must match the lesson's studentGroup so the solver resolves conflicts correctly
-      for (const [tg, level] of [[hlTg, 'HL'], [slTg, 'SL']]) {
-        const effectiveYearForChoice = subject.combine_dp1_dp2 ? 'DP1_DP2' : tg.year_group;
+      // studentSubjectChoices — HL students
+      for (const tg of hlTgs) {
         for (const base44StudentId of (tg.student_ids || [])) {
           const numericStudentId = studentMap.get(base44StudentId);
           if (!numericStudentId) continue;
-          const alreadyAdded = studentSubjectChoices.find(
-            c => c.studentId === numericStudentId && c.subjectId === subject.id && c.yearGroup === effectiveYearForChoice
-          );
-          if (!alreadyAdded) {
-            studentSubjectChoices.push({
-              studentId: numericStudentId,
-              subjectId: subject.id,
-              subject: subject.code,
-              level,
-              yearGroup: effectiveYearForChoice,
-            });
+          if (!studentSubjectChoices.find(c => c.studentId === numericStudentId && c.subjectId === subject.id)) {
+            studentSubjectChoices.push({ studentId: numericStudentId, subjectId: subject.id, subject: subject.code, level: 'HL', yearGroup: hlEffectiveYear });
+          }
+        }
+      }
+      // studentSubjectChoices — SL students
+      for (const tg of slTgs) {
+        for (const base44StudentId of (tg.student_ids || [])) {
+          const numericStudentId = studentMap.get(base44StudentId);
+          if (!numericStudentId) continue;
+          if (!studentSubjectChoices.find(c => c.studentId === numericStudentId && c.subjectId === subject.id)) {
+            studentSubjectChoices.push({ studentId: numericStudentId, subjectId: subject.id, subject: subject.code, level: 'SL', yearGroup: slEffectiveYear });
           }
         }
       }
 
-      processedTgIds.add(hlTg.id);
-      processedTgIds.add(slTg.id);
-      const combinedLabel = subject.combine_dp1_dp2 ? 'DP1+DP2' : hlTg.year_group;
-      console.log(`[buildDPPayload] ${subject.code} ${combinedLabel}: ${hlOnlyPeriods} HL-only lessons (HL students only) + ${sharedPeriods} shared lessons (HL+SL students)`);
+      const combinedLabel = hlEffectiveYear === 'DP1_DP2' ? 'DP1+DP2' : hlEffectiveYear;
+      console.log(`[buildDPPayload] ${subject.code} ${combinedLabel}: ${hlOnlyPeriods} HL-only + ${sharedPeriods} shared lessons | HL students: ${allHLStudentIds.length}, SL students: ${allSLStudentIds.length}`);
 
     } else {
-      // ── Single-level group (only HL or only SL, no pair) ──
-      for (const tg of groupsForSubject) {
-        if (processedTgIds.has(tg.id)) continue;
-        const subject = dpSubjects.find(s => s.id === tg.subject_id);
-        if (!subject) continue;
+      // ── Single-level (only HL or only SL) ──
+      const tgsForLevel = hlTgs.length > 0 ? hlTgs : slTgs;
+      const level = hlTgs.length > 0 ? 'HL' : 'SL';
+      const allStudentIds = hlTgs.length > 0 ? allHLStudentIds : allSLStudentIds;
+      const effectiveYear = hlTgs.length > 0 ? hlEffectiveYear : slEffectiveYear;
+      const teacherId = hlTgs.length > 0 ? hlTeacherId : slTeacherId;
+      const repTg = tgsForLevel[0];
 
-        const level = tg.level || 'HL';
-        const hoursHL = subject.hoursPerWeekHL > 0 ? subject.hoursPerWeekHL : 5;
-        const hoursSL = subject.hoursPerWeekSL > 0 ? subject.hoursPerWeekSL : 3;
-        const minutesPerWeek = tg.minutes_per_week ||
-          (level === 'HL' ? hoursHL * 60 : hoursSL * 60);
-        const periodsPerWeek = Math.max(1, Math.round(minutesPerWeek / periodDuration));
-        const numericTeacherId = tg.teacher_id ? teacherMap.get(tg.teacher_id) ?? null : null;
+      const minutesPerWeek = repTg?.minutes_per_week || (level === 'HL' ? hoursHL * 60 : hoursSL * 60);
+      const periodsPerWeek = Math.max(1, Math.round(minutesPerWeek / periodDuration));
+      const sectionId = `sec_${level.toLowerCase()}_${subjectKey}`;
 
-        const tgStudentNumericIds = (tg.student_ids || []).map(sid => studentMap.get(sid)).filter(Boolean);
-        const effectiveYear = subject.combine_dp1_dp2 ? 'DP1_DP2' : tg.year_group;
-
-        for (let i = 0; i < periodsPerWeek; i++) {
-          lessons.push({
-            id: lessonId++,
-            subject: subject.code,
-            studentGroup: effectiveYear,
-            teachingGroupId: `tg_${tg.id}`,
-            sectionId: `sec_${tg.id}`,
-            yearGroup: effectiveYear,
-            level,
-            requiredCapacity: tgStudentNumericIds.length || 10,
-            teacherId: numericTeacherId,
-            timeslotId: null,
-            studentIds: tgStudentNumericIds,
-          });
-        }
-
-        subject_requirements.push({
-          studentGroup: effectiveYear,
-          teachingGroupId: `tg_${tg.id}`,
-          sectionId: `sec_${tg.id}`,
+      for (let i = 0; i < periodsPerWeek; i++) {
+        lessons.push({
+          id: lessonId++,
           subject: subject.code,
-          minutesPerWeek,
+          studentGroup: effectiveYear,
+          teachingGroupId: repTg ? `tg_${repTg.id}` : null,
+          sectionId,
+          yearGroup: effectiveYear,
+          level,
+          requiredCapacity: allStudentIds.length || 10,
+          teacherId,
+          timeslotId: null,
+          studentIds: allStudentIds,
         });
+      }
 
+      subject_requirements.push({
+        studentGroup: effectiveYear,
+        teachingGroupId: repTg ? `tg_${repTg.id}` : null,
+        sectionId,
+        subject: subject.code,
+        minutesPerWeek,
+      });
+
+      for (const tg of tgsForLevel) {
         for (const base44StudentId of (tg.student_ids || [])) {
           const numericStudentId = studentMap.get(base44StudentId);
           if (!numericStudentId) continue;
-          const alreadyAdded = studentSubjectChoices.find(
-            c => c.studentId === numericStudentId && c.subjectId === subject.id && c.yearGroup === effectiveYear
-          );
-          if (!alreadyAdded) {
-            studentSubjectChoices.push({
-              studentId: numericStudentId,
-              subjectId: subject.id,
-              subject: subject.code,
-              level,
-              yearGroup: effectiveYear,
-            });
+          if (!studentSubjectChoices.find(c => c.studentId === numericStudentId && c.subjectId === subject.id)) {
+            studentSubjectChoices.push({ studentId: numericStudentId, subjectId: subject.id, subject: subject.code, level, yearGroup: effectiveYear });
           }
         }
-
-        processedTgIds.add(tg.id);
-        console.log(`[buildDPPayload] ${subject.code} ${effectiveYear} (${level} only): ${periodsPerWeek} lessons`);
       }
+
+      console.log(`[buildDPPayload] ${subject.code} ${effectiveYear} (${level} only): ${periodsPerWeek} lessons | students: ${allStudentIds.length}`);
     }
   }
 
