@@ -165,8 +165,11 @@ function buildDPPayload({ schoolId, scheduleVersionId, school, students, teacher
     if (!subject) continue;
 
     const level = tg.level || 'HL';
+    // Cap hours to sensible defaults: HL max 5h/week, SL max 3h/week
+    const rawHoursHL = subject.hoursPerWeekHL && subject.hoursPerWeekHL > 0 ? Math.min(subject.hoursPerWeekHL, 5) : 5;
+    const rawHoursSL = subject.hoursPerWeekSL && subject.hoursPerWeekSL > 0 ? Math.min(subject.hoursPerWeekSL, 3) : 3;
     const minutesPerWeek = tg.minutes_per_week ||
-      (level === 'HL' ? (subject.hoursPerWeekHL || 5) * 60 : (subject.hoursPerWeekSL || 3) * 60);
+      (level === 'HL' ? rawHoursHL * 60 : rawHoursSL * 60);
     const periodsPerWeek = Math.max(1, Math.round(minutesPerWeek / periodDuration));
     const numericTeacherId = tg.teacher_id ? teacherMap.get(tg.teacher_id) ?? null : null;
 
