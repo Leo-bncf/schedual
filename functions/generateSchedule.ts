@@ -578,7 +578,7 @@ Deno.serve(async (req) => {
         continue;
       }
 
-      // Solver ran but has constraint violations — log details and continue to save slots
+      // Solver ran but has constraint violations — log and fall through to save partial slots
       if (solverOk === false && hasAssignments) {
         console.warn(`[generateSchedule] ${payload.programType} solver finished with conflicts: reason=${solverReason}, score=${result.data?.score}, studentConflicts=${result.data?.studentConflictCount}, hardViolations=${result.data?.conflictsCount}`);
         console.warn(`[generateSchedule] ${payload.programType} violations: ${JSON.stringify(result.data?.violations || result.data?.violatingConstraints || []).slice(0, 500)}`);
