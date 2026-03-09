@@ -296,14 +296,14 @@ function buildDPPayload({ schoolId, scheduleVersionId, school, students, teacher
       }
 
       subject_requirements.push({
-        studentGroup: hlEffectiveYear,
+        studentGroup: hlStudentGroup,
         teachingGroupId: repHLTg ? `tg_${repHLTg.id}` : null,
         sectionId: hlOnlySectionId,
         subject: subject.code,
         minutesPerWeek: hlOnlyPeriods * periodDuration,
       });
       subject_requirements.push({
-        studentGroup: slEffectiveYear,
+        studentGroup: slStudentGroup,
         teachingGroupId: repSLTg ? `tg_${repSLTg.id}` : null,
         sectionId: sharedSectionId,
         subject: subject.code,
@@ -316,7 +316,7 @@ function buildDPPayload({ schoolId, scheduleVersionId, school, students, teacher
           const numericStudentId = studentMap.get(base44StudentId);
           if (!numericStudentId) continue;
           if (!studentSubjectChoices.find(c => c.studentId === numericStudentId && c.subjectId === subject.id)) {
-            studentSubjectChoices.push({ studentId: numericStudentId, subjectId: subject.id, subject: subject.code, level: 'HL', yearGroup: hlEffectiveYear });
+            studentSubjectChoices.push({ studentId: numericStudentId, subjectId: subject.id, subject: subject.code, level: 'HL', yearGroup: baseYear });
           }
         }
       }
@@ -326,13 +326,12 @@ function buildDPPayload({ schoolId, scheduleVersionId, school, students, teacher
           const numericStudentId = studentMap.get(base44StudentId);
           if (!numericStudentId) continue;
           if (!studentSubjectChoices.find(c => c.studentId === numericStudentId && c.subjectId === subject.id)) {
-            studentSubjectChoices.push({ studentId: numericStudentId, subjectId: subject.id, subject: subject.code, level: 'SL', yearGroup: slEffectiveYear });
+            studentSubjectChoices.push({ studentId: numericStudentId, subjectId: subject.id, subject: subject.code, level: 'SL', yearGroup: baseYear });
           }
         }
       }
 
-      const combinedLabel = hlEffectiveYear === 'DP1_DP2' ? 'DP1+DP2' : hlEffectiveYear;
-      console.log(`[buildDPPayload] ${subject.code} ${combinedLabel}: ${hlOnlyPeriods} HL-only + ${sharedPeriods} shared lessons | HL students: ${allHLStudentIds.length}, SL students: ${allSLStudentIds.length}`);
+      console.log(`[buildDPPayload] ${subject.code} (${baseYear}): ${hlOnlyPeriods} HL-only [${hlStudentGroup}] + ${sharedPeriods} shared [${slStudentGroup}] | HL: ${allHLStudentIds.length}, SL-only: ${slOnlyStudentIds.length}`);
 
     } else {
       // ── Single-level (only HL or only SL) ──
