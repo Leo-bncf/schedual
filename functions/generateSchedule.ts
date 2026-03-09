@@ -2,7 +2,10 @@ import { createClientFromRequest } from 'npm:@base44/sdk@0.8.20';
 
 const OPTAPLANNER_ENDPOINT = Deno.env.get('OPTAPLANNER_ENDPOINT') || 'http://87.106.27.27:8080';
 const OPTAPLANNER_API_KEY = Deno.env.get('OPTAPLANNER_API_KEY') || 'ib-scheduler-987654321';
-const INGEST_URL = `${OPTAPLANNER_ENDPOINT}/base44/ingest`;
+
+// Build ingest URL — if the env var already contains a path, use as-is, otherwise append /base44/ingest
+const _ep = OPTAPLANNER_ENDPOINT.replace(/\/$/, '');
+const INGEST_URL = _ep.includes('/base44') ? _ep : `${_ep}/base44/ingest`;
 
 // ─── Helpers ─────────────────────────────────────────────────────────────────
 
