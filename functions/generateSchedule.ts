@@ -343,7 +343,9 @@ function buildDPPayload({ schoolId, scheduleVersionId, school, students, teacher
       const teacherId = hlTgs.length > 0 ? hlTeacherId : slTeacherId;
       const repTg = tgsForLevel[0];
 
-      const minutesPerWeek = repTg?.minutes_per_week || (level === 'HL' ? hoursHL * 60 : hoursSL * 60);
+      // Use subject hours as authoritative source; only fall back to TG minutes_per_week if subject hours are missing
+      const subjectMinutes = level === 'HL' ? (hoursHL > 0 ? hoursHL * 60 : 0) : (hoursSL > 0 ? hoursSL * 60 : 0);
+      const minutesPerWeek = subjectMinutes || repTg?.minutes_per_week || (level === 'HL' ? 300 : 180);
       const periodsPerWeek = Math.max(1, Math.round(minutesPerWeek / periodDuration));
       const sectionId = `sec_${level.toLowerCase()}_${subjectKey}`;
 
