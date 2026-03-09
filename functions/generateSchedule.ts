@@ -343,7 +343,7 @@ function buildDPPayload({ schoolId, scheduleVersionId, school, students, teacher
           const numericStudentId = studentMap.get(base44StudentId);
           if (!numericStudentId) continue;
           const alreadyAdded = studentSubjectChoices.find(
-            c => c.studentId === numericStudentId && c.subjectId === subject.id && c.yearGroup === tg.year_group
+            c => c.studentId === numericStudentId && c.subjectId === subject.id && c.yearGroup === effectiveYear
           );
           if (!alreadyAdded) {
             studentSubjectChoices.push({
@@ -351,7 +351,7 @@ function buildDPPayload({ schoolId, scheduleVersionId, school, students, teacher
               subjectId: subject.id,
               subject: subject.code,
               level,
-              yearGroup: tg.year_group,
+              yearGroup: effectiveYear,
             });
           }
         }
