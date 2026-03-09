@@ -203,15 +203,14 @@ export default function Schedules() {
         setGenMessage(`${data.slotsInserted} slots created. ${programmes}`);
         setGenStatus('success');
         
-        // Update selectedVersion with returned timeslots immediately
-        if (data.solverTimeslots && Array.isArray(data.solverTimeslots)) {
-          setSelectedVersion(prev => ({
-            ...prev,
-            generation_params: {
-              programmes: data.programmes?.map(p => p.programme) || [],
-              solverTimeslots: data.solverTimeslots
-            }
-          }));
+        // Refetch scheduleVersions from the database to get persisted generation_params
+        const updatedVersions = await base44.entities.ScheduleVersion.filter({ school_id: schoolId }, '-created_date');
+        queryClient.setQueryData(['scheduleVersions', schoolId], updatedVersions);
+        
+        // Update selectedVersion to the refetched one
+        const refreshedVersion = updatedVersions.find(v => v.id === selectedVersion.id);
+        if (refreshedVersion) {
+          setSelectedVersion(refreshedVersion);
         }
         
         if (data.failed?.length > 0) {
@@ -219,9 +218,9 @@ export default function Schedules() {
         } else {
           toast.success(`Schedule generated: ${data.slotsInserted} slots`);
         }
-        // Refresh slots — this will switch the UI to the timetable view
+        
+        // Refresh slots
         queryClient.invalidateQueries({ queryKey: ['scheduleSlots'] });
-        queryClient.invalidateQueries({ queryKey: ['scheduleVersions'] });
       } else {
         setGenStatus('error');
         const failDetails = data?.failed?.map(f => `${f.programme}: ${f.error}`).join(' | ') || '';
