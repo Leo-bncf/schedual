@@ -548,13 +548,16 @@ Deno.serve(async (req) => {
       console.log(`[generateSchedule] ${payload.programType} success, parsing response...`);
 
       // Check if solver returned ok:false with a validation error
+      // Only treat as failure if ok is explicitly false OR errorCode is present
       const solverOk = result.data?.ok;
-      const solverError = result.data?.errorCode || result.data?.code || result.data?.message;
-      if (solverOk === false || solverError) {
+      const solverErrorCode = result.data?.errorCode || result.data?.code;
+      if (solverOk === false || solverErrorCode) {
         const errMsg = result.data?.message || result.data?.errorCode || 'Solver validation failed';
         const validationErrors = result.data?.validationErrors || [];
-        console.error(`[generateSchedule] ${payload.programType} solver rejected: ${errMsg} | ${validationErrors.join(', ')}`);
-        failedProgrammes.push({ programme: payload.programType, error: `${errMsg} (${validationErrors.join(', ')})` });
+        console.error(`[generateSchedule] ${payload.programType} solver rejected: ${errMsg}`);
+        console.error(`[generateSchedule] ${payload.programType} validationErrors: ${JSON.stringify(validationErrors)}`);
+        console.error(`[generateSchedule] ${payload.programType} full solver response: ${JSON.stringify(result.data)}`);
+        failedProgrammes.push({ programme: payload.programType, error: `${errMsg}${validationErrors.length ? ' | ' + validationErrors.join(', ') : ''}` });
         continue;
       }
 
