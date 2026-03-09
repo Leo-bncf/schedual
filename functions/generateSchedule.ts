@@ -700,6 +700,17 @@ Deno.serve(async (req) => {
       return Response.json({ error: 'School not found' }, { status: 404 });
     }
 
+    // Clear existing slots for this version before inserting a fresh generation.
+    // Without this, repeated generations stack stale slots and break the timetable UI.
+    const existingVersionSlots = await base44.entities.ScheduleSlot.filter({ schedule_version: schedule_version_id }, '-created_date', 1000);
+    console.log(`[generateSchedule] Found ${existingVersionSlots.length} existing slots for version ${schedule_version_id}`);
+    for (let i = 0; i < existingVersionSlots.length; i += 50) {
+      await Promise.all(
+        existingVersionSlots.slice(i, i + 50).map((slot) => base44.entities.ScheduleSlot.delete(slot.id))
+      );
+    }
+    console.log(`[generateSchedule] Cleared ${existingVersionSlots.length} existing slots for version ${schedule_version_id}`);
+
     console.log(`[generateSchedule] School: ${school.name}, Students: ${students.length}, Teachers: ${teachers.length}`);
 
     const activeStudents = students.filter(s => s.is_active !== false);
