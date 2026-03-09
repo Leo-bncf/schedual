@@ -531,6 +531,7 @@ Deno.serve(async (req) => {
       return Response.json({ error: 'No students found in any IB programme' }, { status: 400 });
     }
 
+    // Build maps once for reverse-lookup during slot parsing
     const { teacherMap } = buildTeacherMap(teachers);
     const { roomMap } = buildRoomMap(rooms);
 
