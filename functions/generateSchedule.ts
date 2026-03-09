@@ -451,6 +451,67 @@ async function sendToOptaPlanner(payload) {
   return { ok: true, programType, data: json };
 }
 
+// ─── Auto-sync students to teaching groups ────────────────────────────────────
+
+async function syncStudentsToTeachingGroups(base44, schoolId, students, subjects, existingTeachingGroups) {
+  const tgMap = new Map(); // key: "${subjectId}__${level}__${yearGroup}" → teaching group
+  
+  // Index existing teaching groups
+  for (const tg of existingTeachingGroups) {
+    const key = `${tg.subject_id}__${tg.level}__${tg.year_group}`;
+    tgMap.set(key, { ...tg, student_ids: [...(tg.student_ids || [])] });
+  }
+
+  // For each student, add them to teaching groups matching their subject choices
+  for (const student of students) {
+    if (!Array.isArray(student.subject_choices)) continue;
+    
+    const yearGroup = student.year_group;
+    for (const choice of student.subject_choices) {
+      const { subject_id, level } = choice;
+      const key = `${subject_id}__${level}__${yearGroup}`;
+      
+      if (!tgMap.has(key)) {
+        // Create new teaching group for this subject/level/year combo
+        const subject = subjects.find(s => s.id === subject_id);
+        if (!subject) continue;
+        
+        const tgName = `${subject.name} ${level} - ${yearGroup}`;
+        const newTg = {
+          school_id: schoolId,
+          name: tgName,
+          subject_id,
+          level,
+          year_group: yearGroup,
+          teacher_id: null,
+          student_ids: [student.id],
+          minutes_per_week: level === 'HL' ? (subject.hoursPerWeekHL || 5) * 60 : (subject.hoursPerWeekSL || 3) * 60,
+          is_active: true,
+        };
+        
+        console.log(`[syncStudentsToTeachingGroups] Creating teaching group: ${tgName}`);
+        const created = await base44.entities.TeachingGroup.create(newTg);
+        tgMap.set(key, { ...newTg, id: created.id, student_ids: [student.id] });
+      } else {
+        // Add student to existing teaching group if not already there
+        const tg = tgMap.get(key);
+        if (!tg.student_ids.includes(student.id)) {
+          tg.student_ids.push(student.id);
+        }
+      }
+    }
+  }
+
+  // Update all modified teaching groups
+  for (const [key, tg] of tgMap) {
+    if (tg.id && tg.student_ids) {
+      await base44.entities.TeachingGroup.update(tg.id, { student_ids: tg.student_ids });
+    }
+  }
+
+  return Object.fromEntries(tgMap);
+}
+
 // ─── Parse OptaPlanner response → ScheduleSlots ──────────────────────────────
 
 function parseResponseToSlots({ responseData, payload, scheduleVersionId, schoolId, teacherMap, roomMap }) {
