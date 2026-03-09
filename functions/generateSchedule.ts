@@ -210,14 +210,14 @@ function buildDPPayload({ schoolId, scheduleVersionId, school, students, teacher
     // Merge all student IDs across all TGs for each level
     const allHLStudentIds = [...new Set(hlTgs.flatMap(tg => (tg.student_ids || []).map(sid => studentMap.get(sid)).filter(Boolean)))];
     const allSLStudentIds = [...new Set(slTgs.flatMap(tg => (tg.student_ids || []).map(sid => studentMap.get(sid)).filter(Boolean)))];
-    // For shared lessons: ALL students (HL+SL together in same room).
-    const allSharedStudentIds = [...new Set([...allHLStudentIds, ...allSLStudentIds])];
-    // SL-only students (not in HL): used nowhere currently but kept for clarity.
-    // CRITICAL: HL-only lessons must NOT include studentIds to avoid STUDENT_CONFLICT.
-    // The solver fires STUDENT_CONFLICT when the same studentId appears in two lessons at the same timeslot.
-    // HL students attend BOTH hl-only and shared lessons — but at DIFFERENT timeslots (by design).
-    // However the solver doesn't know that at validation time, so we strip studentIds from HL-only lessons
-    // and rely purely on sectionId + requiredCapacity for conflict avoidance there.
+    // SL-only students: those in SL but NOT in HL.
+    // CRITICAL for studentOverlapConflict: each studentId must appear in at most ONE lesson's studentIds per timeslot.
+    // HL students → tracked via HL-only lessons' studentIds (or omitted there too; see below).
+    // Shared lessons → only SL-only students, so no student appears in both HL-only and shared studentIds.
+    const hlStudentIdSet = new Set(allHLStudentIds);
+    const slOnlyStudentIds = allSLStudentIds.filter(id => !hlStudentIdSet.has(id));
+    // Capacity for shared room = all bodies in the room (HL + SL), but studentIds only = SL-only to avoid overlap conflicts.
+    const allSharedStudentIds = [...new Set([...allHLStudentIds, ...allSLStudentIds])]; // for requiredCapacity only
 
     // Pick a representative TG for metadata (first one per level)
     const repHLTg = hlTgs[0];
