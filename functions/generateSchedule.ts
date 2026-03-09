@@ -451,11 +451,13 @@ async function sendToOptaPlanner(payload) {
 // ─── Parse OptaPlanner response → ScheduleSlots ──────────────────────────────
 
 function parseResponseToSlots({ responseData, payload, scheduleVersionId, schoolId, teacherMap, roomMap }) {
-  // Server returns either `lessons` (cohort) or `assignments` (DP/individual) 
+  // Server returns either `lessons` (cohort) or `assignments` (DP/individual)
   const lessons = responseData?.lessons || responseData?.data?.lessons || [];
   const assignments = responseData?.assignments || responseData?.data?.assignments || [];
-  const timeslots = responseData?.timeslots || responseData?.data?.timeslots || 
-                    responseData?.solverTimeslots || responseData?.data?.solverTimeslots || [];
+
+  // solverTimeslots: List<{id, dayOfWeek, startTime, endTime}> — echoed back from scheduleSettings
+  const solverTimeslots = responseData?.solverTimeslots || responseData?.data?.solverTimeslots || 
+                          responseData?.timeslots || responseData?.data?.timeslots || [];
 
   const teacherReverseMap = new Map();
   teacherMap.forEach((numId, base44Id) => teacherReverseMap.set(numId, base44Id));
@@ -463,40 +465,45 @@ function parseResponseToSlots({ responseData, payload, scheduleVersionId, school
   const roomReverseMap = new Map();
   roomMap.forEach((numId, base44Id) => roomReverseMap.set(numId, base44Id));
 
-  const timeslotById = new Map();
-  for (const ts of timeslots) timeslotById.set(ts.id, ts);
-
-  // For DP: build tg reverse map (strip tg_ prefix to get base44 id)
-  const tgPayloadMap = new Map();
-  if (payload.payloadType === 'individual_payload') {
-    for (const tg of (payload.teaching_groups || [])) {
-      tgPayloadMap.set(tg.id, tg.id.replace(/^tg_/, ''));
-    }
-  }
-
+  // Build timeslot lookup by id → {day, period}
+  // dayOfWeek field is used (not `day`). Period = index within that day's slots sorted by startTime + 1.
   const DAY_MAP = {
     MONDAY: 'Monday', TUESDAY: 'Tuesday', WEDNESDAY: 'Wednesday', THURSDAY: 'Thursday', FRIDAY: 'Friday',
-    Monday: 'Monday', Tuesday: 'Tuesday', Wednesday: 'Wednesday', Thursday: 'Thursday', Friday: 'Friday',
   };
 
-  const slots = [];
+  // Group timeslots by day and sort by startTime to derive period numbers
+  const timeslotsByDay = {};
+  for (const ts of solverTimeslots) {
+    const d = ts.dayOfWeek;
+    if (!timeslotsByDay[d]) timeslotsByDay[d] = [];
+    timeslotsByDay[d].push(ts);
+  }
+  for (const d of Object.keys(timeslotsByDay)) {
+    timeslotsByDay[d].sort((a, b) => a.startTime.localeCompare(b.startTime));
+  }
 
-  // Unified: process both `lessons` (cohort) and `assignments` (DP) arrays
+  const timeslotById = new Map();
+  for (const [dayOfWeek, slots] of Object.entries(timeslotsByDay)) {
+    const day = DAY_MAP[dayOfWeek] || dayOfWeek;
+    slots.forEach((ts, idx) => {
+      timeslotById.set(ts.id, { day, period: idx + 1, startTime: ts.startTime, endTime: ts.endTime });
+    });
+  }
+
+  console.log(`[parseResponseToSlots] lessons=${lessons.length}, assignments=${assignments.length}, solverTimeslots=${solverTimeslots.length}, timeslotLookup=${timeslotById.size}`);
+  if (solverTimeslots.length > 0) console.log(`[parseResponseToSlots] sample solverTimeslot: ${JSON.stringify(solverTimeslots[0])}`);
+
   const allEntries = [...lessons, ...assignments];
-  console.log(`[parseResponseToSlots] lessons=${lessons.length}, assignments=${assignments.length}, timeslots=${timeslots.length}`);
-  if (timeslots.length > 0) console.log(`[parseResponseToSlots] sample timeslot: ${JSON.stringify(timeslots[0])}`);
   if (allEntries.length > 0) console.log(`[parseResponseToSlots] sample entry: ${JSON.stringify(allEntries[0])}`);
-  if (timeslots.length === 0 && allEntries.length > 0) console.warn(`[parseResponseToSlots] WARNING: no timeslots array — entries have timeslotId but no day lookup. Entry keys: ${Object.keys(allEntries[0]).join(',')}`);
+
+  const slots = [];
 
   for (const entry of allEntries) {
     if (entry.timeslotId == null) continue;
 
     const ts = timeslotById.get(entry.timeslotId);
-    // For assignments, day/period may be directly on the entry OR via timeslot lookup
-    const rawDay = ts?.day || entry.day;
-    const day = rawDay ? (DAY_MAP[rawDay] || rawDay) : null;
-    if (!day) {
-      console.warn(`[parseResponseToSlots] No day for timeslotId=${entry.timeslotId}, entry keys=${Object.keys(entry).join(',')}`);
+    if (!ts) {
+      console.warn(`[parseResponseToSlots] No timeslot found for timeslotId=${entry.timeslotId}`);
       continue;
     }
 
@@ -506,8 +513,8 @@ function parseResponseToSlots({ responseData, payload, scheduleVersionId, school
     const slot = {
       school_id: schoolId,
       schedule_version: scheduleVersionId,
-      day,
-      period: ts?.period ?? entry.period ?? null,
+      day: ts.day,
+      period: ts.period,
       timeslot_id: entry.timeslotId,
       teacher_id: teacherBase44Id,
       room_id: roomBase44Id,
@@ -518,11 +525,10 @@ function parseResponseToSlots({ responseData, payload, scheduleVersionId, school
       slot.subject_id = payload.subjectIdByCode[entry.subject] ?? null;
     }
 
-    // teachingGroupId on assignment may be the full `tg_xxx` id or the raw base44 id
-    const tgId = entry.teachingGroupId;
-    if (tgId) {
-      const base44TgId = tgPayloadMap.get(tgId) || (tgId.startsWith('tg_') ? tgId.replace(/^tg_/, '') : tgId);
-      if (base44TgId) slot.teaching_group_id = base44TgId;
+    // For DP: teachingGroupId from solver is already the raw base44 id (mapper strips TG_ prefix)
+    // Our payload sends `tg_<id>` so the mapper returns the bare `<id>` back
+    if (entry.teachingGroupId) {
+      slot.teaching_group_id = entry.teachingGroupId;
     }
 
     slots.push(slot);
