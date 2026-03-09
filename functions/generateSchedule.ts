@@ -216,12 +216,13 @@ function buildDPPayload({ schoolId, scheduleVersionId, school, students, teacher
     const repHLTg = hlTgs[0];
     const repSLTg = slTgs[0];
 
-    // Determine the studentGroup label for the solver
-    // If combine_dp1_dp2 OR students from both year groups are present → use DP1_DP2
-    const hlYearGroups = new Set(hlTgs.map(tg => tg.year_group));
-    const slYearGroups = new Set(slTgs.map(tg => tg.year_group));
-    const hlEffectiveYear = (subject.combine_dp1_dp2 || hlYearGroups.size > 1) ? 'DP1_DP2' : (repHLTg?.year_group || 'DP1');
-    const slEffectiveYear = (subject.combine_dp1_dp2 || slYearGroups.size > 1) ? 'DP1_DP2' : (repSLTg?.year_group || 'DP1');
+    // Determine a SINGLE studentGroup label for the entire subject (HL + SL share the same cohort).
+    // If any TG for this subject spans both DP1 and DP2, or combine_dp1_dp2 is set → use DP1_DP2.
+    const allTgsForSubject = [...hlTgs, ...slTgs];
+    const allYearGroups = new Set(allTgsForSubject.map(tg => tg.year_group));
+    const effectiveYear = (subject.combine_dp1_dp2 || allYearGroups.size > 1) ? 'DP1_DP2' : (repHLTg?.year_group || repSLTg?.year_group || 'DP1');
+    const hlEffectiveYear = effectiveYear;
+    const slEffectiveYear = effectiveYear;
 
     // Determine teacher: prefer first TG that has one assigned
     const hlTeacherId = hlTgs.reduce((acc, tg) => acc || (tg.teacher_id ? teacherMap.get(tg.teacher_id) ?? null : null), null);
