@@ -710,6 +710,7 @@ export default function Schedules() {
                     periodDurationMinutes={school?.period_duration_minutes || 60}
                     scheduleSettings={school}
                     globalView={overviewFilterType === 'all'}
+                    timeslots={selectedVersion?.generation_params?.solverTimeslots || []}
                     onSlotClick={(day, uiRow, actionData) => {
                       if (actionData.action === 'move') {
                         if (confirm(`Are you sure you want to move this lesson to ${day}, Period ${uiRow}?`)) {
@@ -813,7 +814,7 @@ export default function Schedules() {
                           scheduleSettings={school}
                           globalView={false}
                           exportId="student-viewer-timetable"
-                          timeslots={[]}
+                          timeslots={selectedVersion?.generation_params?.solverTimeslots || []}
                         />
                       </div>
                     </div>
@@ -908,7 +909,7 @@ export default function Schedules() {
                           scheduleSettings={school}
                           globalView={false}
                           exportId="teacher-viewer-timetable"
-                          timeslots={[]}
+                          timeslots={selectedVersion?.generation_params?.solverTimeslots || []}
                         />
                       </div>
                     </div>
