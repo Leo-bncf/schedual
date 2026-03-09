@@ -606,11 +606,13 @@ Deno.serve(async (req) => {
       const solverOk = result.data?.ok;
       const solverErrorCode = result.data?.errorCode;
       const solverReason = result.data?.reason;
-      // Check for assigned lessons — solver returns them in `lessons` with timeslotId set
+      // Check for assigned lessons — solver returns `lessons` (cohort) or `assignments` (DP)
       const allLessons = result.data?.lessons || result.data?.data?.lessons || [];
-      const hasAssignments = allLessons.some(l => l.timeslotId != null);
+      const allAssignments = result.data?.assignments || result.data?.data?.assignments || [];
+      const allEntries = [...allLessons, ...allAssignments];
+      const hasAssignments = allEntries.some(e => e.timeslotId != null);
 
-      console.log(`[generateSchedule] ${payload.programType} solverOk=${solverOk}, reason=${solverReason}, totalLessons=${allLessons.length}, assignedLessons=${allLessons.filter(l => l.timeslotId != null).length}, score=${result.data?.score}`);
+      console.log(`[generateSchedule] ${payload.programType} solverOk=${solverOk}, reason=${solverReason}, lessons=${allLessons.length}, assignments=${allAssignments.length}, assigned=${allEntries.filter(e => e.timeslotId != null).length}, score=${result.data?.score}`);
 
       // Pre-solve validation failure: errorCode present OR solver explicitly failed with no assignments at all
       if (solverErrorCode || (!hasAssignments && solverOk === false)) {
