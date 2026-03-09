@@ -156,7 +156,9 @@ function buildDPPayload({ schoolId, scheduleVersionId, school, students, teacher
     return { id: subj.id, code: subj.code, name: subj.name };
   });
 
-  // teaching_groups: use effective year group (DP1_DP2 if combined) so solver knows the cohort scope
+  // teaching_groups: we register one entry per TG; sectionIds used in lessons are
+  // sec_hl_{id} (HL-only) and sec_shared_{hlId} (shared) — built dynamically per lesson.
+  // This array is used by the solver for metadata; the sectionId on each lesson is what matters.
   const teachingGroupsPayload = dpGroups.map(tg => {
     const subj = subjectMap.get(tg.subject_id);
     const effectiveGroup = subj?.combine_dp1_dp2 ? 'DP1_DP2' : tg.year_group;
