@@ -180,8 +180,6 @@ function buildDPPayload({ schoolId, scheduleVersionId, school, students, teacher
   const studentSubjectChoices = [];
   let lessonId = 1;
 
-  const subjectMap = new Map(dpSubjects.map(s => [s.id, s]));
-
   // ── Group ALL teaching groups by subject + level, merging DP1 and DP2 together.
   // A subject can have DP1-HL and DP2-HL TGs — they should become ONE combined lesson bucket
   // because those students share the same classroom. Same for SL.
