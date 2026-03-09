@@ -813,6 +813,7 @@ export default function Schedules() {
                           scheduleSettings={school}
                           globalView={false}
                           exportId="student-viewer-timetable"
+                          timeslots={[]}
                         />
                       </div>
                     </div>
@@ -907,6 +908,7 @@ export default function Schedules() {
                           scheduleSettings={school}
                           globalView={false}
                           exportId="teacher-viewer-timetable"
+                          timeslots={[]}
                         />
                       </div>
                     </div>
