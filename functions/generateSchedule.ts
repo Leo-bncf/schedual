@@ -257,39 +257,41 @@ function buildDPPayload({ schoolId, scheduleVersionId, school, students, teacher
       const hlOnlySectionId = `sec_hl_${subjectKey}`;
       const sharedSectionId = `sec_shared_${subjectKey}`;
 
-      // HL-only lessons: no studentIds — rely on sectionId for conflict isolation.
-      // Including HL studentIds here would cause STUDENT_CONFLICT since those same
-      // students also appear in the shared lessons.
+      // HL-only lessons: unique studentGroup (hlStudentGroup) so studentGroupConflict never fires
+      // against the shared lessons. studentIds = allHLStudentIds for accurate capacity/conflict tracking
+      // within the HL-only section itself.
       for (let i = 0; i < hlOnlyPeriods; i++) {
         lessons.push({
           id: lessonId++,
           subject: subject.code,
-          studentGroup: hlEffectiveYear,
+          studentGroup: hlStudentGroup,
           teachingGroupId: repHLTg ? `tg_${repHLTg.id}` : null,
           sectionId: hlOnlySectionId,
-          yearGroup: hlEffectiveYear,
+          yearGroup: baseYear,
           level: 'HL',
           requiredCapacity: allHLStudentIds.length || 10,
           teacherId: hlTeacherId,
           timeslotId: null,
-          studentIds: [],
+          studentIds: allHLStudentIds,
         });
       }
 
-      // Shared lessons: ALL students (HL+SL) — solver uses these for student conflict checks.
+      // Shared lessons: unique studentGroup (slStudentGroup). studentIds = SL-only students only.
+      // HL students are NOT in this list — they are tracked via the HL-only section above.
+      // This ensures no studentId appears in two different lessons, satisfying studentOverlapConflict.
       for (let i = 0; i < sharedPeriods; i++) {
         lessons.push({
           id: lessonId++,
           subject: subject.code,
-          studentGroup: slEffectiveYear,
+          studentGroup: slStudentGroup,
           teachingGroupId: repSLTg ? `tg_${repSLTg.id}` : null,
           sectionId: sharedSectionId,
-          yearGroup: slEffectiveYear,
+          yearGroup: baseYear,
           level: 'SL',
           requiredCapacity: allSharedStudentIds.length || 10,
           teacherId: slTeacherId || hlTeacherId,
           timeslotId: null,
-          studentIds: allSharedStudentIds,
+          studentIds: slOnlyStudentIds,
         });
       }
 
