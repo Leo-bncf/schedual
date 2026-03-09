@@ -190,31 +190,35 @@ export default function Schedules() {
     setGenError('');
 
     try {
-      const { data } = await base44.functions.invoke('generateSchedule', {
+      const response = await base44.functions.invoke('generateSchedule', {
         schedule_version_id: selectedVersion.id,
       });
 
-      if (data.ok === true) {
-        setGenStatus('success');
+      const data = response?.data ?? response;
+
+      if (data?.ok === true && data?.slotsInserted > 0) {
         const programmes = data.programmes?.map(p => `${p.programme}: ${p.slots} slots`).join(', ') || '';
-        setGenMessage(`✅ ${data.slotsInserted} slots created. ${programmes}`);
+        setGenMessage(`${data.slotsInserted} slots created. ${programmes}`);
+        setGenStatus('success');
         if (data.failed?.length > 0) {
-          toast.warning(`Some programmes failed: ${data.failed.map(f => f.programme).join(', ')}`);
+          toast.warning(`Some programmes failed: ${data.failed.map(f => `${f.programme} (${f.error})`).join(', ')}`);
         } else {
           toast.success(`Schedule generated: ${data.slotsInserted} slots`);
         }
-        await queryClient.invalidateQueries({ queryKey: ['scheduleSlots'] });
-        await queryClient.invalidateQueries({ queryKey: ['scheduleVersions'] });
+        // Refresh slots — this will switch the UI to the timetable view
+        queryClient.invalidateQueries({ queryKey: ['scheduleSlots'] });
+        queryClient.invalidateQueries({ queryKey: ['scheduleVersions'] });
       } else {
         setGenStatus('error');
-        const errorMsg = data.error || 'Generation failed';
+        const failDetails = data?.failed?.map(f => `${f.programme}: ${f.error}`).join('\n') || '';
+        const errorMsg = data?.error || (failDetails ? `Solver errors:\n${failDetails}` : 'Generation returned 0 slots. Check OptaPlanner endpoint and payload.');
         setGenError(errorMsg);
-        toast.error(errorMsg, { duration: 10000 });
+        toast.error('Generation failed — see error below.', { duration: 10000 });
       }
     } catch (error) {
       console.error('Generation error:', error);
       setGenStatus('error');
-      const errorMsg = error.response?.data?.error || error.message || 'Failed to generate schedule';
+      const errorMsg = error?.response?.data?.error || error?.message || 'Failed to reach the generation service';
       setGenError(errorMsg);
       toast.error(errorMsg, { duration: 10000 });
     }
