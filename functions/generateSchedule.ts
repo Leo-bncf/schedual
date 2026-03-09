@@ -659,6 +659,18 @@ Deno.serve(async (req) => {
     const updatedTeachingGroups = await syncStudentsToTeachingGroups(base44, schoolId, activeStudents, subjects, teachingGroups);
     console.log(`[generateSchedule] Sync complete: ${Object.keys(updatedTeachingGroups).length} teaching groups updated`);
 
+    // ── AUTO-SYNC: Update student.assigned_groups to match their subject choices ──
+    console.log(`[generateSchedule] Syncing student assignments to teaching groups...`);
+    try {
+      const syncResult = await base44.functions.invoke('syncStudentTeachingGroups', {});
+      console.log(`[generateSchedule] Student assignment sync: ${syncResult.data?.studentsUpdated} students updated, ${syncResult.data?.teachingGroupsUpdated} groups updated`);
+      if (syncResult.data?.integrityReport?.missingAssignments?.length > 0) {
+        console.warn(`[generateSchedule] ⚠️ ${syncResult.data.integrityReport.missingAssignments.length} students have missing subject assignments`);
+      }
+    } catch (syncErr) {
+      console.error('[generateSchedule] Student assignment sync failed:', syncErr);
+    }
+
     const common = { schoolId, scheduleVersionId: schedule_version_id, school, students, teachers, subjects, rooms, teachingGroups: Object.values(updatedTeachingGroups) };
 
     // Build payloads — ONE per programme
