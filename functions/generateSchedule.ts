@@ -78,6 +78,7 @@ function buildCohortPayload({ programType, schoolId, scheduleVersionId, school, 
     const subject = progSubjects.find(s => s.id === tg.subject_id);
     if (!subject) continue;
 
+    // Priority: tg.minutes_per_week > subject.pyp_myp_minutes_per_week_default
     const minutesPerWeek = tg.minutes_per_week || subject.pyp_myp_minutes_per_week_default || 180;
     const periodsPerWeek = Math.max(1, Math.round(minutesPerWeek / periodDuration));
     const numericTeacherId = tg.teacher_id ? teacherMap.get(tg.teacher_id) ?? null : null;
