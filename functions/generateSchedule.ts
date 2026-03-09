@@ -162,16 +162,19 @@ function buildDPPayload({ schoolId, scheduleVersionId, school, students, teacher
   // We still register each TG so the solver can look up metadata by tg id.
   const teachingGroupsPayload = dpGroups.map(tg => {
     const subj = subjectMap.get(tg.subject_id);
-    // Count how many TGs share this subject+level to detect cross-year merges
     const sameSubjectLevel = dpGroups.filter(g => g.subject_id === tg.subject_id && (g.level || 'HL') === (tg.level || 'HL'));
     const crossYear = sameSubjectLevel.some(g => g.year_group !== tg.year_group);
-    const effectiveGroup = (subj?.combine_dp1_dp2 || crossYear) ? 'DP1_DP2' : tg.year_group;
+    const baseYearForTg = (subj?.combine_dp1_dp2 || crossYear) ? 'DP1_DP2' : tg.year_group;
+    const subjectKeyForTg = tg.subject_id.replace(/-/g, '');
+    const levelForTg = tg.level || 'HL';
+    // student_group must match the subject-scoped group used in lessons for this TG
+    const studentGroupForTg = `${baseYearForTg}_${levelForTg}_${subjectKeyForTg}`;
     return {
       id: `tg_${tg.id}`,
       section_id: `sec_${tg.id}`,
-      student_group: effectiveGroup,
+      student_group: studentGroupForTg,
       subject_id: tg.subject_id,
-      level: tg.level || 'HL',
+      level: levelForTg,
     };
   });
 
