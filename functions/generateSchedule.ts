@@ -215,12 +215,9 @@ function buildDPPayload({ schoolId, scheduleVersionId, school, students, teacher
   // We still register each TG so the solver can look up metadata by tg id.
   const teachingGroupsPayload = dpGroups.map(tg => {
     const subj = subjectMap.get(tg.subject_id);
-    const sameSubjectLevel = dpGroups.filter(g => g.subject_id === tg.subject_id && (g.level || 'HL') === (tg.level || 'HL'));
-    const crossYear = sameSubjectLevel.some(g => g.year_group !== tg.year_group);
-    const baseYearForTg = (subj?.combine_dp1_dp2 || crossYear) ? 'DP1_DP2' : tg.year_group;
+    const baseYearForTg = subj?.combine_dp1_dp2 ? 'DP1_DP2' : tg.year_group;
     const subjectKeyForTg = tg.subject_id.replace(/-/g, '');
     const levelForTg = tg.level || 'HL';
-    // student_group must match the subject-scoped group used in lessons for this TG
     const studentGroupForTg = `${baseYearForTg}_${levelForTg}_${subjectKeyForTg}`;
     return {
       id: `tg_${tg.id}`,
@@ -236,27 +233,30 @@ function buildDPPayload({ schoolId, scheduleVersionId, school, students, teacher
   const studentSubjectChoices = [];
   let lessonId = 1;
 
-  // ── Group ALL teaching groups by subject + level, merging DP1 and DP2 together.
-  // A subject can have DP1-HL and DP2-HL TGs — they should become ONE combined lesson bucket
-  // because those students share the same classroom. Same for SL.
-  // combine_dp1_dp2 flag only controls the studentGroup label sent to the solver.
-  const tgBySubjectLevel = new Map(); // key: `{subjectId}__{level}`
+  // Group teaching groups by subject and sharing scope.
+  // DP1 and DP2 are only merged when the subject explicitly enables combine_dp1_dp2.
+  const tgBySchedulingBucket = new Map(); // key: `${subjectId}__${yearScope}` → { subjectId, yearScope, HL, SL }
   for (const tg of dpGroups) {
+    const subject = subjectMap.get(tg.subject_id);
+    if (!subject) continue;
+
     const level = tg.level || 'HL';
-    const key = `${tg.subject_id}__${level}`;
-    if (!tgBySubjectLevel.has(key)) tgBySubjectLevel.set(key, []);
-    tgBySubjectLevel.get(key).push(tg);
+    const yearScope = subject.combine_dp1_dp2 ? 'DP1_DP2' : tg.year_group;
+    const bucketKey = `${tg.subject_id}__${yearScope}`;
+
+    if (!tgBySchedulingBucket.has(bucketKey)) {
+      tgBySchedulingBucket.set(bucketKey, {
+        subjectId: tg.subject_id,
+        yearScope,
+        HL: [],
+        SL: []
+      });
+    }
+
+    tgBySchedulingBucket.get(bucketKey)[level].push(tg);
   }
 
-  // Now group by subject only to pair HL + SL buckets
-  const tgBySubject = new Map(); // key: subjectId → { HL: [tgs], SL: [tgs] }
-  for (const [key, tgs] of tgBySubjectLevel) {
-    const [subjectId, level] = key.split('__');
-    if (!tgBySubject.has(subjectId)) tgBySubject.set(subjectId, { HL: [], SL: [] });
-    tgBySubject.get(subjectId)[level] = tgs;
-  }
-
-  for (const [subjectId, { HL: hlTgs, SL: slTgs }] of tgBySubject) {
+  for (const { subjectId, yearScope, HL: hlTgs, SL: slTgs } of tgBySchedulingBucket.values()) {
     const subject = subjectMap.get(subjectId);
     if (!subject) continue;
 
@@ -279,10 +279,8 @@ function buildDPPayload({ schoolId, scheduleVersionId, school, students, teacher
     const repHLTg = hlTgs[0];
     const repSLTg = slTgs[0];
 
-    // Determine the year-group label for this subject's cohort.
-    const allTgsForSubject = [...hlTgs, ...slTgs];
-    const allYearGroups = new Set(allTgsForSubject.map(tg => tg.year_group));
-    const baseYear = (subject.combine_dp1_dp2 || allYearGroups.size > 1) ? 'DP1_DP2' : (repHLTg?.year_group || repSLTg?.year_group || 'DP1');
+    // Determine the year-group label for this scheduling bucket.
+    const baseYear = yearScope || repHLTg?.year_group || repSLTg?.year_group || 'DP1';
 
     // Use a stable section key derived from subjectId (not a single TG id) since we merged TGs
     const subjectKey = subjectId.replace(/-/g, '');
