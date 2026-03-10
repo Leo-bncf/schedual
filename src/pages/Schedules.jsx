@@ -360,8 +360,49 @@ export default function Schedules() {
     },
     enabled: !!selectedStudentId && !!selectedVersion?.id,
   });
+
+  const annotateStudentScheduleLevels = (student, slotsList) => {
+    if (!student || !Array.isArray(slotsList)) return slotsList || [];
+
+    return slotsList.map((slot) => {
+      if (student.ib_programme !== 'DP' || !slot.subject_id || !slot.teaching_group_id) {
+        return slot;
+      }
+
+      const slotGroup = teachingGroups.find(g => g.id === slot.teaching_group_id);
+      const subjectChoice = (student.subject_choices || []).find(choice => choice.subject_id === slot.subject_id);
+      if (!slotGroup || !subjectChoice) {
+        return slot;
+      }
+
+      const slotLevel = String(slotGroup.level || '').toUpperCase().trim();
+      const choiceLevel = String(subjectChoice.level || '').toUpperCase().trim();
+      const hasSiblingHLGroup = teachingGroups.some(g =>
+        g.subject_id === slot.subject_id &&
+        String(g.level || '').toUpperCase().trim() === 'HL'
+      );
+
+      if (slotLevel === 'HL') {
+        return { ...slot, display_level_override: 'HL' };
+      }
+
+      if (slotLevel === 'SL' && hasSiblingHLGroup) {
+        return {
+          ...slot,
+          display_level_override: choiceLevel === 'HL' ? 'SL & HL' : 'SL & HL'
+        };
+      }
+
+      if (slotLevel === 'SL') {
+        return { ...slot, display_level_override: 'SL' };
+      }
+
+      return slot;
+    });
+  };
+
   const studentSchedule = selectedStudentId
-    ? (studentScheduleResponse?.slots ?? getStudentSchedule(selectedStudentId))
+    ? annotateStudentScheduleLevels(selectedStudent, studentScheduleResponse?.slots ?? getStudentSchedule(selectedStudentId))
     : null;
 
   const getTeacherSchedule = (teacherId) => {

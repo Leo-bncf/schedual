@@ -829,7 +829,7 @@ export default function TimetableGrid({
                 <div className="space-y-4">
                   <div className="bg-gradient-to-br from-slate-50 to-slate-100 rounded-xl p-5 border border-slate-200">
                     <div className="text-sm font-semibold text-slate-600 mb-2">Level</div>
-                    <div className="text-xl font-bold text-slate-900">{selectedSlot.group?.level}</div>
+                    <div className="text-xl font-bold text-slate-900">{selectedSlot.slot?.display_level_override || selectedSlot.group?.level}</div>
                   </div>
 
                   <div className="bg-gradient-to-br from-blue-50 to-blue-100 rounded-xl p-5 border border-blue-200">
