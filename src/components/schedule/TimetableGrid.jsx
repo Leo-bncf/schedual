@@ -486,7 +486,7 @@ export default function TimetableGrid({
                           if (group) {
                             subject = getSubjectInfo(group.subject_id);
                             teacher = getTeacherInfo(group.teacher_id);
-                            level = group.level;
+                            level = slot.display_level_override || group.level;
                             displayName = group.name;
                           }
                         }
@@ -649,7 +649,7 @@ export default function TimetableGrid({
                                 if (group) {
                                   subject = getSubjectInfo(group.subject_id);
                                   teacher = getTeacherInfo(group.teacher_id);
-                                  level = group.level;
+                                  level = slot.display_level_override || group.level;
                                 }
                               } else if (slot.subject_id) {
                                 subject = getSubjectInfo(slot.subject_id);
