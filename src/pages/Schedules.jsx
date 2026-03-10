@@ -171,15 +171,10 @@ export default function Schedules() {
 
   const deleteVersionMutation = useMutation({
     mutationFn: async (versionId) => {
-      const versionSlots = await base44.entities.ScheduleSlot.filter({ schedule_version: versionId }, '-created_date', 1000);
-      for (let i = 0; i < versionSlots.length; i += 50) {
-        await Promise.all(versionSlots.slice(i, i + 50).map((slot) => base44.entities.ScheduleSlot.delete(slot.id)));
-      }
       return base44.entities.ScheduleVersion.delete(versionId);
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['scheduleVersions'] });
-      queryClient.invalidateQueries({ queryKey: ['scheduleSlots'] });
       setSelectedVersion(null);
       setIsDeleteDialogOpen(false);
       toast.success("Schedule version deleted successfully");
