@@ -260,8 +260,8 @@ function buildDPPayload({ schoolId, scheduleVersionId, school, students, teacher
     const subject = subjectMap.get(subjectId);
     if (!subject) continue;
 
-    const hoursHL = subject.hoursPerWeekHL > 0 ? subject.hoursPerWeekHL : 5;
-    const hoursSL = subject.hoursPerWeekSL > 0 ? subject.hoursPerWeekSL : 3;
+    const hoursHL = Number(subject.hoursPerWeekHL || 0);
+    const hoursSL = Number(subject.hoursPerWeekSL || 0);
 
     // Merge all student IDs across all TGs for each level
     const allHLStudentIds = [...new Set(hlTgs.flatMap(tg => (tg.student_ids || []).map(sid => studentMap.get(sid)).filter(Boolean)))];
@@ -299,9 +299,9 @@ function buildDPPayload({ schoolId, scheduleVersionId, school, students, teacher
 
     if (hlTgs.length > 0 && slTgs.length > 0) {
       // ── Paired HL + SL: shared periods + HL-only extra periods ──
-      // Priority: TG minutes_per_week > subject hours > defaults
-      const minutesSL = repSLTg?.minutes_per_week || (hoursSL > 0 ? hoursSL * 60 : null) || 180;
-      const minutesHL = repHLTg?.minutes_per_week || (hoursHL > 0 ? hoursHL * 60 : null) || 300;
+      // Source of truth: subject hours configured on the Subjects page
+      const minutesSL = hoursSL * 60;
+      const minutesHL = hoursHL * 60;
       const minutesHLOnly = Math.max(0, minutesHL - minutesSL);
 
       const sharedPeriods = Math.max(1, Math.round(minutesSL / periodDuration));
@@ -396,8 +396,8 @@ function buildDPPayload({ schoolId, scheduleVersionId, school, students, teacher
       const teacherId = hlTgs.length > 0 ? hlTeacherId : slTeacherId;
       const repTg = tgsForLevel[0];
 
-      // Priority: TG minutes_per_week > subject hours > defaults
-      const minutesPerWeek = repTg?.minutes_per_week || (level === 'HL' ? (hoursHL > 0 ? hoursHL * 60 : 300) : (hoursSL > 0 ? hoursSL * 60 : 180));
+      // Source of truth: subject hours configured on the Subjects page
+      const minutesPerWeek = level === 'HL' ? (hoursHL * 60) : (hoursSL * 60);
       const periodsPerWeek = Math.max(1, Math.round(minutesPerWeek / periodDuration));
       const sectionId = `sec_${level.toLowerCase()}_${subjectKey}`;
 
@@ -542,7 +542,7 @@ async function syncStudentsToTeachingGroups(base44, schoolId, students, subjects
           year_group: yearGroup,
           teacher_id: null,
           student_ids: [student.id],
-          minutes_per_week: level === 'HL' ? (subject.hoursPerWeekHL || 5) * 60 : (subject.hoursPerWeekSL || 3) * 60,
+          minutes_per_week: level === 'HL' ? Number(subject.hoursPerWeekHL || 0) * 60 : Number(subject.hoursPerWeekSL || 0) * 60,
           is_active: true,
         };
         
