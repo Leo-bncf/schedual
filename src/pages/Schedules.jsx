@@ -389,7 +389,7 @@ export default function Schedules() {
       if (slotLevel === 'SL' && hasSiblingHLGroup) {
         return {
           ...slot,
-          display_level_override: choiceLevel === 'HL' ? 'SL & HL' : 'SL'
+          display_level_override: choiceLevel || 'SL'
         };
       }
 

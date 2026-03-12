@@ -211,14 +211,11 @@ function buildDPPayload({ schoolId, scheduleVersionId, school, students, teacher
 
   const subjectMap = new Map(dpSubjects.map(s => [s.id, s]));
 
-  // teaching_groups metadata — each TG stays identifiable, but scheduling may merge
-  // DP1/DP2 only when the subject explicitly enables it, and HL/SL can share common lessons.
+  // teaching_groups metadata — send each real teaching group separately.
   const teachingGroupsPayload = dpGroups.map(tg => {
-    const subj = subjectMap.get(tg.subject_id);
-    const baseYearForTg = subj?.combine_dp1_dp2 ? 'DP1_DP2' : tg.year_group;
     const subjectKeyForTg = tg.subject_id.replace(/-/g, '');
     const levelForTg = tg.level || 'HL';
-    const studentGroupForTg = `${baseYearForTg}_${levelForTg}_${subjectKeyForTg}`;
+    const studentGroupForTg = `sg_${tg.id}_${tg.year_group}_${levelForTg}_${subjectKeyForTg}`;
     return {
       id: `tg_${tg.id}`,
       section_id: `sec_${tg.id}`,
@@ -233,174 +230,60 @@ function buildDPPayload({ schoolId, scheduleVersionId, school, students, teacher
   const studentSubjectChoices = [];
   let lessonId = 1;
 
-  const tgBySchedulingBucket = new Map();
   for (const tg of dpGroups) {
     const subject = subjectMap.get(tg.subject_id);
     if (!subject) continue;
 
     const level = tg.level || 'HL';
-    const yearScope = subject.combine_dp1_dp2 ? 'DP1_DP2' : tg.year_group;
-    const bucketKey = `${tg.subject_id}__${yearScope}`;
+    const subjectKey = tg.subject_id.replace(/-/g, '');
+    const studentGroup = `sg_${tg.id}_${tg.year_group}_${level}_${subjectKey}`;
+    const sectionId = `sec_${tg.id}`;
+    const hoursForLevel = level === 'HL' ? Number(subject.hoursPerWeekHL || 0) : Number(subject.hoursPerWeekSL || 0);
+    const minutesPerWeek = Number(tg.minutes_per_week || 0) || (hoursForLevel * 60);
+    const periodsPerWeek = Math.max(1, Math.round(minutesPerWeek / periodDuration));
+    const teacherId = tg.teacher_id ? (teacherMap.get(tg.teacher_id) ?? null) : null;
+    const studentIds = [...new Set((tg.student_ids || []).map(base44StudentId => studentMap.get(base44StudentId)).filter(Boolean))];
 
-    if (!tgBySchedulingBucket.has(bucketKey)) {
-      tgBySchedulingBucket.set(bucketKey, {
-        subjectId: tg.subject_id,
-        yearScope,
-        HL: [],
-        SL: []
-      });
-    }
-
-    tgBySchedulingBucket.get(bucketKey)[level].push(tg);
-  }
-
-  for (const { subjectId, yearScope, HL: hlTgs, SL: slTgs } of tgBySchedulingBucket.values()) {
-    const subject = subjectMap.get(subjectId);
-    if (!subject) continue;
-
-    const hoursHL = Number(subject.hoursPerWeekHL || 0);
-    const hoursSL = Number(subject.hoursPerWeekSL || 0);
-
-    const allHLStudentIds = [...new Set(hlTgs.flatMap(tg => (tg.student_ids || []).map(sid => studentMap.get(sid)).filter(Boolean)))];
-    const allSLStudentIds = [...new Set(slTgs.flatMap(tg => (tg.student_ids || []).map(sid => studentMap.get(sid)).filter(Boolean)))];
-    const hlStudentIdSet = new Set(allHLStudentIds);
-    const slOnlyStudentIds = allSLStudentIds.filter(id => !hlStudentIdSet.has(id));
-    const allSharedStudentIds = [...new Set([...allHLStudentIds, ...allSLStudentIds])];
-
-    const repHLTg = hlTgs[0];
-    const repSLTg = slTgs[0];
-    const baseYear = yearScope || repHLTg?.year_group || repSLTg?.year_group || 'DP1';
-    const subjectKey = subjectId.replace(/-/g, '');
-    const hlStudentGroup = `${baseYear}_HL_${subjectKey}`;
-    const slStudentGroup = `${baseYear}_SL_${subjectKey}`;
-    const hlTeacherId = hlTgs.reduce((acc, tg) => acc || (tg.teacher_id ? teacherMap.get(tg.teacher_id) ?? null : null), null);
-    const slTeacherId = slTgs.reduce((acc, tg) => acc || (tg.teacher_id ? teacherMap.get(tg.teacher_id) ?? null : null), null);
-
-    if (hlTgs.length > 0 && slTgs.length > 0) {
-      const minutesSL = hoursSL * 60;
-      const minutesHL = hoursHL * 60;
-      const minutesHLOnly = Math.max(0, minutesHL - minutesSL);
-
-      const sharedPeriods = Math.max(1, Math.round(minutesSL / periodDuration));
-      const hlOnlyPeriods = Math.max(0, Math.round(minutesHLOnly / periodDuration));
-
-      const hlOnlySectionId = `sec_hl_${subjectKey}_${baseYear}`;
-      const sharedSectionId = `sec_shared_${subjectKey}_${baseYear}`;
-
-      for (let i = 0; i < hlOnlyPeriods; i++) {
-        lessons.push({
-          id: lessonId++,
-          subject: subject.code,
-          studentGroup: hlStudentGroup,
-          teachingGroupId: repHLTg ? `tg_${repHLTg.id}` : null,
-          sectionId: hlOnlySectionId,
-          yearGroup: baseYear,
-          level: 'HL',
-          requiredCapacity: allHLStudentIds.length || 10,
-          teacherId: hlTeacherId,
-          timeslotId: null,
-          studentIds: allHLStudentIds,
-        });
-      }
-
-      for (let i = 0; i < sharedPeriods; i++) {
-        lessons.push({
-          id: lessonId++,
-          subject: subject.code,
-          studentGroup: slStudentGroup,
-          teachingGroupId: repSLTg ? `tg_${repSLTg.id}` : null,
-          sectionId: sharedSectionId,
-          yearGroup: baseYear,
-          level: 'SL',
-          requiredCapacity: allSharedStudentIds.length || 10,
-          teacherId: slTeacherId || hlTeacherId,
-          timeslotId: null,
-          studentIds: slOnlyStudentIds,
-        });
-      }
-
-      subject_requirements.push({
-        studentGroup: hlStudentGroup,
-        teachingGroupId: repHLTg ? `tg_${repHLTg.id}` : null,
-        sectionId: hlOnlySectionId,
+    for (let i = 0; i < periodsPerWeek; i++) {
+      lessons.push({
+        id: lessonId++,
         subject: subject.code,
-        minutesPerWeek: hlOnlyPeriods * periodDuration,
-      });
-      subject_requirements.push({
-        studentGroup: slStudentGroup,
-        teachingGroupId: repSLTg ? `tg_${repSLTg.id}` : null,
-        sectionId: sharedSectionId,
-        subject: subject.code,
-        minutesPerWeek: sharedPeriods * periodDuration,
-      });
-
-      for (const tg of hlTgs) {
-        for (const base44StudentId of (tg.student_ids || [])) {
-          const numericStudentId = studentMap.get(base44StudentId);
-          if (!numericStudentId) continue;
-          if (!studentSubjectChoices.find(c => c.studentId === numericStudentId && c.subjectId === subject.id)) {
-            studentSubjectChoices.push({ studentId: numericStudentId, subjectId: subject.id, subject: subject.code, level: 'HL', yearGroup: baseYear });
-          }
-        }
-      }
-      for (const tg of slTgs) {
-        for (const base44StudentId of (tg.student_ids || [])) {
-          const numericStudentId = studentMap.get(base44StudentId);
-          if (!numericStudentId) continue;
-          if (!studentSubjectChoices.find(c => c.studentId === numericStudentId && c.subjectId === subject.id)) {
-            studentSubjectChoices.push({ studentId: numericStudentId, subjectId: subject.id, subject: subject.code, level: 'SL', yearGroup: baseYear });
-          }
-        }
-      }
-
-      console.log(`[buildDPPayload] ${subject.code} (${baseYear}): ${hlOnlyPeriods} HL-only + ${sharedPeriods} shared | HL: ${allHLStudentIds.length}, SL-only: ${slOnlyStudentIds.length}`);
-    } else {
-      const tgsForLevel = hlTgs.length > 0 ? hlTgs : slTgs;
-      const level = hlTgs.length > 0 ? 'HL' : 'SL';
-      const allStudentIds = hlTgs.length > 0 ? allHLStudentIds : allSLStudentIds;
-      const singleLevelGroup = hlTgs.length > 0 ? hlStudentGroup : slStudentGroup;
-      const teacherId = hlTgs.length > 0 ? hlTeacherId : slTeacherId;
-      const repTg = tgsForLevel[0];
-      const minutesPerWeek = level === 'HL' ? (hoursHL * 60) : (hoursSL * 60);
-      const periodsPerWeek = Math.max(1, Math.round(minutesPerWeek / periodDuration));
-      const sectionId = `sec_${level.toLowerCase()}_${subjectKey}_${baseYear}`;
-
-      for (let i = 0; i < periodsPerWeek; i++) {
-        lessons.push({
-          id: lessonId++,
-          subject: subject.code,
-          studentGroup: singleLevelGroup,
-          teachingGroupId: repTg ? `tg_${repTg.id}` : null,
-          sectionId,
-          yearGroup: baseYear,
-          level,
-          requiredCapacity: allStudentIds.length || 10,
-          teacherId,
-          timeslotId: null,
-          studentIds: allStudentIds,
-        });
-      }
-
-      subject_requirements.push({
-        studentGroup: singleLevelGroup,
-        teachingGroupId: repTg ? `tg_${repTg.id}` : null,
+        studentGroup,
+        teachingGroupId: `tg_${tg.id}`,
         sectionId,
-        subject: subject.code,
-        minutesPerWeek,
+        yearGroup: tg.year_group,
+        level,
+        requiredCapacity: studentIds.length || 10,
+        teacherId,
+        timeslotId: null,
+        studentIds,
       });
-
-      for (const tg of tgsForLevel) {
-        for (const base44StudentId of (tg.student_ids || [])) {
-          const numericStudentId = studentMap.get(base44StudentId);
-          if (!numericStudentId) continue;
-          if (!studentSubjectChoices.find(c => c.studentId === numericStudentId && c.subjectId === subject.id)) {
-            studentSubjectChoices.push({ studentId: numericStudentId, subjectId: subject.id, subject: subject.code, level, yearGroup: baseYear });
-          }
-        }
-      }
-
-      console.log(`[buildDPPayload] ${subject.code} ${singleLevelGroup} (${level} only): ${periodsPerWeek} lessons | students: ${allStudentIds.length}`);
     }
+
+    subject_requirements.push({
+      studentGroup,
+      teachingGroupId: `tg_${tg.id}`,
+      sectionId,
+      subject: subject.code,
+      minutesPerWeek,
+    });
+
+    for (const base44StudentId of (tg.student_ids || [])) {
+      const numericStudentId = studentMap.get(base44StudentId);
+      if (!numericStudentId) continue;
+      if (!studentSubjectChoices.find(c => c.studentId === numericStudentId && c.teachingGroupId === `tg_${tg.id}`)) {
+        studentSubjectChoices.push({
+          studentId: numericStudentId,
+          subjectId: subject.id,
+          subject: subject.code,
+          level,
+          yearGroup: tg.year_group,
+          teachingGroupId: `tg_${tg.id}`,
+        });
+      }
+    }
+
+    console.log(`[buildDPPayload] ${subject.code} ${tg.name} (${level}): ${periodsPerWeek} lessons | students: ${studentIds.length}`);
   }
 
   console.log(`[buildDPPayload] lessons=${lessons.length}, teachers=${teacherList.length}`);
