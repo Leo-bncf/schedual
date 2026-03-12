@@ -230,28 +230,46 @@ function buildDPPayload({ schoolId, scheduleVersionId, school, students, teacher
   const studentSubjectChoices = [];
   let lessonId = 1;
 
+  // Merge only DP1+DP2 groups of the SAME LEVEL when the subject is explicitly marked shared.
+  // HL and SL always stay separate lesson streams.
+  const tgByBucket = new Map();
   for (const tg of dpGroups) {
     const subject = subjectMap.get(tg.subject_id);
     if (!subject) continue;
 
     const level = tg.level || 'HL';
-    const subjectKey = tg.subject_id.replace(/-/g, '');
-    const studentGroup = `sg_${tg.id}_${tg.year_group}_${level}_${subjectKey}`;
-    const sectionId = `sec_${tg.id}`;
+    const yearScope = subject.combine_dp1_dp2 ? 'DP1_DP2' : tg.year_group;
+    const bucketKey = `${tg.subject_id}__${yearScope}__${level}`;
+
+    if (!tgByBucket.has(bucketKey)) {
+      tgByBucket.set(bucketKey, []);
+    }
+    tgByBucket.get(bucketKey).push(tg);
+  }
+
+  for (const [bucketKey, bucketTgs] of tgByBucket.entries()) {
+    const [subjectId, yearScope, level] = bucketKey.split('__');
+    const subject = subjectMap.get(subjectId);
+    if (!subject) continue;
+
+    const subjectKey = subjectId.replace(/-/g, '');
+    const repTg = bucketTgs[0];
+    const studentGroup = `${yearScope}_${level}_${subjectKey}`;
+    const sectionId = `sec_${level.toLowerCase()}_${subjectKey}_${yearScope}`;
     const hoursForLevel = level === 'HL' ? Number(subject.hoursPerWeekHL || 0) : Number(subject.hoursPerWeekSL || 0);
-    const minutesPerWeek = Number(tg.minutes_per_week || 0) || (hoursForLevel * 60);
+    const minutesPerWeek = hoursForLevel * 60;
     const periodsPerWeek = Math.max(1, Math.round(minutesPerWeek / periodDuration));
-    const teacherId = tg.teacher_id ? (teacherMap.get(tg.teacher_id) ?? null) : null;
-    const studentIds = [...new Set((tg.student_ids || []).map(base44StudentId => studentMap.get(base44StudentId)).filter(Boolean))];
+    const teacherId = bucketTgs.reduce((acc, tg) => acc || (tg.teacher_id ? (teacherMap.get(tg.teacher_id) ?? null) : null), null);
+    const studentIds = [...new Set(bucketTgs.flatMap(tg => (tg.student_ids || []).map(base44StudentId => studentMap.get(base44StudentId)).filter(Boolean)))];
 
     for (let i = 0; i < periodsPerWeek; i++) {
       lessons.push({
         id: lessonId++,
         subject: subject.code,
         studentGroup,
-        teachingGroupId: `tg_${tg.id}`,
+        teachingGroupId: repTg ? `tg_${repTg.id}` : null,
         sectionId,
-        yearGroup: tg.year_group,
+        yearGroup: yearScope,
         level,
         requiredCapacity: studentIds.length || 10,
         teacherId,
@@ -262,28 +280,30 @@ function buildDPPayload({ schoolId, scheduleVersionId, school, students, teacher
 
     subject_requirements.push({
       studentGroup,
-      teachingGroupId: `tg_${tg.id}`,
+      teachingGroupId: repTg ? `tg_${repTg.id}` : null,
       sectionId,
       subject: subject.code,
       minutesPerWeek,
     });
 
-    for (const base44StudentId of (tg.student_ids || [])) {
-      const numericStudentId = studentMap.get(base44StudentId);
-      if (!numericStudentId) continue;
-      if (!studentSubjectChoices.find(c => c.studentId === numericStudentId && c.teachingGroupId === `tg_${tg.id}`)) {
-        studentSubjectChoices.push({
-          studentId: numericStudentId,
-          subjectId: subject.id,
-          subject: subject.code,
-          level,
-          yearGroup: tg.year_group,
-          teachingGroupId: `tg_${tg.id}`,
-        });
+    for (const tg of bucketTgs) {
+      for (const base44StudentId of (tg.student_ids || [])) {
+        const numericStudentId = studentMap.get(base44StudentId);
+        if (!numericStudentId) continue;
+        if (!studentSubjectChoices.find(c => c.studentId === numericStudentId && c.subjectId === subject.id && c.level === level)) {
+          studentSubjectChoices.push({
+            studentId: numericStudentId,
+            subjectId: subject.id,
+            subject: subject.code,
+            level,
+            yearGroup: yearScope,
+            teachingGroupId: repTg ? `tg_${repTg.id}` : null,
+          });
+        }
       }
     }
 
-    console.log(`[buildDPPayload] ${subject.code} ${tg.name} (${level}): ${periodsPerWeek} lessons | students: ${studentIds.length}`);
+    console.log(`[buildDPPayload] ${subject.code} ${yearScope} (${level}): ${periodsPerWeek} lessons | merged groups: ${bucketTgs.length} | students: ${studentIds.length}`);
   }
 
   console.log(`[buildDPPayload] lessons=${lessons.length}, teachers=${teacherList.length}`);
