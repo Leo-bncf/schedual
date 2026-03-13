@@ -224,6 +224,7 @@ Deno.serve(async (req) => {
     });
 
     const requestedTeachingGroupIds = Array.isArray(body.teaching_group_ids) ? body.teaching_group_ids : [];
+    const sampleLimit = Number(body.sample_limit || 20);
     const filteredLessons = requestedTeachingGroupIds.length > 0
       ? payload.lessons.filter((lesson) => requestedTeachingGroupIds.includes(lesson.teachingGroupId))
       : payload.lessons;
