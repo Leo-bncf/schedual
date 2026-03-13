@@ -187,23 +187,23 @@ function buildDPPayload({ schoolId, scheduleVersionId, school, students, teacher
 Deno.serve(async (req) => {
   try {
     const base44 = createClientFromRequest(req);
-    const user = await base44.auth.me();
-
-    if (!user?.school_id) {
-      return Response.json({ error: 'Unauthorized' }, { status: 401 });
-    }
+    const user = await base44.auth.me().catch(() => null);
 
     const body = await req.json().catch(() => ({}));
-    const schoolId = user.school_id;
+    const schoolId = body.school_id || user?.school_id;
+
+    if (!schoolId) {
+      return Response.json({ error: 'school_id is required' }, { status: 400 });
+    }
 
     const [schools, students, teachers, subjects, rooms, teachingGroups, scheduleVersions] = await Promise.all([
-      base44.entities.School.filter({ id: schoolId }),
-      base44.entities.Student.filter({ school_id: schoolId }),
-      base44.entities.Teacher.filter({ school_id: schoolId }),
-      base44.entities.Subject.filter({ school_id: schoolId }),
-      base44.entities.Room.filter({ school_id: schoolId }),
-      base44.entities.TeachingGroup.filter({ school_id: schoolId }),
-      base44.entities.ScheduleVersion.filter({ school_id: schoolId }, '-created_date', 10),
+      base44.asServiceRole.entities.School.filter({ id: schoolId }),
+      base44.asServiceRole.entities.Student.filter({ school_id: schoolId }),
+      base44.asServiceRole.entities.Teacher.filter({ school_id: schoolId }),
+      base44.asServiceRole.entities.Subject.filter({ school_id: schoolId }),
+      base44.asServiceRole.entities.Room.filter({ school_id: schoolId }),
+      base44.asServiceRole.entities.TeachingGroup.filter({ school_id: schoolId }),
+      base44.asServiceRole.entities.ScheduleVersion.filter({ school_id: schoolId }, '-created_date', 10),
     ]);
 
     const school = schools[0];
