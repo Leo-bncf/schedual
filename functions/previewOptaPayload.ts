@@ -223,6 +223,20 @@ Deno.serve(async (req) => {
       teachingGroups,
     });
 
+    const requestedTeachingGroupIds = Array.isArray(body.teaching_group_ids) ? body.teaching_group_ids : [];
+    const filteredLessons = requestedTeachingGroupIds.length > 0
+      ? payload.lessons.filter((lesson) => requestedTeachingGroupIds.includes(lesson.teachingGroupId))
+      : payload.lessons;
+    const filteredRequirements = requestedTeachingGroupIds.length > 0
+      ? payload.subject_requirements.filter((item) => requestedTeachingGroupIds.includes(item.teachingGroupId))
+      : payload.subject_requirements;
+    const filteredChoices = requestedTeachingGroupIds.length > 0
+      ? payload.studentSubjectChoices.filter((item) => requestedTeachingGroupIds.includes(item.teachingGroupId))
+      : payload.studentSubjectChoices;
+    const filteredTeachingGroups = requestedTeachingGroupIds.length > 0
+      ? payload.teaching_groups.filter((item) => requestedTeachingGroupIds.includes(item.id))
+      : payload.teaching_groups;
+
     return Response.json({
       ok: true,
       scheduleVersionId,
@@ -235,6 +249,13 @@ Deno.serve(async (req) => {
         subject_requirements: payload.subject_requirements.length,
         studentSubjectChoices: payload.studentSubjectChoices.length,
       },
+      filtered: requestedTeachingGroupIds.length > 0 ? {
+        teaching_group_ids: requestedTeachingGroupIds,
+        teaching_groups: filteredTeachingGroups,
+        lessons: filteredLessons,
+        subject_requirements: filteredRequirements,
+        studentSubjectChoices: filteredChoices,
+      } : null,
       payload,
     });
   } catch (error) {
