@@ -264,6 +264,32 @@ Deno.serve(async (req) => {
         })
       : null;
 
+    const payloadSample = requestedTeachingGroupIds.length > 0 ? null : {
+      payloadType: payload.payloadType,
+      programType: payload.programType,
+      schoolId: payload.schoolId,
+      scheduleVersionId: payload.scheduleVersionId,
+      timezone: payload.timezone,
+      calendar: payload.calendar,
+      scheduleSettings: payload.scheduleSettings,
+      counts: {
+        teachers: payload.teachers.length,
+        rooms: payload.rooms.length,
+        subjects: payload.subjects.length,
+        teaching_groups: payload.teaching_groups.length,
+        lessons: payload.lessons.length,
+        subject_requirements: payload.subject_requirements.length,
+        studentSubjectChoices: payload.studentSubjectChoices.length,
+      },
+      teachers: payload.teachers.slice(0, sampleLimit),
+      rooms: payload.rooms.slice(0, sampleLimit),
+      subjects: payload.subjects.slice(0, sampleLimit),
+      teaching_groups: payload.teaching_groups.slice(0, sampleLimit),
+      lessons: payload.lessons.slice(0, sampleLimit),
+      subject_requirements: payload.subject_requirements.slice(0, sampleLimit),
+      studentSubjectChoices: payload.studentSubjectChoices.slice(0, sampleLimit),
+    };
+
     return Response.json({
       ok: true,
       scheduleVersionId,
@@ -284,7 +310,7 @@ Deno.serve(async (req) => {
         subject_requirements: filteredRequirements,
         studentSubjectChoices: filteredChoices,
       } : null,
-      payload: requestedTeachingGroupIds.length > 0 ? null : payload,
+      payload: payloadSample,
     });
   } catch (error) {
     console.error('[previewOptaPayload] Error:', error);
