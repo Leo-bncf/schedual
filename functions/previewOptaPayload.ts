@@ -277,6 +277,7 @@ Deno.serve(async (req) => {
       },
       filtered: requestedTeachingGroupIds.length > 0 ? {
         teaching_group_ids: requestedTeachingGroupIds,
+        group_summaries: filteredGroupSummaries,
         teaching_groups: filteredTeachingGroups,
         lessons: filteredLessons,
         subject_requirements: filteredRequirements,
