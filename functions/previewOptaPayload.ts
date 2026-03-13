@@ -283,7 +283,7 @@ Deno.serve(async (req) => {
         subject_requirements: filteredRequirements,
         studentSubjectChoices: filteredChoices,
       } : null,
-      payload,
+      payload: requestedTeachingGroupIds.length > 0 ? null : payload,
     });
   } catch (error) {
     console.error('[previewOptaPayload] Error:', error);
