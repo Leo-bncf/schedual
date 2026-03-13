@@ -236,6 +236,32 @@ Deno.serve(async (req) => {
     const filteredTeachingGroups = requestedTeachingGroupIds.length > 0
       ? payload.teaching_groups.filter((item) => requestedTeachingGroupIds.includes(item.id))
       : payload.teaching_groups;
+    const filteredGroupSummaries = requestedTeachingGroupIds.length > 0
+      ? requestedTeachingGroupIds.map((groupId) => {
+          const lessonsForGroup = filteredLessons.filter((lesson) => lesson.teachingGroupId === groupId);
+          const requirement = filteredRequirements.find((item) => item.teachingGroupId === groupId) || null;
+          const choicesForGroup = filteredChoices.filter((item) => item.teachingGroupId === groupId);
+          const tgMeta = filteredTeachingGroups.find((item) => item.id === groupId) || null;
+          const teacher = lessonsForGroup[0]?.teacherId ? payload.teachers.find((t) => t.id === lessonsForGroup[0].teacherId) : null;
+          const subject = lessonsForGroup[0]?.subject ? payload.subjects.find((s) => s.code === lessonsForGroup[0].subject) : null;
+          return {
+            teachingGroupId: groupId,
+            subject: subject?.code || lessonsForGroup[0]?.subject || null,
+            subjectName: subject?.name || null,
+            yearGroup: lessonsForGroup[0]?.yearGroup || null,
+            level: lessonsForGroup[0]?.level || tgMeta?.level || null,
+            teacherId: lessonsForGroup[0]?.teacherId || null,
+            teacherName: teacher?.name || null,
+            requiredCapacity: lessonsForGroup[0]?.requiredCapacity || 0,
+            studentIdsCount: lessonsForGroup[0]?.studentIds?.length || 0,
+            studentIds: lessonsForGroup[0]?.studentIds || [],
+            lessonsCount: lessonsForGroup.length,
+            requirementMinutes: requirement?.minutesPerWeek || 0,
+            sectionId: lessonsForGroup[0]?.sectionId || tgMeta?.section_id || null,
+            studentGroup: lessonsForGroup[0]?.studentGroup || tgMeta?.student_group || null,
+          };
+        })
+      : null;
 
     return Response.json({
       ok: true,
