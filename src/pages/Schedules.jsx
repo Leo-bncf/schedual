@@ -162,7 +162,11 @@ export default function Schedules() {
 
   const updateSlotMutation = useMutation({
     mutationFn: async ({ id, data }) => {
-      return base44.entities.ScheduleSlot.update(id, data);
+      const response = await base44.functions.invoke('updateScheduleSlotValidated', {
+        slot_id: id,
+        updates: data,
+      });
+      return response.data;
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['scheduleSlots'] });
@@ -838,18 +842,18 @@ export default function Schedules() {
                         if (confirm(`Are you sure you want to move this lesson to ${day}, Period ${uiRow}?`)) {
                           updateSlotMutation.mutate({
                             id: actionData.sourceSlotId,
-                            data: { day, period: uiRow }
+                            data: { day, period: uiRow, timeslot_id: actionData.targetTimeslotId }
                           });
                         }
                       } else if (actionData.action === 'swap') {
                         if (confirm(`Are you sure you want to swap these lessons?`)) {
                           updateSlotMutation.mutate({
                             id: actionData.sourceSlotId,
-                            data: { day: actionData.targetDay, period: actionData.targetPeriod }
+                            data: { day: actionData.targetDay, period: actionData.targetPeriod, timeslot_id: actionData.targetTimeslotId }
                           });
                           updateSlotMutation.mutate({
                             id: actionData.targetSlotId,
-                            data: { day: actionData.sourceDay, period: actionData.sourcePeriod }
+                            data: { day: actionData.sourceDay, period: actionData.sourcePeriod, timeslot_id: actionData.sourceTimeslotId || null }
                           });
                         }
                       }

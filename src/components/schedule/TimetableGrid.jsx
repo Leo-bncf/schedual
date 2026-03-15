@@ -107,13 +107,27 @@ export default function TimetableGrid({
     // CRITICAL: Store EVERY timeslot by ID (string key) → position number
     Object.entries(timeslotsByDay).forEach(([day, daySlots]) => {
       daySlots.forEach((ts, idx) => {
-        // Key is string ID, value is 1-based position within that day
         map[String(ts.id)] = idx + 1;
       });
     });
     
     console.log('[TimetableGrid] Built timeslotToPosition map with', Object.keys(map).length, 'entries. Sample:', Object.entries(map).slice(0, 10));
     
+    return map;
+  }, [timeslots]);
+
+  const positionToTimeslotId = React.useMemo(() => {
+    const map = {};
+    DAYS.forEach(day => {
+      const dayUpper = day.toUpperCase();
+      map[day] = (timeslots || [])
+        .filter(t => t.dayOfWeek === dayUpper)
+        .sort((a, b) => String(a.startTime || '').localeCompare(String(b.startTime || '')))
+        .reduce((acc, ts, idx) => {
+          acc[idx + 1] = ts.id;
+          return acc;
+        }, {});
+    });
     return map;
   }, [timeslots]);
   
@@ -425,8 +439,10 @@ export default function TimetableGrid({
                             sourceSlotId, 
                             sourceDay,
                             sourcePeriod,
+                            sourceTimeslotId: e.dataTransfer.getData('sourceTimeslotId'),
                             targetDay: day,
-                            targetPeriod: uiRow
+                            targetPeriod: uiRow,
+                            targetTimeslotId: positionToTimeslotId[day]?.[uiRow] || null
                           });
                         }}
                       />
@@ -464,8 +480,11 @@ export default function TimetableGrid({
                             targetSlotId: targetSlot?.id,
                             sourceDay,
                             sourcePeriod,
+                            sourceTimeslotId: e.dataTransfer.getData('sourceTimeslotId'),
                             targetDay: day,
-                            targetPeriod: uiRow
+                            targetPeriod: uiRow,
+                            targetTimeslotId: positionToTimeslotId[day]?.[uiRow] || null,
+                            targetSlotTimeslotId: targetSlot?.timeslot_id || null
                           });
                         }
                       }}
@@ -537,6 +556,7 @@ export default function TimetableGrid({
                               e.dataTransfer.setData('slotId', slot.id);
                               e.dataTransfer.setData('sourceDay', day);
                               e.dataTransfer.setData('sourcePeriod', String(uiRow));
+                              e.dataTransfer.setData('sourceTimeslotId', String(slot.timeslot_id || ''));
                             }}
                             className={`cursor-move transition-all overflow-hidden group ${globalView ? 'w-[calc(50%-4px)] lg:w-[calc(33.33%-4px)] rounded hover:ring-2 hover:ring-blue-400' : 'hover:shadow-lg hover:scale-105 rounded-lg'}`}
                             onClick={() => handleSlotClick(slot)}
