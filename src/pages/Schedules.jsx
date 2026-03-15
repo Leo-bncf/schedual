@@ -40,6 +40,7 @@ import {
   Play
 } from 'lucide-react';
 import TimetableGrid from '../components/schedule/TimetableGrid';
+import ExportTimetableButton from '../components/schedule/ExportTimetableButton';
 
 export default function Schedules() {
   const [isDialogOpen, setIsDialogOpen] = useState(false);
@@ -916,7 +917,14 @@ export default function Schedules() {
                             <h3 className="text-sm font-semibold text-slate-900">{selectedStudent.full_name}</h3>
                             <p className="text-xs text-slate-500">{selectedStudent.year_group} • {selectedStudent.email}</p>
                           </div>
-                          <Badge variant="outline" className="text-xs">{selectedStudent.ib_programme || 'IB'}</Badge>
+                          <div className="flex items-center gap-2">
+                            <Badge variant="outline" className="text-xs">{selectedStudent.ib_programme || 'IB'}</Badge>
+                            <ExportTimetableButton
+                              type="student"
+                              entityId={selectedStudent.id}
+                              scheduleVersionId={selectedVersion?.id}
+                            />
+                          </div>
                         </div>
                       </div>
 
@@ -1011,11 +1019,18 @@ export default function Schedules() {
                             <h3 className="text-sm font-semibold text-slate-900">{selectedTeacher.full_name}</h3>
                             <p className="text-xs text-slate-500">{selectedTeacher.email}</p>
                           </div>
-                          {selectedTeacher.max_hours_per_week && (
-                            <Badge variant="outline" className="text-xs">
-                              Max {selectedTeacher.max_hours_per_week}h/week
-                            </Badge>
-                          )}
+                          <div className="flex items-center gap-2">
+                            {selectedTeacher.max_hours_per_week && (
+                              <Badge variant="outline" className="text-xs">
+                                Max {selectedTeacher.max_hours_per_week}h/week
+                              </Badge>
+                            )}
+                            <ExportTimetableButton
+                              type="teacher"
+                              entityId={selectedTeacher.id}
+                              scheduleVersionId={selectedVersion?.id}
+                            />
+                          </div>
                         </div>
                       </div>
 
