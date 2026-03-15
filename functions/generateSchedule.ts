@@ -296,20 +296,28 @@ function buildDPPayload({ schoolId, scheduleVersionId, school, students, teacher
       minutesPerWeek,
     });
 
-    for (const tg of bucketTgs) {
-      for (const base44StudentId of (tg.student_ids || [])) {
-        const numericStudentId = studentMap.get(base44StudentId);
-        if (!numericStudentId) continue;
-        if (!studentSubjectChoices.find(c => c.studentId === numericStudentId && c.subjectId === subject.id && c.yearGroup === yearScope && c.level === level)) {
-          studentSubjectChoices.push({
-            studentId: numericStudentId,
-            subjectId: subject.id,
-            subject: subject.code,
-            level,
-            yearGroup: yearScope,
-            teachingGroupId,
-          });
-        }
+    // Build studentSubjectChoices from the SAME filtered set used in studentIds
+    // so that lessons.studentIds always exactly matches studentSubjectChoices entries.
+    for (const base44StudentId of rawStudentIds) {
+      const student = dpStudents.find(s => s.id === base44StudentId);
+      if (!student) continue;
+      const hasChoice = (student.subject_choices || []).some(c =>
+        c.subject_id === subjectId &&
+        String(c.level || '').toUpperCase() === level.toUpperCase() &&
+        validYearGroups.includes(student.year_group)
+      );
+      if (!hasChoice) continue;
+      const numericStudentId = studentMap.get(base44StudentId);
+      if (!numericStudentId) continue;
+      if (!studentSubjectChoices.find(c => c.studentId === numericStudentId && c.subjectId === subject.id && c.yearGroup === yearScope && c.level === level)) {
+        studentSubjectChoices.push({
+          studentId: numericStudentId,
+          subjectId: subject.id,
+          subject: subject.code,
+          level,
+          yearGroup: yearScope,
+          teachingGroupId,
+        });
       }
     }
 
