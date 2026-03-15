@@ -527,7 +527,7 @@ export default function TimetableGrid({
                       }}
                     >
                       {/* Show first N lessons as cards */}
-                      {visibleSlots.slice(0, displayCount).map(slot => {
+                      {deduplicatedSlots.slice(0, displayCount).map(slot => {
                         const span = getSlotSpan(day, uiRow, slot.id);
                         const room = getRoomInfo(slot.room_id);
                         
