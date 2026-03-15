@@ -18,7 +18,6 @@ export default function StudentScheduleView({ students, slots, groups, subjects,
   const [serverSlots, setServerSlots] = React.useState(null);
   const [diagnostics, setDiagnostics] = React.useState(null);
   const [loadingServerSlots, setLoadingServerSlots] = React.useState(false);
-  const [useServerSlots, setUseServerSlots] = React.useState(true); // Default to server-side JOIN
   const [isFullscreen, setIsFullscreen] = React.useState(false);
   const [studentSearchQuery, setStudentSearchQuery] = React.useState("");
   
@@ -109,7 +108,7 @@ export default function StudentScheduleView({ students, slots, groups, subjects,
 
   // SERVER-SIDE JOIN: Load slots via backend API (SOURCE OF TRUTH)
   React.useEffect(() => {
-    if (!selectedStudent || !scheduleVersionId || !useServerSlots) {
+    if (!selectedStudent || !scheduleVersionId) {
       setServerSlots(null);
       setDiagnostics(null);
       return;
@@ -154,153 +153,7 @@ export default function StudentScheduleView({ students, slots, groups, subjects,
     loadServerSlots();
   }, [selectedStudent?.id, scheduleVersionId, useServerSlots]);
   
-  const getStudentSlots = (studentId) => {
-    const student = students.find(s => s.id === studentId);
-    const assignedGroupIds = Array.isArray(student?.assigned_groups) ? student.assigned_groups : [];
-    const subjectChoices = Array.isArray(student?.subject_choices) ? student.subject_choices : [];
-    
-    const matchedSlots = slots.filter(slot => {
-      // PYP/MYP: match by classgroup_id
-      if (slot.classgroup_id && student?.classgroup_id) {
-        return slot.classgroup_id === student.classgroup_id;
-      }
-      // DP test slots: include DP1/DP2 test slots by year_group marker in notes
-      if (slot?.notes?.includes('Test') && (slot?.notes?.includes('DP1') || slot?.notes?.includes('DP2'))) {
-        return student?.year_group && slot.notes.includes(student.year_group);
-      }
-      // Student-specific slots (e.g., individual lunch breaks)
-      if (slot.student_id) {
-        return slot.student_id === student?.id;
-      }
-      if (!slot.teaching_group_id) {
-        return false;
-      }
-
-      if (assignedGroupIds.includes(slot.teaching_group_id)) {
-        return true;
-      }
-
-      const slotGroup = groups.find(g => g.id === slot.teaching_group_id);
-      const slotSubject = slot.subject_id ? subjects.find(s => s.id === slot.subject_id) : (slotGroup?.subject_id ? subjects.find(s => s.id === slotGroup.subject_id) : null);
-      if (!slotGroup || !slotSubject?.combine_dp1_dp2) {
-        return false;
-      }
-
-      const subjectChoice = subjectChoices.find(choice => choice.subject_id === slotSubject.id);
-      if (!subjectChoice) {
-        return false;
-      }
-
-      return String(subjectChoice.level || '').toUpperCase().trim() === String(slotGroup.level || '').toUpperCase().trim();
-    }).filter((slot, index, self) => index === self.findIndex(s => s.id === slot.id));
-
-    // ENHANCED DEBUG: Expected vs actual periods by teaching group and subject
-    const expectedByTG = {};
-    const actualByTG = {};
-    const expectedBySubject = {};
-    const actualBySubject = {};
-    
-    // Calculate expected periods from assigned teaching groups
-    assignedGroupIds.forEach(tgId => {
-      const group = groups.find(g => g.id === tgId);
-      if (!group) return;
-      
-      const subject = subjects.find(s => s.id === group.subject_id);
-      const subjectCode = subject?.code || subject?.name || 'Unknown';
-      
-      // Get expected periods for this TG
-      const periodDuration = scheduleSettings?.periodDurationMinutes || scheduleSettings?.period_duration_minutes || 60;
-      let expectedPeriods = 0;
-      
-      if (group.periods_per_week) {
-        expectedPeriods = group.periods_per_week;
-      } else if (group.minutes_per_week) {
-        expectedPeriods = Math.ceil(group.minutes_per_week / periodDuration);
-      } else if (group.hours_per_week) {
-        expectedPeriods = Math.ceil((group.hours_per_week * 60) / periodDuration);
-      } else {
-        expectedPeriods = 0;
-      }
-      
-      expectedByTG[tgId] = expectedPeriods;
-      expectedBySubject[subjectCode] = (expectedBySubject[subjectCode] || 0) + expectedPeriods;
-      actualByTG[tgId] = 0;
-    });
-    
-    // Count actual slots per TG and subject
-    matchedSlots.forEach(s => {
-      const group = s.teaching_group_id ? groups.find(g => g.id === s.teaching_group_id) : null;
-      const subject = group ? subjects.find(sub => sub.id === group.subject_id) : 
-                      s.subject_id ? subjects.find(sub => sub.id === s.subject_id) : null;
-      const subjectCode = subject?.code || subject?.name || 'Unknown';
-      
-      if (s.teaching_group_id) {
-        actualByTG[s.teaching_group_id] = (actualByTG[s.teaching_group_id] || 0) + 1;
-      }
-      actualBySubject[subjectCode] = (actualBySubject[subjectCode] || 0) + 1;
-    });
-
-    // Build mismatch report
-    const mismatchesByTG = [];
-    const mismatchesBySubject = [];
-    
-    Object.keys(expectedByTG).forEach(tgId => {
-      const expected = expectedByTG[tgId];
-      const actual = actualByTG[tgId] || 0;
-      if (expected !== actual) {
-        const group = groups.find(g => g.id === tgId);
-        const subject = group ? subjects.find(s => s.id === group.subject_id) : null;
-        mismatchesByTG.push({
-          tg_id: tgId,
-          name: group?.name || 'Unknown',
-          subject_code: subject?.code || subject?.name || 'Unknown',
-          level: group?.level || null,
-          expected,
-          actual,
-          diff: actual - expected
-        });
-      }
-    });
-    
-    Object.keys(expectedBySubject).forEach(subjectCode => {
-      const expected = expectedBySubject[subjectCode];
-      const actual = actualBySubject[subjectCode] || 0;
-      if (expected !== actual) {
-        mismatchesBySubject.push({
-          subject_code: subjectCode,
-          expected,
-          actual,
-          diff: actual - expected
-        });
-      }
-    });
-
-    console.log(`[StudentScheduleView] 📊 Student ${student?.full_name} (${student?.year_group}):`, {
-      assigned_groups_count: assignedGroupIds.length,
-      assigned_groups: assignedGroupIds,
-      total_slots_displayed: matchedSlots.length,
-      expectedByTG,
-      actualByTG,
-      expectedBySubject,
-      actualBySubject,
-      mismatchesByTG,
-      mismatchesBySubject
-    });
-    
-    // Log critical mismatches prominently
-    if (mismatchesByTG.length > 0) {
-      console.warn(`⚠️ ${student?.full_name}: ${mismatchesByTG.length} teaching groups with hour mismatches:`, mismatchesByTG);
-    }
-    if (mismatchesBySubject.length > 0) {
-      console.warn(`⚠️ ${student?.full_name}: ${mismatchesBySubject.length} subjects with hour mismatches:`, mismatchesBySubject);
-    }
-
-    return matchedSlots;
-  };
-
-  // Use server-side slots if available, fallback to client-side join
-  const studentSlots = useServerSlots && serverSlots ? serverSlots : 
-                       selectedStudent ? getStudentSlots(selectedStudent.id) : [];
+  const studentSlots = serverSlots || [];
 
   // NORMALIZE EVENTS: Group by day and uiRow, create conflict-groups for overlaps
   const { normalizedEvents, overlaps } = React.useMemo(() => {
@@ -487,14 +340,6 @@ export default function StudentScheduleView({ students, slots, groups, subjects,
           <CardContent className="p-4">
             <div className="flex items-center justify-between mb-2">
               <div className="font-bold text-blue-900">🔍 Slot Loading Diagnostics</div>
-              <Button 
-                size="sm" 
-                variant="outline"
-                onClick={() => setUseServerSlots(!useServerSlots)}
-                className="text-xs"
-              >
-                {useServerSlots ? '🟢 Server-side JOIN' : '🔴 Client-side JOIN'}
-              </Button>
             </div>
             <div className="grid grid-cols-3 gap-4 text-sm">
               <div>
@@ -530,7 +375,7 @@ export default function StudentScheduleView({ students, slots, groups, subjects,
             <div className="mt-3 text-xs text-blue-700">
               <div><strong>Schedule Version:</strong> {scheduleVersionId}</div>
               <div><strong>Assigned Groups:</strong> {diagnostics.assigned_groups_count}</div>
-              <div><strong>Loading Method:</strong> {useServerSlots ? 'Server-side API (getStudentScheduleSlots)' : 'Client-side JOIN'}</div>
+              <div><strong>Loading Method:</strong> Server-side API (getStudentScheduleSlots)</div>
             </div>
           </CardContent>
         </Card>
