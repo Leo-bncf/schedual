@@ -258,11 +258,7 @@ function createTimetablePdf({ title, subtitle, school, scheduleVersion, slots, t
 Deno.serve(async (req) => {
   try {
     const base44 = createClientFromRequest(req);
-    const user = await base44.auth.me();
-
-    if (!user?.school_id) {
-      return Response.json({ error: 'Unauthorized' }, { status: 401 });
-    }
+    const user = await base44.auth.me().catch(() => null);
 
     const body = await req.json().catch(() => ({}));
     const { type, student_id, teacher_id, schedule_version_id } = body;
@@ -271,15 +267,19 @@ Deno.serve(async (req) => {
       return Response.json({ error: 'type, schedule_version_id and target id are required' }, { status: 400 });
     }
 
-    const schoolId = user.school_id;
+    const schoolId = user?.school_id || body.school_id;
+    if (!schoolId) {
+      return Response.json({ error: 'Unauthorized' }, { status: 401 });
+    }
 
+    const entityApi = user?.school_id ? base44.entities : base44.asServiceRole.entities;
     const [schools, scheduleVersions, subjects, teachers, rooms, groups] = await Promise.all([
-      base44.entities.School.filter({ id: schoolId }),
-      base44.entities.ScheduleVersion.filter({ id: schedule_version_id }),
-      base44.entities.Subject.filter({ school_id: schoolId }),
-      base44.entities.Teacher.filter({ school_id: schoolId }),
-      base44.entities.Room.filter({ school_id: schoolId }),
-      base44.entities.TeachingGroup.filter({ school_id: schoolId }),
+      entityApi.School.filter({ id: schoolId }),
+      entityApi.ScheduleVersion.filter({ id: schedule_version_id }),
+      entityApi.Subject.filter({ school_id: schoolId }),
+      entityApi.Teacher.filter({ school_id: schoolId }),
+      entityApi.Room.filter({ school_id: schoolId }),
+      entityApi.TeachingGroup.filter({ school_id: schoolId }),
     ]);
 
     const school = schools[0];
@@ -297,7 +297,7 @@ Deno.serve(async (req) => {
     let filename = `timetable-${schedule_version_id}.pdf`;
 
     if (type === 'student') {
-      const [student] = await base44.entities.Student.filter({ id: student_id });
+      const [student] = await entityApi.Student.filter({ id: student_id });
       if (!student) {
         return Response.json({ error: 'Student not found' }, { status: 404 });
       }
@@ -313,12 +313,12 @@ Deno.serve(async (req) => {
     }
 
     if (type === 'teacher') {
-      const [teacher] = await base44.entities.Teacher.filter({ id: teacher_id });
+      const [teacher] = await entityApi.Teacher.filter({ id: teacher_id });
       if (!teacher) {
         return Response.json({ error: 'Teacher not found' }, { status: 404 });
       }
 
-      slots = await base44.entities.ScheduleSlot.filter({
+      slots = await entityApi.ScheduleSlot.filter({
         school_id: schoolId,
         schedule_version: schedule_version_id,
         teacher_id,
