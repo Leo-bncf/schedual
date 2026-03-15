@@ -48,6 +48,9 @@ export default function Schedules() {
   const [genStatus, setGenStatus] = useState('idle'); // idle | generating | success | error
   const [genMessage, setGenMessage] = useState('');
   const [genError, setGenError] = useState('');
+  const [isPayloadDialogOpen, setIsPayloadDialogOpen] = useState(false);
+  const [payloadPreview, setPayloadPreview] = useState(null);
+  const [isPayloadLoading, setIsPayloadLoading] = useState(false);
   const [selectedStudentId, setSelectedStudentId] = useState(null);
   const [searchStudent, setSearchStudent] = useState('');
   const [selectedTeacherId, setSelectedTeacherId] = useState(null);
@@ -183,6 +186,25 @@ export default function Schedules() {
       toast.error("Failed to delete version: " + err.message);
     }
   });
+
+  const handlePreviewPayload = async () => {
+    if (!selectedVersion || !schoolId) return;
+
+    setIsPayloadLoading(true);
+    try {
+      const response = await base44.functions.invoke('previewOptaPayload', {
+        school_id: schoolId,
+        schedule_version_id: selectedVersion.id,
+        sample_limit: 50,
+      });
+      setPayloadPreview(response.data || null);
+      setIsPayloadDialogOpen(true);
+    } catch (error) {
+      toast.error(error?.message || 'Failed to load payload preview');
+    } finally {
+      setIsPayloadLoading(false);
+    }
+  };
 
   const handleGenerateSchedule = async () => {
     if (!selectedVersion) return;
@@ -623,17 +645,32 @@ export default function Schedules() {
               <p className="text-slate-500 max-w-sm mb-8">
                 Configure your constraints and generate an optimized timetable using our AI engine.
               </p>
-              <Button
-                onClick={handleGenerateSchedule}
-                disabled={genStatus === 'generating'}
-                className="bg-blue-600 hover:bg-blue-700 h-12 px-8 text-base shadow-md hover:shadow-lg transition-all"
-              >
-                {genStatus === 'generating' ? (
-                  <><Loader2 className="w-5 h-5 mr-2 animate-spin" />Generating...</>
-                ) : (
-                  <><Play className="w-5 h-5 mr-2 fill-current" />Start Generation</>
-                )}
-              </Button>
+              <div className="flex flex-col sm:flex-row gap-3">
+                <Button
+                  type="button"
+                  variant="outline"
+                  onClick={handlePreviewPayload}
+                  disabled={isPayloadLoading}
+                  className="h-12 px-8 text-base"
+                >
+                  {isPayloadLoading ? (
+                    <><Loader2 className="w-5 h-5 mr-2 animate-spin" />Loading Payload...</>
+                  ) : (
+                    'Preview Payload'
+                  )}
+                </Button>
+                <Button
+                  onClick={handleGenerateSchedule}
+                  disabled={genStatus === 'generating'}
+                  className="bg-blue-600 hover:bg-blue-700 h-12 px-8 text-base shadow-md hover:shadow-lg transition-all"
+                >
+                  {genStatus === 'generating' ? (
+                    <><Loader2 className="w-5 h-5 mr-2 animate-spin" />Generating...</>
+                  ) : (
+                    <><Play className="w-5 h-5 mr-2 fill-current" />Start Generation</>
+                  )}
+                </Button>
+              </div>
               {genStatus === 'success' && genMessage && (
                 <p className="text-sm text-emerald-600 mt-3 font-medium">{genMessage}</p>
               )}
@@ -1230,6 +1267,31 @@ export default function Schedules() {
               ) : (
                 'Create Version'
               )}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      <Dialog open={isPayloadDialogOpen} onOpenChange={setIsPayloadDialogOpen}>
+        <DialogContent className="max-w-5xl max-h-[85vh] overflow-hidden flex flex-col">
+          <DialogHeader>
+            <DialogTitle>Payload Preview</DialogTitle>
+            <DialogDescription>
+              This is the sampled payload structure that will be sent to the solver for the selected version.
+            </DialogDescription>
+          </DialogHeader>
+          <div className="grid grid-cols-2 md:grid-cols-4 gap-3 py-2">
+            <div className="rounded-lg border p-3 bg-slate-50"><div className="text-xs text-slate-500">Teachers</div><div className="text-lg font-semibold">{payloadPreview?.summary?.teachers ?? 0}</div></div>
+            <div className="rounded-lg border p-3 bg-slate-50"><div className="text-xs text-slate-500">Rooms</div><div className="text-lg font-semibold">{payloadPreview?.summary?.rooms ?? 0}</div></div>
+            <div className="rounded-lg border p-3 bg-slate-50"><div className="text-xs text-slate-500">Groups</div><div className="text-lg font-semibold">{payloadPreview?.summary?.teaching_groups ?? 0}</div></div>
+            <div className="rounded-lg border p-3 bg-slate-50"><div className="text-xs text-slate-500">Lessons</div><div className="text-lg font-semibold">{payloadPreview?.summary?.lessons ?? 0}</div></div>
+          </div>
+          <div className="flex-1 overflow-auto rounded-lg border bg-slate-950 p-4">
+            <pre className="text-xs text-slate-100 whitespace-pre-wrap break-words">{payloadPreview ? JSON.stringify(payloadPreview, null, 2) : 'No payload loaded.'}</pre>
+          </div>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setIsPayloadDialogOpen(false)}>
+              Close
             </Button>
           </DialogFooter>
         </DialogContent>
