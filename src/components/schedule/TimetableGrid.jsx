@@ -536,7 +536,7 @@ export default function TimetableGrid({
                         let level = '';
                         let displayName = '';
                         
-                        // DP style: teaching_group_id on slot (check this first!)
+                        // DP style: teaching_group_id on slot
                         if (slot.teaching_group_id) {
                           const group = getGroupInfo(slot.teaching_group_id);
                           if (group) {
@@ -546,17 +546,17 @@ export default function TimetableGrid({
                             displayName = group.name;
                           }
                         }
-                        // PYP/MYP style: subject_id directly on slot
+                        // Fallback: subject_id directly on slot (PYP/MYP, or when TG not found in groups list)
                         if (!subject && slot.subject_id) {
                           subject = getSubjectInfo(slot.subject_id);
-                          teacher = slot.teacher_id ? getTeacherInfo(slot.teacher_id) : null;
+                        }
+                        if (!teacher && slot.teacher_id) {
+                          teacher = getTeacherInfo(slot.teacher_id);
+                        }
+                        if (!subject && !teacher && slot.classgroup_id) {
                           const classGroup = classGroups.find(cg => cg.id === slot.classgroup_id);
                           level = classGroup?.ib_programme || '';
                           displayName = classGroup?.name || '';
-                        }
-                        // Fallback: slot with direct teacher_id only
-                        if (!subject && !level && slot.teacher_id) {
-                          teacher = getTeacherInfo(slot.teacher_id);
                         }
                         
                         const getSubjectColor = (subjectName) => {
