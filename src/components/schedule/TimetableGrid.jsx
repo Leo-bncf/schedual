@@ -57,7 +57,6 @@ const subjectGroupColors = {
 
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Button } from "@/components/ui/button";
-import ConflictAlert from "./ConflictAlert";
 
 export default function TimetableGrid({ 
   slots = [], 
@@ -261,98 +260,6 @@ export default function TimetableGrid({
     return teachers.find(t => t.id === teacherId);
   };
 
-  const conflictState = React.useMemo(() => {
-    const slotConflictMap = {};
-    const cellConflictMap = {};
-    let teacherConflictCells = 0;
-    let roomConflictCells = 0;
-    let studentConflictCells = 0;
-
-    const addConflict = (slotId, type) => {
-      if (!slotConflictMap[slotId]) {
-        slotConflictMap[slotId] = { teacher: false, room: false, student: false };
-      }
-      slotConflictMap[slotId][type] = true;
-    };
-
-    const getSlotTeacherId = (slot) => {
-      if (slot.teacher_id) return slot.teacher_id;
-      const group = slot.teaching_group_id ? getGroupInfo(slot.teaching_group_id) : null;
-      return group?.teacher_id || null;
-    };
-
-    const getSlotStudentIds = (slot) => {
-      if (slot.student_id) return [slot.student_id];
-      if (slot.teaching_group_id) {
-        const group = getGroupInfo(slot.teaching_group_id);
-        return Array.isArray(group?.student_ids) ? group.student_ids : [];
-      }
-      if (slot.classgroup_id) {
-        const classGroup = classGroups.find(cg => cg.id === slot.classgroup_id);
-        return Array.isArray(classGroup?.student_ids) ? classGroup.student_ids : [];
-      }
-      return [];
-    };
-
-    const shareStudents = (a, b) => {
-      if (!a.length || !b.length) return false;
-      const setA = new Set(a);
-      return b.some(id => setA.has(id));
-    };
-
-    DAYS.forEach((day) => {
-      activePeriods.forEach((uiRow) => {
-        const cellSlots = normalizedSlots.filter(s => s.day === day && s.uiRow === uiRow && !s.is_break);
-        if (cellSlots.length < 2) return;
-
-        const cellConflicts = { teacher: false, room: false, student: false };
-
-        for (let i = 0; i < cellSlots.length; i++) {
-          for (let j = i + 1; j < cellSlots.length; j++) {
-            const slotA = cellSlots[i];
-            const slotB = cellSlots[j];
-
-            const teacherA = getSlotTeacherId(slotA);
-            const teacherB = getSlotTeacherId(slotB);
-            if (teacherA && teacherB && teacherA === teacherB) {
-              addConflict(slotA.id, 'teacher');
-              addConflict(slotB.id, 'teacher');
-              cellConflicts.teacher = true;
-            }
-
-            if (slotA.room_id && slotB.room_id && slotA.room_id === slotB.room_id) {
-              addConflict(slotA.id, 'room');
-              addConflict(slotB.id, 'room');
-              cellConflicts.room = true;
-            }
-
-            if (shareStudents(getSlotStudentIds(slotA), getSlotStudentIds(slotB))) {
-              addConflict(slotA.id, 'student');
-              addConflict(slotB.id, 'student');
-              cellConflicts.student = true;
-            }
-          }
-        }
-
-        if (cellConflicts.teacher || cellConflicts.room || cellConflicts.student) {
-          cellConflictMap[`${day}-${uiRow}`] = cellConflicts;
-          if (cellConflicts.teacher) teacherConflictCells += 1;
-          if (cellConflicts.room) roomConflictCells += 1;
-          if (cellConflicts.student) studentConflictCells += 1;
-        }
-      });
-    });
-
-    return {
-      slotConflictMap,
-      cellConflictMap,
-      hasConflicts: teacherConflictCells > 0 || roomConflictCells > 0 || studentConflictCells > 0,
-      teacherConflictCells,
-      roomConflictCells,
-      studentConflictCells,
-    };
-  }, [normalizedSlots, activePeriods, groups, classGroups, rooms, teachers]);
-
   // FIX BUG #2: Calculate actual periods needed based on timeslots per day (not just config)
   const computedPeriodsPerDay = React.useMemo(() => {
     if (!timeslots || timeslots.length === 0) return periodsPerDay;
@@ -471,14 +378,7 @@ export default function TimetableGrid({
 
   return (
     <>
-      {conflictState.hasConflicts && (
-        <ConflictAlert
-          severity="error"
-          title="Live timetable conflicts detected"
-          description={`Teacher clashes: ${conflictState.teacherConflictCells} • Student overlaps: ${conflictState.studentConflictCells} • Room conflicts: ${conflictState.roomConflictCells}`}
-        />
-      )}
-
+      
       <Card className="overflow-hidden border-0 shadow-sm" id={exportId}>
         <div className="overflow-x-auto">
           <div className="min-w-[1200px]">
@@ -544,12 +444,10 @@ export default function TimetableGrid({
                   const displayCount = globalView ? visibleSlots.length : Math.min(visibleSlots.length, 2);
                   const remainingCount = visibleSlots.length - displayCount;
 
-                  const cellConflict = conflictState.cellConflictMap[`${day}-${uiRow}`];
-
                   return (
                     <div 
                       key={`${day}-${uiRow}`} 
-                      className={`border-r border-slate-300 last:border-r-0 p-2 relative ${globalView ? 'flex flex-row flex-wrap gap-1 content-start' : 'space-y-1'} ${cellConflict ? 'bg-rose-50/50' : ''}`}
+                      className={`border-r border-slate-300 last:border-r-0 p-2 relative ${globalView ? 'flex flex-row flex-wrap gap-1 content-start' : 'space-y-1'}`}
                       onDragOver={(e) => e.preventDefault()}
                       onDrop={(e) => {
                         e.preventDefault();
@@ -631,9 +529,6 @@ export default function TimetableGrid({
 
                         const colorScheme = subject ? getSubjectColor(subject.name) : { bg: 'bg-slate-50', border: 'border-l-slate-400', text: 'text-slate-900' };
 
-                        const slotConflict = conflictState.slotConflictMap[slot.id];
-                        const hasSlotConflict = !!slotConflict && (slotConflict.teacher || slotConflict.room || slotConflict.student);
-
                         return (
                           <div 
                             key={slot.id}
@@ -643,16 +538,9 @@ export default function TimetableGrid({
                               e.dataTransfer.setData('sourceDay', day);
                               e.dataTransfer.setData('sourcePeriod', String(uiRow));
                             }}
-                            className={`cursor-move transition-all overflow-hidden group ${globalView ? 'w-[calc(50%-4px)] lg:w-[calc(33.33%-4px)] rounded hover:ring-2 hover:ring-blue-400' : 'hover:shadow-lg hover:scale-105 rounded-lg'} ${hasSlotConflict ? 'ring-2 ring-rose-400 bg-rose-50/60' : ''}`}
+                            className={`cursor-move transition-all overflow-hidden group ${globalView ? 'w-[calc(50%-4px)] lg:w-[calc(33.33%-4px)] rounded hover:ring-2 hover:ring-blue-400' : 'hover:shadow-lg hover:scale-105 rounded-lg'}`}
                             onClick={() => handleSlotClick(slot)}
                           >
-                            {hasSlotConflict && (
-                              <div className="absolute left-1 top-1 z-10 flex gap-1">
-                                {slotConflict.teacher && <span className="rounded bg-rose-600 px-1 py-0.5 text-[9px] font-bold text-white">T</span>}
-                                {slotConflict.student && <span className="rounded bg-amber-600 px-1 py-0.5 text-[9px] font-bold text-white">S</span>}
-                                {slotConflict.room && <span className="rounded bg-violet-600 px-1 py-0.5 text-[9px] font-bold text-white">R</span>}
-                              </div>
-                            )}
                             {!globalView && (
                               <div className="absolute top-1 right-1 opacity-0 group-hover:opacity-100 transition-opacity z-10">
                                 <div className="px-1.5 py-0.5 bg-white/90 rounded shadow text-[10px] font-bold text-slate-600">⋮⋮</div>
