@@ -679,24 +679,34 @@ Deno.serve(async (req) => {
       const hardScore = Number(result.data?.hardScore ?? NaN);
       const conflictsCount = Number(result.data?.conflictsCount || 0);
       const topConstraint = result.data?.hardConstraintsBreakdown?.[0]?.constraintName || null;
+      const solveStage = result.data?.stage || 'SOLVE';
+      const solverErrorCode = result.data?.errorCode || null;
+      const validationErrors = result.data?.validationErrors || [];
       const isStrictlyValid = result.data?.ok === true && hardScore === 0 && result.data?.isFeasible === true && conflictsCount === 0;
 
       if (!isStrictlyValid) {
-        const reasonCode = hardScore < 0 ? 'HARD_CONSTRAINTS_VIOLATED' : 'SOLUTION_INFEASIBLE';
+        let reasonCode = 'SOLUTION_INFEASIBLE';
+        if (solverErrorCode === 'PRE_SOLVE_VALIDATION_FAILED' || solveStage === 'PRE_SOLVE_VALIDATION') {
+          reasonCode = 'PRE_SOLVE_VALIDATION_FAILED';
+        } else if (!Number.isNaN(hardScore) && hardScore < 0) {
+          reasonCode = 'HARD_CONSTRAINTS_VIOLATED';
+        }
+
+        const blocker = topConstraint || validationErrors[0] || result.data?.reason || result.data?.error || 'unknown';
         const errorBits = [
           `code=${reasonCode}`,
           `ok=${result.data?.ok}`,
           `hardScore=${result.data?.hardScore}`,
           `isFeasible=${result.data?.isFeasible}`,
           `conflictsCount=${result.data?.conflictsCount}`,
-          `constraint=${topConstraint || 'unknown'}`,
-          `error=${result.data?.error || result.data?.reason || 'SOLUTION_INFEASIBLE'}`
+          `constraint=${blocker}`,
+          `error=${result.data?.error || result.data?.reason || reasonCode}`
         ];
         failedProgrammes.push({
           programme: payload.programType,
-          stage: 'SOLVE',
+          stage: solveStage,
           reason_code: reasonCode,
-          blocker: topConstraint,
+          blocker,
           error: errorBits.join(' | ')
         });
         continue;
