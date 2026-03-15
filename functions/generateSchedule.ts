@@ -248,7 +248,21 @@ function buildDPPayload({ schoolId, scheduleVersionId, school, students, teacher
     const minutesPerWeek = hoursForLevel * 60;
     const periodsPerWeek = Math.max(1, Math.ceil(minutesPerWeek / periodDuration));
     const teacherId = bucketTgs.reduce((acc, tg) => acc || (tg.teacher_id ? (teacherMap.get(tg.teacher_id) ?? null) : null), null);
-    const studentIds = [...new Set(bucketTgs.flatMap(tg => (tg.student_ids || []).map(base44StudentId => studentMap.get(base44StudentId)).filter(Boolean)))];
+
+    // Only include students who actually have this subject+level in their subject_choices.
+    // This ensures lessons.studentIds always matches studentSubjectChoices — preventing STUDENT_MEMBERSHIP_INCONSISTENT.
+    const validYearGroups = yearScope === 'DP1_DP2' ? ['DP1', 'DP2'] : [yearScope];
+    const rawStudentIds = [...new Set(bucketTgs.flatMap(tg => (tg.student_ids || [])))];
+    const studentIds = rawStudentIds.map(base44Id => {
+      const student = dpStudents.find(s => s.id === base44Id);
+      if (!student) return null;
+      const hasChoice = (student.subject_choices || []).some(c =>
+        c.subject_id === subjectId &&
+        String(c.level || '').toUpperCase() === level.toUpperCase() &&
+        validYearGroups.includes(student.year_group)
+      );
+      return hasChoice ? studentMap.get(base44Id) : null;
+    }).filter(Boolean);
 
     teachingGroupsPayload.push({
       id: teachingGroupId,
