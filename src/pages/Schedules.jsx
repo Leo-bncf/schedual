@@ -403,7 +403,7 @@ export default function Schedules() {
   };
 
   const studentSchedule = selectedStudentId
-    ? annotateStudentScheduleLevels(selectedStudent, studentScheduleResponse?.slots ?? getStudentSchedule(selectedStudentId))
+    ? annotateStudentScheduleLevels(selectedStudent, studentScheduleResponse?.slots || [])
     : null;
 
   const getTeacherSchedule = (teacherId) => {

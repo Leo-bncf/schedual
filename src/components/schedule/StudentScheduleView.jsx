@@ -14,7 +14,6 @@ export default function StudentScheduleView({ students, slots, groups, subjects,
   const [serverSlots, setServerSlots] = React.useState(null);
   const [diagnostics, setDiagnostics] = React.useState(null);
   const [loadingServerSlots, setLoadingServerSlots] = React.useState(false);
-  const [useServerSlots, setUseServerSlots] = React.useState(true); // Default to server-side JOIN
   const [isFullscreen, setIsFullscreen] = React.useState(false);
   const [studentSearchQuery, setStudentSearchQuery] = React.useState("");
   
@@ -95,7 +94,7 @@ export default function StudentScheduleView({ students, slots, groups, subjects,
 
   // SERVER-SIDE JOIN: Load slots via backend API (SOURCE OF TRUTH)
   React.useEffect(() => {
-    if (!selectedStudent || !scheduleVersionId || !useServerSlots) {
+    if (!selectedStudent || !scheduleVersionId) {
       setServerSlots(null);
       setDiagnostics(null);
       return;
@@ -138,7 +137,7 @@ export default function StudentScheduleView({ students, slots, groups, subjects,
     };
     
     loadServerSlots();
-  }, [selectedStudent?.id, scheduleVersionId, useServerSlots]);
+  }, [selectedStudent?.id, scheduleVersionId]);
   
   const getStudentSlots = (studentId) => {
     const student = students.find(s => s.id === studentId);
@@ -269,9 +268,8 @@ export default function StudentScheduleView({ students, slots, groups, subjects,
     return matchedSlots;
   };
 
-  // Use server-side slots if available, fallback to client-side join
-  const studentSlots = useServerSlots && serverSlots ? serverSlots : 
-                       selectedStudent ? getStudentSlots(selectedStudent.id) : [];
+  // Use server-side slots as the only source of truth
+  const studentSlots = selectedStudent ? (serverSlots || []) : [];
 
   // NORMALIZE EVENTS: Group by day and uiRow, create conflict-groups for overlaps
   const { normalizedEvents, overlaps } = React.useMemo(() => {
@@ -454,14 +452,6 @@ export default function StudentScheduleView({ students, slots, groups, subjects,
           <CardContent className="p-4">
             <div className="flex items-center justify-between mb-2">
               <div className="font-bold text-blue-900">🔍 Slot Loading Diagnostics</div>
-              <Button 
-                size="sm" 
-                variant="outline"
-                onClick={() => setUseServerSlots(!useServerSlots)}
-                className="text-xs"
-              >
-                {useServerSlots ? '🟢 Server-side JOIN' : '🔴 Client-side JOIN'}
-              </Button>
             </div>
             <div className="grid grid-cols-3 gap-4 text-sm">
               <div>
