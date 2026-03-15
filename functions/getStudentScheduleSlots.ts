@@ -111,24 +111,26 @@ Deno.serve(async (req) => {
       }
 
       // Check if student is directly listed in the teaching group's student_ids
-      // (handles combine_dp1_dp2 merging where the slot uses a different TG's id than the student's assigned group)
+      // (handles repTg merging where slot TG ID != student's assigned_groups entry)
       const slotGroup = tgById[slot.teaching_group_id];
       if (slotGroup && Array.isArray(slotGroup.student_ids) && slotGroup.student_ids.includes(student.id)) {
         return true;
       }
 
-      // Fallback: combine_dp1_dp2 subjects — match by subject + level across year groups
-      const slotSubject = slot.subject_id ? subjectById[slot.subject_id] : (slotGroup?.subject_id ? subjectById[slotGroup.subject_id] : null);
-      if (!slotGroup || !slotSubject?.combine_dp1_dp2) {
-        return false;
+      // Universal fallback: match by subject_choices — if student chose this subject+level, include the slot
+      const slotSubject = slot.subject_id ? subjectById[slot.subject_id]
+        : (slotGroup?.subject_id ? subjectById[slotGroup.subject_id] : null);
+      if (!slotSubject) return false;
+
+      const subjectChoice = subjectChoices.find(c => c.subject_id === slotSubject.id);
+      if (!subjectChoice) return false;
+
+      // For DP: level must match
+      if (student.ib_programme === 'DP' && slotGroup?.level) {
+        return normalizeLevel(subjectChoice.level) === normalizeLevel(slotGroup.level);
       }
 
-      const subjectChoice = subjectChoices.find(choice => choice.subject_id === slotSubject.id);
-      if (!subjectChoice) {
-        return false;
-      }
-
-      return normalizeLevel(subjectChoice.level) === normalizeLevel(slotGroup.level);
+      return true;
     }).filter((slot, index, self) => index === self.findIndex(s => s.id === slot.id));
     
     console.log('[getStudentScheduleSlots] ✅ Filtered slots for student:', studentSlots.length);
