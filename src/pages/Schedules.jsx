@@ -245,8 +245,10 @@ export default function Schedules() {
         queryClient.invalidateQueries({ queryKey: ['scheduleSlots'] });
       } else {
         setGenStatus('error');
+        const primaryFailure = data?.failed?.[0];
+        const constraintBlocker = primaryFailure?.blocker ? ` | blocker=${primaryFailure.blocker}` : '';
         const failDetails = data?.failed?.map(f => `${f.programme}: ${f.error}`).join(' | ') || '';
-        const errorMsg = data?.error || failDetails || 'Generation returned 0 slots.';
+        const errorMsg = data?.error || (primaryFailure ? `${primaryFailure.reason_code || 'SOLUTION_INFEASIBLE'}${constraintBlocker}` : failDetails) || 'Generation returned 0 slots.';
         setGenError(errorMsg);
         toast.error('Schedule generation failed', { duration: 10000 });
       }

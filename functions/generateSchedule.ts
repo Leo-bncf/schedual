@@ -333,8 +333,8 @@ function validateDPPayload(payload) {
   const periodDuration = Number(payload?.scheduleSettings?.periodDurationMinutes || 60);
   const groupMap = new Map((payload.teaching_groups || []).map((group) => [group.id, group]));
   const subjectByCode = new Map((payload.subjects || []).map((subject) => [subject.code, subject]));
-  const lessonsByGroup = new Map();
-  const requirementsByGroup = new Map();
+  const lessonsByScope = new Map();
+  const requirementsByScope = new Map();
 
   for (const lesson of payload.lessons || []) {
     const group = groupMap.get(lesson.teachingGroupId);
@@ -356,9 +356,10 @@ function validateDPPayload(payload) {
       errors.push(`sectionId mismatch for lesson ${lesson.id}: ${lesson.sectionId} !== ${group.section_id}`);
     }
 
-    const current = lessonsByGroup.get(lesson.teachingGroupId) || [];
+    const scopeKey = `${lesson.teachingGroupId}__${lesson.sectionId}__${lesson.subject}`;
+    const current = lessonsByScope.get(scopeKey) || [];
     current.push(lesson);
-    lessonsByGroup.set(lesson.teachingGroupId, current);
+    lessonsByScope.set(scopeKey, current);
   }
 
   for (const requirement of payload.subject_requirements || []) {
@@ -376,12 +377,13 @@ function validateDPPayload(payload) {
       errors.push(`Requirement sectionId mismatch for ${requirement.teachingGroupId}`);
     }
 
-    requirementsByGroup.set(requirement.teachingGroupId, requirement);
+    const scopeKey = `${requirement.teachingGroupId}__${requirement.sectionId}__${requirement.subject}`;
+    requirementsByScope.set(scopeKey, requirement);
 
     const requiredPeriods = Math.ceil(Number(requirement.minutesPerWeek || 0) / periodDuration);
-    const actualPeriods = (lessonsByGroup.get(requirement.teachingGroupId) || []).length;
+    const actualPeriods = (lessonsByScope.get(scopeKey) || []).length;
     if (actualPeriods !== requiredPeriods) {
-      errors.push(`Hour parity mismatch for ${requirement.teachingGroupId}: expected ${requiredPeriods}, got ${actualPeriods}`);
+      errors.push(`Hour parity mismatch for ${scopeKey}: expected ${requiredPeriods}, got ${actualPeriods}`);
     }
   }
 
@@ -405,8 +407,10 @@ function validateDPPayload(payload) {
     currentLevels.add(choice.level);
     levelKeys.set(levelKey, currentLevels);
 
-    const req = requirementsByGroup.get(choice.teachingGroupId);
-    const lessons = lessonsByGroup.get(choice.teachingGroupId) || [];
+    const subject = payload.subjects.find((item) => item.id === choice.subjectId);
+    const scopeKey = `${choice.teachingGroupId}__${group.section_id}__${subject?.code || choice.subject}`;
+    const req = requirementsByScope.get(scopeKey);
+    const lessons = lessonsByScope.get(scopeKey) || [];
     if (!req || lessons.length === 0) {
       errors.push(`Choice scope missing requirement/lessons for ${choice.teachingGroupId}`);
     }
@@ -726,17 +730,26 @@ Deno.serve(async (req) => {
 
       const hardScore = Number(result.data?.hardScore ?? NaN);
       const conflictsCount = Number(result.data?.conflictsCount || 0);
+      const topConstraint = result.data?.hardConstraintsBreakdown?.[0]?.constraintName || null;
       const isStrictlyValid = result.data?.ok === true && hardScore === 0 && result.data?.isFeasible === true && conflictsCount === 0;
 
       if (!isStrictlyValid) {
+        const reasonCode = hardScore < 0 ? 'HARD_CONSTRAINTS_VIOLATED' : 'SOLUTION_INFEASIBLE';
         const errorBits = [
+          `code=${reasonCode}`,
           `ok=${result.data?.ok}`,
           `hardScore=${result.data?.hardScore}`,
           `isFeasible=${result.data?.isFeasible}`,
           `conflictsCount=${result.data?.conflictsCount}`,
-          `error=${result.data?.error || result.data?.reason || 'STRICT_VALIDATION_FAILED'}`
+          `constraint=${topConstraint || 'unknown'}`,
+          `error=${result.data?.error || result.data?.reason || 'SOLUTION_INFEASIBLE'}`
         ];
-        failedProgrammes.push({ programme: payload.programType, error: errorBits.join(' | ') });
+        failedProgrammes.push({
+          programme: payload.programType,
+          reason_code: reasonCode,
+          blocker: topConstraint,
+          error: errorBits.join(' | ')
+        });
         continue;
       }
 
