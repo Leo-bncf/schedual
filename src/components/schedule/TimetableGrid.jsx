@@ -376,28 +376,24 @@ export default function TimetableGrid({
     
     let group, subject, teacher;
     
-    // DP style: teaching_group_id on slot (check this first!)
+    // DP style: teaching_group_id on slot
     if (slot.teaching_group_id) {
       group = getGroupInfo(slot.teaching_group_id);
       subject = group ? getSubjectInfo(group.subject_id) : null;
       teacher = group ? getTeacherInfo(group.teacher_id) : null;
     }
-    // PYP/MYP style: direct subject_id on slot
-    else if (slot.subject_id) {
-      const classGroup = classGroups.find(cg => cg.id === slot.classgroup_id);
+    // Fallback: subject_id / teacher_id directly on slot (PYP/MYP or when TG not in groups list)
+    if (!subject && slot.subject_id) {
       subject = getSubjectInfo(slot.subject_id);
-      teacher = slot.teacher_id ? getTeacherInfo(slot.teacher_id) : null;
-      
-      // Create a group-like object for modal compatibility
-      group = {
-        name: classGroup?.name || 'Class',
-        level: classGroup?.year_group || subject?.ib_level,
-        student_ids: classGroup?.student_ids || []
-      };
     }
-    // Fallback: slot with direct teacher_id only
-    else if (slot.teacher_id) {
+    if (!teacher && slot.teacher_id) {
       teacher = getTeacherInfo(slot.teacher_id);
+    }
+    if (!group && slot.classgroup_id) {
+      const classGroup = classGroups.find(cg => cg.id === slot.classgroup_id);
+      if (classGroup) {
+        group = { name: classGroup.name, level: classGroup.year_group, student_ids: classGroup.student_ids || [] };
+      }
     }
     
     const room = getRoomInfo(slot.room_id);
