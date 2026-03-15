@@ -158,6 +158,95 @@ export default function StudentScheduleView({ students, slots, groups, subjects,
   
   const studentSlots = serverSlots || [];
 
+  const groupsById = React.useMemo(
+    () => Object.fromEntries((groups || []).map(group => [group.id, group])),
+    [groups]
+  );
+
+  const subjectsById = React.useMemo(
+    () => Object.fromEntries((subjects || []).map(subject => [subject.id, subject])),
+    [subjects]
+  );
+
+  const teachersById = React.useMemo(
+    () => Object.fromEntries((teachers || []).map(teacher => [teacher.id, teacher])),
+    [teachers]
+  );
+
+  const roomsById = React.useMemo(
+    () => Object.fromEntries((rooms || []).map(room => [room.id, room])),
+    [rooms]
+  );
+
+  const studentLevelsBySubjectId = React.useMemo(() => {
+    const levelMap = {};
+    const assignedGroups = (selectedStudent?.assigned_groups || [])
+      .map((groupId) => groupsById[groupId])
+      .filter(Boolean);
+
+    assignedGroups.forEach((group) => {
+      if (!group?.subject_id || !group?.level) return;
+      if (!levelMap[group.subject_id]) levelMap[group.subject_id] = new Set();
+      levelMap[group.subject_id].add(normalizeLevel(group.level));
+    });
+
+    (selectedStudent?.subject_choices || []).forEach((choice) => {
+      const level = normalizeLevel(choice?.level);
+      if (!choice?.subject_id || !level) return;
+      if (!levelMap[choice.subject_id]) levelMap[choice.subject_id] = new Set();
+      levelMap[choice.subject_id].add(level);
+    });
+
+    return levelMap;
+  }, [selectedStudent, groupsById]);
+
+  const resolveStudentLevelForSubject = React.useCallback((subjectId) => {
+    const levels = subjectId ? studentLevelsBySubjectId[subjectId] : null;
+    return levels?.size === 1 ? Array.from(levels)[0] : '';
+  }, [studentLevelsBySubjectId]);
+
+  const resolveSlotMeta = React.useCallback((slot) => {
+    const group = slot?.teaching_group_id ? groupsById[slot.teaching_group_id] : null;
+    const subjectId = slot?.subject_id || group?.subject_id;
+    const subject = subjectId ? subjectsById[subjectId] : null;
+    const teacher = slot?.teacher_id
+      ? teachersById[slot.teacher_id]
+      : group?.teacher_id
+        ? teachersById[group.teacher_id]
+        : null;
+    const room = slot?.room_id ? roomsById[slot.room_id] : null;
+    const level = normalizeLevel(slot?.display_level_override || group?.level || resolveStudentLevelForSubject(subjectId));
+
+    return { group, subject, teacher, room, level };
+  }, [groupsById, subjectsById, teachersById, roomsById, resolveStudentLevelForSubject]);
+
+  const allowedStudentSubjectKeys = React.useMemo(() => {
+    const keys = new Set();
+
+    (selectedStudent?.assigned_groups || []).forEach((groupId) => {
+      const group = groupsById[groupId];
+      const key = makeSubjectLevelKey(group?.subject_id, group?.level);
+      if (key) keys.add(key);
+    });
+
+    (selectedStudent?.subject_choices || []).forEach((choice) => {
+      const key = makeSubjectLevelKey(choice?.subject_id, choice?.level);
+      if (key) keys.add(key);
+    });
+
+    return keys;
+  }, [selectedStudent, groupsById]);
+
+  const visibleStudentSlots = React.useMemo(() => {
+    return (studentSlots || []).filter((slot) => {
+      if (slot?.is_break) return true;
+      if (slot?.notes?.includes('Test')) return true;
+      const { subject, level } = resolveSlotMeta(slot);
+      const key = makeSubjectLevelKey(subject?.id, level);
+      return key && allowedStudentSubjectKeys.has(key);
+    });
+  }, [studentSlots, resolveSlotMeta, allowedStudentSubjectKeys]);
+
   // NORMALIZE EVENTS: Group by day and uiRow, create conflict-groups for overlaps
   const { normalizedEvents, overlaps } = React.useMemo(() => {
     // Group by day and uiRow directly
