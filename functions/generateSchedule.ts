@@ -525,9 +525,12 @@ async function sendToOptaPlanner(payload) {
 // ─── Parse OptaPlanner response → ScheduleSlots ──────────────────────────────
 
 function parseResponseToSlots({ responseData, payload, scheduleVersionId, schoolId, teacherMap, roomMap }) {
-  // Build a lookup from sectionId → real Base44 teachingGroupId (from the payload we sent)
+  // Build lookup tables from the payload we sent so persisted slots always use
+  // the same Base44 metadata even when the solver returns synthetic IDs.
   const sectionIdToRealTgId = new Map();
+  const payloadLessonById = new Map();
   for (const lesson of (payload?.lessons || [])) {
+    payloadLessonById.set(String(lesson.id), lesson);
     if (lesson.sectionId && lesson.teachingGroupId) {
       sectionIdToRealTgId.set(lesson.sectionId, lesson.teachingGroupId);
     }
@@ -588,6 +591,7 @@ function parseResponseToSlots({ responseData, payload, scheduleVersionId, school
       continue;
     }
 
+    const payloadLesson = payloadLessonById.get(String(entry.lessonId ?? entry.id));
     const teacherBase44Id = entry.teacherId ? teacherReverseMap.get(entry.teacherId) ?? null : null;
     const roomBase44Id = entry.roomId ? roomReverseMap.get(entry.roomId) ?? null : null;
 
@@ -602,13 +606,28 @@ function parseResponseToSlots({ responseData, payload, scheduleVersionId, school
       status: 'scheduled',
     };
 
-    if (entry.subject && payload.subjectIdByCode) {
-      slot.subject_id = payload.subjectIdByCode[entry.subject] ?? null;
+    const subjectCode = payloadLesson?.subject || entry.subject;
+    if (subjectCode && payload.subjectIdByCode) {
+      slot.subject_id = payload.subjectIdByCode[subjectCode] ?? null;
     }
 
-    // Resolve the real Base44 TG ID: prefer sectionId lookup (handles solver-synthesized IDs),
-    // then fall back to stripping tg_/TG_ prefix, then raw value.
-    if (entry.sectionId && sectionIdToRealTgId.has(entry.sectionId)) {
+    if (payloadLesson?.level) {
+      slot.display_level_override = payloadLesson.level;
+    }
+    if (payloadLesson?.sectionId || entry.sectionId) {
+      slot.section_id = payloadLesson?.sectionId || entry.sectionId;
+    }
+    if (payloadLesson?.yearGroup) {
+      slot.year_group_scope = payloadLesson.yearGroup;
+    }
+    if (entry.teachingGroupId) {
+      slot.solver_teaching_group_id = String(entry.teachingGroupId);
+    }
+
+    // Always prefer the teaching group ID from the lesson we sent to the solver.
+    if (payloadLesson?.teachingGroupId) {
+      slot.teaching_group_id = payloadLesson.teachingGroupId;
+    } else if (entry.sectionId && sectionIdToRealTgId.has(entry.sectionId)) {
       slot.teaching_group_id = sectionIdToRealTgId.get(entry.sectionId);
     } else if (entry.teachingGroupId) {
       const raw = String(entry.teachingGroupId);

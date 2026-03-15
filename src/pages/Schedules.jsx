@@ -42,6 +42,7 @@ import {
 import TimetableGrid from '../components/schedule/TimetableGrid';
 import ExportTimetableButton from '../components/schedule/ExportTimetableButton';
 import SearchableEntitySelect from '../components/schedule/SearchableEntitySelect';
+import StudentScheduleView from '../components/schedule/StudentScheduleView';
 
 export default function Schedules() {
   const [isDialogOpen, setIsDialogOpen] = useState(false);
@@ -339,62 +340,6 @@ export default function Schedules() {
     );
   });
 
-  const selectedStudent = students.find(s => s.id === selectedStudentId);
-  const { data: studentScheduleResponse } = useQuery({
-    queryKey: ['studentScheduleSlots', selectedStudentId, selectedVersion?.id],
-    queryFn: async () => {
-      const response = await base44.functions.invoke('getStudentScheduleSlots', {
-        student_id: selectedStudentId,
-        schedule_version_id: selectedVersion.id,
-      });
-      return response.data;
-    },
-    enabled: !!selectedStudentId && !!selectedVersion?.id,
-  });
-
-  const annotateStudentScheduleLevels = (student, slotsList) => {
-    if (!student || !Array.isArray(slotsList)) return slotsList || [];
-
-    return slotsList.map((slot) => {
-      if (student.ib_programme !== 'DP' || !slot.subject_id || !slot.teaching_group_id) {
-        return slot;
-      }
-
-      const slotGroup = teachingGroups.find(g => g.id === slot.teaching_group_id);
-      const subjectChoice = (student.subject_choices || []).find(choice => choice.subject_id === slot.subject_id);
-      if (!slotGroup || !subjectChoice) {
-        return slot;
-      }
-
-      const slotLevel = String(slotGroup.level || '').toUpperCase().trim();
-      const choiceLevel = String(subjectChoice.level || '').toUpperCase().trim();
-      const hasSiblingHLGroup = teachingGroups.some(g =>
-        g.subject_id === slot.subject_id &&
-        String(g.level || '').toUpperCase().trim() === 'HL'
-      );
-
-      if (slotLevel === 'HL') {
-        return { ...slot, display_level_override: 'HL' };
-      }
-
-      if (slotLevel === 'SL' && hasSiblingHLGroup) {
-        return {
-          ...slot,
-          display_level_override: choiceLevel || 'SL'
-        };
-      }
-
-      if (slotLevel === 'SL') {
-        return { ...slot, display_level_override: 'SL' };
-      }
-
-      return slot;
-    });
-  };
-
-  const studentSchedule = selectedStudentId
-    ? annotateStudentScheduleLevels(selectedStudent, studentScheduleResponse?.slots || [])
-    : null;
 
   const getTeacherSchedule = (teacherId) => {
     return scheduleSlots.filter(slot => slot.teacher_id === teacherId);
@@ -876,76 +821,24 @@ export default function Schedules() {
                   <CardDescription>View individual student schedules</CardDescription>
                 </CardHeader>
                 <CardContent className="pt-4 space-y-4">
-                  {/* Student Search & Select */}
-                  <div className="space-y-2">
-                    <Label className="text-xs font-medium text-slate-600">Select Student</Label>
-                    <SearchableEntitySelect
-                      items={filteredStudents}
-                      value={selectedStudentId || ''}
-                      onChange={setSelectedStudentId}
-                      placeholder="Search and choose a student..."
-                      emptyText="No students found"
-                      renderSubtitle={(student) => student.year_group ? `${student.year_group}` : 'Student'}
-                    />
-                  </div>
-
-                  {/* Student Schedule Display */}
-                  {selectedStudent && studentSchedule && (
-                    <div className="space-y-4">
-                      {/* Student Info Card */}
-                      <div className="p-4 rounded-lg border border-slate-200 bg-slate-50">
-                        <div className="flex items-center gap-3">
-                          <div className="w-10 h-10 rounded-lg bg-blue-100 flex items-center justify-center text-blue-700 font-bold">
-                            {selectedStudent.full_name?.charAt(0)?.toUpperCase() || 'S'}
-                          </div>
-                          <div className="flex-1">
-                            <h3 className="text-sm font-semibold text-slate-900">{selectedStudent.full_name}</h3>
-                            <p className="text-xs text-slate-500">{selectedStudent.year_group} • {selectedStudent.email}</p>
-                          </div>
-                          <div className="flex items-center gap-2">
-                            <Badge variant="outline" className="text-xs">{selectedStudent.ib_programme || 'IB'}</Badge>
-                            <ExportTimetableButton
-                              type="student"
-                              entityId={selectedStudent.id}
-                              scheduleVersionId={selectedVersion?.id}
-                            />
-                          </div>
-                        </div>
-                      </div>
-
-                      {/* Timetable Grid */}
-                      <div className="mt-4">
-                        <TimetableGrid 
-                          slots={studentSchedule || []}
-                          groups={teachingGroups}
-                          rooms={rooms}
-                          subjects={subjects}
-                          teachers={teachers}
-                          periodsPerDay={school?.periods_per_day || 10}
-                          dayStartTime={school?.day_start_time || '08:00'}
-                          dayEndTime={school?.day_end_time || '18:00'}
-                          periodDurationMinutes={school?.period_duration_minutes || 60}
-                          scheduleSettings={school}
-                          globalView={false}
-                          exportId="student-viewer-timetable"
-                          timeslots={
+                  <StudentScheduleView
+                    students={filteredStudents}
+                    slots={scheduleSlots}
+                    groups={teachingGroups}
+                    subjects={subjects}
+                    teachers={teachers}
+                    rooms={rooms}
+                    selectedStudentId={selectedStudentId}
+                    onStudentChange={setSelectedStudentId}
+                    exportId="student-viewer-timetable"
+                    timeslots={
                       typeof selectedVersion?.generation_params === 'string'
                         ? JSON.parse(selectedVersion.generation_params)?.solverTimeslots || []
                         : selectedVersion?.generation_params?.solverTimeslots || []
                     }
-                        />
-                      </div>
-                    </div>
-                  )}
-
-                  {!selectedStudent && (
-                    <div className="text-center py-12">
-                      <div className="w-12 h-12 rounded-lg bg-slate-100 flex items-center justify-center mx-auto mb-3">
-                        <Users className="w-6 h-6 text-slate-400" />
-                      </div>
-                      <p className="text-sm text-slate-500">Select a student to view their timetable</p>
-                    </div>
-                  )}
+                    scheduleSettings={school}
+                    scheduleVersionId={selectedVersion?.id}
+                  />
                 </CardContent>
               </Card>
             </TabsContent>
