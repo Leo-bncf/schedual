@@ -335,94 +335,45 @@ function validateDPPayload(payload) {
   const subjectByCode = new Map((payload.subjects || []).map((subject) => [subject.code, subject]));
   const lessonsByScope = new Map();
   const requirementsByScope = new Map();
-
-  for (const lesson of payload.lessons || []) {
-    const group = groupMap.get(lesson.teachingGroupId);
-    if (!group) {
-      errors.push(`Missing teaching group for lesson ${lesson.id}: ${lesson.teachingGroupId}`);
-      continue;
-    }
-
-    const subject = subjectByCode.get(lesson.subject);
-    if (!subject || subject.id !== group.subject_id) {
-      errors.push(`Subject mismatch for lesson ${lesson.id}: lesson.subject=${lesson.subject}, teaching_group.subject_id=${group.subject_id}`);
-    }
-
-    if (lesson.studentGroup !== group.student_group) {
-      errors.push(`studentGroup mismatch for lesson ${lesson.id}: ${lesson.studentGroup} !== ${group.student_group}`);
-    }
-
-    if (lesson.sectionId !== group.section_id) {
-      errors.push(`sectionId mismatch for lesson ${lesson.id}: ${lesson.sectionId} !== ${group.section_id}`);
-    }
-
-    const scopeKey = `${lesson.teachingGroupId}__${lesson.sectionId}__${lesson.subject}`;
-    const current = lessonsByScope.get(scopeKey) || [];
-    current.push(lesson);
-    lessonsByScope.set(scopeKey, current);
-  }
-
-  for (const requirement of payload.subject_requirements || []) {
-    const group = groupMap.get(requirement.teachingGroupId);
-    if (!group) {
-      errors.push(`Missing teaching group for requirement: ${requirement.teachingGroupId}`);
-      continue;
-    }
-
-    if (requirement.studentGroup !== group.student_group) {
-      errors.push(`Requirement studentGroup mismatch for ${requirement.teachingGroupId}`);
-    }
-
-    if (requirement.sectionId !== group.section_id) {
-      errors.push(`Requirement sectionId mismatch for ${requirement.teachingGroupId}`);
-    }
-
-    const scopeKey = `${requirement.teachingGroupId}__${requirement.sectionId}__${requirement.subject}`;
-    requirementsByScope.set(scopeKey, requirement);
-
-    const requiredPeriods = Math.ceil(Number(requirement.minutesPerWeek || 0) / periodDuration);
-    const actualPeriods = (lessonsByScope.get(scopeKey) || []).length;
-    if (actualPeriods !== requiredPeriods) {
-      errors.push(`Hour parity mismatch for ${scopeKey}: expected ${requiredPeriods}, got ${actualPeriods}`);
-    }
-  }
-
-  const choiceKeys = new Set();
-  const levelKeys = new Map();
-  for (const choice of payload.studentSubjectChoices || []) {
-    const group = groupMap.get(choice.teachingGroupId);
-    if (!group) {
-      errors.push(`Missing teaching group for choice: ${choice.teachingGroupId}`);
-      continue;
-    }
-
-    const duplicateKey = `${choice.studentId}__${choice.subjectId}__${choice.yearGroup}`;
-    if (choiceKeys.has(duplicateKey)) {
-      errors.push(`Duplicate student choice: ${duplicateKey}`);
-    }
-    choiceKeys.add(duplicateKey);
-
-    const levelKey = `${choice.studentId}__${choice.subjectId}__${choice.yearGroup}`;
-    const currentLevels = levelKeys.get(levelKey) || new Set();
-    currentLevels.add(choice.level);
-    levelKeys.set(levelKey, currentLevels);
-
-    const subject = payload.subjects.find((item) => item.id === choice.subjectId);
-    const scopeKey = `${choice.teachingGroupId}__${group.section_id}__${subject?.code || choice.subject}`;
-    const req = requirementsByScope.get(scopeKey);
-    const lessons = lessonsByScope.get(scopeKey) || [];
-    if (!req || lessons.length === 0) {
-      errors.push(`Choice scope missing requirement/lessons for ${choice.teachingGroupId}`);
-    }
-  }
-
-  for (const [key, levels] of levelKeys.entries()) {
-    if (levels.has('HL') && levels.has('SL')) {
-      errors.push(`Student has both HL and SL for same subject/yearGroup: ${key}`);
-    }
-  }
-
+...
   return errors;
+}
+
+function validatePostSolveStudentOverlaps(responseData, payload) {
+  const entries = [
+    ...(responseData?.lessons || responseData?.data?.lessons || []),
+    ...(responseData?.assignments || responseData?.data?.assignments || []),
+  ];
+  const payloadLessonMap = new Map((payload?.lessons || []).map((lesson) => [String(lesson.id), lesson]));
+  const seen = new Map();
+  const overlaps = [];
+
+  for (const entry of entries) {
+    if (entry?.timeslotId == null) continue;
+    const payloadLesson = payloadLessonMap.get(String(entry.lessonId ?? entry.id));
+    if (!payloadLesson || !Array.isArray(payloadLesson.studentIds)) continue;
+
+    for (const studentId of payloadLesson.studentIds) {
+      const key = `${studentId}__${entry.timeslotId}`;
+      if (seen.has(key)) {
+        overlaps.push({
+          studentId,
+          timeslotId: entry.timeslotId,
+          firstLessonId: seen.get(key).lessonId,
+          secondLessonId: entry.lessonId ?? entry.id,
+          firstTeachingGroupId: seen.get(key).teachingGroupId,
+          secondTeachingGroupId: entry.teachingGroupId || null,
+        });
+      } else {
+        seen.set(key, {
+          lessonId: entry.lessonId ?? entry.id,
+          teachingGroupId: entry.teachingGroupId || null,
+        });
+      }
+    }
+  }
+
+  return overlaps;
 }
 
 // ─── OptaPlanner call — ONE payload per call ──────────────────────────────────
@@ -746,9 +697,25 @@ Deno.serve(async (req) => {
         ];
         failedProgrammes.push({
           programme: payload.programType,
+          stage: 'SOLVE',
           reason_code: reasonCode,
           blocker: topConstraint,
           error: errorBits.join(' | ')
+        });
+        continue;
+      }
+
+      const postSolveOverlaps = payload.programType === 'DP'
+        ? validatePostSolveStudentOverlaps(result.data, payload)
+        : [];
+
+      if (postSolveOverlaps.length > 0) {
+        failedProgrammes.push({
+          programme: payload.programType,
+          stage: 'POST_SOLVE_VALIDATION_FAILED',
+          reason_code: 'STUDENT_OVERLAP_DETECTED',
+          blocker: 'Student appears in multiple lessons in same timeslot',
+          error: `POST_SOLVE_VALIDATION_FAILED | code=STUDENT_OVERLAP_DETECTED | overlaps=${JSON.stringify(postSolveOverlaps.slice(0, 5))}`
         });
         continue;
       }
@@ -768,8 +735,11 @@ Deno.serve(async (req) => {
     }
 
     if (failedProgrammes.length > 0 || successProgrammes.length === 0) {
+      const primaryFailure = failedProgrammes[0] || null;
       return Response.json({
         ok: false,
+        stage: primaryFailure?.stage || 'SOLVE',
+        code: primaryFailure?.reason_code || 'SOLUTION_INFEASIBLE',
         slotsInserted: 0,
         programmes: successProgrammes,
         failed: failedProgrammes,
