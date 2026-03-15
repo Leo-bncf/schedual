@@ -11,6 +11,11 @@ function normalizeLevel(raw) {
   return String(raw).toUpperCase().trim();
 }
 
+function makeSubjectLevelKey(subjectId, level) {
+  if (!subjectId) return '';
+  return `${subjectId}__${normalizeLevel(level)}`;
+}
+
 Deno.serve(async (req) => {
   const FUNCTION_VERSION = '2026-03-15T20:00:00Z';
   console.log('[getStudentScheduleSlots] 🚀 VERSION:', FUNCTION_VERSION);
@@ -55,10 +60,52 @@ Deno.serve(async (req) => {
     ]);
 
     const tgById = {};
-    teachingGroups.forEach(tg => { tgById[tg.id] = tg; });
+    const teachingGroupsByKey = {};
+    teachingGroups.forEach(tg => {
+      tgById[tg.id] = tg;
+      const key = makeSubjectLevelKey(tg.subject_id, tg.level);
+      if (key) {
+        if (!teachingGroupsByKey[key]) teachingGroupsByKey[key] = [];
+        teachingGroupsByKey[key].push(tg);
+      }
+    });
 
     const subjectById = {};
     subjects.forEach(s => { subjectById[s.id] = s; });
+
+    const assignedGroups = assignedGroupIds.map(id => tgById[id]).filter(Boolean);
+    const studentYearGroup = String(student.year_group || '').trim();
+    const allowedTeachingGroupIds = new Set(assignedGroupIds);
+    const allowedSubjectLevelKeys = new Set(
+      assignedGroups
+        .map(tg => makeSubjectLevelKey(tg.subject_id, tg.level))
+        .filter(Boolean)
+    );
+
+    // Universal merged-cohort handling: if a student is assigned to a TG,
+    // also allow sibling TG IDs with the same subject+level across year groups.
+    assignedGroups.forEach((assignedTg) => {
+      const key = makeSubjectLevelKey(assignedTg.subject_id, assignedTg.level);
+      const siblings = teachingGroupsByKey[key] || [];
+      siblings.forEach((candidate) => {
+        if (
+          candidate.id !== assignedTg.id &&
+          candidate.year_group &&
+          assignedTg.year_group &&
+          candidate.year_group !== assignedTg.year_group
+        ) {
+          allowedTeachingGroupIds.add(candidate.id);
+        }
+      });
+    });
+
+    // Fallback for students missing assigned_groups: use subject choices.
+    if (allowedSubjectLevelKeys.size === 0) {
+      subjectChoices.forEach((choice) => {
+        const key = makeSubjectLevelKey(choice.subject_id, choice.level);
+        if (key) allowedSubjectLevelKeys.add(key);
+      });
+    }
 
     console.log('[getStudentScheduleSlots] 🎓 Student:', { 
       name: student.full_name, 
@@ -88,51 +135,55 @@ Deno.serve(async (req) => {
       schedule_version: schedule_version_id 
     });
     
-    // Step 3: Filter slots by exact group membership plus merged-DP subject fallback
+    // Step 3: Filter slots using a single source of truth:
+    // exact TG assignment, direct membership on TG, or subject+level entitlement.
     const studentSlots = allSlots.filter(slot => {
       if (slot.classgroup_id && student.classgroup_id) {
         return slot.classgroup_id === student.classgroup_id;
       }
-      
+
       if (slot?.notes?.includes('Test') && (slot?.notes?.includes('DP1') || slot?.notes?.includes('DP2'))) {
-        return student?.year_group && slot.notes.includes(student.year_group);
+        return studentYearGroup && slot.notes.includes(studentYearGroup);
       }
 
       if (slot.student_id) {
         return slot.student_id === student.id;
       }
 
-      if (!slot.teaching_group_id) {
-        return false;
-      }
+      const slotGroup = slot.teaching_group_id ? tgById[slot.teaching_group_id] : null;
+      const slotSubjectId = slot.subject_id || slotGroup?.subject_id;
+      const slotLevel = slot.display_level_override || slotGroup?.level;
+      const slotKey = makeSubjectLevelKey(slotSubjectId, slotLevel);
 
-      if (assignedGroupIds.includes(slot.teaching_group_id)) {
+      if (slot.teaching_group_id && allowedTeachingGroupIds.has(slot.teaching_group_id)) {
         return true;
       }
 
-      // Check if student is directly listed in the teaching group's student_ids
-      // (handles repTg merging where slot TG ID != student's assigned_groups entry)
-      const slotGroup = tgById[slot.teaching_group_id];
       if (slotGroup && Array.isArray(slotGroup.student_ids) && slotGroup.student_ids.includes(student.id)) {
         return true;
       }
 
-      // Sibling-TG fallback: handles combine_dp1_dp2 merging where the solver uses the
-      // DP1 repTg ID for all slots, but the student is only assigned to the DP2 group.
-      // If the student has an assigned TG for the same subject+level → accept this slot.
-      if (slotGroup) {
-        const slotSubjectId = slotGroup.subject_id;
-        const slotLevel = normalizeLevel(slotGroup.level);
-        const hasSiblingAssigned = assignedGroupIds.some(assignedTgId => {
-          const assignedTg = tgById[assignedTgId];
-          return assignedTg &&
-            assignedTg.subject_id === slotSubjectId &&
-            normalizeLevel(assignedTg.level) === slotLevel;
-        });
-        if (hasSiblingAssigned) return true;
+      if (!slotKey || !allowedSubjectLevelKeys.has(slotKey)) {
+        return false;
       }
 
-      return false;
+      // Keep subject-choice fallback tight: same year group unless the student already
+      // has an assigned sibling TG for the same subject+level (merged DP1/DP2 case).
+      if (!slotGroup?.year_group || !studentYearGroup) {
+        return true;
+      }
+
+      if (slotGroup.year_group === studentYearGroup) {
+        return true;
+      }
+
+      return assignedGroups.some((assignedTg) =>
+        assignedTg.subject_id === slotSubjectId &&
+        normalizeLevel(assignedTg.level) === normalizeLevel(slotLevel) &&
+        assignedTg.year_group &&
+        slotGroup.year_group &&
+        assignedTg.year_group !== slotGroup.year_group
+      );
     }).filter((slot, index, self) => index === self.findIndex(s => s.id === slot.id));
     
     console.log('[getStudentScheduleSlots] ✅ Filtered slots for student:', studentSlots.length);
