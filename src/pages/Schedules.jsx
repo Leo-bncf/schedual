@@ -41,6 +41,7 @@ import {
 } from 'lucide-react';
 import TimetableGrid from '../components/schedule/TimetableGrid';
 import ExportTimetableButton from '../components/schedule/ExportTimetableButton';
+import SearchableEntitySelect from '../components/schedule/SearchableEntitySelect';
 
 export default function Schedules() {
   const [isDialogOpen, setIsDialogOpen] = useState(false);
@@ -904,35 +905,14 @@ export default function Schedules() {
                   {/* Student Search & Select */}
                   <div className="space-y-2">
                     <Label className="text-xs font-medium text-slate-600">Select Student</Label>
-                    <div className="flex flex-col sm:flex-row gap-2">
-                      <div className="flex-1 relative">
-                        <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400" />
-                        <Input
-                          placeholder="Search by name..."
-                          value={searchStudent}
-                          onChange={(e) => setSearchStudent(e.target.value)}
-                          className="pl-9 h-10 border-slate-200"
-                        />
-                      </div>
-                      <Select value={selectedStudentId || ''} onValueChange={setSelectedStudentId}>
-                        <SelectTrigger className="sm:w-[280px] h-10 border-slate-200">
-                          <SelectValue placeholder="Choose student" />
-                        </SelectTrigger>
-                        <SelectContent>
-                          {filteredStudents.map(student => (
-                            <SelectItem key={student.id} value={student.id}>
-                              <div className="flex items-center gap-2">
-                                <div className="w-6 h-6 rounded-full bg-blue-100 flex items-center justify-center text-blue-700 text-xs font-semibold">
-                                  {student.full_name?.charAt(0)?.toUpperCase()}
-                                </div>
-                                <span className="text-sm">{student.full_name}</span>
-                                <span className="text-xs text-slate-500">({student.year_group})</span>
-                              </div>
-                            </SelectItem>
-                          ))}
-                        </SelectContent>
-                      </Select>
-                    </div>
+                    <SearchableEntitySelect
+                      items={filteredStudents}
+                      value={selectedStudentId || ''}
+                      onChange={setSelectedStudentId}
+                      placeholder="Search and choose a student..."
+                      emptyText="No students found"
+                      renderSubtitle={(student) => student.year_group ? `${student.year_group}` : 'Student'}
+                    />
                   </div>
 
                   {/* Student Schedule Display */}
@@ -1007,34 +987,14 @@ export default function Schedules() {
                   {/* Teacher Search & Select */}
                   <div className="space-y-2">
                     <Label className="text-xs font-medium text-slate-600">Select Teacher</Label>
-                    <div className="flex flex-col sm:flex-row gap-2">
-                      <div className="flex-1 relative">
-                        <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400" />
-                        <Input
-                          placeholder="Search by name..."
-                          value={searchTeacher}
-                          onChange={(e) => setSearchTeacher(e.target.value)}
-                          className="pl-9 h-10 border-slate-200"
-                        />
-                      </div>
-                      <Select value={selectedTeacherId || ''} onValueChange={setSelectedTeacherId}>
-                        <SelectTrigger className="sm:w-[280px] h-10 border-slate-200">
-                          <SelectValue placeholder="Choose teacher" />
-                        </SelectTrigger>
-                        <SelectContent>
-                          {filteredTeachers.map(teacher => (
-                            <SelectItem key={teacher.id} value={teacher.id}>
-                              <div className="flex items-center gap-2">
-                                <div className="w-6 h-6 rounded-full bg-emerald-100 flex items-center justify-center text-emerald-700 text-xs font-semibold">
-                                  {teacher.full_name?.charAt(0)?.toUpperCase()}
-                                </div>
-                                <span className="text-sm">{teacher.full_name}</span>
-                              </div>
-                            </SelectItem>
-                          ))}
-                        </SelectContent>
-                      </Select>
-                    </div>
+                    <SearchableEntitySelect
+                      items={filteredTeachers}
+                      value={selectedTeacherId || ''}
+                      onChange={setSelectedTeacherId}
+                      placeholder="Search and choose a teacher..."
+                      emptyText="No teachers found"
+                      renderSubtitle={() => 'Teacher'}
+                    />
                   </div>
 
                   {/* Teacher Schedule Display */}
