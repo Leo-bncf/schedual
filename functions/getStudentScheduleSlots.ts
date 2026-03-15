@@ -106,7 +106,22 @@ Deno.serve(async (req) => {
         return false;
       }
 
-      return assignedGroupIds.includes(slot.teaching_group_id);
+      if (assignedGroupIds.includes(slot.teaching_group_id)) {
+        return true;
+      }
+
+      const slotGroup = tgById[slot.teaching_group_id];
+      const slotSubject = slot.subject_id ? subjectById[slot.subject_id] : (slotGroup?.subject_id ? subjectById[slotGroup.subject_id] : null);
+      if (!slotGroup || !slotSubject?.combine_dp1_dp2) {
+        return false;
+      }
+
+      const subjectChoice = subjectChoices.find(choice => choice.subject_id === slotSubject.id);
+      if (!subjectChoice) {
+        return false;
+      }
+
+      return normalizeLevel(subjectChoice.level) === normalizeLevel(slotGroup.level);
     }).filter((slot, index, self) => index === self.findIndex(s => s.id === slot.id));
     
     console.log('[getStudentScheduleSlots] ✅ Filtered slots for student:', studentSlots.length);

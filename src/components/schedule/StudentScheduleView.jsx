@@ -162,7 +162,22 @@ export default function StudentScheduleView({ students, slots, groups, subjects,
         return false;
       }
 
-      return assignedGroupIds.includes(slot.teaching_group_id);
+      if (assignedGroupIds.includes(slot.teaching_group_id)) {
+        return true;
+      }
+
+      const slotGroup = groups.find(g => g.id === slot.teaching_group_id);
+      const slotSubject = slot.subject_id ? subjects.find(s => s.id === slot.subject_id) : (slotGroup?.subject_id ? subjects.find(s => s.id === slotGroup.subject_id) : null);
+      if (!slotGroup || !slotSubject?.combine_dp1_dp2) {
+        return false;
+      }
+
+      const subjectChoice = subjectChoices.find(choice => choice.subject_id === slotSubject.id);
+      if (!subjectChoice) {
+        return false;
+      }
+
+      return String(subjectChoice.level || '').toUpperCase().trim() === String(slotGroup.level || '').toUpperCase().trim();
     }).filter((slot, index, self) => index === self.findIndex(s => s.id === slot.id));
 
     // ENHANCED DEBUG: Expected vs actual periods by teaching group and subject

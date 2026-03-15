@@ -331,17 +331,21 @@ export default function Schedules() {
     const subjectChoices = Array.isArray(student?.subject_choices) ? student.subject_choices : [];
 
     const matchedSlots = scheduleSlots.filter(slot => {
-      // Direct student match (e.g. for individual slots)
       if (slot.student_id === studentId) return true;
-
-      // PYP/MYP: match by classgroup_id
       if (slot.classgroup_id && student?.classgroup_id) {
         return slot.classgroup_id === student.classgroup_id;
       }
-
       if (!slot.teaching_group_id) return false;
+      if (assignedGroups.includes(slot.teaching_group_id)) return true;
 
-      return assignedGroups.includes(slot.teaching_group_id);
+      const slotGroup = teachingGroups.find(g => g.id === slot.teaching_group_id);
+      const slotSubject = slot.subject_id ? subjects.find(s => s.id === slot.subject_id) : (slotGroup?.subject_id ? subjects.find(s => s.id === slotGroup.subject_id) : null);
+      if (!slotGroup || !slotSubject?.combine_dp1_dp2) return false;
+
+      const subjectChoice = subjectChoices.find(choice => choice.subject_id === slotSubject.id);
+      if (!subjectChoice) return false;
+
+      return String(subjectChoice.level || '').toUpperCase().trim() === String(slotGroup.level || '').toUpperCase().trim();
     });
 
     return matchedSlots.filter((slot, index, self) => index === self.findIndex(s => s.id === slot.id));
@@ -407,7 +411,7 @@ export default function Schedules() {
   };
 
   const studentSchedule = selectedStudentId
-    ? annotateStudentScheduleLevels(selectedStudent, studentScheduleResponse?.slots ?? getStudentSchedule(selectedStudentId))
+    ? annotateStudentScheduleLevels(selectedStudent, studentScheduleResponse?.slots || [])
     : null;
 
   const getTeacherSchedule = (teacherId) => {
