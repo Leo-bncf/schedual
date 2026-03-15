@@ -16,8 +16,22 @@ function makeSubjectLevelKey(subjectId, level) {
   return `${subjectId}__${normalizeLevel(level)}`;
 }
 
+function extractYearGroupScope(slot, slotGroup) {
+  const explicitScope = String(slot?.year_group_scope || '').trim();
+  if (explicitScope) return explicitScope;
+
+  const groupYear = String(slotGroup?.year_group || '').trim();
+  if (groupYear) return groupYear;
+
+  const raw = String(slot?.solver_teaching_group_id || slot?.teaching_group_id || '').toUpperCase();
+  if (raw.includes('DP1_DP2')) return 'DP1_DP2';
+  if (raw.includes('DP2')) return 'DP2';
+  if (raw.includes('DP1')) return 'DP1';
+  return '';
+}
+
 Deno.serve(async (req) => {
-  const FUNCTION_VERSION = '2026-03-15T20:50:00Z';
+  const FUNCTION_VERSION = '2026-03-15T21:10:00Z';
   console.log('[getStudentScheduleSlots] 🚀 VERSION:', FUNCTION_VERSION);
   
   try {
@@ -180,11 +194,12 @@ Deno.serve(async (req) => {
         return false;
       }
 
-      if (!slotGroup?.year_group || !studentYearGroup) {
-        return true;
+      const slotScope = extractYearGroupScope(slot, slotGroup);
+      if (!slotScope || !studentYearGroup) {
+        return false;
       }
 
-      if (slotGroup.year_group === studentYearGroup) {
+      if (slotScope === studentYearGroup || slotScope === 'DP1_DP2') {
         return true;
       }
 
@@ -192,8 +207,8 @@ Deno.serve(async (req) => {
         assignedTg.subject_id === slotSubjectId &&
         normalizeLevel(assignedTg.level) === normalizeLevel(slotLevel) &&
         assignedTg.year_group &&
-        slotGroup.year_group &&
-        assignedTg.year_group !== slotGroup.year_group
+        slotScope &&
+        (assignedTg.year_group === slotScope || slotScope === 'DP1_DP2')
       );
     }).filter((slot, index, self) => index === self.findIndex(s => s.id === slot.id));
     
