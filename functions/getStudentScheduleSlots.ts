@@ -117,15 +117,22 @@ Deno.serve(async (req) => {
         return true;
       }
 
-      // Fallback: combine_dp1_dp2 subjects — match by subject + level across year groups
-      const slotSubject = slot.subject_id ? subjectById[slot.subject_id]
-        : (slotGroup?.subject_id ? subjectById[slotGroup.subject_id] : null);
-      if (!slotGroup || !slotSubject?.combine_dp1_dp2) return false;
+      // Sibling-TG fallback: handles combine_dp1_dp2 merging where the solver uses the
+      // DP1 repTg ID for all slots, but the student is only assigned to the DP2 group.
+      // If the student has an assigned TG for the same subject+level → accept this slot.
+      if (slotGroup) {
+        const slotSubjectId = slotGroup.subject_id;
+        const slotLevel = normalizeLevel(slotGroup.level);
+        const hasSiblingAssigned = assignedGroupIds.some(assignedTgId => {
+          const assignedTg = tgById[assignedTgId];
+          return assignedTg &&
+            assignedTg.subject_id === slotSubjectId &&
+            normalizeLevel(assignedTg.level) === slotLevel;
+        });
+        if (hasSiblingAssigned) return true;
+      }
 
-      const subjectChoice = subjectChoices.find(c => c.subject_id === slotSubject.id);
-      if (!subjectChoice) return false;
-
-      return normalizeLevel(subjectChoice.level) === normalizeLevel(slotGroup.level);
+      return false;
     }).filter((slot, index, self) => index === self.findIndex(s => s.id === slot.id));
     
     console.log('[getStudentScheduleSlots] ✅ Filtered slots for student:', studentSlots.length);
