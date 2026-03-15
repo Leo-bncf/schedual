@@ -100,7 +100,7 @@ function buildDPPayload({ schoolId, scheduleVersionId, school, students, teacher
     const repTg = bucketTgs[0];
     const studentGroup = `${yearScope}_${level}_${subjectKey}`;
     const sectionId = `sec_${level.toLowerCase()}_${subjectKey}_${yearScope}`;
-    const teachingGroupId = repTg ? `tg_${repTg.id}` : null;
+    const teachingGroupId = repTg ? repTg.id : null;
     const hoursForLevel = level === 'HL' ? Number(subject.hoursPerWeekHL || 0) : Number(subject.hoursPerWeekSL || 0);
     const minutesPerWeek = hoursForLevel * 60;
     const periodsPerWeek = Math.max(1, Math.ceil(minutesPerWeek / periodDuration));

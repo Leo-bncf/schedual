@@ -243,7 +243,7 @@ function buildDPPayload({ schoolId, scheduleVersionId, school, students, teacher
     const repTg = bucketTgs[0];
     const studentGroup = `${yearScope}_${level}_${subjectKey}`;
     const sectionId = `sec_${level.toLowerCase()}_${subjectKey}_${yearScope}`;
-    const teachingGroupId = repTg ? `tg_${repTg.id}` : null;
+    const teachingGroupId = repTg ? repTg.id : null;
     const hoursForLevel = level === 'HL' ? Number(subject.hoursPerWeekHL || 0) : Number(subject.hoursPerWeekSL || 0);
     const minutesPerWeek = hoursForLevel * 60;
     const periodsPerWeek = Math.max(1, Math.ceil(minutesPerWeek / periodDuration));
@@ -577,12 +577,12 @@ function parseResponseToSlots({ responseData, payload, scheduleVersionId, school
       slot.subject_id = payload.subjectIdByCode[entry.subject] ?? null;
     }
 
-    // teachingGroupId from solver still has our `tg_` prefix (mapper only strips `TG_` uppercase prefix)
-    // Strip our `tg_` prefix to get the raw base44 entity ID
     if (entry.teachingGroupId) {
-      slot.teaching_group_id = entry.teachingGroupId.startsWith('tg_') 
-        ? entry.teachingGroupId.slice(3) 
-        : entry.teachingGroupId;
+      slot.teaching_group_id = String(entry.teachingGroupId).startsWith('tg_')
+        ? String(entry.teachingGroupId).slice(3)
+        : String(entry.teachingGroupId).startsWith('TG_')
+          ? String(entry.teachingGroupId).slice(3)
+          : entry.teachingGroupId;
     }
 
     slots.push(slot);
