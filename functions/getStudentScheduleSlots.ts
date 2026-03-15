@@ -17,7 +17,7 @@ function makeSubjectLevelKey(subjectId, level) {
 }
 
 Deno.serve(async (req) => {
-  const FUNCTION_VERSION = '2026-03-15T20:20:00Z';
+  const FUNCTION_VERSION = '2026-03-15T20:35:00Z';
   console.log('[getStudentScheduleSlots] 🚀 VERSION:', FUNCTION_VERSION);
   
   try {
@@ -81,6 +81,11 @@ Deno.serve(async (req) => {
         .map(tg => makeSubjectLevelKey(tg.subject_id, tg.level))
         .filter(Boolean)
     );
+    const allowedSubjectIds = new Set(
+      assignedGroups
+        .map(tg => tg.subject_id)
+        .filter(Boolean)
+    );
 
     // Universal merged-cohort handling: if a student is assigned to a TG,
     // also allow sibling TG IDs with the same subject+level across year groups.
@@ -99,13 +104,12 @@ Deno.serve(async (req) => {
       });
     });
 
-    // Fallback for students missing assigned_groups: use subject choices.
-    if (allowedSubjectLevelKeys.size === 0) {
-      subjectChoices.forEach((choice) => {
-        const key = makeSubjectLevelKey(choice.subject_id, choice.level);
-        if (key) allowedSubjectLevelKeys.add(key);
-      });
-    }
+    // Always enrich from subject choices as a fallback when TG metadata is incomplete.
+    subjectChoices.forEach((choice) => {
+      const key = makeSubjectLevelKey(choice.subject_id, choice.level);
+      if (key) allowedSubjectLevelKeys.add(key);
+      if (choice.subject_id) allowedSubjectIds.add(choice.subject_id);
+    });
 
     console.log('[getStudentScheduleSlots] 🎓 Student:', { 
       name: student.full_name, 
@@ -163,27 +167,30 @@ Deno.serve(async (req) => {
         return true;
       }
 
-      if (!slotKey || !allowedSubjectLevelKeys.has(slotKey)) {
-        return false;
+      if (slotKey && allowedSubjectLevelKeys.has(slotKey)) {
+        if (!slotGroup?.year_group || !studentYearGroup) {
+          return true;
+        }
+
+        if (slotGroup.year_group === studentYearGroup) {
+          return true;
+        }
+
+        return assignedGroups.some((assignedTg) =>
+          assignedTg.subject_id === slotSubjectId &&
+          normalizeLevel(assignedTg.level) === normalizeLevel(slotLevel) &&
+          assignedTg.year_group &&
+          slotGroup.year_group &&
+          assignedTg.year_group !== slotGroup.year_group
+        );
       }
 
-      // Keep subject-choice fallback tight: same year group unless the student already
-      // has an assigned sibling TG for the same subject+level (merged DP1/DP2 case).
-      if (!slotGroup?.year_group || !studentYearGroup) {
+      // Last-resort fallback for broken/generated slots that kept subject_id but lost TG/level metadata.
+      if (slotSubjectId && allowedSubjectIds.has(slotSubjectId) && !slotLevel) {
         return true;
       }
 
-      if (slotGroup.year_group === studentYearGroup) {
-        return true;
-      }
-
-      return assignedGroups.some((assignedTg) =>
-        assignedTg.subject_id === slotSubjectId &&
-        normalizeLevel(assignedTg.level) === normalizeLevel(slotLevel) &&
-        assignedTg.year_group &&
-        slotGroup.year_group &&
-        assignedTg.year_group !== slotGroup.year_group
-      );
+      return false;
     }).filter((slot, index, self) => index === self.findIndex(s => s.id === slot.id));
     
     console.log('[getStudentScheduleSlots] ✅ Filtered slots for student:', studentSlots.length);
