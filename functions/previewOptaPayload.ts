@@ -76,7 +76,7 @@ function buildDPPayload({ schoolId, scheduleVersionId, school, students, teacher
     if (!subject) continue;
 
     const level = tg.level || 'HL';
-    const yearScope = tg.year_group;
+    const yearScope = subject.combine_dp1_dp2 ? 'DP1_DP2' : tg.year_group;
     const bucketKey = `${tg.subject_id}__${yearScope}__${level}`;
 
     if (!tgByBucket.has(bucketKey)) {
