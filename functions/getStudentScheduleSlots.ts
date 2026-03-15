@@ -117,20 +117,15 @@ Deno.serve(async (req) => {
         return true;
       }
 
-      // Universal fallback: match by subject_choices — if student chose this subject+level, include the slot
+      // Fallback: combine_dp1_dp2 subjects — match by subject + level across year groups
       const slotSubject = slot.subject_id ? subjectById[slot.subject_id]
         : (slotGroup?.subject_id ? subjectById[slotGroup.subject_id] : null);
-      if (!slotSubject) return false;
+      if (!slotGroup || !slotSubject?.combine_dp1_dp2) return false;
 
       const subjectChoice = subjectChoices.find(c => c.subject_id === slotSubject.id);
       if (!subjectChoice) return false;
 
-      // For DP: level must match
-      if (student.ib_programme === 'DP' && slotGroup?.level) {
-        return normalizeLevel(subjectChoice.level) === normalizeLevel(slotGroup.level);
-      }
-
-      return true;
+      return normalizeLevel(subjectChoice.level) === normalizeLevel(slotGroup.level);
     }).filter((slot, index, self) => index === self.findIndex(s => s.id === slot.id));
     
     console.log('[getStudentScheduleSlots] ✅ Filtered slots for student:', studentSlots.length);
