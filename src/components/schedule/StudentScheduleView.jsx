@@ -163,7 +163,7 @@ export default function StudentScheduleView({ students, slots, groups, subjects,
     // Group by day and uiRow directly
     const byCell = new Map(); // key: "day_period"
     
-    studentSlots.forEach(slot => {
+    visibleStudentSlots.forEach(slot => {
       // Robustly resolve uiRow (timeslot fallback)
       const tsId = slot.timeslot_id;
       const mappedTimeslot = tsId ? (timeslotToPosition[String(tsId)] || timeslotToPosition[Number(tsId)]) : null;
@@ -223,7 +223,7 @@ export default function StudentScheduleView({ students, slots, groups, subjects,
     }
     
     return { normalizedEvents: events, overlaps: conflicts };
-  }, [studentSlots, timeslotToPosition, resolveSlotMeta]);
+  }, [visibleStudentSlots, timeslotToPosition, resolveSlotMeta]);
 
   const getEventForPeriod = (day, uiRow) => {
     const key = `${day}_${uiRow}`;
@@ -235,12 +235,12 @@ export default function StudentScheduleView({ students, slots, groups, subjects,
     if (selectedStudent) {
       console.log('[StudentScheduleView] DEBUG - timeslots.length:', timeslots.length);
       console.log('[StudentScheduleView] DEBUG - timeslots[0]:', timeslots[0]);
-      console.log('[StudentScheduleView] DEBUG - studentSlots.length:', studentSlots.length);
-      console.log('[StudentScheduleView] DEBUG - studentSlots[0] keys:', Object.keys(studentSlots[0] || {}));
-      console.log('[StudentScheduleView] DEBUG - studentSlots sample:', studentSlots.slice(0, 3));
+      console.log('[StudentScheduleView] DEBUG - studentSlots.length:', visibleStudentSlots.length);
+      console.log('[StudentScheduleView] DEBUG - studentSlots[0] keys:', Object.keys(visibleStudentSlots[0] || {}));
+      console.log('[StudentScheduleView] DEBUG - studentSlots sample:', visibleStudentSlots.slice(0, 3));
       console.log('[StudentScheduleView] DEBUG - timeslotToPosition sample:', Object.entries(timeslotToPosition).slice(0, 5));
     }
-  }, [selectedStudent, studentSlots, timeslots, timeslotToPosition]);
+  }, [selectedStudent, visibleStudentSlots, timeslots, timeslotToPosition]);
 
   const getSubjectColor = (subjectName) => {
     if (!subjectName) return { bg: 'bg-slate-50', border: 'border-slate-300', text: 'text-slate-900', badge: 'bg-slate-100 text-slate-700' };
@@ -341,6 +341,33 @@ export default function StudentScheduleView({ students, slots, groups, subjects,
     return { group, subject, teacher, room, level };
   }, [groupsById, subjectsById, teachersById, roomsById, resolveStudentLevelForSubject]);
 
+  const allowedStudentSubjectKeys = React.useMemo(() => {
+    const keys = new Set();
+
+    (selectedStudent?.assigned_groups || []).forEach((groupId) => {
+      const group = groupsById[groupId];
+      const key = makeSubjectLevelKey(group?.subject_id, group?.level);
+      if (key) keys.add(key);
+    });
+
+    (selectedStudent?.subject_choices || []).forEach((choice) => {
+      const key = makeSubjectLevelKey(choice?.subject_id, choice?.level);
+      if (key) keys.add(key);
+    });
+
+    return keys;
+  }, [selectedStudent, groupsById]);
+
+  const visibleStudentSlots = React.useMemo(() => {
+    return (studentSlots || []).filter((slot) => {
+      if (slot?.is_break) return true;
+      if (slot?.notes?.includes('Test')) return true;
+      const { subject, level } = resolveSlotMeta(slot);
+      const key = makeSubjectLevelKey(subject?.id, level);
+      return key && allowedStudentSubjectKeys.has(key);
+    });
+  }, [studentSlots, resolveSlotMeta, allowedStudentSubjectKeys]);
+
   const filteredStudentOptions = students.filter(student =>
     normalizeSearch(student.full_name).includes(normalizeSearch(studentSearchQuery))
   );
@@ -435,7 +462,7 @@ export default function StudentScheduleView({ students, slots, groups, subjects,
           <span className="text-sm font-medium text-slate-700">Select Student</span>
           {selectedStudent && (
             <>
-              <Badge variant="outline">{studentSlots.length} periods</Badge>
+              <Badge variant="outline">{visibleStudentSlots.length} periods</Badge>
               <Badge variant="outline" className="bg-blue-50 text-blue-900">
                 {(selectedStudent.assigned_groups || []).length} groups
               </Badge>
@@ -608,7 +635,7 @@ export default function StudentScheduleView({ students, slots, groups, subjects,
               const coverageKey = makeSubjectLevelKey(group.subject_id, group.level);
 
               // Count actual SCHEDULED slots by subject+level, using the same resolution as the grid.
-              const scheduledSlots = studentSlots.filter((s) => {
+              const scheduledSlots = visibleStudentSlots.filter((s) => {
                 const { subject, level } = resolveSlotMeta(s);
                 const slotKey = makeSubjectLevelKey(subject?.id, level);
                 return slotKey === coverageKey && s.status === 'scheduled' && s.timeslot_id;
@@ -616,7 +643,7 @@ export default function StudentScheduleView({ students, slots, groups, subjects,
               const actualPeriods = scheduledSlots.reduce((sum, s) => sum + (s.is_double_period ? 2 : 1), 0);
               
               // Count unscheduled slots by subject+level too
-              const unscheduledSlots = studentSlots.filter((s) => {
+              const unscheduledSlots = visibleStudentSlots.filter((s) => {
                 const { subject, level } = resolveSlotMeta(s);
                 const slotKey = makeSubjectLevelKey(subject?.id, level);
                 return slotKey === coverageKey && s.status === 'unscheduled';
