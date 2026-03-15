@@ -12,7 +12,7 @@ function normalizeLevel(raw) {
 }
 
 Deno.serve(async (req) => {
-  const FUNCTION_VERSION = '2026-03-09T21:05:00Z';
+  const FUNCTION_VERSION = '2026-03-15T20:00:00Z';
   console.log('[getStudentScheduleSlots] 🚀 VERSION:', FUNCTION_VERSION);
   
   try {
