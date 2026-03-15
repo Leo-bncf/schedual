@@ -8,6 +8,10 @@ import { GraduationCap, AlertCircle, Maximize2, Minimize2 } from 'lucide-react';
 import { cn } from "@/lib/utils";
 
 const DAYS = ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday'];
+const normalizeSearch = (value) => String(value || '')
+  .toLowerCase()
+  .normalize('NFD')
+  .replace(/[\u0300-\u036f]/g, '');
 
 export default function StudentScheduleView({ students, slots, groups, subjects, teachers, rooms, selectedStudentId, onStudentChange, exportId = "student-schedule", unassignedBySubjectCode = {}, timeslots = [], scheduleSettings, scheduleVersionId }) {
   const selectedStudent = students.find(s => s.id === selectedStudentId);
@@ -569,7 +573,7 @@ export default function StudentScheduleView({ students, slots, groups, subjects,
           </div>
           
           <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-3 max-h-[300px] overflow-y-auto pr-1 custom-scrollbar">
-            {students.filter(student => student.full_name.toLowerCase().includes(studentSearchQuery.toLowerCase())).map(student => (
+            {students.filter(student => normalizeSearch(student.full_name).includes(normalizeSearch(studentSearchQuery))).map(student => (
               <button
                 key={student.id}
                 onClick={() => onStudentChange(student.id)}

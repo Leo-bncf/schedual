@@ -300,6 +300,11 @@ export default function Schedules() {
     };
   }, [selectedVersion, scheduleSlots, students, teachingGroups]);
 
+  const normalizeSearch = (value) => String(value || '')
+    .toLowerCase()
+    .normalize('NFD')
+    .replace(/[\u0300-\u036f]/g, '');
+
   // Student schedule view
   const getSubjectColor = (subjectName) => {
     if (!subjectName) return { bg: 'bg-slate-50', border: 'border-slate-200', text: 'text-slate-900', badge: 'bg-slate-100 text-slate-700' };
@@ -351,11 +356,13 @@ export default function Schedules() {
     return matchedSlots.filter((slot, index, self) => index === self.findIndex(s => s.id === slot.id));
   };
 
-  const filteredStudents = students.filter(s => 
-    s.is_active && 
-    (s.full_name?.toLowerCase().includes(searchStudent.toLowerCase()) ||
-     s.email?.toLowerCase().includes(searchStudent.toLowerCase()))
-  );
+  const filteredStudents = students.filter(s => {
+    const query = normalizeSearch(searchStudent);
+    return s.is_active && (
+      normalizeSearch(s.full_name).includes(query) ||
+      normalizeSearch(s.email).includes(query)
+    );
+  });
 
   const selectedStudent = students.find(s => s.id === selectedStudentId);
   const { data: studentScheduleResponse } = useQuery({
@@ -418,11 +425,13 @@ export default function Schedules() {
     return scheduleSlots.filter(slot => slot.teacher_id === teacherId);
   };
 
-  const filteredTeachers = teachers.filter(t => 
-    t.is_active && 
-    (t.full_name?.toLowerCase().includes(searchTeacher.toLowerCase()) ||
-     t.email?.toLowerCase().includes(searchTeacher.toLowerCase()))
-  );
+  const filteredTeachers = teachers.filter(t => {
+    const query = normalizeSearch(searchTeacher);
+    return t.is_active && (
+      normalizeSearch(t.full_name).includes(query) ||
+      normalizeSearch(t.email).includes(query)
+    );
+  });
 
   const selectedTeacher = teachers.find(t => t.id === selectedTeacherId);
   const teacherSchedule = selectedTeacherId ? getTeacherSchedule(selectedTeacherId) : null;
