@@ -488,9 +488,14 @@ export default function TimetableGrid({
                     return null;
                   }
 
-                  // MULTI-LESSON DISPLAY: Show all visible slots in this cell
-                  const displayCount = globalView ? visibleSlots.length : Math.min(visibleSlots.length, 2);
-                  const remainingCount = visibleSlots.length - displayCount;
+                  // MULTI-LESSON DISPLAY: In global view deduplicate by teaching_group_id (one card per group)
+                  const deduplicatedSlots = globalView
+                    ? visibleSlots.filter((slot, idx, arr) =>
+                        !slot.teaching_group_id || arr.findIndex(s => s.teaching_group_id === slot.teaching_group_id) === idx
+                      )
+                    : visibleSlots;
+                  const displayCount = Math.min(deduplicatedSlots.length, globalView ? deduplicatedSlots.length : 2);
+                  const remainingCount = deduplicatedSlots.length - displayCount;
 
                   return (
                     <div 
