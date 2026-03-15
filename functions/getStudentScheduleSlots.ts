@@ -110,7 +110,14 @@ Deno.serve(async (req) => {
         return true;
       }
 
+      // Check if student is directly listed in the teaching group's student_ids
+      // (handles combine_dp1_dp2 merging where the slot uses a different TG's id than the student's assigned group)
       const slotGroup = tgById[slot.teaching_group_id];
+      if (slotGroup && Array.isArray(slotGroup.student_ids) && slotGroup.student_ids.includes(student.id)) {
+        return true;
+      }
+
+      // Fallback: combine_dp1_dp2 subjects — match by subject + level across year groups
       const slotSubject = slot.subject_id ? subjectById[slot.subject_id] : (slotGroup?.subject_id ? subjectById[slotGroup.subject_id] : null);
       if (!slotGroup || !slotSubject?.combine_dp1_dp2) {
         return false;
