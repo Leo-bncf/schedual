@@ -161,7 +161,6 @@ export default function TimetableGrid({
             const [breakStartHour, breakStartMin] = br.start.split(':').map(Number);
             let elapsedMins = (breakStartHour * 60 + breakStartMin) - (startHour * 60 + startMin);
             
-            // Subtract duration of earlier breaks
             const earlierBreaks = breaks.filter(otherBr => {
               const [oH, oM] = otherBr.start.split(':').map(Number);
               return (oH * 60 + oM) < (breakStartHour * 60 + breakStartMin);
@@ -178,6 +177,24 @@ export default function TimetableGrid({
           })()
     }));
   }, [scheduleSettings, timeslots, dayStartTime, periodDurationMinutes]);
+
+  const lunchRowsMap = React.useMemo(() => {
+    const lunchRows = {};
+    (timeslots || []).forEach((ts) => {
+      const row = timeslotToPosition[String(ts.id)];
+      const start = String(ts.startTime || '').slice(0, 5);
+      const end = String(ts.endTime || '').slice(0, 5);
+      if (row && start === '12:00' && end === '13:00') {
+        lunchRows[row] = {
+          label: 'Lunch Break',
+          emoji: '🍽️',
+          startTime: start,
+          endTime: end,
+        };
+      }
+    });
+    return lunchRows;
+  }, [timeslots, timeslotToPosition]);
 
   const normalizedSlots = React.useMemo(() => {
     console.log('[TimetableGrid] DEBUG - timeslots.length:', timeslots.length);
@@ -409,6 +426,21 @@ export default function TimetableGrid({
             {/* Period Rows */}
             {activePeriods.map(uiRow => (
               <React.Fragment key={uiRow}>
+                {lunchRowsMap[uiRow] ? (
+                  <div className="grid grid-cols-[100px_repeat(5,1fr)] border-b-2 border-amber-300 bg-gradient-to-r from-amber-50 to-orange-50">
+                    <div className="p-4 bg-amber-100 border-r border-amber-300 flex flex-col items-center justify-center text-center min-h-[120px]">
+                      <div className="text-sm font-bold text-amber-900">{lunchRowsMap[uiRow].emoji}</div>
+                      <div className="text-sm font-bold text-amber-900">Lunch</div>
+                      <div className="text-[10px] text-amber-700 mt-1">{lunchRowsMap[uiRow].startTime} - {lunchRowsMap[uiRow].endTime}</div>
+                    </div>
+                    {DAYS.map(day => (
+                      <div key={`${day}-${uiRow}-lunch`} className="p-4 border-r border-amber-200 last:border-r-0 flex flex-col items-center justify-center min-h-[120px]">
+                        <span className="text-amber-700 font-semibold text-sm uppercase">Lunch Break</span>
+                        <div className="text-[10px] text-amber-600 mt-1">No lessons scheduled</div>
+                      </div>
+                    ))}
+                  </div>
+                ) : (
                 <div className="grid grid-cols-[100px_repeat(5,1fr)] border-b border-slate-300">
                   <div className="p-4 bg-slate-50 border-r border-slate-300 flex flex-col justify-center items-center text-center min-h-[120px]">
                     <div className="text-sm font-bold text-slate-800">{uiRow}</div>
@@ -698,6 +730,7 @@ export default function TimetableGrid({
                   );
                 })}
                 </div>
+                )}
                 
                 {/* Break Rows mapped from scheduleSettings */}
                 {breakRowsData.filter(br => Math.round(br.afterPeriod) === uiRow).map(breakRow => (

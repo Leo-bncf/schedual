@@ -21,7 +21,7 @@ export default function StudentScheduleView({ students, slots, groups, subjects,
   // DYNAMIC PERIOD CALCULATION: Derive from timeslots, not hardcoded
   const DAY_MAP = { MONDAY: 'Monday', TUESDAY: 'Tuesday', WEDNESDAY: 'Wednesday', THURSDAY: 'Thursday', FRIDAY: 'Friday' };
   
-  const { timeslotToPosition, periodTimes, maxPeriodsPerDay, breakRows } = React.useMemo(() => {
+  const { timeslotToPosition, periodTimes, maxPeriodsPerDay, breakRows, lunchRowsMap } = React.useMemo(() => {
     const map = {};
     const times = {};
     const timeslotsByDay = {};
@@ -89,8 +89,18 @@ export default function StudentScheduleView({ students, slots, groups, subjects,
       bgColor: idx === 0 ? 'bg-sky-200' : 'bg-amber-200',
       textColor: idx === 0 ? 'text-sky-900' : 'text-amber-900'
     }));
+
+    const lunchRows = {};
+    (timeslots || []).forEach((ts) => {
+      const row = map[String(ts.id)]?.uiRow || map[ts.id]?.uiRow;
+      const start = String(ts.startTime || '').slice(0, 5);
+      const end = String(ts.endTime || '').slice(0, 5);
+      if (row && start === '12:00' && end === '13:00') {
+        lunchRows[row] = { startTime: start, endTime: end };
+      }
+    });
     
-    return { timeslotToPosition: map, periodTimes: times, maxPeriodsPerDay: maxPeriods, breakRows: breakRowsData };
+    return { timeslotToPosition: map, periodTimes: times, maxPeriodsPerDay: maxPeriods, breakRows: breakRowsData, lunchRowsMap: lunchRows };
   }, [timeslots, scheduleSettings]);
 
   // SERVER-SIDE JOIN: Load slots via backend API (SOURCE OF TRUTH)
@@ -881,6 +891,23 @@ export default function StudentScheduleView({ students, slots, groups, subjects,
               {/* Dynamic periods based on actual timeslots */}
               {Array.from({ length: maxPeriodsPerDay }, (_, idx) => idx + 1).map(period => (
                 <React.Fragment key={period}>
+                {lunchRowsMap[period] ? (
+                  <div className="grid grid-cols-[80px_repeat(5,1fr)] border-b-2 border-amber-300 bg-gradient-to-r from-amber-50 to-orange-50" style={{ minHeight: '60px' }}>
+                    <div className="p-3 bg-amber-100 border-r-2 border-amber-300 flex flex-col items-center justify-center text-center">
+                      <div className="text-xs font-bold text-amber-900">🍽️</div>
+                      <div className="text-xs font-bold text-amber-900">Lunch</div>
+                      <div className="text-[10px] text-amber-700 mt-0.5">{lunchRowsMap[period].startTime} - {lunchRowsMap[period].endTime}</div>
+                    </div>
+                    {DAYS.map(day => (
+                      <div key={`${day}-${period}-lunch`} className="border-r-2 border-amber-300 last:border-r-0 flex items-center justify-center">
+                        <div className="text-center">
+                          <div className="text-xs font-bold text-amber-900">LUNCH BREAK</div>
+                          <div className="text-[10px] text-amber-700 mt-0.5">No lessons scheduled</div>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                ) : (
                 <div className="grid grid-cols-[80px_repeat(5,1fr)] border-b border-slate-200" style={{ minHeight: '60px' }}>
                   <div className="p-2 bg-slate-50 border-r border-slate-200 flex flex-col justify-center items-center text-center">
                     <div className="text-sm font-bold text-slate-800">{period}</div>
@@ -990,6 +1017,7 @@ export default function StudentScheduleView({ students, slots, groups, subjects,
                     );
                   })}
                 </div>
+                )}
                 {/* Break rows from scheduleSettings.breaks */}
                 {breakRows.filter(br => br.afterPeriod === period).map(breakRow => (
                   <div key={breakRow.id} className={`grid grid-cols-[80px_repeat(5,1fr)] border-b-2 ${breakRow.borderColor} bg-gradient-to-r ${breakRow.colorFrom} ${breakRow.colorTo}`} style={{ minHeight: '50px' }}>
