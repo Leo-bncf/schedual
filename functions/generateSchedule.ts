@@ -606,12 +606,15 @@ function parseResponseToSlots({ responseData, payload, scheduleVersionId, school
       slot.subject_id = payload.subjectIdByCode[entry.subject] ?? null;
     }
 
-    if (entry.teachingGroupId) {
-      slot.teaching_group_id = String(entry.teachingGroupId).startsWith('tg_')
-        ? String(entry.teachingGroupId).slice(3)
-        : String(entry.teachingGroupId).startsWith('TG_')
-          ? String(entry.teachingGroupId).slice(3)
-          : entry.teachingGroupId;
+    // Resolve the real Base44 TG ID: prefer sectionId lookup (handles solver-synthesized IDs),
+    // then fall back to stripping tg_/TG_ prefix, then raw value.
+    if (entry.sectionId && sectionIdToRealTgId.has(entry.sectionId)) {
+      slot.teaching_group_id = sectionIdToRealTgId.get(entry.sectionId);
+    } else if (entry.teachingGroupId) {
+      const raw = String(entry.teachingGroupId);
+      slot.teaching_group_id = raw.startsWith('tg_') ? raw.slice(3)
+        : raw.startsWith('TG_') ? raw.slice(3)
+        : raw;
     }
 
     slots.push(slot);
