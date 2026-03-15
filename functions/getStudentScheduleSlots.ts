@@ -17,7 +17,7 @@ function makeSubjectLevelKey(subjectId, level) {
 }
 
 Deno.serve(async (req) => {
-  const FUNCTION_VERSION = '2026-03-15T20:00:00Z';
+  const FUNCTION_VERSION = '2026-03-15T20:20:00Z';
   console.log('[getStudentScheduleSlots] 🚀 VERSION:', FUNCTION_VERSION);
   
   try {
@@ -214,8 +214,21 @@ Deno.serve(async (req) => {
       slots_with_unknown_tg: slotsWithUnknownTG
     });
     
-    // Step 5: Analyze missing teaching groups (assigned but no slots)
-    const missingTGIds = assignedGroupIds.filter(tgId => !uniqueTGIds.has(tgId));
+    // Step 5: Analyze missing teaching groups (assigned subject+level with no matching slots)
+    const coveredSubjectLevelKeys = new Set(
+      studentSlots.map((slot) => {
+        const slotTg = slot.teaching_group_id ? tgById[slot.teaching_group_id] : null;
+        return makeSubjectLevelKey(slot.subject_id || slotTg?.subject_id, slot.display_level_override || slotTg?.level);
+      }).filter(Boolean)
+    );
+
+    const missingTGIds = assignedGroupIds.filter((tgId) => {
+      const tg = tgById[tgId];
+      if (!tg) return true;
+      const key = makeSubjectLevelKey(tg.subject_id, tg.level);
+      return !coveredSubjectLevelKeys.has(key);
+    });
+
     const missingTGDetails = missingTGIds.map(tgId => {
       const tg = tgById[tgId];
       const subject = tg?.subject_id ? subjectById[tg.subject_id] : null;
