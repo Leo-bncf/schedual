@@ -211,27 +211,8 @@ function buildDPPayload({ schoolId, scheduleVersionId, school, students, teacher
 
   const subjectMap = new Map(dpSubjects.map(s => [s.id, s]));
 
-  // teaching_groups metadata — send each real teaching group separately.
-  const teachingGroupsPayload = dpGroups.map(tg => {
-    const subjectKeyForTg = tg.subject_id.replace(/-/g, '');
-    const levelForTg = tg.level || 'HL';
-    const studentGroupForTg = `sg_${tg.id}_${tg.year_group}_${levelForTg}_${subjectKeyForTg}`;
-    return {
-      id: `tg_${tg.id}`,
-      section_id: `sec_${tg.id}`,
-      student_group: studentGroupForTg,
-      subject_id: tg.subject_id,
-      level: levelForTg,
-    };
-  });
-
-  const lessons = [];
-  const subject_requirements = [];
-  const studentSubjectChoices = [];
-  let lessonId = 1;
-
-  // Merge only DP1+DP2 groups of the SAME LEVEL when the subject is explicitly marked shared.
-  // HL and SL always stay separate lesson streams.
+  // Canonical teaching group mapping: one entry per actual scheduling scope.
+  // The same identity is used across teaching_groups, lessons, subject_requirements and studentSubjectChoices.
   const tgByBucket = new Map();
   for (const tg of dpGroups) {
     const subject = subjectMap.get(tg.subject_id);
@@ -247,6 +228,12 @@ function buildDPPayload({ schoolId, scheduleVersionId, school, students, teacher
     tgByBucket.get(bucketKey).push(tg);
   }
 
+  const teachingGroupsPayload = [];
+  const lessons = [];
+  const subject_requirements = [];
+  const studentSubjectChoices = [];
+  let lessonId = 1;
+
   for (const [bucketKey, bucketTgs] of tgByBucket.entries()) {
     const [subjectId, yearScope, level] = bucketKey.split('__');
     const subject = subjectMap.get(subjectId);
@@ -256,18 +243,27 @@ function buildDPPayload({ schoolId, scheduleVersionId, school, students, teacher
     const repTg = bucketTgs[0];
     const studentGroup = `${yearScope}_${level}_${subjectKey}`;
     const sectionId = `sec_${level.toLowerCase()}_${subjectKey}_${yearScope}`;
+    const teachingGroupId = repTg ? `tg_${repTg.id}` : null;
     const hoursForLevel = level === 'HL' ? Number(subject.hoursPerWeekHL || 0) : Number(subject.hoursPerWeekSL || 0);
     const minutesPerWeek = hoursForLevel * 60;
-    const periodsPerWeek = Math.max(1, Math.round(minutesPerWeek / periodDuration));
+    const periodsPerWeek = Math.max(1, Math.ceil(minutesPerWeek / periodDuration));
     const teacherId = bucketTgs.reduce((acc, tg) => acc || (tg.teacher_id ? (teacherMap.get(tg.teacher_id) ?? null) : null), null);
     const studentIds = [...new Set(bucketTgs.flatMap(tg => (tg.student_ids || []).map(base44StudentId => studentMap.get(base44StudentId)).filter(Boolean)))];
+
+    teachingGroupsPayload.push({
+      id: teachingGroupId,
+      section_id: sectionId,
+      student_group: studentGroup,
+      subject_id: subjectId,
+      level,
+    });
 
     for (let i = 0; i < periodsPerWeek; i++) {
       lessons.push({
         id: lessonId++,
         subject: subject.code,
         studentGroup,
-        teachingGroupId: repTg ? `tg_${repTg.id}` : null,
+        teachingGroupId,
         sectionId,
         yearGroup: yearScope,
         level,
@@ -280,7 +276,7 @@ function buildDPPayload({ schoolId, scheduleVersionId, school, students, teacher
 
     subject_requirements.push({
       studentGroup,
-      teachingGroupId: repTg ? `tg_${repTg.id}` : null,
+      teachingGroupId,
       sectionId,
       subject: subject.code,
       minutesPerWeek,
@@ -290,14 +286,14 @@ function buildDPPayload({ schoolId, scheduleVersionId, school, students, teacher
       for (const base44StudentId of (tg.student_ids || [])) {
         const numericStudentId = studentMap.get(base44StudentId);
         if (!numericStudentId) continue;
-        if (!studentSubjectChoices.find(c => c.studentId === numericStudentId && c.subjectId === subject.id && c.level === level)) {
+        if (!studentSubjectChoices.find(c => c.studentId === numericStudentId && c.subjectId === subject.id && c.yearGroup === yearScope && c.level === level)) {
           studentSubjectChoices.push({
             studentId: numericStudentId,
             subjectId: subject.id,
             subject: subject.code,
             level,
             yearGroup: yearScope,
-            teachingGroupId: repTg ? `tg_${repTg.id}` : null,
+            teachingGroupId,
           });
         }
       }
@@ -330,6 +326,99 @@ function buildDPPayload({ schoolId, scheduleVersionId, school, students, teacher
       avoidTeacherLatePeriods: true,
     },
   };
+}
+
+function validateDPPayload(payload) {
+  const errors = [];
+  const periodDuration = Number(payload?.scheduleSettings?.periodDurationMinutes || 60);
+  const groupMap = new Map((payload.teaching_groups || []).map((group) => [group.id, group]));
+  const subjectByCode = new Map((payload.subjects || []).map((subject) => [subject.code, subject]));
+  const lessonsByGroup = new Map();
+  const requirementsByGroup = new Map();
+
+  for (const lesson of payload.lessons || []) {
+    const group = groupMap.get(lesson.teachingGroupId);
+    if (!group) {
+      errors.push(`Missing teaching group for lesson ${lesson.id}: ${lesson.teachingGroupId}`);
+      continue;
+    }
+
+    const subject = subjectByCode.get(lesson.subject);
+    if (!subject || subject.id !== group.subject_id) {
+      errors.push(`Subject mismatch for lesson ${lesson.id}: lesson.subject=${lesson.subject}, teaching_group.subject_id=${group.subject_id}`);
+    }
+
+    if (lesson.studentGroup !== group.student_group) {
+      errors.push(`studentGroup mismatch for lesson ${lesson.id}: ${lesson.studentGroup} !== ${group.student_group}`);
+    }
+
+    if (lesson.sectionId !== group.section_id) {
+      errors.push(`sectionId mismatch for lesson ${lesson.id}: ${lesson.sectionId} !== ${group.section_id}`);
+    }
+
+    const current = lessonsByGroup.get(lesson.teachingGroupId) || [];
+    current.push(lesson);
+    lessonsByGroup.set(lesson.teachingGroupId, current);
+  }
+
+  for (const requirement of payload.subject_requirements || []) {
+    const group = groupMap.get(requirement.teachingGroupId);
+    if (!group) {
+      errors.push(`Missing teaching group for requirement: ${requirement.teachingGroupId}`);
+      continue;
+    }
+
+    if (requirement.studentGroup !== group.student_group) {
+      errors.push(`Requirement studentGroup mismatch for ${requirement.teachingGroupId}`);
+    }
+
+    if (requirement.sectionId !== group.section_id) {
+      errors.push(`Requirement sectionId mismatch for ${requirement.teachingGroupId}`);
+    }
+
+    requirementsByGroup.set(requirement.teachingGroupId, requirement);
+
+    const requiredPeriods = Math.ceil(Number(requirement.minutesPerWeek || 0) / periodDuration);
+    const actualPeriods = (lessonsByGroup.get(requirement.teachingGroupId) || []).length;
+    if (actualPeriods !== requiredPeriods) {
+      errors.push(`Hour parity mismatch for ${requirement.teachingGroupId}: expected ${requiredPeriods}, got ${actualPeriods}`);
+    }
+  }
+
+  const choiceKeys = new Set();
+  const levelKeys = new Map();
+  for (const choice of payload.studentSubjectChoices || []) {
+    const group = groupMap.get(choice.teachingGroupId);
+    if (!group) {
+      errors.push(`Missing teaching group for choice: ${choice.teachingGroupId}`);
+      continue;
+    }
+
+    const duplicateKey = `${choice.studentId}__${choice.subjectId}__${choice.yearGroup}`;
+    if (choiceKeys.has(duplicateKey)) {
+      errors.push(`Duplicate student choice: ${duplicateKey}`);
+    }
+    choiceKeys.add(duplicateKey);
+
+    const levelKey = `${choice.studentId}__${choice.subjectId}__${choice.yearGroup}`;
+    const currentLevels = levelKeys.get(levelKey) || new Set();
+    currentLevels.add(choice.level);
+    levelKeys.set(levelKey, currentLevels);
+
+    const req = requirementsByGroup.get(choice.teachingGroupId);
+    const lessons = lessonsByGroup.get(choice.teachingGroupId) || [];
+    if (!req || lessons.length === 0) {
+      errors.push(`Choice scope missing requirement/lessons for ${choice.teachingGroupId}`);
+    }
+  }
+
+  for (const [key, levels] of levelKeys.entries()) {
+    if (levels.has('HL') && levels.has('SL')) {
+      errors.push(`Student has both HL and SL for same subject/yearGroup: ${key}`);
+    }
+  }
+
+  return errors;
 }
 
 // ─── OptaPlanner call — ONE payload per call ──────────────────────────────────
@@ -567,17 +656,6 @@ Deno.serve(async (req) => {
       return Response.json({ error: 'School not found' }, { status: 404 });
     }
 
-    // Clear existing slots for this version before inserting a fresh generation.
-    // Without this, repeated generations stack stale slots and break the timetable UI.
-    const existingVersionSlots = await base44.entities.ScheduleSlot.filter({ schedule_version: schedule_version_id }, '-created_date', 1000);
-    console.log(`[generateSchedule] Found ${existingVersionSlots.length} existing slots for version ${schedule_version_id}`);
-    for (let i = 0; i < existingVersionSlots.length; i += 50) {
-      await Promise.all(
-        existingVersionSlots.slice(i, i + 50).map((slot) => base44.entities.ScheduleSlot.delete(slot.id))
-      );
-    }
-    console.log(`[generateSchedule] Cleared ${existingVersionSlots.length} existing slots for version ${schedule_version_id}`);
-
     console.log(`[generateSchedule] School: ${school.name}, Students: ${students.length}, Teachers: ${teachers.length}`);
 
     const activeStudents = students.filter(s => s.is_active !== false);
@@ -621,13 +699,23 @@ Deno.serve(async (req) => {
     const solverTimeslots = buildSolverTimeslots(school);
     console.log(`[generateSchedule] Built ${solverTimeslots.length} solverTimeslots from school schedule`);
 
-    // ── Send ONE payload at a time (rule: one programme shape per run) ──
+    // ── Send ONE payload at a time and reject anything inconsistent ──
     let totalSlotsInserted = 0;
     const failedProgrammes = [];
     const successProgrammes = [];
+    const slotsToPersist = [];
 
     for (const payload of payloadsToRun) {
       console.log(`[generateSchedule] Processing ${payload.programType}...`);
+
+      if (payload.programType === 'DP') {
+        const payloadErrors = validateDPPayload(payload);
+        if (payloadErrors.length > 0) {
+          failedProgrammes.push({ programme: payload.programType, error: `Payload validation failed: ${payloadErrors.slice(0, 10).join(' | ')}` });
+          continue;
+        }
+      }
+
       const result = await sendToOptaPlanner(payload);
 
       if (!result.ok) {
@@ -636,37 +724,20 @@ Deno.serve(async (req) => {
         continue;
       }
 
-      console.log(`[generateSchedule] ${payload.programType} success, parsing response...`);
+      const hardScore = Number(result.data?.hardScore ?? NaN);
+      const conflictsCount = Number(result.data?.conflictsCount || 0);
+      const isStrictlyValid = result.data?.ok === true && hardScore === 0 && result.data?.isFeasible === true && conflictsCount === 0;
 
-      // Check if this is a hard pre-solve validation failure (no assignments at all)
-      // vs a soft solver failure (ran but has conflicts) — the latter still has assignments to save
-      const solverOk = result.data?.ok;
-      const solverErrorCode = result.data?.errorCode;
-      const solverReason = result.data?.reason;
-      // Check for assigned lessons — solver returns `lessons` (cohort) or `assignments` (DP)
-      const allLessons = result.data?.lessons || result.data?.data?.lessons || [];
-      const allAssignments = result.data?.assignments || result.data?.data?.assignments || [];
-      const allEntries = [...allLessons, ...allAssignments];
-      const hasAssignments = allEntries.some(e => e.timeslotId != null);
-
-      console.log(`[generateSchedule] ${payload.programType} solverOk=${solverOk}, reason=${solverReason}, lessons=${allLessons.length}, assignments=${allAssignments.length}, assigned=${allEntries.filter(e => e.timeslotId != null).length}, score=${result.data?.score}`);
-
-      // Pre-solve validation failure: errorCode present OR solver explicitly failed with no assignments at all
-      if (solverErrorCode || (!hasAssignments && solverOk === false)) {
-        const errMsg = result.data?.message || result.data?.errorCode || result.data?.reason || 'Solver validation failed';
-        const validationErrors = result.data?.validationErrors || result.data?.validationErrorSamples || [];
-        console.error(`[generateSchedule] ${payload.programType} pre-solve failure: ${errMsg}`);
-        console.error(`[generateSchedule] ${payload.programType} validationErrors: ${JSON.stringify(validationErrors)}`);
-        failedProgrammes.push({ programme: payload.programType, error: `${errMsg}${validationErrors.length ? ' | ' + JSON.stringify(validationErrors).slice(0, 300) : ''}` });
+      if (!isStrictlyValid) {
+        const errorBits = [
+          `ok=${result.data?.ok}`,
+          `hardScore=${result.data?.hardScore}`,
+          `isFeasible=${result.data?.isFeasible}`,
+          `conflictsCount=${result.data?.conflictsCount}`,
+          `error=${result.data?.error || result.data?.reason || 'STRICT_VALIDATION_FAILED'}`
+        ];
+        failedProgrammes.push({ programme: payload.programType, error: errorBits.join(' | ') });
         continue;
-      }
-
-      // Solver ran but has constraint violations — log and fall through to save partial slots
-      if (solverOk === false && hasAssignments) {
-        console.warn(`[generateSchedule] ${payload.programType} solver finished with conflicts: reason=${solverReason}, score=${result.data?.score}, studentConflicts=${result.data?.studentConflictCount}, hardViolations=${result.data?.conflictsCount}`);
-        console.warn(`[generateSchedule] ${payload.programType} violations: ${JSON.stringify(result.data?.violations || result.data?.violatingConstraints || []).slice(0, 500)}`);
-        console.warn(`[generateSchedule] ${payload.programType} unmet requirements: ${JSON.stringify(result.data?.unmetRequirements || []).slice(0, 500)}`);
-        // Don't continue — fall through to save the partial schedule
       }
 
       const slots = parseResponseToSlots({
@@ -678,15 +749,34 @@ Deno.serve(async (req) => {
         roomMap,
       });
 
-      console.log(`[generateSchedule] ${payload.programType}: ${slots.length} slots to insert`);
-
-      const BATCH = 50;
-      for (let i = 0; i < slots.length; i += BATCH) {
-        await base44.entities.ScheduleSlot.bulkCreate(slots.slice(i, i + BATCH));
-      }
-
+      slotsToPersist.push(...slots);
       totalSlotsInserted += slots.length;
       successProgrammes.push({ programme: payload.programType, slots: slots.length });
+    }
+
+    if (failedProgrammes.length > 0 || successProgrammes.length === 0) {
+      return Response.json({
+        ok: false,
+        slotsInserted: 0,
+        programmes: successProgrammes,
+        failed: failedProgrammes,
+        solverTimeslots,
+        error: failedProgrammes.map(f => `${f.programme}: ${f.error}`).join('\n'),
+      });
+    }
+
+    const existingVersionSlots = await base44.entities.ScheduleSlot.filter({ schedule_version: schedule_version_id }, '-created_date', 1000);
+    console.log(`[generateSchedule] Found ${existingVersionSlots.length} existing slots for version ${schedule_version_id}`);
+    for (let i = 0; i < existingVersionSlots.length; i += 50) {
+      await Promise.all(
+        existingVersionSlots.slice(i, i + 50).map((slot) => base44.entities.ScheduleSlot.delete(slot.id))
+      );
+    }
+    console.log(`[generateSchedule] Cleared ${existingVersionSlots.length} existing slots for version ${schedule_version_id}`);
+
+    const BATCH = 50;
+    for (let i = 0; i < slotsToPersist.length; i += BATCH) {
+      await base44.entities.ScheduleSlot.bulkCreate(slotsToPersist.slice(i, i + BATCH));
     }
 
     await base44.entities.ScheduleVersion.update(schedule_version_id, {
@@ -701,14 +791,13 @@ Deno.serve(async (req) => {
     console.log(`[generateSchedule] Done. Total slots inserted: ${totalSlotsInserted}, solverTimeslots saved: ${solverTimeslots.length}`);
     console.log(`[generateSchedule] First 3 solverTimeslots: ${JSON.stringify(solverTimeslots.slice(0, 3))}`);
 
-    const allFailed = failedProgrammes.length > 0 && successProgrammes.length === 0;
     return Response.json({
-      ok: !allFailed && totalSlotsInserted > 0,
+      ok: true,
       slotsInserted: totalSlotsInserted,
       programmes: successProgrammes,
-      failed: failedProgrammes,
+      failed: [],
       solverTimeslots: solverTimeslots,
-      error: allFailed ? failedProgrammes.map(f => `${f.programme}: ${f.error}`).join('\n') : null,
+      error: null,
     });
 
   } catch (error) {

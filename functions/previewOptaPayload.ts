@@ -70,24 +70,6 @@ function buildDPPayload({ schoolId, scheduleVersionId, school, students, teacher
 
   const subjectMap = new Map(dpSubjects.map(s => [s.id, s]));
 
-  const teachingGroupsPayload = dpGroups.map(tg => {
-    const subjectKeyForTg = tg.subject_id.replace(/-/g, '');
-    const levelForTg = tg.level || 'HL';
-    const studentGroupForTg = `sg_${tg.id}_${tg.year_group}_${levelForTg}_${subjectKeyForTg}`;
-    return {
-      id: `tg_${tg.id}`,
-      section_id: `sec_${tg.id}`,
-      student_group: studentGroupForTg,
-      subject_id: tg.subject_id,
-      level: levelForTg,
-    };
-  });
-
-  const lessons = [];
-  const subject_requirements = [];
-  const studentSubjectChoices = [];
-  let lessonId = 1;
-
   const tgByBucket = new Map();
   for (const tg of dpGroups) {
     const subject = subjectMap.get(tg.subject_id);
@@ -103,6 +85,12 @@ function buildDPPayload({ schoolId, scheduleVersionId, school, students, teacher
     tgByBucket.get(bucketKey).push(tg);
   }
 
+  const teachingGroupsPayload = [];
+  const lessons = [];
+  const subject_requirements = [];
+  const studentSubjectChoices = [];
+  let lessonId = 1;
+
   for (const [bucketKey, bucketTgs] of tgByBucket.entries()) {
     const [subjectId, yearScope, level] = bucketKey.split('__');
     const subject = subjectMap.get(subjectId);
@@ -112,18 +100,27 @@ function buildDPPayload({ schoolId, scheduleVersionId, school, students, teacher
     const repTg = bucketTgs[0];
     const studentGroup = `${yearScope}_${level}_${subjectKey}`;
     const sectionId = `sec_${level.toLowerCase()}_${subjectKey}_${yearScope}`;
+    const teachingGroupId = repTg ? `tg_${repTg.id}` : null;
     const hoursForLevel = level === 'HL' ? Number(subject.hoursPerWeekHL || 0) : Number(subject.hoursPerWeekSL || 0);
     const minutesPerWeek = hoursForLevel * 60;
-    const periodsPerWeek = Math.max(1, Math.round(minutesPerWeek / periodDuration));
+    const periodsPerWeek = Math.max(1, Math.ceil(minutesPerWeek / periodDuration));
     const teacherId = bucketTgs.reduce((acc, tg) => acc || (tg.teacher_id ? (teacherMap.get(tg.teacher_id) ?? null) : null), null);
     const studentIds = [...new Set(bucketTgs.flatMap(tg => (tg.student_ids || []).map(base44StudentId => studentMap.get(base44StudentId)).filter(Boolean)))];
+
+    teachingGroupsPayload.push({
+      id: teachingGroupId,
+      section_id: sectionId,
+      student_group: studentGroup,
+      subject_id: subjectId,
+      level,
+    });
 
     for (let i = 0; i < periodsPerWeek; i++) {
       lessons.push({
         id: lessonId++,
         subject: subject.code,
         studentGroup,
-        teachingGroupId: repTg ? `tg_${repTg.id}` : null,
+        teachingGroupId,
         sectionId,
         yearGroup: yearScope,
         level,
@@ -136,7 +133,7 @@ function buildDPPayload({ schoolId, scheduleVersionId, school, students, teacher
 
     subject_requirements.push({
       studentGroup,
-      teachingGroupId: repTg ? `tg_${repTg.id}` : null,
+      teachingGroupId,
       sectionId,
       subject: subject.code,
       minutesPerWeek,
@@ -146,14 +143,14 @@ function buildDPPayload({ schoolId, scheduleVersionId, school, students, teacher
       for (const base44StudentId of (tg.student_ids || [])) {
         const numericStudentId = studentMap.get(base44StudentId);
         if (!numericStudentId) continue;
-        if (!studentSubjectChoices.find(c => c.studentId === numericStudentId && c.subjectId === subject.id && c.level === level)) {
+        if (!studentSubjectChoices.find(c => c.studentId === numericStudentId && c.subjectId === subject.id && c.yearGroup === yearScope && c.level === level)) {
           studentSubjectChoices.push({
             studentId: numericStudentId,
             subjectId: subject.id,
             subject: subject.code,
             level,
             yearGroup: yearScope,
-            teachingGroupId: repTg ? `tg_${repTg.id}` : null,
+            teachingGroupId,
           });
         }
       }
