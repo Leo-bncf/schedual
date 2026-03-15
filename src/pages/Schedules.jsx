@@ -757,36 +757,50 @@ export default function Schedules() {
           </div>
         ) : (
           <Tabs defaultValue="overview" className="w-full">
-            <TabsList className="bg-white border border-slate-200 p-1">
-              <TabsTrigger 
-                value="overview" 
-                className="data-[state=active]:bg-slate-100 data-[state=active]:text-slate-900"
-              >
-                <Calendar className="w-4 h-4 mr-2" />
-                Overview
-              </TabsTrigger>
-              <TabsTrigger 
-                value="student" 
-                className="data-[state=active]:bg-slate-100 data-[state=active]:text-slate-900"
-              >
-                <Users className="w-4 h-4 mr-2" />
-                Student View
-              </TabsTrigger>
-              <TabsTrigger 
-                value="teacher" 
-                className="data-[state=active]:bg-slate-100 data-[state=active]:text-slate-900"
-              >
-                <Users className="w-4 h-4 mr-2" />
-                Teacher View
-              </TabsTrigger>
-              <TabsTrigger 
-                value="generation" 
-                className="data-[state=active]:bg-slate-100 data-[state=active]:text-slate-900"
-              >
-                <Settings2 className="w-4 h-4 mr-2" />
-                Generation Settings
-              </TabsTrigger>
-            </TabsList>
+            <div className="mb-4 rounded-2xl border border-slate-200 bg-white p-2 shadow-sm">
+              <TabsList className="grid h-auto w-full grid-cols-2 gap-2 bg-transparent p-0 lg:grid-cols-4">
+                <TabsTrigger 
+                  value="overview" 
+                  className="flex h-auto items-start justify-start rounded-xl border border-transparent px-4 py-3 text-left text-slate-600 transition-all data-[state=active]:border-blue-200 data-[state=active]:bg-blue-50 data-[state=active]:text-blue-900"
+                >
+                  <Calendar className="mt-0.5 mr-3 h-4 w-4 shrink-0" />
+                  <span>
+                    <span className="block font-semibold">Overview</span>
+                    <span className="block text-xs text-slate-500 data-[state=active]:text-blue-700">All classes</span>
+                  </span>
+                </TabsTrigger>
+                <TabsTrigger 
+                  value="student" 
+                  className="flex h-auto items-start justify-start rounded-xl border border-transparent px-4 py-3 text-left text-slate-600 transition-all data-[state=active]:border-blue-200 data-[state=active]:bg-blue-50 data-[state=active]:text-blue-900"
+                >
+                  <Users className="mt-0.5 mr-3 h-4 w-4 shrink-0" />
+                  <span>
+                    <span className="block font-semibold">Student View</span>
+                    <span className="block text-xs text-slate-500 data-[state=active]:text-blue-700">One student</span>
+                  </span>
+                </TabsTrigger>
+                <TabsTrigger 
+                  value="teacher" 
+                  className="flex h-auto items-start justify-start rounded-xl border border-transparent px-4 py-3 text-left text-slate-600 transition-all data-[state=active]:border-blue-200 data-[state=active]:bg-blue-50 data-[state=active]:text-blue-900"
+                >
+                  <Users className="mt-0.5 mr-3 h-4 w-4 shrink-0" />
+                  <span>
+                    <span className="block font-semibold">Teacher View</span>
+                    <span className="block text-xs text-slate-500 data-[state=active]:text-blue-700">One teacher</span>
+                  </span>
+                </TabsTrigger>
+                <TabsTrigger 
+                  value="generation" 
+                  className="flex h-auto items-start justify-start rounded-xl border border-transparent px-4 py-3 text-left text-slate-600 transition-all data-[state=active]:border-blue-200 data-[state=active]:bg-blue-50 data-[state=active]:text-blue-900"
+                >
+                  <Settings2 className="mt-0.5 mr-3 h-4 w-4 shrink-0" />
+                  <span>
+                    <span className="block font-semibold">Generation</span>
+                    <span className="block text-xs text-slate-500 data-[state=active]:text-blue-700">Rules & payload</span>
+                  </span>
+                </TabsTrigger>
+              </TabsList>
+            </div>
 
             {/* Admin Overview Tab */}
             <TabsContent value="overview" className="space-y-4 mt-4">
