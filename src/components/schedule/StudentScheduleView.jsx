@@ -33,6 +33,7 @@ export default function StudentScheduleView({
   timeslots = [],
   scheduleSettings,
   scheduleVersionId,
+  exportId = 'student-schedule',
 }) {
   const [serverSlots, setServerSlots] = React.useState([]);
   const [loading, setLoading] = React.useState(false);
