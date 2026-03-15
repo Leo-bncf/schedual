@@ -188,35 +188,18 @@ export default function StudentScheduleView({ students, slots, groups, subjects,
       } else {
         // Multiple slots: conflict-group
         const conflictDetails = slots.map(s => {
-          let subj = null;
-          let teacher = null;
-          let level = null;
-          
-          if (s.subject_id) {
-            subj = subjects.find(sub => sub.id === s.subject_id);
-            teacher = teachers.find(t => t.id === s.teacher_id);
-            level = selectedStudent?.ib_programme || '';
-          } else if (s.teaching_group_id) {
-            const group = groups.find(g => g.id === s.teaching_group_id);
-            if (group) {
-              subj = subjects.find(sub => sub.id === group.subject_id);
-              teacher = teachers.find(t => t.id === group.teacher_id);
-              level = group.level;
-            }
-          }
-          
-          const room = rooms.find(r => r.id === s.room_id);
-          
+          const { subject, teacher, room, level } = resolveSlotMeta(s);
+
           return {
             id: s.id,
-            subject: subj?.name || s.notes || 'Unknown',
-            subjectCode: subj?.code || null,
+            subject: subject?.name || s.notes || 'Unknown',
+            subjectCode: subject?.code || null,
             teacher: teacher?.full_name || 'Unassigned',
             room: room?.name || 'TBD',
             level: level || null
           };
         });
-        
+
         events.set(cellKey, {
           type: 'conflict',
           count: slots.length,
@@ -240,7 +223,7 @@ export default function StudentScheduleView({ students, slots, groups, subjects,
     }
     
     return { normalizedEvents: events, overlaps: conflicts };
-  }, [studentSlots, timeslotToPosition, subjects, teachers, rooms, groups, selectedStudent]);
+  }, [studentSlots, timeslotToPosition, resolveSlotMeta]);
 
   const getEventForPeriod = (day, uiRow) => {
     const key = `${day}_${uiRow}`;
@@ -295,6 +278,68 @@ export default function StudentScheduleView({ students, slots, groups, subjects,
       alert('Sync failed: ' + e.message);
     }
   };
+
+  const groupsById = React.useMemo(
+    () => Object.fromEntries((groups || []).map(group => [group.id, group])),
+    [groups]
+  );
+
+  const subjectsById = React.useMemo(
+    () => Object.fromEntries((subjects || []).map(subject => [subject.id, subject])),
+    [subjects]
+  );
+
+  const teachersById = React.useMemo(
+    () => Object.fromEntries((teachers || []).map(teacher => [teacher.id, teacher])),
+    [teachers]
+  );
+
+  const roomsById = React.useMemo(
+    () => Object.fromEntries((rooms || []).map(room => [room.id, room])),
+    [rooms]
+  );
+
+  const studentLevelsBySubjectId = React.useMemo(() => {
+    const levelMap = {};
+    const assignedGroups = (selectedStudent?.assigned_groups || [])
+      .map((groupId) => groupsById[groupId])
+      .filter(Boolean);
+
+    assignedGroups.forEach((group) => {
+      if (!group?.subject_id || !group?.level) return;
+      if (!levelMap[group.subject_id]) levelMap[group.subject_id] = new Set();
+      levelMap[group.subject_id].add(normalizeLevel(group.level));
+    });
+
+    (selectedStudent?.subject_choices || []).forEach((choice) => {
+      const level = normalizeLevel(choice?.level);
+      if (!choice?.subject_id || !level) return;
+      if (!levelMap[choice.subject_id]) levelMap[choice.subject_id] = new Set();
+      levelMap[choice.subject_id].add(level);
+    });
+
+    return levelMap;
+  }, [selectedStudent, groupsById]);
+
+  const resolveStudentLevelForSubject = React.useCallback((subjectId) => {
+    const levels = subjectId ? studentLevelsBySubjectId[subjectId] : null;
+    return levels?.size === 1 ? Array.from(levels)[0] : '';
+  }, [studentLevelsBySubjectId]);
+
+  const resolveSlotMeta = React.useCallback((slot) => {
+    const group = slot?.teaching_group_id ? groupsById[slot.teaching_group_id] : null;
+    const subjectId = slot?.subject_id || group?.subject_id;
+    const subject = subjectId ? subjectsById[subjectId] : null;
+    const teacher = slot?.teacher_id
+      ? teachersById[slot.teacher_id]
+      : group?.teacher_id
+        ? teachersById[group.teacher_id]
+        : null;
+    const room = slot?.room_id ? roomsById[slot.room_id] : null;
+    const level = normalizeLevel(slot?.display_level_override || group?.level || resolveStudentLevelForSubject(subjectId));
+
+    return { group, subject, teacher, room, level };
+  }, [groupsById, subjectsById, teachersById, roomsById, resolveStudentLevelForSubject]);
 
   const filteredStudentOptions = students.filter(student =>
     normalizeSearch(student.full_name).includes(normalizeSearch(studentSearchQuery))
@@ -562,19 +607,18 @@ export default function StudentScheduleView({ students, slots, groups, subjects,
               
               const coverageKey = makeSubjectLevelKey(group.subject_id, group.level);
 
-              // Count actual SCHEDULED slots by subject+level, not exact TG only,
-              // so merged DP1/DP2 slots still count for the student's sibling TG.
+              // Count actual SCHEDULED slots by subject+level, using the same resolution as the grid.
               const scheduledSlots = studentSlots.filter((s) => {
-                const slotGroup = s.teaching_group_id ? groups.find(g => g.id === s.teaching_group_id) : null;
-                const slotKey = makeSubjectLevelKey(s.subject_id || slotGroup?.subject_id, s.display_level_override || slotGroup?.level);
+                const { subject, level } = resolveSlotMeta(s);
+                const slotKey = makeSubjectLevelKey(subject?.id, level);
                 return slotKey === coverageKey && s.status === 'scheduled' && s.timeslot_id;
               });
               const actualPeriods = scheduledSlots.reduce((sum, s) => sum + (s.is_double_period ? 2 : 1), 0);
               
               // Count unscheduled slots by subject+level too
               const unscheduledSlots = studentSlots.filter((s) => {
-                const slotGroup = s.teaching_group_id ? groups.find(g => g.id === s.teaching_group_id) : null;
-                const slotKey = makeSubjectLevelKey(s.subject_id || slotGroup?.subject_id, s.display_level_override || slotGroup?.level);
+                const { subject, level } = resolveSlotMeta(s);
+                const slotKey = makeSubjectLevelKey(subject?.id, level);
                 return slotKey === coverageKey && s.status === 'unscheduled';
               });
               
@@ -800,32 +844,14 @@ export default function StudentScheduleView({ students, slots, groups, subjects,
                     
                     // SINGLE EVENT (normal case)
                     const slot = event.slot;
-                    let subject = null;
-                    let teacher = null;
-                    let level = null;
-                    
-                    // Check if this is a test slot (no subject_id, has notes)
+                    let { subject, teacher, room, level } = resolveSlotMeta(slot);
+
                     if (!slot.subject_id && slot.notes?.includes('Test')) {
                       subject = { name: 'Test/Assessment', ib_group: null };
                       teacher = null;
-                      level = null;
+                      level = '';
                     }
-                    // PYP/MYP: subject_id and teacher_id are directly on the slot
-                    else if (slot.subject_id) {
-                      subject = subjects.find(s => s.id === slot.subject_id);
-                      teacher = teachers.find(t => t.id === slot.teacher_id);
-                      level = selectedStudent?.ib_programme || '';
-                    } else {
-                      // DP: get from teaching group
-                      const group = groups.find(g => g.id === slot.teaching_group_id);
-                      if (group) {
-                        subject = subjects.find(s => s.id === group.subject_id);
-                        teacher = teachers.find(t => t.id === group.teacher_id);
-                        level = group.level;
-                      }
-                    }
-                    
-                    const room = rooms.find(r => r.id === slot.room_id);
+
                     const isTestSlot = slot.notes?.includes('Test');
                     
                     const colorData = isTestSlot 
