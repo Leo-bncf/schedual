@@ -525,6 +525,13 @@ async function sendToOptaPlanner(payload) {
 // ─── Parse OptaPlanner response → ScheduleSlots ──────────────────────────────
 
 function parseResponseToSlots({ responseData, payload, scheduleVersionId, schoolId, teacherMap, roomMap }) {
+  // Build a lookup from sectionId → real Base44 teachingGroupId (from the payload we sent)
+  const sectionIdToRealTgId = new Map();
+  for (const lesson of (payload?.lessons || [])) {
+    if (lesson.sectionId && lesson.teachingGroupId) {
+      sectionIdToRealTgId.set(lesson.sectionId, lesson.teachingGroupId);
+    }
+  }
   // Server returns either `lessons` (cohort) or `assignments` (DP/individual)
   const lessons = responseData?.lessons || responseData?.data?.lessons || [];
   const assignments = responseData?.assignments || responseData?.data?.assignments || [];
