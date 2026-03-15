@@ -336,31 +336,7 @@ export default function Schedules() {
 
       if (!slot.teaching_group_id) return false;
 
-      // Exact teaching-group match first
-      if (assignedGroups.includes(slot.teaching_group_id)) {
-        return true;
-      }
-
-      const slotGroup = teachingGroups.find(g => g.id === slot.teaching_group_id);
-
-      // DP merged-subject fallback:
-      // shared SL-tagged slots should appear for both HL and SL students of that subject,
-      // while HL-tagged slots should appear only for HL students.
-      if (student?.ib_programme === 'DP' && slot.subject_id) {
-        const subjectChoice = subjectChoices.find(choice => choice.subject_id === slot.subject_id);
-        if (subjectChoice) {
-          const slotLevel = slotGroup?.level;
-          if (slotLevel === 'HL') {
-            return subjectChoice.level === 'HL';
-          }
-          if (slotLevel === 'SL') {
-            return true;
-          }
-        }
-      }
-
-      // Final fallback: membership on the teaching group itself
-      return slotGroup?.student_ids?.includes(studentId);
+      return assignedGroups.includes(slot.teaching_group_id);
     });
 
     return matchedSlots.filter((slot, index, self) => index === self.findIndex(s => s.id === slot.id));

@@ -106,23 +106,7 @@ Deno.serve(async (req) => {
         return false;
       }
 
-      if (assignedGroupIds.includes(slot.teaching_group_id)) {
-        return true;
-      }
-
-      const slotGroup = tgById[slot.teaching_group_id];
-      if (student?.ib_programme === 'DP' && slot.subject_id) {
-        const subjectChoice = subjectChoices.find(choice => choice.subject_id === slot.subject_id);
-        if (subjectChoice) {
-          const slotLevel = normalizeLevel(slotGroup?.level);
-          const choiceLevel = normalizeLevel(subjectChoice.level);
-          if (slotLevel === 'HL') return choiceLevel === 'HL';
-          if (slotLevel === 'SL') return true;
-          return true;
-        }
-      }
-
-      return Array.isArray(slotGroup?.student_ids) && slotGroup.student_ids.includes(student.id);
+      return assignedGroupIds.includes(slot.teaching_group_id);
     }).filter((slot, index, self) => index === self.findIndex(s => s.id === slot.id));
     
     console.log('[getStudentScheduleSlots] ✅ Filtered slots for student:', studentSlots.length);

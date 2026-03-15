@@ -162,23 +162,7 @@ export default function StudentScheduleView({ students, slots, groups, subjects,
         return false;
       }
 
-      if (assignedGroupIds.includes(slot.teaching_group_id)) {
-        return true;
-      }
-
-      const slotGroup = groups.find(g => g.id === slot.teaching_group_id);
-      if (student?.ib_programme === 'DP' && slot.subject_id) {
-        const subjectChoice = subjectChoices.find(choice => choice.subject_id === slot.subject_id);
-        if (subjectChoice) {
-          const slotLevel = String(slotGroup?.level || '').toUpperCase().trim();
-          const choiceLevel = String(subjectChoice.level || '').toUpperCase().trim();
-          if (slotLevel === 'HL') return choiceLevel === 'HL';
-          if (slotLevel === 'SL') return true;
-          return true;
-        }
-      }
-
-      return slotGroup?.student_ids?.includes(student.id);
+      return assignedGroupIds.includes(slot.teaching_group_id);
     }).filter((slot, index, self) => index === self.findIndex(s => s.id === slot.id));
 
     // ENHANCED DEBUG: Expected vs actual periods by teaching group and subject
@@ -206,9 +190,7 @@ export default function StudentScheduleView({ students, slots, groups, subjects,
       } else if (group.hours_per_week) {
         expectedPeriods = Math.ceil((group.hours_per_week * 60) / periodDuration);
       } else {
-        // Fallback: HL=5, SL=3 (IB standard for 60min periods)
-        const level = String(group.level || '').toUpperCase();
-        expectedPeriods = level === 'HL' ? 5 : level === 'SL' ? 3 : 3;
+        expectedPeriods = 0;
       }
       
       expectedByTG[tgId] = expectedPeriods;
