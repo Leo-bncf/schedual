@@ -13,6 +13,9 @@ const normalizeSearch = (value) => String(value || '')
   .normalize('NFD')
   .replace(/[\u0300-\u036f]/g, '');
 
+const normalizeLevel = (value) => String(value || '').toUpperCase().trim();
+const makeSubjectLevelKey = (subjectId, level) => subjectId ? `${subjectId}__${normalizeLevel(level)}` : '';
+
 export default function StudentScheduleView({ students, slots, groups, subjects, teachers, rooms, selectedStudentId, onStudentChange, exportId = "student-schedule", unassignedBySubjectCode = {}, timeslots = [], scheduleSettings, scheduleVersionId }) {
   const selectedStudent = students.find(s => s.id === selectedStudentId);
   const [serverSlots, setServerSlots] = React.useState(null);
@@ -151,7 +154,7 @@ export default function StudentScheduleView({ students, slots, groups, subjects,
     };
     
     loadServerSlots();
-  }, [selectedStudent?.id, scheduleVersionId, useServerSlots]);
+  }, [selectedStudent?.id, scheduleVersionId]);
   
   const studentSlots = serverSlots || [];
 
@@ -344,7 +347,7 @@ export default function StudentScheduleView({ students, slots, groups, subjects,
             <div className="grid grid-cols-3 gap-4 text-sm">
               <div>
                 <div className="text-blue-700 font-semibold">Slots Loaded</div>
-                <div className="text-2xl font-bold text-blue-900">{diagnostics.total_slots_loaded}</div>
+                <div className="text-2xl font-bold text-blue-900">{diagnostics.student_slots_returned}</div>
               </div>
               <div>
                 <div className="text-blue-700 font-semibold">Unique Teaching Groups</div>
@@ -557,19 +560,23 @@ export default function StudentScheduleView({ students, slots, groups, subjects,
               // SOURCE OF TRUTH: periods_per_week
               const expectedPeriods = group.periods_per_week || 0;
               
-              // Count actual SCHEDULED slots (status='scheduled' + timeslot_id exists)
-              const scheduledSlots = studentSlots.filter(s => 
-                s.teaching_group_id === tgId && 
-                s.status === 'scheduled' &&
-                s.timeslot_id
-              );
+              const coverageKey = makeSubjectLevelKey(group.subject_id, group.level);
+
+              // Count actual SCHEDULED slots by subject+level, not exact TG only,
+              // so merged DP1/DP2 slots still count for the student's sibling TG.
+              const scheduledSlots = studentSlots.filter((s) => {
+                const slotGroup = s.teaching_group_id ? groups.find(g => g.id === s.teaching_group_id) : null;
+                const slotKey = makeSubjectLevelKey(s.subject_id || slotGroup?.subject_id, s.display_level_override || slotGroup?.level);
+                return slotKey === coverageKey && s.status === 'scheduled' && s.timeslot_id;
+              });
               const actualPeriods = scheduledSlots.reduce((sum, s) => sum + (s.is_double_period ? 2 : 1), 0);
               
-              // Count unscheduled slots
-              const unscheduledSlots = studentSlots.filter(s =>
-                s.teaching_group_id === tgId &&
-                s.status === 'unscheduled'
-              );
+              // Count unscheduled slots by subject+level too
+              const unscheduledSlots = studentSlots.filter((s) => {
+                const slotGroup = s.teaching_group_id ? groups.find(g => g.id === s.teaching_group_id) : null;
+                const slotKey = makeSubjectLevelKey(s.subject_id || slotGroup?.subject_id, s.display_level_override || slotGroup?.level);
+                return slotKey === coverageKey && s.status === 'unscheduled';
+              });
               
               tgCoverage.push({
                 tgId,
