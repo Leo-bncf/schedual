@@ -1,6 +1,7 @@
 import React from 'react';
 import { base44 } from '@/api/base44Client';
 import { Card, CardContent } from '@/components/ui/card';
+import { Badge } from '@/components/ui/badge';
 import SearchableEntitySelect from '@/components/schedule/SearchableEntitySelect';
 import { GraduationCap } from 'lucide-react';
 
@@ -22,6 +23,24 @@ function extractYearGroupScope(slot, slotGroup) {
   if (raw.includes('DP2')) return 'DP2';
   if (raw.includes('DP1')) return 'DP1';
   return '';
+}
+
+function getSubjectStyle(subjectName) {
+  const palettes = [
+    'bg-blue-50 border-blue-200 text-blue-900',
+    'bg-indigo-50 border-indigo-200 text-indigo-900',
+    'bg-violet-50 border-violet-200 text-violet-900',
+    'bg-purple-50 border-purple-200 text-purple-900',
+    'bg-emerald-50 border-emerald-200 text-emerald-900',
+    'bg-amber-50 border-amber-200 text-amber-900',
+    'bg-rose-50 border-rose-200 text-rose-900',
+    'bg-cyan-50 border-cyan-200 text-cyan-900'
+  ];
+
+  let hash = 0;
+  const text = String(subjectName || 'Subject');
+  for (let i = 0; i < text.length; i++) hash = text.charCodeAt(i) + ((hash << 5) - hash);
+  return palettes[Math.abs(hash) % palettes.length];
 }
 
 export default function StudentScheduleView({
@@ -239,37 +258,42 @@ export default function StudentScheduleView({
       />
 
       {selectedStudent && (
-        <div className="flex items-center gap-3 rounded-xl border border-slate-200 bg-slate-50 px-4 py-3">
-          <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-blue-100 text-blue-700">
-            <GraduationCap className="h-5 w-5" />
+        <div className="flex flex-col gap-3 rounded-2xl border border-slate-200 bg-gradient-to-r from-slate-50 to-white px-4 py-4 shadow-sm sm:flex-row sm:items-center sm:justify-between">
+          <div className="flex items-center gap-3">
+            <div className="flex h-11 w-11 items-center justify-center rounded-xl bg-blue-100 text-blue-700">
+              <GraduationCap className="h-5 w-5" />
+            </div>
+            <div>
+              <div className="text-base font-semibold text-slate-900">{selectedStudent.full_name}</div>
+              <div className="text-xs text-slate-500">{selectedStudent.year_group}</div>
+            </div>
           </div>
-          <div>
-            <div className="text-sm font-semibold text-slate-900">{selectedStudent.full_name}</div>
-            <div className="text-xs text-slate-500">{selectedStudent.year_group}</div>
-          </div>
+          <Badge variant="outline" className="w-fit bg-white text-slate-700">
+            {visibleSlots.length} scheduled lessons
+          </Badge>
         </div>
       )}
 
       {loading ? (
         <div className="py-12 text-center text-sm text-slate-500">Loading timetable...</div>
       ) : (
-        <Card className="overflow-hidden border-blue-200 shadow-sm bg-white" id={exportId}>
+        <Card className="overflow-hidden border-slate-200 shadow-sm bg-white" id={exportId}>
           <CardContent className="p-0">
             <div className="overflow-x-auto">
-              <div className="min-w-[900px]">
-                <div className="grid grid-cols-[90px_repeat(5,1fr)] border-b-2 border-slate-300 bg-white">
-                  <div className="border-r border-slate-200 p-3"></div>
+              <div className="min-w-[980px]">
+                <div className="grid grid-cols-[100px_repeat(5,1fr)] border-b border-slate-200 bg-slate-50">
+                  <div className="border-r border-slate-200 p-4"></div>
                   {DAYS.map((day) => (
-                    <div key={day} className="border-r border-slate-200 p-3 text-center text-sm font-semibold text-slate-700 last:border-r-0">
+                    <div key={day} className="border-r border-slate-200 p-4 text-center text-sm font-semibold text-slate-700 last:border-r-0">
                       {day}
                     </div>
                   ))}
                 </div>
 
                 {Array.from({ length: maxPeriods }, (_, index) => index + 1).map((row) => (
-                  <div key={row} className="grid grid-cols-[90px_repeat(5,1fr)] border-b border-slate-200 min-h-[72px]">
-                    <div className="border-r border-slate-200 bg-slate-50 p-2 text-center">
-                      <div className="text-sm font-bold text-slate-800">{row}</div>
+                  <div key={row} className="grid grid-cols-[100px_repeat(5,1fr)] border-b border-slate-200 min-h-[92px]">
+                    <div className="border-r border-slate-200 bg-slate-50/80 p-3 text-center">
+                      <div className="text-sm font-bold text-slate-800">P{row}</div>
                       <div className="mt-1 text-[10px] text-slate-500">{periodTimes[row] || `Period ${row}`}</div>
                     </div>
 
@@ -277,17 +301,21 @@ export default function StudentScheduleView({
                       const cellSlots = slotMap.get(`${day}__${row}`) || [];
 
                       return (
-                        <div key={`${day}-${row}`} className="border-r border-slate-200 p-2 last:border-r-0">
-                          <div className="space-y-1">
-                            {cellSlots.map((slot) => {
-                              const { subject } = resolveSlotMeta(slot);
-                              return subject ? (
-                                <div key={slot.id} className="rounded-md border border-blue-200 bg-blue-50 px-2 py-2 text-xs font-semibold text-slate-900">
-                                  {subject.name}
-                                </div>
-                              ) : null;
-                            })}
-                          </div>
+                        <div key={`${day}-${row}`} className="border-r border-slate-200 bg-white p-2.5 last:border-r-0">
+                          {cellSlots.length === 0 ? (
+                            <div className="h-full rounded-xl border border-dashed border-slate-200 bg-slate-50/60" />
+                          ) : (
+                            <div className="space-y-2">
+                              {cellSlots.map((slot) => {
+                                const { subject } = resolveSlotMeta(slot);
+                                return subject ? (
+                                  <div key={slot.id} className={`rounded-xl border px-3 py-3 text-sm font-semibold shadow-sm ${getSubjectStyle(subject.name)}`}>
+                                    {subject.name}
+                                  </div>
+                                ) : null;
+                              })}
+                            </div>
+                          )}
                         </div>
                       );
                     })}
