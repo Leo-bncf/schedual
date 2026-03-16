@@ -814,12 +814,17 @@ Deno.serve(async (req) => {
 
       const missingScopes = validatePostSolveAssignmentCoverage(result.data, payload);
       if (missingScopes.length > 0) {
+        const summary = missingScopes.slice(0, 10).map((scope) => {
+          const [, , subjectCode] = String(scope.key || '').split('__');
+          return `${subjectCode || 'Unknown'} ${scope.actual}/${scope.expected}`;
+        }).join(', ');
+
         failedProgrammes.push({
           programme: payload.programType,
           stage: 'POST_SOLVE_VALIDATION_FAILED',
           reason_code: 'ASSIGNMENT_COUNT_MISMATCH',
-          blocker: 'Solver returned fewer lessons than requested for one or more sections',
-          error: `POST_SOLVE_VALIDATION_FAILED | code=ASSIGNMENT_COUNT_MISMATCH | missing=${JSON.stringify(missingScopes.slice(0, 10))}`
+          blocker: 'Solver returned fewer lessons than requested for one or more subjects',
+          error: `Incomplete timetable generated. The solver scheduled too few lessons for: ${summary}`
         });
         continue;
       }
