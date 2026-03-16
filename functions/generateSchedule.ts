@@ -484,6 +484,40 @@ function validatePostSolveStudentOverlaps(responseData, payload) {
   return overlaps;
 }
 
+function validatePostSolveAssignmentCoverage(responseData, payload) {
+  const entries = [
+    ...(responseData?.lessons || responseData?.data?.lessons || []),
+    ...(responseData?.assignments || responseData?.data?.assignments || []),
+  ];
+
+  const payloadLessonMap = new Map((payload?.lessons || []).map((lesson) => [String(lesson.id), lesson]));
+  const expectedCounts = new Map();
+  const actualCounts = new Map();
+
+  (payload?.lessons || []).forEach((lesson) => {
+    const key = `${lesson.sectionId || ''}__${lesson.teachingGroupId || ''}__${lesson.subject || ''}`;
+    expectedCounts.set(key, (expectedCounts.get(key) || 0) + 1);
+  });
+
+  entries.forEach((entry) => {
+    if (entry?.timeslotId == null) return;
+    const payloadLesson = payloadLessonMap.get(String(entry.lessonId ?? entry.id));
+    if (!payloadLesson) return;
+    const key = `${payloadLesson.sectionId || ''}__${payloadLesson.teachingGroupId || ''}__${payloadLesson.subject || ''}`;
+    actualCounts.set(key, (actualCounts.get(key) || 0) + 1);
+  });
+
+  const missingScopes = [];
+  expectedCounts.forEach((expected, key) => {
+    const actual = actualCounts.get(key) || 0;
+    if (actual !== expected) {
+      missingScopes.push({ key, expected, actual });
+    }
+  });
+
+  return missingScopes;
+}
+
 // ─── OptaPlanner call — ONE payload per call ──────────────────────────────────
 
 async function sendToOptaPlanner(payload) {
@@ -774,6 +808,18 @@ Deno.serve(async (req) => {
           reason_code: 'STUDENT_OVERLAP_DETECTED',
           blocker: 'Student appears in multiple lessons in same timeslot',
           error: `POST_SOLVE_VALIDATION_FAILED | code=STUDENT_OVERLAP_DETECTED | overlaps=${JSON.stringify(postSolveOverlaps.slice(0, 5))}`
+        });
+        continue;
+      }
+
+      const missingScopes = validatePostSolveAssignmentCoverage(result.data, payload);
+      if (missingScopes.length > 0) {
+        failedProgrammes.push({
+          programme: payload.programType,
+          stage: 'POST_SOLVE_VALIDATION_FAILED',
+          reason_code: 'ASSIGNMENT_COUNT_MISMATCH',
+          blocker: 'Solver returned fewer lessons than requested for one or more sections',
+          error: `POST_SOLVE_VALIDATION_FAILED | code=ASSIGNMENT_COUNT_MISMATCH | missing=${JSON.stringify(missingScopes.slice(0, 10))}`
         });
         continue;
       }
