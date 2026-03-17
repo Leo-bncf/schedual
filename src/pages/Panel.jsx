@@ -1,4 +1,5 @@
 import React, { useState } from 'react';
+import { useLocation, useNavigate } from 'react-router-dom';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { base44 } from '@/api/base44Client';
 import { Button } from "@/components/ui/button";
@@ -54,6 +55,9 @@ export default function Panel() {
   const [seatsToAdd, setSeatsToAdd] = useState(1);
 
   const queryClient = useQueryClient();
+  const location = useLocation();
+  const navigate = useNavigate();
+  const activeTab = new URLSearchParams(location.search).get('tab') || 'schools';
 
   const { data: schools = [], isLoading: loadingSchools } = useQuery({
     queryKey: ['allSchools'],
@@ -540,75 +544,63 @@ export default function Panel() {
         </CardContent>
       </Card>
 
-      <Tabs defaultValue="schools" className="space-y-0">
-        <div className="grid gap-6 xl:grid-cols-[280px_minmax(0,1fr)] items-start">
-          <Card className="border-0 shadow-sm rounded-3xl sticky top-6">
-            <CardContent className="p-4">
-              <div className="mb-4 px-2">
-                <div className="text-xs font-semibold uppercase tracking-[0.18em] text-slate-400">Workspace</div>
-                <div className="mt-2 text-lg font-semibold text-slate-900">Admin navigation</div>
-                <div className="text-sm text-slate-500">Switch between key platform sections.</div>
+      <Tabs value={activeTab} onValueChange={(value) => navigate(`?tab=${value}`)} className="space-y-6">
+        <TabsList className="grid h-auto w-full grid-cols-2 gap-3 rounded-3xl bg-transparent p-0 lg:grid-cols-3 xl:grid-cols-6">
+          <TabsTrigger value="schools" className="group rounded-2xl border border-slate-200 bg-white px-4 py-4 text-left data-[state=active]:border-blue-200 data-[state=active]:bg-blue-50 data-[state=active]:text-blue-900 data-[state=active]:shadow-sm">
+            <div className="flex items-start gap-3">
+              <div className="rounded-xl bg-slate-100 p-2 text-slate-600 group-data-[state=active]:bg-blue-100 group-data-[state=active]:text-blue-700"><Building2 className="w-4 h-4" /></div>
+              <div>
+                <div className="font-semibold">Schools</div>
+                <div className="text-xs text-slate-500">Manage clients</div>
               </div>
-              <TabsList className="flex h-auto w-full flex-col items-stretch gap-3 bg-transparent p-0 text-left">
-                <TabsTrigger value="schools" className="group w-full justify-start rounded-2xl border border-slate-200 bg-white px-4 py-4 text-left data-[state=active]:border-blue-200 data-[state=active]:bg-blue-50 data-[state=active]:text-blue-900 data-[state=active]:shadow-sm">
-                  <div className="flex items-center gap-4">
-                    <div className="rounded-2xl bg-slate-100 p-3 text-slate-600 group-data-[state=active]:bg-blue-100 group-data-[state=active]:text-blue-700"><Building2 className="w-5 h-5" /></div>
-                    <div>
-                      <div className="font-semibold">Schools</div>
-                      <div className="text-xs text-slate-500">Manage clients</div>
-                    </div>
-                  </div>
-                </TabsTrigger>
-                <TabsTrigger value="users" className="group w-full justify-start rounded-2xl border border-slate-200 bg-white px-4 py-4 text-left data-[state=active]:border-blue-200 data-[state=active]:bg-blue-50 data-[state=active]:text-blue-900 data-[state=active]:shadow-sm">
-                  <div className="flex items-center gap-4">
-                    <div className="rounded-2xl bg-slate-100 p-3 text-slate-600 group-data-[state=active]:bg-blue-100 group-data-[state=active]:text-blue-700"><Users className="w-5 h-5" /></div>
-                    <div>
-                      <div className="font-semibold">User Management</div>
-                      <div className="text-xs text-slate-500">Assignments & roles</div>
-                    </div>
-                  </div>
-                </TabsTrigger>
-                <TabsTrigger value="analytics" className="group w-full justify-start rounded-2xl border border-slate-200 bg-white px-4 py-4 text-left data-[state=active]:border-blue-200 data-[state=active]:bg-blue-50 data-[state=active]:text-blue-900 data-[state=active]:shadow-sm">
-                  <div className="flex items-center gap-4">
-                    <div className="rounded-2xl bg-slate-100 p-3 text-slate-600 group-data-[state=active]:bg-blue-100 group-data-[state=active]:text-blue-700"><BarChart3 className="w-5 h-5" /></div>
-                    <div>
-                      <div className="font-semibold">Analytics</div>
-                      <div className="text-xs text-slate-500">Growth & revenue</div>
-                    </div>
-                  </div>
-                </TabsTrigger>
-                <TabsTrigger value="automation" className="group w-full justify-start rounded-2xl border border-slate-200 bg-white px-4 py-4 text-left data-[state=active]:border-blue-200 data-[state=active]:bg-blue-50 data-[state=active]:text-blue-900 data-[state=active]:shadow-sm">
-                  <div className="flex items-center gap-4">
-                    <div className="rounded-2xl bg-slate-100 p-3 text-slate-600 group-data-[state=active]:bg-blue-100 group-data-[state=active]:text-blue-700"><Bot className="w-5 h-5" /></div>
-                    <div>
-                      <div className="font-semibold">Automation</div>
-                      <div className="text-xs text-slate-500">Onboarding flows</div>
-                    </div>
-                  </div>
-                </TabsTrigger>
-                <TabsTrigger value="login-sessions" className="group w-full justify-start rounded-2xl border border-slate-200 bg-white px-4 py-4 text-left data-[state=active]:border-blue-200 data-[state=active]:bg-blue-50 data-[state=active]:text-blue-900 data-[state=active]:shadow-sm">
-                  <div className="flex items-center gap-4">
-                    <div className="rounded-2xl bg-slate-100 p-3 text-slate-600 group-data-[state=active]:bg-blue-100 group-data-[state=active]:text-blue-700"><ShieldCheck className="w-5 h-5" /></div>
-                    <div>
-                      <div className="font-semibold">Login Sessions</div>
-                      <div className="text-xs text-slate-500">Access activity</div>
-                    </div>
-                  </div>
-                </TabsTrigger>
-                <TabsTrigger value="ai-training" className="group w-full justify-start rounded-2xl border border-slate-200 bg-white px-4 py-4 text-left data-[state=active]:border-blue-200 data-[state=active]:bg-blue-50 data-[state=active]:text-blue-900 data-[state=active]:shadow-sm">
-                  <div className="flex items-center gap-4">
-                    <div className="rounded-2xl bg-slate-100 p-3 text-slate-600 group-data-[state=active]:bg-blue-100 group-data-[state=active]:text-blue-700"><Brain className="w-5 h-5" /></div>
-                    <div>
-                      <div className="font-semibold">AI Training</div>
-                      <div className="text-xs text-slate-500">Improve agents</div>
-                    </div>
-                  </div>
-                </TabsTrigger>
-              </TabsList>
-            </CardContent>
-          </Card>
-
-          <div className="min-w-0 space-y-4">
+            </div>
+          </TabsTrigger>
+          <TabsTrigger value="users" className="group rounded-2xl border border-slate-200 bg-white px-4 py-4 text-left data-[state=active]:border-blue-200 data-[state=active]:bg-blue-50 data-[state=active]:text-blue-900 data-[state=active]:shadow-sm">
+            <div className="flex items-start gap-3">
+              <div className="rounded-xl bg-slate-100 p-2 text-slate-600 group-data-[state=active]:bg-blue-100 group-data-[state=active]:text-blue-700"><Users className="w-4 h-4" /></div>
+              <div>
+                <div className="font-semibold">Users</div>
+                <div className="text-xs text-slate-500">Assignments & roles</div>
+              </div>
+            </div>
+          </TabsTrigger>
+          <TabsTrigger value="analytics" className="group rounded-2xl border border-slate-200 bg-white px-4 py-4 text-left data-[state=active]:border-blue-200 data-[state=active]:bg-blue-50 data-[state=active]:text-blue-900 data-[state=active]:shadow-sm">
+            <div className="flex items-start gap-3">
+              <div className="rounded-xl bg-slate-100 p-2 text-slate-600 group-data-[state=active]:bg-blue-100 group-data-[state=active]:text-blue-700"><BarChart3 className="w-4 h-4" /></div>
+              <div>
+                <div className="font-semibold">Analytics</div>
+                <div className="text-xs text-slate-500">Growth & revenue</div>
+              </div>
+            </div>
+          </TabsTrigger>
+          <TabsTrigger value="automation" className="group rounded-2xl border border-slate-200 bg-white px-4 py-4 text-left data-[state=active]:border-blue-200 data-[state=active]:bg-blue-50 data-[state=active]:text-blue-900 data-[state=active]:shadow-sm">
+            <div className="flex items-start gap-3">
+              <div className="rounded-xl bg-slate-100 p-2 text-slate-600 group-data-[state=active]:bg-blue-100 group-data-[state=active]:text-blue-700"><Bot className="w-4 h-4" /></div>
+              <div>
+                <div className="font-semibold">Automation</div>
+                <div className="text-xs text-slate-500">Onboarding flows</div>
+              </div>
+            </div>
+          </TabsTrigger>
+          <TabsTrigger value="login-sessions" className="group rounded-2xl border border-slate-200 bg-white px-4 py-4 text-left data-[state=active]:border-blue-200 data-[state=active]:bg-blue-50 data-[state=active]:text-blue-900 data-[state=active]:shadow-sm">
+            <div className="flex items-start gap-3">
+              <div className="rounded-xl bg-slate-100 p-2 text-slate-600 group-data-[state=active]:bg-blue-100 group-data-[state=active]:text-blue-700"><ShieldCheck className="w-4 h-4" /></div>
+              <div>
+                <div className="font-semibold">Login Sessions</div>
+                <div className="text-xs text-slate-500">Access activity</div>
+              </div>
+            </div>
+          </TabsTrigger>
+          <TabsTrigger value="ai-training" className="group rounded-2xl border border-slate-200 bg-white px-4 py-4 text-left data-[state=active]:border-blue-200 data-[state=active]:bg-blue-50 data-[state=active]:text-blue-900 data-[state=active]:shadow-sm">
+            <div className="flex items-start gap-3">
+              <div className="rounded-xl bg-slate-100 p-2 text-slate-600 group-data-[state=active]:bg-blue-100 group-data-[state=active]:text-blue-700"><Brain className="w-4 h-4" /></div>
+              <div>
+                <div className="font-semibold">AI Training</div>
+                <div className="text-xs text-slate-500">Improve agents</div>
+              </div>
+            </div>
+          </TabsTrigger>
+        </TabsList>
 
         <TabsContent value="schools">
           <Card className="border-0 shadow-sm">
@@ -774,8 +766,6 @@ export default function Panel() {
             />
           </div>
         </TabsContent>
-          </div>
-        </div>
       </Tabs>
 
       <Dialog open={isSchoolDialogOpen} onOpenChange={(open) => { if (!open) resetSchoolForm(); setIsSchoolDialogOpen(open); }}>

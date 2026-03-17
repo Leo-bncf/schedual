@@ -48,7 +48,9 @@ const navigation = [
   
   // SuperAdmin Pages
   { name: 'Admin Panel', page: 'Panel', icon: Settings, superAdminOnly: true },
-  { name: 'User Management', page: 'UserManagement', icon: Users, superAdminOnly: true },
+  { name: 'User Management', page: 'Panel', icon: Users, superAdminOnly: true, query: '?tab=users' },
+  { name: 'Analytics', page: 'Panel', icon: LayoutDashboard, superAdminOnly: true, query: '?tab=analytics' },
+  { name: 'Automation', page: 'Panel', icon: Sparkles, superAdminOnly: true, query: '?tab=automation' },
   { name: 'Subscriptions', page: 'SubscriptionsOverview', icon: CreditCard, superAdminOnly: true },
   { name: 'Support Tickets', page: 'SupportTickets', icon: Bell, superAdminOnly: true },
 ];
@@ -311,7 +313,7 @@ export default function Layout({ children, currentPageName }) {
                 return (
                   <Link
                     key={item.name}
-                    to={createPageUrl(item.page)}
+                    to={`${createPageUrl(item.page)}${item.query || ''}`}
                     className={`group flex items-center gap-3 rounded-2xl px-4 py-3.5 text-sm font-medium transition-all duration-200 ${
                       isActive
                         ? 'bg-gradient-to-r from-blue-500 to-indigo-600 text-white shadow-lg shadow-blue-500/20'
