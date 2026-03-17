@@ -8,6 +8,10 @@ import { BrowserRouter as Router, Route, Routes } from 'react-router-dom';
 import PageNotFound from './lib/PageNotFound';
 import { AuthProvider, useAuth } from '@/lib/AuthContext';
 import UserNotRegisteredError from '@/components/UserNotRegisteredError';
+import AnalyticsAdmin from './pages/AnalyticsAdmin';
+import AutomationAdmin from './pages/AutomationAdmin';
+import LoginSessionsAdmin from './pages/LoginSessionsAdmin';
+import AITrainingAdmin from './pages/AITrainingAdmin';
 
 const { Pages, Layout, mainPage } = pagesConfig;
 const mainPageKey = mainPage ?? Object.keys(Pages)[0];
@@ -59,6 +63,10 @@ const AuthenticatedApp = () => {
           }
         />
       ))}
+      <Route path="/AnalyticsAdmin" element={<LayoutWrapper currentPageName="AnalyticsAdmin"><AnalyticsAdmin /></LayoutWrapper>} />
+      <Route path="/AutomationAdmin" element={<LayoutWrapper currentPageName="AutomationAdmin"><AutomationAdmin /></LayoutWrapper>} />
+      <Route path="/LoginSessionsAdmin" element={<LayoutWrapper currentPageName="LoginSessionsAdmin"><LoginSessionsAdmin /></LayoutWrapper>} />
+      <Route path="/AITrainingAdmin" element={<LayoutWrapper currentPageName="AITrainingAdmin"><AITrainingAdmin /></LayoutWrapper>} />
       <Route path="*" element={<PageNotFound />} />
     </Routes>
   );
