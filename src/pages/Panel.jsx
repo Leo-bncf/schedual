@@ -11,6 +11,7 @@ import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, Di
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Building2, Users, GraduationCap, Plus, Pencil, Trash2, Calendar, Crown, MoreHorizontal, Brain } from 'lucide-react';
 import AgentTrainingSection from '../components/ai-training/AgentTrainingSection';
+import AutomationDashboard from '../components/admin/AutomationDashboard';
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
 import PageHeader from '../components/ui-custom/PageHeader';
 import StatCard from '../components/ui-custom/StatCard';
@@ -508,6 +509,7 @@ export default function Panel() {
           <TabsTrigger value="schools">Schools</TabsTrigger>
           <TabsTrigger value="users">Users</TabsTrigger>
           <TabsTrigger value="analytics">Analytics</TabsTrigger>
+          <TabsTrigger value="automation">Automation</TabsTrigger>
           <TabsTrigger value="login-sessions">Login Sessions</TabsTrigger>
           <TabsTrigger value="ai-training">
             <Brain className="w-4 h-4 mr-2" />
@@ -583,6 +585,10 @@ export default function Panel() {
               );
             })}
           </div>
+        </TabsContent>
+
+        <TabsContent value="automation">
+          <AutomationDashboard />
         </TabsContent>
 
         <TabsContent value="login-sessions">
