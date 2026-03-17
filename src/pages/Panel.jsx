@@ -12,6 +12,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Building2, Users, GraduationCap, Plus, Pencil, Trash2, Calendar, Crown, MoreHorizontal, Brain } from 'lucide-react';
 import AgentTrainingSection from '../components/ai-training/AgentTrainingSection';
 import AutomationDashboard from '../components/admin/AutomationDashboard';
+import AnalyticsDashboard from '../components/admin/AnalyticsDashboard';
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
 import PageHeader from '../components/ui-custom/PageHeader';
 import StatCard from '../components/ui-custom/StatCard';
@@ -553,38 +554,11 @@ export default function Panel() {
         </TabsContent>
 
         <TabsContent value="analytics">
-          <div className="grid gap-4">
-            {schools.map(school => {
-              const stats = getSchoolStats(school.id);
-              return (
-                <Card key={school.id} className="border-0 shadow-sm">
-                  <CardHeader>
-                    <CardTitle className="text-lg">{school.name}</CardTitle>
-                  </CardHeader>
-                  <CardContent>
-                    <div className="grid grid-cols-4 gap-4">
-                      <div>
-                        <p className="text-sm text-slate-500">Users</p>
-                        <p className="text-2xl font-semibold text-slate-900">{stats.users}</p>
-                      </div>
-                      <div>
-                        <p className="text-sm text-slate-500">Teachers</p>
-                        <p className="text-2xl font-semibold text-slate-900">{stats.teachers}</p>
-                      </div>
-                      <div>
-                        <p className="text-sm text-slate-500">Students</p>
-                        <p className="text-2xl font-semibold text-slate-900">{stats.students}</p>
-                      </div>
-                      <div>
-                        <p className="text-sm text-slate-500">Schedules</p>
-                        <p className="text-2xl font-semibold text-slate-900">{stats.schedules}</p>
-                      </div>
-                    </div>
-                  </CardContent>
-                </Card>
-              );
-            })}
-          </div>
+          <AnalyticsDashboard
+            schools={schools}
+            users={allUsers}
+            loginSessions={loginSessions}
+          />
         </TabsContent>
 
         <TabsContent value="automation">
