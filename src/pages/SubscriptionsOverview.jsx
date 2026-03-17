@@ -29,9 +29,13 @@ import { format } from 'date-fns';
 export default function SubscriptionsOverview() {
   const [copied, setCopied] = useState(false);
   const [tierDialogOpen, setTierDialogOpen] = useState(false);
+  const [invoiceDialogOpen, setInvoiceDialogOpen] = useState(false);
   const [selectedSchool, setSelectedSchool] = useState(null);
   const [selectedTier, setSelectedTier] = useState('tier2');
   const [isUpdating, setIsUpdating] = useState(false);
+  const [invoiceLoading, setInvoiceLoading] = useState(false);
+  const [creatingInvoice, setCreatingInvoice] = useState(false);
+  const [invoiceData, setInvoiceData] = useState(null);
   const queryClient = useQueryClient();
 
   const { data: schools = [], isLoading } = useQuery({
@@ -71,6 +75,39 @@ export default function SubscriptionsOverview() {
       alert(e.message || 'Failed to update tier');
     } finally {
       setIsUpdating(false);
+    }
+  };
+
+  const loadInvoices = async (school) => {
+    setSelectedSchool(school);
+    setInvoiceDialogOpen(true);
+    setInvoiceLoading(true);
+    try {
+      const { data } = await base44.functions.invoke('adminSchoolInvoices', {
+        action: 'list',
+        school_id: school.id,
+      });
+      setInvoiceData(data);
+    } catch (e) {
+      setInvoiceData({ error: e.message });
+    } finally {
+      setInvoiceLoading(false);
+    }
+  };
+
+  const handleCreateInvoice = async () => {
+    if (!selectedSchool) return;
+    setCreatingInvoice(true);
+    try {
+      const { data } = await base44.functions.invoke('adminSchoolInvoices', {
+        action: 'create',
+        school_id: selectedSchool.id,
+      });
+      setInvoiceData(data);
+    } catch (e) {
+      alert(e.message || 'Failed to generate invoice');
+    } finally {
+      setCreatingInvoice(false);
     }
   };
 
@@ -307,6 +344,79 @@ export default function SubscriptionsOverview() {
           />
         </CardContent>
       </Card>
+
+      <Dialog open={invoiceDialogOpen} onOpenChange={setInvoiceDialogOpen}>
+        <DialogContent className="max-w-3xl">
+          <DialogHeader>
+            <DialogTitle>School Invoices</DialogTitle>
+            <DialogDescription>
+              Preview and manually generate invoices for {selectedSchool?.name}
+            </DialogDescription>
+          </DialogHeader>
+          <div className="space-y-4">
+            {invoiceLoading ? (
+              <div className="flex items-center gap-2 text-sm text-slate-500"><Loader2 className="w-4 h-4 animate-spin" />Loading invoices...</div>
+            ) : invoiceData?.error ? (
+              <div className="rounded-lg border border-rose-200 bg-rose-50 p-4 text-sm text-rose-700">{invoiceData.error}</div>
+            ) : (
+              <>
+                <Card className="border-slate-200">
+                  <CardHeader>
+                    <CardTitle className="text-base">Invoice Preview</CardTitle>
+                  </CardHeader>
+                  <CardContent className="space-y-3">
+                    {(invoiceData?.preview?.line_items || []).map((item, index) => (
+                      <div key={index} className="flex items-center justify-between text-sm border-b last:border-b-0 pb-2 last:pb-0">
+                        <div>
+                          <div className="font-medium text-slate-900">{item.description}</div>
+                          <div className="text-xs text-slate-500">Qty {item.quantity}</div>
+                        </div>
+                        <div className="font-semibold text-slate-900">${((item.unit_amount * item.quantity) / 100).toFixed(2)}</div>
+                      </div>
+                    ))}
+                    <div className="flex items-center justify-between pt-2 text-sm font-semibold text-slate-900">
+                      <span>Total</span>
+                      <span>${((invoiceData?.preview?.total_amount || 0) / 100).toFixed(2)}</span>
+                    </div>
+                  </CardContent>
+                </Card>
+
+                <Card className="border-slate-200">
+                  <CardHeader>
+                    <CardTitle className="text-base">Recent Invoices</CardTitle>
+                  </CardHeader>
+                  <CardContent className="space-y-3">
+                    {(invoiceData?.invoices || []).length === 0 ? (
+                      <div className="text-sm text-slate-500">No invoices found yet.</div>
+                    ) : (
+                      invoiceData.invoices.map((invoice) => (
+                        <div key={invoice.id} className="flex flex-col gap-3 rounded-lg border border-slate-200 p-4 md:flex-row md:items-center md:justify-between">
+                          <div>
+                            <div className="font-medium text-slate-900">{invoice.number || invoice.id}</div>
+                            <div className="text-xs text-slate-500">{new Date(invoice.created * 1000).toLocaleString()}</div>
+                          </div>
+                          <div className="flex items-center gap-3">
+                            <Badge variant="outline">{invoice.status}</Badge>
+                            <span className="text-sm font-semibold text-slate-900">${(invoice.amount_due / 100).toFixed(2)}</span>
+                            {invoice.hosted_invoice_url && <a href={invoice.hosted_invoice_url} target="_blank" rel="noopener noreferrer" className="text-sm text-indigo-600 hover:underline">Hosted</a>}
+                            <a href={invoice.dashboard_url} target="_blank" rel="noopener noreferrer" className="text-sm text-indigo-600 hover:underline">Stripe</a>
+                          </div>
+                        </div>
+                      ))
+                    )}
+                  </CardContent>
+                </Card>
+              </>
+            )}
+          </div>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setInvoiceDialogOpen(false)}>Close</Button>
+            <Button className="bg-blue-900 hover:bg-blue-800" onClick={handleCreateInvoice} disabled={creatingInvoice || invoiceLoading}>
+              {creatingInvoice ? <><Loader2 className="w-4 h-4 mr-2 animate-spin" />Generating...</> : 'Generate Invoice'}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
 
       {/* Change Tier Dialog */}
       <Dialog open={tierDialogOpen} onOpenChange={setTierDialogOpen}>
