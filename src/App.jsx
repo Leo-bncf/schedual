@@ -10,7 +10,7 @@ import { AuthProvider, useAuth } from '@/lib/AuthContext';
 import UserNotRegisteredError from '@/components/UserNotRegisteredError';
 import AnalyticsAdmin from './pages/AnalyticsAdmin';
 import AutomationAdmin from './pages/AutomationAdmin';
-import LoginSessionsAdmin from './pages/LoginSessionsAdmin';
+import SessionActivityAdmin from './pages/SessionActivityAdmin';
 import AITrainingAdmin from './pages/AITrainingAdmin';
 
 const { Pages, Layout, mainPage } = pagesConfig;
@@ -65,7 +65,7 @@ const AuthenticatedApp = () => {
       ))}
       <Route path="/AnalyticsAdmin" element={<LayoutWrapper currentPageName="AnalyticsAdmin"><AnalyticsAdmin /></LayoutWrapper>} />
       <Route path="/AutomationAdmin" element={<LayoutWrapper currentPageName="AutomationAdmin"><AutomationAdmin /></LayoutWrapper>} />
-      <Route path="/LoginSessionsAdmin" element={<LayoutWrapper currentPageName="LoginSessionsAdmin"><LoginSessionsAdmin /></LayoutWrapper>} />
+      <Route path="/SessionActivityAdmin" element={<LayoutWrapper currentPageName="SessionActivityAdmin"><SessionActivityAdmin /></LayoutWrapper>} />
       <Route path="/AITrainingAdmin" element={<LayoutWrapper currentPageName="AITrainingAdmin"><AITrainingAdmin /></LayoutWrapper>} />
       <Route path="*" element={<PageNotFound />} />
     </Routes>

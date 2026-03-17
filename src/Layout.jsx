@@ -51,7 +51,7 @@ const navigation = [
   { name: 'User Management', page: 'UserManagement', icon: Users, superAdminOnly: true },
   { name: 'Analytics', page: 'AnalyticsAdmin', icon: LayoutDashboard, superAdminOnly: true },
   { name: 'Automation', page: 'AutomationAdmin', icon: Sparkles, superAdminOnly: true },
-  { name: 'Login Sessions', page: 'LoginSessionsAdmin', icon: Bell, superAdminOnly: true },
+  { name: 'Login Sessions', page: 'SessionActivityAdmin', icon: Bell, superAdminOnly: true },
   { name: 'AI Training', page: 'AITrainingAdmin', icon: Upload, superAdminOnly: true },
   { name: 'Subscriptions', page: 'SubscriptionsOverview', icon: CreditCard, superAdminOnly: true },
   { name: 'Support Tickets', page: 'SupportTickets', icon: Bell, superAdminOnly: true },
@@ -220,7 +220,7 @@ export default function Layout({ children, currentPageName }) {
 
   // Role-based access control with React Router navigation
   const schoolOnlyPages = ['Dashboard', 'Onboarding', 'Schedule', 'TeachingGroups', 'Teachers', 'Students', 'Subjects', 'Rooms', 'Constraints', 'AIAdvisor', 'Settings', 'Support'];
-  const superAdminPages = ['Panel', 'UserManagement', 'AnalyticsAdmin', 'AutomationAdmin', 'LoginSessionsAdmin', 'AITrainingAdmin', 'SubscriptionsOverview', 'SupportTickets'];
+  const superAdminPages = ['Panel', 'UserManagement', 'AnalyticsAdmin', 'AutomationAdmin', 'SessionActivityAdmin', 'AITrainingAdmin', 'SubscriptionsOverview', 'SupportTickets'];
 
   if (isSuperAdmin && schoolOnlyPages.includes(currentPageName)) {
     return <Navigate to={createPageUrl('Panel')} replace />;
