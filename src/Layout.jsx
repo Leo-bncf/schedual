@@ -309,7 +309,10 @@ export default function Layout({ children, currentPageName }) {
                 // Strict role filtering
                 if (item.superAdminOnly && !isSuperAdmin) return null;
                 if (item.schoolOnly && !isSchoolAdmin(user)) return null;
-                const isActive = currentPageName === item.page;
+                const currentQuery = window.location.search || '';
+                const isActive = item.query
+                  ? currentPageName === item.page && currentQuery === item.query
+                  : currentPageName === item.page && !navigation.some(navItem => navItem.page === item.page && navItem.query && navItem.query === currentQuery);
                 return (
                   <Link
                     key={item.name}
