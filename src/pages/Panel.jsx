@@ -9,7 +9,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { Building2, Users, GraduationCap, Plus, Pencil, Trash2, Calendar, Crown, MoreHorizontal, Brain } from 'lucide-react';
+import { Building2, Users, GraduationCap, Plus, Pencil, Trash2, Calendar, Crown, MoreHorizontal, Brain, BarChart3, Bot, ShieldCheck } from 'lucide-react';
 import AgentTrainingSection from '../components/ai-training/AgentTrainingSection';
 import AutomationDashboard from '../components/admin/AutomationDashboard';
 import AnalyticsDashboard from '../components/admin/AnalyticsDashboard';
@@ -505,16 +505,96 @@ export default function Panel() {
         <StatCard title="Unassigned Users" value={allUsers.filter(u => !u.school_id).length} icon={Users} />
       </div>
 
-      <Tabs defaultValue="schools" className="space-y-4">
-        <TabsList className="bg-slate-100">
-          <TabsTrigger value="schools">Schools</TabsTrigger>
-          <TabsTrigger value="users">Users</TabsTrigger>
-          <TabsTrigger value="analytics">Analytics</TabsTrigger>
-          <TabsTrigger value="automation">Automation</TabsTrigger>
-          <TabsTrigger value="login-sessions">Login Sessions</TabsTrigger>
-          <TabsTrigger value="ai-training">
-            <Brain className="w-4 h-4 mr-2" />
-            AI Training
+      <Card className="border-0 bg-gradient-to-r from-blue-600 via-indigo-600 to-violet-600 text-white shadow-xl">
+        <CardContent className="p-6 md:p-8">
+          <div className="flex flex-col gap-6 lg:flex-row lg:items-end lg:justify-between">
+            <div>
+              <div className="inline-flex items-center gap-2 rounded-full bg-white/15 px-3 py-1 text-xs font-medium text-blue-50">
+                <Crown className="w-3.5 h-3.5" />
+                Super Admin Workspace
+              </div>
+              <h2 className="mt-4 text-3xl font-bold tracking-tight">Platform control center</h2>
+              <p className="mt-2 max-w-2xl text-sm text-blue-50/90">
+                Manage schools, users, analytics, automation and platform operations from one modern dashboard.
+              </p>
+            </div>
+            <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">
+              <div className="rounded-2xl bg-white/10 px-4 py-3 backdrop-blur-sm">
+                <div className="text-xs text-blue-100">Schools</div>
+                <div className="mt-1 text-2xl font-semibold">{schools.length}</div>
+              </div>
+              <div className="rounded-2xl bg-white/10 px-4 py-3 backdrop-blur-sm">
+                <div className="text-xs text-blue-100">Users</div>
+                <div className="mt-1 text-2xl font-semibold">{totalUsers}</div>
+              </div>
+              <div className="rounded-2xl bg-white/10 px-4 py-3 backdrop-blur-sm">
+                <div className="text-xs text-blue-100">Teachers</div>
+                <div className="mt-1 text-2xl font-semibold">{totalTeachers}</div>
+              </div>
+              <div className="rounded-2xl bg-white/10 px-4 py-3 backdrop-blur-sm">
+                <div className="text-xs text-blue-100">Students</div>
+                <div className="mt-1 text-2xl font-semibold">{totalStudents}</div>
+              </div>
+            </div>
+          </div>
+        </CardContent>
+      </Card>
+
+      <Tabs defaultValue="schools" className="space-y-6">
+        <TabsList className="grid h-auto w-full grid-cols-2 gap-3 rounded-3xl bg-transparent p-0 lg:grid-cols-3 xl:grid-cols-6">
+          <TabsTrigger value="schools" className="group rounded-2xl border border-slate-200 bg-white px-4 py-4 text-left data-[state=active]:border-blue-200 data-[state=active]:bg-blue-50 data-[state=active]:text-blue-900 data-[state=active]:shadow-sm">
+            <div className="flex items-start gap-3">
+              <div className="rounded-xl bg-slate-100 p-2 text-slate-600 group-data-[state=active]:bg-blue-100 group-data-[state=active]:text-blue-700"><Building2 className="w-4 h-4" /></div>
+              <div>
+                <div className="font-semibold">Schools</div>
+                <div className="text-xs text-slate-500">Manage clients</div>
+              </div>
+            </div>
+          </TabsTrigger>
+          <TabsTrigger value="users" className="group rounded-2xl border border-slate-200 bg-white px-4 py-4 text-left data-[state=active]:border-blue-200 data-[state=active]:bg-blue-50 data-[state=active]:text-blue-900 data-[state=active]:shadow-sm">
+            <div className="flex items-start gap-3">
+              <div className="rounded-xl bg-slate-100 p-2 text-slate-600 group-data-[state=active]:bg-blue-100 group-data-[state=active]:text-blue-700"><Users className="w-4 h-4" /></div>
+              <div>
+                <div className="font-semibold">Users</div>
+                <div className="text-xs text-slate-500">Assignments & roles</div>
+              </div>
+            </div>
+          </TabsTrigger>
+          <TabsTrigger value="analytics" className="group rounded-2xl border border-slate-200 bg-white px-4 py-4 text-left data-[state=active]:border-blue-200 data-[state=active]:bg-blue-50 data-[state=active]:text-blue-900 data-[state=active]:shadow-sm">
+            <div className="flex items-start gap-3">
+              <div className="rounded-xl bg-slate-100 p-2 text-slate-600 group-data-[state=active]:bg-blue-100 group-data-[state=active]:text-blue-700"><BarChart3 className="w-4 h-4" /></div>
+              <div>
+                <div className="font-semibold">Analytics</div>
+                <div className="text-xs text-slate-500">Growth & revenue</div>
+              </div>
+            </div>
+          </TabsTrigger>
+          <TabsTrigger value="automation" className="group rounded-2xl border border-slate-200 bg-white px-4 py-4 text-left data-[state=active]:border-blue-200 data-[state=active]:bg-blue-50 data-[state=active]:text-blue-900 data-[state=active]:shadow-sm">
+            <div className="flex items-start gap-3">
+              <div className="rounded-xl bg-slate-100 p-2 text-slate-600 group-data-[state=active]:bg-blue-100 group-data-[state=active]:text-blue-700"><Bot className="w-4 h-4" /></div>
+              <div>
+                <div className="font-semibold">Automation</div>
+                <div className="text-xs text-slate-500">Onboarding flows</div>
+              </div>
+            </div>
+          </TabsTrigger>
+          <TabsTrigger value="login-sessions" className="group rounded-2xl border border-slate-200 bg-white px-4 py-4 text-left data-[state=active]:border-blue-200 data-[state=active]:bg-blue-50 data-[state=active]:text-blue-900 data-[state=active]:shadow-sm">
+            <div className="flex items-start gap-3">
+              <div className="rounded-xl bg-slate-100 p-2 text-slate-600 group-data-[state=active]:bg-blue-100 group-data-[state=active]:text-blue-700"><ShieldCheck className="w-4 h-4" /></div>
+              <div>
+                <div className="font-semibold">Login Sessions</div>
+                <div className="text-xs text-slate-500">Access activity</div>
+              </div>
+            </div>
+          </TabsTrigger>
+          <TabsTrigger value="ai-training" className="group rounded-2xl border border-slate-200 bg-white px-4 py-4 text-left data-[state=active]:border-blue-200 data-[state=active]:bg-blue-50 data-[state=active]:text-blue-900 data-[state=active]:shadow-sm">
+            <div className="flex items-start gap-3">
+              <div className="rounded-xl bg-slate-100 p-2 text-slate-600 group-data-[state=active]:bg-blue-100 group-data-[state=active]:text-blue-700"><Brain className="w-4 h-4" /></div>
+              <div>
+                <div className="font-semibold">AI Training</div>
+                <div className="text-xs text-slate-500">Improve agents</div>
+              </div>
+            </div>
           </TabsTrigger>
         </TabsList>
 

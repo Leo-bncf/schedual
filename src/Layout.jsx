@@ -312,18 +312,17 @@ export default function Layout({ children, currentPageName }) {
                   <Link
                     key={item.name}
                     to={createPageUrl(item.page)}
-                    className={`
-                      flex items-center gap-3 px-4 py-3 rounded-xl text-sm font-medium
-                      transition-all duration-200
-                      ${isActive 
-                        ? 'bg-blue-500 text-white shadow-lg' 
-                                                      : 'text-slate-600 hover:bg-blue-50 hover:text-blue-800'
-                      }
-                    `}
+                    className={`group flex items-center gap-3 rounded-2xl px-4 py-3.5 text-sm font-medium transition-all duration-200 ${
+                      isActive
+                        ? 'bg-gradient-to-r from-blue-500 to-indigo-600 text-white shadow-lg shadow-blue-500/20'
+                        : 'border border-transparent text-slate-600 hover:border-blue-100 hover:bg-blue-50/80 hover:text-blue-800'
+                    }`}
                     onClick={() => setSidebarOpen(false)}
                   >
-                    <item.icon className={`w-5 h-5 ${isActive ? 'text-white' : 'text-slate-400'}`} />
-                    {item.name}
+                    <div className={`rounded-xl p-2 transition-colors ${isActive ? 'bg-white/15 text-white' : 'bg-slate-100 text-slate-500 group-hover:bg-blue-100 group-hover:text-blue-700'}`}>
+                      <item.icon className="w-4 h-4" />
+                    </div>
+                    <span>{item.name}</span>
                   </Link>
                 );
               })
