@@ -207,17 +207,26 @@ export default function SubscriptionsOverview() {
       header: 'Actions',
       accessor: 'actions',
       cell: (row) => (
-        <Button
-          variant="outline"
-          size="sm"
-          onClick={() => {
-            setSelectedSchool(row);
-            setSelectedTier(row.subscription_tier || 'tier2');
-            setTierDialogOpen(true);
-          }}
-        >
-          Change Tier
-        </Button>
+        <div className="flex items-center gap-2">
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={() => {
+              setSelectedSchool(row);
+              setSelectedTier(row.subscription_tier || 'tier2');
+              setTierDialogOpen(true);
+            }}
+          >
+            Change Tier
+          </Button>
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={() => loadInvoices(row)}
+          >
+            Invoices
+          </Button>
+        </div>
       )
     }
   ];
