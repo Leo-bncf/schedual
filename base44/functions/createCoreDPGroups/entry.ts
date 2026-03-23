@@ -52,8 +52,10 @@ Deno.serve(async (req) => {
           name: nameByCode[code] || code,
           code,
           ib_level: 'DP',
-          hoursPerWeekHL: 1,
-          hoursPerWeekSL: 1,
+          standard_hours_per_week: 1,
+          sessions_per_week: 0,
+          hours_per_session: 0,
+          is_core: true,
           combine_dp1_dp2: false,
           is_active: true
         });

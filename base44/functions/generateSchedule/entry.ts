@@ -263,6 +263,7 @@ function buildDPPayload({ schoolId, scheduleVersionId, school, students, teacher
     const subject = subjectMap.get(subjectId);
     if (!subject) continue;
 
+    const specialDpSubject = isSpecialDpSubject(subject);
     const subjectKey = subjectId.replace(/-/g, '');
     const repTg = bucketTgs[0];
     const studentGroup = `${yearScope}_${level}_${subjectKey}`;
