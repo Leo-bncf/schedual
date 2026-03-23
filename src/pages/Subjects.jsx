@@ -115,6 +115,8 @@ export default function Subjects() {
     return ['PYP','MYP','DP'];
   };
   const allowedProgrammes = getAllowedProgrammes(school);
+  const normalizedFormCode = getSubjectCode(formData.code);
+  const isCurrentSpecialDp = formData.ib_level === 'DP' && isSpecialDpSubject(normalizedFormCode);
 
   const { data: subjects = [], isLoading } = useQuery({
     queryKey: ['subjects', schoolId],
@@ -909,10 +911,11 @@ ${trainingFeedback ? `LESSONS FROM ADMIN FEEDBACK:\n${trainingFeedback}\n\n` : '
                   id="code"
                   value={formData.code}
                   onChange={(e) => setFormData({ ...formData, code: e.target.value })}
-                  placeholder="e.g., PHY or TEST"
+                  placeholder={formData.ib_level === 'DP' && isCurrentSpecialDp ? 'Auto-set from subject type' : 'e.g., PHY or TEST'}
+                  readOnly={formData.ib_level === 'DP' && isCurrentSpecialDp}
                   required
                 />
-                <p className="text-xs text-slate-500">Use TOK, EE, or TEST for DP core and exam-time subjects.</p>
+                <p className="text-xs text-slate-500">Use the DP Subject Type selector for TOK, EE, and Exam Time.</p>
               </div>
             </div>
 
@@ -939,7 +942,39 @@ ${trainingFeedback ? `LESSONS FROM ADMIN FEEDBACK:\n${trainingFeedback}\n\n` : '
               </Select>
             </div>
 
-            {!(formData.ib_level === 'DP' && isSpecialDpSubject(formData.code)) && (
+            {formData.ib_level === 'DP' && (
+              <div className="space-y-2">
+                <Label htmlFor="dp_subject_type">DP Subject Type</Label>
+                <Select
+                  value={isCurrentSpecialDp ? normalizedFormCode : 'academic'}
+                  onValueChange={(value) => {
+                    if (value === 'academic') {
+                      setFormData({ ...formData, code: '' });
+                      return;
+                    }
+
+                    setFormData({
+                      ...formData,
+                      code: value,
+                      name: formData.name || (value === 'TOK' ? 'Theory of Knowledge' : value === 'EE' ? 'Extended Essay' : 'Exam Time'),
+                      combine_dp1_dp2: false
+                    });
+                  }}
+                >
+                  <SelectTrigger>
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="academic">Academic Subject</SelectItem>
+                    <SelectItem value="TOK">TOK</SelectItem>
+                    <SelectItem value="EE">EE</SelectItem>
+                    <SelectItem value="TEST">Exam Time</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+            )}
+
+            {!(formData.ib_level === 'DP' && isCurrentSpecialDp) && (
               <div className="space-y-2">
                 <Label htmlFor="ib_group">IB Group</Label>
                 <Select 
@@ -961,7 +996,7 @@ ${trainingFeedback ? `LESSONS FROM ADMIN FEEDBACK:\n${trainingFeedback}\n\n` : '
             )}
 
             {formData.ib_level === 'DP' ? (
-              isSpecialDpSubject(formData.code) ? (
+              isCurrentSpecialDp ? (
                 <div className="space-y-4">
                   <div className="grid grid-cols-2 gap-4">
                     <div className="space-y-2">
@@ -1119,9 +1154,9 @@ ${trainingFeedback ? `LESSONS FROM ADMIN FEEDBACK:\n${trainingFeedback}\n\n` : '
                 disabled={
                   createMutation.isPending || 
                   updateMutation.isPending ||
-                  (formData.ib_level === 'DP' && !isSpecialDpSubject(formData.code) &&
+                  (formData.ib_level === 'DP' && !isCurrentSpecialDp &&
                    (parseFloat(formData.hoursPerWeekHL) <= 0 || parseFloat(formData.hoursPerWeekSL) <= 0)) ||
-                  (formData.ib_level === 'DP' && isSpecialDpSubject(formData.code) &&
+                  (formData.ib_level === 'DP' && isCurrentSpecialDp &&
                    parseFloat(formData.standard_hours_per_week) <= 0 &&
                    !(parseFloat(formData.sessions_per_week) > 0 && parseFloat(formData.hours_per_session) > 0))
                 }
