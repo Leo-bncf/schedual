@@ -1,7 +1,7 @@
 import { createClientFromRequest } from 'npm:@base44/sdk@0.8.6';
 
-// Create DP TeachingGroups for core subjects TOK/EE with fixed weekly quotas
-// year_group: "DP1+DP2"; teacher/room optional
+// Create DP TeachingGroups for core subjects TOK/CAS/EE with fixed weekly quotas
+// TOK=2h, CAS=1h, EE=1h; year_group: "DP1+DP2"; teacher/room optional
 Deno.serve(async (req) => {
   try {
     if (req.method !== 'POST') {
@@ -33,29 +33,21 @@ Deno.serve(async (req) => {
     }
 
     // Minutes per week for core subjects
-    const getSubjectMinutes = (subject) => {
-      const sessionsPerWeek = Number(subject?.sessions_per_week || 0);
-      const hoursPerSession = Number(subject?.hours_per_session || 0);
-      if (sessionsPerWeek > 0 && hoursPerSession > 0) return sessionsPerWeek * hoursPerSession * 60;
-      if (Number(subject?.standard_hours_per_week || 0) > 0) return Number(subject.standard_hours_per_week) * 60;
-      return 60;
-    };
-    const targets = ['TOK', 'EE'];
+    const quotas = { TOK: 60, CAS: 60, EE: 60 }; // 1h each
+    const targets = Object.keys(quotas);
 
     const missing = targets.filter(code => !subjectByCode.has(code));
     const subjects_created = [];
     if (missing.length > 0) {
       for (const code of missing) {
-        const nameByCode = { TOK: 'Theory of Knowledge', EE: 'Extended Essay' };
+        const nameByCode = { TOK: 'Theory of Knowledge', CAS: 'Creativity, Activity, Service', EE: 'Extended Essay' };
         const created = await client.entities.Subject.create({
           school_id,
           name: nameByCode[code] || code,
           code,
           ib_level: 'DP',
-          standard_hours_per_week: 1,
-          sessions_per_week: 0,
-          hours_per_session: 0,
-          is_core: true,
+          hoursPerWeekHL: 1,
+          hoursPerWeekSL: 1,
           combine_dp1_dp2: false,
           is_active: true
         });
@@ -63,22 +55,6 @@ Deno.serve(async (req) => {
         subjects_created.push({ code, id: created.id });
         console.log('[createCoreDPGroups] created Subject', { code, id: created.id });
       }
-    }
-
-    const casSubject = subjectByCode.get('CAS');
-    if (casSubject) {
-      const casTeachingGroups = await client.asServiceRole.entities.TeachingGroup.filter({ school_id, subject_id: casSubject.id });
-      const casSlots = await client.asServiceRole.entities.ScheduleSlot.filter({ school_id, subject_id: casSubject.id });
-
-      await Promise.all((casSlots || []).map((slot) => client.asServiceRole.entities.ScheduleSlot.delete(slot.id)));
-      await Promise.all((casTeachingGroups || []).map((tg) => client.asServiceRole.entities.TeachingGroup.delete(tg.id)));
-      await client.asServiceRole.entities.Subject.delete(casSubject.id);
-      subjectByCode.delete('CAS');
-      console.log('[createCoreDPGroups] deleted CAS subject and related records', {
-        subjectId: casSubject.id,
-        teachingGroups: casTeachingGroups.length,
-        scheduleSlots: casSlots.length,
-      });
     }
 
     // Fetch DP students by year group for separate TGs
@@ -123,8 +99,7 @@ Deno.serve(async (req) => {
           for (const tg of existingForYear) {
             await client.asServiceRole.entities.TeachingGroup.update(tg.id, { 
               is_active: true, 
-              teacher_id: subj.supervisor_teacher_id || null,
-              minutes_per_week: getSubjectMinutes(subj),
+              minutes_per_week: quotas[code],
               student_ids: studentIds
             });
             console.log('[createCoreDPGroups] updated TG', { code, year, id: tg.id, students: studentIds.length });
@@ -138,8 +113,7 @@ Deno.serve(async (req) => {
             subject_id: subj.id,
             year_group: year,
             level: 'Standard',
-            teacher_id: subj.supervisor_teacher_id || null,
-            minutes_per_week: getSubjectMinutes(subj),
+            minutes_per_week: quotas[code],
             student_ids: studentIds,
             is_active: true
           });

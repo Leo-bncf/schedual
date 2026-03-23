@@ -1,6 +1,6 @@
 import { createClientFromRequest } from 'npm:@base44/sdk@0.8.6';
 
-// Audit + fix DP core TeachingGroups (TOK/EE) for a given school, then rebuild and report breakdown
+// Audit + fix DP core TeachingGroups (TOK/CAS/EE) for a given school, then rebuild and report breakdown
 // Request body: { school_id: string }
 // Response: { success, subjects, teaching_groups: {...}, created, updated, breakdown }
 Deno.serve(async (req) => {
@@ -21,11 +21,11 @@ Deno.serve(async (req) => {
     const client = base44.asServiceRole;
     console.log('[auditAndFixCoreDPGroups] schoolIdInput', school_id);
 
-    // 1) Fetch core subjects (TOK, EE)
+    // 1) Fetch core subjects (TOK, CAS, EE)
     const subjectsAll = await client.entities.Subject.filter({ school_id, is_active: true });
     const norm = (s) => String(s || '').trim().toUpperCase().replace(/\s+/g, '_').replace(/[^A-Z0-9_]/g, '_').replace(/_+/g, '_').replace(/^_|_$/g, '');
 
-    const coreCodes = ['TOK','EE'];
+    const coreCodes = ['TOK','CAS','EE'];
     const coreSubjects = {};
     for (const s of subjectsAll) {
       const code = norm(s.code || s.name || '');
@@ -40,8 +40,8 @@ Deno.serve(async (req) => {
     });
 
     // 2) Query TeachingGroups for TOK/CAS/EE (IN semantics via multiple queries)
-    const quotas = { TOK: 2, EE: 1 };
-    const tgsByCode = { TOK: [], EE: [] };
+    const quotas = { TOK: 2, CAS: 1, EE: 1 };
+    const tgsByCode = { TOK: [], CAS: [], EE: [] };
 
     for (const code of coreCodes) {
       const subj = coreSubjects[code];
@@ -64,6 +64,7 @@ Deno.serve(async (req) => {
 
     console.log('[auditAndFixCoreDPGroups] teachingGroups (before)', {
       TOK: { count: tgsByCode.TOK.length, list: tgsByCode.TOK },
+      CAS: { count: tgsByCode.CAS.length, list: tgsByCode.CAS },
       EE:  { count: tgsByCode.EE.length,  list: tgsByCode.EE }
     });
 
@@ -126,6 +127,7 @@ Deno.serve(async (req) => {
 
     console.log('[auditAndFixCoreDPGroups] teachingGroups (after)', {
       TOK: { count: tgsByCode.TOK.length, list: tgsByCode.TOK },
+      CAS: { count: tgsByCode.CAS.length, list: tgsByCode.CAS },
       EE:  { count: tgsByCode.EE.length,  list: tgsByCode.EE }
     });
 
@@ -143,6 +145,7 @@ Deno.serve(async (req) => {
 
     const breakdown = {
       TOK: lessonsCreatedBySubject['TOK'] || 0,
+      CAS: lessonsCreatedBySubject['CAS'] || 0,
       EE: lessonsCreatedBySubject['EE'] || 0,
     };
 
@@ -151,6 +154,7 @@ Deno.serve(async (req) => {
       subjects: Object.fromEntries(coreCodes.map(c => [c, coreSubjects[c] ? { id: coreSubjects[c].id, name: coreSubjects[c].name, ib_level: coreSubjects[c].ib_level } : null ])),
       teaching_groups: {
         TOK: { count: tgsByCode.TOK.length, list: tgsByCode.TOK },
+        CAS: { count: tgsByCode.CAS.length, list: tgsByCode.CAS },
         EE:  { count: tgsByCode.EE.length,  list: tgsByCode.EE },
       },
       created,

@@ -1,6 +1,6 @@
 import { createClientFromRequest } from 'npm:@base44/sdk@0.8.6';
 
-// Diagnostic function to verify core subjects (TOK/EE) flow end-to-end
+// Diagnostic function to verify core subjects (TOK/CAS/EE) flow end-to-end
 // - Verifies TeachingGroups for core subjects (active, hours/week)
 // - Builds scheduling problem and reports expected vs created lessons per subject
 // - Optionally triggers solver and then reports inserted slots by subject (with core samples)
@@ -53,7 +53,7 @@ Deno.serve(async (req) => {
     }
 
     // Logs: subjects found and filters used
-    const _coreSubjSample = ['TOK','EE'].map(code => {
+    const _coreSubjSample = ['TOK','CAS','EE'].map(code => {
       const subj = subjects.find(s => String(s.code || s.name || '').toUpperCase().includes(code));
       return subj ? { id: subj.id, code: String(subj.code || subj.name || '').toUpperCase() } : null;
     }).filter(Boolean);
@@ -71,7 +71,7 @@ Deno.serve(async (req) => {
     });
 
     // Identify TOK/CAS/EE by code heuristics or is_core flag
-    const coreTargetCodes = ['TOK','EE'];
+    const coreTargetCodes = ['TOK','CAS','EE'];
     const coreSubjects = {};
     for (const s of subjects) {
       const code = codeOf(s);
@@ -201,7 +201,7 @@ Deno.serve(async (req) => {
       }
       const created = {};
       for (const l of lessons) { created[l.subject] = (created[l.subject] || 0) + 1; }
-      const missingCore = ['TOK','EE'].filter(c => (created[c] || 0) === 0);
+      const missingCore = ['TOK','CAS','EE'].filter(c => (created[c] || 0) === 0);
       stats = {
         timeslots: timeslots.length,
         lessons: lessons.length,
@@ -337,7 +337,7 @@ Deno.serve(async (req) => {
       console.log('[diagCoreScheduling] lessonsCreatedFromTG', { count: (problem?.lessons?.length || 0), breakdown: lessonsCreatedBySubject });
     }
 
-    const missingCoreSubjects = stats.missingCoreSubjects || (['TOK','EE'].filter(k => (lessonsCreatedBySubject[k] || 0) === 0));
+    const missingCoreSubjects = stats.missingCoreSubjects || (['TOK','CAS','EE'].filter(k => (lessonsCreatedBySubject[k] || 0) === 0));
 
     // Compute DP totals and underfilled_days (approximation without solver)
     const dpTarget = 9; // as requested for diagnostic
@@ -367,7 +367,7 @@ Deno.serve(async (req) => {
     }, 0);
 
     // Sample core lessons from problem (pre-solver)
-    let coreSamples = { TOK: [], EE: [] }; // FIX: Changed from const to let (can be reassigned after solver)
+    let coreSamples = { TOK: [], CAS: [], EE: [] }; // FIX: Changed from const to let (can be reassigned after solver)
     for (const l of (problem?.lessons || [])) {
       const code = norm(l.subject || '');
       if (coreSamples[code] && coreSamples[code].length < 5) {
@@ -391,7 +391,7 @@ Deno.serve(async (req) => {
       const codeBySubjectId = {};
       Object.entries(subjectIdByCode).forEach(([code, id]) => { codeBySubjectId[id] = code; });
       insertedCountBySubject = {};
-      coreSamples = { TOK: [], EE: [] };
+      coreSamples = { TOK: [], CAS: [], EE: [] };
       for (const s of allSlots) {
         const code = s.subject_id ? (codeBySubjectId[s.subject_id] || 'UNKNOWN') : (s.notes?.includes('Study') ? 'STUDY' : 'UNKNOWN');
         insertedCountBySubject[code] = (insertedCountBySubject[code] || 0) + 1;
