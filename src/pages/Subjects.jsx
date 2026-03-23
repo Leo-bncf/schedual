@@ -67,6 +67,10 @@ export default function Subjects() {
     available_levels: ['HL', 'SL'],
     hoursPerWeekHL: 6,
     hoursPerWeekSL: 4,
+    standard_hours_per_week: 2,
+    sessions_per_week: 0,
+    hours_per_session: 0,
+    supervisor_teacher_id: 'none',
     pyp_myp_hours_per_week: 3,
     requires_lab: false,
     requires_special_room: '',
@@ -90,6 +94,19 @@ export default function Subjects() {
     enabled: !!schoolId,
   });
   const school = schoolRecords[0];
+
+  const { data: teachers = [] } = useQuery({
+    queryKey: ['teachers', schoolId],
+    queryFn: () => base44.entities.Teacher.filter({ school_id: schoolId }),
+    enabled: !!schoolId,
+  });
+
+  const specialDpCodes = new Set(['TOK', 'EE', 'TEST']);
+  const getSubjectCode = (value = '') => String(value).trim().toUpperCase();
+  const isSpecialDpSubject = (subjectOrCode) => {
+    const code = typeof subjectOrCode === 'string' ? subjectOrCode : subjectOrCode?.code;
+    return specialDpCodes.has(getSubjectCode(code));
+  };
 
   const getAllowedProgrammes = (s) => {
     const tier = s?.subscription_tier;
@@ -151,6 +168,10 @@ export default function Subjects() {
       available_levels: ['HL', 'SL'],
       hoursPerWeekHL: 6,
       hoursPerWeekSL: 4,
+      standard_hours_per_week: 2,
+      sessions_per_week: 0,
+      hours_per_session: 0,
+      supervisor_teacher_id: 'none',
       pyp_myp_hours_per_week: 3,
       requires_lab: false,
       requires_special_room: '',
@@ -172,10 +193,15 @@ export default function Subjects() {
       available_levels: subject.available_levels || ['HL', 'SL'],
       hoursPerWeekHL: subject.hoursPerWeekHL || (subject.hl_minutes_per_week_default ? Math.round(subject.hl_minutes_per_week_default / 60) : 6),
       hoursPerWeekSL: subject.hoursPerWeekSL || (subject.sl_minutes_per_week_default ? Math.round(subject.sl_minutes_per_week_default / 60) : 4),
+      standard_hours_per_week: subject.standard_hours_per_week || ((subject.sessions_per_week && subject.hours_per_session) ? subject.sessions_per_week * subject.hours_per_session : 2),
+      sessions_per_week: subject.sessions_per_week || 0,
+      hours_per_session: subject.hours_per_session || 0,
+      supervisor_teacher_id: subject.supervisor_teacher_id || 'none',
       pyp_myp_hours_per_week: subject.pyp_myp_minutes_per_week_default ? Math.round(subject.pyp_myp_minutes_per_week_default / 60) : 3,
       requires_lab: subject.requires_lab || false,
       requires_special_room: subject.requires_special_room || '',
       combine_dp1_dp2: subject.combine_dp1_dp2 || false,
+      is_core: subject.is_core || isSpecialDpSubject(subject),
       is_active: subject.is_active !== false
     });
     setIsDialogOpen(true);
@@ -183,31 +209,69 @@ export default function Subjects() {
 
   const handleSubmit = (e) => {
     e.preventDefault();
-    
-    // Validate DP subjects require HL+SL hours
-    if (formData.ib_level === 'DP') {
+
+    const normalizedCode = getSubjectCode(formData.code);
+    const isSpecialDp = formData.ib_level === 'DP' && isSpecialDpSubject(normalizedCode);
+
+    if (formData.ib_level === 'DP' && !isSpecialDp) {
       const hlHours = parseFloat(formData.hoursPerWeekHL) || 0;
       const slHours = parseFloat(formData.hoursPerWeekSL) || 0;
-      
+
       if (hlHours <= 0 || slHours <= 0) {
         alert('DP subjects require both HL and SL hours to be greater than 0 for schedule generation.');
         return;
       }
     }
-    
+
+    if (isSpecialDp && (Number(formData.standard_hours_per_week || 0) <= 0)) {
+      alert('Special DP subjects need hours per week greater than 0.');
+      return;
+    }
+
     const group = IB_GROUPS.find(g => g.id === formData.ib_group);
-    const data = { 
+    const data = {
       ...formData,
-      ib_group: String(formData.ib_group),
-      ib_group_name: group?.name || '',
-      hoursPerWeekHL: formData.hoursPerWeekHL,
-      hoursPerWeekSL: formData.hoursPerWeekSL,
-      hl_minutes_per_week_default: formData.hoursPerWeekHL * 60,
-      sl_minutes_per_week_default: formData.hoursPerWeekSL * 60,
+      code: normalizedCode,
+      supervisor_teacher_id: formData.supervisor_teacher_id === 'none' ? '' : formData.supervisor_teacher_id,
       pyp_myp_minutes_per_week_default: formData.pyp_myp_hours_per_week * 60
     };
+
+    if (isSpecialDp) {
+      data.is_core = true;
+      data.available_levels = [];
+      data.ib_group = undefined;
+      data.ib_group_name = undefined;
+      data.hoursPerWeekHL = 0;
+      data.hoursPerWeekSL = 0;
+      data.hl_minutes_per_week_default = 0;
+      data.sl_minutes_per_week_default = 0;
+      data.combine_dp1_dp2 = false;
+    } else if (formData.ib_level === 'DP') {
+      data.is_core = false;
+      data.ib_group = String(formData.ib_group);
+      data.ib_group_name = group?.name || '';
+      data.hoursPerWeekHL = formData.hoursPerWeekHL;
+      data.hoursPerWeekSL = formData.hoursPerWeekSL;
+      data.hl_minutes_per_week_default = formData.hoursPerWeekHL * 60;
+      data.sl_minutes_per_week_default = formData.hoursPerWeekSL * 60;
+      data.standard_hours_per_week = 0;
+      data.sessions_per_week = 0;
+      data.hours_per_session = 0;
+    } else {
+      data.is_core = false;
+      data.available_levels = [];
+      data.hoursPerWeekHL = 0;
+      data.hoursPerWeekSL = 0;
+      data.hl_minutes_per_week_default = 0;
+      data.sl_minutes_per_week_default = 0;
+      data.standard_hours_per_week = 0;
+      data.sessions_per_week = 0;
+      data.hours_per_session = 0;
+      data.supervisor_teacher_id = '';
+    }
+
     delete data.pyp_myp_hours_per_week;
-    
+
     if (editingSubject) {
       updateMutation.mutate({ id: editingSubject.id, data });
     } else {
@@ -222,9 +286,10 @@ export default function Subjects() {
 
   const groupedSubjects = IB_GROUPS.map(group => ({
     ...group,
-    subjects: filteredSubjects.filter(s => String(s.ib_group) === String(group.id) && s.ib_level === 'DP')
+    subjects: filteredSubjects.filter(s => String(s.ib_group) === String(group.id) && s.ib_level === 'DP' && !isSpecialDpSubject(s))
   }));
 
+  const specialDpSubjects = filteredSubjects.filter((s) => s.ib_level === 'DP' && isSpecialDpSubject(s));
   const pypSubjects = filteredSubjects.filter(s => s.ib_level === 'PYP');
   const mypSubjects = filteredSubjects.filter(s => s.ib_level === 'MYP');
 
@@ -605,6 +670,99 @@ ${trainingFeedback ? `LESSONS FROM ADMIN FEEDBACK:\n${trainingFeedback}\n\n` : '
 
 
 
+          {/* DP Special Subjects */}
+          {allowedProgrammes.includes('DP') && specialDpSubjects.length > 0 && (
+            <div>
+              <motion.div 
+                initial={{ opacity: 0, x: -20 }}
+                animate={{ opacity: 1, x: 0 }}
+                className="flex items-center gap-4 mb-6"
+              >
+                <div className="flex items-center gap-3 flex-1">
+                  <motion.div 
+                    className="w-14 h-14 rounded-2xl bg-gradient-to-br from-slate-700 to-slate-900 flex items-center justify-center shadow-xl"
+                    whileHover={{ rotate: 360, scale: 1.1 }}
+                    transition={{ duration: 0.6 }}
+                  >
+                    <Sparkles className="w-7 h-7 text-white" />
+                  </motion.div>
+                  <div>
+                    <h3 className="text-2xl font-bold text-slate-900">Core & Assessment</h3>
+                    <p className="text-sm text-slate-500 mt-1">TOK, EE, and Exam Time</p>
+                  </div>
+                </div>
+                <Badge className="bg-slate-800 text-white border-0 shadow-md text-base px-4 py-1">
+                  {specialDpSubjects.length} subjects
+                </Badge>
+              </motion.div>
+              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+                {specialDpSubjects.map((subject, index) => {
+                  const assignedTeacher = teachers.find((teacher) => teacher.id === subject.supervisor_teacher_id);
+                  return (
+                    <motion.div
+                      key={subject.id}
+                      initial={{ opacity: 0, y: 20 }}
+                      animate={{ opacity: 1, y: 0 }}
+                      transition={{ delay: index * 0.05 }}
+                      whileHover={{ y: -8, transition: { duration: 0.2 } }}
+                    >
+                      <Card className="border border-slate-200 shadow-sm bg-white rounded-xl hover:shadow-md transition-all duration-200 overflow-hidden h-full flex flex-col">
+                        <div className="h-1 w-full bg-slate-800" />
+                        <CardContent className="p-5 flex-1 flex flex-col">
+                          <div className="flex items-start justify-between mb-4">
+                            <div className="flex items-center gap-3 flex-1 min-w-0">
+                              <div className="w-10 h-10 rounded-lg bg-slate-800 flex items-center justify-center flex-shrink-0">
+                                <Sparkles className="w-5 h-5 text-white" />
+                              </div>
+                              <div className="min-w-0 flex-1">
+                                <p className="font-bold text-slate-900 text-base truncate">{subject.name}</p>
+                                <p className="text-xs text-slate-500 truncate">{subject.code}</p>
+                              </div>
+                            </div>
+                            <DropdownMenu>
+                              <DropdownMenuTrigger asChild>
+                                <Button variant="ghost" size="icon" className="h-8 w-8 -mr-2 -mt-2">
+                                  <MoreHorizontal className="w-4 h-4 text-slate-400" />
+                                </Button>
+                              </DropdownMenuTrigger>
+                              <DropdownMenuContent align="end">
+                                <DropdownMenuItem onClick={() => handleEdit(subject)}>
+                                  <Pencil className="w-4 h-4 mr-2" /> Edit
+                                </DropdownMenuItem>
+                                <DropdownMenuItem className="text-rose-600" onClick={() => deleteMutation.mutate(subject.id)}>
+                                  <Trash2 className="w-4 h-4 mr-2" /> Delete
+                                </DropdownMenuItem>
+                              </DropdownMenuContent>
+                            </DropdownMenu>
+                          </div>
+
+                          <div className="flex flex-wrap gap-1.5 mb-4">
+                            <Badge variant="secondary" className="bg-slate-100 text-slate-700 border-0 text-xs font-medium">
+                              {subject.standard_hours_per_week || 0}h/week
+                            </Badge>
+                            {Number(subject.sessions_per_week || 0) > 0 && Number(subject.hours_per_session || 0) > 0 && (
+                              <Badge variant="secondary" className="bg-slate-100 text-slate-700 border-0 text-xs font-medium">
+                                {subject.sessions_per_week}× {subject.hours_per_session}h
+                              </Badge>
+                            )}
+                          </div>
+
+                          <div className="flex items-center justify-between mt-auto pt-2">
+                            <div className="flex items-center gap-2 text-slate-500 min-w-0">
+                              <BookOpen className="w-4 h-4" />
+                              <span className="text-sm truncate">{assignedTeacher?.full_name || 'No teacher set'}</span>
+                            </div>
+                            <Badge className="bg-slate-800 text-white border-0 font-medium">DP</Badge>
+                          </div>
+                        </CardContent>
+                      </Card>
+                    </motion.div>
+                  );
+                })}
+              </div>
+            </div>
+          )}
+
           {/* DP Subject Groups (gated) */}
           {allowedProgrammes.includes('DP') && groupedSubjects.map(group => {
             if (group.subjects.length === 0) return null;
@@ -745,9 +903,10 @@ ${trainingFeedback ? `LESSONS FROM ADMIN FEEDBACK:\n${trainingFeedback}\n\n` : '
                   id="code"
                   value={formData.code}
                   onChange={(e) => setFormData({ ...formData, code: e.target.value })}
-                  placeholder="e.g., PHY"
+                  placeholder="e.g., PHY or TEST"
                   required
                 />
+                <p className="text-xs text-slate-500">Use TOK, EE, or TEST for DP core and exam-time subjects.</p>
               </div>
             </div>
 
@@ -774,62 +933,129 @@ ${trainingFeedback ? `LESSONS FROM ADMIN FEEDBACK:\n${trainingFeedback}\n\n` : '
               </Select>
             </div>
 
-            <div className="space-y-2">
-              <Label htmlFor="ib_group">IB Group</Label>
-              <Select 
-                value={String(formData.ib_group)} 
-                onValueChange={(value) => setFormData({ ...formData, ib_group: parseInt(value) })}
-              >
-                <SelectTrigger>
-                  <SelectValue />
-                </SelectTrigger>
-                <SelectContent>
-                  {IB_GROUPS.map(group => (
-                    <SelectItem key={group.id} value={String(group.id)}>
-                      Group {group.id}: {group.name}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-            </div>
+            {!(formData.ib_level === 'DP' && isSpecialDpSubject(formData.code)) && (
+              <div className="space-y-2">
+                <Label htmlFor="ib_group">IB Group</Label>
+                <Select 
+                  value={String(formData.ib_group)} 
+                  onValueChange={(value) => setFormData({ ...formData, ib_group: parseInt(value) })}
+                >
+                  <SelectTrigger>
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {IB_GROUPS.map(group => (
+                      <SelectItem key={group.id} value={String(group.id)}>
+                        Group {group.id}: {group.name}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+            )}
 
             {formData.ib_level === 'DP' ? (
-              <>
-                <div className="grid grid-cols-2 gap-4">
-                  <div className="space-y-2">
-                    <Label htmlFor="hl_hours">HL Hours/Week *</Label>
-                    <Input 
-                      id="hl_hours"
-                      type="number"
-                      step="0.5"
-                      min="0.5"
-                      max="12"
-                      value={formData.hoursPerWeekHL}
-                      onChange={(e) => setFormData({ ...formData, hoursPerWeekHL: parseFloat(e.target.value) || 0 })}
-                      required
-                    />
-                    <p className="text-xs text-slate-500">
-                      IB standard: 6 hours/week (360 min)
-                    </p>
+              isSpecialDpSubject(formData.code) ? (
+                <div className="space-y-4">
+                  <div className="grid grid-cols-2 gap-4">
+                    <div className="space-y-2">
+                      <Label htmlFor="standard_hours">Hours/Week *</Label>
+                      <Input 
+                        id="standard_hours"
+                        type="number"
+                        step="0.5"
+                        min="0.5"
+                        max="12"
+                        value={formData.standard_hours_per_week}
+                        onChange={(e) => setFormData({ ...formData, standard_hours_per_week: parseFloat(e.target.value) || 0 })}
+                        required
+                      />
+                    </div>
+                    <div className="space-y-2">
+                      <Label htmlFor="special_teacher">Assigned Teacher</Label>
+                      <Select 
+                        value={formData.supervisor_teacher_id}
+                        onValueChange={(value) => setFormData({ ...formData, supervisor_teacher_id: value })}
+                      >
+                        <SelectTrigger>
+                          <SelectValue placeholder="Select teacher" />
+                        </SelectTrigger>
+                        <SelectContent>
+                          <SelectItem value="none">No teacher assigned</SelectItem>
+                          {teachers.map((teacher) => (
+                            <SelectItem key={teacher.id} value={teacher.id}>{teacher.full_name}</SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
+                    </div>
                   </div>
-                  <div className="space-y-2">
-                    <Label htmlFor="sl_hours">SL Hours/Week *</Label>
-                    <Input 
-                      id="sl_hours"
-                      type="number"
-                      step="0.5"
-                      min="0.5"
-                      max="10"
-                      value={formData.hoursPerWeekSL}
-                      onChange={(e) => setFormData({ ...formData, hoursPerWeekSL: parseFloat(e.target.value) || 0 })}
-                      required
-                    />
-                    <p className="text-xs text-slate-500">
-                      IB standard: 4 hours/week (240 min)
-                    </p>
+                  <div className="grid grid-cols-2 gap-4">
+                    <div className="space-y-2">
+                      <Label htmlFor="sessions_per_week">Sessions Per Week</Label>
+                      <Input 
+                        id="sessions_per_week"
+                        type="number"
+                        min="0"
+                        max="10"
+                        value={formData.sessions_per_week}
+                        onChange={(e) => setFormData({ ...formData, sessions_per_week: parseInt(e.target.value) || 0 })}
+                      />
+                    </div>
+                    <div className="space-y-2">
+                      <Label htmlFor="hours_per_session">Hours Per Session</Label>
+                      <Input 
+                        id="hours_per_session"
+                        type="number"
+                        step="0.5"
+                        min="0"
+                        max="6"
+                        value={formData.hours_per_session}
+                        onChange={(e) => setFormData({ ...formData, hours_per_session: parseFloat(e.target.value) || 0 })}
+                      />
+                    </div>
                   </div>
+                  <p className="text-xs text-slate-500">
+                    Use code TEST for Exam Time. When sessions and hours per session are filled, the solver payload uses sessions × hours × 60 as the source of truth.
+                  </p>
                 </div>
-              </>
+              ) : (
+                <>
+                  <div className="grid grid-cols-2 gap-4">
+                    <div className="space-y-2">
+                      <Label htmlFor="hl_hours">HL Hours/Week *</Label>
+                      <Input 
+                        id="hl_hours"
+                        type="number"
+                        step="0.5"
+                        min="0.5"
+                        max="12"
+                        value={formData.hoursPerWeekHL}
+                        onChange={(e) => setFormData({ ...formData, hoursPerWeekHL: parseFloat(e.target.value) || 0 })}
+                        required
+                      />
+                      <p className="text-xs text-slate-500">
+                        IB standard: 6 hours/week (360 min)
+                      </p>
+                    </div>
+                    <div className="space-y-2">
+                      <Label htmlFor="sl_hours">SL Hours/Week *</Label>
+                      <Input 
+                        id="sl_hours"
+                        type="number"
+                        step="0.5"
+                        min="0.5"
+                        max="10"
+                        value={formData.hoursPerWeekSL}
+                        onChange={(e) => setFormData({ ...formData, hoursPerWeekSL: parseFloat(e.target.value) || 0 })}
+                        required
+                      />
+                      <p className="text-xs text-slate-500">
+                        IB standard: 4 hours/week (240 min)
+                      </p>
+                    </div>
+                  </div>
+                </>
+              )
             ) : (
               <div className="space-y-2">
                 <Label htmlFor="pyp_myp_hours">Teaching Hours Per Week *</Label>
@@ -887,8 +1113,10 @@ ${trainingFeedback ? `LESSONS FROM ADMIN FEEDBACK:\n${trainingFeedback}\n\n` : '
                 disabled={
                   createMutation.isPending || 
                   updateMutation.isPending ||
-                  (formData.ib_level === 'DP' && 
-                   (parseFloat(formData.hoursPerWeekHL) <= 0 || parseFloat(formData.hoursPerWeekSL) <= 0))
+                  (formData.ib_level === 'DP' && !isSpecialDpSubject(formData.code) &&
+                   (parseFloat(formData.hoursPerWeekHL) <= 0 || parseFloat(formData.hoursPerWeekSL) <= 0)) ||
+                  (formData.ib_level === 'DP' && isSpecialDpSubject(formData.code) &&
+                   parseFloat(formData.standard_hours_per_week) <= 0)
                 }
               >
                 {editingSubject ? 'Save Changes' : 'Add Subject'}
