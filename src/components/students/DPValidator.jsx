@@ -8,11 +8,17 @@ export default function DPValidator({ subjectChoices, subjects }) {
   const violations = [];
   const warnings = [];
   const validations = [];
+  const specialDpCodes = new Set(['TOK', 'EE', 'TEST']);
+  const diplomaChoices = subjectChoices.filter((choice) => {
+    const subject = subjects.find((item) => item.id === choice.subject_id);
+    const code = String(subject?.code || '').trim().toUpperCase();
+    return !subject?.is_core && !specialDpCodes.has(code);
+  });
 
   // Get HL and SL counts
-  const hlSubjects = subjectChoices.filter(sc => sc.level === 'HL');
-  const slSubjects = subjectChoices.filter(sc => sc.level === 'SL');
-  const totalSubjects = subjectChoices.length;
+  const hlSubjects = diplomaChoices.filter(sc => sc.level === 'HL');
+  const slSubjects = diplomaChoices.filter(sc => sc.level === 'SL');
+  const totalSubjects = diplomaChoices.length;
 
   // Rule S3: Exactly 6 subjects
   if (totalSubjects === 6) {
@@ -36,7 +42,7 @@ export default function DPValidator({ subjectChoices, subjects }) {
   }
 
   // Rule S3: At least 5 different IB groups
-  const uniqueGroups = new Set(subjectChoices.map(sc => sc.ib_group).filter(Boolean));
+  const uniqueGroups = new Set(diplomaChoices.map(sc => sc.ib_group).filter(Boolean));
   if (uniqueGroups.size >= 5) {
     validations.push({ rule: 'S3', message: `${uniqueGroups.size} IB groups covered (min: 5) ✓`, status: 'success' });
   } else {
@@ -49,7 +55,7 @@ export default function DPValidator({ subjectChoices, subjects }) {
 
   // Rule S8: One subject per group (check duplicates)
   const groupCounts = {};
-  subjectChoices.forEach(sc => {
+  diplomaChoices.forEach(sc => {
     const subject = subjects.find(s => s.id === sc.subject_id);
     if (subject && subject.ib_group) {
       groupCounts[subject.ib_group] = (groupCounts[subject.ib_group] || 0) + 1;

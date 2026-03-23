@@ -37,6 +37,36 @@ function buildScheduleSettings(school) {
   };
 }
 
+const SPECIAL_DP_SUBJECT_CODES = new Set(['TOK', 'EE', 'TEST']);
+
+function isSpecialDpSubject(subject) {
+  return SPECIAL_DP_SUBJECT_CODES.has(String(subject?.code || '').trim().toUpperCase());
+}
+
+function getDpMinutesPerWeek({ subject, level, periodDuration, teachingGroups = [] }) {
+  const groupMinutes = teachingGroups.map((tg) => Number(tg.minutes_per_week || 0)).find((value) => value > 0);
+  if (groupMinutes) return groupMinutes;
+
+  const sessionsPerWeek = Number(subject.sessions_per_week || 0);
+  const hoursPerSession = Number(subject.hours_per_session || 0);
+  if (sessionsPerWeek > 0 && hoursPerSession > 0) {
+    return sessionsPerWeek * hoursPerSession * 60;
+  }
+
+  const normalizedLevel = String(level || '').toUpperCase();
+  if (normalizedLevel === 'HL' && Number(subject.hoursPerWeekHL || 0) > 0) {
+    return Number(subject.hoursPerWeekHL) * 60;
+  }
+  if (normalizedLevel === 'SL' && Number(subject.hoursPerWeekSL || 0) > 0) {
+    return Number(subject.hoursPerWeekSL) * 60;
+  }
+  if (Number(subject.standard_hours_per_week || 0) > 0) {
+    return Number(subject.standard_hours_per_week) * 60;
+  }
+
+  return periodDuration;
+}
+
 function buildDPPayload({ schoolId, scheduleVersionId, school, students, teachers, subjects, rooms, teachingGroups }) {
   const { teacherList, teacherMap } = buildTeacherMap(teachers);
   const { roomList } = buildRoomMap(rooms);
@@ -45,15 +75,9 @@ function buildDPPayload({ schoolId, scheduleVersionId, school, students, teacher
 
   const dpStudents = students.filter(s => s.ib_programme === 'DP' && s.is_active !== false);
 
-  const coreSubjectCodes = new Set(['TOK', 'EE', 'tok', 'ee']);
-  const coreSubjectIds = new Set(
-    subjects.filter(s => s.is_core === true || coreSubjectCodes.has(s.code?.toUpperCase())).map(s => s.id)
-  );
-
-  const dpGroups = teachingGroups.filter(tg =>
+  const dpGroups = teachingGroups.filter((tg) =>
     tg.is_active !== false &&
-    (tg.year_group === 'DP1' || tg.year_group === 'DP2') &&
-    !coreSubjectIds.has(tg.subject_id)
+    ['DP1', 'DP2', 'DP1_DP2', 'DP1+DP2'].includes(tg.year_group)
   );
 
   const studentMap = new Map();
@@ -75,8 +99,9 @@ function buildDPPayload({ schoolId, scheduleVersionId, school, students, teacher
     const subject = subjectMap.get(tg.subject_id);
     if (!subject) continue;
 
-    const level = tg.level || 'HL';
-    const yearScope = subject.combine_dp1_dp2 ? 'DP1_DP2' : tg.year_group;
+    const specialDpSubject = isSpecialDpSubject(subject);
+    const level = tg.level || (specialDpSubject ? 'Standard' : 'HL');
+    const yearScope = (subject.combine_dp1_dp2 || tg.year_group === 'DP1_DP2' || tg.year_group === 'DP1+DP2') ? 'DP1_DP2' : tg.year_group;
     const bucketKey = `${tg.subject_id}__${yearScope}__${level}`;
 
     if (!tgByBucket.has(bucketKey)) {
@@ -101,17 +126,25 @@ function buildDPPayload({ schoolId, scheduleVersionId, school, students, teacher
     const studentGroup = `${yearScope}_${level}_${subjectKey}`;
     const sectionId = `sec_${level.toLowerCase()}_${subjectKey}_${yearScope}`;
     const teachingGroupId = repTg ? repTg.id : null;
-    const hoursForLevel = level === 'HL' ? Number(subject.hoursPerWeekHL || 0) : Number(subject.hoursPerWeekSL || 0);
-    const minutesPerWeek = hoursForLevel * 60;
+    const minutesPerWeek = getDpMinutesPerWeek({
+      subject,
+      level,
+      periodDuration,
+      teachingGroups: bucketTgs,
+    });
     const periodsPerWeek = Math.max(1, Math.ceil(minutesPerWeek / periodDuration));
-    const teacherId = bucketTgs.reduce((acc, tg) => acc || (tg.teacher_id ? (teacherMap.get(tg.teacher_id) ?? null) : null), null);
+    const teacherId = bucketTgs.reduce((acc, tg) => acc || (tg.teacher_id ? (teacherMap.get(tg.teacher_id) ?? null) : null), null)
+      || (subject.supervisor_teacher_id ? (teacherMap.get(subject.supervisor_teacher_id) ?? null) : null);
 
     // Only include students who actually have this subject+level in their subject_choices.
     const validYearGroups = yearScope === 'DP1_DP2' ? ['DP1', 'DP2'] : [yearScope];
     const rawStudentIds = [...new Set(bucketTgs.flatMap(tg => (tg.student_ids || [])))];
     const studentIds = rawStudentIds.map(base44Id => {
       const student = dpStudents.find(s => s.id === base44Id);
-      if (!student) return null;
+      if (!student || !validYearGroups.includes(student.year_group)) return null;
+      if (specialDpSubject) {
+        return studentMap.get(base44Id);
+      }
       const hasChoice = (student.subject_choices || []).some(c =>
         c.subject_id === subjectId &&
         String(c.level || '').toUpperCase() === level.toUpperCase() &&
@@ -155,7 +188,7 @@ function buildDPPayload({ schoolId, scheduleVersionId, school, students, teacher
     for (const base44StudentId of rawStudentIds) {
       const student = dpStudents.find(s => s.id === base44StudentId);
       if (!student) continue;
-      const hasChoice = (student.subject_choices || []).some(c =>
+      const hasChoice = specialDpSubject || (student.subject_choices || []).some(c =>
         c.subject_id === subjectId &&
         String(c.level || '').toUpperCase() === level.toUpperCase() &&
         validYearGroups.includes(student.year_group)

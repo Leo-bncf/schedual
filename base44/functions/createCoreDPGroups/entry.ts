@@ -33,8 +33,14 @@ Deno.serve(async (req) => {
     }
 
     // Minutes per week for core subjects
-    const quotas = { TOK: 60, EE: 60 };
-    const targets = Object.keys(quotas);
+    const getSubjectMinutes = (subject) => {
+      const sessionsPerWeek = Number(subject?.sessions_per_week || 0);
+      const hoursPerSession = Number(subject?.hours_per_session || 0);
+      if (sessionsPerWeek > 0 && hoursPerSession > 0) return sessionsPerWeek * hoursPerSession * 60;
+      if (Number(subject?.standard_hours_per_week || 0) > 0) return Number(subject.standard_hours_per_week) * 60;
+      return 60;
+    };
+    const targets = ['TOK', 'EE'];
 
     const missing = targets.filter(code => !subjectByCode.has(code));
     const subjects_created = [];
@@ -115,7 +121,8 @@ Deno.serve(async (req) => {
           for (const tg of existingForYear) {
             await client.asServiceRole.entities.TeachingGroup.update(tg.id, { 
               is_active: true, 
-              minutes_per_week: quotas[code],
+              teacher_id: subj.supervisor_teacher_id || null,
+              minutes_per_week: getSubjectMinutes(subj),
               student_ids: studentIds
             });
             console.log('[createCoreDPGroups] updated TG', { code, year, id: tg.id, students: studentIds.length });
@@ -129,7 +136,8 @@ Deno.serve(async (req) => {
             subject_id: subj.id,
             year_group: year,
             level: 'Standard',
-            minutes_per_week: quotas[code],
+            teacher_id: subj.supervisor_teacher_id || null,
+            minutes_per_week: getSubjectMinutes(subj),
             student_ids: studentIds,
             is_active: true
           });

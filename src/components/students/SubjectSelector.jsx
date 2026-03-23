@@ -50,8 +50,14 @@ export default function SubjectSelector({
     }
   }, [selectedSubjects]);
 
+  const specialDpCodes = new Set(['TOK', 'EE', 'TEST']);
+
   // Filter subjects by programme
-  const availableSubjects = subjects.filter(s => s.ib_level === programme && !s.is_core);
+  const availableSubjects = subjects.filter((s) => {
+    if (s.ib_level !== programme) return false;
+    const code = String(s.code || '').trim().toUpperCase();
+    return !s.is_core && !specialDpCodes.has(code);
+  });
 
   const addSubject = () => {
     if (!selectedSubjectId) return;
