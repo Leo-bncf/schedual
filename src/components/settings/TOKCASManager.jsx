@@ -12,7 +12,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import { BookOpen, Users, FileText, Save, Loader2, CheckCircle } from 'lucide-react';
+import { BookOpen, FileText, Save, Loader2, CheckCircle } from 'lucide-react';
 import { toast } from 'sonner';
 
 export default function TOKCASManager({ schoolId }) {
@@ -38,8 +38,6 @@ export default function TOKCASManager({ schoolId }) {
   const [formData, setFormData] = useState({
     tok_hours_per_week: 2,
     tok_teacher_id: '',
-    cas_hours_per_week: 1,
-    cas_coordinator_id: '',
     ee_hours_per_week: 1,
     ee_coordinator_id: '',
   });
@@ -49,8 +47,6 @@ export default function TOKCASManager({ schoolId }) {
       setFormData({
         tok_hours_per_week: school.settings.tok_hours_per_week || 2,
         tok_teacher_id: school.settings.tok_teacher_id || '',
-        cas_hours_per_week: school.settings.cas_hours_per_week || 1,
-        cas_coordinator_id: school.settings.cas_coordinator_id || '',
         ee_hours_per_week: school.settings.ee_hours_per_week || 1,
         ee_coordinator_id: school.settings.ee_coordinator_id || '',
       });
@@ -59,9 +55,15 @@ export default function TOKCASManager({ schoolId }) {
 
   const updateSchoolMutation = useMutation({
     mutationFn: async (data) => {
+      const {
+        cas_hours_per_week,
+        cas_coordinator_id,
+        ...cleanSettings
+      } = school.settings || {};
+
       return await base44.entities.School.update(schoolId, {
         settings: {
-          ...school.settings,
+          ...cleanSettings,
           ...data,
         }
       });
@@ -70,7 +72,7 @@ export default function TOKCASManager({ schoolId }) {
       queryClient.invalidateQueries({ queryKey: ['school', schoolId] });
       setSaved(true);
       setTimeout(() => setSaved(false), 2000);
-      toast.success('Core components updated successfully');
+      toast.success('TOK and EE updated successfully');
     },
     onError: (error) => {
       console.error('Update error:', error);
@@ -96,14 +98,6 @@ export default function TOKCASManager({ schoolId }) {
       color: 'from-blue-500 to-indigo-600',
       hoursKey: 'tok_hours_per_week',
       teacherKey: 'tok_teacher_id',
-    },
-    {
-      id: 'cas',
-      name: 'Creativity, Activity, Service (CAS)',
-      icon: Users,
-      color: 'from-emerald-500 to-teal-600',
-      hoursKey: 'cas_hours_per_week',
-      teacherKey: 'cas_coordinator_id',
     },
     {
       id: 'ee',
