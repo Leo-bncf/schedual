@@ -223,8 +223,11 @@ export default function Subjects() {
       }
     }
 
-    if (isSpecialDp && (Number(formData.standard_hours_per_week || 0) <= 0)) {
-      alert('Special DP subjects need hours per week greater than 0.');
+    const hasSpecialWeeklyHours = Number(formData.standard_hours_per_week || 0) > 0;
+    const hasSpecialSessionPattern = Number(formData.sessions_per_week || 0) > 0 && Number(formData.hours_per_session || 0) > 0;
+
+    if (isSpecialDp && !hasSpecialWeeklyHours && !hasSpecialSessionPattern) {
+      alert('Special DP subjects need either hours per week or a sessions-per-week pattern.');
       return;
     }
 
@@ -245,6 +248,9 @@ export default function Subjects() {
       data.hoursPerWeekSL = 0;
       data.hl_minutes_per_week_default = 0;
       data.sl_minutes_per_week_default = 0;
+      data.standard_hours_per_week = hasSpecialWeeklyHours
+        ? Number(formData.standard_hours_per_week || 0)
+        : Number(formData.sessions_per_week || 0) * Number(formData.hours_per_session || 0);
       data.combine_dp1_dp2 = false;
     } else if (formData.ib_level === 'DP') {
       data.is_core = false;
@@ -738,7 +744,7 @@ ${trainingFeedback ? `LESSONS FROM ADMIN FEEDBACK:\n${trainingFeedback}\n\n` : '
 
                           <div className="flex flex-wrap gap-1.5 mb-4">
                             <Badge variant="secondary" className="bg-slate-100 text-slate-700 border-0 text-xs font-medium">
-                              {subject.standard_hours_per_week || 0}h/week
+                              {subject.standard_hours_per_week || (Number(subject.sessions_per_week || 0) * Number(subject.hours_per_session || 0)) || 0}h/week
                             </Badge>
                             {Number(subject.sessions_per_week || 0) > 0 && Number(subject.hours_per_session || 0) > 0 && (
                               <Badge variant="secondary" className="bg-slate-100 text-slate-700 border-0 text-xs font-medium">
@@ -1116,7 +1122,8 @@ ${trainingFeedback ? `LESSONS FROM ADMIN FEEDBACK:\n${trainingFeedback}\n\n` : '
                   (formData.ib_level === 'DP' && !isSpecialDpSubject(formData.code) &&
                    (parseFloat(formData.hoursPerWeekHL) <= 0 || parseFloat(formData.hoursPerWeekSL) <= 0)) ||
                   (formData.ib_level === 'DP' && isSpecialDpSubject(formData.code) &&
-                   parseFloat(formData.standard_hours_per_week) <= 0)
+                   parseFloat(formData.standard_hours_per_week) <= 0 &&
+                   !(parseFloat(formData.sessions_per_week) > 0 && parseFloat(formData.hours_per_session) > 0))
                 }
               >
                 {editingSubject ? 'Save Changes' : 'Add Subject'}
