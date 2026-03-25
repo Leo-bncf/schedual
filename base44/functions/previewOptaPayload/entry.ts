@@ -45,9 +45,12 @@ function buildDPPayload({ schoolId, scheduleVersionId, school, students, teacher
 
   const dpStudents = students.filter(s => s.ib_programme === 'DP' && s.is_active !== false);
 
-  const coreSubjectCodes = new Set(['TOK', 'CAS', 'EE', 'tok', 'cas', 'ee']);
+  const coreSubjectCodes = new Set(['TOK', 'CAS', 'EE']);
   const coreSubjectIds = new Set(
-    subjects.filter(s => s.is_core === true || coreSubjectCodes.has(s.code?.toUpperCase())).map(s => s.id)
+    subjects.filter((s) => {
+      const code = String(s.code || '').trim().toUpperCase();
+      return code !== 'TEST' && (s.is_core === true || coreSubjectCodes.has(code));
+    }).map(s => s.id)
   );
 
   const dpGroups = teachingGroups.filter(tg =>

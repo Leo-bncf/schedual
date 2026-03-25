@@ -117,6 +117,7 @@ export default function Subjects() {
   const allowedProgrammes = getAllowedProgrammes(school);
   const normalizedFormCode = getSubjectCode(formData.code);
   const isCurrentSpecialDp = formData.ib_level === 'DP' && isSpecialDpSubject(normalizedFormCode);
+  const canCombineDpYears = formData.ib_level === 'DP' && (!isCurrentSpecialDp || normalizedFormCode === 'TEST');
 
   const { data: subjects = [], isLoading } = useQuery({
     queryKey: ['subjects', schoolId],
@@ -253,7 +254,7 @@ export default function Subjects() {
       data.standard_hours_per_week = hasSpecialWeeklyHours
         ? Number(formData.standard_hours_per_week || 0)
         : Number(formData.sessions_per_week || 0) * Number(formData.hours_per_session || 0);
-      data.combine_dp1_dp2 = false;
+      data.combine_dp1_dp2 = normalizedCode === 'TEST' ? !!formData.combine_dp1_dp2 : false;
     } else if (formData.ib_level === 'DP') {
       data.is_core = false;
       data.ib_group = String(formData.ib_group);
@@ -957,7 +958,7 @@ ${trainingFeedback ? `LESSONS FROM ADMIN FEEDBACK:\n${trainingFeedback}\n\n` : '
                       ...formData,
                       code: value,
                       name: formData.name || (value === 'TOK' ? 'Theory of Knowledge' : value === 'EE' ? 'Extended Essay' : 'Exam Time'),
-                      combine_dp1_dp2: false
+                      combine_dp1_dp2: value === 'TEST' ? formData.combine_dp1_dp2 : false
                     });
                   }}
                 >
@@ -1125,14 +1126,16 @@ ${trainingFeedback ? `LESSONS FROM ADMIN FEEDBACK:\n${trainingFeedback}\n\n` : '
                 <Label htmlFor="requires_lab" className="font-normal">Requires Lab</Label>
               </div>
 
-              {formData.ib_level === 'DP' && (
+              {canCombineDpYears && (
                 <div className="flex items-center justify-between p-4 bg-gradient-to-r from-blue-50 to-indigo-50 rounded-lg border-2 border-blue-200">
                   <div>
                     <Label htmlFor="combine_dp1_dp2" className="font-semibold text-slate-900 text-sm">
                       Combine DP1 & DP2 Teaching Groups
                     </Label>
                     <p className="text-xs text-slate-600 mt-1">
-                      Students from both year groups will be scheduled together
+                      {normalizedFormCode === 'TEST'
+                        ? 'Exam Time can be shared across both year groups in one scheduling scope'
+                        : 'Students from both year groups will be scheduled together'}
                     </p>
                   </div>
                   <Switch 
