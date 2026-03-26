@@ -10,6 +10,10 @@ function makeSubjectLevelKey(subjectId, level) {
   return `${subjectId}__${normalizeLevel(level)}`;
 }
 
+function normalizeCode(value) {
+  return String(value || '').trim().toUpperCase();
+}
+
 function extractYearGroupScope(slot, slotGroup) {
   const explicitScope = String(slot?.year_group_scope || '').trim();
   if (explicitScope) return explicitScope;
@@ -45,17 +49,23 @@ Deno.serve(async (req) => {
       return Response.json({ error: 'Student not found' }, { status: 404 });
     }
 
-    const [allSlots, teachingGroups] = await Promise.all([
+    const [allSlots, teachingGroups, subjects] = await Promise.all([
       base44.entities.ScheduleSlot.filter({
         school_id: user.school_id,
         schedule_version: schedule_version_id,
       }, '-created_date', 1000),
       base44.entities.TeachingGroup.filter({ school_id: user.school_id }, '-created_date', 500),
+      base44.entities.Subject.filter({ school_id: user.school_id }, '-created_date', 500),
     ]);
 
     const tgById = {};
     teachingGroups.forEach((group) => {
       tgById[group.id] = group;
+    });
+
+    const subjectById = {};
+    subjects.forEach((subject) => {
+      subjectById[subject.id] = subject;
     });
 
     const assignedGroupIds = Array.isArray(student.assigned_groups) ? student.assigned_groups : [];
@@ -115,13 +125,21 @@ Deno.serve(async (req) => {
       }
 
       const subjectId = slot.subject_id || slotGroup?.subject_id;
+      const subjectCode = normalizeCode(subjectById[subjectId]?.code);
       const level = normalizeLevel(slot.display_level_override || slotGroup?.level || getStudentLevelForSubject(subjectId));
       const scope = extractYearGroupScope(slot, slotGroup);
-      const isSharedCoreSlot = student.ib_programme === 'DP' && normalizeLevel(slot.display_level_override || slotGroup?.level) === 'STANDARD';
+      const isExamTimeSlot = subjectCode === 'TEST';
+      const isSharedCoreSlot = student.ib_programme === 'DP' && (
+        normalizeLevel(slot.display_level_override || slotGroup?.level) === 'STANDARD' || isExamTimeSlot
+      );
 
       if (isSharedCoreSlot) {
         const studentListedOnGroup = Array.isArray(slotGroup?.student_ids) && slotGroup.student_ids.includes(student.id);
-        return studentListedOnGroup && (scope === 'DP1_DP2' || scope === studentYearGroup);
+        const hasMatchingAssignedGroup = assignedGroups.some((group) =>
+          group?.subject_id === subjectId &&
+          (group.id === slotGroup?.id || extractYearGroupScope(slot, group) === scope || extractYearGroupScope(slot, group) === studentYearGroup)
+        );
+        return (studentListedOnGroup || hasMatchingAssignedGroup) && (scope === 'DP1_DP2' || scope === studentYearGroup);
       }
 
       const key = makeSubjectLevelKey(subjectId, level);
