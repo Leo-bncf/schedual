@@ -111,6 +111,13 @@ Deno.serve(async (req) => {
 
       const subjectId = slot.subject_id || slotGroup?.subject_id;
       const level = normalizeLevel(slot.display_level_override || slotGroup?.level || getStudentLevelForSubject(subjectId));
+      const scope = extractYearGroupScope(slot, slotGroup);
+      const isSharedCoreSlot = student.ib_programme === 'DP' && (level === 'STANDARD' || scope === 'DP1_DP2');
+
+      if (isSharedCoreSlot) {
+        return scope === 'DP1_DP2' || scope === studentYearGroup;
+      }
+
       const key = makeSubjectLevelKey(subjectId, level);
       if (!key || !allowedSubjectLevelKeys.has(key)) {
         return false;
@@ -120,7 +127,6 @@ Deno.serve(async (req) => {
         return true;
       }
 
-      const scope = extractYearGroupScope(slot, slotGroup);
       return scope === 'DP1_DP2' || scope === studentYearGroup;
     }).filter((slot, index, self) => index === self.findIndex((item) => item.id === slot.id));
 
