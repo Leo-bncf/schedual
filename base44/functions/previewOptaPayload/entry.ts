@@ -195,7 +195,8 @@ function buildDPPayload({ schoolId, scheduleVersionId, school, students, teacher
       ? Math.max(tgMinutesPerWeek, standardHoursMinutes, sessionMinutesPerWeek)
       : (level === 'HL' ? Number(subject.hoursPerWeekHL || 0) : Number(subject.hoursPerWeekSL || 0)) * 60;
     const periodsPerWeek = Math.max(1, Math.ceil(minutesPerWeek / periodDuration));
-    const teacherId = bucketTgs.reduce((acc, tg) => acc || (tg.teacher_id ? (teacherMap.get(tg.teacher_id) ?? null) : null), null);
+    const teacherId = bucketTgs.reduce((acc, tg) => acc || (tg.teacher_id ? (teacherMap.get(tg.teacher_id) ?? null) : null), null)
+      || (subject.supervisor_teacher_id ? (teacherMap.get(subject.supervisor_teacher_id) ?? null) : null);
 
     const validYearGroups = yearScope === 'DP1_DP2' ? ['DP1', 'DP2'] : [yearScope];
     const rawStudentIds = [...new Set(bucketTgs.flatMap(tg => (tg.student_ids || [])))];
