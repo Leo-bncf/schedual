@@ -91,8 +91,9 @@ function buildDPPayload({ schoolId, scheduleVersionId, school, students, teacher
     if (!normalizedGroupYear) continue;
 
     const rawLevel = String(tg.level || '').trim();
-    const isStandardSubject = schedulableStandardCodes.has(subjectCode) || rawLevel.toUpperCase() === 'STANDARD';
-    const level = isStandardSubject ? 'Standard' : (rawLevel || 'HL');
+    const isSharedCoreSubject = schedulableStandardCodes.has(subjectCode);
+    const isStandardSubject = isSharedCoreSubject || rawLevel.toUpperCase() === 'STANDARD';
+    const level = isSharedCoreSubject ? 'SHARED' : (isStandardSubject ? 'Standard' : (rawLevel || 'HL'));
     const yearScope = (subject.combine_dp1_dp2 || normalizedGroupYear === 'DP1_DP2') ? 'DP1_DP2' : normalizedGroupYear;
     const bucketKey = `${tg.subject_id}__${yearScope}__${level}`;
 
@@ -114,13 +115,19 @@ function buildDPPayload({ schoolId, scheduleVersionId, school, students, teacher
     if (!subject) continue;
 
     const subjectKey = subjectId.replace(/-/g, '');
+    const subjectCode = String(subject.code || '').trim().toUpperCase();
     const repTg = bucketTgs[0];
-    const isStandardLevel = String(level).toUpperCase() === 'STANDARD';
-    const studentGroup = `${yearScope}_${String(level).toUpperCase()}_${subjectKey}`;
-    const sectionId = `sec_${String(level).toLowerCase()}_${subjectKey}_${yearScope}`;
+    const normalizedPayloadLevel = String(level).toUpperCase();
+    const isSharedLevel = normalizedPayloadLevel === 'SHARED';
+    const isStandardLevel = normalizedPayloadLevel === 'STANDARD' || isSharedLevel;
+    const studentGroup = isSharedLevel ? `${yearScope}_CORE_${subjectCode}` : `${yearScope}_${normalizedPayloadLevel}_${subjectKey}`;
+    const sectionId = isSharedLevel ? `sec_${subjectCode.toLowerCase()}_${yearScope.toLowerCase()}` : `sec_${String(level).toLowerCase()}_${subjectKey}_${yearScope}`;
     const teachingGroupId = repTg ? repTg.id : null;
+    const tgMinutesPerWeek = Number(repTg?.minutes_per_week || 0);
+    const standardHoursMinutes = Number(subject.standard_hours_per_week || 0) * 60;
+    const sessionMinutesPerWeek = Number(subject.sessions_per_week || 0) * Number(subject.hours_per_session || 0) * 60;
     const minutesPerWeek = isStandardLevel
-      ? Number(repTg?.minutes_per_week || 0) || (Number(subject.standard_hours_per_week || 0) * 60)
+      ? Math.max(tgMinutesPerWeek, standardHoursMinutes, sessionMinutesPerWeek)
       : (level === 'HL' ? Number(subject.hoursPerWeekHL || 0) : Number(subject.hoursPerWeekSL || 0)) * 60;
     const periodsPerWeek = Math.max(1, Math.ceil(minutesPerWeek / periodDuration));
     const teacherId = bucketTgs.reduce((acc, tg) => acc || (tg.teacher_id ? (teacherMap.get(tg.teacher_id) ?? null) : null), null);
