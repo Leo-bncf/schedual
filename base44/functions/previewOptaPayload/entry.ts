@@ -70,7 +70,73 @@ function buildDPPayload({ schoolId, scheduleVersionId, school, students, teacher
   const studentMap = new Map();
   dpStudents.forEach((s, idx) => studentMap.set(s.id, idx + 1));
 
-  const usedSubjectIds = new Set(dpGroups.map(tg => tg.subject_id).filter(Boolean));
+  const normalizeCode = (value) => String(value || '').trim().toUpperCase();
+  const subjectsById = new Map(subjects.map((subject) => [subject.id, subject]));
+  const subjectsByCode = new Map(subjects.map((subject) => [normalizeCode(subject.code), subject]));
+  const resolveTeachingGroupSubject = (tg) => {
+    const direct = subjectsById.get(tg.subject_id);
+    if (direct) return direct;
+
+    const groupName = String(tg.name || '').trim().toUpperCase();
+    if (groupName.includes('THEORY OF KNOWLEDGE') || groupName.includes('TOK')) {
+      return subjectsByCode.get('TOK') || null;
+    }
+    if (groupName.includes('EXAM TIME') || groupName.includes('TEST')) {
+      return subjectsByCode.get('TEST') || null;
+    }
+    return null;
+  };
+
+  const resolvedDpGroups = dpGroups
+    .map((tg) => ({ tg, subject: resolveTeachingGroupSubject(tg) }))
+    .filter((entry) => entry.subject);
+
+  const schedulableCoreSubjects = subjects.filter((subject) => schedulableStandardCodes.has(normalizeCode(subject.code)) && subject.is_active !== false);
+  const syntheticDpGroups = [];
+
+  for (const subject of schedulableCoreSubjects) {
+    const targetScopes = subject.combine_dp1_dp2 ? ['DP1_DP2'] : ['DP1', 'DP2'];
+
+    for (const yearScope of targetScopes) {
+      const hasExistingScope = resolvedDpGroups.some(({ tg, subject: resolvedSubject }) => {
+        if (resolvedSubject.id !== subject.id) return false;
+        const normalizedGroupYear = normalizeDpYearScope(tg.year_group);
+        const existingScope = (subject.combine_dp1_dp2 || normalizedGroupYear === 'DP1_DP2') ? 'DP1_DP2' : normalizedGroupYear;
+        return existingScope === yearScope;
+      });
+
+      if (hasExistingScope) continue;
+
+      const scopedStudents = dpStudents.filter((student) =>
+        yearScope === 'DP1_DP2' ? ['DP1', 'DP2'].includes(student.year_group) : student.year_group === yearScope
+      );
+
+      if (scopedStudents.length === 0) continue;
+
+      const subjectCode = normalizeCode(subject.code).toLowerCase();
+      const subjectMinutes = Math.max(
+        Number(subject.standard_hours_per_week || 0) * 60,
+        Number(subject.sessions_per_week || 0) * Number(subject.hours_per_session || 0) * 60,
+      );
+
+      syntheticDpGroups.push({
+        tg: {
+          id: `tg_${subjectCode}_${yearScope.toLowerCase()}`,
+          year_group: yearScope,
+          level: 'Standard',
+          teacher_id: subject.supervisor_teacher_id || null,
+          student_ids: scopedStudents.map((student) => student.id),
+          minutes_per_week: subjectMinutes,
+          name: `${subject.name} - ${yearScope}`,
+        },
+        subject,
+      });
+    }
+  }
+
+  const allResolvedDpGroups = [...resolvedDpGroups, ...syntheticDpGroups];
+
+  const usedSubjectIds = new Set(allResolvedDpGroups.map(({ subject }) => subject.id).filter(Boolean));
   const dpSubjects = subjects.filter(s => usedSubjectIds.has(s.id));
 
   const subjectIdByCode = {};
@@ -82,8 +148,7 @@ function buildDPPayload({ schoolId, scheduleVersionId, school, students, teacher
   const subjectMap = new Map(dpSubjects.map(s => [s.id, s]));
 
   const tgByBucket = new Map();
-  for (const tg of dpGroups) {
-    const subject = subjectMap.get(tg.subject_id);
+  for (const { tg, subject } of allResolvedDpGroups) {
     if (!subject) continue;
 
     const subjectCode = String(subject.code || '').trim().toUpperCase();
@@ -95,7 +160,7 @@ function buildDPPayload({ schoolId, scheduleVersionId, school, students, teacher
     const isStandardSubject = isSharedCoreSubject || rawLevel.toUpperCase() === 'STANDARD';
     const level = isSharedCoreSubject ? 'SHARED' : (isStandardSubject ? 'Standard' : (rawLevel || 'HL'));
     const yearScope = (subject.combine_dp1_dp2 || normalizedGroupYear === 'DP1_DP2') ? 'DP1_DP2' : normalizedGroupYear;
-    const bucketKey = `${tg.subject_id}__${yearScope}__${level}`;
+    const bucketKey = `${subject.id}__${yearScope}__${level}`;
 
     if (!tgByBucket.has(bucketKey)) {
       tgByBucket.set(bucketKey, []);
