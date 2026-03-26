@@ -185,19 +185,26 @@ function buildDPPayload({ schoolId, scheduleVersionId, school, students, teacher
 
   const dpStudents = students.filter(s => s.ib_programme === 'DP' && s.is_active !== false);
 
-  // Exclude TOK, CAS, EE core components from scheduling
-  const coreSubjectCodes = new Set(['TOK', 'CAS', 'EE']);
-  const coreSubjectIds = new Set(
+  const schedulableStandardCodes = new Set(['TOK', 'TEST']);
+  const excludedCoreSubjectIds = new Set(
     subjects.filter((s) => {
       const code = String(s.code || '').trim().toUpperCase();
-      return code !== 'TEST' && (s.is_core === true || coreSubjectCodes.has(code));
-    }).map(s => s.id)
+      if (schedulableStandardCodes.has(code)) return false;
+      return s.is_core === true || code === 'CAS' || code === 'EE';
+    }).map((s) => s.id)
   );
 
-  const dpGroups = teachingGroups.filter(tg =>
+  const normalizeDpYearScope = (rawYearGroup) => {
+    const normalized = String(rawYearGroup || '').trim().toUpperCase();
+    if (normalized === 'DP1+DP2' || normalized === 'DP1_DP2') return 'DP1_DP2';
+    if (normalized === 'DP1' || normalized === 'DP2') return normalized;
+    return '';
+  };
+
+  const dpGroups = teachingGroups.filter((tg) =>
     tg.is_active !== false &&
-    (tg.year_group === 'DP1' || tg.year_group === 'DP2') &&
-    !coreSubjectIds.has(tg.subject_id)
+    normalizeDpYearScope(tg.year_group) &&
+    !excludedCoreSubjectIds.has(tg.subject_id)
   );
 
   const studentMap = new Map();
@@ -221,8 +228,14 @@ function buildDPPayload({ schoolId, scheduleVersionId, school, students, teacher
     const subject = subjectMap.get(tg.subject_id);
     if (!subject) continue;
 
-    const level = tg.level || 'HL';
-    const yearScope = subject.combine_dp1_dp2 ? 'DP1_DP2' : tg.year_group;
+    const subjectCode = String(subject.code || '').trim().toUpperCase();
+    const normalizedGroupYear = normalizeDpYearScope(tg.year_group);
+    if (!normalizedGroupYear) continue;
+
+    const rawLevel = String(tg.level || '').trim();
+    const isStandardSubject = schedulableStandardCodes.has(subjectCode) || rawLevel.toUpperCase() === 'STANDARD';
+    const level = isStandardSubject ? 'Standard' : (rawLevel || 'HL');
+    const yearScope = (subject.combine_dp1_dp2 || normalizedGroupYear === 'DP1_DP2') ? 'DP1_DP2' : normalizedGroupYear;
     const bucketKey = `${tg.subject_id}__${yearScope}__${level}`;
 
     if (!tgByBucket.has(bucketKey)) {
@@ -244,25 +257,25 @@ function buildDPPayload({ schoolId, scheduleVersionId, school, students, teacher
 
     const subjectKey = subjectId.replace(/-/g, '');
     const repTg = bucketTgs[0];
-    const studentGroup = `${yearScope}_${level}_${subjectKey}`;
-    const sectionId = `sec_${level.toLowerCase()}_${subjectKey}_${yearScope}`;
+    const isStandardLevel = String(level).toUpperCase() === 'STANDARD';
+    const studentGroup = `${yearScope}_${String(level).toUpperCase()}_${subjectKey}`;
+    const sectionId = `sec_${String(level).toLowerCase()}_${subjectKey}_${yearScope}`;
     const teachingGroupId = repTg ? repTg.id : null;
-    const hoursForLevel = level === 'HL' ? Number(subject.hoursPerWeekHL || 0) : Number(subject.hoursPerWeekSL || 0);
-    const minutesPerWeek = hoursForLevel * 60;
+    const minutesPerWeek = isStandardLevel
+      ? Number(repTg?.minutes_per_week || 0) || (Number(subject.standard_hours_per_week || 0) * 60)
+      : (level === 'HL' ? Number(subject.hoursPerWeekHL || 0) : Number(subject.hoursPerWeekSL || 0)) * 60;
     const periodsPerWeek = Math.max(1, Math.ceil(minutesPerWeek / periodDuration));
     const teacherId = bucketTgs.reduce((acc, tg) => acc || (tg.teacher_id ? (teacherMap.get(tg.teacher_id) ?? null) : null), null);
 
-    // Only include students who actually have this subject+level in their subject_choices.
-    // This ensures lessons.studentIds always matches studentSubjectChoices — preventing STUDENT_MEMBERSHIP_INCONSISTENT.
     const validYearGroups = yearScope === 'DP1_DP2' ? ['DP1', 'DP2'] : [yearScope];
     const rawStudentIds = [...new Set(bucketTgs.flatMap(tg => (tg.student_ids || [])))];
     const studentIds = rawStudentIds.map(base44Id => {
       const student = dpStudents.find(s => s.id === base44Id);
-      if (!student) return null;
+      if (!student || !validYearGroups.includes(student.year_group)) return null;
+      if (isStandardLevel) return studentMap.get(base44Id);
       const hasChoice = (student.subject_choices || []).some(c =>
         c.subject_id === subjectId &&
-        String(c.level || '').toUpperCase() === level.toUpperCase() &&
-        validYearGroups.includes(student.year_group)
+        String(c.level || '').toUpperCase() === level.toUpperCase()
       );
       return hasChoice ? studentMap.get(base44Id) : null;
     }).filter(Boolean);
@@ -303,11 +316,10 @@ function buildDPPayload({ schoolId, scheduleVersionId, school, students, teacher
     // so that lessons.studentIds always exactly matches studentSubjectChoices entries.
     for (const base44StudentId of rawStudentIds) {
       const student = dpStudents.find(s => s.id === base44StudentId);
-      if (!student) continue;
-      const hasChoice = (student.subject_choices || []).some(c =>
+      if (!student || !validYearGroups.includes(student.year_group)) continue;
+      const hasChoice = isStandardLevel || (student.subject_choices || []).some(c =>
         c.subject_id === subjectId &&
-        String(c.level || '').toUpperCase() === level.toUpperCase() &&
-        validYearGroups.includes(student.year_group)
+        String(c.level || '').toUpperCase() === level.toUpperCase()
       );
       if (!hasChoice) continue;
       const numericStudentId = studentMap.get(base44StudentId);
