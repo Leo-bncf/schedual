@@ -78,6 +78,29 @@ export default function TimetableGrid({
   scheduleSettings = {},
   globalView = false
 }) {
+  const formatClockTime = (timeValue) => String(timeValue || '').slice(0, 5);
+
+  const getSlotStartEnd = (slot) => {
+    const slotTimeslot = (timeslots || []).find((ts) => String(ts.id) === String(slot?.timeslot_id));
+    const start = slotTimeslot?.startTime ? formatClockTime(slotTimeslot.startTime) : null;
+    const end = slotTimeslot?.endTime ? formatClockTime(slotTimeslot.endTime) : null;
+    return { start, end };
+  };
+
+  const getSlotDurationMinutes = (slot) => {
+    const { start, end } = getSlotStartEnd(slot);
+    if (!start || !end) return Number(periodDurationMinutes || 60);
+    const [startHour, startMinute] = start.split(':').map(Number);
+    const [endHour, endMinute] = end.split(':').map(Number);
+    return ((endHour * 60) + endMinute) - ((startHour * 60) + startMinute);
+  };
+
+  const isShortLesson = (slot) => getSlotDurationMinutes(slot) < Number(periodDurationMinutes || 60);
+
+  const getLessonCardHeightClass = (slot) => {
+    if (globalView) return 'min-h-[52px]';
+    return isShortLesson(slot) ? 'min-h-[56px]' : 'min-h-[80px]';
+  };
   const [selectedSlot, setSelectedSlot] = React.useState(null);
   const [isEditing, setIsEditing] = React.useState(false);
   const [editForm, setEditForm] = React.useState({});
@@ -580,6 +603,9 @@ export default function TimetableGrid({
                         };
 
                         const colorScheme = subject ? getSubjectColor(subject.name) : { bg: 'bg-slate-50', border: 'border-l-slate-400', text: 'text-slate-900' };
+                        const slotTiming = getSlotStartEnd(slot);
+                        const slotDurationMinutes = getSlotDurationMinutes(slot);
+                        const shortLesson = isShortLesson(slot);
 
                         return (
                           <div 
@@ -601,12 +627,15 @@ export default function TimetableGrid({
                             )}
                             {globalView ? (
                               <div 
-                                className={`p-1 border border-slate-200 rounded ${slot.is_break ? 'bg-amber-100 border-amber-300 text-amber-900' : (subject ? colorScheme.bg : 'bg-slate-50')} text-[10px] w-full flex flex-col justify-center items-center`}
-                                title={slot.is_break ? (slot.notes || 'Lunch Break') : (`${subject?.name || slot.notes || 'Unassigned'} | ${teacher?.full_name || 'No teacher'} | ${room?.name || 'TBD'}`)}
+                                className={`p-1 border border-slate-200 rounded ${getLessonCardHeightClass(slot)} ${slot.is_break ? 'bg-amber-100 border-amber-300 text-amber-900' : (subject ? colorScheme.bg : 'bg-slate-50')} text-[10px] w-full flex flex-col justify-center items-center ${shortLesson ? 'ring-1 ring-blue-300 border-dashed' : ''}`}
+                                title={slot.is_break ? (slot.notes || 'Lunch Break') : (`${subject?.name || slot.notes || 'Unassigned'} | ${teacher?.full_name || 'No teacher'} | ${room?.name || 'TBD'} | ${slotTiming.start || '--:--'}-${slotTiming.end || '--:--'}`)}
                               >
                                 <span className="font-bold text-center truncate w-full block">
                                   {slot.is_break ? '🍽️ LUNCH' : (subject?.code || subject?.name || slot.notes || '---')}
                                 </span>
+                                {!slot.is_break && (
+                                  <span className="text-slate-600 opacity-80 text-center truncate w-full block text-[9px]">{slotTiming.start && slotTiming.end ? `${slotTiming.start}-${slotTiming.end}` : `${slotDurationMinutes} min`}</span>
+                                )}
                                 {!slot.is_break && subject && (
                                   <span className="text-slate-600 opacity-80 text-center truncate w-full block text-[9px]">{room?.name || 'TBD'}</span>
                                 )}
@@ -623,13 +652,25 @@ export default function TimetableGrid({
                                 )}
 
                                 {subject && !slot.is_break && (
-                                  <div className={`p-3 border-l-4 ${colorScheme.bg} ${colorScheme.border} border border-slate-200 relative`}>
-                                    <div className="font-bold text-sm text-slate-900 leading-tight mb-1.5">
-                                      {subject.name}
+                                  <div className={`p-3 border-l-4 ${getLessonCardHeightClass(slot)} ${colorScheme.bg} ${colorScheme.border} border border-slate-200 relative ${shortLesson ? 'ring-2 ring-blue-200 border-dashed' : ''}`}>
+                                    <div className="flex items-start justify-between gap-2 mb-1.5">
+                                      <div className="font-bold text-sm text-slate-900 leading-tight">
+                                        {subject.name}
+                                      </div>
+                                      <div className="flex flex-col items-end gap-1 shrink-0">
+                                        <Badge variant="outline" className="w-fit bg-white/70 font-semibold text-xs">
+                                          {level}
+                                        </Badge>
+                                        {shortLesson && (
+                                          <Badge variant="outline" className="w-fit bg-blue-50 text-blue-700 border-blue-200 font-semibold text-[10px] px-2 py-0">
+                                            30 min
+                                          </Badge>
+                                        )}
+                                      </div>
                                     </div>
-                                    <Badge variant="outline" className="w-fit mb-2 bg-white/70 font-semibold text-xs">
-                                      {level}
-                                    </Badge>
+                                    <div className="text-[11px] font-semibold text-slate-600 mb-2">
+                                      🕒 {slotTiming.start && slotTiming.end ? `${slotTiming.start} - ${slotTiming.end}` : `${slotDurationMinutes} min lesson`}
+                                    </div>
                                     <div className="text-xs text-slate-700 space-y-1">
                                       {teacher ? (
                                         <div className="font-medium">👤 {teacher.full_name}</div>
@@ -638,7 +679,7 @@ export default function TimetableGrid({
                                       )}
                                       <div className="font-medium">📍 {room?.name || 'TBD'}</div>
                                     </div>
-                                    {span > 1 && (
+                                    {span > 1 && !shortLesson && (
                                       <div className="mt-2 text-xs text-slate-500 font-medium">
                                         {span} periods
                                       </div>
