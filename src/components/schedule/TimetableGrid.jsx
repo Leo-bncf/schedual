@@ -98,8 +98,13 @@ export default function TimetableGrid({
   const isShortLesson = (slot) => getSlotDurationMinutes(slot) < Number(periodDurationMinutes || 60);
 
   const getLessonCardHeightClass = (slot) => {
-    if (globalView) return 'min-h-[52px]';
-    return isShortLesson(slot) ? 'min-h-[56px]' : 'min-h-[80px]';
+    if (globalView) return isShortLesson(slot) ? 'min-h-[40px]' : 'min-h-[52px]';
+    return isShortLesson(slot) ? 'min-h-[52px]' : 'min-h-[92px]';
+  };
+
+  const getCellMinHeightClass = (hasShortLesson) => {
+    if (globalView) return hasShortLesson ? 'min-h-[72px]' : 'min-h-[96px]';
+    return hasShortLesson ? 'min-h-[88px]' : 'min-h-[120px]';
   };
   const [selectedSlot, setSelectedSlot] = React.useState(null);
   const [isEditing, setIsEditing] = React.useState(false);
@@ -507,6 +512,8 @@ export default function TimetableGrid({
                     return null;
                   }
 
+                  const hasShortLessonInCell = visibleSlots.some(slot => isShortLesson(slot));
+
                   // MULTI-LESSON DISPLAY: In global view deduplicate by teaching_group_id (one card per group)
                   const deduplicatedSlots = globalView
                     ? visibleSlots.filter((slot, idx, arr) =>
@@ -519,7 +526,7 @@ export default function TimetableGrid({
                   return (
                     <div 
                       key={`${day}-${uiRow}`} 
-                      className={`border-r border-slate-300 last:border-r-0 p-2 relative ${globalView ? 'flex flex-row flex-wrap gap-1 content-start' : 'space-y-1'}`}
+                      className={`border-r border-slate-300 last:border-r-0 p-2 relative ${getCellMinHeightClass(hasShortLessonInCell)} ${globalView ? 'flex flex-row flex-wrap gap-1 content-start' : 'space-y-2'} ${hasShortLessonInCell ? 'bg-gradient-to-b from-blue-50/30 to-white' : ''}`}
                       onDragOver={(e) => e.preventDefault()}
                       onDrop={(e) => {
                         e.preventDefault();
@@ -627,7 +634,7 @@ export default function TimetableGrid({
                             )}
                             {globalView ? (
                               <div 
-                                className={`p-1 border border-slate-200 rounded ${getLessonCardHeightClass(slot)} ${slot.is_break ? 'bg-amber-100 border-amber-300 text-amber-900' : (subject ? colorScheme.bg : 'bg-slate-50')} text-[10px] w-full flex flex-col justify-center items-center ${shortLesson ? 'ring-1 ring-blue-300 border-dashed' : ''}`}
+                                className={`p-1.5 border rounded ${getLessonCardHeightClass(slot)} ${slot.is_break ? 'bg-amber-100 border-amber-300 text-amber-900' : (subject ? colorScheme.bg : 'bg-slate-50')} text-[10px] w-full flex flex-col justify-center items-center ${shortLesson ? 'ring-1 ring-blue-300 border-dashed bg-white shadow-sm' : 'border-slate-200'} `}
                                 title={slot.is_break ? (slot.notes || 'Lunch Break') : (`${subject?.name || slot.notes || 'Unassigned'} | ${teacher?.full_name || 'No teacher'} | ${room?.name || 'TBD'} | ${slotTiming.start || '--:--'}-${slotTiming.end || '--:--'}`)}
                               >
                                 <span className="font-bold text-center truncate w-full block">
@@ -652,7 +659,7 @@ export default function TimetableGrid({
                                 )}
 
                                 {subject && !slot.is_break && (
-                                  <div className={`p-3 border-l-4 ${getLessonCardHeightClass(slot)} ${colorScheme.bg} ${colorScheme.border} border border-slate-200 relative ${shortLesson ? 'ring-2 ring-blue-200 border-dashed' : ''}`}>
+                                  <div className={`p-3 border-l-4 ${getLessonCardHeightClass(slot)} ${colorScheme.bg} ${colorScheme.border} border relative ${shortLesson ? 'ring-2 ring-blue-200 border-dashed bg-white shadow-sm' : 'border-slate-200 shadow-[0_1px_2px_rgba(15,23,42,0.04)]'}`}>
                                     <div className="flex items-start justify-between gap-2 mb-1.5">
                                       <div className="font-bold text-sm text-slate-900 leading-tight">
                                         {subject.name}
@@ -663,13 +670,16 @@ export default function TimetableGrid({
                                         </Badge>
                                         {shortLesson && (
                                           <Badge variant="outline" className="w-fit bg-blue-50 text-blue-700 border-blue-200 font-semibold text-[10px] px-2 py-0">
-                                            30 min
+                                            Half lesson · 30 min
                                           </Badge>
                                         )}
                                       </div>
                                     </div>
-                                    <div className="text-[11px] font-semibold text-slate-600 mb-2">
-                                      🕒 {slotTiming.start && slotTiming.end ? `${slotTiming.start} - ${slotTiming.end}` : `${slotDurationMinutes} min lesson`}
+                                    <div className={`mb-2 ${shortLesson ? 'flex items-center justify-between gap-2 rounded-md bg-blue-50 px-2 py-1' : 'text-[11px] font-semibold text-slate-600'}`}>
+                                      <span className={`${shortLesson ? 'text-[10px] font-bold uppercase tracking-wide text-blue-700' : ''}`}>
+                                        🕒 {slotTiming.start && slotTiming.end ? `${slotTiming.start} - ${slotTiming.end}` : `${slotDurationMinutes} min lesson`}
+                                      </span>
+                                      {shortLesson && <span className="text-[10px] font-semibold text-blue-600">Short slot</span>}
                                     </div>
                                     <div className="text-xs text-slate-700 space-y-1">
                                       {teacher ? (
