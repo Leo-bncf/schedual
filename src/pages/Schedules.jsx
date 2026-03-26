@@ -121,31 +121,31 @@ export default function Schedules() {
 
   const { data: students = [] } = useQuery({
     queryKey: ['students', schoolId],
-    queryFn: () => base44.entities.Student.filter({ school_id: schoolId }),
+    queryFn: () => base44.entities.Student.filter({ school_id: schoolId }, '-created_date', 500),
     enabled: !!schoolId,
   });
 
   const { data: teachers = [] } = useQuery({
     queryKey: ['teachers', schoolId],
-    queryFn: () => base44.entities.Teacher.filter({ school_id: schoolId }),
+    queryFn: () => base44.entities.Teacher.filter({ school_id: schoolId }, '-created_date', 500),
     enabled: !!schoolId,
   });
 
   const { data: subjects = [] } = useQuery({
     queryKey: ['subjects', schoolId],
-    queryFn: () => base44.entities.Subject.filter({ school_id: schoolId }),
+    queryFn: () => base44.entities.Subject.filter({ school_id: schoolId }, '-created_date', 500),
     enabled: !!schoolId,
   });
 
   const { data: rooms = [] } = useQuery({
     queryKey: ['rooms', schoolId],
-    queryFn: () => base44.entities.Room.filter({ school_id: schoolId }),
+    queryFn: () => base44.entities.Room.filter({ school_id: schoolId }, '-created_date', 500),
     enabled: !!schoolId,
   });
 
   const { data: teachingGroups = [] } = useQuery({
     queryKey: ['teachingGroups', schoolId],
-    queryFn: () => base44.entities.TeachingGroup.filter({ school_id: schoolId }),
+    queryFn: () => base44.entities.TeachingGroup.filter({ school_id: schoolId }, '-created_date', 1000),
     enabled: !!schoolId,
   });
 

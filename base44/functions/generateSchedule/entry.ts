@@ -712,12 +712,12 @@ Deno.serve(async (req) => {
     const schoolId = user.school_id;
 
     const [schools, students, teachers, subjects, rooms, teachingGroups] = await Promise.all([
-      base44.entities.School.filter({ id: schoolId }),
-      base44.entities.Student.filter({ school_id: schoolId }),
-      base44.entities.Teacher.filter({ school_id: schoolId }),
-      base44.entities.Subject.filter({ school_id: schoolId }),
-      base44.entities.Room.filter({ school_id: schoolId }),
-      base44.entities.TeachingGroup.filter({ school_id: schoolId }),
+      base44.entities.School.filter({ id: schoolId }, '-created_date', 10),
+      base44.entities.Student.filter({ school_id: schoolId }, '-created_date', 500),
+      base44.entities.Teacher.filter({ school_id: schoolId }, '-created_date', 500),
+      base44.entities.Subject.filter({ school_id: schoolId }, '-created_date', 500),
+      base44.entities.Room.filter({ school_id: schoolId }, '-created_date', 500),
+      base44.entities.TeachingGroup.filter({ school_id: schoolId }, '-created_date', 1000),
     ]);
 
     const school = schools[0];

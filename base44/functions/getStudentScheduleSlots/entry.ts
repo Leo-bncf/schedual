@@ -49,8 +49,8 @@ Deno.serve(async (req) => {
       base44.entities.ScheduleSlot.filter({
         school_id: user.school_id,
         schedule_version: schedule_version_id,
-      }),
-      base44.entities.TeachingGroup.filter({ school_id: user.school_id }),
+      }, '-created_date', 1000),
+      base44.entities.TeachingGroup.filter({ school_id: user.school_id }, '-created_date', 500),
     ]);
 
     const tgById = {};
