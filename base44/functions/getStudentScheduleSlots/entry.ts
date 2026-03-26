@@ -61,6 +61,7 @@ Deno.serve(async (req) => {
     const assignedGroupIds = Array.isArray(student.assigned_groups) ? student.assigned_groups : [];
     const subjectChoices = Array.isArray(student.subject_choices) ? student.subject_choices : [];
     const assignedGroups = assignedGroupIds.map((id) => tgById[id]).filter(Boolean);
+    const assignedGroupIdSet = new Set(assignedGroupIds);
     const studentYearGroup = String(student.year_group || '').trim();
 
     const studentLevelsBySubjectId = {};
@@ -105,6 +106,10 @@ Deno.serve(async (req) => {
       }
 
       const slotGroup = slot.teaching_group_id ? tgById[slot.teaching_group_id] : null;
+      if (slotGroup?.id && assignedGroupIdSet.has(slotGroup.id)) {
+        return true;
+      }
+
       if (slotGroup && Array.isArray(slotGroup.student_ids) && slotGroup.student_ids.includes(student.id)) {
         return true;
       }
@@ -112,10 +117,11 @@ Deno.serve(async (req) => {
       const subjectId = slot.subject_id || slotGroup?.subject_id;
       const level = normalizeLevel(slot.display_level_override || slotGroup?.level || getStudentLevelForSubject(subjectId));
       const scope = extractYearGroupScope(slot, slotGroup);
-      const isSharedCoreSlot = student.ib_programme === 'DP' && (level === 'STANDARD' || scope === 'DP1_DP2');
+      const isSharedCoreSlot = student.ib_programme === 'DP' && normalizeLevel(slot.display_level_override || slotGroup?.level) === 'STANDARD';
 
       if (isSharedCoreSlot) {
-        return scope === 'DP1_DP2' || scope === studentYearGroup;
+        const studentListedOnGroup = Array.isArray(slotGroup?.student_ids) && slotGroup.student_ids.includes(student.id);
+        return studentListedOnGroup && (scope === 'DP1_DP2' || scope === studentYearGroup);
       }
 
       const key = makeSubjectLevelKey(subjectId, level);
