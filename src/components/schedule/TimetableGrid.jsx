@@ -140,20 +140,24 @@ export default function TimetableGrid({
     DAYS.forEach((day) => {
       matrix[day] = {};
       activePeriods.forEach((row) => {
-        const rowSlots = normalizedSlots.filter((slot) => slot.day === day && slot.uiRow === row && !slot.is_break);
-        const carryOverSlot = normalizedSlots.find((slot) => slot.day === day && slot.uiRow === row - 1 && slot.__spillsIntoNextRow);
-        const primarySlot = rowSlots.find((slot) => !slot.__consumed);
-        const nextStartingSlot = carryOverSlot ? rowSlots[0] || null : null;
+        let rowSlots = normalizedSlots.filter((slot) => slot.day === day && slot.uiRow === row && !slot.is_break);
+        
+        if (globalView) {
+          rowSlots = rowSlots.filter((slot, idx, arr) =>
+            !slot.teaching_group_id || arr.findIndex(s => s.teaching_group_id === slot.teaching_group_id) === idx
+          );
+        }
+
+        const carryOverSlots = normalizedSlots.filter((slot) => slot.day === day && slot.uiRow === row - 1 && slot.__spillsIntoNextRow);
+
         matrix[day][row] = {
-          carryOverSlot: carryOverSlot || null,
-          primarySlot: carryOverSlot ? null : (primarySlot || rowSlots[0] || null),
-          nextStartingSlot,
-          hasContent: !!carryOverSlot || rowSlots.length > 0,
+          slots: rowSlots,
+          hasContent: rowSlots.length > 0 || carryOverSlots.length > 0,
         };
       });
     });
     return matrix;
-  }, [normalizedSlots, activePeriods]);
+  }, [normalizedSlots, activePeriods, globalView]);
 
   const handleOpenSlot = (slot) => {
     if (!slot) return;
@@ -175,7 +179,7 @@ export default function TimetableGrid({
             </div>
 
             {activePeriods.map((uiRow) => (
-              <div key={uiRow} className="grid grid-cols-[100px_repeat(5,1fr)] border-b border-slate-300">
+              <div key={uiRow} className="grid grid-cols-[100px_repeat(5,1fr)] border-b border-slate-300" style={{ overflow: 'visible', position: 'relative', zIndex: 0 }}>
                 <div className="flex min-h-[116px] flex-col items-center justify-center border-r border-slate-300 bg-slate-50 p-4 text-center">
                   <div className="text-sm font-bold text-slate-800">{uiRow}</div>
                   <div className="mt-1 whitespace-nowrap text-[10px] text-slate-500">{periodTimes[uiRow] || `Period ${uiRow}`}</div>
@@ -187,12 +191,12 @@ export default function TimetableGrid({
                       key={`${day}-${uiRow}`}
                       day={day}
                       uiRow={uiRow}
-                      primarySlot={cell.primarySlot}
-                      carryOverSlot={cell.carryOverSlot}
-                      nextStartingSlot={cell.nextStartingSlot}
+                      slots={cell.slots}
                       empty={!cell.hasContent}
                       renderSlotData={buildSlotPresentation}
                       onSlotClick={handleOpenSlot}
+                      globalView={globalView}
+                      periodDurationMinutes={periodDurationMinutes}
                     />
                   );
                 })}
