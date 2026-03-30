@@ -277,8 +277,14 @@ export default function TimetableGrid({
     
     const normalized = (slots || []).map(s => {
       let day = normalizeDay(s.day || s.day_of_week || s.dayOfWeek);
-      // FIX BUG #1: Use String(s.timeslot_id) instead of Number() to avoid NaN
-      let uiRow = s.timeslot_id ? timeslotToPosition[String(s.timeslot_id)] : s.period;
+      const slotTimeslot = s.timeslot_id ? timeslots.find(t => String(t.id) === String(s.timeslot_id)) : null;
+      const slotStart = slotTimeslot?.startTime ? formatClockTime(slotTimeslot.startTime) : null;
+      const baseHourStart = slotStart ? `${slotStart.split(':')[0]}:00` : null;
+      // FIX BUG #1: Normalize half-hour rows back to their parent hour so 1h blocks fill the full hour cell
+      let uiRow = baseHourStart
+        ? Object.entries(periodTimes).find(([, range]) => String(range || '').startsWith(baseHourStart))?.[0]
+        : (s.timeslot_id ? timeslotToPosition[String(s.timeslot_id)] : s.period);
+      uiRow = uiRow ? Number(uiRow) : uiRow;
       
       // FALLBACK 1: Derive day from timeslot if missing
       if (!day && s.timeslot_id) {
