@@ -346,6 +346,19 @@ export default function TimetableGrid({
     return hasHalfBlock ? 'relative after:absolute after:left-0 after:right-0 after:top-1/2 after:h-px after:bg-slate-300 after:content-[""]' : '';
   };
 
+  const getHourLabel = (uiRow) => {
+    const rowTime = periodTimes[uiRow]?.split(' - ')[0] || '';
+    const [hour] = rowTime.split(':');
+    if (!hour) return `P${uiRow}`;
+    return `${hour}:00`;
+  };
+
+  const shouldRenderHourLabel = (uiRow) => {
+    const currentLabel = getHourLabel(uiRow);
+    const previousLabel = uiRow > 1 ? getHourLabel(uiRow - 1) : null;
+    return currentLabel !== previousLabel;
+  };
+
   const getGroupInfo = (groupId) => {
     return groups.find(g => g.id === groupId);
   };
@@ -497,16 +510,18 @@ export default function TimetableGrid({
                 ) : (
                 <div className={`grid grid-cols-[72px_repeat(5,1fr)] border-b ${compactPrintView ? 'border-slate-400' : 'border-slate-300'}`}>
                   <div className={`p-2 border-r flex flex-col justify-center items-center text-center ${isStudentView && !compactPrintView ? 'bg-slate-50/80 border-slate-200' : 'bg-slate-50 border-slate-300'} ${getCellMinHeightClass(getSlotData(DAYS[0], uiRow).some(slot => isShortLesson(slot)) || getSlotData(DAYS[1], uiRow).some(slot => isShortLesson(slot)) || getSlotData(DAYS[2], uiRow).some(slot => isShortLesson(slot)) || getSlotData(DAYS[3], uiRow).some(slot => isShortLesson(slot)) || getSlotData(DAYS[4], uiRow).some(slot => isShortLesson(slot)))}`}>
-                    <div className={`${compactPrintView ? 'text-[11px]' : 'text-sm'} font-bold text-slate-800`}>
-                      {compactPrintView ? (() => {
-                        const startLabel = periodTimes[uiRow]?.split(' - ')[0] || '';
-                        const [hour] = startLabel.split(':');
-                        return hour ? `${hour}:00` : `P${uiRow}`;
-                      })() : uiRow}
-                    </div>
-                    <div className={`${compactPrintView ? 'text-[9px]' : 'text-[10px]'} text-slate-500 mt-1 whitespace-nowrap`}>
-                      {compactPrintView ? '' : (periodTimes[uiRow] || `Period ${uiRow}`)}
-                    </div>
+                    {shouldRenderHourLabel(uiRow) ? (
+                      <>
+                        <div className={`${compactPrintView ? 'text-[11px]' : 'text-sm'} font-bold text-slate-800`}>
+                          {compactPrintView ? getHourLabel(uiRow) : getHourLabel(uiRow)}
+                        </div>
+                        <div className={`${compactPrintView ? 'text-[9px]' : 'text-[10px]'} text-slate-500 mt-1 whitespace-nowrap`}>
+                          {compactPrintView ? '' : (studentHourGrid ? `${getHourLabel(uiRow)} - ${String(Number(getHourLabel(uiRow).split(':')[0]) + 1).padStart(2, '0')}:00` : (periodTimes[uiRow] || `Period ${uiRow}`))}
+                        </div>
+                      </>
+                    ) : (
+                      <div className="h-full w-full" />
+                    )}
                   </div>
                 {DAYS.map(day => {
                   let slotsInCell = getSlotData(day, uiRow);
