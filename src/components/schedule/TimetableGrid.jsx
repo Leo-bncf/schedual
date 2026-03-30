@@ -319,6 +319,13 @@ export default function TimetableGrid({
     return teachers.find(t => t.id === teacherId);
   };
 
+  const isExamTimeSubject = (subject, slot) => {
+    const subjectCode = String(subject?.code || '').trim().toUpperCase();
+    const subjectName = String(subject?.name || '').trim().toUpperCase();
+    const notes = String(slot?.notes || '').trim().toUpperCase();
+    return subjectCode === 'TEST' || subjectName === 'EXAM TIME' || notes.includes('TEST') || notes.includes('ASSESSMENT') || notes.includes('EXAM');
+  };
+
   // FIX BUG #2: Calculate actual periods needed based on timeslots per day (not just config)
   const computedPeriodsPerDay = React.useMemo(() => {
     if (!timeslots || timeslots.length === 0) return periodsPerDay;
@@ -609,7 +616,12 @@ export default function TimetableGrid({
                           return colors[Math.abs(hash) % colors.length];
                         };
 
-                        const colorScheme = subject ? getSubjectColor(subject.name) : { bg: 'bg-slate-50', border: 'border-l-slate-400', text: 'text-slate-900' };
+                        const isExamTime = isExamTimeSubject(subject, slot);
+                        const colorScheme = isExamTime
+                          ? { bg: 'bg-red-50', border: 'border-l-red-400', text: 'text-red-900' }
+                          : subject
+                            ? getSubjectColor(subject.name)
+                            : { bg: 'bg-slate-50', border: 'border-l-slate-400', text: 'text-slate-900' };
                         const slotTiming = getSlotStartEnd(slot);
                         const slotDurationMinutes = getSlotDurationMinutes(slot);
                         const shortLesson = isShortLesson(slot);
@@ -659,14 +671,14 @@ export default function TimetableGrid({
                                 )}
 
                                 {subject && !slot.is_break && (
-                                  <div className={`p-3 border-l-4 ${getLessonCardHeightClass(slot)} ${colorScheme.bg} ${colorScheme.border} border relative ${shortLesson ? 'ring-2 ring-blue-200 border-dashed bg-white shadow-sm' : 'border-slate-200 shadow-[0_1px_2px_rgba(15,23,42,0.04)]'}`}>
+                                  <div className={`p-3 border-l-4 ${getLessonCardHeightClass(slot)} ${colorScheme.bg} ${colorScheme.border} border relative ${shortLesson ? 'ring-2 ring-blue-200 border-dashed bg-white shadow-sm' : 'border-slate-200 shadow-[0_1px_2px_rgba(15,23,42,0.04)]'} ${isExamTime ? 'bg-red-50 border-red-200' : ''}`}>
                                     <div className="flex items-start justify-between gap-2 mb-1.5">
                                       <div className="font-bold text-sm text-slate-900 leading-tight">
                                         {subject.name}
                                       </div>
                                       <div className="flex flex-col items-end gap-1 shrink-0">
                                         <Badge variant="outline" className="w-fit bg-white/70 font-semibold text-xs">
-                                          {level}
+                                          {isExamTime ? 'Exam' : level}
                                         </Badge>
                                         {shortLesson && (
                                           <Badge variant="outline" className="w-fit bg-blue-50 text-blue-700 border-blue-200 font-semibold text-[10px] px-2 py-0">
@@ -682,6 +694,9 @@ export default function TimetableGrid({
                                       {shortLesson && <span className="text-[10px] font-semibold text-blue-600">Short slot</span>}
                                     </div>
                                     <div className="text-xs text-slate-700 space-y-1">
+                                      {isExamTime && (
+                                        <div className="font-semibold text-red-700">📝 Assessment Period</div>
+                                      )}
                                       {teacher ? (
                                         <div className="font-medium">👤 {teacher.full_name}</div>
                                       ) : (
