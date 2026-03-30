@@ -343,7 +343,7 @@ export default function TimetableGrid({
 
   const getCellDividerClass = (slotsInCell) => {
     const hasHalfBlock = (slotsInCell || []).some(slot => getSlotDurationMinutes(slot) <= 30);
-    return hasHalfBlock ? 'relative after:absolute after:left-0 after:right-0 after:top-1/2 after:h-px after:bg-slate-300 after:content-[""]' : '';
+    return hasHalfBlock ? 'relative overflow-hidden after:absolute after:left-2 after:right-2 after:top-1/2 after:h-px after:-translate-y-1/2 after:bg-slate-200 after:content-[""]' : '';
   };
 
   const getHourLabel = (uiRow) => {
@@ -641,19 +641,19 @@ export default function TimetableGrid({
                         const getSubjectColor = (subjectName) => {
                           if (!subjectName) return { bg: 'bg-slate-50', border: 'border-l-slate-400', text: 'text-slate-900' };
                           const colors = [
-                            { bg: 'bg-blue-50', border: 'border-l-blue-400', text: 'text-blue-900' },
-                            { bg: 'bg-indigo-50', border: 'border-l-indigo-400', text: 'text-indigo-900' },
-                            { bg: 'bg-violet-50', border: 'border-l-violet-400', text: 'text-violet-900' },
-                            { bg: 'bg-purple-50', border: 'border-l-purple-400', text: 'text-purple-900' },
-                            { bg: 'bg-fuchsia-50', border: 'border-l-fuchsia-400', text: 'text-fuchsia-900' },
-                            { bg: 'bg-pink-50', border: 'border-l-pink-400', text: 'text-pink-900' },
-                            { bg: 'bg-rose-50', border: 'border-l-rose-400', text: 'text-rose-900' },
-                            { bg: 'bg-orange-50', border: 'border-l-orange-400', text: 'text-orange-900' },
-                            { bg: 'bg-amber-50', border: 'border-l-amber-400', text: 'text-amber-900' },
-                            { bg: 'bg-emerald-50', border: 'border-l-emerald-400', text: 'text-emerald-900' },
-                            { bg: 'bg-teal-50', border: 'border-l-teal-400', text: 'text-teal-900' },
-                            { bg: 'bg-cyan-50', border: 'border-l-cyan-400', text: 'text-cyan-900' },
-                            { bg: 'bg-sky-50', border: 'border-l-sky-400', text: 'text-sky-900' },
+                            { bg: 'bg-blue-100', border: 'border-l-blue-500', text: 'text-blue-950' },
+                            { bg: 'bg-indigo-100', border: 'border-l-indigo-500', text: 'text-indigo-950' },
+                            { bg: 'bg-violet-100', border: 'border-l-violet-500', text: 'text-violet-950' },
+                            { bg: 'bg-purple-100', border: 'border-l-purple-500', text: 'text-purple-950' },
+                            { bg: 'bg-fuchsia-100', border: 'border-l-fuchsia-500', text: 'text-fuchsia-950' },
+                            { bg: 'bg-pink-100', border: 'border-l-pink-500', text: 'text-pink-950' },
+                            { bg: 'bg-rose-100', border: 'border-l-rose-500', text: 'text-rose-950' },
+                            { bg: 'bg-orange-100', border: 'border-l-orange-500', text: 'text-orange-950' },
+                            { bg: 'bg-amber-100', border: 'border-l-amber-500', text: 'text-amber-950' },
+                            { bg: 'bg-emerald-100', border: 'border-l-emerald-500', text: 'text-emerald-950' },
+                            { bg: 'bg-teal-100', border: 'border-l-teal-500', text: 'text-teal-950' },
+                            { bg: 'bg-cyan-100', border: 'border-l-cyan-500', text: 'text-cyan-950' },
+                            { bg: 'bg-sky-100', border: 'border-l-sky-500', text: 'text-sky-950' },
                           ];
                           let hash = 0;
                           for (let i = 0; i < subjectName.length; i++) {
@@ -706,8 +706,8 @@ export default function TimetableGrid({
                                 )}
                               </div>
                             ) : studentHourGrid ? (
-                              <div className={`relative w-full ${getStudentHourGridCardClass(slot)} ${shortLesson ? 'border-b border-slate-300' : ''}`}>
-                                <div className={`absolute inset-x-0 ${shortLesson ? 'top-0 bottom-0' : 'inset-0'} border-l-4 ${colorScheme.bg} ${colorScheme.border} border border-slate-200 px-2 py-2 flex flex-col justify-center overflow-hidden`}>
+                              <div className={`relative w-full ${getStudentHourGridCardClass(slot)}`}>
+                                <div className={`absolute inset-x-0 ${shortLesson ? 'top-1 bottom-1' : 'inset-1'} border-l-4 ${colorScheme.bg} ${colorScheme.border} border border-slate-200 rounded-md px-2 py-2 flex flex-col justify-center overflow-hidden shadow-[0_1px_2px_rgba(15,23,42,0.05)]`}>
                                   <div className="text-xs font-semibold text-slate-900 leading-tight truncate">
                                     {getDisplaySubjectLabel(subject, slot)}
                                   </div>
