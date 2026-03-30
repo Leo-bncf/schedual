@@ -779,6 +779,7 @@ export default function Schedules() {
                     periodDurationMinutes={school?.period_duration_minutes || 60}
                     scheduleSettings={school}
                     globalView={overviewFilterType === 'all'}
+                    compactPrintView={true}
                     timeslots={
                       typeof selectedVersion?.generation_params === 'string'
                         ? JSON.parse(selectedVersion.generation_params)?.solverTimeslots || []

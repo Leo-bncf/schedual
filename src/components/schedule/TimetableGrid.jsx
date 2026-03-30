@@ -76,7 +76,8 @@ export default function TimetableGrid({
   periodDurationMinutes = 60,
   timeslots = [],
   scheduleSettings = {},
-  globalView = false
+  globalView = false,
+  compactPrintView = false
 }) {
   const formatClockTime = (timeValue) => String(timeValue || '').slice(0, 5);
 
@@ -116,17 +117,25 @@ export default function TimetableGrid({
   };
 
   const getLessonCardHeightClass = (slot) => {
+    if (compactPrintView) {
+      const duration = getSlotDurationMinutes(slot);
+      if (duration <= 30) return 'min-h-[24px]';
+      if (duration <= 60) return 'min-h-[48px]';
+      if (duration <= 90) return 'min-h-[72px]';
+      return 'min-h-[96px]';
+    }
     if (globalView) return isShortLesson(slot) ? 'min-h-[26px]' : 'min-h-[52px]';
     return isShortLesson(slot) ? 'min-h-[44px]' : 'min-h-[92px]';
   };
 
   const getCellMinHeightClass = (hasShortLesson) => {
+    if (compactPrintView) return hasShortLesson ? 'min-h-[48px]' : 'min-h-[72px]';
     if (globalView) return hasShortLesson ? 'min-h-[56px]' : 'min-h-[96px]';
     return hasShortLesson ? 'min-h-[72px]' : 'min-h-[120px]';
   };
 
   const getLessonCardContainerClass = (slot) => {
-    if (globalView) return getLessonCardHeightClass(slot);
+    if (globalView || compactPrintView) return getLessonCardHeightClass(slot);
     return isShortLesson(slot) ? `${getLessonCardHeightClass(slot)} self-start` : 'h-full';
   };
   const [selectedSlot, setSelectedSlot] = React.useState(null);
@@ -464,14 +473,14 @@ export default function TimetableGrid({
   return (
     <>
       
-      <Card className={`overflow-hidden border-0 shadow-sm ${isStudentView ? 'rounded-none bg-transparent shadow-none' : ''}`} id={exportId}>
-        <div className="overflow-x-auto">
-          <div className="min-w-[1200px]">
+      <Card className={`overflow-hidden border-0 shadow-sm ${isStudentView ? 'rounded-none bg-transparent shadow-none' : ''} ${compactPrintView ? 'bg-white' : ''}`} id={exportId}>
+        <div className={`${compactPrintView ? 'overflow-x-auto print:overflow-visible' : 'overflow-x-auto'}`}>
+          <div className={`${compactPrintView ? 'min-w-[960px] print:min-w-0' : 'min-w-[1200px]'}`}>
             {/* Header Row */}
-            <div className={`grid grid-cols-[100px_repeat(5,1fr)] border-b-2 ${isStudentView ? 'bg-gradient-to-r from-slate-900 via-slate-800 to-slate-900 border-slate-700' : 'bg-slate-100 border-slate-300'}`}>
-              <div className={`p-4 font-bold text-base border-r ${isStudentView ? 'text-slate-100 border-slate-700' : 'text-slate-700 border-slate-300'}`}>Time</div>
+            <div className={`grid grid-cols-[72px_repeat(5,1fr)] border-b ${compactPrintView ? 'bg-slate-100 border-slate-400' : isStudentView ? 'bg-gradient-to-r from-slate-900 via-slate-800 to-slate-900 border-slate-700' : 'bg-slate-100 border-slate-300'}`}>
+              <div className={`p-2 font-bold ${compactPrintView ? 'text-[11px]' : 'text-base'} border-r ${isStudentView && !compactPrintView ? 'text-slate-100 border-slate-700' : 'text-slate-700 border-slate-300'}`}>Time</div>
               {DAYS.map(day => (
-                <div key={day} className={`p-4 font-bold text-center text-base border-r last:border-r-0 ${isStudentView ? 'text-slate-100 border-slate-700' : 'text-slate-700 border-slate-300'}`}>
+                <div key={day} className={`p-2 font-bold text-center ${compactPrintView ? 'text-[11px]' : 'text-base'} border-r last:border-r-0 ${isStudentView && !compactPrintView ? 'text-slate-100 border-slate-700' : 'text-slate-700 border-slate-300'}`}>
                   {day}
                 </div>
               ))}
@@ -495,10 +504,10 @@ export default function TimetableGrid({
                     ))}
                   </div>
                 ) : (
-                <div className="grid grid-cols-[100px_repeat(5,1fr)] border-b border-slate-300">
-                  <div className={`p-4 border-r flex flex-col justify-center items-center text-center ${isStudentView ? 'bg-slate-50/80 border-slate-200' : 'bg-slate-50 border-slate-300'} ${getCellMinHeightClass(getSlotData(DAYS[0], uiRow).some(slot => isShortLesson(slot)) || getSlotData(DAYS[1], uiRow).some(slot => isShortLesson(slot)) || getSlotData(DAYS[2], uiRow).some(slot => isShortLesson(slot)) || getSlotData(DAYS[3], uiRow).some(slot => isShortLesson(slot)) || getSlotData(DAYS[4], uiRow).some(slot => isShortLesson(slot)))}`}>
-                    <div className="text-sm font-bold text-slate-800">{uiRow}</div>
-                    <div className="text-[10px] text-slate-500 mt-1 whitespace-nowrap">{periodTimes[uiRow] || `Period ${uiRow}`}</div>
+                <div className={`grid grid-cols-[72px_repeat(5,1fr)] border-b ${compactPrintView ? 'border-slate-400' : 'border-slate-300'}`}>
+                  <div className={`p-2 border-r flex flex-col justify-center items-center text-center ${isStudentView && !compactPrintView ? 'bg-slate-50/80 border-slate-200' : 'bg-slate-50 border-slate-300'} ${getCellMinHeightClass(getSlotData(DAYS[0], uiRow).some(slot => isShortLesson(slot)) || getSlotData(DAYS[1], uiRow).some(slot => isShortLesson(slot)) || getSlotData(DAYS[2], uiRow).some(slot => isShortLesson(slot)) || getSlotData(DAYS[3], uiRow).some(slot => isShortLesson(slot)) || getSlotData(DAYS[4], uiRow).some(slot => isShortLesson(slot)))}`}>
+                    <div className={`${compactPrintView ? 'text-[11px]' : 'text-sm'} font-bold text-slate-800`}>{compactPrintView ? (periodTimes[uiRow]?.split(' - ')[0] || `P${uiRow}`) : uiRow}</div>
+                    <div className={`${compactPrintView ? 'text-[9px]' : 'text-[10px]'} text-slate-500 mt-1 whitespace-nowrap`}>{compactPrintView ? (periodTimes[uiRow]?.split(' - ')[1] || '') : (periodTimes[uiRow] || `Period ${uiRow}`)}</div>
                   </div>
                 {DAYS.map(day => {
                   let slotsInCell = getSlotData(day, uiRow);
@@ -556,7 +565,7 @@ export default function TimetableGrid({
                   return (
                     <div 
                       key={`${day}-${uiRow}`} 
-                      className={`border-r border-slate-300 last:border-r-0 p-2 relative ${getCellMinHeightClass(hasShortLessonInCell)} ${globalView ? 'flex flex-row flex-wrap gap-1 content-start' : 'space-y-2'} ${hasShortLessonInCell ? 'bg-gradient-to-b from-blue-50/30 to-white' : ''}`}
+                      className={`border-r border-slate-300 last:border-r-0 ${compactPrintView ? 'p-0.5' : 'p-2'} relative ${getCellMinHeightClass(hasShortLessonInCell)} ${globalView ? 'flex flex-row flex-wrap gap-1 content-start' : compactPrintView ? 'space-y-0.5' : 'space-y-2'} ${hasShortLessonInCell && !compactPrintView ? 'bg-gradient-to-b from-blue-50/30 to-white' : ''} ${compactPrintView ? 'bg-[#f4f4f4]' : ''}`}
                       onDragOver={(e) => e.preventDefault()}
                       onDrop={(e) => {
                         e.preventDefault();
@@ -680,6 +689,20 @@ export default function TimetableGrid({
                                 )}
                                 {!slot.is_break && subject && (
                                   <span className="text-slate-600 opacity-80 text-center truncate w-full block text-[9px]">{room?.name || 'TBD'}</span>
+                                )}
+                              </div>
+                            ) : compactPrintView ? (
+                              <div className={`border ${colorScheme.bg} ${compactPrintView ? 'rounded-none shadow-none' : 'rounded-lg'} ${shortLesson ? 'border-dashed' : 'border-slate-400'} ${getLessonCardHeightClass(slot)} flex flex-col items-center justify-center px-1 py-1 text-center overflow-hidden`}>
+                                <div className="text-[10px] font-semibold leading-tight text-slate-800 uppercase truncate w-full">
+                                  {getDisplaySubjectLabel(subject, slot)}
+                                </div>
+                                {(displayName || level) && (
+                                  <div className="text-[9px] text-slate-700 leading-tight truncate w-full">
+                                    {[displayName, level].filter(Boolean).join(' ')}
+                                  </div>
+                                )}
+                                {room?.name && (
+                                  <div className="text-[9px] text-slate-600 truncate w-full">{room.name}</div>
                                 )}
                               </div>
                             ) : (
