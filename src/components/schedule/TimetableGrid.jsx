@@ -98,13 +98,13 @@ export default function TimetableGrid({
   const isShortLesson = (slot) => getSlotDurationMinutes(slot) < Number(periodDurationMinutes || 60);
 
   const getLessonCardHeightClass = (slot) => {
-    if (globalView) return isShortLesson(slot) ? 'min-h-[40px]' : 'min-h-[52px]';
-    return isShortLesson(slot) ? 'min-h-[52px]' : 'min-h-[92px]';
+    if (globalView) return isShortLesson(slot) ? 'min-h-[26px]' : 'min-h-[52px]';
+    return isShortLesson(slot) ? 'min-h-[44px]' : 'min-h-[92px]';
   };
 
   const getCellMinHeightClass = (hasShortLesson) => {
-    if (globalView) return hasShortLesson ? 'min-h-[72px]' : 'min-h-[96px]';
-    return hasShortLesson ? 'min-h-[88px]' : 'min-h-[120px]';
+    if (globalView) return hasShortLesson ? 'min-h-[56px]' : 'min-h-[96px]';
+    return hasShortLesson ? 'min-h-[72px]' : 'min-h-[120px]';
   };
   const [selectedSlot, setSelectedSlot] = React.useState(null);
   const [isEditing, setIsEditing] = React.useState(false);
@@ -473,7 +473,7 @@ export default function TimetableGrid({
                   </div>
                 ) : (
                 <div className="grid grid-cols-[100px_repeat(5,1fr)] border-b border-slate-300">
-                  <div className="p-4 bg-slate-50 border-r border-slate-300 flex flex-col justify-center items-center text-center min-h-[120px]">
+                  <div className={`p-4 bg-slate-50 border-r border-slate-300 flex flex-col justify-center items-center text-center ${getCellMinHeightClass(getSlotData(DAYS[0], uiRow).some(slot => isShortLesson(slot)) || getSlotData(DAYS[1], uiRow).some(slot => isShortLesson(slot)) || getSlotData(DAYS[2], uiRow).some(slot => isShortLesson(slot)) || getSlotData(DAYS[3], uiRow).some(slot => isShortLesson(slot)) || getSlotData(DAYS[4], uiRow).some(slot => isShortLesson(slot)))}`}>
                     <div className="text-sm font-bold text-slate-800">{uiRow}</div>
                     <div className="text-[10px] text-slate-500 mt-1 whitespace-nowrap">{periodTimes[uiRow] || `Period ${uiRow}`}</div>
                   </div>
@@ -636,7 +636,7 @@ export default function TimetableGrid({
                               e.dataTransfer.setData('sourcePeriod', String(uiRow));
                               e.dataTransfer.setData('sourceTimeslotId', String(slot.timeslot_id || ''));
                             }}
-                            className={`cursor-move transition-all overflow-hidden group ${globalView ? 'w-[calc(50%-4px)] lg:w-[calc(33.33%-4px)] rounded hover:ring-2 hover:ring-blue-400' : 'hover:shadow-lg hover:scale-105 rounded-lg'}`}
+                            className={`cursor-move transition-all overflow-hidden group ${globalView ? 'w-[calc(50%-4px)] lg:w-[calc(33.33%-4px)] rounded hover:ring-2 hover:ring-blue-400' : 'hover:shadow-lg rounded-lg'} ${shortLesson ? 'self-start' : ''}`}
                             onClick={() => handleSlotClick(slot)}
                           >
                             {!globalView && (
@@ -671,7 +671,7 @@ export default function TimetableGrid({
                                 )}
 
                                 {subject && !slot.is_break && (
-                                  <div className={`p-3 border-l-4 ${getLessonCardHeightClass(slot)} ${colorScheme.bg} ${colorScheme.border} border relative ${shortLesson ? 'ring-2 ring-blue-200 border-dashed bg-white shadow-sm' : 'border-slate-200 shadow-[0_1px_2px_rgba(15,23,42,0.04)]'} ${isExamTime ? 'bg-red-50 border-red-200' : ''}`}>
+                                  <div className={`p-3 border-l-4 ${getLessonCardHeightClass(slot)} ${colorScheme.bg} ${colorScheme.border} border relative flex flex-col justify-center ${shortLesson ? 'ring-2 ring-blue-200 border-dashed bg-white shadow-sm py-2' : 'border-slate-200 shadow-[0_1px_2px_rgba(15,23,42,0.04)]'} ${isExamTime ? 'bg-red-50 border-red-200' : ''}`}>
                                     <div className="flex items-start justify-between gap-2 mb-1.5">
                                       <div className="font-bold text-sm text-slate-900 leading-tight">
                                         {subject.name}
@@ -682,7 +682,7 @@ export default function TimetableGrid({
                                         </Badge>
                                         {shortLesson && (
                                           <Badge variant="outline" className="w-fit bg-blue-50 text-blue-700 border-blue-200 font-semibold text-[10px] px-2 py-0">
-                                            Half lesson · 30 min
+                                            30 min
                                           </Badge>
                                         )}
                                       </div>
@@ -691,7 +691,7 @@ export default function TimetableGrid({
                                       <span className={`${shortLesson ? 'text-[10px] font-bold uppercase tracking-wide text-blue-700' : ''}`}>
                                         🕒 {slotTiming.start && slotTiming.end ? `${slotTiming.start} - ${slotTiming.end}` : `${slotDurationMinutes} min lesson`}
                                       </span>
-                                      {shortLesson && <span className="text-[10px] font-semibold text-blue-600">Short slot</span>}
+                                      {shortLesson && <span className="text-[10px] font-semibold text-blue-600">Half block</span>}
                                     </div>
                                     <div className="text-xs text-slate-700 space-y-1">
                                       {isExamTime && (
