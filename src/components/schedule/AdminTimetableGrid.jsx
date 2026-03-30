@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useMemo } from 'react';
 import { Card } from '@/components/ui/card';
 
 const DAYS = ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday'];
@@ -70,12 +70,12 @@ export default function AdminTimetableGrid({
   dayStartTime = '08:00',
   periodDurationMinutes = 60,
 }) {
-  const groupMap = React.useMemo(() => Object.fromEntries(groups.map((item) => [item.id, item])), [groups]);
-  const roomMap = React.useMemo(() => Object.fromEntries(rooms.map((item) => [item.id, item])), [rooms]);
-  const subjectMap = React.useMemo(() => Object.fromEntries(subjects.map((item) => [item.id, item])), [subjects]);
-  const teacherMap = React.useMemo(() => Object.fromEntries(teachers.map((item) => [item.id, item])), [teachers]);
+  const groupMap = useMemo(() => Object.fromEntries(groups.map((item) => [item.id, item])), [groups]);
+  const roomMap = useMemo(() => Object.fromEntries(rooms.map((item) => [item.id, item])), [rooms]);
+  const subjectMap = useMemo(() => Object.fromEntries(subjects.map((item) => [item.id, item])), [subjects]);
+  const teacherMap = useMemo(() => Object.fromEntries(teachers.map((item) => [item.id, item])), [teachers]);
 
-  const timeslotsByDay = React.useMemo(() => {
+  const timeslotsByDay = useMemo(() => {
     const result = { Monday: [], Tuesday: [], Wednesday: [], Thursday: [], Friday: [] };
     (timeslots || []).forEach((slot) => {
       const day = normalizeDay(slot.dayOfWeek);
@@ -87,7 +87,7 @@ export default function AdminTimetableGrid({
     return result;
   }, [timeslots]);
 
-  const periodRows = React.useMemo(() => {
+  const periodRows = useMemo(() => {
     const maxRowsFromTimeslots = Math.max(...Object.values(timeslotsByDay).map((list) => list.length), 0);
     const totalRows = Math.max(periodsPerDay, maxRowsFromTimeslots || 0);
     const rows = [];
@@ -104,12 +104,12 @@ export default function AdminTimetableGrid({
     return rows;
   }, [dayStartTime, periodDurationMinutes, periodsPerDay, timeslotsByDay]);
 
-  const rowStartToIndex = React.useMemo(
+  const rowStartToIndex = useMemo(
     () => Object.fromEntries(periodRows.map((row) => [row.start, row.rowIndex])),
     [periodRows]
   );
 
-  const itemsByCell = React.useMemo(() => {
+  const itemsByCell = useMemo(() => {
     const result = {};
 
     const pushItem = (day, rowIndex, segment, item) => {
@@ -158,14 +158,17 @@ export default function AdminTimetableGrid({
         return;
       }
 
-      pushItem(day, baseRowIndex, 'full', item);
+      if (duration <= 60) {
+        pushItem(day, baseRowIndex, 'full', item);
+        return;
+      }
 
-      if (duration > 60) {
-        const overflowMinutes = duration - 60;
-        const nextRow = baseRowIndex + 1;
-        if (overflowMinutes >= 30) {
-          pushItem(day, nextRow, 'top', { ...item, id: `${slot.id}-overflow`, duration: overflowMinutes });
-        }
+      pushItem(day, baseRowIndex, 'full', { ...item, id: `${slot.id}-main`, duration: 60, endTime: `${String((Number(startTime.slice(0, 2)) + 1)).padStart(2, '0')}:${startTime.slice(3, 5)}` });
+
+      const overflowMinutes = duration - 60;
+      const nextRow = baseRowIndex + 1;
+      if (overflowMinutes >= 30) {
+        pushItem(day, nextRow, 'top', { ...item, id: `${slot.id}-overflow`, duration: overflowMinutes, startTime: `${String((Number(startTime.slice(0, 2)) + 1)).padStart(2, '0')}:${startTime.slice(3, 5)}` });
       }
     });
 
