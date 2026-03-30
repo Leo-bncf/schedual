@@ -72,8 +72,10 @@ function getSolverSlotDurationMinutes(school, subjects = [], teachingGroups = []
 }
 
 function buildScheduleSettings(school, subjects = [], teachingGroups = []) {
+  const solverSlotDurationMinutes = getSolverSlotDurationMinutes(school, subjects, teachingGroups);
   return {
-    periodDurationMinutes: getSolverSlotDurationMinutes(school, subjects, teachingGroups),
+    periodDurationMinutes: solverSlotDurationMinutes,
+    basePeriodDurationMinutes: Number(school.period_duration_minutes || 60),
     dayStartTime: school.day_start_time || '08:00',
     dayEndTime: school.day_end_time || '18:00',
     daysOfWeek: school.days_of_week || ['MONDAY', 'TUESDAY', 'WEDNESDAY', 'THURSDAY', 'FRIDAY'],
@@ -139,7 +141,7 @@ function buildCohortPayload({ programType, schoolId, scheduleVersionId, school, 
   const { teacherList, teacherMap } = buildTeacherMap(teachers);
   const { roomList } = buildRoomMap(rooms);
   const scheduleSettings = buildScheduleSettings(school, subjects, teachingGroups);
-  const periodDuration = scheduleSettings.periodDurationMinutes || 60;
+  const solverSlotDuration = scheduleSettings.periodDurationMinutes || 60;
 
   const progStudents = students.filter(s => s.ib_programme === programType && s.is_active !== false);
   const progYearGroups = [...new Set(progStudents.map(s => s.year_group).filter(Boolean))];
@@ -164,7 +166,8 @@ function buildCohortPayload({ programType, schoolId, scheduleVersionId, school, 
 
     // Priority: tg.minutes_per_week > subject.pyp_myp_minutes_per_week_default
     const minutesPerWeek = tg.minutes_per_week || subject.pyp_myp_minutes_per_week_default || 180;
-    const periodsPerWeek = Math.max(1, Math.round(minutesPerWeek / periodDuration));
+    const sessionDurationMinutes = Number(subject.hours_per_session || 0) > 0 ? Number(subject.hours_per_session || 0) * 60 : solverSlotDuration;
+    const periodsPerWeek = Math.max(1, Math.round(minutesPerWeek / sessionDurationMinutes));
     const numericTeacherId = tg.teacher_id ? teacherMap.get(tg.teacher_id) ?? null : null;
     const studentGroup = tg.year_group;
     const requiredCapacity = tg.student_ids?.length || progStudents.filter(s => s.year_group === studentGroup).length || 20;
@@ -177,6 +180,7 @@ function buildCohortPayload({ programType, schoolId, scheduleVersionId, school, 
         requiredCapacity,
         teacherId: numericTeacherId,
         timeslotId: null,
+        durationMinutes: sessionDurationMinutes,
       });
     }
 
@@ -213,7 +217,7 @@ function buildDPPayload({ schoolId, scheduleVersionId, school, students, teacher
   const { teacherList, teacherMap } = buildTeacherMap(teachers);
   const { roomList } = buildRoomMap(rooms);
   const scheduleSettings = buildScheduleSettings(school, subjects, teachingGroups);
-  const periodDuration = scheduleSettings.periodDurationMinutes || 60;
+  const solverSlotDuration = scheduleSettings.periodDurationMinutes || 60;
 
   const dpStudents = students.filter(s => s.ib_programme === 'DP' && s.is_active !== false);
 
@@ -368,7 +372,8 @@ function buildDPPayload({ schoolId, scheduleVersionId, school, students, teacher
     const minutesPerWeek = isStandardLevel
       ? Math.max(tgMinutesPerWeek, standardHoursMinutes, sessionMinutesPerWeek)
       : (level === 'HL' ? Number(subject.hoursPerWeekHL || 0) : Number(subject.hoursPerWeekSL || 0)) * 60;
-    const periodsPerWeek = Math.max(1, Math.ceil(minutesPerWeek / periodDuration));
+    const sessionDurationMinutes = Number(subject.hours_per_session || 0) > 0 ? Number(subject.hours_per_session || 0) * 60 : solverSlotDuration;
+    const periodsPerWeek = Math.max(1, Math.ceil(minutesPerWeek / sessionDurationMinutes));
     const teacherId = bucketTgs.reduce((acc, tg) => acc || (tg.teacher_id ? (teacherMap.get(tg.teacher_id) ?? null) : null), null)
       || (subject.supervisor_teacher_id ? (teacherMap.get(subject.supervisor_teacher_id) ?? null) : null);
 
@@ -406,6 +411,7 @@ function buildDPPayload({ schoolId, scheduleVersionId, school, students, teacher
         teacherId,
         timeslotId: null,
         studentIds,
+        durationMinutes: sessionDurationMinutes,
       });
     }
 
@@ -522,10 +528,12 @@ function validateDPPayload(payload) {
     const scopeKey = `${requirement.teachingGroupId}__${requirement.sectionId}__${requirement.subject}`;
     requirementsByScope.set(scopeKey, requirement);
 
-    const requiredPeriods = Math.ceil(Number(requirement.minutesPerWeek || 0) / periodDuration);
-    const actualPeriods = (lessonsByScope.get(scopeKey) || []).length;
-    if (actualPeriods !== requiredPeriods) {
-      errors.push(`Hour parity mismatch for ${scopeKey}: expected ${requiredPeriods}, got ${actualPeriods}`);
+    const scopeLessons = lessonsByScope.get(scopeKey) || [];
+    const totalScheduledMinutes = scopeLessons.reduce((sum, lesson) => sum + Number(lesson.durationMinutes || periodDuration), 0);
+    const requiredMinutes = Number(requirement.minutesPerWeek || 0);
+    const actualPeriods = scopeLessons.length;
+    if (Math.abs(totalScheduledMinutes - requiredMinutes) > 0) {
+      errors.push(`Hour parity mismatch for ${scopeKey}: expected ${requiredMinutes} minutes, got ${totalScheduledMinutes} minutes across ${actualPeriods} lessons`);
     }
   }
 
@@ -749,6 +757,8 @@ function parseResponseToSlots({ responseData, payload, scheduleVersionId, school
     const teacherBase44Id = entry.teacherId ? teacherReverseMap.get(entry.teacherId) ?? null : null;
     const roomBase44Id = entry.roomId ? roomReverseMap.get(entry.roomId) ?? null : null;
 
+    const durationMinutes = Number(payloadLesson?.durationMinutes || 0) || Math.max(1, (((Number(ts.endTime.slice(0, 2)) * 60) + Number(ts.endTime.slice(3, 5))) - ((Number(ts.startTime.slice(0, 2)) * 60) + Number(ts.startTime.slice(3, 5)))));
+    const slotEndMinutes = ((Number(ts.startTime.slice(0, 2)) * 60) + Number(ts.startTime.slice(3, 5))) + durationMinutes;
     const slot = {
       school_id: schoolId,
       schedule_version: scheduleVersionId,
@@ -758,6 +768,7 @@ function parseResponseToSlots({ responseData, payload, scheduleVersionId, school
       teacher_id: teacherBase44Id,
       room_id: roomBase44Id,
       status: 'scheduled',
+      notes: null,
     };
 
     const subjectCode = payloadLesson?.subject || entry.subject;
@@ -791,6 +802,11 @@ function parseResponseToSlots({ responseData, payload, scheduleVersionId, school
         : raw.startsWith('TG_') ? raw.slice(3)
         : raw;
     }
+
+      const endHour = Math.floor(slotEndMinutes / 60);
+      const endMinute = slotEndMinutes % 60;
+      slot.end_time_override = `${String(endHour).padStart(2, '0')}:${String(endMinute).padStart(2, '0')}`;
+      slot.duration_minutes_override = durationMinutes;
 
     slots.push(slot);
   }

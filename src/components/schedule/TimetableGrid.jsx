@@ -83,11 +83,13 @@ export default function TimetableGrid({
   const getSlotStartEnd = (slot) => {
     const slotTimeslot = (timeslots || []).find((ts) => String(ts.id) === String(slot?.timeslot_id));
     const start = slotTimeslot?.startTime ? formatClockTime(slotTimeslot.startTime) : null;
-    const end = slotTimeslot?.endTime ? formatClockTime(slotTimeslot.endTime) : null;
+    const endOverride = formatClockTime(slot?.end_time_override);
+    const end = endOverride || (slotTimeslot?.endTime ? formatClockTime(slotTimeslot.endTime) : null);
     return { start, end };
   };
 
   const getSlotDurationMinutes = (slot) => {
+    if (slot?.duration_minutes_override) return Number(slot.duration_minutes_override);
     const { start, end } = getSlotStartEnd(slot);
     if (!start || !end) return Number(periodDurationMinutes || 60);
     const [startHour, startMinute] = start.split(':').map(Number);
