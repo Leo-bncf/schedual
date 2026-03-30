@@ -96,6 +96,11 @@ export default function TimetableGrid({
   };
 
   const isShortLesson = (slot) => getSlotDurationMinutes(slot) < Number(periodDurationMinutes || 60);
+  const isMediumLesson = (slot) => {
+    const duration = getSlotDurationMinutes(slot);
+    const base = Number(periodDurationMinutes || 60);
+    return duration > base && duration < (base * 2);
+  };
   const isStudentView = !globalView && !onUpdateSlot;
 
   const getDisplaySubjectLabel = (subject, slot) => {
@@ -693,16 +698,22 @@ export default function TimetableGrid({
                                         </Badge>
                                         {shortLesson && (
                                           <Badge variant="outline" className="w-fit bg-blue-50 text-blue-700 border-blue-200 font-semibold text-[10px] px-2 py-0">
-                                            30 min
+                                            {slotDurationMinutes} min
+                                          </Badge>
+                                        )}
+                                        {isMediumLesson(slot) && (
+                                          <Badge variant="outline" className="w-fit bg-violet-50 text-violet-700 border-violet-200 font-semibold text-[10px] px-2 py-0">
+                                            {slotDurationMinutes} min
                                           </Badge>
                                         )}
                                       </div>
                                     </div>
                                     <div className={`mb-2 ${shortLesson ? 'flex items-center justify-between gap-2 rounded-md bg-blue-50 px-2 py-1' : 'text-[11px] font-semibold text-slate-600'}`}>
-                                      <span className={`${shortLesson ? 'text-[10px] font-bold uppercase tracking-wide text-blue-700' : ''}`}>
+                                      <span className={`${shortLesson ? 'text-[10px] font-bold uppercase tracking-wide text-blue-700' : isMediumLesson(slot) ? 'text-[10px] font-bold uppercase tracking-wide text-violet-700' : ''}`}>
                                         🕒 {slotTiming.start && slotTiming.end ? `${slotTiming.start} - ${slotTiming.end}` : `${slotDurationMinutes} min lesson`}
                                       </span>
                                       {shortLesson && <span className="text-[10px] font-semibold text-blue-600">Half block</span>}
+                                      {isMediumLesson(slot) && <span className="text-[10px] font-semibold text-violet-600">Extended block</span>}
                                     </div>
                                     <div className="text-xs text-slate-700 space-y-1">
                                       {isExamTime && (

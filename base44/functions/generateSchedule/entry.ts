@@ -39,9 +39,41 @@ function buildRoomMap(rooms) {
   return { roomList: list, roomMap: map };
 }
 
-function buildScheduleSettings(school) {
+function gcd(a, b) {
+  let x = Math.abs(Number(a) || 0);
+  let y = Math.abs(Number(b) || 0);
+  while (y) {
+    const temp = y;
+    y = x % y;
+    x = temp;
+  }
+  return x || 1;
+}
+
+function getSolverSlotDurationMinutes(school, subjects = [], teachingGroups = []) {
+  const schoolPeriod = Number(school.period_duration_minutes || 60);
+  const durationCandidates = [schoolPeriod];
+
+  subjects.forEach((subject) => {
+    const sessionHours = Number(subject.hours_per_session || 0);
+    if (sessionHours > 0) durationCandidates.push(sessionHours * 60);
+    const standardHours = Number(subject.standard_hours_per_week || 0);
+    if (standardHours > 0) durationCandidates.push(standardHours * 60);
+  });
+
+  teachingGroups.forEach((group) => {
+    const minutes = Number(group.minutes_per_week || 0);
+    if (minutes > 0) durationCandidates.push(minutes);
+  });
+
+  const normalizedDurations = durationCandidates.filter((value) => Number.isFinite(value) && value > 0);
+  const derived = normalizedDurations.reduce((acc, value) => gcd(acc, value), normalizedDurations[0] || schoolPeriod);
+  return Math.max(30, Math.min(schoolPeriod, derived || schoolPeriod));
+}
+
+function buildScheduleSettings(school, subjects = [], teachingGroups = []) {
   return {
-    periodDurationMinutes: school.period_duration_minutes || 60,
+    periodDurationMinutes: getSolverSlotDurationMinutes(school, subjects, teachingGroups),
     dayStartTime: school.day_start_time || '08:00',
     dayEndTime: school.day_end_time || '18:00',
     daysOfWeek: school.days_of_week || ['MONDAY', 'TUESDAY', 'WEDNESDAY', 'THURSDAY', 'FRIDAY'],
@@ -50,11 +82,11 @@ function buildScheduleSettings(school) {
 }
 
 // Build solverTimeslots array from school schedule config
-function buildSolverTimeslots(school) {
+function buildSolverTimeslots(school, subjects = [], teachingGroups = []) {
   const daysOfWeek = school.days_of_week || ['MONDAY', 'TUESDAY', 'WEDNESDAY', 'THURSDAY', 'FRIDAY'];
   const dayStartTime = school.day_start_time || '08:00';
   const dayEndTime = school.day_end_time || '18:00';
-  const periodDurationMinutes = school.period_duration_minutes || 60;
+  const periodDurationMinutes = getSolverSlotDurationMinutes(school, subjects, teachingGroups);
   const breaks = school.breaks || [];
 
   const timeslots = [];
@@ -106,8 +138,8 @@ function buildSolverTimeslots(school) {
 function buildCohortPayload({ programType, schoolId, scheduleVersionId, school, students, teachers, subjects, rooms, teachingGroups }) {
   const { teacherList, teacherMap } = buildTeacherMap(teachers);
   const { roomList } = buildRoomMap(rooms);
-  const scheduleSettings = buildScheduleSettings(school);
-  const periodDuration = school.period_duration_minutes || 60;
+  const scheduleSettings = buildScheduleSettings(school, subjects, teachingGroups);
+  const periodDuration = scheduleSettings.periodDurationMinutes || 60;
 
   const progStudents = students.filter(s => s.ib_programme === programType && s.is_active !== false);
   const progYearGroups = [...new Set(progStudents.map(s => s.year_group).filter(Boolean))];
@@ -180,8 +212,8 @@ function buildCohortPayload({ programType, schoolId, scheduleVersionId, school, 
 function buildDPPayload({ schoolId, scheduleVersionId, school, students, teachers, subjects, rooms, teachingGroups }) {
   const { teacherList, teacherMap } = buildTeacherMap(teachers);
   const { roomList } = buildRoomMap(rooms);
-  const scheduleSettings = buildScheduleSettings(school);
-  const periodDuration = school.period_duration_minutes || 60;
+  const scheduleSettings = buildScheduleSettings(school, subjects, teachingGroups);
+  const periodDuration = scheduleSettings.periodDurationMinutes || 60;
 
   const dpStudents = students.filter(s => s.ib_programme === 'DP' && s.is_active !== false);
 
@@ -823,7 +855,7 @@ Deno.serve(async (req) => {
     const { roomMap } = buildRoomMap(rooms);
 
     // ── Build solverTimeslots from school config ──
-    const solverTimeslots = buildSolverTimeslots(school);
+    const solverTimeslots = buildSolverTimeslots(school, subjects, teachingGroups);
     console.log(`[generateSchedule] Built ${solverTimeslots.length} solverTimeslots from school schedule`);
 
     // ── Send ONE payload at a time and reject anything inconsistent ──

@@ -160,7 +160,7 @@ export default function StudentScheduleView({
                     Timetable: {selectedStudent.full_name}
                   </div>
                   <div className="text-xs text-slate-500">
-                    Short lessons are shown as half-height blocks for easier reading.
+                    Lesson durations now use the real slot times, including 90-minute blocks.
                   </div>
                 </div>
                 <Button variant="outline" size="sm" onClick={() => setIsFullscreen(!isFullscreen)} className="bg-white">
