@@ -103,7 +103,7 @@ export default function StudentScheduleView({
 
       {selectedStudent && (
         <>
-          <div className="p-4 rounded-lg border border-slate-200 bg-slate-50">
+          <div className="p-4 rounded-xl border border-slate-200 bg-gradient-to-r from-slate-50 to-blue-50">
             <div className="flex items-center gap-3">
               <div className="w-10 h-10 rounded-lg bg-blue-100 flex items-center justify-center text-blue-700 font-bold">
                 {selectedStudent.full_name?.charAt(0)?.toUpperCase() || 'S'}
@@ -155,8 +155,13 @@ export default function StudentScheduleView({
               id={exportId}
             >
               <div className="flex items-center justify-between p-2 border-b border-slate-200 bg-slate-50 sticky top-0 z-20">
-                <div className="text-sm font-semibold text-slate-700 pl-2">
-                  Timetable: {selectedStudent.full_name}
+                <div className="pl-2">
+                  <div className="text-sm font-semibold text-slate-700">
+                    Timetable: {selectedStudent.full_name}
+                  </div>
+                  <div className="text-xs text-slate-500">
+                    Short lessons are shown as half-height blocks for easier reading.
+                  </div>
                 </div>
                 <Button variant="outline" size="sm" onClick={() => setIsFullscreen(!isFullscreen)} className="bg-white">
                   {isFullscreen ? <Minimize2 className="w-4 h-4 mr-2" /> : <Maximize2 className="w-4 h-4 mr-2" />}

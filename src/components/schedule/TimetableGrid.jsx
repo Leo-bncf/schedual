@@ -96,6 +96,17 @@ export default function TimetableGrid({
   };
 
   const isShortLesson = (slot) => getSlotDurationMinutes(slot) < Number(periodDurationMinutes || 60);
+  const isStudentView = !globalView && !onUpdateSlot;
+
+  const getDisplaySubjectLabel = (subject, slot) => {
+    if (isExamTimeSubject(subject, slot)) return 'Exam Time';
+    return subject?.name || slot?.notes || 'Unassigned';
+  };
+
+  const getDisplaySubjectShortLabel = (subject, slot) => {
+    if (isExamTimeSubject(subject, slot)) return 'EXAM';
+    return subject?.code || subject?.name || slot?.notes || '---';
+  };
 
   const getLessonCardHeightClass = (slot) => {
     if (globalView) return isShortLesson(slot) ? 'min-h-[26px]' : 'min-h-[52px]';
@@ -527,7 +538,7 @@ export default function TimetableGrid({
                         !slot.teaching_group_id || arr.findIndex(s => s.teaching_group_id === slot.teaching_group_id) === idx
                       )
                     : visibleSlots;
-                  const displayCount = Math.min(deduplicatedSlots.length, globalView ? deduplicatedSlots.length : 2);
+                  const displayCount = Math.min(deduplicatedSlots.length, globalView ? deduplicatedSlots.length : (isStudentView ? 3 : 2));
                   const remainingCount = deduplicatedSlots.length - displayCount;
 
                   return (
@@ -650,7 +661,7 @@ export default function TimetableGrid({
                                 title={slot.is_break ? (slot.notes || 'Lunch Break') : (`${subject?.name || slot.notes || 'Unassigned'} | ${teacher?.full_name || 'No teacher'} | ${room?.name || 'TBD'} | ${slotTiming.start || '--:--'}-${slotTiming.end || '--:--'}`)}
                               >
                                 <span className="font-bold text-center truncate w-full block">
-                                  {slot.is_break ? '🍽️ LUNCH' : (subject?.code || subject?.name || slot.notes || '---')}
+                                  {slot.is_break ? '🍽️ LUNCH' : getDisplaySubjectShortLabel(subject, slot)}
                                 </span>
                                 {!slot.is_break && (
                                   <span className="text-slate-600 opacity-80 text-center truncate w-full block text-[9px]">{slotTiming.start && slotTiming.end ? `${slotTiming.start}-${slotTiming.end}` : `${slotDurationMinutes} min`}</span>
@@ -671,10 +682,10 @@ export default function TimetableGrid({
                                 )}
 
                                 {subject && !slot.is_break && (
-                                  <div className={`p-3 border-l-4 ${getLessonCardHeightClass(slot)} ${colorScheme.bg} ${colorScheme.border} border relative flex flex-col justify-center ${shortLesson ? 'ring-2 ring-blue-200 border-dashed bg-white shadow-sm py-2' : 'border-slate-200 shadow-[0_1px_2px_rgba(15,23,42,0.04)]'} ${isExamTime ? 'bg-red-50 border-red-200' : ''}`}>
+                                  <div className={`p-3 border-l-4 ${getLessonCardHeightClass(slot)} ${colorScheme.bg} ${colorScheme.border} border relative flex flex-col justify-center ${shortLesson ? 'ring-2 ring-blue-200 border-dashed bg-white shadow-sm py-2' : 'border-slate-200 shadow-[0_1px_2px_rgba(15,23,42,0.04)]'} ${isExamTime ? 'bg-red-50 border-red-200' : ''} ${isStudentView ? 'rounded-xl' : ''}`}>
                                     <div className="flex items-start justify-between gap-2 mb-1.5">
                                       <div className="font-bold text-sm text-slate-900 leading-tight">
-                                        {subject.name}
+                                        {getDisplaySubjectLabel(subject, slot)}
                                       </div>
                                       <div className="flex flex-col items-end gap-1 shrink-0">
                                         <Badge variant="outline" className="w-fit bg-white/70 font-semibold text-xs">
@@ -697,11 +708,11 @@ export default function TimetableGrid({
                                       {isExamTime && (
                                         <div className="font-semibold text-red-700">📝 Assessment Period</div>
                                       )}
-                                      {teacher ? (
+                                      {!isStudentView && (teacher ? (
                                         <div className="font-medium">👤 {teacher.full_name}</div>
                                       ) : (
                                         <div className="font-medium text-amber-600">👤 No teacher assigned</div>
-                                      )}
+                                      ))}
                                       <div className="font-medium">📍 {room?.name || 'TBD'}</div>
                                     </div>
                                     {span > 1 && !shortLesson && (
