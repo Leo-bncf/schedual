@@ -1,1105 +1,283 @@
 import React from 'react';
-import { Card } from "@/components/ui/card";
-import { Badge } from "@/components/ui/badge";
+import { Card } from '@/components/ui/card';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import { Button } from '@/components/ui/button';
+import TimetableCell from '@/components/schedule/TimetableCell';
+import { DAYS, calculatePeriodTimes, formatClockTime, SlotCard } from '@/components/schedule/timetableGridUtils';
 
-const DAYS = ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday'];
-
-// Calculate period times dynamically from dayStartTime + periodDurationMinutes, accounting for breaks
-const calculatePeriodTimes = (dayStartTime = '08:00', periodDurationMinutes = 60, periodsPerDay = 8, breaks = []) => {
-  const times = {};
-  const [startHour, startMin] = (dayStartTime || '08:00').split(':').map(Number);
-  let currentMinutes = startHour * 60 + startMin;
-  
-  // Sort breaks by start time
-  const sortedBreaks = [...breaks].sort((a, b) => {
-    const [aH, aM] = a.start.split(':').map(Number);
-    const [bH, bM] = b.start.split(':').map(Number);
-    return (aH * 60 + aM) - (bH * 60 + bM);
-  });
-
-  for (let i = 1; i <= periodsPerDay; i++) {
-    // Check if current time falls exactly on a break start time
-    const currentH = Math.floor(currentMinutes / 60);
-    const currentM = currentMinutes % 60;
-    const currentStr = `${String(currentH).padStart(2, '0')}:${String(currentM).padStart(2, '0')}`;
-    
-    // Find if there's a break starting now
-    const activeBreak = sortedBreaks.find(br => br.start === currentStr);
-    if (activeBreak) {
-      const [endH, endM] = activeBreak.end.split(':').map(Number);
-      currentMinutes = endH * 60 + endM; // Skip to end of break
-    }
-
-    const h = Math.floor(currentMinutes / 60);
-    const m = currentMinutes % 60;
-    const startTimeStr = `${String(h).padStart(2, '0')}:${String(m).padStart(2, '0')}`;
-    
-    currentMinutes += (periodDurationMinutes || 60);
-    
-    const endH = Math.floor(currentMinutes / 60);
-    const endM = currentMinutes % 60;
-    const endTimeStr = `${String(endH).padStart(2, '0')}:${String(endM).padStart(2, '0')}`;
-    
-    times[i] = `${startTimeStr} - ${endTimeStr}`;
-  }
-  
-  return times;
-};
-
-const subjectGroupColors = {
-  '1': { bg: 'bg-purple-100', border: 'border-l-purple-600', text: 'text-purple-900', name: 'Language & Literature' },
-  '2': { bg: 'bg-sky-100', border: 'border-l-sky-600', text: 'text-sky-900', name: 'Language Acquisition' },
-  '3': { bg: 'bg-emerald-100', border: 'border-l-emerald-600', text: 'text-emerald-900', name: 'Individuals & Societies' },
-  '4': { bg: 'bg-amber-100', border: 'border-l-amber-600', text: 'text-amber-900', name: 'Sciences' },
-  '5': { bg: 'bg-orange-100', border: 'border-l-orange-600', text: 'text-orange-900', name: 'Mathematics' },
-  '6': { bg: 'bg-pink-100', border: 'border-l-pink-600', text: 'text-pink-900', name: 'The Arts' },
-};
-
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { Button } from "@/components/ui/button";
-
-export default function TimetableGrid({ 
-  slots = [], 
-  groups = [], 
-  rooms = [], 
-  subjects = [], 
-  teachers = [], 
-  classGroups = [], 
-  periodsPerDay = 8, 
-  breakPeriods = [], 
-  lunchPeriod = 4, 
-  onSlotClick, 
+export default function TimetableGrid({
+  slots = [],
+  groups = [],
+  rooms = [],
+  subjects = [],
+  teachers = [],
+  classGroups = [],
+  periodsPerDay = 8,
+  onSlotClick,
   onUpdateSlot,
-  exportId = "timetable-grid",
+  exportId = 'timetable-grid',
   dayStartTime = '08:00',
-  dayEndTime = '18:00',
   periodDurationMinutes = 60,
   timeslots = [],
   scheduleSettings = {},
-  globalView = false
+  globalView = false,
 }) {
-  const formatClockTime = (timeValue) => String(timeValue || '').slice(0, 5);
-
-  const getSlotStartEnd = (slot) => {
-    const slotTimeslot = (timeslots || []).find((ts) => String(ts.id) === String(slot?.timeslot_id));
-    const start = slotTimeslot?.startTime ? formatClockTime(slotTimeslot.startTime) : null;
-    const end = slotTimeslot?.endTime ? formatClockTime(slotTimeslot.endTime) : null;
-    return { start, end };
-  };
-
-  const getSlotDurationMinutes = (slot) => {
-    const { start, end } = getSlotStartEnd(slot);
-    if (!start || !end) return Number(periodDurationMinutes || 60);
-    const [startHour, startMinute] = start.split(':').map(Number);
-    const [endHour, endMinute] = end.split(':').map(Number);
-    return ((endHour * 60) + endMinute) - ((startHour * 60) + startMinute);
-  };
-
-  const isShortLesson = (slot) => getSlotDurationMinutes(slot) < Number(periodDurationMinutes || 60);
-  const isMediumLesson = (slot) => {
-    const duration = getSlotDurationMinutes(slot);
-    const base = Number(periodDurationMinutes || 60);
-    return duration > base && duration < (base * 2);
-  };
-  const isStudentView = !globalView && !onUpdateSlot;
-
-  const getDisplaySubjectLabel = (subject, slot) => {
-    if (isExamTimeSubject(subject, slot)) return 'Exam Time';
-    return subject?.name || slot?.notes || 'Unassigned';
-  };
-
-  const getDisplaySubjectShortLabel = (subject, slot) => {
-    if (isExamTimeSubject(subject, slot)) return 'EXAM';
-    return subject?.code || subject?.name || slot?.notes || '---';
-  };
-
-  const getLessonCardHeightClass = (slot) => {
-    if (globalView) return isShortLesson(slot) ? 'min-h-[26px]' : 'min-h-[52px]';
-    return isShortLesson(slot) ? 'min-h-[44px]' : 'min-h-[92px]';
-  };
-
-  const getCellMinHeightClass = (hasShortLesson) => {
-    if (globalView) return hasShortLesson ? 'min-h-[56px]' : 'min-h-[96px]';
-    return hasShortLesson ? 'min-h-[72px]' : 'min-h-[120px]';
-  };
   const [selectedSlot, setSelectedSlot] = React.useState(null);
   const [isEditing, setIsEditing] = React.useState(false);
   const [editForm, setEditForm] = React.useState({});
-  
-  // Build timeslot index: timeslot_id → UI row position (chronological per day, includes breaks)
-  const DAY_MAP = { MONDAY: 'Monday', TUESDAY: 'Tuesday', WEDNESDAY: 'Wednesday', THURSDAY: 'Thursday', FRIDAY: 'Friday' };
-  const normalizeDay = (d) => {
-    if (!d) return d;
-    const up = String(d).toUpperCase();
-    if (DAY_MAP[up]) return DAY_MAP[up];
-    return String(d).charAt(0).toUpperCase() + String(d).slice(1).toLowerCase();
+
+  const dayMap = { MONDAY: 'Monday', TUESDAY: 'Tuesday', WEDNESDAY: 'Wednesday', THURSDAY: 'Thursday', FRIDAY: 'Friday' };
+  const normalizeDay = (value) => {
+    if (!value) return '';
+    const upper = String(value).toUpperCase();
+    return dayMap[upper] || `${String(value).charAt(0).toUpperCase()}${String(value).slice(1).toLowerCase()}`;
   };
-  
-  const timeslotToPosition = React.useMemo(() => {
-    const map = {};
-    const timeslotsByDay = {};
-    
-    // Group timeslots by day and sort chronologically
-    DAYS.forEach(day => {
-      const dayUpper = day.toUpperCase();
-      timeslotsByDay[day] = (timeslots || [])
-        .filter(t => t.dayOfWeek === dayUpper)
+
+  const timeslotListByDay = React.useMemo(() => {
+    const grouped = {};
+    DAYS.forEach((day) => {
+      grouped[day] = (timeslots || [])
+        .filter((ts) => normalizeDay(ts.dayOfWeek) === day)
         .sort((a, b) => String(a.startTime || '').localeCompare(String(b.startTime || '')));
     });
-    
-    // Map each timeslot to its UI row position (1-based, chronological)
-    // CRITICAL: Store EVERY timeslot by ID (string key) → position number
-    Object.entries(timeslotsByDay).forEach(([day, daySlots]) => {
+    return grouped;
+  }, [timeslots]);
+
+  const timeslotToPosition = React.useMemo(() => {
+    const map = {};
+    Object.entries(timeslotListByDay).forEach(([, daySlots]) => {
       daySlots.forEach((ts, idx) => {
         map[String(ts.id)] = idx + 1;
       });
     });
-    
-    console.log('[TimetableGrid] Built timeslotToPosition map with', Object.keys(map).length, 'entries. Sample:', Object.entries(map).slice(0, 10));
-    
     return map;
-  }, [timeslots]);
+  }, [timeslotListByDay]);
 
-  const positionToTimeslotId = React.useMemo(() => {
-    const map = {};
-    DAYS.forEach(day => {
-      const dayUpper = day.toUpperCase();
-      map[day] = (timeslots || [])
-        .filter(t => t.dayOfWeek === dayUpper)
-        .sort((a, b) => String(a.startTime || '').localeCompare(String(b.startTime || '')))
-        .reduce((acc, ts, idx) => {
-          acc[idx + 1] = ts.id;
-          return acc;
-        }, {});
-    });
-    return map;
-  }, [timeslots]);
-  
   const periodTimes = React.useMemo(() => {
-    if (!timeslots || timeslots.length === 0) {
+    if (!timeslots.length) {
       return calculatePeriodTimes(dayStartTime, periodDurationMinutes, periodsPerDay, Array.isArray(scheduleSettings?.breaks) ? scheduleSettings.breaks : []);
     }
     const times = {};
-    // Build from actual timeslots for accurate display
-    timeslots.forEach(ts => {
-      const position = timeslotToPosition[ts.id];
-      if (position && !times[position]) {
-        times[position] = ts.startTime ? `${ts.startTime.substring(0, 5)} - ${ts.endTime.substring(0, 5)}` : '';
-      }
+    Object.values(timeslotListByDay).forEach((daySlots) => {
+      daySlots.forEach((ts, idx) => {
+        const row = idx + 1;
+        if (!times[row]) times[row] = `${formatClockTime(ts.startTime)} - ${formatClockTime(ts.endTime)}`;
+      });
     });
     return times;
-  }, [timeslots, timeslotToPosition, dayStartTime, periodDurationMinutes, periodsPerDay]);
-
-  const breakRowsData = React.useMemo(() => {
-    const breaks = Array.isArray(scheduleSettings?.breaks) ? scheduleSettings.breaks : [];
-    return breaks.map((br, idx) => ({
-      id: `break-${idx}`,
-      label: idx === 0 ? 'Break' : 'Lunch',
-      emoji: idx === 0 ? '☕' : '🍽️',
-      startTime: br.start,
-      endTime: br.end,
-      afterPeriod: timeslots && timeslots.length > 0 
-        ? timeslots.filter(t => t.endTime <= br.start).length / DAYS.length 
-        : (() => {
-            const [startHour, startMin] = (dayStartTime || '08:00').split(':').map(Number);
-            const [breakStartHour, breakStartMin] = br.start.split(':').map(Number);
-            let elapsedMins = (breakStartHour * 60 + breakStartMin) - (startHour * 60 + startMin);
-            
-            const earlierBreaks = breaks.filter(otherBr => {
-              const [oH, oM] = otherBr.start.split(':').map(Number);
-              return (oH * 60 + oM) < (breakStartHour * 60 + breakStartMin);
-            });
-            
-            let previousBreaksDuration = 0;
-            earlierBreaks.forEach(otherBr => {
-              const [sH, sM] = otherBr.start.split(':').map(Number);
-              const [eH, eM] = otherBr.end.split(':').map(Number);
-              previousBreaksDuration += (eH * 60 + eM) - (sH * 60 + sM);
-            });
-            
-            return Math.round((elapsedMins - previousBreaksDuration) / (periodDurationMinutes || 60));
-          })()
-    }));
-  }, [scheduleSettings, timeslots, dayStartTime, periodDurationMinutes]);
-
-  const lunchRowsMap = React.useMemo(() => {
-    const lunchRows = {};
-    (timeslots || []).forEach((ts) => {
-      const row = timeslotToPosition[String(ts.id)];
-      const start = String(ts.startTime || '').slice(0, 5);
-      const end = String(ts.endTime || '').slice(0, 5);
-      if (row && start === '12:00' && end === '13:00') {
-        lunchRows[row] = {
-          label: 'Lunch Break',
-          emoji: '🍽️',
-          startTime: start,
-          endTime: end,
-        };
-      }
-    });
-    return lunchRows;
-  }, [timeslots, timeslotToPosition]);
+  }, [timeslots, timeslotListByDay, dayStartTime, periodDurationMinutes, periodsPerDay, scheduleSettings]);
 
   const normalizedSlots = React.useMemo(() => {
-    console.log('[TimetableGrid] DEBUG - timeslots.length:', timeslots.length);
-    console.log('[TimetableGrid] DEBUG - timeslots[0]:', timeslots[0]);
-    console.log('[TimetableGrid] DEBUG - slots.length:', slots.length);
-    console.log('[TimetableGrid] DEBUG - slots[0] keys:', Object.keys(slots[0] || {}));
-    console.log('[TimetableGrid] DEBUG - slots[0]:', slots[0]);
-    console.log('[TimetableGrid] DEBUG - timeslotToPosition sample:', Object.entries(timeslotToPosition).slice(0, 5));
-    
-    // DEBUG COUNTERS: Track mapping failures
-    let invalidTimeslotIdCount = 0;
-    let missingDayCount = 0;
-    let successfullyMappedCount = 0;
-    
-    const normalized = (slots || []).map(s => {
-      let day = normalizeDay(s.day || s.day_of_week || s.dayOfWeek);
-      // FIX BUG #1: Use String(s.timeslot_id) instead of Number() to avoid NaN
-      let uiRow = s.timeslot_id ? timeslotToPosition[String(s.timeslot_id)] : s.period;
-      
-      // FALLBACK 1: Derive day from timeslot if missing
-      if (!day && s.timeslot_id) {
-        const ts = timeslots.find(t => String(t.id) === String(s.timeslot_id));
-        if (ts?.dayOfWeek) {
-          day = normalizeDay(ts.dayOfWeek);
-          console.log(`[TimetableGrid] FALLBACK: Derived day="${day}" from timeslot_id=${s.timeslot_id}`);
-        }
-      }
-      
-      // FALLBACK 2: Derive uiRow from timeslot position if undefined
-      if (!uiRow && s.timeslot_id) {
-        const tsId = String(s.timeslot_id);
-        if (timeslotToPosition[tsId]) {
-          uiRow = timeslotToPosition[tsId];
-          console.log(`[TimetableGrid] FALLBACK: Derived uiRow=${uiRow} from timeslot_id=${s.timeslot_id}`);
-        } else {
-          invalidTimeslotIdCount++;
-          console.warn(`[TimetableGrid] ❌ Invalid timeslot_id=${s.timeslot_id} (type: ${typeof s.timeslot_id}) not in timeslotToPosition map`);
-        }
-      }
-      
-      // FALLBACK 3: Use period as uiRow if still undefined (no upper limit check - let it render)
-      if (!uiRow && s.period) {
-        uiRow = s.period;
-        console.log(`[TimetableGrid] FALLBACK: Using period=${s.period} as uiRow`);
-      }
-      
-      // COUNT FAILURES
-      if (!day) {
-        missingDayCount++;
-        console.warn(`[TimetableGrid] ❌ Missing day for slot:`, s);
-      }
-      if (!uiRow) {
-        console.warn(`[TimetableGrid] ❌ Missing uiRow for slot (timeslot_id=${s.timeslot_id}, period=${s.period}):`, s);
-      }
-      if (day && uiRow) {
-        successfullyMappedCount++;
-      }
-      
+    return (slots || []).map((slot) => {
+      const uiRow = slot.timeslot_id ? timeslotToPosition[String(slot.timeslot_id)] : slot.period;
+      const currentTimeslot = (timeslots || []).find((ts) => String(ts.id) === String(slot.timeslot_id));
+      const start = currentTimeslot?.startTime ? formatClockTime(currentTimeslot.startTime) : null;
+      const end = currentTimeslot?.endTime ? formatClockTime(currentTimeslot.endTime) : null;
+      const durationMinutes = start && end
+        ? (((Number(end.split(':')[0]) * 60) + Number(end.split(':')[1])) - ((Number(start.split(':')[0]) * 60) + Number(start.split(':')[1])))
+        : Number(periodDurationMinutes || 60);
+      const spillsIntoNextRow = durationMinutes > Number(periodDurationMinutes || 60) && durationMinutes < (Number(periodDurationMinutes || 60) * 2);
+
       return {
-        ...s,
-        day,
+        ...slot,
+        day: normalizeDay(slot.day || slot.dayOfWeek || slot.day_of_week),
         uiRow,
+        __timing: { start, end },
+        __durationMinutes: durationMinutes,
+        __spillsIntoNextRow: spillsIntoNextRow,
       };
-    });
-    
-    console.log('[TimetableGrid] 📊 MAPPING DIAGNOSTICS:', {
-      totalSlots: slots.length,
-      successfullyMapped: successfullyMappedCount,
-      invalidTimeslotId: invalidTimeslotIdCount,
-      missingDay: missingDayCount,
-      unmappable: slots.length - successfullyMappedCount
-    });
-    
-    return normalized;
-  }, [slots, timeslotToPosition, timeslots]);
+    }).filter((slot) => slot.day && slot.uiRow);
+  }, [slots, timeslots, timeslotToPosition, periodDurationMinutes]);
 
-  const getSlotData = (day, uiRow) => {
-    return normalizedSlots.filter(s => s.day === day && s.uiRow === uiRow);
-  };
-
-  const getGroupInfo = (groupId) => {
-    return groups.find(g => g.id === groupId);
-  };
-
-  const getRoomInfo = (roomId) => {
-    return rooms.find(r => r.id === roomId);
-  };
-
-  const getSubjectInfo = (subjectId) => {
-    return subjects.find(s => s.id === subjectId);
-  };
-
-  const getTeacherInfo = (teacherId) => {
-    return teachers.find(t => t.id === teacherId);
-  };
-
-  const isExamTimeSubject = (subject, slot) => {
-    const subjectCode = String(subject?.code || '').trim().toUpperCase();
-    const subjectName = String(subject?.name || '').trim().toUpperCase();
-    const notes = String(slot?.notes || '').trim().toUpperCase();
-    return subjectCode === 'TEST' || subjectName === 'EXAM TIME' || notes.includes('TEST') || notes.includes('ASSESSMENT') || notes.includes('EXAM');
-  };
-
-  // FIX BUG #2: Calculate actual periods needed based on timeslots per day (not just config)
   const computedPeriodsPerDay = React.useMemo(() => {
-    if (!timeslots || timeslots.length === 0) return periodsPerDay;
-    
-    // Count timeslots per day
-    const countsPerDay = {};
-    DAYS.forEach(day => {
-      const dayUpper = day.toUpperCase();
-      countsPerDay[day] = timeslots.filter(t => t.dayOfWeek === dayUpper).length;
-    });
-    
-    const maxTimeslotsPerDay = Math.max(...Object.values(countsPerDay), 0);
-    
-    // Also check max period in normalized slots
-    const maxPeriodInSlots = normalizedSlots.reduce((max, s) => Math.max(max, s.uiRow || 0), 0);
-    
-    // Cap maxPeriodInSlots to a reasonable range to prevent runaway grid expansion from bad data
-    const cappedMaxPeriod = Math.min(maxPeriodInSlots, 20);
-    const computed = Math.max(periodsPerDay, maxTimeslotsPerDay, cappedMaxPeriod);
-    
-    if (computed > periodsPerDay) {
-      console.warn(`[TimetableGrid] ⚠️ GRID EXPANSION: periodsPerDay=${periodsPerDay} but timeslots/slots require ${computed} rows. Expanding grid to prevent hiding slots.`);
-    }
-    
-    console.log('[TimetableGrid] 📊 GRID SIZE DIAGNOSTIC:', {
-      configPeriodsPerDay: periodsPerDay,
-      maxTimeslotsPerDay,
-      maxPeriodInSlots,
-      computedPeriodsPerDay: computed,
-      countsPerDay
-    });
-    
-    return computed;
-  }, [timeslots, periodsPerDay, normalizedSlots]);
+    const maxFromTimeslots = Math.max(...Object.values(timeslotListByDay).map((daySlots) => daySlots.length), 0);
+    const maxFromSlots = normalizedSlots.reduce((max, slot) => Math.max(max, slot.uiRow || 0), 0);
+    return Math.max(periodsPerDay, maxFromTimeslots, maxFromSlots);
+  }, [timeslotListByDay, normalizedSlots, periodsPerDay]);
 
-  const activePeriods = Array.from({ length: computedPeriodsPerDay }, (_, i) => i + 1);
+  const activePeriods = Array.from({ length: computedPeriodsPerDay }, (_, idx) => idx + 1);
 
-  const getSlotSpan = (day, period, slotId) => {
-    const currentSlots = getSlotData(day, period);
-    const currentSlot = currentSlots.find(s => s.id === slotId);
-    if (!currentSlot) return 1;
+  const getGroupInfo = (groupId) => groups.find((group) => group.id === groupId);
+  const getRoomInfo = (roomId) => rooms.find((room) => room.id === roomId);
+  const getSubjectInfo = (subjectId) => subjects.find((subject) => subject.id === subjectId);
+  const getTeacherInfo = (teacherId) => teachers.find((teacher) => teacher.id === teacherId);
+  const isStudentView = !globalView && !onUpdateSlot;
 
-    let span = 1;
-    let checkPeriod = period + 1;
-    
-    // Use computedPeriodsPerDay instead of periodsPerDay to allow spans beyond config limit
-    while (checkPeriod <= computedPeriodsPerDay) {
-      const nextSlots = getSlotData(day, checkPeriod);
-      // Stop spanning if the next slot is a break or different teaching group
-      const matchingNextSlot = nextSlots.find(s => s.teaching_group_id === currentSlot.teaching_group_id);
-      
-      if (matchingNextSlot) {
-        if (currentSlot.is_break === matchingNextSlot.is_break) {
-            span++;
-            checkPeriod++;
-        } else {
-            break;
-        }
-      } else {
-        break;
-      }
-    }
-    
-    return span;
-  };
+  const buildSlotPresentation = React.useCallback((slot) => {
+    let subject = null;
+    let teacher = null;
+    let level = '';
+    let group = null;
 
-  const shouldSkipCell = (day, period, slotId) => {
-    for (let p = period - 1; p >= 1; p--) {
-      const prevSlots = getSlotData(day, p);
-      const prevSlot = prevSlots.find(s => s.id === slotId);
-      if (prevSlot) {
-        const span = getSlotSpan(day, p, slotId);
-        if (p + span > period) {
-          return true;
-        }
-      }
-    }
-    return false;
-  };
-
-  const handleSlotClick = (slot) => {
-    if (!slot) return;
-    
-    let group, subject, teacher;
-    
-    // DP style: teaching_group_id on slot
-    if (slot.teaching_group_id) {
+    if (slot?.teaching_group_id) {
       group = getGroupInfo(slot.teaching_group_id);
-      subject = group ? getSubjectInfo(group.subject_id) : null;
-      teacher = group ? getTeacherInfo(group.teacher_id) : null;
-    }
-    // Fallback: subject_id / teacher_id directly on slot (PYP/MYP or when TG not in groups list)
-    if (!subject && slot.subject_id) {
-      subject = getSubjectInfo(slot.subject_id);
-    }
-    if (!teacher && slot.teacher_id) {
-      teacher = getTeacherInfo(slot.teacher_id);
-    }
-    if (!group && slot.classgroup_id) {
-      const classGroup = classGroups.find(cg => cg.id === slot.classgroup_id);
-      if (classGroup) {
-        group = { name: classGroup.name, level: classGroup.year_group, student_ids: classGroup.student_ids || [] };
+      if (group) {
+        subject = getSubjectInfo(group.subject_id);
+        teacher = getTeacherInfo(group.teacher_id);
+        level = slot.display_level_override || group.level || '';
       }
     }
-    
-    const room = getRoomInfo(slot.room_id);
-    setSelectedSlot({ slot, group, room, subject, teacher });
+
+    if (!subject && slot?.subject_id) subject = getSubjectInfo(slot.subject_id);
+    if (!teacher && slot?.teacher_id) teacher = getTeacherInfo(slot.teacher_id);
+    if (!group && slot?.classgroup_id) group = classGroups.find((item) => item.id === slot.classgroup_id) || null;
+
+    return {
+      slot,
+      subject,
+      teacher,
+      room: getRoomInfo(slot?.room_id),
+      level,
+      group,
+      isStudentView,
+      isGlobalView: globalView,
+      durationMinutes: slot?.__durationMinutes || Number(periodDurationMinutes || 60),
+    };
+  }, [groups, rooms, subjects, teachers, classGroups, isStudentView, globalView, periodDurationMinutes]);
+
+  const rowMatrix = React.useMemo(() => {
+    const matrix = {};
+    DAYS.forEach((day) => {
+      matrix[day] = {};
+      activePeriods.forEach((row) => {
+        const rowSlots = normalizedSlots.filter((slot) => slot.day === day && slot.uiRow === row && !slot.is_break);
+        const carryOverSlot = normalizedSlots.find((slot) => slot.day === day && slot.uiRow === row - 1 && slot.__spillsIntoNextRow);
+        const primarySlot = rowSlots.find((slot) => !slot.__consumed);
+        const nextStartingSlot = carryOverSlot ? rowSlots[0] || null : null;
+        matrix[day][row] = {
+          carryOverSlot: carryOverSlot || null,
+          primarySlot: carryOverSlot ? null : (primarySlot || rowSlots[0] || null),
+          nextStartingSlot,
+          hasContent: !!carryOverSlot || rowSlots.length > 0,
+        };
+      });
+    });
+    return matrix;
+  }, [normalizedSlots, activePeriods]);
+
+  const handleOpenSlot = (slot) => {
+    if (!slot) return;
+    const data = buildSlotPresentation(slot);
+    setSelectedSlot(data);
     setIsEditing(false);
   };
 
-
-
   return (
     <>
-      
       <Card className="overflow-hidden border-0 shadow-sm" id={exportId}>
         <div className="overflow-x-auto">
           <div className="min-w-[1200px]">
-            {/* Header Row */}
-            <div className="grid grid-cols-[100px_repeat(5,1fr)] bg-slate-100 border-b-2 border-slate-300">
-              <div className="p-4 font-bold text-slate-700 text-base border-r border-slate-300">Time</div>
-              {DAYS.map(day => (
-                <div key={day} className="p-4 font-bold text-slate-700 text-center text-base border-r border-slate-300 last:border-r-0">
-                  {day}
-                </div>
+            <div className="grid grid-cols-[100px_repeat(5,1fr)] border-b-2 border-slate-300 bg-slate-100">
+              <div className="border-r border-slate-300 p-4 text-base font-bold text-slate-700">Time</div>
+              {DAYS.map((day) => (
+                <div key={day} className="border-r border-slate-300 p-4 text-center text-base font-bold text-slate-700 last:border-r-0">{day}</div>
               ))}
             </div>
 
-            {/* Period Rows */}
-            {activePeriods.map(uiRow => (
-              <React.Fragment key={uiRow}>
-                {lunchRowsMap[uiRow] ? (
-                  <div className="grid grid-cols-[100px_repeat(5,1fr)] border-b-2 border-amber-300 bg-gradient-to-r from-amber-50 to-orange-50">
-                    <div className="p-4 bg-amber-100 border-r border-amber-300 flex flex-col items-center justify-center text-center min-h-[120px]">
-                      <div className="text-sm font-bold text-amber-900">{lunchRowsMap[uiRow].emoji}</div>
-                      <div className="text-sm font-bold text-amber-900">Lunch</div>
-                      <div className="text-[10px] text-amber-700 mt-1">{lunchRowsMap[uiRow].startTime} - {lunchRowsMap[uiRow].endTime}</div>
-                    </div>
-                    {DAYS.map(day => (
-                      <div key={`${day}-${uiRow}-lunch`} className="p-4 border-r border-amber-200 last:border-r-0 flex flex-col items-center justify-center min-h-[120px]">
-                        <span className="text-amber-700 font-semibold text-sm uppercase">Lunch Break</span>
-                        <div className="text-[10px] text-amber-600 mt-1">No lessons scheduled</div>
-                      </div>
-                    ))}
-                  </div>
-                ) : (
-                <div className="grid grid-cols-[100px_repeat(5,1fr)] border-b border-slate-300">
-                  <div className={`p-4 bg-slate-50 border-r border-slate-300 flex flex-col justify-center items-center text-center ${getCellMinHeightClass(getSlotData(DAYS[0], uiRow).some(slot => isShortLesson(slot)) || getSlotData(DAYS[1], uiRow).some(slot => isShortLesson(slot)) || getSlotData(DAYS[2], uiRow).some(slot => isShortLesson(slot)) || getSlotData(DAYS[3], uiRow).some(slot => isShortLesson(slot)) || getSlotData(DAYS[4], uiRow).some(slot => isShortLesson(slot)))}`}>
-                    <div className="text-sm font-bold text-slate-800">{uiRow}</div>
-                    <div className="text-[10px] text-slate-500 mt-1 whitespace-nowrap">{periodTimes[uiRow] || `Period ${uiRow}`}</div>
-                  </div>
-                {DAYS.map(day => {
-                  let slotsInCell = getSlotData(day, uiRow);
-                  
-                  // Deduplicate break slots so they don't stack up for every teaching group a student belongs to
-                  slotsInCell = slotsInCell.filter((slot, index, self) => 
-                    !slot.is_break || index === self.findIndex(s => s.is_break && s.day === slot.day && s.period === slot.period)
-                  );
-                  
-                  if (slotsInCell.length === 0) {
-                    return (
-                      <div 
-                        key={`${day}-${uiRow}`} 
-                        className="border-r border-slate-300 last:border-r-0 min-h-[120px] bg-slate-50/50"
-                        onDragOver={(e) => e.preventDefault()}
-                        onDrop={(e) => {
-                          e.preventDefault();
-                          const sourceSlotId = e.dataTransfer.getData('slotId');
-                          const sourceDay = e.dataTransfer.getData('sourceDay');
-                          const sourcePeriod = parseInt(e.dataTransfer.getData('sourcePeriod'));
-                          
-                          onSlotClick?.(day, uiRow, { 
-                            action: 'move', 
-                            sourceSlotId, 
-                            sourceDay,
-                            sourcePeriod,
-                            sourceTimeslotId: e.dataTransfer.getData('sourceTimeslotId'),
-                            targetDay: day,
-                            targetPeriod: uiRow,
-                            targetTimeslotId: positionToTimeslotId[day]?.[uiRow] || null
-                          });
-                        }}
-                      />
-                    );
-                  }
-
-                  // Filter out slots that should be skipped due to spanning
-                  const visibleSlots = slotsInCell.filter(slot => !shouldSkipCell(day, uiRow, slot.id));
-
-                  if (visibleSlots.length === 0) {
-                    return null;
-                  }
-
-                  const hasShortLessonInCell = visibleSlots.some(slot => isShortLesson(slot));
-
-                  // MULTI-LESSON DISPLAY: In global view deduplicate by teaching_group_id (one card per group)
-                  const deduplicatedSlots = globalView
-                    ? visibleSlots.filter((slot, idx, arr) =>
-                        !slot.teaching_group_id || arr.findIndex(s => s.teaching_group_id === slot.teaching_group_id) === idx
-                      )
-                    : visibleSlots;
-                  const displayCount = Math.min(deduplicatedSlots.length, globalView ? deduplicatedSlots.length : (isStudentView ? 3 : 2));
-                  const remainingCount = deduplicatedSlots.length - displayCount;
-
+            {activePeriods.map((uiRow) => (
+              <div key={uiRow} className="grid grid-cols-[100px_repeat(5,1fr)] border-b border-slate-300">
+                <div className="flex min-h-[116px] flex-col items-center justify-center border-r border-slate-300 bg-slate-50 p-4 text-center">
+                  <div className="text-sm font-bold text-slate-800">{uiRow}</div>
+                  <div className="mt-1 whitespace-nowrap text-[10px] text-slate-500">{periodTimes[uiRow] || `Period ${uiRow}`}</div>
+                </div>
+                {DAYS.map((day) => {
+                  const cell = rowMatrix[day][uiRow];
                   return (
-                    <div 
-                      key={`${day}-${uiRow}`} 
-                      className={`border-r border-slate-300 last:border-r-0 p-2 relative ${getCellMinHeightClass(hasShortLessonInCell)} ${globalView ? 'flex flex-row flex-wrap gap-1 content-start' : 'space-y-2'} ${hasShortLessonInCell ? 'bg-gradient-to-b from-blue-50/30 to-white' : ''}`}
-                      onDragOver={(e) => e.preventDefault()}
-                      onDrop={(e) => {
-                        e.preventDefault();
-                        const sourceSlotId = e.dataTransfer.getData('slotId');
-                        const sourceDay = e.dataTransfer.getData('sourceDay');
-                        const sourcePeriod = parseInt(e.dataTransfer.getData('sourcePeriod'));
-                        
-                        // Check if dropping on a slot or empty space
-                        const targetSlot = visibleSlots[0];
-                        if (sourceSlotId !== targetSlot?.id) {
-                          onSlotClick?.(day, uiRow, { 
-                            action: targetSlot ? 'swap' : 'move', 
-                            sourceSlotId, 
-                            targetSlotId: targetSlot?.id,
-                            sourceDay,
-                            sourcePeriod,
-                            sourceTimeslotId: e.dataTransfer.getData('sourceTimeslotId'),
-                            targetDay: day,
-                            targetPeriod: uiRow,
-                            targetTimeslotId: positionToTimeslotId[day]?.[uiRow] || null,
-                            targetSlotTimeslotId: targetSlot?.timeslot_id || null
-                          });
-                        }
-                      }}
-                    >
-                      {/* Show first N lessons as cards */}
-                      {deduplicatedSlots.slice(0, displayCount).map(slot => {
-                        const span = getSlotSpan(day, uiRow, slot.id);
-                        const room = getRoomInfo(slot.room_id);
-                        
-                        let subject = null;
-                        let teacher = null;
-                        let level = '';
-                        let displayName = '';
-                        
-                        // DP style: teaching_group_id on slot
-                        if (slot.teaching_group_id) {
-                          const group = getGroupInfo(slot.teaching_group_id);
-                          if (group) {
-                            subject = getSubjectInfo(group.subject_id);
-                            teacher = getTeacherInfo(group.teacher_id);
-                            level = slot.display_level_override || group.level;
-                            displayName = group.name;
-                          }
-                        }
-                        // Fallback: subject_id directly on slot (PYP/MYP, or when TG not found in groups list)
-                        if (!subject && slot.subject_id) {
-                          subject = getSubjectInfo(slot.subject_id);
-                        }
-                        if (!teacher && slot.teacher_id) {
-                          teacher = getTeacherInfo(slot.teacher_id);
-                        }
-                        if (!subject && !teacher && slot.classgroup_id) {
-                          const classGroup = classGroups.find(cg => cg.id === slot.classgroup_id);
-                          level = classGroup?.ib_programme || '';
-                          displayName = classGroup?.name || '';
-                        }
-                        
-                        const getSubjectColor = (subjectName) => {
-                          if (!subjectName) return { bg: 'bg-slate-50', border: 'border-l-slate-400', text: 'text-slate-900' };
-                          const colors = [
-                            { bg: 'bg-blue-50', border: 'border-l-blue-400', text: 'text-blue-900' },
-                            { bg: 'bg-indigo-50', border: 'border-l-indigo-400', text: 'text-indigo-900' },
-                            { bg: 'bg-violet-50', border: 'border-l-violet-400', text: 'text-violet-900' },
-                            { bg: 'bg-purple-50', border: 'border-l-purple-400', text: 'text-purple-900' },
-                            { bg: 'bg-fuchsia-50', border: 'border-l-fuchsia-400', text: 'text-fuchsia-900' },
-                            { bg: 'bg-pink-50', border: 'border-l-pink-400', text: 'text-pink-900' },
-                            { bg: 'bg-rose-50', border: 'border-l-rose-400', text: 'text-rose-900' },
-                            { bg: 'bg-orange-50', border: 'border-l-orange-400', text: 'text-orange-900' },
-                            { bg: 'bg-amber-50', border: 'border-l-amber-400', text: 'text-amber-900' },
-                            { bg: 'bg-emerald-50', border: 'border-l-emerald-400', text: 'text-emerald-900' },
-                            { bg: 'bg-teal-50', border: 'border-l-teal-400', text: 'text-teal-900' },
-                            { bg: 'bg-cyan-50', border: 'border-l-cyan-400', text: 'text-cyan-900' },
-                            { bg: 'bg-sky-50', border: 'border-l-sky-400', text: 'text-sky-900' },
-                          ];
-                          let hash = 0;
-                          for (let i = 0; i < subjectName.length; i++) {
-                            hash = subjectName.charCodeAt(i) + ((hash << 5) - hash);
-                          }
-                          return colors[Math.abs(hash) % colors.length];
-                        };
-
-                        const isExamTime = isExamTimeSubject(subject, slot);
-                        const colorScheme = isExamTime
-                          ? { bg: 'bg-red-50', border: 'border-l-red-400', text: 'text-red-900' }
-                          : subject
-                            ? getSubjectColor(subject.name)
-                            : { bg: 'bg-slate-50', border: 'border-l-slate-400', text: 'text-slate-900' };
-                        const slotTiming = getSlotStartEnd(slot);
-                        const slotDurationMinutes = getSlotDurationMinutes(slot);
-                        const shortLesson = isShortLesson(slot);
-
-                        return (
-                          <div 
-                            key={slot.id}
-                            draggable
-                            onDragStart={(e) => {
-                              e.dataTransfer.setData('slotId', slot.id);
-                              e.dataTransfer.setData('sourceDay', day);
-                              e.dataTransfer.setData('sourcePeriod', String(uiRow));
-                              e.dataTransfer.setData('sourceTimeslotId', String(slot.timeslot_id || ''));
-                            }}
-                            className={`cursor-move transition-all overflow-hidden group ${globalView ? 'w-[calc(50%-4px)] lg:w-[calc(33.33%-4px)] rounded hover:ring-2 hover:ring-blue-400' : 'hover:shadow-lg rounded-lg'} ${shortLesson ? 'self-start' : ''}`}
-                            onClick={() => handleSlotClick(slot)}
-                          >
-                            {!globalView && (
-                              <div className="absolute top-1 right-1 opacity-0 group-hover:opacity-100 transition-opacity z-10">
-                                <div className="px-1.5 py-0.5 bg-white/90 rounded shadow text-[10px] font-bold text-slate-600">⋮⋮</div>
-                              </div>
-                            )}
-                            {globalView ? (
-                              <div 
-                                className={`p-1.5 border rounded ${getLessonCardHeightClass(slot)} ${slot.is_break ? 'bg-amber-100 border-amber-300 text-amber-900' : (subject ? colorScheme.bg : 'bg-slate-50')} text-[10px] w-full flex flex-col justify-center items-center ${shortLesson ? 'ring-1 ring-blue-300 border-dashed bg-white shadow-sm' : 'border-slate-200'} `}
-                                title={slot.is_break ? (slot.notes || 'Lunch Break') : (`${subject?.name || slot.notes || 'Unassigned'} | ${teacher?.full_name || 'No teacher'} | ${room?.name || 'TBD'} | ${slotTiming.start || '--:--'}-${slotTiming.end || '--:--'}`)}
-                              >
-                                <span className="font-bold text-center truncate w-full block">
-                                  {slot.is_break ? '🍽️ LUNCH' : getDisplaySubjectShortLabel(subject, slot)}
-                                </span>
-                                {!slot.is_break && (
-                                  <span className="text-slate-600 opacity-80 text-center truncate w-full block text-[9px]">{slotTiming.start && slotTiming.end ? `${slotTiming.start}-${slotTiming.end}` : `${slotDurationMinutes} min`}</span>
-                                )}
-                                {!slot.is_break && subject && (
-                                  <span className="text-slate-600 opacity-80 text-center truncate w-full block text-[9px]">{room?.name || 'TBD'}</span>
-                                )}
-                              </div>
-                            ) : (
-                              <>
-                                {slot.is_break && (
-                                  <div className="p-3 border-l-4 border-amber-400 bg-amber-50 border border-amber-200 h-full min-h-[80px] flex flex-col justify-center items-center text-center">
-                                    <div className="font-bold text-lg text-amber-900 leading-tight mb-1">
-                                      🍽️ {slot.notes || 'Lunch Break'}
-                                    </div>
-                                    <div className="text-xs font-bold text-amber-700 uppercase tracking-wider">Break</div>
-                                  </div>
-                                )}
-
-                                {subject && !slot.is_break && (
-                                  <div className={`p-3 border-l-4 ${getLessonCardHeightClass(slot)} ${colorScheme.bg} ${colorScheme.border} border relative flex flex-col justify-center ${shortLesson ? 'ring-2 ring-blue-200 border-dashed bg-white shadow-sm py-2' : 'border-slate-200 shadow-[0_1px_2px_rgba(15,23,42,0.04)]'} ${isExamTime ? 'bg-red-50 border-red-200' : ''} ${isStudentView ? 'rounded-xl' : ''}`}>
-                                    <div className="flex items-start justify-between gap-2 mb-1.5">
-                                      <div className="font-bold text-sm text-slate-900 leading-tight">
-                                        {getDisplaySubjectLabel(subject, slot)}
-                                      </div>
-                                      <div className="flex flex-col items-end gap-1 shrink-0">
-                                        <Badge variant="outline" className="w-fit bg-white/70 font-semibold text-xs">
-                                          {isExamTime ? 'Exam' : level}
-                                        </Badge>
-                                        {shortLesson && (
-                                          <Badge variant="outline" className="w-fit bg-blue-50 text-blue-700 border-blue-200 font-semibold text-[10px] px-2 py-0">
-                                            {slotDurationMinutes} min
-                                          </Badge>
-                                        )}
-                                        {isMediumLesson(slot) && (
-                                          <Badge variant="outline" className="w-fit bg-violet-50 text-violet-700 border-violet-200 font-semibold text-[10px] px-2 py-0">
-                                            {slotDurationMinutes} min
-                                          </Badge>
-                                        )}
-                                      </div>
-                                    </div>
-                                    <div className={`mb-2 ${shortLesson ? 'flex items-center justify-between gap-2 rounded-md bg-blue-50 px-2 py-1' : 'text-[11px] font-semibold text-slate-600'}`}>
-                                      <span className={`${shortLesson ? 'text-[10px] font-bold uppercase tracking-wide text-blue-700' : isMediumLesson(slot) ? 'text-[10px] font-bold uppercase tracking-wide text-violet-700' : ''}`}>
-                                        🕒 {slotTiming.start && slotTiming.end ? `${slotTiming.start} - ${slotTiming.end}` : `${slotDurationMinutes} min lesson`}
-                                      </span>
-                                      {shortLesson && <span className="text-[10px] font-semibold text-blue-600">Half block</span>}
-                                      {isMediumLesson(slot) && <span className="text-[10px] font-semibold text-violet-600">Extended block</span>}
-                                    </div>
-                                    <div className="text-xs text-slate-700 space-y-1">
-                                      {isExamTime && (
-                                        <div className="font-semibold text-red-700">📝 Assessment Period</div>
-                                      )}
-                                      {!isStudentView && (teacher ? (
-                                        <div className="font-medium">👤 {teacher.full_name}</div>
-                                      ) : (
-                                        <div className="font-medium text-amber-600">👤 No teacher assigned</div>
-                                      ))}
-                                      <div className="font-medium">📍 {room?.name || 'TBD'}</div>
-                                    </div>
-                                    {span > 1 && !shortLesson && (
-                                      <div className="mt-2 text-xs text-slate-500 font-medium">
-                                        {span} periods
-                                      </div>
-                                    )}
-                                  </div>
-                                )}
-
-                                {!subject && !slot.is_break && slot.notes?.includes('Study') && (
-                                  <div className="p-3 border-l-4 border-slate-400 bg-slate-50 border border-slate-200">
-                                    <div className="font-bold text-sm text-slate-700 leading-tight mb-1.5">
-                                      Study / Free Period
-                                    </div>
-                                    <div className="text-xs text-slate-500">Self-study time</div>
-                                  </div>
-                                )}
-
-                                {!subject && !slot.is_break && !slot.notes?.includes('Study') && (slot.notes?.includes('Test') || slot.notes?.includes('Assessment')) && (
-                                  <div className="p-3 border-l-4 border-red-400 bg-red-50 border border-red-200">
-                                    <div className="font-bold text-sm text-red-900 leading-tight mb-1.5">
-                                      📝 {slot.notes}
-                                    </div>
-                                    <div className="text-xs text-red-700">
-                                      Assessment Period
-                                    </div>
-                                  </div>
-                                )}
-
-                                {!subject && !slot.is_break && !slot.notes?.includes('Study') && !(slot.notes?.includes('Test') || slot.notes?.includes('Assessment')) && (
-                                  <div className="p-3 border-l-4 border-slate-300 bg-slate-50 border border-slate-200">
-                                    <div className="font-bold text-sm text-slate-600 leading-tight mb-1.5">
-                                      Unassigned Class
-                                    </div>
-                                    <div className="text-xs text-slate-500 space-y-1">
-                                      {teacher ? (
-                                        <div className="font-medium">👤 {teacher.full_name}</div>
-                                      ) : (
-                                        <div className="font-medium text-amber-600">👤 No teacher assigned</div>
-                                      )}
-                                      <div className="font-medium">📍 {room?.name || 'TBD'}</div>
-                                    </div>
-                                  </div>
-                                )}
-                              </>
-                            )}
-                          </div>
-                        );
-                      })}
-                      
-                      {/* "+N more" badge if there are remaining lessons */}
-                      {remainingCount > 0 && (
-                        <button
-                          onClick={() => {
-                            // Show all lessons in this cell
-                            const allLessons = visibleSlots.map(slot => {
-                              let subject = null;
-                              let teacher = null;
-                              let level = '';
-                              
-                              if (slot.teaching_group_id) {
-                                const group = getGroupInfo(slot.teaching_group_id);
-                                if (group) {
-                                  subject = getSubjectInfo(group.subject_id);
-                                  teacher = getTeacherInfo(group.teacher_id);
-                                  level = slot.display_level_override || group.level;
-                                }
-                              } else if (slot.subject_id) {
-                                subject = getSubjectInfo(slot.subject_id);
-                                teacher = slot.teacher_id ? getTeacherInfo(slot.teacher_id) : null;
-                                const classGroup = classGroups.find(cg => cg.id === slot.classgroup_id);
-                                level = classGroup?.year_group || '';
-                              }
-                              
-                              const room = getRoomInfo(slot.room_id);
-                              return { slot, subject, teacher, level, room };
-                            });
-                            
-                            setSelectedSlot({ 
-                              multiple: true, 
-                              lessons: allLessons, 
-                              day, 
-                              period: uiRow 
-                            });
-                          }}
-                          className="w-full px-2 py-1 bg-slate-200 hover:bg-slate-300 rounded text-xs font-semibold text-slate-700 transition-colors"
-                        >
-                          +{remainingCount} more
-                        </button>
-                      )}
-                    </div>
+                    <TimetableCell
+                      key={`${day}-${uiRow}`}
+                      day={day}
+                      uiRow={uiRow}
+                      primarySlot={cell.primarySlot}
+                      carryOverSlot={cell.carryOverSlot}
+                      nextStartingSlot={cell.nextStartingSlot}
+                      empty={!cell.hasContent}
+                      renderSlotData={buildSlotPresentation}
+                      onSlotClick={handleOpenSlot}
+                    />
                   );
                 })}
-                </div>
-                )}
-                
-                {/* Break Rows mapped from scheduleSettings */}
-                {breakRowsData.filter(br => Math.round(br.afterPeriod) === uiRow).map(breakRow => (
-                  <div key={breakRow.id} className="grid grid-cols-[100px_repeat(5,1fr)] border-b-2 border-amber-300 bg-gradient-to-r from-amber-50 to-orange-50">
-                    <div className="p-4 bg-amber-100 border-r border-amber-300 flex flex-col items-center justify-center text-center">
-                      <div className="text-sm font-bold text-amber-900">{breakRow.emoji}</div>
-                      <div className="text-sm font-bold text-amber-900">{breakRow.label}</div>
-                    </div>
-                    {DAYS.map(day => (
-                      <div key={`${day}-${breakRow.id}`} className="p-4 border-r border-amber-200 last:border-r-0 flex flex-col items-center justify-center">
-                        <span className="text-amber-700 font-medium text-sm uppercase">{breakRow.label}</span>
-                        <div className="text-[10px] text-amber-600 mt-1">{breakRow.startTime} - {breakRow.endTime}</div>
-                      </div>
-                    ))}
-                  </div>
-                ))}
-              </React.Fragment>
+              </div>
             ))}
           </div>
         </div>
       </Card>
 
-      {/* Slot Details Modal - supports single or multiple lessons */}
       {selectedSlot && (
-        <div 
-          className="fixed inset-0 bg-black/60 flex items-center justify-center z-50 p-4 backdrop-blur-sm"
-          onClick={() => setSelectedSlot(null)}
-        >
-          <div 
-            className="bg-white rounded-2xl shadow-2xl max-w-2xl w-full max-h-[90vh] overflow-y-auto p-8 transform transition-all"
-            onClick={(e) => e.stopPropagation()}
-          >
-            {selectedSlot.multiple ? (
-              // MULTIPLE LESSONS VIEW
-              <>
-                <div className="flex items-start justify-between mb-6">
-                  <div className="flex-1">
-                    <h3 className="text-3xl font-bold text-slate-900 mb-2">
-                      Parallel Lessons ({selectedSlot.lessons.length})
-                    </h3>
-                    <p className="text-slate-500 text-lg">
-                      {selectedSlot.day}, Period {selectedSlot.period}
-                    </p>
-                  </div>
-                  <button 
-                    onClick={() => setSelectedSlot(null)}
-                    className="text-slate-400 hover:text-slate-600 transition-colors p-1"
-                  >
-                    <svg className="w-7 h-7" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
-                    </svg>
-                  </button>
-                </div>
-
-                <div className="space-y-4">
-                  {selectedSlot.lessons.map((lesson, idx) => {
-                    const getSubjectColor = (subjectName) => {
-                      if (!subjectName) return { bg: 'bg-slate-50', border: 'border-l-slate-400', text: 'text-slate-900' };
-                      const colors = [
-                        { bg: 'bg-blue-50', border: 'border-l-blue-400', text: 'text-blue-900' },
-                        { bg: 'bg-indigo-50', border: 'border-l-indigo-400', text: 'text-indigo-900' },
-                        { bg: 'bg-violet-50', border: 'border-l-violet-400', text: 'text-violet-900' },
-                        { bg: 'bg-purple-50', border: 'border-l-purple-400', text: 'text-purple-900' },
-                        { bg: 'bg-fuchsia-50', border: 'border-l-fuchsia-400', text: 'text-fuchsia-900' },
-                        { bg: 'bg-pink-50', border: 'border-l-pink-400', text: 'text-pink-900' },
-                        { bg: 'bg-rose-50', border: 'border-l-rose-400', text: 'text-rose-900' },
-                        { bg: 'bg-orange-50', border: 'border-l-orange-400', text: 'text-orange-900' },
-                        { bg: 'bg-amber-50', border: 'border-l-amber-400', text: 'text-amber-900' },
-                        { bg: 'bg-emerald-50', border: 'border-l-emerald-400', text: 'text-emerald-900' },
-                        { bg: 'bg-teal-50', border: 'border-l-teal-400', text: 'text-teal-900' },
-                        { bg: 'bg-cyan-50', border: 'border-l-cyan-400', text: 'text-cyan-900' },
-                        { bg: 'bg-sky-50', border: 'border-l-sky-400', text: 'text-sky-900' },
-                      ];
-                      let hash = 0;
-                      for (let i = 0; i < subjectName.length; i++) {
-                        hash = subjectName.charCodeAt(i) + ((hash << 5) - hash);
-                      }
-                      return colors[Math.abs(hash) % colors.length];
-                    };
-
-                    const colorScheme = lesson.subject ? getSubjectColor(lesson.subject.name) : { bg: 'bg-slate-50', border: 'border-l-slate-400', text: 'text-slate-900' };
-
-                    return (
-                      <div 
-                        key={idx}
-                        className={`p-4 rounded-lg border-l-4 ${colorScheme.bg} ${colorScheme.border} border border-slate-200`}
-                      >
-                        <div className="font-bold text-lg text-slate-900 mb-2">
-                          {lesson.subject?.name || lesson.slot.notes || 'Unassigned'}
-                        </div>
-                        <div className="grid grid-cols-3 gap-3 text-sm">
-                          <div>
-                            <div className="text-slate-500 font-medium">Level</div>
-                            <div className="font-semibold text-slate-900">{lesson.level || 'N/A'}</div>
-                          </div>
-                          <div>
-                            <div className="text-slate-500 font-medium">Teacher</div>
-                            <div className="font-semibold text-slate-900">{lesson.teacher?.full_name || 'Unassigned'}</div>
-                          </div>
-                          <div>
-                            <div className="text-slate-500 font-medium">Room</div>
-                            <div className="font-semibold text-slate-900">{lesson.room?.name || 'TBD'}</div>
-                          </div>
-                        </div>
-                      </div>
-                    );
-                  })}
-                </div>
-              </>
-            ) : (
-              // SINGLE LESSON VIEW
-              <>
-                <div className="flex items-start justify-between mb-6">
-                  <div className="flex-1">
-                    <div className="flex items-center gap-3 mb-2">
-                      <h3 className="text-3xl font-bold text-slate-900">
-                        {selectedSlot.subject?.name || selectedSlot.slot?.notes || 'Slot'}
-                      </h3>
-                      {!isEditing && onUpdateSlot && (
-                        <Button 
-                          variant="outline" 
-                          size="sm" 
-                          onClick={() => {
-                            setIsEditing(true);
-                            setEditForm({
-                              teacher_id: selectedSlot.slot?.teacher_id || 'unassigned',
-                              room_id: selectedSlot.slot?.room_id || 'unassigned'
-                            });
-                          }}
-                        >
-                          Edit
-                        </Button>
-                      )}
-                    </div>
-                    <p className="text-slate-500 text-lg">
-                      {selectedSlot.slot?.day}, Period {selectedSlot.slot?.uiRow || selectedSlot.slot?.period}
-                    </p>
-                  </div>
-                  <button 
-                    onClick={() => { setSelectedSlot(null); setIsEditing(false); }}
-                    className="text-slate-400 hover:text-slate-600 transition-colors p-1"
-                  >
-                    <svg className="w-7 h-7" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
-                    </svg>
-                  </button>
-                </div>
-
-                <div className="space-y-4">
-                  <div className="bg-gradient-to-br from-slate-50 to-slate-100 rounded-xl p-5 border border-slate-200">
-                    <div className="text-sm font-semibold text-slate-600 mb-2">Level</div>
-                    <div className="text-xl font-bold text-slate-900">{selectedSlot.slot?.display_level_override || selectedSlot.group?.level}</div>
-                  </div>
-
-                  <div className="bg-gradient-to-br from-blue-50 to-blue-100 rounded-xl p-5 border border-blue-200">
-                    <div className="text-sm font-semibold text-blue-600 mb-2">Teacher</div>
-                    {isEditing ? (
-                      <Select 
-                        value={editForm.teacher_id} 
-                        onValueChange={(val) => setEditForm(prev => ({ ...prev, teacher_id: val }))}
-                      >
-                        <SelectTrigger className="w-full bg-white text-lg h-12">
-                          <SelectValue placeholder="Select teacher" />
-                        </SelectTrigger>
-                        <SelectContent>
-                          <SelectItem value="unassigned">Unassigned</SelectItem>
-                          {teachers.map(t => (
-                            <SelectItem key={t.id} value={t.id}>{t.full_name}</SelectItem>
-                          ))}
-                        </SelectContent>
-                      </Select>
-                    ) : (
-                      <>
-                        <div className="text-xl font-bold text-blue-900">
-                          {selectedSlot.teacher?.full_name || 'Not assigned'}
-                        </div>
-                        {selectedSlot.teacher?.email && (
-                          <div className="text-sm text-blue-700 mt-2">{selectedSlot.teacher.email}</div>
-                        )}
-                      </>
-                    )}
-                  </div>
-
-                  <div className="bg-gradient-to-br from-emerald-50 to-emerald-100 rounded-xl p-5 border border-emerald-200">
-                    <div className="text-sm font-semibold text-emerald-600 mb-2">Room</div>
-                    {isEditing ? (
-                      <Select 
-                        value={editForm.room_id} 
-                        onValueChange={(val) => setEditForm(prev => ({ ...prev, room_id: val }))}
-                      >
-                        <SelectTrigger className="w-full bg-white text-lg h-12">
-                          <SelectValue placeholder="Select room" />
-                        </SelectTrigger>
-                        <SelectContent>
-                          <SelectItem value="unassigned">Unassigned</SelectItem>
-                          {rooms.map(r => (
-                            <SelectItem key={r.id} value={r.id}>{r.name} ({r.capacity} cap)</SelectItem>
-                          ))}
-                        </SelectContent>
-                      </Select>
-                    ) : (
-                      <>
-                        <div className="text-xl font-bold text-emerald-900">
-                          {selectedSlot.room?.name || 'Not assigned'}
-                        </div>
-                        {selectedSlot.room?.building && (
-                          <div className="text-sm text-emerald-700 mt-2">
-                            Building {selectedSlot.room.building}
-                            {selectedSlot.room.floor && `, Floor ${selectedSlot.room.floor}`}
-                          </div>
-                        )}
-                        {selectedSlot.room?.capacity && (
-                          <div className="text-sm text-emerald-700 mt-1">
-                            Capacity: {selectedSlot.room.capacity} students
-                          </div>
-                        )}
-                      </>
-                    )}
-                  </div>
-
-                  <div className="bg-gradient-to-br from-violet-50 to-violet-100 rounded-xl p-5 border border-violet-200">
-                    <div className="text-sm font-semibold text-violet-600 mb-2">Group Details</div>
-                    <div className="text-lg font-bold text-violet-900">{selectedSlot.group?.name}</div>
-                    {selectedSlot.group?.student_ids?.length > 0 && (
-                      <div className="text-sm text-violet-700 mt-2">
-                        {selectedSlot.group.student_ids.length} students enrolled
-                      </div>
-                    )}
-                  </div>
-
-                  {isEditing && (
-                    <div className="flex items-center gap-3 pt-4">
-                      <Button 
-                        size="lg"
-                        onClick={() => {
-                          if (confirm('Save these changes?')) {
-                            const newTeacherId = editForm.teacher_id === 'unassigned' ? null : editForm.teacher_id;
-                            const newRoomId = editForm.room_id === 'unassigned' ? null : editForm.room_id;
-                            onUpdateSlot?.(selectedSlot.slot.id, {
-                              teacher_id: newTeacherId,
-                              room_id: newRoomId
-                            });
-                            setIsEditing(false);
-                            // Optimistically update local view
-                            const updatedSlot = { 
-                              ...selectedSlot.slot,
-                              teacher_id: newTeacherId,
-                              room_id: newRoomId
-                            };
-                            setSelectedSlot({
-                              ...selectedSlot,
-                              slot: updatedSlot,
-                              teacher: teachers.find(t => t.id === newTeacherId) || null,
-                              room: rooms.find(r => r.id === newRoomId) || null
-                            });
-                          }
-                        }}
-                        className="bg-blue-600 hover:bg-blue-700 text-white"
-                      >
-                        Save Changes
-                      </Button>
-                      <Button 
-                        size="lg"
-                        variant="outline" 
-                        onClick={() => setIsEditing(false)}
-                      >
-                        Cancel
-                      </Button>
-                    </div>
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 p-4 backdrop-blur-sm" onClick={() => setSelectedSlot(null)}>
+          <div className="max-h-[90vh] w-full max-w-2xl overflow-y-auto rounded-2xl bg-white p-8 shadow-2xl" onClick={(e) => e.stopPropagation()}>
+            <div className="mb-6 flex items-start justify-between">
+              <div className="flex-1">
+                <div className="mb-2 flex items-center gap-3">
+                  <h3 className="text-3xl font-bold text-slate-900">{selectedSlot.subject?.name || selectedSlot.slot?.notes || 'Slot'}</h3>
+                  {!isEditing && onUpdateSlot && (
+                    <Button variant="outline" size="sm" onClick={() => {
+                      setIsEditing(true);
+                      setEditForm({
+                        teacher_id: selectedSlot.slot?.teacher_id || 'unassigned',
+                        room_id: selectedSlot.slot?.room_id || 'unassigned',
+                      });
+                    }}>Edit</Button>
                   )}
                 </div>
-              </>
-            )}
+                <p className="text-lg text-slate-500">{selectedSlot.slot?.day}, Period {selectedSlot.slot?.uiRow || selectedSlot.slot?.period}</p>
+              </div>
+              <button onClick={() => { setSelectedSlot(null); setIsEditing(false); }} className="p-1 text-slate-400 transition-colors hover:text-slate-600">×</button>
+            </div>
 
-            <button
-              onClick={() => { setSelectedSlot(null); setIsEditing(false); }}
-              className="w-full mt-6 px-6 py-4 bg-slate-900 text-white rounded-xl font-bold text-lg hover:bg-slate-800 transition-colors shadow-lg"
-            >
-              Close
-            </button>
+            <div className="space-y-4">
+              <div className="rounded-xl border border-slate-200 bg-gradient-to-br from-slate-50 to-slate-100 p-5">
+                <div className="mb-2 text-sm font-semibold text-slate-600">Level</div>
+                <div className="text-xl font-bold text-slate-900">{selectedSlot.slot?.display_level_override || selectedSlot.level || '—'}</div>
+              </div>
+
+              <div className="rounded-xl border border-blue-200 bg-gradient-to-br from-blue-50 to-blue-100 p-5">
+                <div className="mb-2 text-sm font-semibold text-blue-600">Teacher</div>
+                {isEditing ? (
+                  <Select value={editForm.teacher_id} onValueChange={(value) => setEditForm((prev) => ({ ...prev, teacher_id: value }))}>
+                    <SelectTrigger className="h-12 w-full bg-white text-lg"><SelectValue placeholder="Select teacher" /></SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="unassigned">Unassigned</SelectItem>
+                      {teachers.map((teacher) => <SelectItem key={teacher.id} value={teacher.id}>{teacher.full_name}</SelectItem>)}
+                    </SelectContent>
+                  </Select>
+                ) : (
+                  <div className="text-xl font-bold text-blue-900">{selectedSlot.teacher?.full_name || 'Not assigned'}</div>
+                )}
+              </div>
+
+              <div className="rounded-xl border border-emerald-200 bg-gradient-to-br from-emerald-50 to-emerald-100 p-5">
+                <div className="mb-2 text-sm font-semibold text-emerald-600">Room</div>
+                {isEditing ? (
+                  <Select value={editForm.room_id} onValueChange={(value) => setEditForm((prev) => ({ ...prev, room_id: value }))}>
+                    <SelectTrigger className="h-12 w-full bg-white text-lg"><SelectValue placeholder="Select room" /></SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="unassigned">Unassigned</SelectItem>
+                      {rooms.map((room) => <SelectItem key={room.id} value={room.id}>{room.name} ({room.capacity} cap)</SelectItem>)}
+                    </SelectContent>
+                  </Select>
+                ) : (
+                  <div className="text-xl font-bold text-emerald-900">{selectedSlot.room?.name || 'Not assigned'}</div>
+                )}
+              </div>
+            </div>
+
+            {isEditing && (
+              <div className="flex items-center gap-3 pt-6">
+                <Button size="lg" className="bg-blue-600 hover:bg-blue-700 text-white" onClick={() => {
+                  const newTeacherId = editForm.teacher_id === 'unassigned' ? null : editForm.teacher_id;
+                  const newRoomId = editForm.room_id === 'unassigned' ? null : editForm.room_id;
+                  onUpdateSlot?.(selectedSlot.slot.id, { teacher_id: newTeacherId, room_id: newRoomId });
+                  setIsEditing(false);
+                  setSelectedSlot((prev) => ({
+                    ...prev,
+                    slot: { ...prev.slot, teacher_id: newTeacherId, room_id: newRoomId },
+                    teacher: teachers.find((teacher) => teacher.id === newTeacherId) || null,
+                    room: rooms.find((room) => room.id === newRoomId) || null,
+                  }));
+                }}>Save Changes</Button>
+                <Button size="lg" variant="outline" onClick={() => setIsEditing(false)}>Cancel</Button>
+              </div>
+            )}
           </div>
         </div>
       )}
