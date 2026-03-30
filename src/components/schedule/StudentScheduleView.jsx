@@ -192,6 +192,7 @@ export default function StudentScheduleView({
                   periodDurationMinutes={scheduleSettings?.period_duration_minutes || 60}
                   scheduleSettings={scheduleSettings}
                   globalView={false}
+                  studentHourGrid={true}
                   exportId={exportId}
                   timeslots={timeslots}
                 />

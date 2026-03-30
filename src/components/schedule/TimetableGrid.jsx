@@ -77,7 +77,8 @@ export default function TimetableGrid({
   timeslots = [],
   scheduleSettings = {},
   globalView = false,
-  compactPrintView = false
+  compactPrintView = false,
+  studentHourGrid = false
 }) {
   const formatClockTime = (timeValue) => String(timeValue || '').slice(0, 5);
 
@@ -99,6 +100,11 @@ export default function TimetableGrid({
   };
 
   const isShortLesson = (slot) => getSlotDurationMinutes(slot) < Number(periodDurationMinutes || 60);
+  const getStudentHourGridCardClass = (slot) => {
+    const duration = getSlotDurationMinutes(slot);
+    if (duration <= 30) return 'h-[calc(50%-1px)]';
+    return 'h-full';
+  };
   const isMediumLesson = (slot) => {
     const duration = getSlotDurationMinutes(slot);
     const base = Number(periodDurationMinutes || 60);
@@ -573,7 +579,7 @@ export default function TimetableGrid({
                   return (
                     <div 
                       key={`${day}-${uiRow}`} 
-                      className={`border-r border-slate-300 last:border-r-0 ${compactPrintView ? 'p-0.5' : 'p-2'} relative ${getCellMinHeightClass(hasShortLessonInCell)} ${globalView ? 'flex flex-row flex-wrap gap-1 content-start' : compactPrintView ? 'space-y-0.5' : 'space-y-2'} ${hasShortLessonInCell && !compactPrintView ? 'bg-gradient-to-b from-blue-50/30 to-white' : ''} ${compactPrintView ? 'bg-[#f4f4f4]' : ''}`}
+                      className={`border-r border-slate-300 last:border-r-0 ${compactPrintView ? 'p-0.5' : studentHourGrid ? 'p-0' : 'p-2'} relative ${studentHourGrid ? 'min-h-[96px]' : getCellMinHeightClass(hasShortLessonInCell)} ${globalView ? 'flex flex-row flex-wrap gap-1 content-start' : compactPrintView ? 'space-y-0.5' : studentHourGrid ? 'flex flex-col' : 'space-y-2'} ${hasShortLessonInCell && !compactPrintView && !studentHourGrid ? 'bg-gradient-to-b from-blue-50/30 to-white' : ''} ${compactPrintView ? 'bg-[#f4f4f4]' : studentHourGrid ? 'bg-white' : ''}`}
                       onDragOver={(e) => e.preventDefault()}
                       onDrop={(e) => {
                         e.preventDefault();
@@ -698,6 +704,18 @@ export default function TimetableGrid({
                                 {!slot.is_break && subject && (
                                   <span className="text-slate-600 opacity-80 text-center truncate w-full block text-[9px]">{room?.name || 'TBD'}</span>
                                 )}
+                              </div>
+                            ) : studentHourGrid ? (
+                              <div className={`relative w-full ${getStudentHourGridCardClass(slot)} ${shortLesson ? 'border-b border-slate-300' : ''}`}>
+                                <div className={`absolute inset-x-0 ${shortLesson ? 'top-0 bottom-0' : 'inset-0'} border-l-4 ${colorScheme.bg} ${colorScheme.border} border border-slate-200 px-2 py-2 flex flex-col justify-center overflow-hidden`}>
+                                  <div className="text-xs font-semibold text-slate-900 leading-tight truncate">
+                                    {getDisplaySubjectLabel(subject, slot)}
+                                  </div>
+                                  <div className="text-[11px] text-slate-600 truncate">
+                                    {slotTiming.start && slotTiming.end ? `${slotTiming.start} - ${slotTiming.end}` : `${slotDurationMinutes} min`}
+                                  </div>
+                                  {room?.name && <div className="text-[11px] text-slate-500 truncate">{room.name}</div>}
+                                </div>
                               </div>
                             ) : compactPrintView ? (
                               <div className={`border ${colorScheme.bg} ${compactPrintView ? 'rounded-none shadow-none' : 'rounded-lg'} ${shortLesson ? 'border-dashed' : 'border-slate-400'} ${getLessonCardHeightClass(slot)} flex flex-col items-center justify-center px-1 py-1 text-center overflow-hidden`}>
