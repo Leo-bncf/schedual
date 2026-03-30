@@ -341,6 +341,11 @@ export default function TimetableGrid({
     return normalizedSlots.filter(s => s.day === day && s.uiRow === uiRow);
   };
 
+  const getCellDividerClass = (slotsInCell) => {
+    const hasHalfBlock = (slotsInCell || []).some(slot => getSlotDurationMinutes(slot) <= 30);
+    return hasHalfBlock ? 'relative after:absolute after:left-0 after:right-0 after:top-1/2 after:h-px after:bg-slate-300 after:content-[""]' : '';
+  };
+
   const getGroupInfo = (groupId) => {
     return groups.find(g => g.id === groupId);
   };
@@ -366,38 +371,18 @@ export default function TimetableGrid({
 
   // FIX BUG #2: Calculate actual periods needed based on timeslots per day (not just config)
   const computedPeriodsPerDay = React.useMemo(() => {
-    if (!timeslots || timeslots.length === 0) return periodsPerDay;
-    
-    // Count timeslots per day
-    const countsPerDay = {};
-    DAYS.forEach(day => {
-      const dayUpper = day.toUpperCase();
-      countsPerDay[day] = timeslots.filter(t => t.dayOfWeek === dayUpper).length;
-    });
-    
-    const maxTimeslotsPerDay = Math.max(...Object.values(countsPerDay), 0);
-    
-    // Also check max period in normalized slots
     const maxPeriodInSlots = normalizedSlots.reduce((max, s) => Math.max(max, s.uiRow || 0), 0);
-    
-    // Cap maxPeriodInSlots to a reasonable range to prevent runaway grid expansion from bad data
     const cappedMaxPeriod = Math.min(maxPeriodInSlots, 20);
-    const computed = Math.max(periodsPerDay, maxTimeslotsPerDay, cappedMaxPeriod);
-    
-    if (computed > periodsPerDay) {
-      console.warn(`[TimetableGrid] ⚠️ GRID EXPANSION: periodsPerDay=${periodsPerDay} but timeslots/slots require ${computed} rows. Expanding grid to prevent hiding slots.`);
-    }
-    
+    const computed = Math.max(periodsPerDay, cappedMaxPeriod);
+
     console.log('[TimetableGrid] 📊 GRID SIZE DIAGNOSTIC:', {
       configPeriodsPerDay: periodsPerDay,
-      maxTimeslotsPerDay,
       maxPeriodInSlots,
       computedPeriodsPerDay: computed,
-      countsPerDay
     });
-    
+
     return computed;
-  }, [timeslots, periodsPerDay, normalizedSlots]);
+  }, [periodsPerDay, normalizedSlots]);
 
   const activePeriods = Array.from({ length: computedPeriodsPerDay }, (_, i) => i + 1);
 
@@ -579,7 +564,7 @@ export default function TimetableGrid({
                   return (
                     <div 
                       key={`${day}-${uiRow}`} 
-                      className={`border-r border-slate-300 last:border-r-0 ${compactPrintView ? 'p-0.5' : studentHourGrid ? 'p-0' : 'p-2'} relative ${studentHourGrid ? 'min-h-[96px]' : getCellMinHeightClass(hasShortLessonInCell)} ${globalView ? 'flex flex-row flex-wrap gap-1 content-start' : compactPrintView ? 'space-y-0.5' : studentHourGrid ? 'flex flex-col' : 'space-y-2'} ${hasShortLessonInCell && !compactPrintView && !studentHourGrid ? 'bg-gradient-to-b from-blue-50/30 to-white' : ''} ${compactPrintView ? 'bg-[#f4f4f4]' : studentHourGrid ? 'bg-white' : ''}`}
+                      className={`border-r border-slate-300 last:border-r-0 ${compactPrintView ? 'p-0.5' : studentHourGrid ? 'p-0' : 'p-2'} relative ${studentHourGrid ? 'min-h-[96px]' : getCellMinHeightClass(hasShortLessonInCell)} ${globalView ? 'flex flex-row flex-wrap gap-1 content-start' : compactPrintView ? 'space-y-0.5' : studentHourGrid ? 'flex flex-col' : 'space-y-2'} ${hasShortLessonInCell && !compactPrintView && !studentHourGrid ? 'bg-gradient-to-b from-blue-50/30 to-white' : ''} ${compactPrintView ? 'bg-[#f4f4f4]' : studentHourGrid ? 'bg-white' : ''} ${getCellDividerClass(visibleSlots)}`}
                       onDragOver={(e) => e.preventDefault()}
                       onDrop={(e) => {
                         e.preventDefault();

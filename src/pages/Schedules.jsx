@@ -907,6 +907,7 @@ export default function Schedules() {
                           periodDurationMinutes={school?.period_duration_minutes || 60}
                           scheduleSettings={school}
                           globalView={false}
+                          studentHourGrid={true}
                           exportId="teacher-viewer-timetable"
                           timeslots={
                       typeof selectedVersion?.generation_params === 'string'
