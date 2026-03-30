@@ -54,18 +54,33 @@ export default function TimetableGrid({
   }, [timeslotListByDay]);
 
   const periodTimes = React.useMemo(() => {
-    if (!timeslots.length) {
-      return calculatePeriodTimes(dayStartTime, periodDurationMinutes, periodsPerDay, Array.isArray(scheduleSettings?.breaks) ? scheduleSettings.breaks : []);
-    }
+    const format = (mins) => {
+      const h = Math.floor(mins / 60);
+      const m = mins % 60;
+      return `${String(h).padStart(2, '0')}:${String(m).padStart(2, '0')}`;
+    };
+
     const times = {};
-    Object.values(timeslotListByDay).forEach((daySlots) => {
-      daySlots.forEach((ts, idx) => {
-        const row = idx + 1;
-        if (!times[row]) times[row] = `${formatClockTime(ts.startTime)} - ${formatClockTime(ts.endTime)}`;
-      });
+    activePeriods.forEach((row) => {
+      const rowStart = gridStartMins + ((row - 1) * 60);
+      const rowEnd = rowStart + 60;
+
+      const rowBoundaries = (timeslots || [])
+        .flatMap((ts) => [ts.startTime, ts.endTime])
+        .map((value) => formatClockTime(value))
+        .filter(Boolean)
+        .map((value) => {
+          const [h, m] = value.split(':').map(Number);
+          return (h * 60) + m;
+        })
+        .filter((mins) => mins >= rowStart && mins <= rowEnd)
+        .sort((a, b) => a - b);
+
+      times[row] = Array.from(new Set([rowStart, ...rowBoundaries, rowEnd])).map(format);
     });
+
     return times;
-  }, [timeslots, timeslotListByDay, dayStartTime, periodDurationMinutes, periodsPerDay, scheduleSettings]);
+  }, [activePeriods, gridStartMins, timeslots]);
 
   const normalizedSlots = React.useMemo(() => {
     return (slots || []).map((slot) => {
@@ -178,9 +193,22 @@ export default function TimetableGrid({
 
             {activePeriods.map((uiRow) => (
               <div key={uiRow} className="grid grid-cols-[100px_repeat(5,1fr)] border-b border-slate-300" style={{ overflow: 'visible', position: 'relative', zIndex: 0 }}>
-                <div className="flex min-h-[116px] flex-col items-center justify-center border-r border-slate-300 bg-slate-50 p-4 text-center">
-                  <div className="text-sm font-bold text-slate-800">{uiRow}</div>
-                  <div className="mt-1 whitespace-nowrap text-[10px] text-slate-500">{periodTimes[uiRow] || `Period ${uiRow}`}</div>
+                <div className="relative min-h-[116px] border-r border-slate-300 bg-slate-50 px-3 py-2 text-center">
+                  <div className="absolute left-1.5 top-2 text-[10px] font-bold text-slate-700">{uiRow}</div>
+                  <div className="relative h-full min-h-[100px]">
+                    {(periodTimes[uiRow] || [`Period ${uiRow}`]).map((time, index, arr) => {
+                      const top = arr.length === 1 ? 0 : (index / (arr.length - 1)) * 100;
+                      return (
+                        <div
+                          key={`${uiRow}-${time}-${index}`}
+                          className="absolute left-0 right-0 -translate-y-1/2 text-[10px] text-slate-500"
+                          style={{ top: `${top}%` }}
+                        >
+                          {time}
+                        </div>
+                      );
+                    })}
+                  </div>
                 </div>
                 {DAYS.map((day) => {
                   const cell = rowMatrix[day][uiRow];
