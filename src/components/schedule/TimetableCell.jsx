@@ -32,13 +32,12 @@ export default function TimetableCell({
       <div className={`absolute inset-1 flex ${globalView ? 'flex-row flex-wrap content-start' : 'flex-col'} gap-1`} style={{ zIndex: 1 }}>
         {slots.map((slot) => {
           const data = renderSlotData(slot);
-          const duration = slot.__durationMinutes || Number(periodDurationMinutes || 60);
-          const base = Number(periodDurationMinutes || 60);
-          // Height as % of this row's height (116px per row assumed)
-          const heightMultiplier = duration / base;
-          // Only float beyond 100% if it genuinely overflows
-          const heightPct = heightMultiplier > 1 ? `${heightMultiplier * 100}%` : '100%';
-          const spills = heightMultiplier > 1 && heightMultiplier < 2;
+          const duration = slot.__durationMinutes || 60;
+          const base = 60;
+          const topOffsetMinutes = Number(slot.__topOffsetMinutes || 0);
+          const heightPct = `${(duration / base) * 100}%`;
+          const topPct = `${(topOffsetMinutes / base) * 100}%`;
+          const spills = topOffsetMinutes + duration > base;
 
           return (
             <FloatingSlotCard
@@ -46,6 +45,7 @@ export default function TimetableCell({
               {...data}
               slot={slot}
               heightPct={heightPct}
+              topPct={topPct}
               spills={spills}
               globalView={globalView}
               onClick={() => onSlotClick(slot)}
@@ -57,7 +57,7 @@ export default function TimetableCell({
   );
 }
 
-function FloatingSlotCard({ slot, subject, teacher, room, level, isStudentView, globalView, durationMinutes, heightPct, spills, onClick }) {
+function FloatingSlotCard({ slot, subject, teacher, room, level, isStudentView, globalView, durationMinutes, heightPct, topPct = '0%', spills, onClick }) {
   const isExamTime =
     String(subject?.code || '').trim().toUpperCase() === 'TEST' ||
     String(subject?.name || '').trim().toUpperCase() === 'EXAM TIME';
@@ -92,10 +92,10 @@ function FloatingSlotCard({ slot, subject, teacher, room, level, isStudentView, 
         cursor-pointer overflow-hidden border-l-4 rounded-xl px-3 py-2
         ${colorScheme.bg} ${colorScheme.border} border border-slate-200
         shadow-sm hover:shadow-md transition-shadow
-        ${globalView ? 'w-[calc(50%-4px)] lg:w-[calc(33.33%-4px)] flex flex-col items-center justify-center text-center p-1.5' : 'w-full flex flex-col'}
-        ${spills ? 'relative z-10 ring-1 ring-violet-300 shadow-[0_4px_12px_rgba(139,92,246,0.15)]' : 'relative'}
+        ${globalView ? 'w-[calc(50%-4px)] lg:w-[calc(33.33%-4px)] flex flex-col items-center justify-center text-center p-1.5 relative' : 'w-full flex flex-col absolute left-0 right-0'}
+        ${spills ? 'z-10 ring-1 ring-violet-300 shadow-[0_4px_12px_rgba(139,92,246,0.15)]' : 'z-[1]'}
       `}
-      style={{ height: heightPct }}
+      style={{ height: heightPct, top: topPct }}
     >
       {globalView ? (
         <>

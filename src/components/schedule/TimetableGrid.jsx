@@ -140,19 +140,17 @@ export default function TimetableGrid({
     DAYS.forEach((day) => {
       matrix[day] = {};
       activePeriods.forEach((row) => {
-        let rowSlots = normalizedSlots.filter((slot) => slot.day === day && slot.uiRow === row && !slot.is_break);
-        
+        let rowSlots = normalizedSlots.filter((slot) => slot.day === day && slot.uiRow === row);
+
         if (globalView) {
           rowSlots = rowSlots.filter((slot, idx, arr) =>
-            !slot.teaching_group_id || arr.findIndex(s => s.teaching_group_id === slot.teaching_group_id) === idx
+            !slot.teaching_group_id || arr.findIndex((s) => s.teaching_group_id === slot.teaching_group_id) === idx
           );
         }
 
-        const carryOverSlots = normalizedSlots.filter((slot) => slot.day === day && slot.uiRow === row - 1 && slot.__spillsIntoNextRow);
-
         matrix[day][row] = {
           slots: rowSlots,
-          hasContent: rowSlots.length > 0 || carryOverSlots.length > 0,
+          hasContent: rowSlots.length > 0,
         };
       });
     });
