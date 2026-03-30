@@ -122,10 +122,17 @@ Deno.serve(async (req) => {
       const subjectId = slot.subject_id || slotGroup?.subject_id;
       const subject = subjectById[subjectId];
       const slotNotes = String(slot?.notes || '');
-      const isNamedYearExamSlot = isExamTimeSubject(subject, slot) && (slotNotes.includes('DP1') || slotNotes.includes('DP2'));
+      const normalizedNotes = normalizeCode(slotNotes);
+      const isExamSlot = isExamTimeSubject(subject, slot);
+      const isNamedYearExamSlot = isExamSlot && (normalizedNotes.includes('DP1') || normalizedNotes.includes('DP2'));
 
       if (isNamedYearExamSlot) {
-        return studentYearGroup && slotNotes.includes(studentYearGroup);
+        return studentYearGroup && normalizedNotes.includes(normalizeCode(studentYearGroup));
+      }
+
+      if (isExamSlot) {
+        const scope = extractYearGroupScope(slot, slotGroup);
+        return !scope || scope === 'DP1_DP2' || scope === studentYearGroup;
       }
 
       if (slotGroup?.id && assignedGroupIdSet.has(slotGroup.id)) {
