@@ -457,14 +457,14 @@ export default function TimetableGrid({
   return (
     <>
       
-      <Card className="overflow-hidden border-0 shadow-sm" id={exportId}>
+      <Card className={`overflow-hidden border-0 shadow-sm ${isStudentView ? 'rounded-none bg-transparent shadow-none' : ''}`} id={exportId}>
         <div className="overflow-x-auto">
           <div className="min-w-[1200px]">
             {/* Header Row */}
-            <div className="grid grid-cols-[100px_repeat(5,1fr)] bg-slate-100 border-b-2 border-slate-300">
-              <div className="p-4 font-bold text-slate-700 text-base border-r border-slate-300">Time</div>
+            <div className={`grid grid-cols-[100px_repeat(5,1fr)] border-b-2 ${isStudentView ? 'bg-gradient-to-r from-slate-900 via-slate-800 to-slate-900 border-slate-700' : 'bg-slate-100 border-slate-300'}`}>
+              <div className={`p-4 font-bold text-base border-r ${isStudentView ? 'text-slate-100 border-slate-700' : 'text-slate-700 border-slate-300'}`}>Time</div>
               {DAYS.map(day => (
-                <div key={day} className="p-4 font-bold text-slate-700 text-center text-base border-r border-slate-300 last:border-r-0">
+                <div key={day} className={`p-4 font-bold text-center text-base border-r last:border-r-0 ${isStudentView ? 'text-slate-100 border-slate-700' : 'text-slate-700 border-slate-300'}`}>
                   {day}
                 </div>
               ))}
@@ -489,7 +489,7 @@ export default function TimetableGrid({
                   </div>
                 ) : (
                 <div className="grid grid-cols-[100px_repeat(5,1fr)] border-b border-slate-300">
-                  <div className={`p-4 bg-slate-50 border-r border-slate-300 flex flex-col justify-center items-center text-center ${getCellMinHeightClass(getSlotData(DAYS[0], uiRow).some(slot => isShortLesson(slot)) || getSlotData(DAYS[1], uiRow).some(slot => isShortLesson(slot)) || getSlotData(DAYS[2], uiRow).some(slot => isShortLesson(slot)) || getSlotData(DAYS[3], uiRow).some(slot => isShortLesson(slot)) || getSlotData(DAYS[4], uiRow).some(slot => isShortLesson(slot)))}`}>
+                  <div className={`p-4 border-r flex flex-col justify-center items-center text-center ${isStudentView ? 'bg-slate-50/80 border-slate-200' : 'bg-slate-50 border-slate-300'} ${getCellMinHeightClass(getSlotData(DAYS[0], uiRow).some(slot => isShortLesson(slot)) || getSlotData(DAYS[1], uiRow).some(slot => isShortLesson(slot)) || getSlotData(DAYS[2], uiRow).some(slot => isShortLesson(slot)) || getSlotData(DAYS[3], uiRow).some(slot => isShortLesson(slot)) || getSlotData(DAYS[4], uiRow).some(slot => isShortLesson(slot)))}`}>
                     <div className="text-sm font-bold text-slate-800">{uiRow}</div>
                     <div className="text-[10px] text-slate-500 mt-1 whitespace-nowrap">{periodTimes[uiRow] || `Period ${uiRow}`}</div>
                   </div>
@@ -652,7 +652,7 @@ export default function TimetableGrid({
                               e.dataTransfer.setData('sourcePeriod', String(uiRow));
                               e.dataTransfer.setData('sourceTimeslotId', String(slot.timeslot_id || ''));
                             }}
-                            className={`cursor-move transition-all overflow-hidden group ${globalView ? 'w-[calc(50%-4px)] lg:w-[calc(33.33%-4px)] rounded hover:ring-2 hover:ring-blue-400' : 'hover:shadow-lg rounded-lg'} ${shortLesson ? 'self-start' : ''}`}
+                            className={`cursor-move transition-all overflow-hidden group ${globalView ? 'w-[calc(50%-4px)] lg:w-[calc(33.33%-4px)] rounded hover:ring-2 hover:ring-blue-400' : `${isStudentView ? 'rounded-xl hover:-translate-y-0.5 hover:shadow-xl' : 'hover:shadow-lg rounded-lg'}`} ${shortLesson ? 'self-start' : ''}`}
                             onClick={() => handleSlotClick(slot)}
                           >
                             {!globalView && (

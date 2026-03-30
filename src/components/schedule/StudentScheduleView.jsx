@@ -74,11 +74,18 @@ export default function StudentScheduleView({
 
   return (
     <div className="space-y-4">
-      <div className="space-y-2">
-        <div className="flex items-center gap-2">
-          <GraduationCap className="w-5 h-5 text-indigo-600" />
-          <span className="text-sm font-medium text-slate-700">Select Student</span>
-          {selectedStudent && <Badge variant="outline">{slots.length} lessons</Badge>}
+      <div className="space-y-3 rounded-2xl border border-slate-200 bg-white p-4 shadow-sm">
+        <div className="flex flex-wrap items-center gap-2">
+          <div className="flex items-center gap-2">
+            <div className="flex h-9 w-9 items-center justify-center rounded-xl bg-indigo-100">
+              <GraduationCap className="w-5 h-5 text-indigo-600" />
+            </div>
+            <div>
+              <div className="text-sm font-semibold text-slate-900">Student timetable</div>
+              <div className="text-xs text-slate-500">Choose a student to load a cleaner weekly view</div>
+            </div>
+          </div>
+          {selectedStudent && <Badge variant="outline" className="ml-auto">{slots.length} lessons</Badge>}
           {isLoading && <Badge variant="outline">Loading...</Badge>}
         </div>
 
@@ -103,8 +110,10 @@ export default function StudentScheduleView({
 
       {selectedStudent && (
         <>
-          <div className="p-4 rounded-xl border border-slate-200 bg-gradient-to-r from-slate-50 to-blue-50">
-            <div className="flex items-center gap-3">
+          <div className="overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-sm">
+            <div className="h-1.5 bg-gradient-to-r from-blue-500 via-indigo-500 to-violet-500" />
+            <div className="p-4 bg-gradient-to-r from-slate-50 to-blue-50">
+            <div className="flex flex-col gap-3 sm:flex-row sm:items-center">
               <div className="w-10 h-10 rounded-lg bg-blue-100 flex items-center justify-center text-blue-700 font-bold">
                 {selectedStudent.full_name?.charAt(0)?.toUpperCase() || 'S'}
               </div>
@@ -114,7 +123,7 @@ export default function StudentScheduleView({
                   {selectedStudent.year_group} • {selectedStudent.ib_programme || 'IB'}
                 </p>
               </div>
-              <div className="flex items-center gap-2">
+              <div className="flex flex-wrap items-center gap-2">
                 <ExportTimetableButton
                   type="student"
                   entityId={selectedStudent.id}
@@ -124,6 +133,7 @@ export default function StudentScheduleView({
                   {isFullscreen ? <Minimize2 className="w-4 h-4" /> : <Maximize2 className="w-4 h-4" />}
                 </Button>
               </div>
+            </div>
             </div>
           </div>
 
@@ -149,18 +159,18 @@ export default function StudentScheduleView({
           ) : (
             <Card
               className={cn(
-                'overflow-hidden border-blue-200 shadow-sm transition-all duration-300 bg-white',
-                isFullscreen ? 'fixed inset-4 z-[100] flex flex-col shadow-2xl overflow-hidden' : ''
+                'overflow-hidden border-slate-200 shadow-sm transition-all duration-300 bg-white rounded-2xl',
+                isFullscreen ? 'fixed inset-4 z-[100] flex flex-col shadow-2xl overflow-hidden rounded-2xl' : ''
               )}
               id={exportId}
             >
-              <div className="flex items-center justify-between p-2 border-b border-slate-200 bg-slate-50 sticky top-0 z-20">
+              <div className="sticky top-0 z-20 flex items-center justify-between gap-3 border-b border-slate-200 bg-white/95 p-3 backdrop-blur">
                 <div className="pl-2">
-                  <div className="text-sm font-semibold text-slate-700">
-                    Timetable: {selectedStudent.full_name}
+                  <div className="text-sm font-semibold text-slate-900">
+                    {selectedStudent.full_name}'s timetable
                   </div>
                   <div className="text-xs text-slate-500">
-                    Lesson durations now use the real slot times, including 90-minute blocks.
+                    Clear weekly layout with real lesson durations and easier scanning.
                   </div>
                 </div>
                 <Button variant="outline" size="sm" onClick={() => setIsFullscreen(!isFullscreen)} className="bg-white">
@@ -168,7 +178,7 @@ export default function StudentScheduleView({
                   <span className="hidden sm:inline">{isFullscreen ? 'Exit full screen' : 'Full screen'}</span>
                 </Button>
               </div>
-              <div className="h-1 bg-blue-500" />
+              <div className="h-1 bg-gradient-to-r from-blue-500 via-indigo-500 to-violet-500" />
               <div className={cn('overflow-auto', isFullscreen ? 'flex-1' : 'overflow-x-auto')}>
                 <TimetableGrid
                   slots={slots}
