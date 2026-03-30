@@ -122,6 +122,11 @@ export default function TimetableGrid({
     if (globalView) return hasShortLesson ? 'min-h-[56px]' : 'min-h-[96px]';
     return hasShortLesson ? 'min-h-[72px]' : 'min-h-[120px]';
   };
+
+  const getLessonCardContainerClass = (slot) => {
+    if (globalView) return getLessonCardHeightClass(slot);
+    return isShortLesson(slot) ? `${getLessonCardHeightClass(slot)} self-start` : 'h-full';
+  };
   const [selectedSlot, setSelectedSlot] = React.useState(null);
   const [isEditing, setIsEditing] = React.useState(false);
   const [editForm, setEditForm] = React.useState({});
@@ -652,7 +657,7 @@ export default function TimetableGrid({
                               e.dataTransfer.setData('sourcePeriod', String(uiRow));
                               e.dataTransfer.setData('sourceTimeslotId', String(slot.timeslot_id || ''));
                             }}
-                            className={`cursor-move transition-all overflow-hidden group ${globalView ? 'w-[calc(50%-4px)] lg:w-[calc(33.33%-4px)] rounded hover:ring-2 hover:ring-blue-400' : `${isStudentView ? 'rounded-xl hover:-translate-y-0.5 hover:shadow-xl' : 'hover:shadow-lg rounded-lg'}`} ${shortLesson ? 'self-start' : ''}`}
+                            className={`cursor-move transition-all overflow-hidden group ${globalView ? 'w-[calc(50%-4px)] lg:w-[calc(33.33%-4px)] rounded hover:ring-2 hover:ring-blue-400' : `${isStudentView ? 'rounded-xl hover:-translate-y-0.5 hover:shadow-xl' : 'hover:shadow-lg rounded-lg'} ${getLessonCardContainerClass(slot)}`}`}
                             onClick={() => handleSlotClick(slot)}
                           >
                             {!globalView && (
@@ -687,7 +692,7 @@ export default function TimetableGrid({
                                 )}
 
                                 {subject && !slot.is_break && (
-                                  <div className={`p-3 border-l-4 ${getLessonCardHeightClass(slot)} ${colorScheme.bg} ${colorScheme.border} border relative flex flex-col justify-center ${shortLesson ? 'ring-2 ring-blue-200 border-dashed bg-white shadow-sm py-2' : 'border-slate-200 shadow-[0_1px_2px_rgba(15,23,42,0.04)]'} ${isExamTime ? 'bg-red-50 border-red-200' : ''} ${isStudentView ? 'rounded-xl' : ''}`}>
+                                  <div className={`p-3 border-l-4 ${getLessonCardHeightClass(slot)} ${colorScheme.bg} ${colorScheme.border} border relative flex flex-col justify-center h-full ${shortLesson ? 'ring-2 ring-blue-200 border-dashed bg-white shadow-sm py-2 h-auto' : 'border-slate-200 shadow-[0_1px_2px_rgba(15,23,42,0.04)]'} ${isExamTime ? 'bg-red-50 border-red-200' : ''} ${isStudentView ? 'rounded-xl' : ''}`}>
                                     <div className="flex items-start justify-between gap-2 mb-1.5">
                                       <div className="font-bold text-sm text-slate-900 leading-tight">
                                         {getDisplaySubjectLabel(subject, slot)}
