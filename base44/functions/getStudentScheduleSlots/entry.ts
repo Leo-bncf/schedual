@@ -14,6 +14,13 @@ function normalizeCode(value) {
   return String(value || '').trim().toUpperCase();
 }
 
+function isExamTimeSubject(subject, slot) {
+  const subjectCode = normalizeCode(subject?.code);
+  const subjectName = normalizeCode(subject?.name);
+  const notes = normalizeCode(slot?.notes);
+  return subjectCode === 'TEST' || subjectName === 'EXAM TIME' || notes.includes('TEST') || notes.includes('ASSESSMENT') || notes.includes('EXAM');
+}
+
 function extractYearGroupScope(slot, slotGroup) {
   const explicitScope = String(slot?.year_group_scope || '').trim();
   if (explicitScope) return explicitScope;
@@ -111,11 +118,16 @@ Deno.serve(async (req) => {
         return slot.student_id === student.id;
       }
 
-      if (slot?.notes?.includes('Test') && (slot?.notes?.includes('DP1') || slot?.notes?.includes('DP2'))) {
-        return studentYearGroup && slot.notes.includes(studentYearGroup);
+      const slotGroup = slot.teaching_group_id ? tgById[slot.teaching_group_id] : null;
+      const subjectId = slot.subject_id || slotGroup?.subject_id;
+      const subject = subjectById[subjectId];
+      const slotNotes = String(slot?.notes || '');
+      const isNamedYearExamSlot = isExamTimeSubject(subject, slot) && (slotNotes.includes('DP1') || slotNotes.includes('DP2'));
+
+      if (isNamedYearExamSlot) {
+        return studentYearGroup && slotNotes.includes(studentYearGroup);
       }
 
-      const slotGroup = slot.teaching_group_id ? tgById[slot.teaching_group_id] : null;
       if (slotGroup?.id && assignedGroupIdSet.has(slotGroup.id)) {
         return true;
       }
@@ -124,11 +136,10 @@ Deno.serve(async (req) => {
         return true;
       }
 
-      const subjectId = slot.subject_id || slotGroup?.subject_id;
-      const subjectCode = normalizeCode(subjectById[subjectId]?.code);
+      const subjectCode = normalizeCode(subject?.code);
       const level = normalizeLevel(slot.display_level_override || slotGroup?.level || getStudentLevelForSubject(subjectId));
       const scope = extractYearGroupScope(slot, slotGroup);
-      const isExamTimeSlot = subjectCode === 'TEST';
+      const isExamTimeSlot = isExamTimeSubject(subject, slot);
       const isSharedCoreSlot = student.ib_programme === 'DP' && (
         normalizeLevel(slot.display_level_override || slotGroup?.level) === 'STANDARD' || isExamTimeSlot
       );
