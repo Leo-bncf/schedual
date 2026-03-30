@@ -40,7 +40,6 @@ import {
   Play
 } from 'lucide-react';
 import TimetableGrid from '../components/schedule/TimetableGrid';
-import AdminTimetableGrid from '../components/schedule/AdminTimetableGrid';
 import ExportTimetableButton from '../components/schedule/ExportTimetableButton';
 import SearchableEntitySelect from '../components/schedule/SearchableEntitySelect';
 import StudentScheduleView from '../components/schedule/StudentScheduleView';
@@ -768,7 +767,7 @@ export default function Schedules() {
                   </div>
                 </CardHeader>
                 <CardContent className="pt-4 p-0 sm:p-4">
-                  <AdminTimetableGrid
+                  <TimetableGrid 
                     slots={filteredOverviewSlots}
                     groups={teachingGroups}
                     rooms={rooms}
@@ -776,12 +775,39 @@ export default function Schedules() {
                     teachers={teachers}
                     periodsPerDay={school?.periods_per_day || 10}
                     dayStartTime={school?.day_start_time || '08:00'}
+                    dayEndTime={school?.day_end_time || '18:00'}
                     periodDurationMinutes={school?.period_duration_minutes || 60}
+                    scheduleSettings={school}
+                    globalView={overviewFilterType === 'all'}
                     timeslots={
                       typeof selectedVersion?.generation_params === 'string'
                         ? JSON.parse(selectedVersion.generation_params)?.solverTimeslots || []
                         : selectedVersion?.generation_params?.solverTimeslots || []
                     }
+                    onSlotClick={(day, uiRow, actionData) => {
+                      if (actionData.action === 'move') {
+                        if (confirm(`Are you sure you want to move this lesson to ${day}, Period ${uiRow}?`)) {
+                          updateSlotMutation.mutate({
+                            id: actionData.sourceSlotId,
+                            data: { day, period: uiRow, timeslot_id: actionData.targetTimeslotId }
+                          });
+                        }
+                      } else if (actionData.action === 'swap') {
+                        if (confirm(`Are you sure you want to swap these lessons?`)) {
+                          updateSlotMutation.mutate({
+                            id: actionData.sourceSlotId,
+                            data: { day: actionData.targetDay, period: actionData.targetPeriod, timeslot_id: actionData.targetTimeslotId }
+                          });
+                          updateSlotMutation.mutate({
+                            id: actionData.targetSlotId,
+                            data: { day: actionData.sourceDay, period: actionData.sourcePeriod, timeslot_id: actionData.sourceTimeslotId || null }
+                          });
+                        }
+                      }
+                    }}
+                    onUpdateSlot={(slotId, updates) => {
+                      updateSlotMutation.mutate({ id: slotId, data: updates });
+                    }}
                   />
                 </CardContent>
               </Card>
@@ -880,7 +906,6 @@ export default function Schedules() {
                           periodDurationMinutes={school?.period_duration_minutes || 60}
                           scheduleSettings={school}
                           globalView={false}
-                          studentHourGrid={true}
                           exportId="teacher-viewer-timetable"
                           timeslots={
                       typeof selectedVersion?.generation_params === 'string'
