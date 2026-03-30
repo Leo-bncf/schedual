@@ -137,11 +137,15 @@ Deno.serve(async (req) => {
       }
 
       const subjectCode = normalizeCode(subject?.code);
+      const subjectName = normalizeCode(subject?.name);
       const level = normalizeLevel(slot.display_level_override || slotGroup?.level || getStudentLevelForSubject(subjectId));
       const scope = extractYearGroupScope(slot, slotGroup);
       const isExamTimeSlot = isExamTimeSubject(subject, slot);
+      const isCoreDpSubject = student.ib_programme === 'DP' && (
+        subject?.is_core === true || subjectCode === 'TOK' || subjectName === 'THEORY OF KNOWLEDGE' || subjectName === 'TOK'
+      );
       const isSharedCoreSlot = student.ib_programme === 'DP' && (
-        normalizeLevel(slot.display_level_override || slotGroup?.level) === 'STANDARD' || isExamTimeSlot
+        normalizeLevel(slot.display_level_override || slotGroup?.level) === 'STANDARD' || isExamTimeSlot || isCoreDpSubject
       );
 
       if (isSharedCoreSlot) {
