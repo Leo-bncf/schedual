@@ -57,6 +57,7 @@ import {
 } from 'lucide-react';
 import PageHeader from '../components/ui-custom/PageHeader';
 import YearAdvancement from '../components/settings/YearAdvancement';
+import TimeslotTemplateEditor from '../components/settings/TimeslotTemplateEditor';
 
 import { toast } from 'sonner';
 
@@ -151,6 +152,7 @@ export default function Settings() {
     periods_per_day: 8,
     days_per_week: 5,
     school_start_time: '08:00',
+    timeslot_templates: [],
     settings: {}
   });
 
@@ -166,6 +168,7 @@ export default function Settings() {
         periods_per_day: school.periods_per_day || 8,
         days_per_week: school.days_per_week || 5,
         school_start_time: school.school_start_time || '08:00',
+        timeslot_templates: Array.isArray(school.timeslot_templates) ? school.timeslot_templates : [],
         settings: school.settings || {}
       });
     }
@@ -455,6 +458,11 @@ export default function Settings() {
                 </div>
               </CardContent>
             </Card>
+
+            <TimeslotTemplateEditor
+              value={formData.timeslot_templates}
+              onChange={(timeslot_templates) => setFormData({ ...formData, timeslot_templates })}
+            />
 
             {/* System Information */}
             <Card className="border-0 shadow-sm bg-white rounded-xl">

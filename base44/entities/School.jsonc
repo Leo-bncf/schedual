@@ -1,0 +1,246 @@
+{
+  "name": "School",
+  "type": "object",
+  "properties": {
+    "name": {
+      "type": "string",
+      "description": "School name"
+    },
+    "code": {
+      "type": "string",
+      "description": "Unique school code"
+    },
+    "ib_school_code": {
+      "type": "string",
+      "description": "Official IB World School code"
+    },
+    "address": {
+      "type": "string"
+    },
+    "timezone": {
+      "type": "string",
+      "default": "UTC"
+    },
+    "academic_year": {
+      "type": "string",
+      "description": "Current academic year (e.g., 2024-2025)"
+    },
+    "periods_per_day": {
+      "type": "number",
+      "default": 10,
+      "minimum": 10,
+      "maximum": 12,
+      "description": "Number of periods per day (10-12)"
+    },
+    "period_duration_minutes": {
+      "type": "number",
+      "default": 60,
+      "description": "Legacy default duration of each period in minutes"
+    },
+    "timeslot_templates": {
+      "type": "array",
+      "description": "Admin-defined daily blocks used for scheduling and solver payloads",
+      "items": {
+        "type": "object",
+        "properties": {
+          "label": {
+            "type": "string",
+            "description": "Optional block label"
+          },
+          "start": {
+            "type": "string",
+            "description": "HH:mm"
+          },
+          "end": {
+            "type": "string",
+            "description": "HH:mm"
+          }
+        },
+        "required": [
+          "start",
+          "end"
+        ]
+      },
+      "default": []
+    },
+    "days_per_week": {
+      "type": "number",
+      "default": 5
+    },
+    "school_start_time": {
+      "type": "string",
+      "default": "08:00"
+    },
+    "day_start_time": {
+      "type": "string",
+      "default": "08:00",
+      "description": "Day start time HH:mm"
+    },
+    "day_end_time": {
+      "type": "string",
+      "default": "18:00",
+      "description": "Day end time HH:mm"
+    },
+    "days_of_week": {
+      "type": "array",
+      "items": {
+        "type": "string",
+        "enum": [
+          "MONDAY",
+          "TUESDAY",
+          "WEDNESDAY",
+          "THURSDAY",
+          "FRIDAY"
+        ]
+      },
+      "default": [
+        "MONDAY",
+        "TUESDAY",
+        "WEDNESDAY",
+        "THURSDAY",
+        "FRIDAY"
+      ],
+      "description": "Operating days of week"
+    },
+    "breaks": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "properties": {
+          "start": {
+            "type": "string",
+            "description": "HH:mm"
+          },
+          "end": {
+            "type": "string",
+            "description": "HH:mm"
+          }
+        },
+        "required": [
+          "start",
+          "end"
+        ]
+      },
+      "default": []
+    },
+    "min_periods_per_day": {
+      "type": "number",
+      "default": 10
+    },
+    "target_periods_per_day": {
+      "type": "number",
+      "default": 10,
+      "description": "Preferred periods per day (planner target)"
+    },
+    "student_count": {
+      "type": "number",
+      "default": 0,
+      "description": "Current student count for tier enforcement"
+    },
+    "campus_count": {
+      "type": "number",
+      "default": 1,
+      "description": "Number of campuses"
+    },
+    "subscription_status": {
+      "type": "string",
+      "enum": [
+        "trialing",
+        "active",
+        "past_due",
+        "canceled",
+        "unpaid",
+        "incomplete",
+        "incomplete_expired",
+        "paused"
+      ],
+      "default": "incomplete",
+      "description": "Stripe subscription status"
+    },
+    "subscription_tier": {
+      "type": "string",
+      "enum": [
+        "tier1",
+        "tier2",
+        "tier3"
+      ],
+      "description": "Current subscription tier"
+    },
+    "active_add_ons": {
+      "type": "array",
+      "items": {
+        "type": "string"
+      },
+      "default": [],
+      "description": "Array of active add-on IDs"
+    },
+    "stripe_customer_id": {
+      "type": "string",
+      "description": "Stripe customer ID"
+    },
+    "stripe_subscription_id": {
+      "type": "string",
+      "description": "Stripe subscription ID"
+    },
+    "subscription_start_date": {
+      "type": "string",
+      "format": "date-time",
+      "description": "When subscription started"
+    },
+    "subscription_current_period_end": {
+      "type": "string",
+      "format": "date-time",
+      "description": "Current billing period end date"
+    },
+    "max_admin_seats": {
+      "type": "number",
+      "default": 3,
+      "description": "Maximum number of admin users allowed"
+    },
+    "settings": {
+      "type": "object",
+      "description": "School-specific settings"
+    }
+  },
+  "required": [
+    "name",
+    "code"
+  ],
+  "rls": {
+    "create": {
+      "user_condition": {
+        "role": "admin"
+      }
+    },
+    "read": {
+      "$or": [
+        {
+          "data.school_id": "{{user.data.school_id}}"
+        },
+        {
+          "user_condition": {
+            "role": "admin"
+          }
+        },
+        {}
+      ]
+    },
+    "update": {
+      "$or": [
+        {
+          "data.school_id": "{{user.data.school_id}}"
+        },
+        {
+          "user_condition": {
+            "role": "admin"
+          }
+        }
+      ]
+    },
+    "delete": {
+      "user_condition": {
+        "role": "admin"
+      }
+    }
+  }
+}
