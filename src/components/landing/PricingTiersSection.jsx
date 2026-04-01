@@ -1,302 +1,222 @@
 import React, { useState } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
-import { CheckCircle2, Zap, Users, Building2, Plug, SlidersHorizontal, LifeBuoy, Sparkles, ChevronDown, X } from 'lucide-react';
+import { CheckCircle2, ChevronDown, School, Users, Calendar, LifeBuoy, FileSpreadsheet, Wrench } from 'lucide-react';
 
 const TIERS = {
   tier1: {
-    name: 'Small',
-    subtitle: 'Small IB Schools',
-    price_yearly: 1100,
-    price_monthly: 110,
-    description: 'PYP-only or MYP-only schools up to 300 students',
-    students: '≤300',
-    features: [
-      'Full timetable generation',
-      'Teacher & room constraints',
-      'IB logic & validation',
-      'PDF/CSV export',
-      'Manual ManageBac import',
+    name: 'Starter',
+    icon: '🟢',
+    price: '€599/year',
+    subtitle: 'Best for smaller schools starting with structured timetable management',
+    rules: [
+      'Up to 200 students',
+      '3 saved schedule versions',
+      'Auto generation + manual adjustments',
+      'PDF & Excel export',
+      '1 admin account',
+      'Email support (48h)',
     ],
-    color: 'from-blue-50 to-blue-100',
-    borderColor: 'border-blue-300',
+    highlights: [
+      { icon: School, label: 'Student limit', value: '200' },
+      { icon: Calendar, label: 'Saved versions', value: '3' },
+      { icon: Users, label: 'Admin accounts', value: '1' },
+    ],
+    featured: false,
   },
   tier2: {
-    name: 'Medium',
-    subtitle: 'Standard IB Continuum',
-    price_yearly: 2200,
-    price_monthly: 220,
-    description: 'PYP + MYP + DP schools (300-800 students)',
-    students: '300-800',
-    features: [
-      'Everything in Tier 1',
-      'Advanced constraint solver',
-      'DP subject grouping & options',
-      'Teacher load balancing',
-      'Timetable versioning & history',
-      'Priority email support',
+    name: 'Standard',
+    icon: '🔵',
+    price: '€1,499/year',
+    subtitle: 'Best for growing schools that need flexibility and multiple admin users',
+    rules: [
+      'Up to 600 students',
+      'Unlimited generations',
+      'Auto generation + manual adjustments',
+      'PDF & Excel export',
+      'Multiple saved versions',
+      '3 admin accounts',
+      'Email support (24h)',
     ],
-    color: 'from-purple-50 to-purple-100',
-    borderColor: 'border-purple-300',
+    highlights: [
+      { icon: School, label: 'Student limit', value: '600' },
+      { icon: Calendar, label: 'Saved versions', value: 'Multiple' },
+      { icon: Users, label: 'Admin accounts', value: '3' },
+    ],
     featured: true,
   },
   tier3: {
-    name: 'Large',
-    subtitle: 'Large/Multi-Campus',
-    price_yearly: 4950,
-    price_monthly: 495,
-    description: 'Large schools with 800+ students, multiple campuses',
-    students: '800+',
-    features: [
-      'Everything in Tier 2',
-      'Multi-campus support',
-      'Multiple timetable scenarios',
-      'API & ManageBac integration',
-      'Dedicated onboarding',
-      'Dedicated account manager',
+    name: 'Pro',
+    icon: '🟣',
+    price: '€2,999/year',
+    subtitle: 'Best for large schools that need scale, speed, and premium support',
+    rules: [
+      'Up to 1,200 students',
+      'Unlimited generations',
+      'Auto generation + manual adjustments',
+      'PDF & Excel export',
+      'Multiple saved versions',
+      'Unlimited admin accounts',
+      'Priority support (same day)',
+      'Onboarding call included',
     ],
-    color: 'from-emerald-50 to-emerald-100',
-    borderColor: 'border-emerald-300',
+    highlights: [
+      { icon: School, label: 'Student limit', value: '1,200' },
+      { icon: Calendar, label: 'Saved versions', value: 'Multiple' },
+      { icon: Users, label: 'Admin accounts', value: 'Unlimited' },
+    ],
+    featured: false,
   },
 };
 
-const ADD_ONS = [
+const SYSTEM_RULES = [
   {
-    category: 'Users',
-    items: [
-      { id: 'extra_admin_user', name: 'Extra Admin User', price_yearly: 275, price_monthly: 28, type: 'recurring' },
-      { id: 'unlimited_admin_users', name: 'Unlimited Admin Users', price_yearly: 825, price_monthly: 83, type: 'recurring' },
-    ],
+    icon: School,
+    title: 'Student cap by tier',
+    description: 'Each school is limited by the number of students allowed in its tier.',
   },
   {
-    category: 'School Structure',
-    items: [
-      { id: 'additional_campus', name: 'Additional Campus', price_yearly: 660, price_monthly: 66, type: 'recurring' },
-      { id: 'unlimited_campuses', name: 'Unlimited Campuses', price_yearly: 1650, price_monthly: 165, type: 'recurring' },
-      { id: 'multiple_timetable_scenarios', name: 'Multiple Timetable Scenarios', price_yearly: 880, price_monthly: 88, type: 'recurring' },
-    ],
+    icon: Calendar,
+    title: 'Schedule version rules',
+    description: 'Saved schedule versions are controlled by the school tier.',
   },
-
-
   {
-    category: 'Support & Services',
-    items: [
-      { id: 'priority_support', name: 'Priority Support (24h)', price_yearly: 550, price_monthly: 55, type: 'recurring' },
-      { id: 'onboarding_setup', name: 'Onboarding & First Setup', price_yearly: 1320, price_monthly: 1320, type: 'onetime' },
-    ],
+    icon: Users,
+    title: 'Admin access rules',
+    description: 'Admin account limits are enforced per school based on its tier.',
+  },
+  {
+    icon: Wrench,
+    title: 'Same core scheduling tools',
+    description: 'All tiers include auto generation and manual timetable adjustments.',
+  },
+  {
+    icon: FileSpreadsheet,
+    title: 'Exports included',
+    description: 'Schools can export schedules in PDF and Excel depending on the tier offering.',
+  },
+  {
+    icon: LifeBuoy,
+    title: 'Support by tier',
+    description: 'Response time and onboarding level improve with higher tiers.',
   },
 ];
 
-const CATEGORY_ICONS = {
-  'Users': Users,
-  'School Structure': Building2,
-  'Support & Services': LifeBuoy,
-};
-
-
-
 export default function PricingTiersSection() {
-  const [expandedCategory, setExpandedCategory] = useState(null);
-  const [expandedTier, setExpandedTier] = useState(null);
-  const [billingInterval, setBillingInterval] = useState('yearly');
-  const toggleCategory = (cat) => setExpandedCategory(expandedCategory === cat ? null : cat);
-
+  const [expandedTier, setExpandedTier] = useState('tier2');
 
   return (
     <section id="pricing" className="py-20 bg-white relative z-10">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-        {/* Header */}
         <div className="text-center mb-16">
           <h2 className="text-4xl sm:text-5xl font-bold text-slate-900 mb-4 tracking-tight">
-            Pricing Built for IB Schools
+            Tier system for schools
           </h2>
-          <p className="text-lg text-slate-600 max-w-2xl mx-auto">
-            Choose the tier that fits your school. All plans include AI-powered scheduling and conflict resolution.
+          <p className="text-lg text-slate-600 max-w-3xl mx-auto">
+            Every school belongs to a tier, and the platform applies the rules of that tier automatically across student capacity, saved schedule versions, admin access, and support level.
           </p>
-          <div className="flex justify-center mt-8">
-            <div className="bg-slate-100 p-1 rounded-lg inline-flex items-center gap-1">
-              <button
-                className={`px-6 py-2 rounded-md text-sm font-medium transition-colors ${billingInterval === 'monthly' ? 'bg-white text-slate-900 shadow-sm' : 'text-slate-600 hover:text-slate-900'}`}
-                onClick={() => setBillingInterval('monthly')}
-              >
-                Monthly
-              </button>
-              <button
-                className={`px-6 py-2 rounded-md text-sm font-medium transition-colors ${billingInterval === 'yearly' ? 'bg-white text-slate-900 shadow-sm' : 'text-slate-600 hover:text-slate-900'}`}
-                onClick={() => setBillingInterval('yearly')}
-              >
-                Annually
-              </button>
-            </div>
-          </div>
         </div>
 
-        {/* Tiers Grid */}
-        <div className="mb-8">
-          <div className="grid gap-6 sm:grid-cols-2 lg:grid-cols-3" role="list">
-            {Object.entries(TIERS).map(([tierId, tier]) => (
+        <div className="grid gap-6 sm:grid-cols-2 lg:grid-cols-3 mb-10">
+          {Object.entries(TIERS).map(([tierId, tier]) => {
+            const isExpanded = expandedTier === tierId;
+            return (
               <button
                 key={tierId}
-                className={`rounded-2xl border border-slate-200 bg-white hover:bg-blue-50 hover:border-blue-300 hover:shadow-sm ${expandedTier === tierId ? 'ring-2 ring-blue-900' : ''} p-5 flex flex-col gap-2 text-left cursor-pointer transition-all`}
-                onClick={() => setExpandedTier(expandedTier === tierId ? null : tierId)}
-                role="button"
-                aria-label={`View details for ${tier.name}`}
-                aria-expanded={expandedTier === tierId}
+                className={`rounded-2xl border p-6 text-left transition-all ${isExpanded ? 'border-blue-900 ring-2 ring-blue-900 bg-blue-50' : 'border-slate-200 bg-white hover:border-blue-300 hover:bg-blue-50'}`}
+                onClick={() => setExpandedTier(isExpanded ? null : tierId)}
+                aria-expanded={isExpanded}
               >
-                <div className="flex items-center justify-between">
-                  <h3 className="text-lg font-semibold text-slate-900">{tier.name}</h3>
+                <div className="flex items-start justify-between gap-3 mb-4">
+                  <div>
+                    <div className="text-3xl mb-3">{tier.icon}</div>
+                    <h3 className="text-2xl font-bold text-slate-900">{tier.name}</h3>
+                    <p className="text-sm text-slate-500 mt-1">{tier.subtitle}</p>
+                  </div>
                   <div className="flex items-center gap-2">
-                    {tier.featured && (
-                      <Badge className="bg-yellow-400 text-slate-900">Recommended</Badge>
-                    )}
-                    <motion.div animate={{ rotate: expandedTier === tierId ? 180 : 0 }} transition={{ duration: 0.2 }}>
+                    {tier.featured ? <Badge className="bg-yellow-400 text-slate-900">Recommended</Badge> : null}
+                    <motion.div animate={{ rotate: isExpanded ? 180 : 0 }} transition={{ duration: 0.2 }}>
                       <ChevronDown className="w-5 h-5 text-slate-500" />
                     </motion.div>
                   </div>
                 </div>
-                <p className="text-sm text-slate-600">{tier.subtitle}</p>
-                <div className="mt-1">
-                  <div className="flex items-baseline gap-1.5">
-                    <span className="text-2xl font-bold text-slate-900">
-                      €{billingInterval === 'yearly' ? tier.price_yearly : tier.price_monthly}
-                    </span>
-                    <span className="text-slate-600 text-sm">/{billingInterval === 'yearly' ? 'year' : 'month'}</span>
-                  </div>
+
+                <div className="text-3xl font-bold text-slate-900 mb-5">{tier.price}</div>
+
+                <div className="grid grid-cols-3 gap-3">
+                  {tier.highlights.map((item) => (
+                    <div key={item.label} className="rounded-xl bg-slate-100 p-3">
+                      <item.icon className="w-4 h-4 text-blue-900 mb-2" />
+                      <div className="text-sm font-semibold text-slate-900">{item.value}</div>
+                      <div className="text-[11px] text-slate-500">{item.label}</div>
+                    </div>
+                  ))}
                 </div>
               </button>
-            ))}
-          </div>
+            );
+          })}
         </div>
 
-        {/* Expanded Details Section */}
         <AnimatePresence mode="wait">
-          {expandedTier && TIERS[expandedTier] && (
+          {expandedTier && TIERS[expandedTier] ? (
             <motion.div
               key={expandedTier}
               initial={{ opacity: 0, height: 0 }}
               animate={{ opacity: 1, height: 'auto' }}
               exit={{ opacity: 0, height: 0 }}
-              transition={{ duration: 0.3 }}
-              className="mb-16 overflow-hidden"
+              transition={{ duration: 0.25 }}
+              className="overflow-hidden mb-16"
             >
-              <div className="rounded-2xl border border-blue-300 bg-gradient-to-br from-blue-50 to-white p-8">
-                <div className="text-xs text-slate-500 mb-2">Best for {TIERS[expandedTier].students} students</div>
-                <h3 className="text-2xl font-bold text-slate-900 mb-2">{TIERS[expandedTier].name}</h3>
-                {TIERS[expandedTier].description && (
-                  <p className="text-slate-700 mb-6">{TIERS[expandedTier].description}</p>
-                )}
-
-                <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-4 mb-8">
-                  {TIERS[expandedTier].features.map((feature, i) => (
-                    <div key={i} className="flex items-start gap-2">
-                      <CheckCircle2 className="w-5 h-5 text-emerald-600 mt-0.5 flex-shrink-0" />
-                      <span className="text-slate-700">{feature}</span>
+              <div className="rounded-2xl border border-blue-200 bg-gradient-to-br from-blue-50 to-white p-8">
+                <div className="flex flex-col lg:flex-row lg:items-start lg:justify-between gap-8">
+                  <div className="max-w-2xl">
+                    <div className="flex items-center gap-3 mb-4">
+                      <span className="text-3xl">{TIERS[expandedTier].icon}</span>
+                      <h3 className="text-3xl font-bold text-slate-900">{TIERS[expandedTier].name}</h3>
                     </div>
-                  ))}
-                </div>
-
-                <a
-                  href="/Subscription"
-                  className="inline-flex items-center gap-2 px-6 py-3 bg-blue-900 text-white rounded-lg hover:bg-blue-800 transition-colors font-medium"
-                >
-                  Choose {TIERS[expandedTier].name}
-                  <span>→</span>
-                </a>
-              </div>
-            </motion.div>
-          )}
-        </AnimatePresence>
-
-        {/* Add-ons Section */}
-        <div id="addons" className="relative pt-24">
-          <div className="text-center mb-8">
-            <h3 className="text-3xl font-bold text-slate-900">Customize Your Plan</h3>
-            <p className="text-slate-600 mt-2">Tap a category to explore optional add-ons</p>
-          </div>
-
-          <div className="mb-8">
-            <div className="grid gap-6 sm:grid-cols-2 lg:grid-cols-3" role="list">
-              {ADD_ONS.map((category, idx) => {
-                const Icon = CATEGORY_ICONS[category.category] || Zap;
-                const isExpanded = expandedCategory === category.category;
-                return (
-                  <button
-                    key={category.category}
-                    className={`rounded-2xl border border-slate-200 bg-white hover:bg-blue-50 hover:border-blue-300 hover:shadow-sm ${isExpanded ? 'ring-2 ring-blue-900' : ''} p-5 flex flex-col gap-2 text-left cursor-pointer transition-all`}
-                    onClick={() => toggleCategory(category.category)}
-                    role="button"
-                    aria-label={`View details for ${category.category}`}
-                    aria-expanded={isExpanded}
-                  >
-                    <div className="flex items-center justify-between">
-                      <div className="flex items-center gap-3">
-                        <div className="h-9 w-9 rounded-xl bg-blue-100 text-blue-900 flex items-center justify-center">
-                          <Icon className="w-5 h-5" />
+                    <p className="text-slate-600 mb-6">{TIERS[expandedTier].subtitle}</p>
+                    <div className="grid sm:grid-cols-2 gap-4">
+                      {TIERS[expandedTier].rules.map((rule) => (
+                        <div key={rule} className="flex items-start gap-3 rounded-xl bg-white p-4 border border-slate-200">
+                          <CheckCircle2 className="w-5 h-5 text-emerald-600 mt-0.5 flex-shrink-0" />
+                          <span className="text-slate-700">{rule}</span>
                         </div>
-                        <div>
-                          <h4 className="text-lg font-semibold text-slate-900">{category.category}</h4>
-                          <p className="text-slate-500 text-sm">{category.items.length} options</p>
-                        </div>
-                      </div>
-                      <motion.div animate={{ rotate: isExpanded ? 180 : 0 }} transition={{ duration: 0.2 }}>
-                        <ChevronDown className="w-5 h-5 text-slate-500" />
-                      </motion.div>
+                      ))}
                     </div>
-                  </button>
-                );
-              })}
-            </div>
-          </div>
-
-          {/* Expanded Details Section */}
-          <AnimatePresence mode="wait">
-            {expandedCategory && ADD_ONS.find(cat => cat.category === expandedCategory) && (
-              <motion.div
-                key={expandedCategory}
-                initial={{ opacity: 0, height: 0 }}
-                animate={{ opacity: 1, height: 'auto' }}
-                exit={{ opacity: 0, height: 0 }}
-                transition={{ duration: 0.3 }}
-                className="mb-16 overflow-hidden"
-              >
-                <div className="rounded-2xl border border-blue-300 bg-gradient-to-br from-blue-50 to-white p-8">
-                  <h3 className="text-2xl font-bold text-slate-900 mb-6">{expandedCategory}</h3>
-
-                  <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
-                    {ADD_ONS.find(cat => cat.category === expandedCategory).items.map((addon) => (
-                      <div
-                        key={addon.id}
-                        className="rounded-xl border border-slate-200 bg-white hover:border-blue-300 hover:shadow-sm transition-all p-5"
-                      >
-                        <div className="flex items-start justify-between gap-3 mb-3">
-                          <h5 className="font-semibold text-slate-900 text-base leading-snug">{addon.name}</h5>
-                          <Badge className={`${addon.type === 'onetime' ? 'bg-amber-100 text-amber-800' : 'bg-indigo-100 text-indigo-800'} text-xs shrink-0`}>
-                            {addon.type === 'onetime' ? 'One-time' : billingInterval === 'yearly' ? 'Annual' : 'Monthly'}
-                          </Badge>
-                        </div>
-                        <div className="text-blue-900 font-bold text-2xl">
-                          €{addon.type === 'onetime' ? addon.price_yearly : billingInterval === 'yearly' ? addon.price_yearly : addon.price_monthly}
-                        </div>
-                      </div>
-                    ))}
+                  </div>
+                  <div className="lg:w-80 rounded-2xl bg-slate-900 text-white p-6">
+                    <p className="text-sm uppercase tracking-wide text-blue-200 mb-3">Applied system rules</p>
+                    <div className="space-y-3 text-sm text-slate-200">
+                      <p>The school can only operate within the limits of this tier.</p>
+                      <p>Student capacity is capped by the tier.</p>
+                      <p>Saved schedule versions follow the tier allowance.</p>
+                      <p>Admin accounts are limited by the tier.</p>
+                      <p>Support level follows the selected plan.</p>
+                    </div>
                   </div>
                 </div>
-              </motion.div>
-            )}
-          </AnimatePresence>
-        </div>
+              </div>
+            </motion.div>
+          ) : null}
+        </AnimatePresence>
 
-        {/* CTA */}
-        <div className="mt-20 text-center">
-          <a
-            href="/Subscription"
-            className="inline-flex items-center gap-2 px-8 py-4 bg-blue-900 text-white rounded-lg hover:bg-blue-800 transition-colors font-semibold text-lg shadow-lg hover:shadow-xl"
-          >
-            Get Started Today
-            <span className="text-xl">→</span>
-          </a>
-          <p className="text-slate-500 mt-4 text-sm">No credit card required for trial</p>
+        <div className="mt-20">
+          <div className="text-center mb-10">
+            <h3 className="text-3xl font-bold text-slate-900">How the tier system works in practice</h3>
+            <p className="text-slate-600 mt-3 max-w-2xl mx-auto">
+              The same school management platform is available across tiers, but each school is governed by the rules of its plan.
+            </p>
+          </div>
+
+          <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
+            {SYSTEM_RULES.map((rule) => (
+              <div key={rule.title} className="rounded-2xl border border-slate-200 bg-slate-50 p-6">
+                <rule.icon className="w-6 h-6 text-blue-900 mb-4" />
+                <h4 className="text-lg font-semibold text-slate-900 mb-2">{rule.title}</h4>
+                <p className="text-slate-600 text-sm leading-relaxed">{rule.description}</p>
+              </div>
+            ))}
+          </div>
         </div>
       </div>
     </section>
