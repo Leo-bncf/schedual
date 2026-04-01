@@ -19,17 +19,29 @@ export default function TimetableCell({
   onSlotClick,
   globalView = false,
   periodDurationMinutes = 60,
+  lunchLabel = '',
 }) {
   if (empty || !slots.length) {
     return (
-      <div className="relative border-r border-slate-300 last:border-r-0 bg-slate-50/40" style={{ minHeight: 116 }} />
+      <div className="relative border-r border-slate-300 last:border-r-0 bg-slate-50/40" style={{ minHeight: 116 }}>
+        {lunchLabel ? (
+          <div className="absolute inset-x-1 top-1 rounded-lg border border-amber-200 bg-amber-50/90 px-2 py-1 text-center text-[11px] font-semibold text-amber-900">
+            {lunchLabel}
+          </div>
+        ) : null}
+      </div>
     );
   }
 
   return (
     <div className="relative border-r border-slate-300 last:border-r-0 bg-white" style={{ minHeight: 116 }}>
+      {lunchLabel ? (
+        <div className="absolute inset-x-1 top-1 rounded-lg border border-amber-200 bg-amber-50/90 px-2 py-1 text-center text-[11px] font-semibold text-amber-900" style={{ zIndex: 2 }}>
+          {lunchLabel}
+        </div>
+      ) : null}
       {/* p-1 padding so cards don't touch the cell edge */}
-      <div className={`absolute inset-1 flex ${globalView ? 'flex-row flex-wrap content-start' : 'flex-col'} gap-1`} style={{ zIndex: 1 }}>
+      <div className={`absolute inset-1 flex ${globalView ? 'flex-row flex-wrap content-start' : 'flex-col'} gap-1`} style={{ zIndex: 1, paddingTop: lunchLabel ? '1.75rem' : undefined }}>
         {slots.map((slot) => {
           const data = renderSlotData(slot);
           const duration = slot.__durationMinutes || periodDurationMinutes || 60;

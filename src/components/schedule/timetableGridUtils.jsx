@@ -38,6 +38,17 @@ export const calculatePeriodTimes = (dayStartTime = '08:00', periodDurationMinut
   return times;
 };
 
+export const getLunchRowInfo = ({ activePeriods = [], periodTimes = {}, lunchStart = '12:00', lunchEnd = '13:00' }) => {
+  for (const row of activePeriods) {
+    const boundaries = periodTimes[row] || [];
+    if (boundaries.includes(lunchStart) && boundaries.includes(lunchEnd)) {
+      return { row, start: lunchStart, end: lunchEnd };
+    }
+  }
+
+  return null;
+};
+
 export const getSubjectColor = (subjectName, isExamTime = false) => {
   if (isExamTime) return { bg: 'bg-red-50', border: 'border-l-red-400', text: 'text-red-900' };
   if (!subjectName) return { bg: 'bg-slate-50', border: 'border-l-slate-400', text: 'text-slate-900' };

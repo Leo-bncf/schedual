@@ -3,7 +3,7 @@ import { Card } from '@/components/ui/card';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Button } from '@/components/ui/button';
 import TimetableCell from '@/components/schedule/TimetableCell';
-import { DAYS, formatClockTime } from '@/components/schedule/timetableGridUtils';
+import { DAYS, formatClockTime, getLunchRowInfo } from '@/components/schedule/timetableGridUtils';
 
 export default function TimetableGrid({
   slots = [],
@@ -128,6 +128,11 @@ export default function TimetableGrid({
     return times;
   }, [activePeriods, gridStartMins, timeslots, periodDurationMinutes]);
 
+  const lunchRowInfo = React.useMemo(
+    () => getLunchRowInfo({ activePeriods, periodTimes, lunchStart: '12:00', lunchEnd: '13:00' }),
+    [activePeriods, periodTimes]
+  );
+
   const getGroupInfo = (groupId) => groups.find((group) => group.id === groupId);
   const getRoomInfo = (roomId) => rooms.find((room) => room.id === roomId);
   const getSubjectInfo = (subjectId) => subjects.find((subject) => subject.id === subjectId);
@@ -239,6 +244,7 @@ export default function TimetableGrid({
                       onSlotClick={handleOpenSlot}
                       globalView={globalView}
                       periodDurationMinutes={periodDurationMinutes}
+                      lunchLabel={lunchRowInfo?.row === uiRow ? 'Lunch Break' : ''}
                     />
                   );
                 })}
