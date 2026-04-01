@@ -16,7 +16,6 @@ import {
   ChevronDown,
   LogOut,
   Bell,
-  CreditCard,
   User,
   Upload,
   FileText
@@ -53,7 +52,6 @@ const navigation = [
   { name: 'Automation', page: 'AutomationAdmin', icon: Sparkles, superAdminOnly: true },
   { name: 'Login Sessions', page: 'SessionActivityAdmin', icon: Bell, superAdminOnly: true },
   { name: 'AI Training', page: 'AITrainingAdmin', icon: Upload, superAdminOnly: true },
-  { name: 'Subscriptions', page: 'SubscriptionsOverview', icon: CreditCard, superAdminOnly: true },
   { name: 'Support Tickets', page: 'SupportTickets', icon: Bell, superAdminOnly: true },
 ];
 
@@ -75,7 +73,7 @@ export default function Layout({ children, currentPageName }) {
   // Role definitions - school_id alone determines school admin access
   const isSchoolAdmin = (userData) => !!userData?.school_id && !isSuperAdmin;
   const isNewClient = (userData) => userData && !userData.school_id && !isSuperAdmin;
-  const hasActiveSubscription = () => school && (school.subscription_status === 'active' || school.subscription_status === 'trialing');
+  const hasActiveSubscription = () => true;
 
   // Suppress browser 403 errors in console by handling them silently
   useEffect(() => {
@@ -95,31 +93,6 @@ export default function Layout({ children, currentPageName }) {
   useEffect(() => {
     const loadAuth = async () => {
       try {
-        const urlParams = new URLSearchParams(window.location.search);
-        const subscriptionSuccess = urlParams.get('subscription') === 'success';
-
-        if (subscriptionSuccess) {
-          let assigned = false;
-          try {
-            // After successful checkout, try to detect and attach via PendingInvitation
-            const { data: inviteData } = await base44.functions.invoke('checkPendingInvitations');
-            if (inviteData?.schoolAssigned) {
-              assigned = true;
-              alert(`Payment successful! You've been linked to ${inviteData.schoolName}. Please log in again.`);
-            } else {
-              alert('Payment successful! If you already had an account, just continue. If not, please sign up or log in to access your dashboard.');
-            }
-          } catch (e) {
-            console.error('Post-checkout linking error:', e);
-            alert('Payment successful! Please sign in to complete linking.');
-          }
-          if (assigned) {
-            base44.auth.logout('/');
-            return;
-          }
-          // If not assigned, continue normal flow (reconcile will try after login)
-        }
-
         const userData = await base44.auth.me();
 
         // Check for pending invitations
@@ -157,7 +130,7 @@ export default function Layout({ children, currentPageName }) {
           return;
         }
 
-        // If user has no school yet, first hydrate from User entity (immediate effect after admin assignment). If still none, attempt reconcile with Stripe.
+        // If user has no school yet, first hydrate from User entity.
         if (!userData?.school_id) {
           try {
             const meRec = await base44.entities.User.filter({ id: userData.id });
@@ -166,16 +139,9 @@ export default function Layout({ children, currentPageName }) {
               alert('Your account was linked to a school. We\u2019ll refresh your session now.');
               base44.auth.logout(window.location.pathname);
               return;
-            } else {
-              const { data: rec } = await base44.functions.invoke('reconcileSubscription');
-              if (rec?.assigned && rec.schoolId) {
-                alert('Subscription detected and your school has been linked. We\u2019ll refresh your session now.');
-                base44.auth.logout(window.location.pathname);
-                return;
-              }
             }
           } catch (e) {
-            console.error('Hydration/reconcile step error:', e);
+            console.error('Hydration step error:', e);
           }
         }
 
@@ -220,17 +186,12 @@ export default function Layout({ children, currentPageName }) {
 
   // Role-based access control with React Router navigation
   const schoolOnlyPages = ['Dashboard', 'Onboarding', 'Schedule', 'TeachingGroups', 'Teachers', 'Students', 'Subjects', 'Rooms', 'Constraints', 'AIAdvisor', 'Settings', 'Support'];
-  const superAdminPages = ['Panel', 'UserManagement', 'AnalyticsAdmin', 'AutomationAdmin', 'SessionActivityAdmin', 'AITrainingAdmin', 'SubscriptionsOverview', 'SupportTickets'];
+  const superAdminPages = ['Panel', 'UserManagement', 'AnalyticsAdmin', 'AutomationAdmin', 'SessionActivityAdmin', 'AITrainingAdmin', 'SupportTickets'];
 
   if (isSuperAdmin && schoolOnlyPages.includes(currentPageName)) {
     return <Navigate to={createPageUrl('Panel')} replace />;
   } else if (isSchoolAdmin(user) && superAdminPages.includes(currentPageName)) {
     return <Navigate to={createPageUrl('Dashboard')} replace />;
-  } else if (isNewClient(user) && !superAdminPages.includes(currentPageName) && currentPageName !== 'Subscription' && currentPageName !== 'SubscriptionTiered' && currentPageName !== 'AccountManager' && currentPageName !== 'Support') {
-    return <Navigate to={createPageUrl('Subscription')} replace />;
-  } else if (isSchoolAdmin(user) && !hasActiveSubscription() && currentPageName !== 'Subscription' && currentPageName !== 'SubscriptionTiered' && currentPageName !== 'AccountManager' && currentPageName !== 'Support') {
-    // Block access to school features if subscription is inactive/expired
-    return <Navigate to={createPageUrl('Subscription')} replace />;
   }
 
   const getInitials = (name) => {

@@ -68,9 +68,6 @@ import Settings from './pages/Settings';
 import StudentProfile from './pages/StudentProfile';
 import Students from './pages/Students';
 import Subjects from './pages/Subjects';
-import Subscription from './pages/Subscription';
-import SubscriptionTiered from './pages/SubscriptionTiered';
-import SubscriptionsOverview from './pages/SubscriptionsOverview';
 import Support from './pages/Support';
 import SupportTickets from './pages/SupportTickets';
 import TeacherProfile from './pages/TeacherProfile';
@@ -103,9 +100,6 @@ export const PAGES = {
     "StudentProfile": StudentProfile,
     "Students": Students,
     "Subjects": Subjects,
-    "Subscription": Subscription,
-    "SubscriptionTiered": SubscriptionTiered,
-    "SubscriptionsOverview": SubscriptionsOverview,
     "Support": Support,
     "SupportTickets": SupportTickets,
     "TeacherProfile": TeacherProfile,

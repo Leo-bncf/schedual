@@ -183,10 +183,6 @@ export default function AccountManager() {
     );
   }
 
-  // Redirect to subscription page if school subscription is inactive or expired
-  if (school && school.subscription_status !== 'active' && school.subscription_status !== 'trial') {
-    return <Navigate to={createPageUrl('Subscription')} replace />;
-  }
 
   return (
     <div className="h-full">
