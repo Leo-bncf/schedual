@@ -39,7 +39,6 @@ import {
   Save,
   Loader2,
   CheckCircle,
-  CreditCard,
   Users,
   Mail,
   AlertCircle,
@@ -52,8 +51,7 @@ import {
   Trash2,
   Plus,
   GraduationCap,
-  Zap,
-  ArrowRight
+  Zap
 } from 'lucide-react';
 import PageHeader from '../components/ui-custom/PageHeader';
 import YearAdvancement from '../components/settings/YearAdvancement';
@@ -132,8 +130,6 @@ const ADD_ONS = [
 export default function Settings() {
   const [isSaving, setIsSaving] = useState(false);
   const [saved, setSaved] = useState(false);
-  const [buyUsersDialogOpen, setBuyUsersDialogOpen] = useState(false);
-  const [usersToBuy, setUsersToBuy] = useState(1);
   const [inviteDialogOpen, setInviteDialogOpen] = useState(false);
   const [inviteEmail, setInviteEmail] = useState('');
   const [isProcessing, setIsProcessing] = useState(false);
@@ -256,42 +252,6 @@ export default function Settings() {
     setIsSaving(false);
   };
 
-  const handleBuyAdditionalUsers = async (quantity) => {
-    setIsProcessing(true);
-    try {
-      const { data } = await base44.functions.invoke('createCheckout', {
-        additional_users_only: true,
-        quantity
-      });
-      
-      if (data.url) {
-        window.location.href = data.url;
-      }
-    } catch (error) {
-      console.error('Checkout error:', error);
-      alert('Failed to start checkout process');
-    } finally {
-      setIsProcessing(false);
-    }
-  };
-
-  const handleManageSubscription = async () => {
-    setIsProcessing(true);
-    try {
-      const { data } = await base44.functions.invoke('createCheckout', {
-        manage_subscription: true
-      });
-      
-      if (data.url) {
-        window.location.href = data.url;
-      }
-    } catch (error) {
-      console.error('Portal error:', error);
-      alert('Failed to open billing portal');
-    } finally {
-      setIsProcessing(false);
-    }
-  };
 
   const isActive = school?.subscription_status === 'active';
   const isPastDue = school?.subscription_status === 'past_due';
@@ -342,8 +302,8 @@ export default function Settings() {
             <span className="text-xs font-medium">Academic</span>
           </TabsTrigger>
           <TabsTrigger value="subscription" className="flex flex-col items-center gap-1.5 py-3 rounded-lg data-[state=active]:bg-slate-50 data-[state=active]:text-indigo-600 transition-all">
-            <CreditCard className="w-5 h-5" />
-            <span className="text-xs font-medium">Billing</span>
+            <Zap className="w-5 h-5" />
+            <span className="text-xs font-medium">Tier</span>
           </TabsTrigger>
           <TabsTrigger value="notifications" className="flex flex-col items-center gap-1.5 py-3 rounded-lg data-[state=active]:bg-slate-50 data-[state=active]:text-indigo-600 transition-all">
             <Bell className="w-5 h-5" />
@@ -715,11 +675,11 @@ export default function Settings() {
                 <div className="flex items-center justify-between">
                   <div className="flex items-center gap-3">
                     <div className="p-2 rounded-lg bg-blue-100">
-                      <CreditCard className="w-5 h-5 text-blue-700" />
+                      <Zap className="w-5 h-5 text-blue-700" />
                     </div>
                     <div>
-                      <CardTitle className="text-lg">Subscription Status</CardTitle>
-                      <CardDescription>Your current plan and billing information</CardDescription>
+                      <CardTitle className="text-lg">Tier Status</CardTitle>
+                      <CardDescription>Your current school tier and access limits</CardDescription>
                     </div>
                   </div>
                   {isActive && (
@@ -785,23 +745,12 @@ export default function Settings() {
                       </div>
                     )}
 
-                    <div className="grid sm:grid-cols-2 gap-3">
-                      <Button 
-                        variant="outline" 
-                        className="w-full h-12 font-medium border-2 border-blue-300 text-blue-700 hover:bg-blue-50"
-                        onClick={handleManageSubscription}
-                        disabled={isProcessing}
-                      >
-                        <CreditCard className="w-4 h-4 mr-2" />
-                        Manage in Stripe
-                      </Button>
-                      
+                    <div className="grid sm:grid-cols-1 gap-3">
                       <Button 
                         variant="outline"
                         className="w-full h-12 font-medium border-2 border-indigo-300 text-indigo-700 hover:bg-indigo-50"
                         onClick={() => setShowTierOptions(!showTierOptions)}
                       >
-                        <ArrowRight className="w-4 h-4 mr-2" />
                         {showTierOptions ? 'Hide' : 'View'} Plans
                       </Button>
                     </div>
@@ -809,7 +758,7 @@ export default function Settings() {
                 ) : (
                   <div className="text-center py-8">
                     <AlertCircle className="w-12 h-12 text-amber-600 mx-auto mb-3" />
-                    <p className="text-slate-600 text-sm">No active subscription</p>
+                    <p className="text-slate-600 text-sm">No active tier assigned</p>
                   </div>
                 )}
               </CardContent>
@@ -823,7 +772,7 @@ export default function Settings() {
                     <Zap className="w-5 h-5" />
                     Available Plans
                   </CardTitle>
-                  <CardDescription>Upgrade or downgrade your subscription</CardDescription>
+                  <CardDescription>View your school tier options and limits</CardDescription>
                 </CardHeader>
                 <CardContent>
                   <div className="grid sm:grid-cols-3 gap-4 mb-4">
@@ -838,7 +787,6 @@ export default function Settings() {
                           }
                         `}
                       >
-                        <div className="text-3xl mb-2">{tier.icon}</div>
                         <h4 className="font-bold text-slate-900 text-sm">{tier.subtitle}</h4>
                         <div className="text-2xl font-bold text-blue-900 mt-2">€{tier.price}</div>
                         <p className="text-xs text-slate-500 mt-1">{tier.description}</p>
@@ -848,7 +796,7 @@ export default function Settings() {
                       </div>
                     ))}
                   </div>
-                  <p className="text-xs text-slate-500">To change your tier, contact support at support@schedual-pro.com</p>
+                  <p className="text-xs text-slate-500">Tier access is managed at the platform level.</p>
                 </CardContent>
               </Card>
             )}
@@ -969,70 +917,6 @@ export default function Settings() {
 
 
       </Tabs>
-
-      {/* Buy Additional Users Dialog */}
-      <Dialog open={buyUsersDialogOpen} onOpenChange={setBuyUsersDialogOpen}>
-        <DialogContent>
-          <DialogHeader>
-            <DialogTitle>Purchase Additional User Seats</DialogTitle>
-            <DialogDescription>
-              Add more admin accounts for your school. Each additional user costs €200/year.
-            </DialogDescription>
-          </DialogHeader>
-          <div className="space-y-4 py-4">
-            <div className="space-y-2">
-              <Label htmlFor="quantity">Number of Additional Users</Label>
-              <Input 
-                id="quantity"
-                type="number"
-                min="1"
-                max="50"
-                value={usersToBuy}
-                onChange={(e) => setUsersToBuy(Math.max(1, parseInt(e.target.value) || 1))}
-              />
-            </div>
-            <div className="bg-slate-50 rounded-lg p-4">
-              <div className="flex justify-between items-center mb-2">
-                <span className="text-slate-600">Additional Users</span>
-                <span className="font-semibold">{usersToBuy}</span>
-              </div>
-              <div className="flex justify-between items-center mb-2">
-                <span className="text-slate-600">Price per user</span>
-                <span className="font-semibold">€200/year</span>
-              </div>
-              <div className="border-t border-slate-200 mt-3 pt-3 flex justify-between items-center">
-                <span className="font-bold text-lg">Total</span>
-                <span className="font-bold text-2xl text-blue-900">€{usersToBuy * 200}</span>
-              </div>
-            </div>
-          </div>
-          <DialogFooter>
-            <Button variant="outline" onClick={() => setBuyUsersDialogOpen(false)}>
-              Cancel
-            </Button>
-            <Button 
-              className="bg-blue-900 hover:bg-blue-800"
-              onClick={() => {
-                handleBuyAdditionalUsers(usersToBuy);
-                setBuyUsersDialogOpen(false);
-              }}
-              disabled={isProcessing}
-            >
-              {isProcessing ? (
-                <>
-                  <Loader2 className="w-4 h-4 mr-2 animate-spin" />
-                  Processing...
-                </>
-              ) : (
-                <>
-                  <CreditCard className="w-4 h-4 mr-2" />
-                  Proceed to Payment
-                </>
-              )}
-            </Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
 
       {/* Invite Admin Dialog */}
       <Dialog open={inviteDialogOpen} onOpenChange={(open) => {

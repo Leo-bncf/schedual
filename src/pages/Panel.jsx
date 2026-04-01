@@ -648,16 +648,6 @@ export default function Panel() {
                 onChange={(e) => setSchoolFormData({ ...schoolFormData, address: e.target.value })}
               />
             </div>
-            <div className="space-y-2">
-              <Label htmlFor="stripe_customer_id">Stripe Customer ID</Label>
-              <Input 
-                id="stripe_customer_id"
-                value={schoolFormData.stripe_customer_id}
-                onChange={(e) => setSchoolFormData({ ...schoolFormData, stripe_customer_id: e.target.value })}
-                placeholder="cus_..."
-              />
-              <p className="text-xs text-slate-500">Optional - Auto-filled on payment</p>
-            </div>
             <div className="grid grid-cols-2 gap-4">
               <div className="space-y-2">
                 <Label htmlFor="timezone">Timezone</Label>

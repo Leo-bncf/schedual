@@ -1,8 +1,6 @@
-import React, { useState } from 'react';
-import { base44 } from '@/api/base44Client';
+import React from 'react';
 import { Button } from "@/components/ui/button";
 import { CheckCircle, Loader2, Shield, X, Undo2 } from 'lucide-react';
-import { createPageUrl } from '../../utils';
 import { motion } from 'framer-motion';
 
 const plans = [
@@ -27,37 +25,6 @@ const plans = [
 ];
 
 export default function PricingSection() {
-  const [loading, setLoading] = useState(null);
-
-  const handleSubscribe = async (priceId) => {
-    setLoading(priceId);
-    
-    try {
-      const isAuthenticated = await base44.auth.isAuthenticated();
-      
-      if (!isAuthenticated) {
-        // Not logged in - redirect to login with subscription as next page
-        base44.auth.redirectToLogin(createPageUrl('Subscription'));
-      } else {
-        // Logged in - check if user has school_id
-        const user = await base44.auth.me();
-        
-        if (!user.school_id) {
-          // No school assigned - redirect to subscription page for payment
-          window.location.href = createPageUrl('Subscription');
-        } else {
-          // Has school - redirect to dashboard
-          window.location.href = createPageUrl('Dashboard');
-        }
-      }
-    } catch (error) {
-      console.error('Subscription navigation error:', error);
-      // Fallback: redirect to login
-      base44.auth.redirectToLogin(createPageUrl('Subscription'));
-    } finally {
-      setLoading(null);
-    }
-  };
 
   return (
     <section id="pricing" className="relative py-24 px-4 sm:px-6 lg:px-8 bg-transparent overflow-hidden">
@@ -149,17 +116,9 @@ export default function PricingSection() {
 
                 <Button 
                   className="w-full py-7 text-lg font-semibold bg-gradient-to-r from-blue-900 to-blue-800 hover:from-blue-800 hover:to-blue-700 shadow-lg hover:shadow-xl transition-all"
-                  onClick={() => handleSubscribe(plan.priceId)}
-                  disabled={loading !== null}
+                  disabled
                 >
-                  {loading === plan.priceId ? (
-                    <>
-                      <Loader2 className="w-5 h-5 mr-2 animate-spin" />
-                      Processing...
-                    </>
-                  ) : (
-                    '🚀 Get Started Now'
-                  )}
+                  Pricing flow being updated
                 </Button>
               </motion.div>
             ))}
