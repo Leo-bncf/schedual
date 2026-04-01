@@ -3,7 +3,7 @@ import { Card } from '@/components/ui/card';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Button } from '@/components/ui/button';
 import TimetableCell from '@/components/schedule/TimetableCell';
-import { DAYS, calculatePeriodTimes, formatClockTime, SlotCard } from '@/components/schedule/timetableGridUtils';
+import { DAYS, formatClockTime } from '@/components/schedule/timetableGridUtils';
 
 export default function TimetableGrid({
   slots = [],
@@ -52,6 +52,17 @@ export default function TimetableGrid({
     });
     return map;
   }, [timeslotListByDay]);
+
+  const gridStartMins = React.useMemo(() => {
+    const firstTimeslot = (timeslots || [])
+      .map((ts) => formatClockTime(ts.startTime))
+      .filter(Boolean)
+      .sort()[0];
+
+    const fallback = formatClockTime(dayStartTime || scheduleSettings?.day_start_time || '08:00');
+    const [hours, minutes] = String(firstTimeslot || fallback).split(':').map(Number);
+    return (hours * 60) + minutes;
+  }, [timeslots, dayStartTime, scheduleSettings]);
 
   const periodTimes = React.useMemo(() => {
   const format = (mins) => {
@@ -111,7 +122,10 @@ export default function TimetableGrid({
     return Math.max(periodsPerDay, maxFromTimeslots, maxFromSlots);
   }, [timeslotListByDay, normalizedSlots, periodsPerDay]);
 
-  const activePeriods = Array.from({ length: computedPeriodsPerDay }, (_, idx) => idx + 1);
+  const activePeriods = React.useMemo(
+    () => Array.from({ length: computedPeriodsPerDay }, (_, idx) => idx + 1),
+    [computedPeriodsPerDay]
+  );
 
   const getGroupInfo = (groupId) => groups.find((group) => group.id === groupId);
   const getRoomInfo = (roomId) => rooms.find((room) => room.id === roomId);
