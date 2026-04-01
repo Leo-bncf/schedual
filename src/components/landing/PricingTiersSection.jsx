@@ -6,7 +6,6 @@ import { CheckCircle2, ChevronDown, School, Users, Calendar, LifeBuoy, FileSprea
 const TIERS = {
   tier1: {
     name: 'Starter',
-    icon: '🟢',
     price: '€599/year',
     subtitle: 'Best for smaller schools starting with structured timetable management',
     rules: [
@@ -26,7 +25,6 @@ const TIERS = {
   },
   tier2: {
     name: 'Standard',
-    icon: '🔵',
     price: '€1,499/year',
     subtitle: 'Best for growing schools that need flexibility and multiple admin users',
     rules: [
@@ -47,7 +45,6 @@ const TIERS = {
   },
   tier3: {
     name: 'Pro',
-    icon: '🟣',
     price: '€2,999/year',
     subtitle: 'Best for large schools that need scale, speed, and premium support',
     rules: [
@@ -129,7 +126,6 @@ export default function PricingTiersSection() {
               >
                 <div className="flex items-start justify-between gap-3 mb-4">
                   <div>
-                    <div className="text-3xl mb-3">{tier.icon}</div>
                     <h3 className="text-2xl font-bold text-slate-900">{tier.name}</h3>
                     <p className="text-sm text-slate-500 mt-1">{tier.subtitle}</p>
                   </div>
@@ -171,7 +167,6 @@ export default function PricingTiersSection() {
                 <div className="flex flex-col lg:flex-row lg:items-start lg:justify-between gap-8">
                   <div className="max-w-2xl">
                     <div className="flex items-center gap-3 mb-4">
-                      <span className="text-3xl">{TIERS[expandedTier].icon}</span>
                       <h3 className="text-3xl font-bold text-slate-900">{TIERS[expandedTier].name}</h3>
                     </div>
                     <p className="text-slate-600 mb-6">{TIERS[expandedTier].subtitle}</p>
