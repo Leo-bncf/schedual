@@ -112,14 +112,13 @@ export default function Schedules() {
 
   const canCreateVersion = () => {
     if (!school) return false;
-    const tier = school.subscription_tier;
-    const hasAddon = school.active_add_ons?.includes('multiple_timetable_scenarios');
-    
-    if (tier === 'tier3' || hasAddon) return true;
-    
-    const count = scheduleVersions.length;
-    if (tier === 'tier2') return count < 5; // Tier 2 gets history (up to 5 versions)
-    return count < 1; // Tier 1 gets 1 version
+    const tierLimits = {
+      tier1: 3,
+      tier2: Infinity,
+      tier3: Infinity,
+    };
+    const maxVersions = tierLimits[school.subscription_tier] ?? 3;
+    return scheduleVersions.length < maxVersions;
   };
 
   const { data: scheduleSlots = [] } = useQuery({
@@ -466,7 +465,7 @@ export default function Schedules() {
               if (canCreateVersion()) {
                 setIsDialogOpen(true);
               } else {
-                alert(`Limit reached. ${school?.subscription_tier === 'tier1' ? 'Tier 1 allows only 1 schedule version.' : 'Tier 2 allows up to 5 versions history.'} Upgrade for more.`);
+                alert(`Limit reached. ${school?.subscription_tier === 'tier1' ? 'Starter allows up to 3 saved schedule versions.' : 'Your current tier limit has been reached.'} Upgrade for more.`);
               }
             }} 
             size="sm"

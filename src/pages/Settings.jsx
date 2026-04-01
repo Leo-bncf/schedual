@@ -68,25 +68,49 @@ const TIMEZONES = [
 
 const TIERS = {
   tier1: {
-    name: 'Tier 1',
-    subtitle: 'Small IB Schools',
-    price: 1100,
-    description: 'PYP/MYP only, ≤300 students',
-    icon: '🌱',
+    name: 'Starter',
+    subtitle: 'Starter',
+    price: 599,
+    description: 'Up to 200 students · 3 saved schedule versions · 1 admin account',
+    icon: '🟢',
+    limits: {
+      students: 200,
+      savedVersions: 3,
+      adminSeats: 1,
+      support: 'Email support (48h)',
+      multipleSavedVersions: true,
+      onboardingCall: false,
+    },
   },
   tier2: {
-    name: 'Tier 2',
-    subtitle: 'Standard IB Continuum',
-    price: 2200,
-    description: 'PYP + MYP + DP, 300-800 students',
-    icon: '⭐',
+    name: 'Standard',
+    subtitle: 'Standard',
+    price: 1499,
+    description: 'Up to 600 students · Unlimited generations · 3 admin accounts',
+    icon: '🔵',
+    limits: {
+      students: 600,
+      savedVersions: 9999,
+      adminSeats: 3,
+      support: 'Email support (24h)',
+      multipleSavedVersions: true,
+      onboardingCall: false,
+    },
   },
   tier3: {
-    name: 'Tier 3',
-    subtitle: 'Large/Multi-Campus',
-    price: 4950,
-    description: '800+ students, multiple campuses',
-    icon: '🚀',
+    name: 'Pro',
+    subtitle: 'Pro',
+    price: 2999,
+    description: 'Up to 1,200 students · Unlimited generations · Unlimited admin accounts',
+    icon: '🟣',
+    limits: {
+      students: 1200,
+      savedVersions: 9999,
+      adminSeats: null,
+      support: 'Priority support (same day)',
+      multipleSavedVersions: true,
+      onboardingCall: true,
+    },
   },
 };
 
@@ -131,6 +155,10 @@ export default function Settings() {
   });
 
   const school = schools[0];
+  const currentTier = school?.subscription_tier ? TIERS[school.subscription_tier] : null;
+  const tierStudentLimit = currentTier?.limits?.students ?? null;
+  const tierAdminSeatLimit = currentTier?.limits?.adminSeats;
+  const effectiveAdminSeatLimit = tierAdminSeatLimit === null ? null : (tierAdminSeatLimit ?? school?.max_admin_seats ?? 3);
 
   const { data: schoolAdmins = [], isLoading: isLoadingAdmins } = useQuery({
     queryKey: ['schoolAdmins', user?.school_id],
@@ -541,7 +569,7 @@ export default function Settings() {
                 <Button
                   onClick={() => setInviteDialogOpen(true)}
                   className="bg-indigo-600 hover:bg-indigo-700"
-                  disabled={!school || schoolAdmins.length >= (school?.max_admin_seats || 3)}
+                  disabled={!school || (effectiveAdminSeatLimit !== null && schoolAdmins.length >= effectiveAdminSeatLimit)}
                 >
                   <Plus className="w-4 h-4 mr-2" />
                   Invite Admin
@@ -558,21 +586,17 @@ export default function Settings() {
                     </div>
                     <div>
                       <p className="text-2xl font-bold text-blue-900">
-                        {schoolAdmins?.length || 0} / {school?.max_admin_seats || 3}
+                        {schoolAdmins?.length || 0} / {effectiveAdminSeatLimit === null ? 'Unlimited' : effectiveAdminSeatLimit}
                       </p>
                       <p className="text-sm text-blue-700 font-medium">
                         Admin seats used
                       </p>
                     </div>
                   </div>
-                  {schoolAdmins && schoolAdmins.length >= (school?.max_admin_seats || 3) && (
-                    <Button
-                      onClick={() => setBuyUsersDialogOpen(true)}
-                      className="bg-blue-600 hover:bg-blue-700"
-                    >
-                      <Plus className="w-4 h-4 mr-2" />
-                      Buy More Seats
-                    </Button>
+                  {effectiveAdminSeatLimit !== null && schoolAdmins && schoolAdmins.length >= effectiveAdminSeatLimit && (
+                    <div className="rounded-lg bg-amber-100 px-4 py-2 text-sm font-medium text-amber-900">
+                      Admin limit reached for your tier
+                    </div>
                   )}
                 </div>
               </div>
@@ -712,8 +736,8 @@ export default function Settings() {
                     <div className="grid sm:grid-cols-3 gap-4">
                       <div className="p-4 rounded-lg bg-gradient-to-br from-blue-50 to-blue-100 border border-blue-200">
                         <p className="text-xs font-medium text-blue-700 uppercase tracking-wide mb-2">Current Tier</p>
-                        <p className="text-2xl font-bold text-blue-900">{TIERS[school?.subscription_tier]?.subtitle || 'N/A'}</p>
-                        <p className="text-sm text-blue-600 mt-2">${TIERS[school?.subscription_tier]?.price || 0}/year</p>
+                        <p className="text-2xl font-bold text-blue-900">{TIERS[school?.subscription_tier]?.name || 'N/A'}</p>
+                        <p className="text-sm text-blue-600 mt-2">€{TIERS[school?.subscription_tier]?.price || 0}/year</p>
                       </div>
                       <div className="p-4 rounded-lg bg-gradient-to-br from-emerald-50 to-emerald-100 border border-emerald-200">
                         <p className="text-xs font-medium text-emerald-700 uppercase tracking-wide mb-2">Next Billing</p>
@@ -727,7 +751,7 @@ export default function Settings() {
                       <div className="p-4 rounded-lg bg-gradient-to-br from-violet-50 to-violet-100 border border-violet-200">
                         <p className="text-xs font-medium text-violet-700 uppercase tracking-wide mb-2">Admin Seats</p>
                         <p className="text-2xl font-bold text-violet-900">
-                          {schoolAdmins.length} / {school?.max_admin_seats || 3}
+                          {schoolAdmins.length} / {effectiveAdminSeatLimit === null ? 'Unlimited' : effectiveAdminSeatLimit}
                         </p>
                       </div>
                       </div>
@@ -736,20 +760,11 @@ export default function Settings() {
                       <div className="p-4 rounded-lg bg-slate-50 border border-slate-200">
                       <h4 className="font-semibold text-slate-900 mb-2 text-sm">Plan Capabilities</h4>
                       <ul className="text-sm text-slate-700 list-disc list-inside space-y-1">
-                        <li>Programmes enabled: {(() => {
-                          const tier = school?.subscription_tier;
-                          if (tier === 'tier1') return 'MYP only';
-                          if (tier === 'tier2') return 'PYP, MYP and DP';
-                          if (tier === 'tier3') return 'All (PYP, MYP, DP)';
-                          return 'PYP, MYP, DP';
-                        })()}</li>
-                        <li>Campuses allowed: {(
-                          school?.subscription_tier === 'tier3' || school?.active_add_ons?.includes('unlimited_campuses')
-                            ? 'Unlimited'
-                            : (school?.subscription_tier === 'tier2'
-                                ? (school?.active_add_ons?.includes('additional_campus') ? 'Multiple (via add-on)' : '1')
-                                : '1')
-                        )}</li>
+                        <li>Student limit: {tierStudentLimit ? `Up to ${tierStudentLimit.toLocaleString()} students` : 'Not set'}</li>
+                        <li>Saved schedule versions: {currentTier?.limits?.savedVersions >= 9999 ? 'Unlimited' : currentTier?.limits?.savedVersions}</li>
+                        <li>Admin accounts: {effectiveAdminSeatLimit === null ? 'Unlimited' : effectiveAdminSeatLimit}</li>
+                        <li>Support: {currentTier?.limits?.support || 'Standard support'}</li>
+                        <li>Onboarding call: {currentTier?.limits?.onboardingCall ? 'Included' : 'Not included'}</li>
                       </ul>
                       </div>
 
@@ -825,7 +840,7 @@ export default function Settings() {
                       >
                         <div className="text-3xl mb-2">{tier.icon}</div>
                         <h4 className="font-bold text-slate-900 text-sm">{tier.subtitle}</h4>
-                        <div className="text-2xl font-bold text-blue-900 mt-2">${tier.price}</div>
+                        <div className="text-2xl font-bold text-blue-900 mt-2">€{tier.price}</div>
                         <p className="text-xs text-slate-500 mt-1">{tier.description}</p>
                         {school?.subscription_tier === tierId && (
                           <Badge className="mt-3 bg-green-600 w-full justify-center">Current Plan</Badge>
@@ -867,13 +882,13 @@ export default function Settings() {
                       <div key={addon.id} className="p-3 rounded-lg border border-slate-200 hover:border-slate-300 transition-colors">
                         <h5 className="font-semibold text-slate-900 text-sm">{addon.name}</h5>
                         <p className="text-xs text-slate-500 mt-1">{addon.category}</p>
-                        <p className="text-lg font-bold text-blue-900 mt-2">${addon.price}</p>
+                        <p className="text-lg font-bold text-blue-900 mt-2">€{addon.price}</p>
                       </div>
                     ))}
                   </div>
                   <div className="mt-4 p-3 bg-blue-50 border border-blue-200 rounded-lg">
                     <p className="text-xs text-blue-900">
-                      💡 To add or modify add-ons, open <strong>Manage in Stripe</strong> above or contact support.
+                      Tier limits now control student capacity, saved schedule versions, and admin accounts for each school.
                     </p>
                   </div>
                 </CardContent>
@@ -1072,7 +1087,7 @@ export default function Settings() {
                   <div className="flex items-start gap-2">
                     <AlertCircle className="w-4 h-4 text-amber-600 mt-0.5 flex-shrink-0" />
                     <p className="text-xs text-amber-800">
-                      <strong>Available seats:</strong> {(school?.max_admin_seats || 3) - schoolAdmins.length} / {school?.max_admin_seats || 3}
+                      <strong>Available seats:</strong> {effectiveAdminSeatLimit === null ? 'Unlimited' : `${Math.max(effectiveAdminSeatLimit - schoolAdmins.length, 0)} / ${effectiveAdminSeatLimit}`}
                     </p>
                   </div>
                 </div>
