@@ -37,7 +37,8 @@ import {
   Search,
   Trash2,
   Settings2,
-  Play
+  Play,
+  BookPlus
 } from 'lucide-react';
 import TimetableGrid from '../components/schedule/TimetableGrid';
 import ExportTimetableButton from '../components/schedule/ExportTimetableButton';
@@ -54,6 +55,17 @@ export default function Schedules() {
   const [isPayloadDialogOpen, setIsPayloadDialogOpen] = useState(false);
   const [payloadPreview, setPayloadPreview] = useState(null);
   const [isPayloadLoading, setIsPayloadLoading] = useState(false);
+  const [isAddLessonDialogOpen, setIsAddLessonDialogOpen] = useState(false);
+  const [manualLessonForm, setManualLessonForm] = useState({
+    subject_id: '',
+    teacher_id: 'unassigned',
+    room_id: 'unassigned',
+    classgroup_id: 'none',
+    teaching_group_id: 'none',
+    day: 'Monday',
+    period: '1',
+    notes: '',
+  });
   const [selectedStudentId, setSelectedStudentId] = useState(null);
   const [searchStudent, setSearchStudent] = useState('');
   const [selectedTeacherId, setSelectedTeacherId] = useState(null);
@@ -149,6 +161,12 @@ export default function Schedules() {
     enabled: !!schoolId,
   });
 
+  const { data: classGroups = [] } = useQuery({
+    queryKey: ['classGroups', schoolId],
+    queryFn: () => base44.entities.ClassGroup.filter({ school_id: schoolId }, '-created_date', 500),
+    enabled: !!schoolId,
+  });
+
   const createVersionMutation = useMutation({
     mutationFn: (data) => {
       if (!schoolId) throw new Error('No school assigned');
@@ -176,6 +194,31 @@ export default function Schedules() {
     },
     onError: (err) => {
       toast.error("Failed to update lesson: " + err.message);
+    }
+  });
+
+  const createManualLessonMutation = useMutation({
+    mutationFn: async (data) => {
+      const response = await base44.functions.invoke('createManualScheduleSlot', data);
+      return response.data;
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['scheduleSlots'] });
+      setIsAddLessonDialogOpen(false);
+      setManualLessonForm({
+        subject_id: '',
+        teacher_id: 'unassigned',
+        room_id: 'unassigned',
+        classgroup_id: 'none',
+        teaching_group_id: 'none',
+        day: 'Monday',
+        period: '1',
+        notes: '',
+      });
+      toast.success('Lesson added to timetable');
+    },
+    onError: (err) => {
+      toast.error('Failed to add lesson: ' + err.message);
     }
   });
 
@@ -366,6 +409,32 @@ export default function Schedules() {
 
   const publishedVersion = scheduleVersions.find(v => v.status === 'published');
   const draftVersions = scheduleVersions.filter(v => v.status === 'draft');
+  const availableTimeslots = typeof selectedVersion?.generation_params === 'string'
+    ? JSON.parse(selectedVersion.generation_params)?.solverTimeslots || []
+    : selectedVersion?.generation_params?.solverTimeslots || [];
+  const classGroupsFromStudents = React.useMemo(() => {
+    const map = new Map();
+    students.forEach((student) => {
+      if (!student.classgroup_id) return;
+      if (!map.has(student.classgroup_id)) {
+        map.set(student.classgroup_id, {
+          id: student.classgroup_id,
+          name: student.classgroup_id,
+          student_ids: [],
+        });
+      }
+      map.get(student.classgroup_id).student_ids.push(student.id);
+    });
+    return Array.from(map.values());
+  }, [students]);
+  const allClassGroups = React.useMemo(() => {
+    const merged = new Map();
+    classGroups.forEach((group) => merged.set(group.id, { ...group, student_ids: group.student_ids || [] }));
+    classGroupsFromStudents.forEach((group) => {
+      if (!merged.has(group.id)) merged.set(group.id, group);
+    });
+    return Array.from(merged.values());
+  }, [classGroups, classGroupsFromStudents]);
 
   return (
     <div className="min-h-screen bg-slate-50">
@@ -732,6 +801,15 @@ export default function Schedules() {
                       <CardDescription>Calendar view of generated lessons</CardDescription>
                     </div>
                     <div className="flex items-center gap-2">
+                      <Button
+                        variant="outline"
+                        onClick={() => setIsAddLessonDialogOpen(true)}
+                        disabled={!selectedVersion}
+                        className="gap-2"
+                      >
+                        <BookPlus className="w-4 h-4" />
+                        Add Lesson
+                      </Button>
                       <Select value={overviewFilterType} onValueChange={(val) => { setOverviewFilterType(val); setOverviewFilterId('all'); }}>
                         <SelectTrigger className="w-[140px]">
                           <SelectValue placeholder="Filter by..." />
@@ -779,11 +857,7 @@ export default function Schedules() {
                     periodDurationMinutes={school?.period_duration_minutes || 60}
                     scheduleSettings={school}
                     globalView={overviewFilterType === 'all'}
-                    timeslots={
-                      typeof selectedVersion?.generation_params === 'string'
-                        ? JSON.parse(selectedVersion.generation_params)?.solverTimeslots || []
-                        : selectedVersion?.generation_params?.solverTimeslots || []
-                    }
+                    timeslots={availableTimeslots}
                     onSlotClick={(day, uiRow, actionData) => {
                       if (actionData.action === 'move') {
                         if (confirm(`Are you sure you want to move this lesson to ${day}, Period ${uiRow}?`)) {
@@ -831,11 +905,7 @@ export default function Schedules() {
                     selectedStudentId={selectedStudentId}
                     onStudentChange={setSelectedStudentId}
                     exportId="student-viewer-timetable"
-                    timeslots={
-                      typeof selectedVersion?.generation_params === 'string'
-                        ? JSON.parse(selectedVersion.generation_params)?.solverTimeslots || []
-                        : selectedVersion?.generation_params?.solverTimeslots || []
-                    }
+                    timeslots={availableTimeslots}
                     scheduleSettings={school}
                     scheduleVersionId={selectedVersion?.id}
                   />
@@ -907,11 +977,7 @@ export default function Schedules() {
                           scheduleSettings={school}
                           globalView={false}
                           exportId="teacher-viewer-timetable"
-                          timeslots={
-                      typeof selectedVersion?.generation_params === 'string'
-                        ? JSON.parse(selectedVersion.generation_params)?.solverTimeslots || []
-                        : selectedVersion?.generation_params?.solverTimeslots || []
-                    }
+                          timeslots={availableTimeslots}
                         />
                       </div>
                     </div>
@@ -1118,6 +1184,138 @@ export default function Schedules() {
               ) : (
                 'Create Version'
               )}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      <Dialog open={isAddLessonDialogOpen} onOpenChange={setIsAddLessonDialogOpen}>
+        <DialogContent className="max-w-2xl">
+          <DialogHeader>
+            <DialogTitle>Add lesson to timetable</DialogTitle>
+            <DialogDescription>
+              Create a manual lesson and assign it to a class or teaching group, with teacher and room if needed.
+            </DialogDescription>
+          </DialogHeader>
+          <div className="grid gap-4 py-4 sm:grid-cols-2">
+            <div className="space-y-2 sm:col-span-2">
+              <Label>Subject</Label>
+              <Select value={manualLessonForm.subject_id} onValueChange={(value) => setManualLessonForm((prev) => ({ ...prev, subject_id: value }))}>
+                <SelectTrigger><SelectValue placeholder="Select subject" /></SelectTrigger>
+                <SelectContent>
+                  {subjects.map((subject) => (
+                    <SelectItem key={subject.id} value={subject.id}>{subject.name}</SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+
+            <div className="space-y-2">
+              <Label>Day</Label>
+              <Select value={manualLessonForm.day} onValueChange={(value) => setManualLessonForm((prev) => ({ ...prev, day: value }))}>
+                <SelectTrigger><SelectValue /></SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="Monday">Monday</SelectItem>
+                  <SelectItem value="Tuesday">Tuesday</SelectItem>
+                  <SelectItem value="Wednesday">Wednesday</SelectItem>
+                  <SelectItem value="Thursday">Thursday</SelectItem>
+                  <SelectItem value="Friday">Friday</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+
+            <div className="space-y-2">
+              <Label>Period</Label>
+              <Select value={manualLessonForm.period} onValueChange={(value) => setManualLessonForm((prev) => ({ ...prev, period: value }))}>
+                <SelectTrigger><SelectValue /></SelectTrigger>
+                <SelectContent>
+                  {Array.from({ length: school?.periods_per_day || 10 }, (_, index) => (
+                    <SelectItem key={index + 1} value={String(index + 1)}>Period {index + 1}</SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+
+            <div className="space-y-2">
+              <Label>Class</Label>
+              <Select value={manualLessonForm.classgroup_id} onValueChange={(value) => setManualLessonForm((prev) => ({ ...prev, classgroup_id: value, teaching_group_id: 'none' }))}>
+                <SelectTrigger><SelectValue placeholder="Select class" /></SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="none">No class selected</SelectItem>
+                  {allClassGroups.map((group) => (
+                    <SelectItem key={group.id} value={group.id}>{group.name}</SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+
+            <div className="space-y-2">
+              <Label>Teaching group</Label>
+              <Select value={manualLessonForm.teaching_group_id} onValueChange={(value) => setManualLessonForm((prev) => ({ ...prev, teaching_group_id: value, classgroup_id: 'none' }))}>
+                <SelectTrigger><SelectValue placeholder="Select teaching group" /></SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="none">No group selected</SelectItem>
+                  {teachingGroups.filter((group) => group.is_active).map((group) => (
+                    <SelectItem key={group.id} value={group.id}>{group.name}</SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+
+            <div className="space-y-2">
+              <Label>Teacher</Label>
+              <Select value={manualLessonForm.teacher_id} onValueChange={(value) => setManualLessonForm((prev) => ({ ...prev, teacher_id: value }))}>
+                <SelectTrigger><SelectValue placeholder="Select teacher" /></SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="unassigned">Unassigned</SelectItem>
+                  {teachers.map((teacher) => (
+                    <SelectItem key={teacher.id} value={teacher.id}>{teacher.full_name}</SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+
+            <div className="space-y-2">
+              <Label>Room</Label>
+              <Select value={manualLessonForm.room_id} onValueChange={(value) => setManualLessonForm((prev) => ({ ...prev, room_id: value }))}>
+                <SelectTrigger><SelectValue placeholder="Select room" /></SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="unassigned">Unassigned</SelectItem>
+                  {rooms.map((room) => (
+                    <SelectItem key={room.id} value={room.id}>{room.name}</SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+
+            <div className="space-y-2 sm:col-span-2">
+              <Label>Notes</Label>
+              <Input
+                placeholder="Optional note"
+                value={manualLessonForm.notes}
+                onChange={(e) => setManualLessonForm((prev) => ({ ...prev, notes: e.target.value }))}
+              />
+            </div>
+          </div>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setIsAddLessonDialogOpen(false)}>Cancel</Button>
+            <Button
+              onClick={() => createManualLessonMutation.mutate({
+                schedule_version: selectedVersion?.id,
+                subject_id: manualLessonForm.subject_id,
+                day: manualLessonForm.day,
+                period: Number(manualLessonForm.period),
+                timeslot_id: availableTimeslots.find((slot, index) => normalizeSearch(String(slot.dayOfWeek || '')) === normalizeSearch(manualLessonForm.day) && (index + 1) === Number(manualLessonForm.period))?.id || null,
+                teacher_id: manualLessonForm.teacher_id === 'unassigned' ? null : manualLessonForm.teacher_id,
+                room_id: manualLessonForm.room_id === 'unassigned' ? null : manualLessonForm.room_id,
+                classgroup_id: manualLessonForm.classgroup_id === 'none' ? null : manualLessonForm.classgroup_id,
+                teaching_group_id: manualLessonForm.teaching_group_id === 'none' ? null : manualLessonForm.teaching_group_id,
+                notes: manualLessonForm.notes,
+              })}
+              disabled={!manualLessonForm.subject_id || (manualLessonForm.classgroup_id === 'none' && manualLessonForm.teaching_group_id === 'none') || createManualLessonMutation.isPending}
+              className="bg-blue-600 hover:bg-blue-700"
+            >
+              {createManualLessonMutation.isPending ? <><Loader2 className="w-4 h-4 mr-2 animate-spin" />Adding...</> : 'Add Lesson'}
             </Button>
           </DialogFooter>
         </DialogContent>
