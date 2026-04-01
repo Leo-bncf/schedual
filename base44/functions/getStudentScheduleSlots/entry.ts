@@ -110,6 +110,16 @@ Deno.serve(async (req) => {
     };
 
     const slots = allSlots.filter((slot) => {
+      if (slot.is_break) {
+        if (slot.student_id) {
+          return slot.student_id === student.id;
+        }
+
+        if (slot.classgroup_id && student.classgroup_id) {
+          return slot.classgroup_id === student.classgroup_id;
+        }
+      }
+
       if (slot.classgroup_id && student.classgroup_id) {
         return slot.classgroup_id === student.classgroup_id;
       }
