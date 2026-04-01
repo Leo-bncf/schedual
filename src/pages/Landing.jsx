@@ -1,7 +1,7 @@
 import React from 'react';
 import LandingHeader from '../components/landing/LandingHeader';
 import HeroSection from '../components/landing/HeroSection';
-import ImmersivePreview from '../components/landing/ImmersivePreview';
+import SchedulerShowcaseSection from '../components/landing/SchedulerShowcaseSection';
 import TrustSection from '../components/landing/TrustSection';
 import DemoBooking from '../components/landing/DemoBooking';
 import MissionSection from '../components/landing/MissionSection';
@@ -18,7 +18,7 @@ export default function Landing() {
       <TermsAcceptanceDialog />
       <LandingHeader />
       <HeroSection />
-      <ImmersivePreview />
+      <SchedulerShowcaseSection />
       <InfoSection />
       <HowItWorksSection />
       <TrustSection />
