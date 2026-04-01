@@ -64,36 +64,6 @@ export default function TimetableGrid({
     return (hours * 60) + minutes;
   }, [timeslots, dayStartTime, scheduleSettings]);
 
-  const periodTimes = React.useMemo(() => {
-  const format = (mins) => {
-    const h = Math.floor(mins / 60);
-    const m = mins % 60;
-    return `${String(h).padStart(2, '0')}:${String(m).padStart(2, '0')}`;
-  };
-
-  const baseMinutes = Number(periodDurationMinutes || 60);
-  const times = {};
-  activePeriods.forEach((row) => {
-    const rowStart = gridStartMins + ((row - 1) * baseMinutes);
-    const rowEnd = rowStart + baseMinutes;
-
-    const rowBoundaries = (timeslots || [])
-      .flatMap((ts) => [ts.startTime, ts.endTime])
-      .map((value) => formatClockTime(value))
-      .filter(Boolean)
-      .map((value) => {
-        const [h, m] = value.split(':').map(Number);
-        return (h * 60) + m;
-      })
-      .filter((mins) => mins >= rowStart && mins <= rowEnd)
-      .sort((a, b) => a - b);
-
-    times[row] = Array.from(new Set([rowStart, ...rowBoundaries, rowEnd])).map(format);
-  });
-
-  return times;
-  }, [activePeriods, gridStartMins, timeslots, periodDurationMinutes]);
-
   const normalizedSlots = React.useMemo(() => {
     return (slots || []).map((slot) => {
       const uiRow = slot.timeslot_id ? timeslotToPosition[String(slot.timeslot_id)] : slot.period;
@@ -126,6 +96,37 @@ export default function TimetableGrid({
     () => Array.from({ length: computedPeriodsPerDay }, (_, idx) => idx + 1),
     [computedPeriodsPerDay]
   );
+
+  const periodTimes = React.useMemo(() => {
+    const format = (mins) => {
+      const h = Math.floor(mins / 60);
+      const m = mins % 60;
+      return `${String(h).padStart(2, '0')}:${String(m).padStart(2, '0')}`;
+    };
+
+    const baseMinutes = Number(periodDurationMinutes || 60);
+    const times = {};
+
+    activePeriods.forEach((row) => {
+      const rowStart = gridStartMins + ((row - 1) * baseMinutes);
+      const rowEnd = rowStart + baseMinutes;
+
+      const rowBoundaries = (timeslots || [])
+        .flatMap((ts) => [ts.startTime, ts.endTime])
+        .map((value) => formatClockTime(value))
+        .filter(Boolean)
+        .map((value) => {
+          const [h, m] = value.split(':').map(Number);
+          return (h * 60) + m;
+        })
+        .filter((mins) => mins >= rowStart && mins <= rowEnd)
+        .sort((a, b) => a - b);
+
+      times[row] = Array.from(new Set([rowStart, ...rowBoundaries, rowEnd])).map(format);
+    });
+
+    return times;
+  }, [activePeriods, gridStartMins, timeslots, periodDurationMinutes]);
 
   const getGroupInfo = (groupId) => groups.find((group) => group.id === groupId);
   const getRoomInfo = (roomId) => rooms.find((room) => room.id === roomId);
