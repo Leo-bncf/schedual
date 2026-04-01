@@ -32,8 +32,8 @@ export default function TimetableCell({
       <div className={`absolute inset-1 flex ${globalView ? 'flex-row flex-wrap content-start' : 'flex-col'} gap-1`} style={{ zIndex: 1 }}>
         {slots.map((slot) => {
           const data = renderSlotData(slot);
-          const duration = slot.__durationMinutes || 60;
-          const base = 60;
+          const duration = slot.__durationMinutes || periodDurationMinutes || 60;
+          const base = periodDurationMinutes || 60;
           const topOffsetMinutes = Number(slot.__topOffsetMinutes || 0);
           const heightPct = `${(duration / base) * 100}%`;
           const topPct = `${(topOffsetMinutes / base) * 100}%`;

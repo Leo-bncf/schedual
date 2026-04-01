@@ -160,7 +160,7 @@ export default function StudentScheduleView({
                     Timetable: {selectedStudent.full_name}
                   </div>
                   <div className="text-xs text-slate-500">
-                    Real lesson times are shown on the left, while the grid stays in 1-hour rows.
+                    Real lesson times are shown on the left using your school’s chosen block duration.
                   </div>
                 </div>
                 <Button variant="outline" size="sm" onClick={() => setIsFullscreen(!isFullscreen)} className="bg-white">

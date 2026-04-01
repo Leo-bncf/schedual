@@ -54,33 +54,34 @@ export default function TimetableGrid({
   }, [timeslotListByDay]);
 
   const periodTimes = React.useMemo(() => {
-    const format = (mins) => {
-      const h = Math.floor(mins / 60);
-      const m = mins % 60;
-      return `${String(h).padStart(2, '0')}:${String(m).padStart(2, '0')}`;
-    };
+  const format = (mins) => {
+    const h = Math.floor(mins / 60);
+    const m = mins % 60;
+    return `${String(h).padStart(2, '0')}:${String(m).padStart(2, '0')}`;
+  };
 
-    const times = {};
-    activePeriods.forEach((row) => {
-      const rowStart = gridStartMins + ((row - 1) * 60);
-      const rowEnd = rowStart + 60;
+  const baseMinutes = Number(periodDurationMinutes || 60);
+  const times = {};
+  activePeriods.forEach((row) => {
+    const rowStart = gridStartMins + ((row - 1) * baseMinutes);
+    const rowEnd = rowStart + baseMinutes;
 
-      const rowBoundaries = (timeslots || [])
-        .flatMap((ts) => [ts.startTime, ts.endTime])
-        .map((value) => formatClockTime(value))
-        .filter(Boolean)
-        .map((value) => {
-          const [h, m] = value.split(':').map(Number);
-          return (h * 60) + m;
-        })
-        .filter((mins) => mins >= rowStart && mins <= rowEnd)
-        .sort((a, b) => a - b);
+    const rowBoundaries = (timeslots || [])
+      .flatMap((ts) => [ts.startTime, ts.endTime])
+      .map((value) => formatClockTime(value))
+      .filter(Boolean)
+      .map((value) => {
+        const [h, m] = value.split(':').map(Number);
+        return (h * 60) + m;
+      })
+      .filter((mins) => mins >= rowStart && mins <= rowEnd)
+      .sort((a, b) => a - b);
 
-      times[row] = Array.from(new Set([rowStart, ...rowBoundaries, rowEnd])).map(format);
-    });
+    times[row] = Array.from(new Set([rowStart, ...rowBoundaries, rowEnd])).map(format);
+  });
 
-    return times;
-  }, [activePeriods, gridStartMins, timeslots]);
+  return times;
+  }, [activePeriods, gridStartMins, timeslots, periodDurationMinutes]);
 
   const normalizedSlots = React.useMemo(() => {
     return (slots || []).map((slot) => {
