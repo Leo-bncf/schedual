@@ -136,13 +136,25 @@ Deno.serve(async (req) => {
         return true;
       }
 
-      const subjectCode = normalizeCode(subject?.code);
       const level = normalizeLevel(slot.display_level_override || slotGroup?.level || getStudentLevelForSubject(subjectId));
       const scope = extractYearGroupScope(slot, slotGroup);
       const isExamTimeSlot = isExamTimeSubject(subject, slot);
       const isSharedCoreSlot = student.ib_programme === 'DP' && (
         normalizeLevel(slot.display_level_override || slotGroup?.level) === 'STANDARD' || isExamTimeSlot
       );
+
+      if (isExamTimeSlot) {
+        if (scope === 'DP1_DP2') return true;
+        if (scope === studentYearGroup) return true;
+
+        const studentListedOnGroup = Array.isArray(slotGroup?.student_ids) && slotGroup.student_ids.includes(student.id);
+        const hasMatchingAssignedGroup = assignedGroups.some((group) =>
+          group?.subject_id === subjectId &&
+          (group.id === slotGroup?.id || extractYearGroupScope(slot, group) === scope || extractYearGroupScope(slot, group) === studentYearGroup)
+        );
+
+        return studentListedOnGroup || hasMatchingAssignedGroup;
+      }
 
       if (isSharedCoreSlot) {
         const studentListedOnGroup = Array.isArray(slotGroup?.student_ids) && slotGroup.student_ids.includes(student.id);
