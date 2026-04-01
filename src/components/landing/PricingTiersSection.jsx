@@ -1,12 +1,15 @@
 import React, { useState } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
+import { base44 } from '@/api/base44Client';
 import { Badge } from "@/components/ui/badge";
-import { CheckCircle2, ChevronDown, School, Users, Calendar, LifeBuoy, FileSpreadsheet, Wrench } from 'lucide-react';
+import { Button } from "@/components/ui/button";
+import { CheckCircle2, ChevronDown, School, Users, Calendar, LifeBuoy, FileSpreadsheet, Wrench, ArrowRight, Loader2 } from 'lucide-react';
 
 const TIERS = {
   tier1: {
     name: 'Starter',
     price: '€599/year',
+    priceId: 'price_1THYLAD8slkoqOiBqzij9LlB',
     subtitle: 'Best for smaller schools starting with structured timetable management',
     rules: [
       'Up to 200 students',
@@ -26,6 +29,7 @@ const TIERS = {
   tier2: {
     name: 'Standard',
     price: '€1,499/year',
+    priceId: 'price_1THYLAD8slkoqOiBI0rA7cCR',
     subtitle: 'Best for growing schools that need flexibility and multiple admin users',
     rules: [
       'Up to 600 students',
@@ -46,6 +50,7 @@ const TIERS = {
   tier3: {
     name: 'Pro',
     price: '€2,999/year',
+    priceId: 'price_1THYLAD8slkoqOiBQCaKAj2z',
     subtitle: 'Best for large schools that need scale, speed, and premium support',
     rules: [
       'Up to 1,200 students',
@@ -101,6 +106,27 @@ const SYSTEM_RULES = [
 
 export default function PricingTiersSection() {
   const [expandedTier, setExpandedTier] = useState('tier2');
+  const [loadingTier, setLoadingTier] = useState(null);
+
+  const handleCheckout = async (priceId, tierId) => {
+    if (window.self !== window.top) {
+      alert('Checkout works only from the published app, not inside the preview.');
+      return;
+    }
+
+    const isAuthenticated = await base44.auth.isAuthenticated();
+    if (!isAuthenticated) {
+      base44.auth.redirectToLogin(`${window.location.pathname}${window.location.search}${window.location.hash}#pricing`);
+      return;
+    }
+
+    setLoadingTier(tierId);
+    const response = await base44.functions.invoke('createStripeCheckout', {
+      priceId,
+      tier: tierId,
+    });
+    window.location.href = response.data.url;
+  };
 
   return (
     <section id="pricing" className="py-20 bg-white relative z-10">
@@ -187,6 +213,16 @@ export default function PricingTiersSection() {
                       <p>Saved schedule versions follow the tier allowance.</p>
                       <p>Admin accounts are limited by the tier.</p>
                       <p>Support level follows the selected plan.</p>
+                    </div>
+                    <div className="mt-6 pt-6 border-t border-white/10">
+                      <Button
+                        className="w-full bg-white text-slate-900 hover:bg-slate-100 font-semibold"
+                        onClick={() => handleCheckout(TIERS[expandedTier].priceId, expandedTier)}
+                        disabled={loadingTier === expandedTier}
+                      >
+                        {loadingTier === expandedTier ? <><Loader2 className="w-4 h-4 mr-2 animate-spin" />Redirecting...</> : <><span>Buy {TIERS[expandedTier].name}</span><ArrowRight className="w-4 h-4 ml-1" /></>}
+                      </Button>
+                      <p className="text-xs text-blue-100/80 mt-3">Already have an account? You’ll go straight to payment. New user? You’ll create your account first.</p>
                     </div>
                   </div>
                 </div>
