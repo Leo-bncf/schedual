@@ -121,14 +121,19 @@ export default function PricingTiersSection() {
     }
 
     setLoadingTier(tierId);
-    const response = await base44.functions.invoke('createStripeCheckout', {
-      priceId,
-      tier: tierId,
-    });
 
-    if (response?.data?.url) {
-      window.location.href = response.data.url;
-      return;
+    try {
+      const response = await base44.functions.invoke('createStripeCheckout', {
+        priceId,
+        tier: tierId,
+      });
+
+      if (response?.data?.url) {
+        window.location.href = response.data.url;
+        return;
+      }
+    } catch (error) {
+      console.error('Checkout start failed:', error);
     }
 
     alert('Unable to start checkout right now.');
@@ -223,8 +228,12 @@ export default function PricingTiersSection() {
                     </div>
                     <div className="mt-6 pt-6 border-t border-white/10">
                       <Button
+                        type="button"
                         className="w-full bg-white text-slate-900 hover:bg-slate-100 font-semibold"
-                        onClick={() => handleCheckout(TIERS[expandedTier].priceId, expandedTier)}
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          handleCheckout(TIERS[expandedTier].priceId, expandedTier);
+                        }}
                         disabled={loadingTier === expandedTier}
                       >
                         {loadingTier === expandedTier ? <><Loader2 className="w-4 h-4 mr-2 animate-spin" />Redirecting...</> : <><span>Buy {TIERS[expandedTier].name}</span><ArrowRight className="w-4 h-4 ml-1" /></>}
