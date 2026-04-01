@@ -125,7 +125,14 @@ export default function PricingTiersSection() {
       priceId,
       tier: tierId,
     });
-    window.location.href = response.data.url;
+
+    if (response?.data?.url) {
+      window.location.href = response.data.url;
+      return;
+    }
+
+    alert('Unable to start checkout right now.');
+    setLoadingTier(null);
   };
 
   return (
