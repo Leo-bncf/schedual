@@ -51,18 +51,6 @@ function gcd(a, b) {
 }
 
 function getSolverSlotDurationMinutes(school) {
-  const customBlocks = Array.isArray(school?.timeslot_templates) ? school.timeslot_templates : [];
-
-  if (customBlocks.length > 0) {
-    const firstBlock = customBlocks.find((block) => block?.start && block?.end);
-    if (firstBlock) {
-      const [startHour, startMinute] = String(firstBlock.start).split(':').map(Number);
-      const [endHour, endMinute] = String(firstBlock.end).split(':').map(Number);
-      const duration = ((endHour * 60) + endMinute) - ((startHour * 60) + startMinute);
-      if (Number.isFinite(duration) && duration > 0) return duration;
-    }
-  }
-
   return Number(school?.period_duration_minutes || 60);
 }
 
@@ -79,22 +67,6 @@ function buildScheduleSettings(school) {
 // Build solverTimeslots array from school schedule config
 function buildSolverTimeslots(school) {
   const daysOfWeek = school.days_of_week || ['MONDAY', 'TUESDAY', 'WEDNESDAY', 'THURSDAY', 'FRIDAY'];
-  const customBlocks = Array.isArray(school?.timeslot_templates) ? school.timeslot_templates : [];
-
-  if (customBlocks.length > 0) {
-    let timeslotId = 1;
-    return daysOfWeek.flatMap((day) =>
-      customBlocks
-        .filter((block) => block?.start && block?.end)
-        .map((block) => ({
-          id: timeslotId++,
-          dayOfWeek: day,
-          startTime: block.start,
-          endTime: block.end,
-        }))
-    );
-  }
-
   const dayStartTime = school.day_start_time || '08:00';
   const dayEndTime = school.day_end_time || '17:00';
   const periodDurationMinutes = getSolverSlotDurationMinutes(school);

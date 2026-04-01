@@ -57,7 +57,6 @@ import {
 } from 'lucide-react';
 import PageHeader from '../components/ui-custom/PageHeader';
 import YearAdvancement from '../components/settings/YearAdvancement';
-import TimeslotTemplateEditor from '../components/settings/TimeslotTemplateEditor';
 
 import { toast } from 'sonner';
 
@@ -150,9 +149,9 @@ export default function Settings() {
     timezone: 'UTC',
     academic_year: '2024-2025',
     periods_per_day: 8,
+    period_duration_minutes: 60,
     days_per_week: 5,
     school_start_time: '08:00',
-    timeslot_templates: [],
     settings: {}
   });
 
@@ -166,9 +165,9 @@ export default function Settings() {
         timezone: school.timezone || 'UTC',
         academic_year: school.academic_year || '2024-2025',
         periods_per_day: school.periods_per_day || 8,
+        period_duration_minutes: school.period_duration_minutes || 60,
         days_per_week: school.days_per_week || 5,
         school_start_time: school.school_start_time || '08:00',
-        timeslot_templates: Array.isArray(school.timeslot_templates) ? school.timeslot_templates : [],
         settings: school.settings || {}
       });
     }
@@ -459,10 +458,39 @@ export default function Settings() {
               </CardContent>
             </Card>
 
-            <TimeslotTemplateEditor
-              value={formData.timeslot_templates}
-              onChange={(timeslot_templates) => setFormData({ ...formData, timeslot_templates })}
-            />
+            <Card className="border-0 shadow-sm bg-white rounded-xl">
+              <CardHeader className="bg-gradient-to-r from-amber-50 to-orange-50 rounded-t-xl">
+                <div className="flex items-center gap-3">
+                  <div className="p-2 rounded-lg bg-amber-100">
+                    <Clock className="w-5 h-5 text-amber-700" />
+                  </div>
+                  <div>
+                    <CardTitle className="text-lg">Block Duration</CardTitle>
+                    <CardDescription>Choose one duration in minutes for all timetable blocks.</CardDescription>
+                  </div>
+                </div>
+              </CardHeader>
+              <CardContent className="pt-6">
+                <div className="grid gap-6 sm:grid-cols-2">
+                  <div className="space-y-2">
+                    <Label htmlFor="period_duration_minutes" className="flex items-center gap-2 text-sm font-semibold">
+                      <Clock className="w-4 h-4 text-amber-600" />
+                      Unit Block Duration
+                    </Label>
+                    <Input
+                      id="period_duration_minutes"
+                      type="number"
+                      min="15"
+                      step="5"
+                      value={formData.period_duration_minutes}
+                      onChange={(e) => setFormData({ ...formData, period_duration_minutes: Number(e.target.value || 60) })}
+                      className="h-11"
+                    />
+                    <p className="text-xs text-slate-500">Example: 60, 55, 45 minutes. This value applies to all blocks.</p>
+                  </div>
+                </div>
+              </CardContent>
+            </Card>
 
             {/* System Information */}
             <Card className="border-0 shadow-sm bg-white rounded-xl">
