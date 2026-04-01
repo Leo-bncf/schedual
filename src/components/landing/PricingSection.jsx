@@ -1,4 +1,5 @@
-import React from 'react';
+import React, { useState } from 'react';
+import { base44 } from '@/api/base44Client';
 import { Button } from "@/components/ui/button";
 import { CheckCircle, Loader2, Shield, X, Undo2 } from 'lucide-react';
 import { motion } from 'framer-motion';
@@ -19,12 +20,27 @@ const plans = [
       'Priority support',
       'Additional users: €200/year each',
     ],
-    priceId: 'price_yearly',
+    priceId: 'price_1THYLAD8slkoqOiBI0rA7cCR',
     popular: true,
   },
 ];
 
 export default function PricingSection() {
+  const [loading, setLoading] = useState(false);
+
+  const handleCheckout = async (priceId) => {
+    if (window.self !== window.top) {
+      alert('Checkout works only from the published app, not inside the preview.');
+      return;
+    }
+
+    setLoading(true);
+    const response = await base44.functions.invoke('createStripeCheckout', {
+      priceId,
+      tier: 'tier2',
+    });
+    window.location.href = response.data.url;
+  };
 
   return (
     <section id="pricing" className="relative py-24 px-4 sm:px-6 lg:px-8 bg-transparent overflow-hidden">
@@ -116,9 +132,10 @@ export default function PricingSection() {
 
                 <Button 
                   className="w-full py-7 text-lg font-semibold bg-gradient-to-r from-blue-900 to-blue-800 hover:from-blue-800 hover:to-blue-700 shadow-lg hover:shadow-xl transition-all"
-                  disabled
+                  onClick={() => handleCheckout(plan.priceId)}
+                  disabled={loading}
                 >
-                  Pricing flow being updated
+                  {loading ? <><Loader2 className="w-5 h-5 mr-2 animate-spin" />Redirecting...</> : 'Start subscription'}
                 </Button>
               </motion.div>
             ))}

@@ -796,7 +796,7 @@ export default function Settings() {
                       </div>
                     ))}
                   </div>
-                  <p className="text-xs text-slate-500">Tier access is managed at the platform level.</p>
+                  <p className="text-xs text-slate-500">Choose a plan from the pricing page to start or change your subscription.</p>
                 </CardContent>
               </Card>
             )}
