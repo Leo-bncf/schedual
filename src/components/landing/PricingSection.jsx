@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 import { base44 } from '@/api/base44Client';
 import { Button } from "@/components/ui/button";
-import { CheckCircle, Loader2, Shield, X, Undo2 } from 'lucide-react';
+import { CheckCircle, Loader2, Shield, X, Undo2, ArrowRight, CreditCard, UserPlus } from 'lucide-react';
 import { motion } from 'framer-motion';
 
 const plans = [
@@ -34,6 +34,12 @@ export default function PricingSection() {
       return;
     }
 
+    const isAuthenticated = await base44.auth.isAuthenticated();
+    if (!isAuthenticated) {
+      base44.auth.redirectToLogin(`${window.location.pathname}${window.location.search}${window.location.hash}#pricing`);
+      return;
+    }
+
     setLoading(true);
     const response = await base44.functions.invoke('createStripeCheckout', {
       priceId,
@@ -57,8 +63,36 @@ export default function PricingSection() {
             Invest in Smarter Scheduling
           </h2>
           <p className="text-xl text-slate-600 max-w-3xl mx-auto leading-relaxed">
-            One comprehensive plan. Everything you need to automate your IB timetabling.
+            Pick your plan, create your account if needed, and continue directly to secure checkout.
           </p>
+        </div>
+
+        <div className="max-w-5xl mx-auto mb-8">
+          <div className="rounded-3xl border border-blue-200 bg-white/85 backdrop-blur-md shadow-xl p-6 md:p-8">
+            <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-6">
+              <div>
+                <p className="text-sm font-semibold uppercase tracking-[0.18em] text-blue-900/80 mb-2">Get started</p>
+                <h3 className="text-2xl md:text-3xl font-bold text-slate-900">Choose your plan and complete checkout in minutes</h3>
+                <p className="text-slate-600 mt-2 max-w-2xl">If you already have an account, you’ll go directly to payment. If not, you’ll create your account first and then continue to checkout automatically.</p>
+              </div>
+              <div className="grid sm:grid-cols-2 gap-3 min-w-full md:min-w-[320px] md:max-w-[360px]">
+                <div className="rounded-2xl bg-blue-50 border border-blue-100 p-4">
+                  <div className="flex items-center gap-2 text-blue-900 font-semibold mb-2">
+                    <UserPlus className="w-4 h-4" />
+                    New customer
+                  </div>
+                  <p className="text-sm text-slate-600">Create your account, then continue straight to secure payment.</p>
+                </div>
+                <div className="rounded-2xl bg-emerald-50 border border-emerald-100 p-4">
+                  <div className="flex items-center gap-2 text-emerald-700 font-semibold mb-2">
+                    <CreditCard className="w-4 h-4" />
+                    Existing account
+                  </div>
+                  <p className="text-sm text-slate-600">Already connected? Click the button and go directly to checkout.</p>
+                </div>
+              </div>
+            </div>
+          </div>
         </div>
 
         {/* Main Pricing Card with Side Stats */}
@@ -94,7 +128,7 @@ export default function PricingSection() {
             {plans.map((plan, index) => (
               <motion.div 
                 key={index} 
-                className="relative p-10 rounded-3xl bg-white/80 backdrop-blur-md shadow-2xl"
+                className="relative p-10 rounded-3xl bg-white/90 backdrop-blur-md shadow-2xl border border-blue-100 overflow-hidden"
                 initial={{ opacity: 0, scale: 0.9 }}
                 whileInView={{ opacity: 1, scale: 1 }}
                 viewport={{ once: true }}
@@ -109,7 +143,13 @@ export default function PricingSection() {
                   </div>
                 )}
 
-                <div className="text-center mb-10">
+                <div className="absolute inset-x-0 top-0 h-2 bg-gradient-to-r from-blue-900 via-blue-600 to-emerald-500" />
+
+                <div className="text-center mb-10 mt-3">
+                  <div className="inline-flex items-center gap-2 rounded-full bg-blue-50 text-blue-900 px-4 py-2 text-sm font-semibold mb-4 border border-blue-100">
+                    <CheckCircle className="w-4 h-4" />
+                    Best for full school scheduling
+                  </div>
                   <h3 className="text-3xl font-bold text-slate-900 mb-4">{plan.name}</h3>
                   <div className="mb-4">
                     <div className="flex items-baseline justify-center gap-2">
@@ -130,13 +170,22 @@ export default function PricingSection() {
                   ))}
                 </ul>
 
+                <div className="rounded-2xl bg-slate-50 border border-slate-200 p-4 mb-5">
+                  <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2 text-sm text-slate-600">
+                    <span>Ready to buy?</span>
+                    <span className="font-medium text-slate-900">Account first, payment right after</span>
+                  </div>
+                </div>
+
                 <Button 
                   className="w-full py-7 text-lg font-semibold bg-gradient-to-r from-blue-900 to-blue-800 hover:from-blue-800 hover:to-blue-700 shadow-lg hover:shadow-xl transition-all"
                   onClick={() => handleCheckout(plan.priceId)}
                   disabled={loading}
                 >
-                  {loading ? <><Loader2 className="w-5 h-5 mr-2 animate-spin" />Redirecting...</> : 'Start subscription'}
+                  {loading ? <><Loader2 className="w-5 h-5 mr-2 animate-spin" />Redirecting...</> : <><span>Choose plan & continue</span><ArrowRight className="w-5 h-5 ml-1" /></>}
                 </Button>
+
+                <p className="text-center text-sm text-slate-500 mt-4">Already connected? You’ll go straight to payment. New here? You’ll create your account first.</p>
               </motion.div>
             ))}
           </div>
