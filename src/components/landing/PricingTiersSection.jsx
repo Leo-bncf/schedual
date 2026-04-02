@@ -174,7 +174,7 @@ export default function PricingTiersSection() {
           <PricingTierSwitch options={tierOptions} value={expandedTier} onChange={setExpandedTier} />
         </div>
 
-        <div className="mt-10 grid gap-8 lg:grid-cols-[1.15fr_0.85fr] lg:items-start">
+        <div className="mt-10 grid gap-8 lg:grid-cols-2 lg:items-stretch">
           <motion.div
             key={expandedTier}
             initial={{ opacity: 0, y: 16 }}
@@ -182,18 +182,12 @@ export default function PricingTiersSection() {
             transition={{ duration: 0.25 }}
             className="rounded-[2rem] border border-slate-200 bg-white p-6 shadow-[0_20px_60px_-30px_rgba(15,23,42,0.35)] sm:p-8"
           >
-            <div className="flex flex-col gap-4 border-b border-slate-100 pb-6 sm:flex-row sm:items-start sm:justify-between">
-              <div>
-                <div className="flex items-center gap-3">
-                  <h3 className="text-3xl font-bold text-slate-900">{selectedTier.name}</h3>
-                  {selectedTier.featured ? <Badge className="bg-yellow-400 text-slate-900">Recommended</Badge> : null}
-                </div>
-                <p className="mt-3 max-w-2xl text-slate-600">{selectedTier.subtitle}</p>
+            <div className="border-b border-slate-100 pb-6">
+              <div className="flex items-center gap-3">
+                <h3 className="text-3xl font-bold text-slate-900">{selectedTier.name}</h3>
+                {selectedTier.featured ? <Badge className="bg-yellow-400 text-slate-900">Recommended</Badge> : null}
               </div>
-              <div className="rounded-2xl bg-slate-900 px-5 py-4 text-white shadow-lg">
-                <div className="text-sm uppercase tracking-[0.18em] text-blue-200">Annual price</div>
-                <div className="mt-2 text-4xl font-bold">{selectedTier.price}</div>
-              </div>
+              <p className="mt-3 max-w-2xl text-slate-600">{selectedTier.subtitle}</p>
             </div>
 
             <div className="mt-6 grid gap-4 sm:grid-cols-3">
@@ -223,7 +217,7 @@ export default function PricingTiersSection() {
             initial={{ opacity: 0, y: 16 }}
             animate={{ opacity: 1, y: 0 }}
             transition={{ duration: 0.25, delay: 0.05 }}
-            className="rounded-[2rem] border border-slate-900 bg-slate-900 p-6 text-white shadow-[0_20px_60px_-30px_rgba(15,23,42,0.65)] sm:p-8"
+            className="flex h-full flex-col rounded-[2rem] border border-slate-900 bg-slate-900 p-6 text-white shadow-[0_20px_60px_-30px_rgba(15,23,42,0.65)] sm:p-8"
           >
             <p className="text-sm uppercase tracking-[0.2em] text-blue-200">What this controls</p>
             <h3 className="mt-3 text-2xl font-bold">{selectedTier.name} rules applied across your school</h3>
@@ -239,26 +233,33 @@ export default function PricingTiersSection() {
               <p className="text-sm text-blue-100">Already have an account? You’ll go straight to payment. New user? You’ll create your account first.</p>
             </div>
 
-            <Button
-              type="button"
-              className="mt-6 h-12 w-full rounded-full bg-white text-slate-900 font-semibold hover:bg-slate-100"
-              onClick={async () => {
-                await handleCheckout(selectedTier.priceId, expandedTier);
-              }}
-              disabled={loadingTier === expandedTier}
-            >
-              {loadingTier === expandedTier ? (
-                <>
-                  <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                  Redirecting...
-                </>
-              ) : (
-                <>
-                  <span>Buy {selectedTier.name}</span>
-                  <ArrowRight className="ml-1 h-4 w-4" />
-                </>
-              )}
-            </Button>
+            <div className="mt-auto pt-8">
+              <div className="mb-4 rounded-3xl border border-white/10 bg-white/5 p-5">
+                <div className="text-xs uppercase tracking-[0.22em] text-blue-200">Annual price</div>
+                <div className="mt-2 text-4xl font-bold text-white">{selectedTier.price}</div>
+              </div>
+
+              <Button
+                type="button"
+                className="h-12 w-full rounded-full bg-white text-slate-900 font-semibold hover:bg-slate-100"
+                onClick={async () => {
+                  await handleCheckout(selectedTier.priceId, expandedTier);
+                }}
+                disabled={loadingTier === expandedTier}
+              >
+                {loadingTier === expandedTier ? (
+                  <>
+                    <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                    Redirecting...
+                  </>
+                ) : (
+                  <>
+                    <span>Buy {selectedTier.name}</span>
+                    <ArrowRight className="ml-1 h-4 w-4" />
+                  </>
+                )}
+              </Button>
+            </div>
           </motion.div>
         </div>
 
