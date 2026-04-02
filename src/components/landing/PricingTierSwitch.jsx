@@ -14,13 +14,13 @@ export default function PricingTierSwitch({ options, value, onChange, className 
             onClick={() => onChange(option.value)}
             className={cn(
               'relative rounded-full px-4 py-3 text-sm font-semibold transition-colors',
-              active ? 'text-white' : 'text-slate-500 hover:text-slate-900'
+              active ? 'text-blue-950' : 'text-slate-500 hover:text-slate-900'
             )}
           >
             {active && (
               <motion.span
                 layoutId="pricing-tier-switch"
-                className="absolute inset-0 rounded-full bg-slate-900 shadow-lg"
+                className="absolute inset-0 rounded-full bg-white shadow-lg"
                 transition={{ type: 'spring', stiffness: 500, damping: 35 }}
               />
             )}

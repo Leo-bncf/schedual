@@ -304,7 +304,7 @@ export default function PricingTiersSection() {
 
                 <Button
                   type="button"
-                  className="h-12 w-full rounded-full bg-gradient-to-r from-blue-900 to-blue-800 text-white font-semibold hover:from-blue-800 hover:to-blue-700"
+                  className="h-12 w-full rounded-full bg-white text-blue-950 font-semibold hover:bg-slate-100"
                   onClick={async () => {
                     await handleCheckout(selectedTier.priceId, expandedTier);
                   }}
