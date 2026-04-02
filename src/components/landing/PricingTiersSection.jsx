@@ -1,5 +1,5 @@
 import React, { useMemo, useState } from 'react';
-import { motion } from 'framer-motion';
+import { AnimatePresence, motion } from 'framer-motion';
 import { base44 } from '@/api/base44Client';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
@@ -116,6 +116,11 @@ const SYSTEM_RULES = [
   },
 ];
 
+const panelTransition = {
+  duration: 0.42,
+  ease: [0.22, 1, 0.36, 1],
+};
+
 export default function PricingTiersSection() {
   const [expandedTier, setExpandedTier] = useState('tier2');
   const [loadingTier, setLoadingTier] = useState(null);
@@ -126,6 +131,13 @@ export default function PricingTiersSection() {
   );
 
   const selectedTier = TIERS[expandedTier];
+  const summaryLines = [
+    'The school can only operate within the limits of this tier.',
+    'Student capacity is capped by the selected plan.',
+    'Saved schedule versions follow the plan allowance.',
+    'Admin accounts are limited by the plan.',
+    'Support response level follows the selected plan.',
+  ];
 
   const handleCheckout = async (priceId, tierId) => {
     if (window.self !== window.top) {
@@ -175,92 +187,144 @@ export default function PricingTiersSection() {
         </div>
 
         <div className="mt-10 grid gap-8 lg:grid-cols-2 lg:items-stretch">
-          <motion.div
-            key={expandedTier}
-            initial={{ opacity: 0, y: 16 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ duration: 0.25 }}
-            className="rounded-[2rem] border border-slate-200 bg-white p-6 shadow-[0_20px_60px_-30px_rgba(15,23,42,0.35)] sm:p-8"
-          >
-            <div className="border-b border-slate-100 pb-6">
-              <div className="flex items-center gap-3">
-                <h3 className="text-3xl font-bold text-slate-900">{selectedTier.name}</h3>
-                {selectedTier.featured ? <Badge className="bg-yellow-400 text-slate-900">Recommended</Badge> : null}
-              </div>
-              <p className="mt-3 max-w-2xl text-slate-600">{selectedTier.subtitle}</p>
-            </div>
-
-            <div className="mt-6 grid gap-4 sm:grid-cols-3">
-              {selectedTier.highlights.map((item) => (
-                <div key={item.label} className="rounded-2xl border border-slate-200 bg-slate-50 p-4">
-                  <item.icon className="mb-3 h-5 w-5 text-blue-700" />
-                  <div className="text-xl font-bold text-slate-900">{item.value}</div>
-                  <div className="text-sm text-slate-500">{item.label}</div>
-                </div>
-              ))}
-            </div>
-
-            <div className="mt-6 grid gap-4 sm:grid-cols-2">
-              {selectedTier.rules.map((rule) => (
-                <div key={rule} className="flex items-start gap-3 rounded-2xl border border-slate-200 bg-white p-4">
-                  <div className="mt-0.5 rounded-full bg-emerald-100 p-1">
-                    <CheckCircle2 className="h-4 w-4 text-emerald-600" />
-                  </div>
-                  <span className="text-slate-700">{rule}</span>
-                </div>
-              ))}
-            </div>
-          </motion.div>
-
-          <motion.div
-            key={`${expandedTier}-summary`}
-            initial={{ opacity: 0, y: 16 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ duration: 0.25, delay: 0.05 }}
-            className="flex h-full flex-col rounded-[2rem] border border-slate-900 bg-slate-900 p-6 text-white shadow-[0_20px_60px_-30px_rgba(15,23,42,0.65)] sm:p-8"
-          >
-            <p className="text-sm uppercase tracking-[0.2em] text-blue-200">What this controls</p>
-            <h3 className="mt-3 text-2xl font-bold">{selectedTier.name} rules applied across your school</h3>
-            <div className="mt-6 space-y-3 text-sm text-slate-200">
-              <p>The school can only operate within the limits of this tier.</p>
-              <p>Student capacity is capped by the selected plan.</p>
-              <p>Saved schedule versions follow the plan allowance.</p>
-              <p>Admin accounts are limited by the plan.</p>
-              <p>Support response level follows the selected plan.</p>
-            </div>
-
-            <div className="mt-8 rounded-2xl border border-white/10 bg-white/5 p-4">
-              <p className="text-sm text-blue-100">Already have an account? You’ll go straight to payment. New user? You’ll create your account first.</p>
-            </div>
-
-            <div className="mt-auto pt-8">
-              <div className="mb-4 rounded-3xl border border-white/10 bg-white/5 p-5">
-                <div className="text-xs uppercase tracking-[0.22em] text-blue-200">Annual price</div>
-                <div className="mt-2 text-4xl font-bold text-white">{selectedTier.price}</div>
-              </div>
-
-              <Button
-                type="button"
-                className="h-12 w-full rounded-full bg-white text-slate-900 font-semibold hover:bg-slate-100"
-                onClick={async () => {
-                  await handleCheckout(selectedTier.priceId, expandedTier);
-                }}
-                disabled={loadingTier === expandedTier}
+          <AnimatePresence mode="wait" initial={false}>
+            <motion.div
+              key={expandedTier}
+              initial={{ opacity: 0, y: 28, scale: 0.985, filter: 'blur(10px)' }}
+              animate={{ opacity: 1, y: 0, scale: 1, filter: 'blur(0px)' }}
+              exit={{ opacity: 0, y: -18, scale: 0.985, filter: 'blur(8px)' }}
+              transition={panelTransition}
+              className="rounded-[2rem] border border-slate-200 bg-white p-6 shadow-[0_20px_60px_-30px_rgba(15,23,42,0.35)] sm:p-8"
+            >
+              <motion.div
+                initial={{ opacity: 0, y: 12 }}
+                animate={{ opacity: 1, y: 0 }}
+                transition={{ duration: 0.28, delay: 0.06 }}
+                className="border-b border-slate-100 pb-6"
               >
-                {loadingTier === expandedTier ? (
-                  <>
-                    <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                    Redirecting...
-                  </>
-                ) : (
-                  <>
-                    <span>Buy {selectedTier.name}</span>
-                    <ArrowRight className="ml-1 h-4 w-4" />
-                  </>
-                )}
-              </Button>
-            </div>
-          </motion.div>
+                <div className="flex items-center gap-3">
+                  <h3 className="text-3xl font-bold text-slate-900">{selectedTier.name}</h3>
+                  {selectedTier.featured ? <Badge className="bg-yellow-400 text-slate-900">Recommended</Badge> : null}
+                </div>
+                <p className="mt-3 max-w-2xl text-slate-600">{selectedTier.subtitle}</p>
+              </motion.div>
+
+              <div className="mt-6 grid gap-4 sm:grid-cols-3">
+                {selectedTier.highlights.map((item, index) => (
+                  <motion.div
+                    key={item.label}
+                    initial={{ opacity: 0, y: 18 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    transition={{ duration: 0.28, delay: 0.1 + index * 0.05 }}
+                    className="rounded-2xl border border-slate-200 bg-slate-50 p-4"
+                  >
+                    <item.icon className="mb-3 h-5 w-5 text-blue-700" />
+                    <div className="text-xl font-bold text-slate-900">{item.value}</div>
+                    <div className="text-sm text-slate-500">{item.label}</div>
+                  </motion.div>
+                ))}
+              </div>
+
+              <div className="mt-6 grid gap-4 sm:grid-cols-2">
+                {selectedTier.rules.map((rule, index) => (
+                  <motion.div
+                    key={rule}
+                    initial={{ opacity: 0, y: 16 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    transition={{ duration: 0.26, delay: 0.18 + index * 0.035 }}
+                    className="flex items-start gap-3 rounded-2xl border border-slate-200 bg-white p-4"
+                  >
+                    <div className="mt-0.5 rounded-full bg-emerald-100 p-1">
+                      <CheckCircle2 className="h-4 w-4 text-emerald-600" />
+                    </div>
+                    <span className="text-slate-700">{rule}</span>
+                  </motion.div>
+                ))}
+              </div>
+            </motion.div>
+          </AnimatePresence>
+
+          <AnimatePresence mode="wait" initial={false}>
+            <motion.div
+              key={`${expandedTier}-summary`}
+              initial={{ opacity: 0, y: 28, scale: 0.985, filter: 'blur(10px)' }}
+              animate={{ opacity: 1, y: 0, scale: 1, filter: 'blur(0px)' }}
+              exit={{ opacity: 0, y: -18, scale: 0.985, filter: 'blur(8px)' }}
+              transition={{ ...panelTransition, delay: 0.03 }}
+              className="flex h-full flex-col rounded-[2rem] border border-slate-900 bg-slate-900 p-6 text-white shadow-[0_20px_60px_-30px_rgba(15,23,42,0.65)] sm:p-8"
+            >
+              <motion.p
+                initial={{ opacity: 0, y: 10 }}
+                animate={{ opacity: 1, y: 0 }}
+                transition={{ duration: 0.24, delay: 0.08 }}
+                className="text-sm uppercase tracking-[0.2em] text-blue-200"
+              >
+                What this controls
+              </motion.p>
+              <motion.h3
+                initial={{ opacity: 0, y: 12 }}
+                animate={{ opacity: 1, y: 0 }}
+                transition={{ duration: 0.28, delay: 0.12 }}
+                className="mt-3 text-2xl font-bold"
+              >
+                {selectedTier.name} rules applied across your school
+              </motion.h3>
+              <div className="mt-6 space-y-3 text-sm text-slate-200">
+                {summaryLines.map((line, index) => (
+                  <motion.p
+                    key={line}
+                    initial={{ opacity: 0, x: 8 }}
+                    animate={{ opacity: 1, x: 0 }}
+                    transition={{ duration: 0.24, delay: 0.16 + index * 0.05 }}
+                  >
+                    {line}
+                  </motion.p>
+                ))}
+              </div>
+
+              <motion.div
+                initial={{ opacity: 0, y: 16 }}
+                animate={{ opacity: 1, y: 0 }}
+                transition={{ duration: 0.28, delay: 0.34 }}
+                className="mt-8 rounded-2xl border border-white/10 bg-white/5 p-4"
+              >
+                <p className="text-sm text-blue-100">Already have an account? You’ll go straight to payment. New user? You’ll create your account first.</p>
+              </motion.div>
+
+              <motion.div
+                initial={{ opacity: 0, y: 18 }}
+                animate={{ opacity: 1, y: 0 }}
+                transition={{ duration: 0.32, delay: 0.4 }}
+                className="mt-auto pt-8"
+              >
+                <div className="mb-4 rounded-3xl border border-white/10 bg-white/5 p-5">
+                  <div className="text-xs uppercase tracking-[0.22em] text-blue-200">Annual price</div>
+                  <div className="mt-2 text-4xl font-bold text-white">{selectedTier.price}</div>
+                </div>
+
+                <Button
+                  type="button"
+                  className="h-12 w-full rounded-full bg-white text-slate-900 font-semibold hover:bg-slate-100"
+                  onClick={async () => {
+                    await handleCheckout(selectedTier.priceId, expandedTier);
+                  }}
+                  disabled={loadingTier === expandedTier}
+                >
+                  {loadingTier === expandedTier ? (
+                    <>
+                      <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                      Redirecting...
+                    </>
+                  ) : (
+                    <>
+                      <span>Buy {selectedTier.name}</span>
+                      <ArrowRight className="ml-1 h-4 w-4" />
+                    </>
+                  )}
+                </Button>
+              </motion.div>
+            </motion.div>
+          </AnimatePresence>
         </div>
 
         <div className="mt-20">
