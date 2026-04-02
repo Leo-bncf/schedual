@@ -251,13 +251,13 @@ export default function PricingTiersSection() {
               animate={{ opacity: 1, y: 0, scale: 1, filter: 'blur(0px)' }}
               exit={{ opacity: 0, y: -18, scale: 0.985, filter: 'blur(8px)' }}
               transition={{ ...panelTransition, delay: 0.03 }}
-              className="flex h-full flex-col rounded-[2rem] border border-slate-900 bg-slate-900 p-6 text-white shadow-[0_20px_60px_-30px_rgba(15,23,42,0.65)] sm:p-8"
+              className="flex h-full flex-col rounded-[2rem] border border-blue-200 bg-gradient-to-br from-blue-950 via-blue-900 to-blue-800 p-6 text-white shadow-[0_20px_60px_-30px_rgba(30,64,175,0.45)] sm:p-8"
             >
               <motion.p
                 initial={{ opacity: 0, y: 10 }}
                 animate={{ opacity: 1, y: 0 }}
                 transition={{ duration: 0.24, delay: 0.08 }}
-                className="text-sm uppercase tracking-[0.2em] text-blue-200"
+                className="text-sm uppercase tracking-[0.2em] text-sky-200"
               >
                 What this controls
               </motion.p>
@@ -269,7 +269,7 @@ export default function PricingTiersSection() {
               >
                 {selectedTier.name} rules applied across your school
               </motion.h3>
-              <div className="mt-6 space-y-3 text-sm text-slate-200">
+              <div className="mt-6 space-y-3 text-sm text-blue-100/90">
                 {summaryLines.map((line, index) => (
                   <motion.p
                     key={line}
@@ -286,9 +286,9 @@ export default function PricingTiersSection() {
                 initial={{ opacity: 0, y: 16 }}
                 animate={{ opacity: 1, y: 0 }}
                 transition={{ duration: 0.28, delay: 0.34 }}
-                className="mt-8 rounded-2xl border border-white/10 bg-white/5 p-4"
+                className="mt-8 rounded-2xl border border-blue-300/20 bg-white/10 p-4 backdrop-blur-sm"
               >
-                <p className="text-sm text-blue-100">Already have an account? You’ll go straight to payment. New user? You’ll create your account first.</p>
+                <p className="text-sm text-sky-100">Already have an account? You’ll go straight to payment. New user? You’ll create your account first.</p>
               </motion.div>
 
               <motion.div
@@ -297,14 +297,14 @@ export default function PricingTiersSection() {
                 transition={{ duration: 0.32, delay: 0.4 }}
                 className="mt-auto pt-8"
               >
-                <div className="mb-4 rounded-3xl border border-white/10 bg-white/5 p-5">
-                  <div className="text-xs uppercase tracking-[0.22em] text-blue-200">Annual price</div>
-                  <div className="mt-2 text-4xl font-bold text-white">{selectedTier.price}</div>
+                <div className="mb-4 rounded-3xl border border-sky-300/20 bg-gradient-to-br from-white/16 to-sky-300/10 p-5 backdrop-blur-sm">
+                  <div className="text-xs uppercase tracking-[0.22em] text-sky-200">Annual price</div>
+                  <div className="mt-2 text-4xl font-bold text-sky-50">{selectedTier.price}</div>
                 </div>
 
                 <Button
                   type="button"
-                  className="h-12 w-full rounded-full bg-white text-slate-900 font-semibold hover:bg-slate-100"
+                  className="h-12 w-full rounded-full bg-sky-100 text-blue-950 font-semibold hover:bg-white"
                   onClick={async () => {
                     await handleCheckout(selectedTier.priceId, expandedTier);
                   }}
