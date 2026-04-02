@@ -248,7 +248,9 @@ export default function PricingTiersSection() {
             <Button
               type="button"
               className="mt-6 h-12 w-full rounded-full bg-white text-slate-900 font-semibold hover:bg-slate-100"
-              onClick={() => handleCheckout(selectedTier.priceId, expandedTier)}
+              onClick={async () => {
+                await handleCheckout(selectedTier.priceId, expandedTier);
+              }}
               disabled={loadingTier === expandedTier}
             >
               {loadingTier === expandedTier ? (
