@@ -251,7 +251,7 @@ export default function PricingTiersSection() {
               animate={{ opacity: 1, y: 0, scale: 1, filter: 'blur(0px)' }}
               exit={{ opacity: 0, y: -18, scale: 0.985, filter: 'blur(8px)' }}
               transition={{ ...panelTransition, delay: 0.03 }}
-              className="flex h-full flex-col rounded-[2rem] border border-blue-200 bg-gradient-to-br from-blue-950 via-blue-900 to-blue-800 p-6 text-white shadow-[0_20px_60px_-30px_rgba(30,64,175,0.45)] sm:p-8"
+              className="flex h-full flex-col rounded-[2rem] border border-blue-800/40 bg-gradient-to-br from-blue-900 via-blue-900 to-blue-800 p-6 text-white shadow-[0_20px_60px_-30px_rgba(30,64,175,0.45)] sm:p-8"
             >
               <motion.p
                 initial={{ opacity: 0, y: 10 }}
@@ -304,7 +304,7 @@ export default function PricingTiersSection() {
 
                 <Button
                   type="button"
-                  className="h-12 w-full rounded-full bg-sky-100 text-blue-950 font-semibold hover:bg-white"
+                  className="h-12 w-full rounded-full bg-gradient-to-r from-blue-900 to-blue-800 text-white font-semibold hover:from-blue-800 hover:to-blue-700"
                   onClick={async () => {
                     await handleCheckout(selectedTier.priceId, expandedTier);
                   }}
