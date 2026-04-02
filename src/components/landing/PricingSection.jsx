@@ -34,18 +34,23 @@ export default function PricingSection() {
       return;
     }
 
-    const isAuthenticated = await base44.auth.isAuthenticated();
-    if (!isAuthenticated) {
-      base44.auth.redirectToLogin(`${window.location.pathname}${window.location.search}${window.location.hash}#pricing`);
-      return;
-    }
-
     setLoading(true);
-    const response = await base44.functions.invoke('createStripeCheckout', {
-      priceId,
-      tier: 'tier2',
-    });
-    window.location.href = response.data.url;
+
+    try {
+      const response = await base44.functions.invoke('createStripeCheckout', {
+        priceId,
+        tier: 'tier2',
+      });
+
+      if (response?.data?.url) {
+        window.location.href = response.data.url;
+        return;
+      }
+
+      alert('Unable to open Stripe checkout right now.');
+    } finally {
+      setLoading(false);
+    }
   };
 
   return (

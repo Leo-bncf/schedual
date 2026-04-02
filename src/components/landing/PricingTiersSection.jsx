@@ -133,12 +133,6 @@ export default function PricingTiersSection() {
       return;
     }
 
-    const isAuthenticated = await base44.auth.isAuthenticated();
-    if (!isAuthenticated) {
-      base44.auth.redirectToLogin(`${window.location.pathname}${window.location.search}${window.location.hash}#pricing`);
-      return;
-    }
-
     setLoadingTier(tierId);
 
     try {
