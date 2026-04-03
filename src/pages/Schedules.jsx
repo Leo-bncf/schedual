@@ -654,7 +654,7 @@ export default function Schedules() {
                 </Button>
                 <Button
                   onClick={handleGenerateSchedule}
-                  disabled={genStatus === 'generating' || !canGenerateSchedule()}
+                  disabled={genStatus === 'generating'}
                   className="bg-blue-600 hover:bg-blue-700 h-12 px-8 text-base shadow-md hover:shadow-lg transition-all"
                 >
                   {genStatus === 'generating' ? (
@@ -1080,7 +1080,7 @@ export default function Schedules() {
                   </p>
                   <Button
                     onClick={handleGenerateSchedule}
-                    disabled={genStatus === 'generating' || !canGenerateSchedule()}
+                    disabled={genStatus === 'generating'}
                     className="bg-blue-600 hover:bg-blue-700 h-12 px-8 text-base shadow-md hover:shadow-lg transition-all"
                   >
                     {genStatus === 'generating' ? (
@@ -1089,11 +1089,6 @@ export default function Schedules() {
                       <><Play className="w-5 h-5 mr-2 fill-current" />Start Generation</>
                     )}
                   </Button>
-                  {!canGenerateSchedule() && (
-                    <p className="text-sm text-amber-600 mt-3 font-medium">
-                      You have reached your plan limit for schedule generations.
-                    </p>
-                  )}
                   {genStatus === 'success' && genMessage && (
                     <p className="text-sm text-emerald-600 mt-3 font-medium">{genMessage}</p>
                   )}
