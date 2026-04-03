@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useEffect, useState } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { Navigate } from 'react-router-dom';
 import { createPageUrl } from '../utils';
@@ -34,7 +34,7 @@ export default function AccountManager() {
     deleteConfirmPassword: ''
   });
 
-  const { data: user, isLoading } = useQuery({
+  const { data: user, isLoading, refetch: refetchUser } = useQuery({
     queryKey: ['currentUser'],
     queryFn: () => base44.auth.me(),
   });
@@ -166,7 +166,7 @@ export default function AccountManager() {
     });
   };
 
-  React.useEffect(() => {
+  useEffect(() => {
     if (user) {
       setFormData(prev => ({
         ...prev,
@@ -175,6 +175,26 @@ export default function AccountManager() {
       }));
     }
   }, [user]);
+
+  useEffect(() => {
+    const params = new URLSearchParams(window.location.search);
+    if (params.get('stripe') !== 'success' || user?.school_id) return;
+
+    let attempts = 0;
+    const interval = window.setInterval(async () => {
+      attempts += 1;
+      const result = await refetchUser();
+      if (result.data?.school_id) {
+        queryClient.invalidateQueries({ queryKey: ['userSchool'] });
+        window.clearInterval(interval);
+      }
+      if (attempts >= 10) {
+        window.clearInterval(interval);
+      }
+    }, 1500);
+
+    return () => window.clearInterval(interval);
+  }, [user?.school_id, refetchUser, queryClient]);
 
   if (isLoading) {
     return (
@@ -524,9 +544,9 @@ export default function AccountManager() {
               <CardContent className="py-12 text-center space-y-4">
                 <Building2 className="w-12 h-12 text-slate-300 mx-auto" />
                 <p className="text-slate-600">No school assigned to your account yet</p>
-                <p className="text-sm text-slate-500">If you just completed payment, sign out and sign back in once so the school admin menu appears.</p>
-                <Button variant="outline" onClick={() => base44.auth.logout(window.location.pathname)}>
-                  Refresh my access
+                <p className="text-sm text-slate-500">If you just completed payment, your access is being refreshed automatically.</p>
+                <Button variant="outline" onClick={() => refetchUser()}>
+                  Check again
                 </Button>
               </CardContent>
             </Card>
