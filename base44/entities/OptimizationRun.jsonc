@@ -1,0 +1,127 @@
+{
+  "name": "OptimizationRun",
+  "type": "object",
+  "properties": {
+    "school_id": {
+      "type": "string"
+    },
+    "schedule_version_id": {
+      "type": "string"
+    },
+    "status": {
+      "type": "string",
+      "enum": [
+        "pending",
+        "running",
+        "completed",
+        "failed"
+      ],
+      "default": "pending"
+    },
+    "algorithm": {
+      "type": "string",
+      "enum": [
+        "csp",
+        "mip",
+        "genetic",
+        "simulated_annealing",
+        "tabu_search"
+      ],
+      "default": "csp"
+    },
+    "parameters": {
+      "type": "object",
+      "description": "Algorithm-specific parameters"
+    },
+    "start_time": {
+      "type": "string",
+      "format": "date-time"
+    },
+    "end_time": {
+      "type": "string",
+      "format": "date-time"
+    },
+    "duration_seconds": {
+      "type": "number"
+    },
+    "iterations": {
+      "type": "number",
+      "description": "Number of iterations completed"
+    },
+    "objective_score": {
+      "type": "number",
+      "description": "Final optimization score (0-100)"
+    },
+    "hard_constraints_satisfied": {
+      "type": "boolean",
+      "default": false
+    },
+    "soft_constraint_score": {
+      "type": "number",
+      "description": "Soft constraint satisfaction score"
+    },
+    "conflicts_found": {
+      "type": "number",
+      "default": 0
+    },
+    "warnings_found": {
+      "type": "number",
+      "default": 0
+    },
+    "execution_log": {
+      "type": "array",
+      "items": {
+        "type": "object"
+      },
+      "description": "Detailed execution log with timestamps"
+    },
+    "error_message": {
+      "type": "string"
+    }
+  },
+  "required": [
+    "school_id",
+    "schedule_version_id"
+  ],
+  "rls": {
+    "create": {
+      "$and": [
+        {
+          "data.school_id": "{{user.data.school_id}}"
+        },
+        {
+          "user_condition": {
+            "role": "admin"
+          }
+        }
+      ]
+    },
+    "read": {
+      "data.school_id": "{{user.data.school_id}}"
+    },
+    "update": {
+      "$and": [
+        {
+          "data.school_id": "{{user.data.school_id}}"
+        },
+        {
+          "user_condition": {
+            "role": "admin"
+          }
+        }
+      ]
+    },
+    "delete": {
+      "$and": [
+        {
+          "data.school_id": "{{user.data.school_id}}"
+        },
+        {
+          "user_condition": {
+            "role": "admin"
+          }
+        }
+      ]
+    }
+  }
+}

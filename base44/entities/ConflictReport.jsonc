@@ -1,0 +1,116 @@
+{
+  "name": "ConflictReport",
+  "type": "object",
+  "properties": {
+    "school_id": {
+      "type": "string"
+    },
+    "schedule_version_id": {
+      "type": "string"
+    },
+    "conflict_type": {
+      "type": "string",
+      "enum": [
+        "teacher_double_booking",
+        "student_double_booking",
+        "room_double_booking",
+        "teacher_unavailable",
+        "room_capacity_exceeded",
+        "insufficient_hours",
+        "ib_requirement_violation",
+        "consecutive_periods_exceeded"
+      ]
+    },
+    "severity": {
+      "type": "string",
+      "enum": [
+        "critical",
+        "high",
+        "medium",
+        "low"
+      ],
+      "default": "high"
+    },
+    "affected_entities": {
+      "type": "object",
+      "description": "IDs of affected teachers, students, rooms, etc."
+    },
+    "description": {
+      "type": "string"
+    },
+    "slot_references": {
+      "type": "array",
+      "items": {
+        "type": "string"
+      },
+      "description": "IDs of conflicting schedule slots"
+    },
+    "suggested_resolution": {
+      "type": "string"
+    },
+    "status": {
+      "type": "string",
+      "enum": [
+        "unresolved",
+        "acknowledged",
+        "resolved",
+        "ignored"
+      ],
+      "default": "unresolved"
+    },
+    "resolved_at": {
+      "type": "string",
+      "format": "date-time"
+    },
+    "resolved_by": {
+      "type": "string"
+    }
+  },
+  "required": [
+    "school_id",
+    "schedule_version_id",
+    "conflict_type",
+    "description"
+  ],
+  "rls": {
+    "create": {
+      "$and": [
+        {
+          "data.school_id": "{{user.data.school_id}}"
+        },
+        {
+          "user_condition": {
+            "role": "admin"
+          }
+        }
+      ]
+    },
+    "read": {
+      "data.school_id": "{{user.data.school_id}}"
+    },
+    "update": {
+      "$and": [
+        {
+          "data.school_id": "{{user.data.school_id}}"
+        },
+        {
+          "user_condition": {
+            "role": "admin"
+          }
+        }
+      ]
+    },
+    "delete": {
+      "$and": [
+        {
+          "data.school_id": "{{user.data.school_id}}"
+        },
+        {
+          "user_condition": {
+            "role": "admin"
+          }
+        }
+      ]
+    }
+  }
+}

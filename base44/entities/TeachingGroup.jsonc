@@ -1,0 +1,85 @@
+{
+  "name": "TeachingGroup",
+  "type": "object",
+  "properties": {
+    "school_id": {
+      "type": "string"
+    },
+    "name": {
+      "type": "string",
+      "description": "Group name (e.g., Physics HL - Group A)"
+    },
+    "subject_id": {
+      "type": "string"
+    },
+    "level": {
+      "type": "string",
+      "enum": [
+        "HL",
+        "SL",
+        "Standard",
+        "Extended"
+      ]
+    },
+    "year_group": {
+      "type": "string",
+      "description": "Year group: DP1, DP2, MYP1-5, PYP1-6"
+    },
+    "teacher_id": {
+      "type": "string"
+    },
+    "student_ids": {
+      "type": "array",
+      "items": {
+        "type": "string"
+      }
+    },
+    "preferred_room_id": {
+      "type": "string"
+    },
+    "minutes_per_week": {
+      "type": "number",
+      "description": "Required teaching minutes per week"
+    },
+    "block_id": {
+      "type": "string",
+      "description": "Elective block identifier - teaching groups with the same block_id must be scheduled concurrently (e.g., all language options in Group 2)"
+    },
+    "min_students": {
+      "type": "number",
+      "default": 1
+    },
+    "max_students": {
+      "type": "number",
+      "default": 20
+    },
+    "requires_double_periods": {
+      "type": "boolean",
+      "default": false
+    },
+    "is_active": {
+      "type": "boolean",
+      "default": true
+    }
+  },
+  "required": [
+    "school_id",
+    "name",
+    "subject_id",
+    "year_group"
+  ],
+  "rls": {
+    "read": {
+      "data.school_id": "{{user.data.school_id}}"
+    },
+    "create": {
+      "data.school_id": "{{user.data.school_id}}"
+    },
+    "update": {
+      "data.school_id": "{{user.data.school_id}}"
+    },
+    "delete": {
+      "data.school_id": "{{user.data.school_id}}"
+    }
+  }
+}

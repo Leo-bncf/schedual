@@ -1,0 +1,71 @@
+{
+  "name": "ClassGroup",
+  "type": "object",
+  "properties": {
+    "school_id": {
+      "type": "string"
+    },
+    "name": {
+      "type": "string",
+      "description": "ClassGroup name (e.g., DP1-Batch-A, MYP3-Batch-B)"
+    },
+    "year_group": {
+      "type": "string",
+      "description": "Year group: DP1, DP2, MYP1-5, PYP1-6"
+    },
+    "ib_programme": {
+      "type": "string",
+      "enum": [
+        "PYP",
+        "MYP",
+        "DP"
+      ],
+      "description": "IB programme level"
+    },
+    "batch_letter": {
+      "type": "string",
+      "description": "Batch identifier (A, B, C, etc.)"
+    },
+    "student_ids": {
+      "type": "array",
+      "items": {
+        "type": "string"
+      },
+      "description": "List of student IDs in this ClassGroup"
+    },
+    "max_students": {
+      "type": "number",
+      "default": 20,
+      "description": "Maximum students per batch"
+    },
+    "homeroom_teacher_id": {
+      "type": "string",
+      "description": "Homeroom teacher for this ClassGroup"
+    },
+    "is_active": {
+      "type": "boolean",
+      "default": true
+    }
+  },
+  "required": [
+    "school_id",
+    "name",
+    "year_group",
+    "ib_programme",
+    "batch_letter"
+  ],
+  "rls": {
+    "read": {
+      "data.school_id": "{{user.data.school_id}}"
+    },
+    "create": {
+      "data.school_id": "{{user.data.school_id}}"
+    },
+    "update": {
+      "data.school_id": "{{user.data.school_id}}"
+    },
+    "delete": {
+      "data.school_id": "{{user.data.school_id}}"
+    }
+  }
+}

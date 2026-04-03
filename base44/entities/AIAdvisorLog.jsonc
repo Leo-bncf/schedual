@@ -1,0 +1,112 @@
+{
+  "name": "AIAdvisorLog",
+  "type": "object",
+  "properties": {
+    "school_id": {
+      "type": "string"
+    },
+    "schedule_version_id": {
+      "type": "string"
+    },
+    "agent_type": {
+      "type": "string",
+      "enum": [
+        "preference_interpreter",
+        "schedule_critic",
+        "what_if_simulator",
+        "load_balancer",
+        "pedagogy_compliance"
+      ]
+    },
+    "action": {
+      "type": "string",
+      "enum": [
+        "analysis",
+        "suggestion",
+        "warning",
+        "simulation",
+        "optimization"
+      ]
+    },
+    "input_context": {
+      "type": "object",
+      "description": "Context provided to the agent"
+    },
+    "output": {
+      "type": "object",
+      "description": "Agent's response and recommendations"
+    },
+    "severity": {
+      "type": "string",
+      "enum": [
+        "info",
+        "warning",
+        "error",
+        "success"
+      ]
+    },
+    "status": {
+      "type": "string",
+      "enum": [
+        "pending",
+        "reviewed",
+        "applied",
+        "dismissed"
+      ],
+      "default": "pending"
+    },
+    "reviewed_by": {
+      "type": "string"
+    },
+    "reviewed_at": {
+      "type": "string",
+      "format": "date-time"
+    }
+  },
+  "required": [
+    "school_id",
+    "agent_type",
+    "action"
+  ],
+  "rls": {
+    "create": {
+      "$and": [
+        {
+          "data.school_id": "{{user.data.school_id}}"
+        },
+        {
+          "user_condition": {
+            "role": "admin"
+          }
+        }
+      ]
+    },
+    "read": {
+      "data.school_id": "{{user.data.school_id}}"
+    },
+    "update": {
+      "$and": [
+        {
+          "data.school_id": "{{user.data.school_id}}"
+        },
+        {
+          "user_condition": {
+            "role": "admin"
+          }
+        }
+      ]
+    },
+    "delete": {
+      "$and": [
+        {
+          "data.school_id": "{{user.data.school_id}}"
+        },
+        {
+          "user_condition": {
+            "role": "admin"
+          }
+        }
+      ]
+    }
+  }
+}

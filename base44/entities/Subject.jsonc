@@ -1,0 +1,158 @@
+{
+  "name": "Subject",
+  "type": "object",
+  "properties": {
+    "school_id": {
+      "type": "string",
+      "description": "Reference to school"
+    },
+    "name": {
+      "type": "string",
+      "description": "Subject name (e.g., Physics, English A)"
+    },
+    "code": {
+      "type": "string",
+      "description": "Subject code"
+    },
+    "ib_level": {
+      "type": "string",
+      "enum": [
+        "PYP",
+        "MYP",
+        "DP"
+      ],
+      "description": "IB programme level"
+    },
+    "ib_group": {
+      "type": "string",
+      "enum": [
+        "1",
+        "2",
+        "3",
+        "4",
+        "5",
+        "6"
+      ],
+      "description": "IB subject group (1-6, for DP only)"
+    },
+    "ib_group_name": {
+      "type": "string",
+      "enum": [
+        "Language & Literature",
+        "Language Acquisition",
+        "Individuals & Societies",
+        "Sciences",
+        "Mathematics",
+        "The Arts"
+      ]
+    },
+    "available_levels": {
+      "type": "array",
+      "items": {
+        "type": "string",
+        "enum": [
+          "HL",
+          "SL"
+        ]
+      },
+      "description": "Available levels for DP subjects (HL/SL)"
+    },
+    "hoursPerWeekHL": {
+      "type": "number",
+      "description": "Hours per week for HL level (configured by admin, used by solver)"
+    },
+    "hoursPerWeekSL": {
+      "type": "number",
+      "description": "Hours per week for SL level (configured by admin, used by solver)"
+    },
+    "standard_hours_per_week": {
+      "type": "number",
+      "description": "Hours per week for standard-level DP subjects such as TOK, EE, or Exam Time"
+    },
+    "sessions_per_week": {
+      "type": "number",
+      "default": 0,
+      "description": "How many sessions per week this subject should have when using session-based scheduling"
+    },
+    "hours_per_session": {
+      "type": "number",
+      "default": 0,
+      "description": "How many hours each scheduled session should last"
+    },
+    "hl_minutes_per_week_default": {
+      "type": "number",
+      "default": 300,
+      "description": "Default HL minutes/week (5h) - DEPRECATED: Use hoursPerWeekHL"
+    },
+    "sl_minutes_per_week_default": {
+      "type": "number",
+      "default": 180,
+      "description": "Default SL minutes/week (3h) - DEPRECATED: Use hoursPerWeekSL"
+    },
+    "pyp_myp_minutes_per_week_default": {
+      "type": "number",
+      "default": 180,
+      "description": "Default minutes/week for PYP/MYP subjects (3h)"
+    },
+    "requires_lab": {
+      "type": "boolean",
+      "default": false
+    },
+    "requires_special_room": {
+      "type": "string",
+      "description": "Type of special room required (e.g., lab, art studio)"
+    },
+    "is_core": {
+      "type": "boolean",
+      "default": false,
+      "description": "True for DP special subjects such as TOK, EE, and other non-diploma-choice subjects"
+    },
+    "combine_dp1_dp2": {
+      "type": "boolean",
+      "default": false,
+      "description": "Whether this DP subject should combine DP1 and DP2 students into single teaching groups"
+    },
+    "supervisor_teacher_id": {
+      "type": "string",
+      "description": "Teacher ID used for supervising or leading special DP subjects like TOK, EE, or Exam Time"
+    },
+    "color": {
+      "type": "string",
+      "description": "Color for UI display"
+    },
+    "preferred_time": {
+      "type": "string",
+      "enum": [
+        "morning",
+        "afternoon",
+        "any"
+      ],
+      "default": "any",
+      "description": "Preferred time of day for scheduling"
+    },
+    "is_active": {
+      "type": "boolean",
+      "default": true
+    }
+  },
+  "required": [
+    "school_id",
+    "name",
+    "code",
+    "ib_level"
+  ],
+  "rls": {
+    "read": {
+      "data.school_id": "{{user.data.school_id}}"
+    },
+    "create": {
+      "data.school_id": "{{user.data.school_id}}"
+    },
+    "update": {
+      "data.school_id": "{{user.data.school_id}}"
+    },
+    "delete": {
+      "data.school_id": "{{user.data.school_id}}"
+    }
+  }
+}

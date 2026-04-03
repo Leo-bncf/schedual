@@ -1,0 +1,131 @@
+{
+  "name": "SupportTicket",
+  "type": "object",
+  "properties": {
+    "school_id": {
+      "type": "string",
+      "description": "Reference to school"
+    },
+    "user_email": {
+      "type": "string",
+      "description": "Email of user who created ticket"
+    },
+    "user_name": {
+      "type": "string",
+      "description": "Name of user who created ticket"
+    },
+    "subject": {
+      "type": "string",
+      "description": "Ticket subject"
+    },
+    "description": {
+      "type": "string",
+      "description": "Ticket description"
+    },
+    "priority": {
+      "type": "string",
+      "enum": [
+        "low",
+        "medium",
+        "high",
+        "urgent"
+      ],
+      "default": "medium"
+    },
+    "status": {
+      "type": "string",
+      "enum": [
+        "open",
+        "in_progress",
+        "waiting_for_customer",
+        "resolved",
+        "closed"
+      ],
+      "default": "open"
+    },
+    "admin_notes": {
+      "type": "string",
+      "description": "Internal notes from admin"
+    }
+  },
+  "required": [
+    "user_email",
+    "user_name",
+    "subject",
+    "description"
+  ],
+  "rls": {
+    "create": {
+      "data.school_id": "{{user.data.school_id}}"
+    },
+    "read": {
+      "$or": [
+        {
+          "$and": [
+            {
+              "data.school_id": "{{user.data.school_id}}"
+            },
+            {
+              "data.user_email": "{{user.email}}"
+            }
+          ]
+        },
+        {
+          "$and": [
+            {
+              "data.school_id": "{{user.data.school_id}}"
+            },
+            {
+              "user_condition": {
+                "role": "admin"
+              }
+            }
+          ]
+        }
+      ]
+    },
+    "update": {
+      "$or": [
+        {
+          "$and": [
+            {
+              "data.school_id": "{{user.data.school_id}}"
+            },
+            {
+              "data.user_email": "{{user.email}}"
+            },
+            {
+              "data.status": {
+                "$ne": "resolved"
+              }
+            }
+          ]
+        },
+        {
+          "$and": [
+            {
+              "data.school_id": "{{user.data.school_id}}"
+            },
+            {
+              "user_condition": {
+                "role": "admin"
+              }
+            }
+          ]
+        }
+      ]
+    },
+    "delete": {
+      "$and": [
+        {
+          "data.school_id": "{{user.data.school_id}}"
+        },
+        {
+          "user_condition": {
+            "role": "admin"
+          }
+        }
+      ]
+    }
+  }
+}

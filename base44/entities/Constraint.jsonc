@@ -1,0 +1,94 @@
+{
+  "name": "Constraint",
+  "type": "object",
+  "properties": {
+    "school_id": {
+      "type": "string"
+    },
+    "name": {
+      "type": "string"
+    },
+    "description": {
+      "type": "string"
+    },
+    "type": {
+      "type": "string",
+      "enum": [
+        "hard",
+        "soft"
+      ]
+    },
+    "category": {
+      "type": "string",
+      "enum": [
+        "teacher",
+        "student",
+        "room",
+        "subject",
+        "time",
+        "ib_requirement",
+        "custom"
+      ]
+    },
+    "rule": {
+      "type": "object",
+      "description": "Constraint rule definition"
+    },
+    "weight": {
+      "type": "number",
+      "default": 1,
+      "description": "Weight for soft constraints (0-1)"
+    },
+    "is_active": {
+      "type": "boolean",
+      "default": true
+    },
+    "source": {
+      "type": "string",
+      "enum": [
+        "system",
+        "admin",
+        "ai_suggested"
+      ],
+      "default": "admin"
+    }
+  },
+  "required": [
+    "school_id",
+    "name",
+    "type",
+    "category"
+  ],
+  "rls": {
+    "read": {
+      "data.school_id": "{{user.data.school_id}}"
+    },
+    "create": {
+      "data.school_id": "{{user.data.school_id}}"
+    },
+    "update": {
+      "$and": [
+        {
+          "data.school_id": "{{user.data.school_id}}"
+        },
+        {
+          "user_condition": {
+            "role": "admin"
+          }
+        }
+      ]
+    },
+    "delete": {
+      "$and": [
+        {
+          "data.school_id": "{{user.data.school_id}}"
+        },
+        {
+          "user_condition": {
+            "role": "admin"
+          }
+        }
+      ]
+    }
+  }
+}

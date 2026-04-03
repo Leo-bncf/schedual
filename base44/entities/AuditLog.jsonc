@@ -1,0 +1,80 @@
+{
+  "name": "AuditLog",
+  "type": "object",
+  "properties": {
+    "school_id": {
+      "type": "string"
+    },
+    "user_id": {
+      "type": "string",
+      "description": "User who performed the action"
+    },
+    "user_email": {
+      "type": "string"
+    },
+    "action": {
+      "type": "string",
+      "enum": [
+        "create_schedule",
+        "update_schedule",
+        "delete_schedule",
+        "publish_schedule",
+        "archive_schedule",
+        "create_teaching_group",
+        "update_teaching_group",
+        "delete_teaching_group",
+        "create_constraint",
+        "update_constraint",
+        "delete_constraint",
+        "apply_ai_suggestion",
+        "dismiss_ai_suggestion",
+        "run_optimization",
+        "resolve_conflict",
+        "update_settings"
+      ]
+    },
+    "entity_type": {
+      "type": "string",
+      "description": "Type of entity affected"
+    },
+    "entity_id": {
+      "type": "string",
+      "description": "ID of entity affected"
+    },
+    "changes": {
+      "type": "object",
+      "description": "Before/after values"
+    },
+    "metadata": {
+      "type": "object",
+      "description": "Additional context"
+    },
+    "ip_address": {
+      "type": "string"
+    },
+    "user_agent": {
+      "type": "string"
+    }
+  },
+  "required": [
+    "school_id",
+    "action"
+  ],
+  "rls": {
+    "create": true,
+    "read": {
+      "$and": [
+        {
+          "data.school_id": "{{user.data.school_id}}"
+        },
+        {
+          "user_condition": {
+            "role": "admin"
+          }
+        }
+      ]
+    },
+    "update": false,
+    "delete": false
+  }
+}

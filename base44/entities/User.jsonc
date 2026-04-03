@@ -1,0 +1,11 @@
+{
+  "name": "User",
+  "type": "object",
+  "properties": {
+    "school_id": {
+      "type": "string",
+      "description": "Reference to school"
+    }
+  },
+  "required": []
+}

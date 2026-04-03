@@ -1,0 +1,74 @@
+{
+  "name": "ScheduleVersion",
+  "type": "object",
+  "properties": {
+    "school_id": {
+      "type": "string"
+    },
+    "name": {
+      "type": "string",
+      "description": "Version name (e.g., Draft v1, Final 2024)"
+    },
+    "status": {
+      "type": "string",
+      "enum": [
+        "draft",
+        "published",
+        "archived"
+      ],
+      "default": "draft"
+    },
+    "academic_year": {
+      "type": "string"
+    },
+    "term": {
+      "type": "string"
+    },
+    "generation_params": {
+      "type": "object",
+      "description": "Parameters used for schedule generation"
+    },
+    "score": {
+      "type": "number",
+      "description": "Optimization score"
+    },
+    "conflicts_count": {
+      "type": "number",
+      "default": 0
+    },
+    "warnings_count": {
+      "type": "number",
+      "default": 0
+    },
+    "generated_at": {
+      "type": "string",
+      "format": "date-time"
+    },
+    "published_at": {
+      "type": "string",
+      "format": "date-time"
+    },
+    "notes": {
+      "type": "string"
+    }
+  },
+  "required": [
+    "school_id",
+    "name",
+    "status"
+  ],
+  "rls": {
+    "read": {
+      "data.school_id": "{{user.data.school_id}}"
+    },
+    "create": {
+      "data.school_id": "{{user.data.school_id}}"
+    },
+    "update": {
+      "data.school_id": "{{user.data.school_id}}"
+    },
+    "delete": {
+      "data.school_id": "{{user.data.school_id}}"
+    }
+  }
+}
