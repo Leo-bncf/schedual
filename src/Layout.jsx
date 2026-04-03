@@ -130,6 +130,7 @@ export default function Layout({ children, currentPageName }) {
           return;
         }
 
+        // If user has no school yet, first hydrate from User entity.
         if (!userData?.school_id) {
           try {
             const meRec = await base44.entities.User.filter({ id: userData.id });
@@ -139,6 +140,7 @@ export default function Layout({ children, currentPageName }) {
               const params = new URLSearchParams(window.location.search);
               const stripeStatus = params.get('stripe');
               const nextUrl = stripeStatus === 'success' ? '/Settings?stripe=success' : window.location.pathname;
+              alert('Your payment was received and your school is ready. Please log in once more to load your school access.');
               base44.auth.logout(nextUrl);
               return;
             }

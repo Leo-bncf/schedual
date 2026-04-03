@@ -193,6 +193,7 @@ export default function AccountManager() {
       if (attempts >= 6 && !hasRedirected) {
         hasRedirected = true;
         window.clearInterval(interval);
+        toast.info('Your payment is confirmed. Please sign in once more to load your school access.');
         setTimeout(() => {
           base44.auth.logout('/Settings?stripe=success');
         }, 800);
