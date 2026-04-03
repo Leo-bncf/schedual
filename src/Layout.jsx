@@ -64,7 +64,6 @@ export default function Layout({ children, currentPageName }) {
 
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const [user, setUser] = useState(null);
-  const [school, setSchool] = useState(null);
   const [isSuperAdmin, setIsSuperAdmin] = useState(false);
   const [isLoading, setIsLoading] = useState(true);
 
@@ -72,8 +71,6 @@ export default function Layout({ children, currentPageName }) {
 
   // Role definitions - school_id alone determines school admin access
   const isSchoolAdmin = (userData) => !!userData?.school_id && !isSuperAdmin;
-  const isNewClient = (userData) => userData && !userData.school_id && !isSuperAdmin;
-  const hasActiveSubscription = () => true;
 
   // Suppress browser 403 errors in console by handling them silently
   useEffect(() => {
@@ -130,33 +127,14 @@ export default function Layout({ children, currentPageName }) {
           return;
         }
 
-        // If user has no school yet, first hydrate from User entity.
+        // If user has no school yet after payment, refresh the auth session once.
         if (!userData?.school_id) {
-          try {
-            const meRec = await base44.entities.User.filter({ id: userData.id });
-            const hydratedUser = meRec?.[0];
-            const derivedSchoolId = hydratedUser?.school_id;
-            if (derivedSchoolId) {
-              const params = new URLSearchParams(window.location.search);
-              const stripeStatus = params.get('stripe');
-              const nextUrl = stripeStatus === 'success' ? '/Settings?stripe=success' : window.location.pathname;
-              alert('Your payment was received and your school is ready. Please log in once more to load your school access.');
-              base44.auth.logout(nextUrl);
-              return;
-            }
-          } catch (e) {
-            console.error('Hydration step error:', e);
-          }
-        }
-
-        // Fetch school data if user has a school
-        if (userData?.school_id) {
-          try {
-            const schools = await base44.entities.School.filter({ id: userData.school_id });
-            const userSchool = schools[0] || null;
-            setSchool(userSchool);
-          } catch (schoolError) {
-            console.error('Error fetching school:', schoolError);
+          const params = new URLSearchParams(window.location.search);
+          const stripeStatus = params.get('stripe');
+          if (stripeStatus === 'success') {
+            alert('Your payment was received. Please sign in once more to load your school access.');
+            base44.auth.logout('/Settings?stripe=success');
+            return;
           }
         }
 
