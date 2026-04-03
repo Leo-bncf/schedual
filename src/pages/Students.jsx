@@ -39,6 +39,7 @@ import UploadProgressDialog from '../components/upload/UploadProgressDialog';
 import DragDropUploadDialog from '../components/upload/DragDropUploadDialog';
 import { Link } from 'react-router-dom';
 import { createPageUrl } from '../utils';
+import { getStudentLimit, getTierLimits } from '@/lib/tierLimits';
 
 export default function Students() {
   const [isDialogOpen, setIsDialogOpen] = useState(false);
@@ -81,21 +82,9 @@ export default function Students() {
   });
   const school = schoolRecords[0];
 
-  const getAllowedProgrammes = (s) => {
-    const tier = s?.subscription_tier;
-    if (tier === 'tier1') return ['MYP'];
-    if (tier === 'tier2' || tier === 'tier3') return ['PYP','MYP','DP'];
-    return ['PYP','MYP','DP'];
-  };
-  const allowedProgrammes = getAllowedProgrammes(school);
-
-  const getMaxStudents = (tier) => {
-    if (tier === 'tier1') return 300;
-    if (tier === 'tier2') return 800;
-    if (tier === 'tier3') return 999999;
-    return 300; // default
-  };
-  const maxStudents = school ? getMaxStudents(school.subscription_tier) : 300;
+  const allowedProgrammes = ['PYP', 'MYP', 'DP'];
+  const tierConfig = getTierLimits(school?.subscription_tier);
+  const maxStudents = getStudentLimit(school?.subscription_tier);
 
   useEffect(() => {
     if (!school) return;
@@ -996,10 +985,7 @@ Return ONLY students array, no other text.`,
       {school && (
         <div className="rounded-lg border border-slate-200 bg-slate-50 p-4 mb-6">
           <p className="text-sm text-slate-700">
-            Your plan: <strong>{(school.subscription_tier || 'unknown').toUpperCase()}</strong>. Enabled programmes: {allowedProgrammes.join(', ')}.
-            {(!allowedProgrammes.includes('DP') || !allowedProgrammes.includes('PYP')) && (
-              <> <Link to={createPageUrl('Subscription')} className="text-blue-700 underline">Upgrade</Link> for more.</>
-            )}
+            Your plan: <strong>{tierConfig?.name || (school.subscription_tier || 'unknown').toUpperCase()}</strong>. Student limit: <strong>{maxStudents.toLocaleString()}</strong>. Enabled programmes: {allowedProgrammes.join(', ')}.
           </p>
         </div>
       )}

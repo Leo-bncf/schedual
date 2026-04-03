@@ -27,9 +27,34 @@ Deno.serve(async (req) => {
 
     const { action, userId, data } = await req.json();
 
+    const tierSeatLimits = {
+      tier1: 1,
+      tier2: 3,
+      tier3: null,
+    };
+
     switch (action) {
       case 'update':
         const previousUser = await base44.asServiceRole.entities.User.filter({ id: userId });
+        const nextSchoolId = data?.school_id;
+        const nextRole = data?.role;
+
+        if (nextSchoolId && nextRole === 'admin') {
+          const schools = await base44.asServiceRole.entities.School.filter({ id: nextSchoolId });
+          const school = schools[0];
+          if (!school) {
+            return Response.json({ error: 'School not found' }, { status: 404 });
+          }
+
+          const seatLimit = tierSeatLimits[school.subscription_tier] ?? school.max_admin_seats ?? 3;
+          const existingAdmins = await base44.asServiceRole.entities.User.filter({ school_id: nextSchoolId, role: 'admin' });
+          const isAlreadyAdminInSchool = existingAdmins.some((admin) => admin.id === userId);
+
+          if (seatLimit !== null && !isAlreadyAdminInSchool && existingAdmins.length >= seatLimit) {
+            return Response.json({ error: `Admin seat limit reached for this school (${existingAdmins.length}/${seatLimit})` }, { status: 400 });
+          }
+        }
+
         await base44.asServiceRole.entities.User.update(userId, data);
         
         // If school_id was just assigned or changed, user needs to logout/login to refresh JWT

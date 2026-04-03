@@ -40,13 +40,69 @@ Deno.serve(async (req) => {
 
     if (action === 'create') {
       if (!data) return Response.json({ error: 'Missing data' }, { status: 400 });
-      const created = await svc.create(data);
+
+      const tierSeatLimits = {
+        tier1: 1,
+        tier2: 3,
+        tier3: null,
+      };
+      const tierStudentLimits = {
+        tier1: 200,
+        tier2: 600,
+        tier3: 1200,
+      };
+      const tierGenerationLimits = {
+        tier1: 3,
+        tier2: null,
+        tier3: null,
+      };
+      const tier = data.subscription_tier || 'tier2';
+      const created = await svc.create({
+        ...data,
+        max_admin_seats: tierSeatLimits[tier],
+        settings: {
+          ...(data.settings || {}),
+          student_count_limit: tierStudentLimits[tier],
+          generation_limit: tierGenerationLimits[tier],
+          saved_versions_limit: tierGenerationLimits[tier],
+        },
+      });
       return Response.json({ success: true, school: created });
     }
 
     if (action === 'update') {
       if (!resolvedId || !data) return Response.json({ error: 'Missing id or data' }, { status: 400 });
-      const updated = await svc.update(resolvedId, data);
+
+      let nextData = data;
+      if (data.subscription_tier) {
+        const tierSeatLimits = {
+          tier1: 1,
+          tier2: 3,
+          tier3: null,
+        };
+        const tierStudentLimits = {
+          tier1: 200,
+          tier2: 600,
+          tier3: 1200,
+        };
+        const tierGenerationLimits = {
+          tier1: 3,
+          tier2: null,
+          tier3: null,
+        };
+        nextData = {
+          ...data,
+          max_admin_seats: tierSeatLimits[data.subscription_tier],
+          settings: {
+            ...(data.settings || {}),
+            student_count_limit: tierStudentLimits[data.subscription_tier],
+            generation_limit: tierGenerationLimits[data.subscription_tier],
+            saved_versions_limit: tierGenerationLimits[data.subscription_tier],
+          },
+        };
+      }
+
+      const updated = await svc.update(resolvedId, nextData);
       return Response.json({ success: true, school: updated });
     }
 

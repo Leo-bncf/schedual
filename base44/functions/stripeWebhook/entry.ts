@@ -4,9 +4,30 @@ import { createClientFromRequest } from 'npm:@base44/sdk@0.8.23';
 const stripe = new Stripe(Deno.env.get('STRIPE_SECRET_KEY'));
 
 const TIER_LIMITS = {
-  tier1: { max_admin_seats: 1 },
-  tier2: { max_admin_seats: 3 },
-  tier3: { max_admin_seats: 9999 },
+  tier1: {
+    max_admin_seats: 1,
+    student_count_limit: 200,
+    generation_limit: 3,
+    saved_versions_limit: 3,
+    support_level: 'Email support (48h)',
+    onboarding_call_included: false,
+  },
+  tier2: {
+    max_admin_seats: 3,
+    student_count_limit: 600,
+    generation_limit: null,
+    saved_versions_limit: null,
+    support_level: 'Email support (24h)',
+    onboarding_call_included: false,
+  },
+  tier3: {
+    max_admin_seats: null,
+    student_count_limit: 1200,
+    generation_limit: null,
+    saved_versions_limit: null,
+    support_level: 'Priority support (same day)',
+    onboarding_call_included: true,
+  },
 };
 
 function buildSchoolCode(email) {
@@ -50,6 +71,14 @@ async function ensureSchoolForCustomer(base44, session) {
       subscription_start_date: matchingSchool.subscription_start_date || new Date().toISOString(),
       subscription_current_period_end: periodEnd,
       max_admin_seats: limits.max_admin_seats,
+      settings: {
+        ...(matchingSchool.settings || {}),
+        generation_limit: limits.generation_limit,
+        saved_versions_limit: limits.saved_versions_limit,
+        student_count_limit: limits.student_count_limit,
+        support_level: limits.support_level,
+        onboarding_call_included: limits.onboarding_call_included,
+      },
       school_id: matchingSchool.school_id || buildSchoolId(stripeCustomerId),
     });
 
@@ -72,6 +101,14 @@ async function ensureSchoolForCustomer(base44, session) {
         subscription_start_date: userSchool.subscription_start_date || new Date().toISOString(),
         subscription_current_period_end: periodEnd,
         max_admin_seats: limits.max_admin_seats,
+        settings: {
+          ...(userSchool.settings || {}),
+          generation_limit: limits.generation_limit,
+          saved_versions_limit: limits.saved_versions_limit,
+          student_count_limit: limits.student_count_limit,
+          support_level: limits.support_level,
+          onboarding_call_included: limits.onboarding_call_included,
+        },
         school_id: userSchool.school_id || buildSchoolId(stripeCustomerId),
       });
       if (user.role !== 'admin') {
@@ -94,6 +131,13 @@ async function ensureSchoolForCustomer(base44, session) {
     subscription_start_date: new Date().toISOString(),
     subscription_current_period_end: periodEnd,
     max_admin_seats: limits.max_admin_seats,
+    settings: {
+      generation_limit: limits.generation_limit,
+      saved_versions_limit: limits.saved_versions_limit,
+      student_count_limit: limits.student_count_limit,
+      support_level: limits.support_level,
+      onboarding_call_included: limits.onboarding_call_included,
+    },
   });
 
   await base44.asServiceRole.entities.User.update(user.id, { school_id: createdSchool.id, role: 'admin' });
@@ -131,6 +175,14 @@ Deno.serve(async (req) => {
             stripe_subscription_id: typeof subscription.id === 'string' ? subscription.id : school.stripe_subscription_id,
             subscription_current_period_end: subscription.current_period_end ? new Date(subscription.current_period_end * 1000).toISOString() : school.subscription_current_period_end,
             school_id: school.school_id || buildSchoolId(customerId),
+            settings: {
+              ...(school.settings || {}),
+              support_level: school.settings?.support_level || null,
+              onboarding_call_included: school.settings?.onboarding_call_included || false,
+              generation_limit: school.settings?.generation_limit ?? null,
+              saved_versions_limit: school.settings?.saved_versions_limit ?? null,
+              student_count_limit: school.settings?.student_count_limit ?? null,
+            },
           });
         }
       }
