@@ -791,6 +791,12 @@ Deno.serve(async (req) => {
       return Response.json({ error: 'Unauthorized' }, { status: 401 });
     }
 
+    const { schedule_version_id } = await req.json();
+
+    if (!schedule_version_id) {
+      return Response.json({ error: 'Missing schedule_version_id' }, { status: 400 });
+    }
+
     const [schools, students, teachers, subjects, rooms, teachingGroups, scheduleVersions] = await Promise.all([
       base44.asServiceRole.entities.School.filter({ id: schoolId }, '-created_date', 10),
       base44.entities.Student.filter({ school_id: schoolId }, '-created_date', 500),
