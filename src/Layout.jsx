@@ -137,8 +137,11 @@ export default function Layout({ children, currentPageName }) {
             const hydratedUser = meRec?.[0];
             const derivedSchoolId = hydratedUser?.school_id;
             if (derivedSchoolId) {
-              alert('Your school access is ready. We’ll refresh your session now.');
-              base44.auth.logout(window.location.pathname);
+              const params = new URLSearchParams(window.location.search);
+              const stripeStatus = params.get('stripe');
+              const nextUrl = stripeStatus === 'success' ? '/Settings?stripe=success' : window.location.pathname;
+              alert('Your payment was received and your school is ready. Please log in once more to load your school access.');
+              base44.auth.logout(nextUrl);
               return;
             }
           } catch (e) {
@@ -186,7 +189,7 @@ export default function Layout({ children, currentPageName }) {
 
 
   // Role-based access control with React Router navigation
-  const schoolOnlyPages = ['Dashboard', 'Onboarding', 'Schedule', 'TeachingGroups', 'Teachers', 'Students', 'Subjects', 'Rooms', 'Constraints', 'AIAdvisor', 'Settings', 'Support'];
+  const schoolOnlyPages = ['Dashboard', 'Onboarding', 'Schedules', 'ClassGroups', 'Teachers', 'Students', 'Subjects', 'Rooms', 'Constraints', 'AIAdvisor', 'Settings', 'Support'];
   const superAdminPages = ['Panel', 'UserManagement', 'AnalyticsAdmin', 'AutomationAdmin', 'SessionActivityAdmin', 'AITrainingAdmin', 'SupportTickets'];
 
   if (isSuperAdmin && schoolOnlyPages.includes(currentPageName)) {
