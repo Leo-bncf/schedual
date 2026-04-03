@@ -1,4 +1,4 @@
-import { createClientFromRequest } from 'npm:@base44/sdk@0.8.6';
+import { createClientFromRequest } from 'npm:@base44/sdk@0.8.23';
 
 Deno.serve(async (req) => {
   try {
@@ -9,24 +9,22 @@ Deno.serve(async (req) => {
       return Response.json({ error: 'Unauthorized' }, { status: 401 });
     }
 
-    // Get all users with the same school_id
-    const admins = await base44.asServiceRole.entities.User.filter({ 
-      school_id: user.school_id 
+    const admins = await base44.asServiceRole.entities.User.filter({
+      school_id: user.school_id,
+      role: 'admin'
     });
 
     return Response.json({ 
       success: true, 
-      admins: admins.map(a => ({
-        id: a.id,
-        email: a.email,
-        full_name: a.full_name
+      admins: admins.map((admin) => ({
+        id: admin.id,
+        email: admin.email,
+        full_name: admin.full_name,
+        role: admin.role,
       }))
     });
-
   } catch (error) {
     console.error('Error fetching school admins:', error);
-    return Response.json({ 
-      error: error.message 
-    }, { status: 500 });
+    return Response.json({ error: error.message }, { status: 500 });
   }
 });
