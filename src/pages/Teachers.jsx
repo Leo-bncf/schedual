@@ -682,13 +682,13 @@ Example: {"full_name": "John Smith", "email": "john@school.com", "subjects": ["P
                   <Label htmlFor="preferred_free_day" className="text-sm font-semibold text-slate-700">Preferred Free Day</Label>
                   <Select 
                     value={formData.preferred_free_day || ""} 
-                    onValueChange={(value) => setFormData({ ...formData, preferred_free_day: value })}
+                    onValueChange={(value) => setFormData({ ...formData, preferred_free_day: value === 'none' ? '' : value })}
                   >
                     <SelectTrigger className="h-11">
                       <SelectValue placeholder="Select day" />
                     </SelectTrigger>
                     <SelectContent>
-                      <SelectItem value={null}>None</SelectItem>
+                      <SelectItem value="none">None</SelectItem>
                       {DAYS.map(day => (
                         <SelectItem key={day} value={day}>{day}</SelectItem>
                       ))}
