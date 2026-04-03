@@ -146,12 +146,21 @@ export default function PricingTiersSection() {
       return;
     }
 
+    const isAuthenticated = await base44.auth.isAuthenticated();
+    if (!isAuthenticated) {
+      base44.auth.redirectToLogin(window.location.href);
+      return;
+    }
+
+    const user = await base44.auth.me();
     setLoadingTier(tierId);
 
     try {
       const response = await base44.functions.invoke('createStripeCheckout', {
         priceId,
         tier: tierId,
+        userId: user.id,
+        userEmail: user.email,
       });
 
       if (response?.data?.url) {

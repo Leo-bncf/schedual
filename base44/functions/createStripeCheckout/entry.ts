@@ -11,9 +11,9 @@ const TIER_PRICE_IDS = {
 Deno.serve(async (req) => {
   try {
     const body = await req.json();
-    const { priceId, tier } = body || {};
+    const { priceId, tier, userId, userEmail } = body || {};
 
-    if (!priceId || !tier) {
+    if (!priceId || !tier || !userId || !userEmail) {
       return Response.json({ error: 'Missing checkout details' }, { status: 400 });
     }
 
@@ -33,11 +33,15 @@ Deno.serve(async (req) => {
     const session = await stripe.checkout.sessions.create({
       mode: 'subscription',
       line_items: [{ price: expectedPriceId, quantity: 1 }],
-      success_url: `${origin}/Settings?stripe=success&tier=${tier}`,
+      success_url: `${origin}/PaymentSuccess?session_id={CHECKOUT_SESSION_ID}`,
       cancel_url: `${origin}/Settings?stripe=cancelled`,
+      customer_email: userEmail,
       metadata: {
         base44_app_id: Deno.env.get('BASE44_APP_ID'),
         tier,
+        user_id: userId,
+        user_email: userEmail,
+        price_id: expectedPriceId,
       },
     });
 

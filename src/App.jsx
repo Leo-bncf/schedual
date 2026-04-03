@@ -12,6 +12,7 @@ import AnalyticsAdmin from './pages/AnalyticsAdmin';
 import AutomationAdmin from './pages/AutomationAdmin';
 import SessionActivityAdmin from './pages/SessionActivityAdmin';
 import AITrainingAdmin from './pages/AITrainingAdmin';
+import PaymentSuccess from './pages/PaymentSuccess';
 
 const { Pages, Layout, mainPage } = pagesConfig;
 const mainPageKey = mainPage ?? Object.keys(Pages)[0];
@@ -67,6 +68,7 @@ const AuthenticatedApp = () => {
       <Route path="/AutomationAdmin" element={<LayoutWrapper currentPageName="AutomationAdmin"><AutomationAdmin /></LayoutWrapper>} />
       <Route path="/SessionActivityAdmin" element={<LayoutWrapper currentPageName="SessionActivityAdmin"><SessionActivityAdmin /></LayoutWrapper>} />
       <Route path="/AITrainingAdmin" element={<LayoutWrapper currentPageName="AITrainingAdmin"><AITrainingAdmin /></LayoutWrapper>} />
+      <Route path="/PaymentSuccess" element={<LayoutWrapper currentPageName="PaymentSuccess"><PaymentSuccess /></LayoutWrapper>} />
       <Route path="*" element={<PageNotFound />} />
     </Routes>
   );
