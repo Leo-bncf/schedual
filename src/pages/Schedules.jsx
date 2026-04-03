@@ -125,6 +125,9 @@ export default function Schedules() {
     return generatedCount < maxGenerations;
   };
 
+  const isSchedulePageReady = Boolean(user && schoolId && school);
+  const isCreateVersionDisabled = !isSchedulePageReady || createVersionMutation.isPending;
+
   const { data: scheduleSlots = [] } = useQuery({
     queryKey: ['scheduleSlots', selectedVersion?.id],
     queryFn: async () => {
@@ -466,16 +469,18 @@ export default function Schedules() {
             )}
             <Button 
               onClick={() => {
-              if (canCreateVersion()) {
-                setIsDialogOpen(true);
-              } else {
-                const versionLimit = getSavedVersionsLimit(school?.subscription_tier);
-                alert(`Limit reached. Your current plan allows up to ${versionLimit} saved timetable versions.`);
-              }
-            }} 
-            size="sm"
-            className="bg-blue-600 hover:bg-blue-700"
-          >
+                if (!isSchedulePageReady) return;
+                if (canCreateVersion()) {
+                  setIsDialogOpen(true);
+                } else {
+                  const versionLimit = getSavedVersionsLimit(school?.subscription_tier);
+                  alert(`Limit reached. Your current plan allows up to ${versionLimit} saved timetable versions.`);
+                }
+              }} 
+              disabled={isCreateVersionDisabled}
+              size="sm"
+              className="bg-blue-600 hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed"
+            >
             <Plus className="w-4 h-4 mr-2" />
             New Version
             </Button>
@@ -1112,8 +1117,12 @@ export default function Schedules() {
               Create a schedule version to get started
             </p>
             <Button
-              onClick={() => setIsDialogOpen(true)}
-              className="bg-blue-600 hover:bg-blue-700 px-6 font-medium"
+              onClick={() => {
+                if (!isSchedulePageReady) return;
+                setIsDialogOpen(true);
+              }}
+              disabled={!isSchedulePageReady}
+              className="bg-blue-600 hover:bg-blue-700 px-6 font-medium disabled:opacity-50 disabled:cursor-not-allowed"
             >
               <Plus className="w-4 h-4 mr-2" />
               Create Version
