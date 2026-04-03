@@ -1,32 +1,33 @@
-import React, { useState } from 'react';
+import React, { useMemo, useState } from 'react';
 import { base44 } from '@/api/base44Client';
 import { Button } from "@/components/ui/button";
 import { CheckCircle, Loader2, Shield, X, Undo2, ArrowRight, CreditCard, UserPlus } from 'lucide-react';
 import { motion } from 'framer-motion';
-
-const plans = [
-  {
-    name: 'Yearly Subscription',
-    price: '€2,239',
-    period: 'per year',
-    description: 'All-inclusive yearly billing with secure storage',
-    features: [
-      'Full platform access (€1,999/year)',
-      'Secure data storage included (€240/year)',
-      'Unlimited teachers and students',
-      'AI-powered scheduling',
-      'Conflict detection & resolution',
-      'IB compliance checking',
-      'Priority support',
-      'Additional users: €200/year each',
-    ],
-    priceId: 'price_1THYLAD8slkoqOiBI0rA7cCR',
-    popular: true,
-  },
-];
+import { TIER_LIMITS } from '@/lib/tierLimits';
 
 export default function PricingSection() {
   const [loading, setLoading] = useState(false);
+
+  const plans = useMemo(() => ([
+    {
+      name: `${TIER_LIMITS.tier2.name} Plan`,
+      price: TIER_LIMITS.tier2.priceLabel,
+      period: 'per year',
+      description: 'Best for growing schools that need flexibility and multiple admin users',
+      features: [
+        `Up to ${TIER_LIMITS.tier2.studentLimit} students`,
+        'Unlimited schedule generations',
+        'Unlimited saved schedule versions',
+        `${TIER_LIMITS.tier2.adminSeats} admin accounts`,
+        'AI-powered scheduling',
+        'Conflict detection & resolution',
+        TIER_LIMITS.tier2.support,
+        'PDF & Excel export included',
+      ],
+      priceId: 'price_1THYLAD8slkoqOiBI0rA7cCR',
+      popular: true,
+    },
+  ]), []);
 
   const handleCheckout = async (priceId) => {
     if (window.self !== window.top) {
@@ -161,7 +162,7 @@ export default function PricingSection() {
                       <span className="text-6xl font-bold bg-gradient-to-r from-blue-900 to-blue-800 text-transparent bg-clip-text">{plan.price}</span>
                       <span className="text-slate-600 text-lg">{plan.period}</span>
                     </div>
-                    <p className="text-slate-500 mt-2">≈ €186/month</p>
+                    <p className="text-slate-500 mt-2">Shared with the main tier pricing configuration</p>
                   </div>
                   <p className="text-slate-600 text-lg">{plan.description}</p>
                 </div>
