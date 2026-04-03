@@ -182,8 +182,8 @@ export default function Schedules() {
     },
   });
 
-  const isSchedulePageReady = Boolean(user && resolvedSchoolId && school);
-  const isCreateVersionDisabled = !isSchedulePageReady || createVersionMutation.isPending;
+  const isSchedulePageReady = Boolean(resolvedSchoolId);
+  const isCreateVersionDisabled = createVersionMutation.isPending;
 
   const updateSlotMutation = useMutation({
     mutationFn: async ({ id, data }) => {
