@@ -1,7 +1,11 @@
 export const TIER_LIMITS = {
   tier1: {
+    id: 'tier1',
     name: 'Starter',
+    subtitle: 'Starter',
+    description: 'Up to 200 students · 3 saved schedule versions · 1 admin account',
     price: 599,
+    priceLabel: '€599/year',
     studentLimit: 200,
     generationLimit: 3,
     savedVersionsLimit: 3,
@@ -13,8 +17,12 @@ export const TIER_LIMITS = {
     onboardingCallIncluded: false,
   },
   tier2: {
+    id: 'tier2',
     name: 'Standard',
+    subtitle: 'Standard',
+    description: 'Up to 600 students · Unlimited generations · 3 admin accounts',
     price: 1499,
+    priceLabel: '€1,499/year',
     studentLimit: 600,
     generationLimit: null,
     savedVersionsLimit: null,
@@ -26,8 +34,12 @@ export const TIER_LIMITS = {
     onboardingCallIncluded: false,
   },
   tier3: {
+    id: 'tier3',
     name: 'Pro',
+    subtitle: 'Pro',
+    description: 'Up to 1,200 students · Unlimited generations · Unlimited admin accounts',
     price: 2999,
+    priceLabel: '€2,999/year',
     studentLimit: 1200,
     generationLimit: null,
     savedVersionsLimit: null,

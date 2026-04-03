@@ -55,7 +55,7 @@ import {
 } from 'lucide-react';
 import PageHeader from '../components/ui-custom/PageHeader';
 import YearAdvancement from '../components/settings/YearAdvancement';
-import { getAdminSeatLimit, getTierLimits } from '@/lib/tierLimits';
+import { TIER_LIMITS, getAdminSeatLimit, getTierLimits } from '@/lib/tierLimits';
 
 import { toast } from 'sonner';
 
@@ -65,53 +65,7 @@ const TIMEZONES = [
   'Asia/Dubai', 'Australia/Sydney'
 ];
 
-const TIERS = {
-  tier1: {
-    name: 'Starter',
-    subtitle: 'Starter',
-    price: 599,
-    description: 'Up to 200 students · 3 saved schedule versions · 1 admin account',
-    icon: '🟢',
-    limits: {
-      students: 200,
-      savedVersions: 3,
-      adminSeats: 1,
-      support: 'Email support (48h)',
-      multipleSavedVersions: true,
-      onboardingCall: false,
-    },
-  },
-  tier2: {
-    name: 'Standard',
-    subtitle: 'Standard',
-    price: 1499,
-    description: 'Up to 600 students · Unlimited generations · 3 admin accounts',
-    icon: '🔵',
-    limits: {
-      students: 600,
-      savedVersions: 9999,
-      adminSeats: 3,
-      support: 'Email support (24h)',
-      multipleSavedVersions: true,
-      onboardingCall: false,
-    },
-  },
-  tier3: {
-    name: 'Pro',
-    subtitle: 'Pro',
-    price: 2999,
-    description: 'Up to 1,200 students · Unlimited generations · Unlimited admin accounts',
-    icon: '🟣',
-    limits: {
-      students: 1200,
-      savedVersions: null,
-      adminSeats: null,
-      support: 'Priority support (same day)',
-      multipleSavedVersions: true,
-      onboardingCall: true,
-    },
-  },
-};
+const TIERS = TIER_LIMITS;
 
 const ADD_ONS = [
   { id: 'extra_admin_user', name: 'Extra Admin User', price: 275, category: 'Users' },
