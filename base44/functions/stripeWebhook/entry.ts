@@ -3,32 +3,39 @@ import { createClientFromRequest } from 'npm:@base44/sdk@0.8.23';
 
 const stripe = new Stripe(Deno.env.get('STRIPE_SECRET_KEY'));
 
-const TIER_LIMITS = {
-  tier1: {
-    max_admin_seats: 1,
-    student_count_limit: 200,
-    generation_limit: 3,
-    saved_versions_limit: 3,
-    support_level: 'Email support (48h)',
-    onboarding_call_included: false,
-  },
-  tier2: {
-    max_admin_seats: 3,
-    student_count_limit: 600,
-    generation_limit: null,
-    saved_versions_limit: null,
-    support_level: 'Email support (24h)',
-    onboarding_call_included: false,
-  },
-  tier3: {
-    max_admin_seats: null,
-    student_count_limit: 1200,
-    generation_limit: null,
-    saved_versions_limit: null,
-    support_level: 'Priority support (same day)',
-    onboarding_call_included: true,
-  },
-};
+function getTierDefinition(tier) {
+  const fallback = 'tier2';
+  const normalizedTier = tier && ['tier1', 'tier2', 'tier3'].includes(tier) ? tier : fallback;
+
+  const definitions = {
+    tier1: {
+      max_admin_seats: 1,
+      student_count_limit: 200,
+      generation_limit: 3,
+      saved_versions_limit: 3,
+      support_level: 'Email support (48h)',
+      onboarding_call_included: false,
+    },
+    tier2: {
+      max_admin_seats: 3,
+      student_count_limit: 600,
+      generation_limit: null,
+      saved_versions_limit: null,
+      support_level: 'Email support (24h)',
+      onboarding_call_included: false,
+    },
+    tier3: {
+      max_admin_seats: null,
+      student_count_limit: 1200,
+      generation_limit: null,
+      saved_versions_limit: null,
+      support_level: 'Priority support (same day)',
+      onboarding_call_included: true,
+    },
+  };
+
+  return definitions[normalizedTier];
+}
 
 function buildTierSettings(existingSettings = {}, limits) {
   return {
@@ -70,7 +77,7 @@ async function ensureSchoolForCustomer(base44, session) {
   const user = users[0];
   const existingSchools = await base44.asServiceRole.entities.School.filter({ stripe_customer_id: stripeCustomerId });
   const matchingSchool = existingSchools[0];
-  const limits = TIER_LIMITS[tier] || TIER_LIMITS.tier2;
+  const limits = getTierDefinition(tier);
   const periodEnd = session.expires_at ? new Date(session.expires_at * 1000).toISOString() : null;
 
   if (matchingSchool) {

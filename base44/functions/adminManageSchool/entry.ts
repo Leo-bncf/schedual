@@ -41,42 +41,44 @@ Deno.serve(async (req) => {
     if (action === 'create') {
       if (!data) return Response.json({ error: 'Missing data' }, { status: 400 });
 
-      const tierSeatLimits = {
-        tier1: 1,
-        tier2: 3,
-        tier3: null,
-      };
-      const tierStudentLimits = {
-        tier1: 200,
-        tier2: 600,
-        tier3: 1200,
-      };
-      const tierGenerationLimits = {
-        tier1: 3,
-        tier2: null,
-        tier3: null,
-      };
-      const tierSupportLevels = {
-        tier1: 'Email support (48h)',
-        tier2: 'Email support (24h)',
-        tier3: 'Priority support (same day)',
-      };
-      const tierOnboardingFlags = {
-        tier1: false,
-        tier2: false,
-        tier3: true,
+      const tierDefinitions = {
+        tier1: {
+          max_admin_seats: 1,
+          student_count_limit: 200,
+          generation_limit: 3,
+          saved_versions_limit: 3,
+          support_level: 'Email support (48h)',
+          onboarding_call_included: false,
+        },
+        tier2: {
+          max_admin_seats: 3,
+          student_count_limit: 600,
+          generation_limit: null,
+          saved_versions_limit: null,
+          support_level: 'Email support (24h)',
+          onboarding_call_included: false,
+        },
+        tier3: {
+          max_admin_seats: null,
+          student_count_limit: 1200,
+          generation_limit: null,
+          saved_versions_limit: null,
+          support_level: 'Priority support (same day)',
+          onboarding_call_included: true,
+        },
       };
       const tier = data.subscription_tier || 'tier2';
+      const limits = tierDefinitions[tier] || tierDefinitions.tier2;
       const created = await svc.create({
         ...data,
-        max_admin_seats: tierSeatLimits[tier],
+        max_admin_seats: limits.max_admin_seats,
         settings: {
           ...(data.settings || {}),
-          student_count_limit: tierStudentLimits[tier],
-          generation_limit: tierGenerationLimits[tier],
-          saved_versions_limit: tierGenerationLimits[tier],
-          support_level: tierSupportLevels[tier],
-          onboarding_call_included: tierOnboardingFlags[tier],
+          student_count_limit: limits.student_count_limit,
+          generation_limit: limits.generation_limit,
+          saved_versions_limit: limits.saved_versions_limit,
+          support_level: limits.support_level,
+          onboarding_call_included: limits.onboarding_call_included,
         },
       });
       return Response.json({ success: true, school: created });
@@ -87,41 +89,43 @@ Deno.serve(async (req) => {
 
       let nextData = data;
       if (data.subscription_tier) {
-        const tierSeatLimits = {
-          tier1: 1,
-          tier2: 3,
-          tier3: null,
+        const tierDefinitions = {
+          tier1: {
+            max_admin_seats: 1,
+            student_count_limit: 200,
+            generation_limit: 3,
+            saved_versions_limit: 3,
+            support_level: 'Email support (48h)',
+            onboarding_call_included: false,
+          },
+          tier2: {
+            max_admin_seats: 3,
+            student_count_limit: 600,
+            generation_limit: null,
+            saved_versions_limit: null,
+            support_level: 'Email support (24h)',
+            onboarding_call_included: false,
+          },
+          tier3: {
+            max_admin_seats: null,
+            student_count_limit: 1200,
+            generation_limit: null,
+            saved_versions_limit: null,
+            support_level: 'Priority support (same day)',
+            onboarding_call_included: true,
+          },
         };
-        const tierStudentLimits = {
-          tier1: 200,
-          tier2: 600,
-          tier3: 1200,
-        };
-        const tierGenerationLimits = {
-          tier1: 3,
-          tier2: null,
-          tier3: null,
-        };
-        const tierSupportLevels = {
-          tier1: 'Email support (48h)',
-          tier2: 'Email support (24h)',
-          tier3: 'Priority support (same day)',
-        };
-        const tierOnboardingFlags = {
-          tier1: false,
-          tier2: false,
-          tier3: true,
-        };
+        const limits = tierDefinitions[data.subscription_tier] || tierDefinitions.tier2;
         nextData = {
           ...data,
-          max_admin_seats: tierSeatLimits[data.subscription_tier],
+          max_admin_seats: limits.max_admin_seats,
           settings: {
             ...(data.settings || {}),
-            student_count_limit: tierStudentLimits[data.subscription_tier],
-            generation_limit: tierGenerationLimits[data.subscription_tier],
-            saved_versions_limit: tierGenerationLimits[data.subscription_tier],
-            support_level: tierSupportLevels[data.subscription_tier],
-            onboarding_call_included: tierOnboardingFlags[data.subscription_tier],
+            student_count_limit: limits.student_count_limit,
+            generation_limit: limits.generation_limit,
+            saved_versions_limit: limits.saved_versions_limit,
+            support_level: limits.support_level,
+            onboarding_call_included: limits.onboarding_call_included,
           },
         };
       }
