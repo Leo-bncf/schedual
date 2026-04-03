@@ -69,14 +69,14 @@ const TIERS = {
       'Unlimited generations',
       'Auto generation + manual adjustments',
       'PDF & Excel export',
-      'Multiple saved versions',
+      'Unlimited saved versions',
       'Unlimited admin accounts',
       'Priority support (same day)',
       'Onboarding call included',
     ],
     highlights: [
       { icon: School, label: 'Student limit', value: '1,200' },
-      { icon: Calendar, label: 'Saved versions', value: 'Multiple' },
+      { icon: Calendar, label: 'Saved versions', value: 'Unlimited' },
       { icon: Users, label: 'Admin accounts', value: 'Unlimited' },
     ],
     featured: false,
@@ -134,8 +134,8 @@ export default function PricingTiersSection() {
   const summaryLines = [
     'The school can only operate within the limits of this tier.',
     'Student capacity is capped by the selected plan.',
-    'Saved schedule versions follow the plan allowance.',
-    'Admin accounts are limited by the plan.',
+    selectedTier.name === 'Pro' ? 'Saved schedule versions are unlimited on this plan.' : 'Saved schedule versions follow the plan allowance.',
+    selectedTier.name === 'Pro' ? 'Admin accounts are unlimited on this plan.' : 'Admin accounts are limited by the plan.',
     'Support response level follows the selected plan.',
   ];
 

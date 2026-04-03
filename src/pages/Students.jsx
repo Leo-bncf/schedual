@@ -985,7 +985,7 @@ Return ONLY students array, no other text.`,
       {school && (
         <div className="rounded-lg border border-slate-200 bg-slate-50 p-4 mb-6">
           <p className="text-sm text-slate-700">
-            Your plan: <strong>{tierConfig?.name || (school.subscription_tier || 'unknown').toUpperCase()}</strong>. Student limit: <strong>{maxStudents.toLocaleString()}</strong>. Enabled programmes: {allowedProgrammes.join(', ')}.
+            Your plan: <strong>{tierConfig?.name || (school.subscription_tier || 'unknown').toUpperCase()}</strong>. Student limit: <strong>{maxStudents.toLocaleString()}</strong>. Admin seats: <strong>{tierConfig?.adminSeats === null ? 'Unlimited' : tierConfig?.adminSeats}</strong>. Enabled programmes: {allowedProgrammes.join(', ')}.
           </p>
         </div>
       )}
