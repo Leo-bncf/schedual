@@ -84,6 +84,7 @@ const ADD_ONS = [
 
 export default function Settings() {
   const [isSaving, setIsSaving] = useState(false);
+  const [stripeNoticeShown, setStripeNoticeShown] = useState(false);
   const [saved, setSaved] = useState(false);
   const [inviteDialogOpen, setInviteDialogOpen] = useState(false);
   const [inviteEmail, setInviteEmail] = useState('');
@@ -153,6 +154,29 @@ export default function Settings() {
       });
     }
   }, [school]);
+
+  useEffect(() => {
+    const params = new URLSearchParams(window.location.search);
+    const stripeStatus = params.get('stripe');
+
+    if (!stripeStatus || stripeNoticeShown) return;
+
+    if (stripeStatus === 'success') {
+      toast.success('Payment completed. Your subscription is being activated.');
+      queryClient.invalidateQueries({ queryKey: ['schools'] });
+    }
+
+    if (stripeStatus === 'cancelled') {
+      toast.error('Checkout was cancelled.');
+    }
+
+    params.delete('stripe');
+    params.delete('tier');
+    const nextQuery = params.toString();
+    const nextUrl = `${window.location.pathname}${nextQuery ? `?${nextQuery}` : ''}`;
+    window.history.replaceState({}, '', nextUrl);
+    setStripeNoticeShown(true);
+  }, [queryClient, stripeNoticeShown]);
 
   const createSchoolMutation = useMutation({
     mutationFn: (data) => base44.entities.School.create(data),

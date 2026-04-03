@@ -47,6 +47,16 @@ function getTierSettings(tierId, existingSettings = {}) {
   };
 }
 
+function getTierIdFromPriceId(priceId) {
+  const priceToTier = {
+    price_1THYLAD8slkoqOiBqzij9LlB: 'tier1',
+    price_1THYLAD8slkoqOiBI0rA7cCR: 'tier2',
+    price_1THYLAD8slkoqOiBQCaKAj2z: 'tier3',
+  };
+
+  return priceToTier[priceId] || null;
+}
+
 function buildSchoolCode(email) {
   const prefix = (email || 'SCH').split('@')[0].replace(/[^a-zA-Z0-9]/g, '').toUpperCase().slice(0, 6) || 'SCH';
   return `${prefix}-${Date.now().toString().slice(-4)}`;
@@ -59,7 +69,8 @@ function buildSchoolId(stripeCustomerId) {
 
 async function ensureSchoolForCustomer(base44, session) {
   const customerEmail = session.customer_details?.email || session.customer_email;
-  const tier = session.metadata?.tier;
+  const sessionLinePriceId = session.line_items?.data?.[0]?.price?.id || session.metadata?.price_id || null;
+  const tier = session.metadata?.tier || getTierIdFromPriceId(sessionLinePriceId);
   const stripeCustomerId = typeof session.customer === 'string' ? session.customer : session.customer?.id;
   const stripeSubscriptionId = typeof session.subscription === 'string' ? session.subscription : session.subscription?.id;
 
@@ -155,7 +166,10 @@ Deno.serve(async (req) => {
     const event = await stripe.webhooks.constructEventAsync(body, signature, webhookSecret);
 
     if (event.type === 'checkout.session.completed') {
-      const session = event.data.object;
+      const rawSession = event.data.object;
+      const session = await stripe.checkout.sessions.retrieve(rawSession.id, {
+        expand: ['line_items.data.price'],
+      });
       const result = await ensureSchoolForCustomer(base44, session);
       console.log('[stripeWebhook] checkout.session.completed processed', result);
     }
