@@ -799,13 +799,14 @@ Deno.serve(async (req) => {
 
     const schoolId = user.school_id;
 
-    const [schools, students, teachers, subjects, rooms, teachingGroups] = await Promise.all([
+    const [schools, students, teachers, subjects, rooms, teachingGroups, scheduleVersions] = await Promise.all([
       base44.entities.School.filter({ id: schoolId }, '-created_date', 10),
       base44.entities.Student.filter({ school_id: schoolId }, '-created_date', 500),
       base44.entities.Teacher.filter({ school_id: schoolId }, '-created_date', 500),
       base44.entities.Subject.filter({ school_id: schoolId }, '-created_date', 500),
       base44.entities.Room.filter({ school_id: schoolId }, '-created_date', 500),
       base44.entities.TeachingGroup.filter({ school_id: schoolId }, '-created_date', 1000),
+      base44.entities.ScheduleVersion.filter({ school_id: schoolId }, '-created_date', 1000),
     ]);
 
     const school = schools[0];
@@ -813,13 +814,37 @@ Deno.serve(async (req) => {
       return Response.json({ error: 'School not found' }, { status: 404 });
     }
 
-    console.log(`[generateSchedule] School: ${school.name}, Students: ${students.length}, Teachers: ${teachers.length}`);
+    const generationLimits = {
+      tier1: 3,
+      tier2: null,
+      tier3: null,
+    };
+    const generationLimit = generationLimits[school.subscription_tier] ?? 3;
+    const generatedCount = scheduleVersions.filter((version) => version.generated_at).length;
 
-    const activeStudents = students.filter(s => s.is_active !== false);
-    const programmes = new Set(activeStudents.map(s => s.ib_programme).filter(Boolean));
+    if (generationLimit !== null && generatedCount >= generationLimit) {
+      return Response.json({ error: `Generation limit reached for your tier (${generatedCount}/${generationLimit})` }, { status: 400 });
+    }
+
+    const studentLimits = {
+      tier1: 200,
+      tier2: 600,
+      tier3: 1200,
+    };
+    const studentLimit = studentLimits[school.subscription_tier] ?? 200;
+    const activeStudentCount = students.filter((student) => student.is_active !== false).length;
+
+    if (activeStudentCount > studentLimit) {
+      return Response.json({ error: `Student limit exceeded for your tier (${activeStudentCount}/${studentLimit})` }, { status: 400 });
+    }
+
+    const [schoolRecord] = schools;
+    console.log(`[generateSchedule] School: ${schoolRecord.name}, Students: ${students.length}, Teachers: ${teachers.length}`);
+
+    const programmes = new Set(students.filter(s => s.is_active !== false).map(s => s.ib_programme).filter(Boolean));
     console.log(`[generateSchedule] Programmes with students: ${[...programmes].join(', ')}`);
 
-    const common = { schoolId, scheduleVersionId: schedule_version_id, school, students, teachers, subjects, rooms, teachingGroups };
+    const common = { schoolId, scheduleVersionId: schedule_version_id, school: schoolRecord, students, teachers, subjects, rooms, teachingGroups };
 
     // Build payloads — ONE per programme
     const payloadsToRun = [];
@@ -836,7 +861,7 @@ Deno.serve(async (req) => {
     const { roomMap } = buildRoomMap(rooms);
 
     // ── Build solverTimeslots from school config ──
-    const solverTimeslots = buildSolverTimeslots(school);
+    const solverTimeslots = buildSolverTimeslots(schoolRecord);
     console.log(`[generateSchedule] Built ${solverTimeslots.length} solverTimeslots from school schedule`);
 
     // ── Send ONE payload at a time and reject anything inconsistent ──

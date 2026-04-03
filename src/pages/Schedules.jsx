@@ -44,6 +44,7 @@ import TimetableGrid from '../components/schedule/TimetableGrid';
 import ExportTimetableButton from '../components/schedule/ExportTimetableButton';
 import SearchableEntitySelect from '../components/schedule/SearchableEntitySelect';
 import StudentScheduleView from '../components/schedule/StudentScheduleView';
+import { getGenerationLimit, getSavedVersionsLimit } from '@/lib/tierLimits';
 
 export default function Schedules() {
   const [isDialogOpen, setIsDialogOpen] = useState(false);
@@ -112,13 +113,16 @@ export default function Schedules() {
 
   const canCreateVersion = () => {
     if (!school) return false;
-    const tierLimits = {
-      tier1: 3,
-      tier2: Infinity,
-      tier3: Infinity,
-    };
-    const maxVersions = tierLimits[school.subscription_tier] ?? 3;
-    return scheduleVersions.length < maxVersions;
+    const maxVersions = getSavedVersionsLimit(school.subscription_tier);
+    return maxVersions === null || maxVersions === undefined ? true : scheduleVersions.length < maxVersions;
+  };
+
+  const canGenerateSchedule = () => {
+    if (!school) return false;
+    const maxGenerations = getGenerationLimit(school.subscription_tier);
+    if (maxGenerations === null || maxGenerations === undefined) return true;
+    const generatedCount = scheduleVersions.filter((version) => version.generated_at).length;
+    return generatedCount < maxGenerations;
   };
 
   const { data: scheduleSlots = [] } = useQuery({
@@ -465,7 +469,7 @@ export default function Schedules() {
               if (canCreateVersion()) {
                 setIsDialogOpen(true);
               } else {
-                alert(`Limit reached. ${school?.subscription_tier === 'tier1' ? 'Starter allows up to 3 saved schedule versions.' : 'Your current tier limit has been reached.'} Upgrade for more.`);
+                alert(`Limit reached. ${school?.subscription_tier === 'tier1' ? 'Starter allows up to 3 saved timetable versions.' : 'Your current tier limit has been reached.'} Upgrade for more.`);
               }
             }} 
             size="sm"
@@ -645,7 +649,7 @@ export default function Schedules() {
                 </Button>
                 <Button
                   onClick={handleGenerateSchedule}
-                  disabled={genStatus === 'generating'}
+                  disabled={genStatus === 'generating' || !canGenerateSchedule()}
                   className="bg-blue-600 hover:bg-blue-700 h-12 px-8 text-base shadow-md hover:shadow-lg transition-all"
                 >
                   {genStatus === 'generating' ? (
@@ -1071,7 +1075,7 @@ export default function Schedules() {
                   </p>
                   <Button
                     onClick={handleGenerateSchedule}
-                    disabled={genStatus === 'generating'}
+                    disabled={genStatus === 'generating' || !canGenerateSchedule()}
                     className="bg-blue-600 hover:bg-blue-700 h-12 px-8 text-base shadow-md hover:shadow-lg transition-all"
                   >
                     {genStatus === 'generating' ? (

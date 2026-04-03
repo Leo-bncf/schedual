@@ -28,7 +28,9 @@ Deno.serve(async (req) => {
       return Response.json({ error: 'Session expired' }, { status: 401 });
     }
 
-    if (!user.school_id) {
+    const schoolId = user.school_id || user.data?.school_id;
+
+    if (!schoolId) {
       return Response.json({ error: 'User not assigned to a school' }, { status: 400 });
     }
 
@@ -38,14 +40,14 @@ Deno.serve(async (req) => {
       return Response.json({ error: 'Invalid email address' }, { status: 400 });
     }
 
-    const schools = await base44.entities.School.filter({ id: user.school_id });
+    const schools = await base44.entities.School.filter({ id: schoolId });
     const school = schools[0];
 
     if (!school) {
       return Response.json({ error: 'School not found' }, { status: 404 });
     }
 
-    const currentAdmins = await base44.asServiceRole.entities.User.filter({ school_id: user.school_id });
+    const currentAdmins = await base44.asServiceRole.entities.User.filter({ school_id: schoolId, role: 'admin' });
     const tierSeatLimits = {
       tier1: 1,
       tier2: 3,
@@ -69,20 +71,20 @@ Deno.serve(async (req) => {
 
     const existingUser = existingUsers[0];
 
-    if (existingUser.school_id === user.school_id) {
+    if ((existingUser.school_id || existingUser.data?.school_id) === schoolId) {
       return Response.json({
         error: 'This user is already an administrator of your school'
       }, { status: 400 });
     }
 
-    if (existingUser.school_id) {
+    if (existingUser.school_id || existingUser.data?.school_id) {
       return Response.json({
         error: 'This user is already assigned to another school'
       }, { status: 400 });
     }
 
     await base44.asServiceRole.entities.User.update(existingUser.id, {
-      school_id: user.school_id
+      school_id: schoolId
     });
 
     await base44.integrations.Core.SendEmail({

@@ -55,6 +55,7 @@ import {
 } from 'lucide-react';
 import PageHeader from '../components/ui-custom/PageHeader';
 import YearAdvancement from '../components/settings/YearAdvancement';
+import { getAdminSeatLimit, getTierLimits } from '@/lib/tierLimits';
 
 import { toast } from 'sonner';
 
@@ -153,8 +154,8 @@ export default function Settings() {
   const school = schools[0];
   const currentTier = school?.subscription_tier ? TIERS[school.subscription_tier] : null;
   const tierStudentLimit = currentTier?.limits?.students ?? null;
-  const tierAdminSeatLimit = currentTier?.limits?.adminSeats;
-  const effectiveAdminSeatLimit = tierAdminSeatLimit === null ? null : (tierAdminSeatLimit ?? school?.max_admin_seats ?? 3);
+  const tierAdminSeatLimit = getAdminSeatLimit(school?.subscription_tier, school?.max_admin_seats ?? 3);
+  const effectiveAdminSeatLimit = tierAdminSeatLimit;
 
   const { data: schoolAdmins = [], isLoading: isLoadingAdmins } = useQuery({
     queryKey: ['schoolAdmins', user?.school_id],
