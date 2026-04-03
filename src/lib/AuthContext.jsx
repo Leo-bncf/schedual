@@ -89,9 +89,18 @@ export const AuthProvider = ({ children }) => {
 
   const checkUserAuth = async () => {
     try {
-      // Now check if the user is authenticated
       setIsLoadingAuth(true);
       const currentUser = await base44.auth.me();
+
+      if (currentUser?.id && !currentUser?.school_id) {
+        const dbUsers = await base44.entities.User.filter({ id: currentUser.id });
+        const dbUser = dbUsers[0] || null;
+        if (dbUser?.school_id) {
+          base44.auth.logout(window.location.href);
+          return;
+        }
+      }
+
       setUser(currentUser);
       setIsAuthenticated(true);
       setIsLoadingAuth(false);
@@ -100,7 +109,6 @@ export const AuthProvider = ({ children }) => {
       setIsLoadingAuth(false);
       setIsAuthenticated(false);
       
-      // If user auth fails, it might be an expired token
       if (error.status === 401 || error.status === 403) {
         setAuthError({
           type: 'auth_required',
