@@ -48,12 +48,9 @@ Deno.serve(async (req) => {
     }
 
     const currentAdmins = await base44.asServiceRole.entities.User.filter({ school_id: schoolId, role: 'admin' });
-    const tierSeatLimits = {
-      tier1: 1,
-      tier2: 3,
-      tier3: null,
-    };
-    const maxSeats = tierSeatLimits[school.subscription_tier] ?? school.max_admin_seats ?? 3;
+    const maxSeats = school.subscription_tier === 'tier3'
+      ? null
+      : (school.subscription_tier === 'tier1' ? 1 : school.subscription_tier === 'tier2' ? 3 : (school.max_admin_seats ?? 3));
 
     if (maxSeats !== null && currentAdmins.length >= maxSeats) {
       return Response.json({
