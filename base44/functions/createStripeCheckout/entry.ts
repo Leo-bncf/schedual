@@ -2,6 +2,12 @@ import Stripe from 'npm:stripe@18.1.1';
 
 const stripe = new Stripe(Deno.env.get('STRIPE_SECRET_KEY'));
 
+const TIER_PRICE_IDS = {
+  tier1: 'price_1THYLAD8slkoqOiBqzij9LlB',
+  tier2: 'price_1THYLAD8slkoqOiBI0rA7cCR',
+  tier3: 'price_1THYLAD8slkoqOiBQCaKAj2z',
+};
+
 Deno.serve(async (req) => {
   try {
     const body = await req.json();
@@ -9,6 +15,11 @@ Deno.serve(async (req) => {
 
     if (!priceId || !tier) {
       return Response.json({ error: 'Missing checkout details' }, { status: 400 });
+    }
+
+    const expectedPriceId = TIER_PRICE_IDS[tier];
+    if (!expectedPriceId || priceId !== expectedPriceId) {
+      return Response.json({ error: 'Invalid tier price selection' }, { status: 400 });
     }
 
     const referer = req.headers.get('referer') || '';
@@ -21,7 +32,7 @@ Deno.serve(async (req) => {
 
     const session = await stripe.checkout.sessions.create({
       mode: 'subscription',
-      line_items: [{ price: priceId, quantity: 1 }],
+      line_items: [{ price: expectedPriceId, quantity: 1 }],
       success_url: `${origin}/Settings?stripe=success&tier=${tier}`,
       cancel_url: `${origin}/Settings?stripe=cancelled`,
       metadata: {
