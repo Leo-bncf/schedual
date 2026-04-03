@@ -96,7 +96,7 @@ export default function Schedules() {
     queryFn: () => base44.auth.me(),
   });
 
-  const schoolId = user?.school_id;
+  const schoolId = user?.school_id || user?.data?.school_id;
 
   const { data: school } = useQuery({
     queryKey: ['school', schoolId],
@@ -105,12 +105,12 @@ export default function Schedules() {
     select: (data) => data[0]
   });
 
+  const resolvedSchoolId = school?.id || schoolId;
   const { data: scheduleVersions = [] } = useQuery({
-    queryKey: ['scheduleVersions', schoolId],
-    queryFn: () => base44.entities.ScheduleVersion.filter({ school_id: schoolId }, '-created_date'),
-    enabled: !!schoolId,
+    queryKey: ['scheduleVersions', resolvedSchoolId],
+    queryFn: () => base44.entities.ScheduleVersion.filter({ school_id: resolvedSchoolId }, '-created_date'),
+    enabled: !!resolvedSchoolId,
   });
-
   const canCreateVersion = () => {
     if (!school) return false;
     const maxVersions = getSavedVersionsLimit(school.subscription_tier);
@@ -135,45 +135,44 @@ export default function Schedules() {
   });
 
   const { data: students = [] } = useQuery({
-    queryKey: ['students', schoolId],
-    queryFn: () => base44.entities.Student.filter({ school_id: schoolId }, '-created_date', 500),
-    enabled: !!schoolId,
+    queryKey: ['students', resolvedSchoolId],
+    queryFn: () => base44.entities.Student.filter({ school_id: resolvedSchoolId }, '-created_date', 500),
+    enabled: !!resolvedSchoolId,
   });
 
   const { data: teachers = [] } = useQuery({
-    queryKey: ['teachers', schoolId],
-    queryFn: () => base44.entities.Teacher.filter({ school_id: schoolId }, '-created_date', 500),
-    enabled: !!schoolId,
+    queryKey: ['teachers', resolvedSchoolId],
+    queryFn: () => base44.entities.Teacher.filter({ school_id: resolvedSchoolId }, '-created_date', 500),
+    enabled: !!resolvedSchoolId,
   });
 
   const { data: subjects = [] } = useQuery({
-    queryKey: ['subjects', schoolId],
-    queryFn: () => base44.entities.Subject.filter({ school_id: schoolId }, '-created_date', 500),
-    enabled: !!schoolId,
+    queryKey: ['subjects', resolvedSchoolId],
+    queryFn: () => base44.entities.Subject.filter({ school_id: resolvedSchoolId }, '-created_date', 500),
+    enabled: !!resolvedSchoolId,
   });
 
   const { data: rooms = [] } = useQuery({
-    queryKey: ['rooms', schoolId],
-    queryFn: () => base44.entities.Room.filter({ school_id: schoolId }, '-created_date', 500),
-    enabled: !!schoolId,
+    queryKey: ['rooms', resolvedSchoolId],
+    queryFn: () => base44.entities.Room.filter({ school_id: resolvedSchoolId }, '-created_date', 500),
+    enabled: !!resolvedSchoolId,
   });
 
   const { data: teachingGroups = [] } = useQuery({
-    queryKey: ['teachingGroups', schoolId],
-    queryFn: () => base44.entities.TeachingGroup.filter({ school_id: schoolId }, '-created_date', 1000),
-    enabled: !!schoolId,
+    queryKey: ['teachingGroups', resolvedSchoolId],
+    queryFn: () => base44.entities.TeachingGroup.filter({ school_id: resolvedSchoolId }, '-created_date', 1000),
+    enabled: !!resolvedSchoolId,
   });
 
   const { data: classGroups = [] } = useQuery({
-    queryKey: ['classGroups', schoolId],
-    queryFn: () => base44.entities.ClassGroup.filter({ school_id: schoolId }, '-created_date', 500),
-    enabled: !!schoolId,
+    queryKey: ['classGroups', resolvedSchoolId],
+    queryFn: () => base44.entities.ClassGroup.filter({ school_id: resolvedSchoolId }, '-created_date', 500),
+    enabled: !!resolvedSchoolId,
   });
-
   const createVersionMutation = useMutation({
     mutationFn: (data) => {
-      if (!schoolId) throw new Error('No school assigned');
-      return base44.entities.ScheduleVersion.create({ ...data, school_id: schoolId, status: 'draft' });
+      if (!resolvedSchoolId) throw new Error('No school assigned');
+      return base44.entities.ScheduleVersion.create({ ...data, school_id: resolvedSchoolId, status: 'draft' });
     },
     onSuccess: (newVersion) => {
       queryClient.invalidateQueries({ queryKey: ['scheduleVersions'] });
@@ -183,7 +182,7 @@ export default function Schedules() {
     },
   });
 
-  const isSchedulePageReady = Boolean(user && schoolId && school);
+  const isSchedulePageReady = Boolean(user && resolvedSchoolId && school);
   const isCreateVersionDisabled = !isSchedulePageReady || createVersionMutation.isPending;
 
   const updateSlotMutation = useMutation({
@@ -249,7 +248,7 @@ export default function Schedules() {
     setIsPayloadLoading(true);
     try {
       const response = await base44.functions.invoke('previewOptaPayload', {
-        school_id: schoolId,
+        school_id: resolvedSchoolId,
         schedule_version_id: selectedVersion.id,
         sample_limit: 50,
       });
@@ -282,8 +281,8 @@ export default function Schedules() {
         setGenStatus('success');
         
         // Refetch scheduleVersions from the database to get persisted generation_params
-        const updatedVersions = await base44.entities.ScheduleVersion.filter({ school_id: schoolId }, '-created_date');
-        queryClient.setQueryData(['scheduleVersions', schoolId], updatedVersions);
+        const updatedVersions = await base44.entities.ScheduleVersion.filter({ school_id: resolvedSchoolId }, '-created_date');
+        queryClient.setQueryData(['scheduleVersions', resolvedSchoolId], updatedVersions);
         
         // Update selectedVersion to the refetched one
         const refreshedVersion = updatedVersions.find(v => v.id === selectedVersion.id);
