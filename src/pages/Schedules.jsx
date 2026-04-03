@@ -125,9 +125,6 @@ export default function Schedules() {
     return generatedCount < maxGenerations;
   };
 
-  const isSchedulePageReady = Boolean(user && schoolId && school);
-  const isCreateVersionDisabled = !isSchedulePageReady || createVersionMutation.isPending;
-
   const { data: scheduleSlots = [] } = useQuery({
     queryKey: ['scheduleSlots', selectedVersion?.id],
     queryFn: async () => {
@@ -185,6 +182,9 @@ export default function Schedules() {
       setFormData({ name: '', academic_year: '2024-2025', term: 'Fall' });
     },
   });
+
+  const isSchedulePageReady = Boolean(user && schoolId && school);
+  const isCreateVersionDisabled = !isSchedulePageReady || createVersionMutation.isPending;
 
   const updateSlotMutation = useMutation({
     mutationFn: async ({ id, data }) => {
