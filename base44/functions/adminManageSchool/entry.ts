@@ -1,4 +1,47 @@
 import { createClientFromRequest } from 'npm:@base44/sdk@0.8.6';
+function getTierDefinition(tierId) {
+  const tierMap = {
+    tier1: {
+      max_admin_seats: 1,
+      student_count_limit: 200,
+      generation_limit: 3,
+      saved_versions_limit: 3,
+      support_level: 'Email support (48h)',
+      onboarding_call_included: false,
+    },
+    tier2: {
+      max_admin_seats: 3,
+      student_count_limit: 600,
+      generation_limit: null,
+      saved_versions_limit: null,
+      support_level: 'Email support (24h)',
+      onboarding_call_included: false,
+    },
+    tier3: {
+      max_admin_seats: null,
+      student_count_limit: 1200,
+      generation_limit: null,
+      saved_versions_limit: null,
+      support_level: 'Priority support (same day)',
+      onboarding_call_included: true,
+    },
+  };
+
+  return tierMap[tierId] || tierMap.tier2;
+}
+
+function getTierSettings(tierId, existingSettings = {}) {
+  const tier = getTierDefinition(tierId);
+
+  return {
+    ...existingSettings,
+    generation_limit: tier.generation_limit,
+    saved_versions_limit: tier.saved_versions_limit,
+    student_count_limit: tier.student_count_limit,
+    support_level: tier.support_level,
+    onboarding_call_included: tier.onboarding_call_included,
+  };
+}
 
 Deno.serve(async (req) => {
   try {
@@ -41,45 +84,12 @@ Deno.serve(async (req) => {
     if (action === 'create') {
       if (!data) return Response.json({ error: 'Missing data' }, { status: 400 });
 
-      const tierDefinitions = {
-        tier1: {
-          max_admin_seats: 1,
-          student_count_limit: 200,
-          generation_limit: 3,
-          saved_versions_limit: 3,
-          support_level: 'Email support (48h)',
-          onboarding_call_included: false,
-        },
-        tier2: {
-          max_admin_seats: 3,
-          student_count_limit: 600,
-          generation_limit: null,
-          saved_versions_limit: null,
-          support_level: 'Email support (24h)',
-          onboarding_call_included: false,
-        },
-        tier3: {
-          max_admin_seats: null,
-          student_count_limit: 1200,
-          generation_limit: null,
-          saved_versions_limit: null,
-          support_level: 'Priority support (same day)',
-          onboarding_call_included: true,
-        },
-      };
       const tier = data.subscription_tier || 'tier2';
-      const limits = tierDefinitions[tier] || tierDefinitions.tier2;
+      const limits = getTierDefinition(tier);
       const created = await svc.create({
         ...data,
         max_admin_seats: limits.max_admin_seats,
-        settings: {
-          ...(data.settings || {}),
-          student_count_limit: limits.student_count_limit,
-          generation_limit: limits.generation_limit,
-          saved_versions_limit: limits.saved_versions_limit,
-          support_level: limits.support_level,
-          onboarding_call_included: limits.onboarding_call_included,
-        },
+        settings: getTierSettings(tier, data.settings || {}),
       });
       return Response.json({ success: true, school: created });
     }
@@ -89,44 +99,11 @@ Deno.serve(async (req) => {
 
       let nextData = data;
       if (data.subscription_tier) {
-        const tierDefinitions = {
-          tier1: {
-            max_admin_seats: 1,
-            student_count_limit: 200,
-            generation_limit: 3,
-            saved_versions_limit: 3,
-            support_level: 'Email support (48h)',
-            onboarding_call_included: false,
-          },
-          tier2: {
-            max_admin_seats: 3,
-            student_count_limit: 600,
-            generation_limit: null,
-            saved_versions_limit: null,
-            support_level: 'Email support (24h)',
-            onboarding_call_included: false,
-          },
-          tier3: {
-            max_admin_seats: null,
-            student_count_limit: 1200,
-            generation_limit: null,
-            saved_versions_limit: null,
-            support_level: 'Priority support (same day)',
-            onboarding_call_included: true,
-          },
-        };
-        const limits = tierDefinitions[data.subscription_tier] || tierDefinitions.tier2;
+        const limits = getTierDefinition(data.subscription_tier);
         nextData = {
           ...data,
           max_admin_seats: limits.max_admin_seats,
-          settings: {
-            ...(data.settings || {}),
-            student_count_limit: limits.student_count_limit,
-            generation_limit: limits.generation_limit,
-            saved_versions_limit: limits.saved_versions_limit,
-            support_level: limits.support_level,
-            onboarding_call_included: limits.onboarding_call_included,
-          },
+          settings: getTierSettings(data.subscription_tier, data.settings || {}),
         };
       }
 

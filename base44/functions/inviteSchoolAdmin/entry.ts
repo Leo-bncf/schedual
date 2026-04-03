@@ -1,4 +1,14 @@
 import { createClientFromRequest } from 'npm:@base44/sdk@0.8.23';
+function getAdminSeatLimit(tierId, fallback = 3) {
+  const tierMap = {
+    tier1: 1,
+    tier2: 3,
+    tier3: null,
+  };
+
+  const limit = tierMap[tierId];
+  return limit === null ? null : (limit ?? fallback);
+}
 
 Deno.serve(async (req) => {
   try {
@@ -48,9 +58,7 @@ Deno.serve(async (req) => {
     }
 
     const currentAdmins = await base44.asServiceRole.entities.User.filter({ school_id: schoolId, role: 'admin' });
-    const maxSeats = school.subscription_tier === 'tier3'
-      ? null
-      : (school.subscription_tier === 'tier1' ? 1 : school.subscription_tier === 'tier2' ? 3 : (school.max_admin_seats ?? 3));
+    const maxSeats = getAdminSeatLimit(school.subscription_tier, school.max_admin_seats ?? 3);
 
     if (maxSeats !== null && currentAdmins.length >= maxSeats) {
       return Response.json({

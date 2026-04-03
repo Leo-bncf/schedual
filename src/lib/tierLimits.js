@@ -72,3 +72,29 @@ export function getAdminSeatLimit(tierId, fallback = 3) {
 export function getStudentLimit(tierId) {
   return getTierLimits(tierId)?.studentLimit ?? 200;
 }
+
+export function getTierSettings(tierId, existingSettings = {}) {
+  const tier = getTierLimits(tierId) || TIER_LIMITS.tier1;
+
+  return {
+    ...existingSettings,
+    generation_limit: tier.generationLimit,
+    saved_versions_limit: tier.savedVersionsLimit,
+    student_count_limit: tier.studentLimit,
+    support_level: tier.support,
+    onboarding_call_included: tier.onboardingCallIncluded,
+  };
+}
+
+export function getBackendTierDefinition(tierId) {
+  const tier = getTierLimits(tierId) || TIER_LIMITS.tier2;
+
+  return {
+    max_admin_seats: tier.adminSeats,
+    student_count_limit: tier.studentLimit,
+    generation_limit: tier.generationLimit,
+    saved_versions_limit: tier.savedVersionsLimit,
+    support_level: tier.support,
+    onboarding_call_included: tier.onboardingCallIncluded,
+  };
+}

@@ -3,11 +3,8 @@ import { createClientFromRequest } from 'npm:@base44/sdk@0.8.23';
 
 const stripe = new Stripe(Deno.env.get('STRIPE_SECRET_KEY'));
 
-function getTierDefinition(tier) {
-  const fallback = 'tier2';
-  const normalizedTier = tier && ['tier1', 'tier2', 'tier3'].includes(tier) ? tier : fallback;
-
-  const definitions = {
+function getTierDefinition(tierId) {
+  const tierMap = {
     tier1: {
       max_admin_seats: 1,
       student_count_limit: 200,
@@ -34,17 +31,19 @@ function getTierDefinition(tier) {
     },
   };
 
-  return definitions[normalizedTier];
+  return tierMap[tierId] || tierMap.tier2;
 }
 
-function buildTierSettings(existingSettings = {}, limits) {
+function getTierSettings(tierId, existingSettings = {}) {
+  const tier = getTierDefinition(tierId);
+
   return {
     ...existingSettings,
-    generation_limit: limits.generation_limit,
-    saved_versions_limit: limits.saved_versions_limit,
-    student_count_limit: limits.student_count_limit,
-    support_level: limits.support_level,
-    onboarding_call_included: limits.onboarding_call_included,
+    generation_limit: tier.generation_limit,
+    saved_versions_limit: tier.saved_versions_limit,
+    student_count_limit: tier.student_count_limit,
+    support_level: tier.support_level,
+    onboarding_call_included: tier.onboarding_call_included,
   };
 }
 
@@ -89,7 +88,7 @@ async function ensureSchoolForCustomer(base44, session) {
       subscription_start_date: matchingSchool.subscription_start_date || new Date().toISOString(),
       subscription_current_period_end: periodEnd,
       max_admin_seats: limits.max_admin_seats,
-      settings: buildTierSettings(matchingSchool.settings, limits),
+      settings: getTierSettings(tier, matchingSchool.settings),
       school_id: matchingSchool.school_id || buildSchoolId(stripeCustomerId),
     });
 
@@ -112,7 +111,7 @@ async function ensureSchoolForCustomer(base44, session) {
         subscription_start_date: userSchool.subscription_start_date || new Date().toISOString(),
         subscription_current_period_end: periodEnd,
         max_admin_seats: limits.max_admin_seats,
-        settings: buildTierSettings(userSchool.settings, limits),
+        settings: getTierSettings(tier, userSchool.settings),
         school_id: userSchool.school_id || buildSchoolId(stripeCustomerId),
       });
       if (user.role !== 'admin') {
@@ -135,7 +134,7 @@ async function ensureSchoolForCustomer(base44, session) {
     subscription_start_date: new Date().toISOString(),
     subscription_current_period_end: periodEnd,
     max_admin_seats: limits.max_admin_seats,
-    settings: buildTierSettings({}, limits),
+    settings: getTierSettings(tier, {}),
   });
 
   await base44.asServiceRole.entities.User.update(user.id, { school_id: createdSchool.id, role: 'admin' });

@@ -1,4 +1,14 @@
 import { createClientFromRequest } from 'npm:@base44/sdk@0.8.6';
+function getAdminSeatLimit(tierId, fallback = 3) {
+  const tierMap = {
+    tier1: 1,
+    tier2: 3,
+    tier3: null,
+  };
+
+  const limit = tierMap[tierId];
+  return limit === null ? null : (limit ?? fallback);
+}
 
 Deno.serve(async (req) => {
   try {
@@ -27,11 +37,6 @@ Deno.serve(async (req) => {
 
     const { action, userId, data } = await req.json();
 
-    const tierSeatLimits = {
-      tier1: 1,
-      tier2: 3,
-      tier3: null,
-    };
 
     switch (action) {
       case 'update':
@@ -46,9 +51,7 @@ Deno.serve(async (req) => {
             return Response.json({ error: 'School not found' }, { status: 404 });
           }
 
-          const seatLimit = school.subscription_tier === 'tier3'
-            ? null
-            : (school.subscription_tier === 'tier1' ? 1 : school.subscription_tier === 'tier2' ? 3 : (school.max_admin_seats ?? 3));
+          const seatLimit = getAdminSeatLimit(school.subscription_tier, school.max_admin_seats ?? 3);
           const existingAdmins = await base44.asServiceRole.entities.User.filter({ school_id: nextSchoolId, role: 'admin' });
           const isAlreadyAdminInSchool = existingAdmins.some((admin) => admin.id === userId);
 
