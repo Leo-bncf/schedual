@@ -30,6 +30,17 @@ const TIER_LIMITS = {
   },
 };
 
+function buildTierSettings(existingSettings = {}, limits) {
+  return {
+    ...existingSettings,
+    generation_limit: limits.generation_limit,
+    saved_versions_limit: limits.saved_versions_limit,
+    student_count_limit: limits.student_count_limit,
+    support_level: limits.support_level,
+    onboarding_call_included: limits.onboarding_call_included,
+  };
+}
+
 function buildSchoolCode(email) {
   const prefix = (email || 'SCH').split('@')[0].replace(/[^a-zA-Z0-9]/g, '').toUpperCase().slice(0, 6) || 'SCH';
   return `${prefix}-${Date.now().toString().slice(-4)}`;
@@ -71,14 +82,7 @@ async function ensureSchoolForCustomer(base44, session) {
       subscription_start_date: matchingSchool.subscription_start_date || new Date().toISOString(),
       subscription_current_period_end: periodEnd,
       max_admin_seats: limits.max_admin_seats,
-      settings: {
-        ...(matchingSchool.settings || {}),
-        generation_limit: limits.generation_limit,
-        saved_versions_limit: limits.saved_versions_limit,
-        student_count_limit: limits.student_count_limit,
-        support_level: limits.support_level,
-        onboarding_call_included: limits.onboarding_call_included,
-      },
+      settings: buildTierSettings(matchingSchool.settings, limits),
       school_id: matchingSchool.school_id || buildSchoolId(stripeCustomerId),
     });
 
@@ -101,14 +105,7 @@ async function ensureSchoolForCustomer(base44, session) {
         subscription_start_date: userSchool.subscription_start_date || new Date().toISOString(),
         subscription_current_period_end: periodEnd,
         max_admin_seats: limits.max_admin_seats,
-        settings: {
-          ...(userSchool.settings || {}),
-          generation_limit: limits.generation_limit,
-          saved_versions_limit: limits.saved_versions_limit,
-          student_count_limit: limits.student_count_limit,
-          support_level: limits.support_level,
-          onboarding_call_included: limits.onboarding_call_included,
-        },
+        settings: buildTierSettings(userSchool.settings, limits),
         school_id: userSchool.school_id || buildSchoolId(stripeCustomerId),
       });
       if (user.role !== 'admin') {
@@ -131,13 +128,7 @@ async function ensureSchoolForCustomer(base44, session) {
     subscription_start_date: new Date().toISOString(),
     subscription_current_period_end: periodEnd,
     max_admin_seats: limits.max_admin_seats,
-    settings: {
-      generation_limit: limits.generation_limit,
-      saved_versions_limit: limits.saved_versions_limit,
-      student_count_limit: limits.student_count_limit,
-      support_level: limits.support_level,
-      onboarding_call_included: limits.onboarding_call_included,
-    },
+    settings: buildTierSettings({}, limits),
   });
 
   await base44.asServiceRole.entities.User.update(user.id, { school_id: createdSchool.id, role: 'admin' });

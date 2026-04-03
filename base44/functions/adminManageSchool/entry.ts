@@ -56,6 +56,16 @@ Deno.serve(async (req) => {
         tier2: null,
         tier3: null,
       };
+      const tierSupportLevels = {
+        tier1: 'Email support (48h)',
+        tier2: 'Email support (24h)',
+        tier3: 'Priority support (same day)',
+      };
+      const tierOnboardingFlags = {
+        tier1: false,
+        tier2: false,
+        tier3: true,
+      };
       const tier = data.subscription_tier || 'tier2';
       const created = await svc.create({
         ...data,
@@ -65,6 +75,8 @@ Deno.serve(async (req) => {
           student_count_limit: tierStudentLimits[tier],
           generation_limit: tierGenerationLimits[tier],
           saved_versions_limit: tierGenerationLimits[tier],
+          support_level: tierSupportLevels[tier],
+          onboarding_call_included: tierOnboardingFlags[tier],
         },
       });
       return Response.json({ success: true, school: created });
@@ -90,6 +102,16 @@ Deno.serve(async (req) => {
           tier2: null,
           tier3: null,
         };
+        const tierSupportLevels = {
+          tier1: 'Email support (48h)',
+          tier2: 'Email support (24h)',
+          tier3: 'Priority support (same day)',
+        };
+        const tierOnboardingFlags = {
+          tier1: false,
+          tier2: false,
+          tier3: true,
+        };
         nextData = {
           ...data,
           max_admin_seats: tierSeatLimits[data.subscription_tier],
@@ -98,6 +120,8 @@ Deno.serve(async (req) => {
             student_count_limit: tierStudentLimits[data.subscription_tier],
             generation_limit: tierGenerationLimits[data.subscription_tier],
             saved_versions_limit: tierGenerationLimits[data.subscription_tier],
+            support_level: tierSupportLevels[data.subscription_tier],
+            onboarding_call_included: tierOnboardingFlags[data.subscription_tier],
           },
         };
       }
