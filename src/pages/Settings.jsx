@@ -497,7 +497,7 @@ export default function Settings() {
                 <div className="space-y-2">
                   <Label className="text-sm font-semibold">School ID</Label>
                   <div className="p-4 rounded-lg bg-gradient-to-r from-slate-50 to-slate-100 border-2 border-slate-200">
-                    <p className="text-sm font-mono text-slate-900 font-semibold mb-2">{school?.id || 'Not available'}</p>
+                    <p className="text-sm font-mono text-slate-900 font-semibold mb-2">{school?.school_id || 'Not available'}</p>
                     <div className="flex items-start gap-2 text-xs text-slate-600">
                       <Info className="w-3 h-3 mt-0.5 flex-shrink-0" />
                       <p>This unique ID is used internally for data imports and integrations. Keep it secure and only share with authorized personnel.</p>
