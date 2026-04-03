@@ -469,7 +469,8 @@ export default function Schedules() {
               if (canCreateVersion()) {
                 setIsDialogOpen(true);
               } else {
-                alert(`Limit reached. ${school?.subscription_tier === 'tier1' ? 'Starter allows up to 3 saved timetable versions.' : 'Your current tier limit has been reached.'} Upgrade for more.`);
+                const versionLimit = getSavedVersionsLimit(school?.subscription_tier);
+                alert(`Limit reached. Your current plan allows up to ${versionLimit} saved timetable versions.`);
               }
             }} 
             size="sm"
@@ -1084,6 +1085,11 @@ export default function Schedules() {
                       <><Play className="w-5 h-5 mr-2 fill-current" />Start Generation</>
                     )}
                   </Button>
+                  {!canGenerateSchedule() && (
+                    <p className="text-sm text-amber-600 mt-3 font-medium">
+                      You have reached your plan limit for schedule generations.
+                    </p>
+                  )}
                   {genStatus === 'success' && genMessage && (
                     <p className="text-sm text-emerald-600 mt-3 font-medium">{genMessage}</p>
                   )}

@@ -152,8 +152,9 @@ export default function Settings() {
   });
 
   const school = schools[0];
+  const sharedTier = getTierLimits(school?.subscription_tier);
   const currentTier = school?.subscription_tier ? TIERS[school.subscription_tier] : null;
-  const tierStudentLimit = currentTier?.limits?.students ?? null;
+  const tierStudentLimit = sharedTier?.studentLimit ?? currentTier?.limits?.students ?? null;
   const tierAdminSeatLimit = getAdminSeatLimit(school?.subscription_tier, school?.max_admin_seats ?? 3);
   const effectiveAdminSeatLimit = tierAdminSeatLimit;
 
@@ -722,10 +723,10 @@ export default function Settings() {
                       <h4 className="font-semibold text-slate-900 mb-2 text-sm">Plan Capabilities</h4>
                       <ul className="text-sm text-slate-700 list-disc list-inside space-y-1">
                         <li>Student limit: {tierStudentLimit ? `Up to ${tierStudentLimit.toLocaleString()} students` : 'Not set'}</li>
-                        <li>Saved schedule versions: {currentTier?.limits?.savedVersions >= 9999 ? 'Unlimited' : currentTier?.limits?.savedVersions}</li>
+                        <li>Saved schedule versions: {sharedTier?.savedVersionsLimit === null ? 'Unlimited' : sharedTier?.savedVersionsLimit}</li>
                         <li>Admin accounts: {effectiveAdminSeatLimit === null ? 'Unlimited' : effectiveAdminSeatLimit}</li>
-                        <li>Support: {currentTier?.limits?.support || 'Standard support'}</li>
-                        <li>Onboarding call: {currentTier?.limits?.onboardingCall ? 'Included' : 'Not included'}</li>
+                        <li>Support: {sharedTier?.support || currentTier?.limits?.support || 'Standard support'}</li>
+                        <li>Onboarding call: {sharedTier?.onboardingCallIncluded ? 'Included' : 'Not included'}</li>
                       </ul>
                       </div>
 
