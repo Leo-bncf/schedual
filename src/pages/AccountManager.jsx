@@ -181,15 +181,22 @@ export default function AccountManager() {
     if (params.get('stripe') !== 'success' || user?.school_id) return;
 
     let attempts = 0;
+    let hasRedirected = false;
     const interval = window.setInterval(async () => {
       attempts += 1;
       const result = await refetchUser();
       if (result.data?.school_id) {
         queryClient.invalidateQueries({ queryKey: ['userSchool'] });
         window.clearInterval(interval);
+        return;
       }
-      if (attempts >= 10) {
+      if (attempts >= 6 && !hasRedirected) {
+        hasRedirected = true;
         window.clearInterval(interval);
+        toast.info('Your payment is confirmed. Please sign in once more to load your school access.');
+        setTimeout(() => {
+          base44.auth.logout('/Settings?stripe=success');
+        }, 800);
       }
     }, 1500);
 
@@ -544,9 +551,9 @@ export default function AccountManager() {
               <CardContent className="py-12 text-center space-y-4">
                 <Building2 className="w-12 h-12 text-slate-300 mx-auto" />
                 <p className="text-slate-600">No school assigned to your account yet</p>
-                <p className="text-sm text-slate-500">If you just completed payment, your access is being refreshed automatically.</p>
-                <Button variant="outline" onClick={() => refetchUser()}>
-                  Check again
+                <p className="text-sm text-slate-500">If you just completed payment and this still shows empty, sign out and back in once to load your school access.</p>
+                <Button variant="outline" onClick={() => base44.auth.logout('/Settings?stripe=success')}>
+                  Refresh my access
                 </Button>
               </CardContent>
             </Card>
