@@ -10,6 +10,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from "@/components/ui/alert-dialog";
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from "@/components/ui/dialog";
+import { Alert, AlertDescription } from "@/components/ui/alert";
 import { Switch } from "@/components/ui/switch";
 import { User, Mail, Building2, Shield, Lock, Trash2, KeyRound, AlertTriangle, Smartphone } from 'lucide-react';
 import { toast } from 'sonner';
@@ -520,9 +521,13 @@ export default function AccountManager() {
             </Card>
           ) : (
             <Card>
-              <CardContent className="py-12 text-center">
-                <Building2 className="w-12 h-12 text-slate-300 mx-auto mb-4" />
-                <p className="text-slate-600">No school assigned to your account</p>
+              <CardContent className="py-12 text-center space-y-4">
+                <Building2 className="w-12 h-12 text-slate-300 mx-auto" />
+                <p className="text-slate-600">No school assigned to your account yet</p>
+                <p className="text-sm text-slate-500">If you just completed payment, sign out and sign back in once so the school admin menu appears.</p>
+                <Button variant="outline" onClick={() => base44.auth.logout(window.location.pathname)}>
+                  Refresh my access
+                </Button>
               </CardContent>
             </Card>
           )}

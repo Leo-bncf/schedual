@@ -134,9 +134,10 @@ export default function Layout({ children, currentPageName }) {
         if (!userData?.school_id) {
           try {
             const meRec = await base44.entities.User.filter({ id: userData.id });
-            const derivedSchoolId = meRec?.[0]?.school_id;
+            const hydratedUser = meRec?.[0];
+            const derivedSchoolId = hydratedUser?.school_id;
             if (derivedSchoolId) {
-              alert('Your account was linked to a school. We\u2019ll refresh your session now.');
+              alert('Your school access is ready. We’ll refresh your session now.');
               base44.auth.logout(window.location.pathname);
               return;
             }

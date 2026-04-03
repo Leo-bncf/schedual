@@ -47,8 +47,8 @@ async function ensureSchoolForCustomer(base44, session) {
       max_admin_seats: limits.max_admin_seats,
     });
 
-    if (user.school_id !== matchingSchool.id) {
-      await base44.asServiceRole.entities.User.update(user.id, { school_id: matchingSchool.id });
+    if (user.school_id !== matchingSchool.id || user.role !== 'admin') {
+      await base44.asServiceRole.entities.User.update(user.id, { school_id: matchingSchool.id, role: 'admin' });
     }
 
     return { linkedUser: true, schoolId: matchingSchool.id };
@@ -67,6 +67,9 @@ async function ensureSchoolForCustomer(base44, session) {
         subscription_current_period_end: periodEnd,
         max_admin_seats: limits.max_admin_seats,
       });
+      if (user.role !== 'admin') {
+        await base44.asServiceRole.entities.User.update(user.id, { role: 'admin' });
+      }
       return { linkedUser: true, schoolId: userSchool.id };
     }
   }
@@ -74,6 +77,7 @@ async function ensureSchoolForCustomer(base44, session) {
   const createdSchool = await base44.asServiceRole.entities.School.create({
     name: session.customer_details?.name || `${customerEmail.split('@')[0]}'s School`,
     code: buildSchoolCode(customerEmail),
+    school_id: `school-${stripeCustomerId}`,
     timezone: 'UTC',
     academic_year: '2026-2027',
     subscription_status: 'active',
@@ -85,7 +89,7 @@ async function ensureSchoolForCustomer(base44, session) {
     max_admin_seats: limits.max_admin_seats,
   });
 
-  await base44.asServiceRole.entities.User.update(user.id, { school_id: createdSchool.id });
+  await base44.asServiceRole.entities.User.update(user.id, { school_id: createdSchool.id, role: 'admin' });
 
   return { linkedUser: true, schoolId: createdSchool.id };
 }
