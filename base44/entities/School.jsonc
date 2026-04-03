@@ -10,6 +10,10 @@
       "type": "string",
       "description": "Unique school code"
     },
+    "school_id": {
+      "type": "string",
+      "description": "Visible school identifier used for imports and integrations"
+    },
     "ib_school_code": {
       "type": "string",
       "description": "Official IB World School code"

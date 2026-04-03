@@ -14,6 +14,11 @@ function buildSchoolCode(email) {
   return `${prefix}-${Date.now().toString().slice(-4)}`;
 }
 
+function buildSchoolId(stripeCustomerId) {
+  const cleaned = (stripeCustomerId || 'school').replace(/[^a-zA-Z0-9]/g, '').toUpperCase().slice(-10) || 'SCHOOL';
+  return `SCH-${cleaned}`;
+}
+
 async function ensureSchoolForCustomer(base44, session) {
   const customerEmail = session.customer_details?.email || session.customer_email;
   const tier = session.metadata?.tier;
@@ -45,6 +50,7 @@ async function ensureSchoolForCustomer(base44, session) {
       subscription_start_date: matchingSchool.subscription_start_date || new Date().toISOString(),
       subscription_current_period_end: periodEnd,
       max_admin_seats: limits.max_admin_seats,
+      school_id: matchingSchool.school_id || buildSchoolId(stripeCustomerId),
     });
 
     if (user.school_id !== matchingSchool.id || user.role !== 'admin') {
@@ -66,6 +72,7 @@ async function ensureSchoolForCustomer(base44, session) {
         subscription_start_date: userSchool.subscription_start_date || new Date().toISOString(),
         subscription_current_period_end: periodEnd,
         max_admin_seats: limits.max_admin_seats,
+        school_id: userSchool.school_id || buildSchoolId(stripeCustomerId),
       });
       if (user.role !== 'admin') {
         await base44.asServiceRole.entities.User.update(user.id, { role: 'admin' });
@@ -77,7 +84,7 @@ async function ensureSchoolForCustomer(base44, session) {
   const createdSchool = await base44.asServiceRole.entities.School.create({
     name: session.customer_details?.name || `${customerEmail.split('@')[0]}'s School`,
     code: buildSchoolCode(customerEmail),
-    school_id: `school-${stripeCustomerId}`,
+    school_id: buildSchoolId(stripeCustomerId),
     timezone: 'UTC',
     academic_year: '2026-2027',
     subscription_status: 'active',
@@ -123,6 +130,7 @@ Deno.serve(async (req) => {
             subscription_status: subscription.status,
             stripe_subscription_id: typeof subscription.id === 'string' ? subscription.id : school.stripe_subscription_id,
             subscription_current_period_end: subscription.current_period_end ? new Date(subscription.current_period_end * 1000).toISOString() : school.subscription_current_period_end,
+            school_id: school.school_id || buildSchoolId(customerId),
           });
         }
       }
