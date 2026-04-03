@@ -5,7 +5,15 @@ Deno.serve(async (req) => {
     const base44 = createClientFromRequest(req);
     const user = await base44.auth.me();
 
-    if (!user || !user.school_id) {
+    if (!user) {
+      return Response.json({ error: 'Unauthorized' }, { status: 401 });
+    }
+
+    const dbUsers = await base44.asServiceRole.entities.User.filter({ id: user.id });
+    const currentUser = dbUsers[0] || user;
+    const schoolId = currentUser.school_id || currentUser.data?.school_id;
+
+    if (!schoolId) {
       return Response.json({ error: 'Unauthorized' }, { status: 401 });
     }
 
@@ -19,7 +27,8 @@ Deno.serve(async (req) => {
     const existingUsers = await base44.asServiceRole.entities.User.filter({ email });
     if (existingUsers.length > 0) {
       const existingUser = existingUsers[0];
-      if (existingUser.school_id) {
+      const existingUserSchoolId = existingUser.school_id || existingUser.data?.school_id;
+      if (existingUserSchoolId) {
         return Response.json({ 
           error: 'This user is already assigned to a school' 
         }, { status: 400 });
@@ -33,7 +42,7 @@ Deno.serve(async (req) => {
     // Create or update pending invitation
     const existingInvites = await base44.asServiceRole.entities.PendingInvitation.filter({
       email,
-      school_id: user.school_id
+      school_id: schoolId
     });
 
     if (existingInvites.length > 0) {
@@ -46,7 +55,7 @@ Deno.serve(async (req) => {
       // Create new invitation
       await base44.asServiceRole.entities.PendingInvitation.create({
         email,
-        school_id: user.school_id,
+        school_id: schoolId,
         invited_by: user.email,
         expires_at: expiresAt.toISOString()
       });

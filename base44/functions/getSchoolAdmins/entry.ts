@@ -5,12 +5,20 @@ Deno.serve(async (req) => {
     const base44 = createClientFromRequest(req);
     const user = await base44.auth.me();
     
-    if (!user || !user.school_id) {
+    if (!user) {
+      return Response.json({ error: 'Unauthorized' }, { status: 401 });
+    }
+
+    const dbUsers = await base44.asServiceRole.entities.User.filter({ id: user.id });
+    const currentUser = dbUsers[0] || user;
+    const schoolId = currentUser.school_id || currentUser.data?.school_id;
+
+    if (!schoolId) {
       return Response.json({ error: 'Unauthorized' }, { status: 401 });
     }
 
     const admins = await base44.asServiceRole.entities.User.filter({
-      school_id: user.school_id,
+      school_id: schoolId,
       role: 'admin'
     });
 

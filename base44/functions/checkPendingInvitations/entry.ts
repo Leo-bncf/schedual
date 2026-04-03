@@ -57,16 +57,20 @@ Deno.serve(async (req) => {
     }
 
     // Check if expired
-    if (new Date(invite.expires_at) < new Date()) {
-      await base44.asServiceRole.entities.PendingInvitation.delete(invite.id);
+    if (bestInvite.expires_at && new Date(bestInvite.expires_at) < new Date()) {
+      await base44.asServiceRole.entities.PendingInvitation.delete(bestInvite.id);
       return Response.json({ 
         hasPendingInvite: false,
         message: 'Invitation expired'
       });
     }
 
+    const dbUsers = await base44.asServiceRole.entities.User.filter({ id: user.id });
+    const currentUser = dbUsers[0] || user;
+    const schoolId = currentUser.school_id || currentUser.data?.school_id;
+
     // Check if user already has a school assigned
-    if (user.school_id) {
+    if (schoolId) {
       return Response.json({ 
         hasPendingInvite: false,
         message: 'You are already assigned to a school'
@@ -75,14 +79,14 @@ Deno.serve(async (req) => {
 
     // Assign user to school
     await base44.asServiceRole.entities.User.update(user.id, {
-      school_id: invite.school_id
+      school_id: bestInvite.school_id
     });
 
     // Delete pending invitation
-    await base44.asServiceRole.entities.PendingInvitation.delete(invite.id);
+    await base44.asServiceRole.entities.PendingInvitation.delete(bestInvite.id);
 
     // Get school name
-    const schools = await base44.asServiceRole.entities.School.filter({ id: invite.school_id });
+    const schools = await base44.asServiceRole.entities.School.filter({ id: bestInvite.school_id });
     const schoolName = schools[0]?.name || 'the school';
 
     return Response.json({ 

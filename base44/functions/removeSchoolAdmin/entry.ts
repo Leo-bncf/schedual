@@ -9,7 +9,11 @@ Deno.serve(async (req) => {
       return Response.json({ error: 'Unauthorized' }, { status: 401 });
     }
 
-    if (!user.school_id) {
+    const dbUsers = await base44.asServiceRole.entities.User.filter({ id: user.id });
+    const currentUser = dbUsers[0] || user;
+    const schoolId = currentUser.school_id || currentUser.data?.school_id;
+
+    if (!schoolId) {
       return Response.json({ error: 'No school assigned' }, { status: 403 });
     }
 
@@ -34,7 +38,7 @@ Deno.serve(async (req) => {
     const admin = adminToRemove[0];
 
     // Verify the admin belongs to the same school
-    if (admin.school_id !== user.school_id) {
+    if (admin.school_id !== schoolId) {
       return Response.json({ error: 'Admin does not belong to your school' }, { status: 403 });
     }
 
