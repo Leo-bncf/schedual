@@ -52,6 +52,12 @@ export default function TeacherProfile() {
     enabled: !!schoolId,
   });
 
+  const { data: teachers = [] } = useQuery({
+    queryKey: ['teachers', schoolId],
+    queryFn: () => base44.entities.Teacher.filter({ school_id: schoolId }),
+    enabled: !!schoolId,
+  });
+
   const { data: scheduleVersions = [] } = useQuery({
     queryKey: ['scheduleVersions', schoolId],
     queryFn: () => base44.entities.ScheduleVersion.filter({ school_id: schoolId }, '-created_date'),
