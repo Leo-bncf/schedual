@@ -28,7 +28,6 @@ Deno.serve(async (req) => {
             <div style="padding:20px 28px;border-top:1px solid #e2e8f0;background:#f8fafc;text-align:center;">
               <p style="margin:0 0 14px 0;color:#64748b;font-size:13px;">Received on ${new Date().toLocaleString()}</p>
               <img src="https://media.base44.com/images/public/69458d4b7ddbdbf0a082832e/690ba3d1f_schedual_pro_logo.png" alt="Schedual Pro" style="max-width:320px;width:100%;height:auto;display:block;margin:0 auto;" />
-              <p style="margin:14px 0 0 0;color:#64748b;font-size:13px;line-height:1.6;">Schedual Pro is also available as a desktop app for Mac, Windows, and Linux.</p>
             </div>
           </div>
         </div>
