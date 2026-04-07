@@ -95,7 +95,26 @@ Deno.serve(async (req) => {
     await base44.integrations.Core.SendEmail({
       to: email,
       subject: 'You have been added as a school administrator',
-      body: `Hello,\n\nYou have been added as an administrator for ${school.name}.\n\nYou can now log in and access the school management features.\n\nBest regards,\nThe Schedual Team`
+      body: `
+        <div style="margin:0;padding:32px 16px;background:#f8fafc;font-family:Arial,sans-serif;color:#0f172a;">
+          <div style="max-width:640px;margin:0 auto;background:#ffffff;border:1px solid #e2e8f0;border-radius:20px;overflow:hidden;box-shadow:0 10px 30px rgba(15,23,42,0.08);">
+            <div style="padding:24px 28px;background:linear-gradient(135deg,#0f172a,#1d4ed8);color:#ffffff;">
+              <div style="font-size:12px;letter-spacing:0.18em;text-transform:uppercase;opacity:0.8;margin-bottom:10px;">Schedual</div>
+              <h2 style="margin:0;font-size:28px;line-height:1.2;">Administrator access granted</h2>
+              <p style="margin:10px 0 0 0;font-size:15px;line-height:1.6;color:rgba(255,255,255,0.88);">You have been added to a school workspace.</p>
+            </div>
+            <div style="padding:28px;">
+              <p style="margin:0 0 18px 0;font-size:16px;line-height:1.7;color:#334155;">You have been added as an administrator for <strong style="color:#0f172a;">${school.name}</strong>.</p>
+              <div style="padding:16px;border:1px solid #e2e8f0;border-radius:14px;background:#f8fafc;color:#475569;font-size:14px;line-height:1.7;">
+                You can now log in and access the school management features.
+              </div>
+            </div>
+            <div style="padding:18px 28px;border-top:1px solid #e2e8f0;background:#f8fafc;color:#64748b;font-size:13px;">
+              Best regards, The Schedual Team
+            </div>
+          </div>
+        </div>
+      `
     });
 
     return Response.json({

@@ -65,16 +65,27 @@ Deno.serve(async (req) => {
       to: email,
       subject: 'Verify your Schedual account',
       body: `
-        <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto;">
-          <h2 style="color: #1e3a8a;">Verify your email address</h2>
-          <p>Thank you for signing up for Schedual. To complete your registration, please enter this verification code:</p>
-          <div style="background: #f1f5f9; padding: 20px; border-radius: 8px; text-align: center; margin: 20px 0;">
-            <h1 style="color: #1e3a8a; font-size: 36px; letter-spacing: 8px; margin: 0;">${code}</h1>
+        <div style="margin:0;padding:32px 16px;background:#f8fafc;font-family:Arial,sans-serif;color:#0f172a;">
+          <div style="max-width:640px;margin:0 auto;background:#ffffff;border:1px solid #e2e8f0;border-radius:20px;overflow:hidden;box-shadow:0 10px 30px rgba(15,23,42,0.08);">
+            <div style="padding:24px 28px;background:linear-gradient(135deg,#0f172a,#1d4ed8);color:#ffffff;">
+              <div style="font-size:12px;letter-spacing:0.18em;text-transform:uppercase;opacity:0.8;margin-bottom:10px;">Schedual</div>
+              <h2 style="margin:0;font-size:28px;line-height:1.2;">Verify your email address</h2>
+              <p style="margin:10px 0 0 0;font-size:15px;line-height:1.6;color:rgba(255,255,255,0.88);">Use the code below to complete your registration.</p>
+            </div>
+            <div style="padding:28px;">
+              <p style="margin:0 0 18px 0;font-size:16px;line-height:1.7;color:#334155;">Thank you for signing up for Schedual. To complete your registration, please enter this verification code:</p>
+              <div style="margin:24px 0;padding:24px;border-radius:18px;background:#eff6ff;border:1px solid #bfdbfe;text-align:center;">
+                <div style="font-size:12px;text-transform:uppercase;letter-spacing:0.16em;color:#1d4ed8;margin-bottom:10px;">Verification code</div>
+                <div style="font-size:40px;line-height:1;letter-spacing:10px;font-weight:700;color:#0f172a;">${code}</div>
+              </div>
+              <div style="padding:16px;border:1px solid #e2e8f0;border-radius:14px;background:#f8fafc;color:#475569;font-size:14px;line-height:1.7;">
+                This code will expire in 10 minutes.<br />If you didn’t request this code, you can safely ignore this email.
+              </div>
+            </div>
+            <div style="padding:18px 28px;border-top:1px solid #e2e8f0;background:#f8fafc;color:#64748b;font-size:13px;">
+              Schedual · Intelligent IB Scheduling
+            </div>
           </div>
-          <p style="color: #64748b;">This code will expire in 10 minutes.</p>
-          <p style="color: #64748b; font-size: 14px;">If you didn't request this code, please ignore this email.</p>
-          <hr style="border: none; border-top: 1px solid #e2e8f0; margin: 20px 0;">
-          <p style="color: #94a3b8; font-size: 12px;">Schedual - Intelligent IB Scheduling</p>
         </div>
       `
     });
