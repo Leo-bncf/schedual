@@ -1,5 +1,6 @@
 import React, { useMemo, useState } from 'react';
 import { Link } from 'react-router-dom';
+import { motion, AnimatePresence } from 'framer-motion';
 import { ChevronDown, Calendar, Users, Shield, CreditCard, Settings, Sparkles } from 'lucide-react';
 import { createPageUrl } from '../../utils';
 import { cn } from '@/lib/utils';
@@ -194,11 +195,21 @@ export default function FAQSection() {
                             </span>
                           </button>
 
-                          {isOpen && (
-                            <div className="px-4 pb-5 pr-16 text-[15px] leading-7 text-slate-600">
-                              {item.a}
-                            </div>
-                          )}
+                          <AnimatePresence initial={false}>
+                            {isOpen && (
+                              <motion.div
+                                initial={{ height: 0, opacity: 0 }}
+                                animate={{ height: 'auto', opacity: 1 }}
+                                exit={{ height: 0, opacity: 0 }}
+                                transition={{ duration: 0.25, ease: 'easeInOut' }}
+                                className="overflow-hidden"
+                              >
+                                <div className="px-4 pb-5 pr-16 text-[15px] leading-7 text-slate-600">
+                                  {item.a}
+                                </div>
+                              </motion.div>
+                            )}
+                          </AnimatePresence>
                         </div>
                       );
                     })}
