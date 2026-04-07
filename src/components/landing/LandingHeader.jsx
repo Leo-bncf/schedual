@@ -74,12 +74,9 @@ export default function LandingHeader() {
             <Link to={createPageUrl('Solutions')} className="text-slate-600 hover:text-slate-900 transition-colors">
               Solutions
             </Link>
-            <button 
-              onClick={() => scrollToSection('pricing')} 
-              className="text-slate-600 hover:text-slate-900 transition-colors"
-            >
+            <Link to={createPageUrl('Landing')} onClick={() => setTimeout(() => scrollToSection('pricing'), 50)} className="text-slate-600 hover:text-slate-900 transition-colors">
               Pricing
-            </button>
+            </Link>
             <Link to={createPageUrl('FAQ')} className="text-slate-600 hover:text-slate-900 transition-colors">
               FAQ
             </Link>
