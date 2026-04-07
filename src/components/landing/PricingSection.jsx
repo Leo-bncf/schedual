@@ -13,7 +13,7 @@ export default function PricingSection() {
       name: `${TIER_LIMITS.tier2.name} Plan`,
       price: TIER_LIMITS.tier2.priceLabel,
       period: 'per year',
-      description: 'Best for growing schools that need flexibility and multiple admin users',
+      description: 'Best for growing schools that need flexibility, multiple admin users, and desktop access across major operating systems',
       features: [
         `Up to ${TIER_LIMITS.tier2.studentLimit} students`,
         'Unlimited schedule generations',
@@ -23,6 +23,7 @@ export default function PricingSection() {
         'Conflict detection & resolution',
         TIER_LIMITS.tier2.support,
         'PDF & Excel export included',
+        'Desktop app downloads for Mac, Windows, and Linux',
       ],
       priceId: 'price_1THYLAD8slkoqOiBI0rA7cCR',
       popular: true,
@@ -174,6 +175,7 @@ export default function PricingSection() {
                     <p className="text-slate-500 mt-2">Shared with the main tier pricing configuration</p>
                   </div>
                   <p className="text-slate-600 text-lg">{plan.description}</p>
+                  <p className="text-sm font-medium text-blue-900 mt-3">Includes downloadable desktop access for Mac, Windows, and Linux.</p>
                 </div>
 
                 <ul className="space-y-4 mb-10">
@@ -186,9 +188,12 @@ export default function PricingSection() {
                 </ul>
 
                 <div className="rounded-2xl bg-slate-50 border border-slate-200 p-4 mb-5">
-                  <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2 text-sm text-slate-600">
-                    <span>Ready to buy?</span>
-                    <span className="font-medium text-slate-900">Account first, payment right after</span>
+                  <div className="flex flex-col gap-2 text-sm text-slate-600">
+                    <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2">
+                      <span>Ready to buy?</span>
+                      <span className="font-medium text-slate-900">Account first, payment right after</span>
+                    </div>
+                    <span className="text-blue-900 font-medium">Pro also includes downloadable desktop versions for Mac, Windows, and Linux.</span>
                   </div>
                 </div>
 
