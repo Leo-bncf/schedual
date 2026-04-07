@@ -68,24 +68,24 @@ export default function LandingHeader() {
 
           {/* Navigation */}
           <nav className="hidden md:flex items-center gap-6">
-            <button 
-              onClick={() => scrollToSection('info')} 
-              className="text-slate-600 hover:text-slate-900 transition-colors"
-            >
-              Info
-            </button>
-            <button 
-              onClick={() => scrollToSection('how-it-works')} 
-              className="text-slate-600 hover:text-slate-900 transition-colors"
-            >
-              How it Works
-            </button>
+            <Link to={createPageUrl('About')} className="text-slate-600 hover:text-slate-900 transition-colors">
+              About
+            </Link>
+            <Link to={createPageUrl('Solutions')} className="text-slate-600 hover:text-slate-900 transition-colors">
+              Solutions
+            </Link>
             <button 
               onClick={() => scrollToSection('pricing')} 
               className="text-slate-600 hover:text-slate-900 transition-colors"
             >
               Pricing
             </button>
+            <Link to={createPageUrl('FAQ')} className="text-slate-600 hover:text-slate-900 transition-colors">
+              FAQ
+            </Link>
+            <Link to={createPageUrl('BookDemo')} className="text-slate-600 hover:text-slate-900 transition-colors">
+              Book Demo
+            </Link>
           </nav>
 
           {/* CTA Buttons */}
