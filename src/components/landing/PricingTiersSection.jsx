@@ -43,7 +43,7 @@ const TIERS = {
     ...TIER_LIMITS.tier2,
     price: TIER_LIMITS.tier2.priceLabel,
     priceId: 'price_1THYLAD8slkoqOiBI0rA7cCR',
-    subtitle: 'Best for growing schools that need flexibility and multiple admin users',
+    subtitle: 'Best for growing schools that need flexibility, multiple admin users, and desktop access on Mac, Windows, and Linux',
     rules: [
       `Up to ${TIER_LIMITS.tier2.studentLimit} students`,
       'Unlimited generations',
@@ -51,6 +51,7 @@ const TIERS = {
       'PDF & Excel export',
       'Unlimited saved versions',
       `${TIER_LIMITS.tier2.adminSeats} admin accounts`,
+      'Desktop app downloads for Mac, Windows, and Linux',
       TIER_LIMITS.tier2.support,
     ],
     highlights: [
@@ -136,6 +137,7 @@ export default function PricingTiersSection() {
     'The school can only operate within the limits of this tier.',
     'Student capacity is capped by the selected plan.',
     selectedTier.name === 'Pro' ? 'Saved schedule versions are unlimited on this plan.' : 'Saved schedule versions follow the plan allowance.',
+    selectedTier.name === 'Pro' ? 'Pro includes downloadable desktop apps for Mac, Windows, and Linux.' : 'Desktop access follows the plan offering.',
     selectedTier.name === 'Pro' ? 'Admin accounts are unlimited on this plan.' : 'Admin accounts are limited by the plan.',
     'Support response level follows the selected plan.',
   ];
@@ -310,6 +312,9 @@ export default function PricingTiersSection() {
                 <div className="mb-4 rounded-3xl border border-sky-300/20 bg-gradient-to-br from-white/16 to-sky-300/10 p-5 backdrop-blur-sm">
                   <div className="text-xs uppercase tracking-[0.22em] text-sky-200">Annual price</div>
                   <div className="mt-2 text-4xl font-bold text-sky-50">{selectedTier.price}</div>
+                  {selectedTier.name === 'Pro' ? (
+                    <div className="mt-3 text-sm text-sky-100">Includes downloadable desktop apps for Mac, Windows, and Linux.</div>
+                  ) : null}
                 </div>
 
                 <Button
