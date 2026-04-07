@@ -20,6 +20,7 @@ import {
 } from 'lucide-react';
 import { Link } from 'react-router-dom';
 import { createPageUrl } from '../utils';
+import ScholrIntegrationCard from '@/components/settings/ScholrIntegrationCard';
 
 
 export default function Dashboard() {
@@ -288,6 +289,10 @@ export default function Dashboard() {
             </div>
           </CardContent>
         </Card>
+
+        <div className="md:col-span-12 lg:col-span-5">
+          <ScholrIntegrationCard compact />
+        </div>
 
         {/* Need Help */}
         <Card className="md:col-span-12 lg:col-span-5 rounded-3xl shadow-sm border-0 bg-gradient-to-br from-blue-50 to-indigo-50 overflow-hidden relative group hover:shadow-md transition-all duration-300">

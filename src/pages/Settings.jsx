@@ -51,11 +51,13 @@ import {
   Trash2,
   Plus,
   GraduationCap,
-  Zap
+  Zap,
+  Link as LinkIcon
 } from 'lucide-react';
 import PageHeader from '../components/ui-custom/PageHeader';
 import YearAdvancement from '../components/settings/YearAdvancement';
 import { TIER_LIMITS, getAdminSeatLimit, getTierLimits } from '@/lib/tierLimits';
+import ScholrIntegrationCard from '@/components/settings/ScholrIntegrationCard';
 
 import { toast } from 'sonner';
 
@@ -269,7 +271,7 @@ export default function Settings() {
       />
 
       <Tabs defaultValue="school" className="space-y-6">
-        <TabsList className="grid grid-cols-5 w-full max-w-5xl bg-white border border-slate-200 shadow-sm p-1 h-auto rounded-xl">
+        <TabsList className="grid grid-cols-3 sm:grid-cols-6 w-full max-w-5xl bg-white border border-slate-200 shadow-sm p-1 h-auto rounded-xl">
           <TabsTrigger value="school" className="flex flex-col items-center gap-1.5 py-3 rounded-lg data-[state=active]:bg-slate-50 data-[state=active]:text-indigo-600 transition-all">
             <Building2 className="w-5 h-5" />
             <span className="text-xs font-medium">School Info</span>
@@ -285,6 +287,10 @@ export default function Settings() {
           <TabsTrigger value="subscription" className="flex flex-col items-center gap-1.5 py-3 rounded-lg data-[state=active]:bg-slate-50 data-[state=active]:text-indigo-600 transition-all">
             <Zap className="w-5 h-5" />
             <span className="text-xs font-medium">Tier</span>
+          </TabsTrigger>
+          <TabsTrigger value="scholr" className="flex flex-col items-center gap-1.5 py-3 rounded-lg data-[state=active]:bg-slate-50 data-[state=active]:text-indigo-600 transition-all">
+            <LinkIcon className="w-5 h-5" />
+            <span className="text-xs font-medium">Scholr</span>
           </TabsTrigger>
           <TabsTrigger value="notifications" className="flex flex-col items-center gap-1.5 py-3 rounded-lg data-[state=active]:bg-slate-50 data-[state=active]:text-indigo-600 transition-all">
             <Bell className="w-5 h-5" />
@@ -853,6 +859,10 @@ export default function Settings() {
               </Card>
             )}
           </div>
+        </TabsContent>
+
+        <TabsContent value="scholr">
+          <ScholrIntegrationCard />
         </TabsContent>
 
         <TabsContent value="notifications">

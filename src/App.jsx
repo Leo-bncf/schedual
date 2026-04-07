@@ -16,6 +16,7 @@ import PaymentSuccess from './pages/PaymentSuccess';
 import About from './pages/About';
 import Solutions from './pages/Solutions';
 import Demo from './pages/Demo';
+import ScholrIntegration from './pages/ScholrIntegration';
 
 const { Pages, Layout, mainPage } = pagesConfig;
 const mainPageKey = mainPage ?? Object.keys(Pages)[0];
@@ -75,6 +76,7 @@ const AuthenticatedApp = () => {
       <Route path="/About" element={<LayoutWrapper currentPageName="About"><About /></LayoutWrapper>} />
       <Route path="/Solutions" element={<LayoutWrapper currentPageName="Solutions"><Solutions /></LayoutWrapper>} />
       <Route path="/Demo" element={<LayoutWrapper currentPageName="Demo"><Demo /></LayoutWrapper>} />
+      <Route path="/ScholrIntegration" element={<LayoutWrapper currentPageName="ScholrIntegration"><ScholrIntegration /></LayoutWrapper>} />
       <Route path="*" element={<PageNotFound />} />
     </Routes>
   );
