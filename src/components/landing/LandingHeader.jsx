@@ -68,7 +68,7 @@ export default function LandingHeader() {
 
           {/* Navigation */}
           <nav className="hidden md:flex items-center gap-6">
-            <Link to={createPageUrl('About')} className="text-slate-600 hover:text-slate-900 transition-colors">
+            <Link to="/About" className="text-slate-600 hover:text-slate-900 transition-colors">
               About
             </Link>
             <Link to={createPageUrl('Solutions')} className="text-slate-600 hover:text-slate-900 transition-colors">
