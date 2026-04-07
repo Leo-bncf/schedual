@@ -82,8 +82,8 @@ Deno.serve(async (req) => {
                 This code will expire in 10 minutes.<br />If you didn’t request this code, you can safely ignore this email.
               </div>
             </div>
-            <div style="padding:18px 28px;border-top:1px solid #e2e8f0;background:#f8fafc;color:#64748b;font-size:13px;">
-              Schedual · Intelligent IB Scheduling
+            <div style="padding:20px 28px;border-top:1px solid #e2e8f0;background:#f8fafc;text-align:center;">
+              <img src="https://media.base44.com/images/public/69458d4b7ddbdbf0a082832e/690ba3d1f_schedual_pro_logo.png" alt="Schedual Pro" style="max-width:320px;width:100%;height:auto;display:block;margin:0 auto;" />
             </div>
           </div>
         </div>
