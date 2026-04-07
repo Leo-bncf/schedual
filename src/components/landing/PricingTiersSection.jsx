@@ -315,25 +315,35 @@ export default function PricingTiersSection() {
                 <div className="mb-4 rounded-3xl border border-sky-300/20 bg-gradient-to-br from-white/16 to-sky-300/10 p-5 backdrop-blur-sm">
                   <div className="text-xs uppercase tracking-[0.22em] text-sky-200">Annual price</div>
                   <div className="mt-2 text-4xl font-bold text-sky-50">{selectedTier.price}</div>
-                  {selectedTier.name === 'Pro' ? (
-                    <div className="mt-4">
-                      <div className="text-sm text-sky-100 mb-3">Includes downloadable desktop apps for Mac, Windows, and Linux.</div>
-                      <div className="flex flex-wrap gap-2">
-                        <div className="inline-flex items-center gap-2 rounded-full border border-white/15 bg-white/10 px-3 py-2 text-sm font-medium text-white">
-                          <Apple className="h-4 w-4" />
-                          Mac
-                        </div>
-                        <div className="inline-flex items-center gap-2 rounded-full border border-white/15 bg-white/10 px-3 py-2 text-sm font-medium text-white">
-                          <Monitor className="h-4 w-4" />
-                          Windows
-                        </div>
-                        <div className="inline-flex items-center gap-2 rounded-full border border-white/15 bg-white/10 px-3 py-2 text-sm font-medium text-white">
-                          <Laptop className="h-4 w-4" />
-                          Linux
-                        </div>
-                      </div>
+                  <div className="mt-4">
+                    <div className="text-sm text-sky-100 mb-3">
+                      {selectedTier.name === 'Pro'
+                        ? 'Includes website access plus downloadable desktop apps for Mac, Windows, and Linux.'
+                        : 'Includes web version access.'}
                     </div>
-                  ) : null}
+                    <div className="flex flex-wrap gap-2">
+                      <div className="inline-flex items-center gap-2 rounded-full border border-white/15 bg-white/10 px-3 py-2 text-sm font-medium text-white">
+                        <Monitor className="h-4 w-4" />
+                        Website
+                      </div>
+                      {selectedTier.name === 'Pro' ? (
+                        <>
+                          <div className="inline-flex items-center gap-2 rounded-full border border-white/15 bg-white/10 px-3 py-2 text-sm font-medium text-white">
+                            <Apple className="h-4 w-4" />
+                            Mac
+                          </div>
+                          <div className="inline-flex items-center gap-2 rounded-full border border-white/15 bg-white/10 px-3 py-2 text-sm font-medium text-white">
+                            <Monitor className="h-4 w-4" />
+                            Windows
+                          </div>
+                          <div className="inline-flex items-center gap-2 rounded-full border border-white/15 bg-white/10 px-3 py-2 text-sm font-medium text-white">
+                            <Laptop className="h-4 w-4" />
+                            Linux
+                          </div>
+                        </>
+                      ) : null}
+                    </div>
+                  </div>
                 </div>
 
                 <Button
