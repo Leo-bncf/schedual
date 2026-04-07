@@ -560,19 +560,19 @@ export default function DashboardPreview() {
   };
 
   return (
-    <section className="relative py-24 px-4 sm:px-6 lg:px-8 bg-transparent">
+    <section className="relative py-24 px-4 sm:px-6 lg:px-8 bg-gradient-to-b from-white via-slate-50 to-white">
       <div className="max-w-7xl mx-auto">
         {/* Header */}
         <div className="text-center mb-16">
           <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.5 }}>
-            <div className="inline-block px-4 py-1.5 bg-purple-100 text-purple-700 rounded-full text-sm font-semibold mb-4">
-              Platform Features
+            <div className="inline-block px-4 py-1.5 bg-blue-100 text-blue-700 rounded-full text-sm font-semibold mb-4">
+              Product walkthrough
             </div>
-            <h2 className="text-5xl font-black text-slate-900 mb-6">
-              See It In Action
+            <h2 className="text-4xl sm:text-5xl font-black tracking-tight text-slate-900 mb-6">
+              Explore the platform before you book
             </h2>
-            <p className="text-xl text-slate-600 max-w-3xl mx-auto leading-relaxed">
-              Explore our powerful features designed specifically for IB schools. Click any card to see it in action.
+            <p className="text-lg sm:text-xl text-slate-600 max-w-3xl mx-auto leading-8">
+              Click through the product areas to see how Schedual supports scheduling, compliance, workloads, and day-to-day school operations.
             </p>
           </motion.div>
         </div>
@@ -587,7 +587,7 @@ export default function DashboardPreview() {
               viewport={{ once: true }}
               transition={{ duration: 0.5, delay: index * 0.1 }}
               onClick={() => setSelectedFeature(index)}
-              className="group relative bg-white rounded-2xl p-6 border-2 border-slate-200 hover:border-blue-400 hover:shadow-2xl transition-all duration-300 text-left overflow-hidden"
+              className="group relative bg-white rounded-3xl p-6 border border-slate-200 hover:border-blue-300 hover:-translate-y-1 hover:shadow-2xl transition-all duration-300 text-left overflow-hidden"
             >
               {/* Gradient background on hover */}
               <div className={`absolute inset-0 bg-gradient-to-br ${feature.color} opacity-0 group-hover:opacity-5 transition-opacity duration-300`}></div>
@@ -636,7 +636,7 @@ export default function DashboardPreview() {
                 exit={{ opacity: 0, scale: 0.95, y: 20 }}
                 transition={{ type: "spring", duration: 0.5 }}
                 onClick={(e) => e.stopPropagation()}
-                className="bg-white rounded-3xl shadow-2xl max-w-5xl w-full max-h-[90vh] overflow-hidden"
+                className="bg-white rounded-3xl shadow-2xl max-w-5xl w-full max-h-[90vh] overflow-hidden border border-slate-200"
               >
                 {/* Header */}
                 <div className={`bg-gradient-to-r ${features[selectedFeature].color} p-6 text-white relative overflow-hidden`}>

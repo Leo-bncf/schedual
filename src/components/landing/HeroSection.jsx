@@ -1,6 +1,7 @@
 import React, { useEffect, useState } from 'react';
-import { Calendar, Users, BookOpen, Building2, ShieldCheck, FileSpreadsheet } from 'lucide-react';
+import { Calendar, Users, BookOpen, Building2, ShieldCheck, FileSpreadsheet, ArrowRight, Sparkles, CheckCircle2 } from 'lucide-react';
 import { motion } from 'framer-motion';
+import { Button } from '@/components/ui/button';
 
 const features = [
   {
@@ -80,7 +81,16 @@ export default function HeroSection() {
           @import url('https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;600&display=swap');
         `}</style>
 
-        <div className="max-w-5xl mx-auto relative z-10 text-center">
+        <div className="max-w-6xl mx-auto relative z-10 text-center">
+          <motion.div
+            initial={{ opacity: 0, y: 40 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ duration: 0.8, ease: [0.16, 1, 0.3, 1] }}
+            className="mb-6 inline-flex items-center gap-2 rounded-full border border-blue-100 bg-white/80 px-4 py-2 text-sm font-semibold text-blue-800 shadow-sm backdrop-blur"
+          >
+            <Sparkles className="h-4 w-4" />
+            Timetabling for IB schools
+          </motion.div>
           <motion.h1
             initial={{ opacity: 0, y: 100 }}
             animate={{ opacity: 1, y: 0 }}
@@ -96,17 +106,54 @@ export default function HeroSection() {
             animate={{ opacity: 1, y: 0 }}
             transition={{ duration: 1, delay: 0.4, ease: [0.16, 1, 0.3, 1] }}
             style={{ opacity: 1 - scrollProgress * 0.8, transform: `translateY(${scrollProgress * -40}px)`, fontFamily: "'Poppins', 'Inter', sans-serif" }}
-            className="text-lg sm:text-xl text-slate-700 mb-12 leading-8 max-w-3xl mx-auto font-normal"
+            className="text-lg sm:text-xl text-slate-700 mb-10 leading-8 max-w-3xl mx-auto font-normal"
           >
-            Schedual now runs on clear Starter, Standard, and Pro tiers for schools, so student limits, saved schedule versions, admin access, exports, and support levels all follow the rules of the selected tier.
+            Build better school schedules with AI-assisted generation, cleaner admin workflows, and a platform designed around the real complexity of IB programmes.
           </motion.p>
+
+          <motion.div
+            initial={{ opacity: 0, y: 80 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ duration: 1, delay: 0.55, ease: [0.16, 1, 0.3, 1] }}
+            className="mb-10 flex flex-col items-center justify-center gap-3 sm:flex-row"
+          >
+            <a href="#pricing">
+              <Button className="h-12 rounded-full bg-blue-900 px-6 text-base hover:bg-blue-800">
+                View pricing
+                <ArrowRight className="h-4 w-4" />
+              </Button>
+            </a>
+            <a href="#demo">
+              <Button variant="outline" className="h-12 rounded-full border-slate-300 bg-white/80 px-6 text-base backdrop-blur">
+                Book a demo
+              </Button>
+            </a>
+          </motion.div>
+
+          <motion.div
+            initial={{ opacity: 0, y: 80 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ duration: 1, delay: 0.7, ease: [0.16, 1, 0.3, 1] }}
+            className="mx-auto grid max-w-4xl gap-3 sm:grid-cols-3"
+          >
+            {[
+              'Built for IB timetabling',
+              'Clear school-wide scheduling workflows',
+              'Exports and admin controls included'
+            ].map((item) => (
+              <div key={item} className="flex items-center justify-center gap-2 rounded-2xl border border-slate-200 bg-white/75 px-4 py-3 text-sm font-medium text-slate-700 shadow-sm backdrop-blur">
+                <CheckCircle2 className="h-4 w-4 text-emerald-500" />
+                <span>{item}</span>
+              </div>
+            ))}
+          </motion.div>
         </div>
 
         <motion.div
           initial={{ opacity: 0, y: 100 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ duration: 1, delay: 0.8, ease: [0.16, 1, 0.3, 1] }}
-          className="absolute left-0 right-0 mt-32 h-64 overflow-hidden z-10"
+          className="absolute left-0 right-0 mt-20 h-64 overflow-hidden z-10"
           style={{ opacity: 1 - scrollProgress * 1.2, transform: `translateY(${scrollProgress * -30}px) scale(${1 - scrollProgress * 0.15})` }}
         >
           <style>{`
