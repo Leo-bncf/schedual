@@ -22,7 +22,9 @@ export default function Landing() {
       <InfoSection />
       <HowItWorksSection />
       <TrustSection />
-      <DemoBooking />
+      <div id="demo">
+        <DemoBooking />
+      </div>
       <MissionSection />
       <ComparisonSection />
       <PricingTiersSection />

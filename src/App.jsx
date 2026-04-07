@@ -15,7 +15,6 @@ import AITrainingAdmin from './pages/AITrainingAdmin';
 import PaymentSuccess from './pages/PaymentSuccess';
 import About from './pages/About';
 import Solutions from './pages/Solutions';
-import BookDemo from './pages/BookDemo';
 
 const { Pages, Layout, mainPage } = pagesConfig;
 const mainPageKey = mainPage ?? Object.keys(Pages)[0];
@@ -74,7 +73,6 @@ const AuthenticatedApp = () => {
       <Route path="/PaymentSuccess" element={<LayoutWrapper currentPageName="PaymentSuccess"><PaymentSuccess /></LayoutWrapper>} />
       <Route path="/About" element={<LayoutWrapper currentPageName="About"><About /></LayoutWrapper>} />
       <Route path="/Solutions" element={<LayoutWrapper currentPageName="Solutions"><Solutions /></LayoutWrapper>} />
-      <Route path="/BookDemo" element={<LayoutWrapper currentPageName="BookDemo"><BookDemo /></LayoutWrapper>} />
       <Route path="*" element={<PageNotFound />} />
     </Routes>
   );

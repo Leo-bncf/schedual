@@ -83,7 +83,7 @@ export default function LandingHeader() {
             <Link to={createPageUrl('FAQ')} className="text-slate-600 hover:text-slate-900 transition-colors">
               FAQ
             </Link>
-            <Link to={createPageUrl('BookDemo')} className="text-slate-600 hover:text-slate-900 transition-colors">
+            <Link to={`${createPageUrl('Landing')}#demo`} className="text-slate-600 hover:text-slate-900 transition-colors">
               Book Demo
             </Link>
           </nav>
