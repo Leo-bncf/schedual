@@ -176,11 +176,14 @@ export default function HowItWorksSection() {
       <div className="max-w-7xl mx-auto relative z-10">
         {/* Section Header */}
         <div className="text-center mb-16">
-          <h2 className="text-4xl font-bold text-slate-900 mb-4">
+          <div className="mb-4 inline-flex items-center gap-2 rounded-full border border-blue-100 bg-blue-50 px-4 py-2 text-sm font-semibold text-blue-700">
+            From setup to export
+          </div>
+          <h2 className="text-4xl sm:text-5xl font-bold tracking-tight text-slate-900 mb-4">
             How It Works
           </h2>
-          <p className="text-xl text-slate-600 max-w-3xl mx-auto">
-            Get started in 5 simple steps. No technical knowledge required.
+          <p className="text-lg sm:text-xl text-slate-600 max-w-3xl mx-auto leading-8">
+            Get started in 5 simple steps with a workflow built for real school timetable teams.
           </p>
         </div>
 

@@ -75,7 +75,7 @@ export default function HeroSection() {
         <motion.div initial={{ opacity: 0, scale: 0.8 }} animate={{ opacity: 1, scale: 1 }} transition={{ duration: 1.5, delay: 0.4, ease: "easeOut" }} className="absolute top-10 right-1/4 w-[600px] h-[600px] bg-gradient-to-tr from-cyan-400/45 via-sky-500/50 to-blue-400/45 rounded-full blur-3xl animate-float-3" />
       </div>
 
-      <section className="relative min-h-screen pt-64 pb-[32rem] px-4 sm:px-6 lg:px-8 overflow-hidden bg-transparent">
+      <section className="relative min-h-screen pt-52 sm:pt-56 pb-[30rem] px-4 sm:px-6 lg:px-8 overflow-hidden bg-transparent">
         <style>{`
           @import url('https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;600&display=swap');
         `}</style>
@@ -86,7 +86,7 @@ export default function HeroSection() {
             animate={{ opacity: 1, y: 0 }}
             transition={{ duration: 1, delay: 0, ease: [0.16, 1, 0.3, 1] }}
             style={{ opacity: 1 - scrollProgress * 0.8, transform: `translateY(${scrollProgress * -50}px) scale(${1 - scrollProgress * 0.1})`, fontFamily: "'Poppins', 'Space Grotesk', sans-serif" }}
-            className="text-6xl sm:text-7xl font-semibold text-slate-900 leading-tight mb-8 tracking-wide"
+            className="text-5xl sm:text-6xl lg:text-7xl font-semibold text-slate-900 leading-[1.05] mb-8 tracking-tight"
           >
             A school tier system built into scheduling
           </motion.h1>
@@ -96,7 +96,7 @@ export default function HeroSection() {
             animate={{ opacity: 1, y: 0 }}
             transition={{ duration: 1, delay: 0.4, ease: [0.16, 1, 0.3, 1] }}
             style={{ opacity: 1 - scrollProgress * 0.8, transform: `translateY(${scrollProgress * -40}px)`, fontFamily: "'Poppins', 'Inter', sans-serif" }}
-            className="text-xl text-slate-800 mb-12 leading-relaxed max-w-4xl mx-auto font-normal tracking-wide"
+            className="text-lg sm:text-xl text-slate-700 mb-12 leading-8 max-w-3xl mx-auto font-normal"
           >
             Schedual now runs on clear Starter, Standard, and Pro tiers for schools, so student limits, saved schedule versions, admin access, exports, and support levels all follow the rules of the selected tier.
           </motion.p>

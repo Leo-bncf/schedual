@@ -4,9 +4,9 @@ import { motion } from 'framer-motion';
 
 export default function MissionSection() {
   return (
-    <section className="py-16 px-4 sm:px-6 lg:px-8 bg-transparent relative overflow-hidden">
+    <section className="py-20 px-4 sm:px-6 lg:px-8 bg-transparent relative overflow-hidden">
 
-      <div className="max-w-4xl mx-auto text-center relative z-10">
+      <div className="max-w-4xl mx-auto text-center relative z-10 rounded-[2rem] border border-slate-200 bg-white/80 px-6 py-10 shadow-[0_20px_60px_rgba(15,23,42,0.06)] backdrop-blur sm:px-10">
         <motion.div 
           className="inline-flex items-center gap-2 mb-6 bg-blue-50/70 backdrop-blur-md px-6 py-3 rounded-full"
           initial={{ opacity: 0, y: -20 }}
@@ -20,7 +20,7 @@ export default function MissionSection() {
         </motion.div>
 
         <motion.p 
-          className="text-xl md:text-2xl text-slate-700 leading-relaxed font-light"
+          className="text-lg md:text-xl text-slate-700 leading-8 font-light"
           initial={{ opacity: 0, y: 20 }}
           whileInView={{ opacity: 1, y: 0 }}
           viewport={{ once: true }}
