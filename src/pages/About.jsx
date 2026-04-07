@@ -7,16 +7,16 @@ import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/com
 
 const principles = [
   {
-    title: 'Built for IB complexity',
-    description: 'Schedual is designed around real IB scheduling constraints, from DP subject combinations to teacher load and room availability.'
+    title: 'Started by two IB students',
+    description: 'Schedual began with two IB students who experienced the limits of existing timetable systems and wanted to build something more useful for real schools.'
   },
   {
-    title: 'Made for school leaders',
-    description: 'We focus on giving coordinators and admins a clear system to manage setup, generation, review, and publishing without chaos.'
+    title: 'Built to improve timetabling',
+    description: 'The goal is to improve how schools plan and manage schedules, with clearer workflows, less manual effort, and tools that reflect how IB schools actually operate.'
   },
   {
-    title: 'Practical, not bloated',
-    description: 'The goal is not to copy legacy systems with endless menus, but to give schools the pages they actually need to act fast.'
+    title: 'Designed for future students',
+    description: 'We believe better scheduling supports better learning environments, giving future students a more organized, reliable, and effective school experience.'
   }
 ];
 
@@ -35,13 +35,13 @@ export default function About() {
             <div className="absolute inset-0 bg-[radial-gradient(circle_at_top_right,rgba(37,99,235,0.12),transparent_30%),radial-gradient(circle_at_bottom_left,rgba(59,130,246,0.08),transparent_28%)]" />
             <div className="relative max-w-3xl">
               <p className="text-sm font-semibold uppercase tracking-[0.25em] text-blue-900 mb-4">About Schedual</p>
-              <h1 className="text-4xl sm:text-5xl font-bold tracking-tight text-slate-900 mb-6">Scheduling software built for modern IB schools.</h1>
+              <h1 className="text-4xl sm:text-5xl font-bold tracking-tight text-slate-900 mb-6">Built by two IB students to improve school timetabling.</h1>
               <p className="text-lg text-slate-600 leading-8">
-                Schedual helps schools organize subjects, teachers, students, rooms, and timetable generation in one place.
-                It is built to reduce manual scheduling work while giving school teams more clarity and control.
+                Schedual was started by two IB students who saw how frustrating and outdated timetable systems could be.
+                What began as a drive to improve existing scheduling tools has grown into a mission to help schools run better and give future students a stronger educational experience.
               </p>
               <div className="mt-8 flex flex-wrap gap-3 text-sm text-slate-700">
-                {['Clearer setup', 'Less manual work', 'Built for IB workflows'].map((item) => (
+                {['Founded by IB students', 'Improving school timetables', 'Built for future learners'].map((item) => (
                   <span key={item} className="inline-flex items-center gap-2 rounded-full border border-blue-100 bg-blue-50 px-4 py-2 font-medium text-blue-900">
                     <CheckCircle2 className="w-4 h-4" />
                     {item}
@@ -80,15 +80,15 @@ export default function About() {
                   <div className="p-8 sm:p-10">
                     <h2 className="text-2xl font-semibold text-slate-900 mb-4">Why this matters</h2>
                     <p className="text-slate-700 leading-8">
-                      IB schools often rely on spreadsheets, fragmented tools, or systems that try to do everything at once.
-                      Schedual is being shaped around a narrower goal: make timetable setup, iteration, and delivery much simpler for schools that need reliability.
+                      Better timetables do more than save admin time.
+                      They create more stable school days, reduce friction for teachers and coordinators, and help students learn in an environment that feels more organized and intentional.
                     </p>
                   </div>
                   <div className="bg-gradient-to-br from-blue-950 via-blue-900 to-slate-900 p-8 text-white flex flex-col justify-between">
                     <div>
                       <p className="text-sm uppercase tracking-[0.2em] text-blue-200 mb-3">Focused outcome</p>
                       <p className="text-lg leading-8 text-blue-50">
-                        A scheduling workspace that feels more structured, more intentional, and easier for school teams to trust.
+                        A better scheduling system built with the belief that smarter school operations can contribute to better education for the students who come next.
                       </p>
                     </div>
                     <div className="mt-8 inline-flex items-center gap-2 text-sm font-medium text-white/90">
