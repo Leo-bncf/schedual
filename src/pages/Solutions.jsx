@@ -28,7 +28,7 @@ export default function Solutions() {
             <p className="text-sm font-semibold uppercase tracking-[0.2em] text-blue-900 mb-4">Solutions</p>
             <h1 className="text-4xl sm:text-5xl font-bold tracking-tight text-slate-900 mb-6">Purpose-built flows for the people who actually run the school timetable.</h1>
             <p className="text-lg text-slate-600 leading-8">
-              Instead of a giant public site with dozens of vague pages, Schedual should explain clearly who it helps and what problems it solves.
+              Schedual is designed to show clearly who it helps, what parts of timetable work it supports, and where it can simplify school operations.
             </p>
           </div>
 

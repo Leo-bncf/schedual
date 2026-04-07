@@ -18,10 +18,10 @@ export default function LandingFooter() {
               <div className="w-9 h-9 rounded-xl bg-gradient-to-br from-blue-700 to-blue-600 flex items-center justify-center">
                 <Calendar className="w-5 h-5 text-white" />
               </div>
-              <span className="text-lg font-semibold text-white">IB Schedule</span>
+              <span className="text-lg font-semibold text-white">Schedual</span>
             </div>
             <p className="text-sm text-white/80">
-              Automated scheduling for IB schools. Save time, reduce conflicts, and focus on education.
+              Scheduling software for IB schools. Keep timetable setup clearer, more structured, and easier to manage.
             </p>
           </div>
 
@@ -58,7 +58,7 @@ export default function LandingFooter() {
 
         {/* Bottom */}
         <div className="pt-8 border-t border-white/20 text-center text-sm text-white/80">
-          <p>&copy; 2025 IB Schedule. All rights reserved.</p>
+          <p>&copy; 2026 Schedual. All rights reserved.</p>
         </div>
       </div>
     </footer>
