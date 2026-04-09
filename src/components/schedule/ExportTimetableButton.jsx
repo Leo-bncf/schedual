@@ -1,16 +1,8 @@
 import React, { useState } from 'react';
-import { base44 } from '@/api/base44Client';
 import { Button } from '@/components/ui/button';
 import { Download, Loader2 } from 'lucide-react';
-
-function base64ToBlob(base64, mimeType) {
-  const binary = atob(base64);
-  const bytes = new Uint8Array(binary.length);
-  for (let i = 0; i < binary.length; i++) {
-    bytes[i] = binary.charCodeAt(i);
-  }
-  return new Blob([bytes], { type: mimeType });
-}
+import html2canvas from 'html2canvas';
+import jsPDF from 'jspdf';
 
 export default function ExportTimetableButton({ type, entityId, scheduleVersionId, label = 'Export PDF' }) {
   const [isLoading, setIsLoading] = useState(false);
@@ -20,32 +12,36 @@ export default function ExportTimetableButton({ type, entityId, scheduleVersionI
 
     setIsLoading(true);
     try {
-      const payload = {
-        type,
-        schedule_version_id: scheduleVersionId,
-        ...(type === 'student' ? { student_id: entityId } : { teacher_id: entityId }),
-      };
-
-      let response;
-      try {
-        response = await base44.functions.invoke('exportTimetablePdf', payload);
-      } catch {
-        response = await base44.functions.invoke('exportTimetablePdf.js', payload);
+      const targetId = type === 'student' ? 'student-viewer-timetable' : 'teacher-viewer-timetable';
+      const element = document.getElementById(targetId);
+      if (!element) {
+        throw new Error('Timetable not found');
       }
 
-      const data = response?.data || {};
-      if (!data?.base64) {
-        throw new Error(data?.error || 'PDF export failed');
-      }
-      const blob = base64ToBlob(data.base64, data.mimeType || 'application/pdf');
-      const url = URL.createObjectURL(blob);
-      const link = document.createElement('a');
-      link.href = url;
-      link.download = data.filename || `${type}-timetable.pdf`;
-      document.body.appendChild(link);
-      link.click();
-      link.remove();
-      URL.revokeObjectURL(url);
+      const canvas = await html2canvas(element, {
+        scale: 2,
+        logging: false,
+        useCORS: true,
+        backgroundColor: '#ffffff',
+        removeContainer: true,
+        imageTimeout: 0,
+      });
+
+      const imgData = canvas.toDataURL('image/png', 1.0);
+      const pdf = new jsPDF({ orientation: 'landscape', unit: 'mm', format: 'a4' });
+      const pdfWidth = pdf.internal.pageSize.getWidth();
+      const pdfHeight = pdf.internal.pageSize.getHeight();
+      const margin = 10;
+      const maxWidth = pdfWidth - (margin * 2);
+      const maxHeight = pdfHeight - (margin * 2);
+      const scale = Math.min(maxWidth / (canvas.width * 0.264583), maxHeight / (canvas.height * 0.264583));
+      const scaledWidth = (canvas.width * 0.264583) * scale;
+      const scaledHeight = (canvas.height * 0.264583) * scale;
+      const x = (pdfWidth - scaledWidth) / 2;
+      const y = (pdfHeight - scaledHeight) / 2;
+
+      pdf.addImage(imgData, 'PNG', x, y, scaledWidth, scaledHeight, undefined, 'FAST');
+      pdf.save(`${type}-timetable.pdf`);
     } finally {
       setIsLoading(false);
     }
