@@ -27,6 +27,9 @@ export default function ExportTimetableButton({ type, entityId, scheduleVersionI
       };
       const response = await base44.functions.invoke('exportTimetablePdf', payload);
       const data = response?.data || {};
+      if (!data?.base64) {
+        throw new Error(data?.error || 'PDF export failed');
+      }
       const blob = base64ToBlob(data.base64, data.mimeType || 'application/pdf');
       const url = URL.createObjectURL(blob);
       const link = document.createElement('a');
