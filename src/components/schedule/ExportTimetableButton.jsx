@@ -25,7 +25,14 @@ export default function ExportTimetableButton({ type, entityId, scheduleVersionI
         schedule_version_id: scheduleVersionId,
         ...(type === 'student' ? { student_id: entityId } : { teacher_id: entityId }),
       };
-      const response = await base44.functions.invoke('exportTimetablePdf.js', payload);
+
+      let response;
+      try {
+        response = await base44.functions.invoke('exportTimetablePdf', payload);
+      } catch {
+        response = await base44.functions.invoke('exportTimetablePdf.js', payload);
+      }
+
       const data = response?.data || {};
       if (!data?.base64) {
         throw new Error(data?.error || 'PDF export failed');
