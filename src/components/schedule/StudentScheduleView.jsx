@@ -119,6 +119,20 @@ export default function StudentScheduleView({
                   type="student"
                   entityId={selectedStudent.id}
                   scheduleVersionId={scheduleVersionId}
+                  lessons={slots.map((slot) => ({
+                    day: slot.day,
+                    startTime: timeslots.find((item) => String(item.id) === String(slot.timeslot_id))?.startTime,
+                    endTime: timeslots.find((item) => String(item.id) === String(slot.timeslot_id))?.endTime,
+                    subject: subjects.find((subject) => subject.id === slot.subject_id)?.name || groups.find((group) => group.id === slot.teaching_group_id)?.name || 'Lesson',
+                    teacher: teachers.find((teacher) => teacher.id === slot.teacher_id)?.full_name,
+                    room: rooms.find((room) => room.id === slot.room_id)?.name,
+                  }))}
+                  summaryCards={[
+                    { label: 'Lessons', value: slots.length },
+                    { label: 'Programme', value: selectedStudent.ib_programme || 'IB' },
+                    { label: 'Year group', value: selectedStudent.year_group || '-' },
+                    { label: 'Version', value: scheduleVersionId },
+                  ]}
                 />
                 <Button variant="outline" size="sm" onClick={() => setIsFullscreen(!isFullscreen)} className="bg-white">
                   {isFullscreen ? <Minimize2 className="w-4 h-4" /> : <Maximize2 className="w-4 h-4" />}

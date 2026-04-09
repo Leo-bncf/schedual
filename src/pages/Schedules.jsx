@@ -965,6 +965,20 @@ export default function Schedules() {
                               type="teacher"
                               entityId={selectedTeacher.id}
                               scheduleVersionId={selectedVersion?.id}
+                              lessons={(teacherSchedule || []).map((slot) => ({
+                                day: slot.day,
+                                startTime: availableTimeslots.find((item) => String(item.id) === String(slot.timeslot_id))?.startTime,
+                                endTime: availableTimeslots.find((item) => String(item.id) === String(slot.timeslot_id))?.endTime,
+                                subject: subjects.find((subject) => subject.id === slot.subject_id)?.name || teachingGroups.find((group) => group.id === slot.teaching_group_id)?.name || 'Lesson',
+                                teacher: selectedTeacher.full_name,
+                                room: rooms.find((room) => room.id === slot.room_id)?.name,
+                              }))}
+                              summaryCards={[
+                                { label: 'Lessons', value: (teacherSchedule || []).length },
+                                { label: 'Teacher', value: selectedTeacher.full_name },
+                                { label: 'Email', value: selectedTeacher.email || '-' },
+                                { label: 'Version', value: selectedVersion?.id || '-' },
+                              ]}
                             />
                           </div>
                         </div>
