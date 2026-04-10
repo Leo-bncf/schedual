@@ -16,7 +16,7 @@ import {
 } from "@/components/ui/dialog";
 import PageHeader from '../components/ui-custom/PageHeader';
 import EmptyState from '../components/ui-custom/EmptyState';
-import GenerateInfoDialog from '../components/ui-custom/GenerateInfoDialog';
+import GenerateInfoDialog from '../components/settings/GenerateInfoDialog';
 
 export default function ClassGroups() {
   const [searchQuery, setSearchQuery] = useState('');

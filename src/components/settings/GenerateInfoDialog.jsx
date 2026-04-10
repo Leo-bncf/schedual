@@ -35,18 +35,11 @@ export default function GenerateInfoDialog({ open, onOpenChange, onConfirm, type
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="sm:max-w-md overflow-hidden p-0">
-        {/* Animated header */}
         <div className={`relative bg-gradient-to-r ${current.gradient} p-6 overflow-hidden`}>
           <motion.div
             className="absolute inset-0 opacity-20"
-            animate={{
-              backgroundPosition: ['0% 0%', '100% 100%'],
-            }}
-            transition={{
-              duration: 3,
-              repeat: Infinity,
-              repeatType: 'reverse'
-            }}
+            animate={{ backgroundPosition: ['0% 0%', '100% 100%'] }}
+            transition={{ duration: 3, repeat: Infinity, repeatType: 'reverse' }}
             style={{
               backgroundImage: 'radial-gradient(circle, white 1px, transparent 1px)',
               backgroundSize: '20px 20px'
@@ -54,20 +47,14 @@ export default function GenerateInfoDialog({ open, onOpenChange, onConfirm, type
           />
           <DialogHeader className="relative">
             <div className="flex items-center gap-3 mb-2">
-              <Sparkles className="w-8 h-8 text-white hover:animate-shake" />
-              <DialogTitle className="text-2xl font-bold text-white">
-                {current.title}
-              </DialogTitle>
+              <Sparkles className="w-8 h-8 text-white" />
+              <DialogTitle className="text-2xl font-bold text-white">{current.title}</DialogTitle>
             </div>
-            <DialogDescription className="text-white/90 text-sm">
-              {current.description}
-            </DialogDescription>
+            <DialogDescription className="text-white/90 text-sm">{current.description}</DialogDescription>
           </DialogHeader>
         </div>
 
-        {/* Content */}
         <div className="p-6 space-y-6">
-          {/* Steps */}
           <div className="space-y-3">
             {current.steps.map((step, index) => (
               <motion.div
@@ -95,21 +82,14 @@ export default function GenerateInfoDialog({ open, onOpenChange, onConfirm, type
             ))}
           </div>
 
-          {/* Note */}
           <div className="p-4 rounded-lg bg-blue-50 border border-blue-200">
             <p className="text-sm text-blue-800">
               <span className="font-semibold">ℹ️ Note:</span> {current.note}
             </p>
           </div>
 
-          {/* Actions */}
           <div className="flex gap-3">
-            <Button
-              variant="outline"
-              onClick={() => onOpenChange(false)}
-              className="flex-1"
-              disabled={isGenerating}
-            >
+            <Button variant="outline" onClick={() => onOpenChange(false)} className="flex-1" disabled={isGenerating}>
               Cancel
             </Button>
             <Button
@@ -127,7 +107,7 @@ export default function GenerateInfoDialog({ open, onOpenChange, onConfirm, type
                 </>
               ) : (
                 <>
-                  <Sparkles className="w-4 h-4 mr-2 hover:animate-shake" />
+                  <Sparkles className="w-4 h-4 mr-2" />
                   Start Generation
                 </>
               )}
