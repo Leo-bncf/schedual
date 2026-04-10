@@ -23,18 +23,15 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import { Plus, Search, BookOpen, MoreHorizontal, Pencil, Trash2, FlaskConical, Palette, Calculator, Globe, Languages, FileText, Upload, Loader2, Sparkles } from 'lucide-react';
-import { motion, AnimatePresence } from 'framer-motion';
-import {
-  DropdownMenu,
-  DropdownMenuContent,
-  DropdownMenuItem,
-  DropdownMenuTrigger,
-} from "@/components/ui/dropdown-menu";
+import { Plus, BookOpen, FlaskConical, Palette, Calculator, Globe, Languages, FileText, Upload, Loader2, Sparkles } from 'lucide-react';
+import { motion } from 'framer-motion';
 import PageHeader from '../components/ui-custom/PageHeader';
 import EmptyState from '../components/ui-custom/EmptyState';
 import UploadProgressDialog from '../components/upload/UploadProgressDialog';
 import DragDropUploadDialog from '../components/upload/DragDropUploadDialog';
+import SubjectsToolbar from '@/components/subjects/SubjectsToolbar';
+import ProgrammeSection from '@/components/subjects/ProgrammeSection';
+import SubjectCardGrid from '@/components/subjects/SubjectCardGrid';
 
 const IB_GROUPS = [
   { id: 1, name: 'Language & Literature', icon: FileText, color: 'bg-blue-500' },
@@ -487,17 +484,7 @@ ${trainingFeedback ? `LESSONS FROM ADMIN FEEDBACK:\n${trainingFeedback}\n\n` : '
         </div>
       )}
 
-      <div className="flex items-center gap-4 mb-6">
-        <div className="relative flex-1 max-w-sm">
-          <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400" />
-          <Input 
-            placeholder="Search subjects..." 
-            className="pl-10 h-11 bg-white border-slate-200 shadow-sm rounded-xl"
-            value={searchQuery}
-            onChange={(e) => setSearchQuery(e.target.value)}
-          />
-        </div>
-      </div>
+      <SubjectsToolbar searchQuery={searchQuery} setSearchQuery={setSearchQuery} />
 
 
 
@@ -513,372 +500,34 @@ ${trainingFeedback ? `LESSONS FROM ADMIN FEEDBACK:\n${trainingFeedback}\n\n` : '
         <div className="space-y-8">
           {/* PYP Subjects (gated) */}
           {allowedProgrammes.includes('PYP') && pypSubjects.length > 0 && (
-            <div>
-              <motion.div 
-                initial={{ opacity: 0, x: -20 }}
-                animate={{ opacity: 1, x: 0 }}
-                className="flex items-center gap-4 mb-6"
-              >
-                <div className="flex items-center gap-3 flex-1">
-                  <motion.div 
-                    className="w-14 h-14 rounded-2xl bg-gradient-to-br from-teal-500 to-cyan-500 flex items-center justify-center shadow-xl"
-                    whileHover={{ rotate: 360, scale: 1.1 }}
-                    transition={{ duration: 0.6 }}
-                  >
-                    <BookOpen className="w-7 h-7 text-white" />
-                  </motion.div>
-                  <div>
-                    <h3 className="text-2xl font-bold bg-gradient-to-r from-teal-600 to-cyan-600 bg-clip-text text-transparent">
-                      PYP Programme
-                    </h3>
-                    <p className="text-sm text-slate-500 mt-1">Primary Years subjects</p>
-                  </div>
-                </div>
-                <Badge className="bg-teal-500 text-white border-0 shadow-md text-base px-4 py-1">
-                  {pypSubjects.length} subjects
-                </Badge>
-              </motion.div>
-              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
-                {pypSubjects.map((subject, index) => (
-                  <motion.div
-                    key={subject.id}
-                    initial={{ opacity: 0, y: 20 }}
-                    animate={{ opacity: 1, y: 0 }}
-                    transition={{ delay: index * 0.05 }}
-                    whileHover={{ y: -8, transition: { duration: 0.2 } }}
-                  >
-                    <Card className="border border-slate-200 shadow-sm bg-white rounded-xl hover:shadow-md transition-all duration-200 overflow-hidden h-full flex flex-col">
-                      <div className="h-1 w-full bg-teal-500" />
-                      <CardContent className="p-5 flex-1 flex flex-col">
-                        <div className="flex items-start justify-between mb-4">
-                          <div className="flex items-center gap-3 flex-1 min-w-0">
-                            <div className="w-10 h-10 rounded-lg bg-teal-500 flex items-center justify-center flex-shrink-0">
-                              <BookOpen className="w-5 h-5 text-white" />
-                            </div>
-                            <div className="min-w-0 flex-1">
-                              <p className="font-bold text-slate-900 text-base truncate">{subject.name}</p>
-                              <p className="text-xs text-slate-500 truncate">{subject.code}</p>
-                            </div>
-                          </div>
-                          <DropdownMenu>
-                            <DropdownMenuTrigger asChild>
-                              <Button variant="ghost" size="icon" className="h-8 w-8 -mr-2 -mt-2">
-                                <MoreHorizontal className="w-4 h-4 text-slate-400" />
-                              </Button>
-                            </DropdownMenuTrigger>
-                            <DropdownMenuContent align="end">
-                              <DropdownMenuItem onClick={() => handleEdit(subject)}>
-                                <Pencil className="w-4 h-4 mr-2" /> Edit
-                              </DropdownMenuItem>
-                              <DropdownMenuItem className="text-rose-600" onClick={() => deleteMutation.mutate(subject.id)}>
-                                <Trash2 className="w-4 h-4 mr-2" /> Delete
-                              </DropdownMenuItem>
-                            </DropdownMenuContent>
-                          </DropdownMenu>
-                        </div>
-
-                        <div className="flex items-center justify-between mt-auto pt-2">
-                          <div className="flex items-center gap-2 text-slate-500">
-                            <BookOpen className="w-4 h-4" />
-                            <span className="text-sm">{subject.pyp_myp_hours_per_week || 4}h/week</span>
-                          </div>
-                          <Badge className="bg-teal-500 text-white border-0 font-medium">
-                            PYP
-                          </Badge>
-                        </div>
-                      </CardContent>
-                    </Card>
-                  </motion.div>
-                ))}
-              </div>
-            </div>
+            <ProgrammeSection title="PYP Programme" subtitle="Primary Years subjects" count={pypSubjects.length} colorClass="bg-teal-500" icon={BookOpen}>
+              <SubjectCardGrid subjects={pypSubjects} colorClass="bg-teal-500" icon={BookOpen} programmeLabel="PYP" onEdit={handleEdit} onDelete={(id) => deleteMutation.mutate(id)} />
+            </ProgrammeSection>
           )}
 
           {/* MYP Subjects (always for tier1+) */}
           {allowedProgrammes.includes('MYP') && mypSubjects.length > 0 && (
-            <div>
-              <motion.div 
-                initial={{ opacity: 0, x: -20 }}
-                animate={{ opacity: 1, x: 0 }}
-                className="flex items-center gap-4 mb-6"
-              >
-                <div className="flex items-center gap-3 flex-1">
-                  <motion.div 
-                    className="w-14 h-14 rounded-2xl bg-gradient-to-br from-purple-500 to-fuchsia-500 flex items-center justify-center shadow-xl"
-                    whileHover={{ rotate: 360, scale: 1.1 }}
-                    transition={{ duration: 0.6 }}
-                  >
-                    <BookOpen className="w-7 h-7 text-white" />
-                  </motion.div>
-                  <div>
-                    <h3 className="text-2xl font-bold bg-gradient-to-r from-purple-600 to-fuchsia-600 bg-clip-text text-transparent">
-                      MYP Programme
-                    </h3>
-                    <p className="text-sm text-slate-500 mt-1">Middle Years subjects</p>
-                  </div>
-                </div>
-                <Badge className="bg-purple-500 text-white border-0 shadow-md text-base px-4 py-1">
-                  {mypSubjects.length} subjects
-                </Badge>
-              </motion.div>
-              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
-                {mypSubjects.map((subject, index) => (
-                  <motion.div
-                    key={subject.id}
-                    initial={{ opacity: 0, y: 20 }}
-                    animate={{ opacity: 1, y: 0 }}
-                    transition={{ delay: index * 0.05 }}
-                    whileHover={{ y: -8, transition: { duration: 0.2 } }}
-                  >
-                    <Card className="border border-slate-200 shadow-sm bg-white rounded-xl hover:shadow-md transition-all duration-200 overflow-hidden h-full flex flex-col">
-                      <div className="h-1 w-full bg-purple-500" />
-                      <CardContent className="p-5 flex-1 flex flex-col">
-                        <div className="flex items-start justify-between mb-4">
-                          <div className="flex items-center gap-3 flex-1 min-w-0">
-                            <div className="w-10 h-10 rounded-lg bg-purple-500 flex items-center justify-center flex-shrink-0">
-                              <BookOpen className="w-5 h-5 text-white" />
-                            </div>
-                            <div className="min-w-0 flex-1">
-                              <p className="font-bold text-slate-900 text-base truncate">{subject.name}</p>
-                              <p className="text-xs text-slate-500 truncate">{subject.code}</p>
-                            </div>
-                          </div>
-                          <DropdownMenu>
-                            <DropdownMenuTrigger asChild>
-                              <Button variant="ghost" size="icon" className="h-8 w-8 -mr-2 -mt-2">
-                                <MoreHorizontal className="w-4 h-4 text-slate-400" />
-                              </Button>
-                            </DropdownMenuTrigger>
-                            <DropdownMenuContent align="end">
-                              <DropdownMenuItem onClick={() => handleEdit(subject)}>
-                                <Pencil className="w-4 h-4 mr-2" /> Edit
-                              </DropdownMenuItem>
-                              <DropdownMenuItem className="text-rose-600" onClick={() => deleteMutation.mutate(subject.id)}>
-                                <Trash2 className="w-4 h-4 mr-2" /> Delete
-                              </DropdownMenuItem>
-                            </DropdownMenuContent>
-                          </DropdownMenu>
-                        </div>
-
-                        <div className="flex items-center justify-between mt-auto pt-2">
-                          <div className="flex items-center gap-2 text-slate-500">
-                            <BookOpen className="w-4 h-4" />
-                            <span className="text-sm">{subject.pyp_myp_hours_per_week || 4}h/week</span>
-                          </div>
-                          <Badge className="bg-purple-500 text-white border-0 font-medium">
-                            MYP
-                          </Badge>
-                        </div>
-                      </CardContent>
-                    </Card>
-                  </motion.div>
-                ))}
-              </div>
-            </div>
+            <ProgrammeSection title="MYP Programme" subtitle="Middle Years subjects" count={mypSubjects.length} colorClass="bg-purple-500" icon={BookOpen}>
+              <SubjectCardGrid subjects={mypSubjects} colorClass="bg-purple-500" icon={BookOpen} programmeLabel="MYP" onEdit={handleEdit} onDelete={(id) => deleteMutation.mutate(id)} />
+            </ProgrammeSection>
           )}
 
 
 
           {/* DP Special Subjects */}
           {allowedProgrammes.includes('DP') && specialDpSubjects.length > 0 && (
-            <div>
-              <motion.div 
-                initial={{ opacity: 0, x: -20 }}
-                animate={{ opacity: 1, x: 0 }}
-                className="flex items-center gap-4 mb-6"
-              >
-                <div className="flex items-center gap-3 flex-1">
-                  <motion.div 
-                    className="w-14 h-14 rounded-2xl bg-gradient-to-br from-slate-700 to-slate-900 flex items-center justify-center shadow-xl"
-                    whileHover={{ rotate: 360, scale: 1.1 }}
-                    transition={{ duration: 0.6 }}
-                  >
-                    <Sparkles className="w-7 h-7 text-white" />
-                  </motion.div>
-                  <div>
-                    <h3 className="text-2xl font-bold text-slate-900">Core & Assessment</h3>
-                    <p className="text-sm text-slate-500 mt-1">TOK, EE, and Exam Time</p>
-                  </div>
-                </div>
-                <Badge className="bg-slate-800 text-white border-0 shadow-md text-base px-4 py-1">
-                  {specialDpSubjects.length} subjects
-                </Badge>
-              </motion.div>
-              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
-                {specialDpSubjects.map((subject, index) => {
-                  const assignedTeacher = teachers.find((teacher) => teacher.id === subject.supervisor_teacher_id);
-                  return (
-                    <motion.div
-                      key={subject.id}
-                      initial={{ opacity: 0, y: 20 }}
-                      animate={{ opacity: 1, y: 0 }}
-                      transition={{ delay: index * 0.05 }}
-                      whileHover={{ y: -8, transition: { duration: 0.2 } }}
-                    >
-                      <Card className="border border-slate-200 shadow-sm bg-white rounded-xl hover:shadow-md transition-all duration-200 overflow-hidden h-full flex flex-col">
-                        <div className="h-1 w-full bg-slate-800" />
-                        <CardContent className="p-5 flex-1 flex flex-col">
-                          <div className="flex items-start justify-between mb-4">
-                            <div className="flex items-center gap-3 flex-1 min-w-0">
-                              <div className="w-10 h-10 rounded-lg bg-slate-800 flex items-center justify-center flex-shrink-0">
-                                <Sparkles className="w-5 h-5 text-white" />
-                              </div>
-                              <div className="min-w-0 flex-1">
-                                <p className="font-bold text-slate-900 text-base truncate">{subject.name}</p>
-                                <p className="text-xs text-slate-500 truncate">{subject.code}</p>
-                              </div>
-                            </div>
-                            <DropdownMenu>
-                              <DropdownMenuTrigger asChild>
-                                <Button variant="ghost" size="icon" className="h-8 w-8 -mr-2 -mt-2">
-                                  <MoreHorizontal className="w-4 h-4 text-slate-400" />
-                                </Button>
-                              </DropdownMenuTrigger>
-                              <DropdownMenuContent align="end">
-                                <DropdownMenuItem onClick={() => handleEdit(subject)}>
-                                  <Pencil className="w-4 h-4 mr-2" /> Edit
-                                </DropdownMenuItem>
-                                <DropdownMenuItem className="text-rose-600" onClick={() => deleteMutation.mutate(subject.id)}>
-                                  <Trash2 className="w-4 h-4 mr-2" /> Delete
-                                </DropdownMenuItem>
-                              </DropdownMenuContent>
-                            </DropdownMenu>
-                          </div>
-
-                          <div className="flex flex-wrap gap-1.5 mb-4">
-                            <Badge variant="secondary" className="bg-slate-100 text-slate-700 border-0 text-xs font-medium">
-                              {subject.standard_hours_per_week || (Number(subject.sessions_per_week || 0) * Number(subject.hours_per_session || 0)) || 0}h/week
-                            </Badge>
-                            {Number(subject.sessions_per_week || 0) > 0 && Number(subject.hours_per_session || 0) > 0 && (
-                              <Badge variant="secondary" className="bg-slate-100 text-slate-700 border-0 text-xs font-medium">
-                                {subject.sessions_per_week}× {subject.hours_per_session}h
-                              </Badge>
-                            )}
-                          </div>
-
-                          <div className="flex items-center justify-between mt-auto pt-2">
-                            <div className="flex items-center gap-2 text-slate-500 min-w-0">
-                              <BookOpen className="w-4 h-4" />
-                              <span className="text-sm truncate">{assignedTeacher?.full_name || 'No teacher set'}</span>
-                            </div>
-                            <Badge className="bg-slate-800 text-white border-0 font-medium">DP</Badge>
-                          </div>
-                        </CardContent>
-                      </Card>
-                    </motion.div>
-                  );
-                })}
-              </div>
-            </div>
+            <ProgrammeSection title="Core & Assessment" subtitle="TOK, EE, and Exam Time" count={specialDpSubjects.length} colorClass="bg-slate-800" icon={Sparkles}>
+              <SubjectCardGrid subjects={specialDpSubjects} colorClass="bg-slate-800" icon={Sparkles} programmeLabel="DP" onEdit={handleEdit} onDelete={(id) => deleteMutation.mutate(id)} teachers={teachers} />
+            </ProgrammeSection>
           )}
 
           {/* DP Subject Groups (gated) */}
-          {allowedProgrammes.includes('DP') && groupedSubjects.map(group => {
+          {allowedProgrammes.includes('DP') && groupedSubjects.map((group) => {
             if (group.subjects.length === 0) return null;
-            const Icon = group.icon;
-            
             return (
-              <div key={group.id} className="mb-10">
-                <motion.div 
-                  initial={{ opacity: 0, x: -20 }}
-                  animate={{ opacity: 1, x: 0 }}
-                  className="flex items-center gap-4 mb-6"
-                >
-                  <div className="flex items-center gap-3 flex-1">
-                    <motion.div 
-                      className={`w-14 h-14 rounded-2xl ${group.color} flex items-center justify-center shadow-xl`}
-                      whileHover={{ rotate: 360, scale: 1.1 }}
-                      transition={{ duration: 0.6 }}
-                    >
-                      <Icon className="w-7 h-7 text-white" />
-                    </motion.div>
-                    <div>
-                      <h3 className="text-2xl font-bold text-slate-900">
-                        Group {group.id}: {group.name}
-                      </h3>
-                      <p className="text-sm text-slate-500 mt-1">IB Diploma Programme</p>
-                    </div>
-                  </div>
-                  <Badge className={`${group.color} text-white border-0 shadow-md text-base px-4 py-1`}>
-                    {group.subjects.length} subjects
-                  </Badge>
-                </motion.div>
-                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
-                  {group.subjects.map((subject, index) => (
-                    <motion.div
-                      key={subject.id}
-                      initial={{ opacity: 0, y: 20 }}
-                      animate={{ opacity: 1, y: 0 }}
-                      transition={{ delay: index * 0.05 }}
-                      whileHover={{ y: -8, transition: { duration: 0.2 } }}
-                    >
-                      <Card className="border border-slate-200 shadow-sm bg-white rounded-xl hover:shadow-md transition-all duration-200 overflow-hidden h-full flex flex-col">
-                        <div className={`h-1 w-full ${group.color}`} />
-                        <CardContent className="p-5 flex-1 flex flex-col">
-                          <div className="flex items-start justify-between mb-4">
-                            <div className="flex items-center gap-3 flex-1 min-w-0">
-                              <div className={`w-10 h-10 rounded-lg ${group.color} flex items-center justify-center flex-shrink-0`}>
-                                <Icon className="w-5 h-5 text-white" />
-                              </div>
-                              <div className="min-w-0 flex-1">
-                                <p className="font-bold text-slate-900 text-base truncate">{subject.name}</p>
-                                <p className="text-xs text-slate-500 truncate">{subject.code}</p>
-                              </div>
-                            </div>
-                            <DropdownMenu>
-                              <DropdownMenuTrigger asChild>
-                                <Button variant="ghost" size="icon" className="h-8 w-8 -mr-2 -mt-2">
-                                  <MoreHorizontal className="w-4 h-4 text-slate-400" />
-                                </Button>
-                              </DropdownMenuTrigger>
-                              <DropdownMenuContent align="end">
-                                <DropdownMenuItem onClick={() => handleEdit(subject)}>
-                                  <Pencil className="w-4 h-4 mr-2" /> Edit
-                                </DropdownMenuItem>
-                                <DropdownMenuItem className="text-rose-600" onClick={() => deleteMutation.mutate(subject.id)}>
-                                  <Trash2 className="w-4 h-4 mr-2" /> Delete
-                                </DropdownMenuItem>
-                              </DropdownMenuContent>
-                            </DropdownMenu>
-                          </div>
-
-                          <div className="flex flex-wrap gap-1.5 mb-4">
-                            {subject.available_levels?.includes('HL') && (
-                              <Badge variant="secondary" className="bg-slate-100 text-slate-700 border-0 text-xs font-medium">
-                                HL {subject.hoursPerWeekHL || Math.round((subject.hl_minutes_per_week_default || 360) / 60)}h
-                              </Badge>
-                            )}
-                            {subject.available_levels?.includes('SL') && (
-                              <Badge variant="secondary" className="bg-slate-100 text-slate-700 border-0 text-xs font-medium">
-                                SL {subject.hoursPerWeekSL || Math.round((subject.sl_minutes_per_week_default || 240) / 60)}h
-                              </Badge>
-                            )}
-                          </div>
-
-                          <div className="flex items-center justify-between mt-auto pt-2">
-                            <div className="flex items-center gap-2 text-slate-500">
-                              {subject.requires_lab ? (
-                                <>
-                                  <FlaskConical className="w-4 h-4" />
-                                  <span className="text-sm">Requires Lab</span>
-                                </>
-                              ) : (
-                                <>
-                                  <BookOpen className="w-4 h-4" />
-                                  <span className="text-sm">Standard</span>
-                                </>
-                              )}
-                            </div>
-                            <Badge className={`${group.color} text-white border-0 font-medium`}>
-                              DP
-                            </Badge>
-                          </div>
-                        </CardContent>
-                      </Card>
-                    </motion.div>
-                  ))}
-                </div>
-              </div>
+              <ProgrammeSection key={group.id} title={`Group ${group.id}: ${group.name}`} subtitle="IB Diploma Programme" count={group.subjects.length} colorClass={group.color} icon={group.icon}>
+                <SubjectCardGrid subjects={group.subjects} colorClass={group.color} icon={group.icon} programmeLabel="DP" onEdit={handleEdit} onDelete={(id) => deleteMutation.mutate(id)} />
+              </ProgrammeSection>
             );
           })}
         </div>

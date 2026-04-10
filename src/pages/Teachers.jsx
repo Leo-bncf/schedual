@@ -4,7 +4,6 @@ import { base44 } from '@/api/base44Client';
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { Badge } from "@/components/ui/badge";
 import {
   Dialog,
   DialogContent,
@@ -20,23 +19,15 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import { Plus, Search, Mail, Clock, MoreHorizontal, Pencil, Trash2, Upload, Loader2, BookOpen } from 'lucide-react';
-import { AnimatePresence, motion } from 'framer-motion';
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import {
-  DropdownMenu,
-  DropdownMenuContent,
-  DropdownMenuItem,
-  DropdownMenuTrigger,
-} from "@/components/ui/dropdown-menu";
+import { Plus, Upload, Loader2, BookOpen } from 'lucide-react';
+import { motion } from 'framer-motion';
 import PageHeader from '../components/ui-custom/PageHeader';
-import DataTable from '../components/ui-custom/DataTable';
 import EmptyState from '../components/ui-custom/EmptyState';
 import QualificationManager from '../components/teachers/QualificationManager';
+import TeachersToolbar from '@/components/teachers/TeachersToolbar';
+import TeacherCardGrid from '@/components/teachers/TeacherCardGrid';
 import UploadProgressDialog from '../components/upload/UploadProgressDialog';
 import DragDropUploadDialog from '../components/upload/DragDropUploadDialog';
-import { Link } from 'react-router-dom';
-import { createPageUrl } from '../utils';
 
 const DAYS = ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday'];
 
@@ -379,93 +370,6 @@ Example: {"full_name": "John Smith", "email": "john@school.com", "subjects": ["P
     }
   };
 
-  const columns = [
-    {
-      header: 'Name',
-      cell: (row) => (
-        <div className="flex items-center gap-3">
-          <div className="w-10 h-10 rounded-full bg-gradient-to-br from-indigo-500 to-violet-600 flex items-center justify-center text-white font-medium">
-            {row.full_name?.split(' ').map(n => n[0]).join('').slice(0, 2)}
-          </div>
-          <div>
-            <Link to={`${createPageUrl('TeacherProfile')}?id=${row.id}`} className="font-medium text-slate-900 hover:text-indigo-600 hover:underline">{row.full_name}</Link>
-            <p className="text-sm text-slate-500">{row.employee_id}</p>
-          </div>
-        </div>
-      )
-    },
-    {
-      header: 'Email',
-      cell: (row) => (
-        <div className="flex items-center gap-2 text-slate-600">
-          <Mail className="w-4 h-4 text-slate-400" />
-          {row.email}
-        </div>
-      )
-    },
-    {
-      header: 'Subjects',
-      cell: (row) => {
-        const subjectNames = getSubjectNames(row.subjects);
-        return (
-          <div className="flex flex-wrap gap-1">
-            {subjectNames.slice(0, 2).map((name, i) => (
-              <Badge key={i} variant="secondary" className="bg-indigo-50 text-indigo-700 border-0">
-                {name}
-              </Badge>
-            ))}
-            {subjectNames.length > 2 && (
-              <Badge variant="secondary" className="bg-slate-100 text-slate-600 border-0">
-                +{subjectNames.length - 2}
-              </Badge>
-            )}
-          </div>
-        );
-      }
-    },
-    {
-      header: 'Workload',
-      cell: (row) => (
-        <div className="flex items-center gap-2 text-slate-600">
-          <Clock className="w-4 h-4 text-slate-400" />
-          {row.max_hours_per_week || 25}h/week
-        </div>
-      )
-    },
-    {
-      header: 'Status',
-      cell: (row) => (
-        <Badge className={row.is_active !== false ? 'bg-emerald-100 text-emerald-700 border-0' : 'bg-slate-100 text-slate-600 border-0'}>
-          {row.is_active !== false ? 'Active' : 'Inactive'}
-        </Badge>
-      )
-    },
-    {
-      header: '',
-      cell: (row) => (
-        <DropdownMenu>
-          <DropdownMenuTrigger asChild>
-            <Button variant="ghost" size="icon">
-              <MoreHorizontal className="w-4 h-4" />
-            </Button>
-          </DropdownMenuTrigger>
-          <DropdownMenuContent align="end">
-            <DropdownMenuItem onClick={() => handleEdit(row)}>
-              <Pencil className="w-4 h-4 mr-2" />
-              Edit
-            </DropdownMenuItem>
-            <DropdownMenuItem 
-              className="text-rose-600"
-              onClick={() => deleteMutation.mutate(row.id)}
-            >
-              <Trash2 className="w-4 h-4 mr-2" />
-              Delete
-            </DropdownMenuItem>
-          </DropdownMenuContent>
-        </DropdownMenu>
-      )
-    }
-  ];
 
   return (
     <div className="space-y-6">
@@ -508,17 +412,7 @@ Example: {"full_name": "John Smith", "email": "john@school.com", "subjects": ["P
         </p>
       </div>
 
-      <div className="flex items-center gap-4 mb-6">
-        <div className="relative flex-1 max-w-sm">
-          <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400" />
-          <Input 
-            placeholder="Search teachers..." 
-            className="pl-10 h-11 bg-white border-slate-200 shadow-sm rounded-xl"
-            value={searchQuery}
-            onChange={(e) => setSearchQuery(e.target.value)}
-          />
-        </div>
-      </div>
+      <TeachersToolbar searchQuery={searchQuery} setSearchQuery={setSearchQuery} />
 
       {filteredTeachers.length === 0 && !isLoading ? (
         <EmptyState 
@@ -535,87 +429,12 @@ Example: {"full_name": "John Smith", "email": "john@school.com", "subjects": ["P
           ))}
         </div>
       ) : (
-        <motion.div 
-          className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4"
-          initial={{ opacity: 0 }}
-          animate={{ opacity: 1 }}
-        >
-          {filteredTeachers.map((teacher, index) => (
-            <motion.div
-              key={teacher.id}
-              initial={{ opacity: 0, y: 20 }}
-              animate={{ opacity: 1, y: 0 }}
-              transition={{ delay: index * 0.05 }}
-              whileHover={{ scale: 1.05, y: -8, transition: { duration: 0.2 } }}
-            >
-              <Card className="border border-slate-200 shadow-sm bg-white rounded-xl hover:shadow-md transition-all duration-200 overflow-hidden h-full flex flex-col">
-                <div className="h-1 w-full bg-indigo-500" />
-                <CardContent className="p-5 flex-1 flex flex-col">
-                  <div className="flex items-start justify-between mb-4">
-                    <div className="flex items-center gap-3 flex-1 min-w-0">
-                      <div className="w-10 h-10 rounded-lg bg-indigo-500 flex items-center justify-center text-white font-semibold text-sm flex-shrink-0">
-                        {teacher.full_name?.split(' ').map(n => n[0]).join('').slice(0, 2)}
-                      </div>
-                      <div className="min-w-0 flex-1">
-                        <Link to={`${createPageUrl('TeacherProfile')}?id=${teacher.id}`} className="font-bold text-slate-900 text-base hover:text-indigo-600 hover:underline truncate block">
-                          {teacher.full_name}
-                        </Link>
-                        {teacher.employee_id && <p className="text-xs text-slate-500 truncate">{teacher.employee_id}</p>}
-                      </div>
-                    </div>
-                    <DropdownMenu>
-                      <DropdownMenuTrigger asChild>
-                        <Button variant="ghost" size="icon" className="h-8 w-8 -mr-2 -mt-2">
-                          <MoreHorizontal className="w-4 h-4 text-slate-400" />
-                        </Button>
-                      </DropdownMenuTrigger>
-                      <DropdownMenuContent align="end">
-                        <DropdownMenuItem onClick={() => handleEdit(teacher)}>
-                          <Pencil className="w-4 h-4 mr-2" />
-                          Edit
-                        </DropdownMenuItem>
-                        <DropdownMenuItem 
-                          className="text-rose-600"
-                          onClick={() => deleteMutation.mutate(teacher.id)}
-                        >
-                          <Trash2 className="w-4 h-4 mr-2" />
-                          Delete
-                        </DropdownMenuItem>
-                      </DropdownMenuContent>
-                    </DropdownMenu>
-                  </div>
-
-                  {teacher.subjects && teacher.subjects.length > 0 && (
-                    <div className="mb-4">
-                      <div className="flex flex-wrap gap-1.5">
-                        {getSubjectNames(teacher.subjects).slice(0, 3).map((name, i) => (
-                          <Badge key={i} variant="secondary" className="bg-slate-100 text-slate-700 border-0 text-xs font-medium">
-                            {name}
-                          </Badge>
-                        ))}
-                        {getSubjectNames(teacher.subjects).length > 3 && (
-                          <Badge variant="secondary" className="bg-slate-100 text-slate-600 border-0 text-xs font-medium">
-                            +{getSubjectNames(teacher.subjects).length - 3}
-                          </Badge>
-                        )}
-                      </div>
-                    </div>
-                  )}
-
-                  <div className="flex items-center justify-between mt-auto pt-2">
-                    <div className="flex items-center gap-2 text-slate-500">
-                      <Clock className="w-4 h-4" />
-                      <span className="text-sm">{teacher.max_hours_per_week || 25}h/week</span>
-                    </div>
-                    <Badge className="bg-indigo-500 text-white border-0 font-medium">
-                      Teacher
-                    </Badge>
-                  </div>
-                </CardContent>
-              </Card>
-            </motion.div>
-          ))}
-        </motion.div>
+        <TeacherCardGrid
+          teachers={filteredTeachers}
+          getSubjectNames={getSubjectNames}
+          onEdit={handleEdit}
+          onDelete={(id) => deleteMutation.mutate(id)}
+        />
       )}
 
       <Dialog open={isDialogOpen} onOpenChange={(open) => { if (!open) resetForm(); }}>

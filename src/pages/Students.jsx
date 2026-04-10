@@ -20,25 +20,16 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { Plus, Search, GraduationCap, MoreHorizontal, Pencil, Trash2, Upload, Loader2 } from 'lucide-react';
-import { AnimatePresence, motion } from 'framer-motion';
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import {
-  DropdownMenu,
-  DropdownMenuContent,
-  DropdownMenuItem,
-  DropdownMenuTrigger,
-} from "@/components/ui/dropdown-menu";
+import { Plus, GraduationCap, Upload, Loader2 } from 'lucide-react';
+import { motion } from 'framer-motion';
 import PageHeader from '../components/ui-custom/PageHeader';
-import DataTable from '../components/ui-custom/DataTable';
 import EmptyState from '../components/ui-custom/EmptyState';
 import SubjectSelector from '../components/students/SubjectSelector';
 import DPValidator from '../components/students/DPValidator';
+import StudentsStatsBar from '@/components/students/StudentsStatsBar';
+import StudentCardGrid from '@/components/students/StudentCardGrid';
 import UploadProgressDialog from '../components/upload/UploadProgressDialog';
 import DragDropUploadDialog from '../components/upload/DragDropUploadDialog';
-import { Link } from 'react-router-dom';
-import { createPageUrl } from '../utils';
 import { getStudentLimit, getTierLimits } from '@/lib/tierLimits';
 
 export default function Students() {
@@ -304,93 +295,6 @@ export default function Students() {
     return { hl, sl };
   };
 
-  const columns = [
-    {
-      header: 'Student',
-      cell: (row) => (
-        <div className="flex items-center gap-3">
-          <div className="w-10 h-10 rounded-full bg-gradient-to-br from-emerald-500 to-teal-600 flex items-center justify-center text-white font-medium">
-            {row.full_name?.split(' ').map(n => n[0]).join('').slice(0, 2)}
-          </div>
-          <div>
-            <Link to={`${createPageUrl('StudentProfile')}?id=${row.id}`} className="font-medium text-slate-900 hover:text-blue-600 hover:underline">{row.full_name}</Link>
-            <p className="text-sm text-slate-500">{row.student_id}</p>
-          </div>
-        </div>
-      )
-    },
-    {
-      header: 'Email',
-      accessor: 'email'
-    },
-    {
-      header: 'Year',
-      cell: (row) => (
-        <Badge className={row.year_group === 'DP2' ? 'bg-violet-100 text-violet-700 border-0' : 'bg-blue-100 text-blue-700 border-0'}>
-          {row.year_group}
-        </Badge>
-      )
-    },
-    {
-      header: 'Subjects',
-      cell: (row) => {
-        if (row.ib_programme === 'DP') {
-          const { hl, sl } = getSubjectInfo(row.subject_choices);
-          return (
-            <div className="flex gap-2">
-              <Badge variant="secondary" className="bg-rose-50 text-rose-700 border-0">
-                {hl} HL
-              </Badge>
-              <Badge variant="secondary" className="bg-amber-50 text-amber-700 border-0">
-                {sl} SL
-              </Badge>
-            </div>
-          );
-        } else {
-          // PYP/MYP students don't have HL/SL
-          const subjectCount = row.subject_choices?.length || 0;
-          return (
-            <Badge variant="secondary" className="bg-blue-50 text-blue-700 border-0">
-              {subjectCount} subjects
-            </Badge>
-          );
-        }
-      }
-    },
-    {
-      header: 'Status',
-      cell: (row) => (
-        <Badge className={row.is_active !== false ? 'bg-emerald-100 text-emerald-700 border-0' : 'bg-slate-100 text-slate-600 border-0'}>
-          {row.is_active !== false ? 'Active' : 'Inactive'}
-        </Badge>
-      )
-    },
-    {
-      header: '',
-      cell: (row) => (
-        <DropdownMenu>
-          <DropdownMenuTrigger asChild>
-            <Button variant="ghost" size="icon">
-              <MoreHorizontal className="w-4 h-4" />
-            </Button>
-          </DropdownMenuTrigger>
-          <DropdownMenuContent align="end">
-            <DropdownMenuItem onClick={() => handleEdit(row)}>
-              <Pencil className="w-4 h-4 mr-2" />
-              Edit
-            </DropdownMenuItem>
-            <DropdownMenuItem 
-              className="text-rose-600"
-              onClick={() => deleteMutation.mutate(row.id)}
-            >
-              <Trash2 className="w-4 h-4 mr-2" />
-              Delete
-            </DropdownMenuItem>
-          </DropdownMenuContent>
-        </DropdownMenu>
-      )
-    }
-  ];
 
   const dp1Count = students.filter(s => s.year_group === 'DP1').length;
   const dp2Count = students.filter(s => s.year_group === 'DP2').length;
@@ -996,47 +900,18 @@ Return ONLY students array, no other text.`,
         </p>
       </div>
 
-      <div className="flex flex-col sm:flex-row items-start sm:items-center gap-4 mb-6">
-        <div className="relative flex-1 max-w-sm">
-          <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400" />
-          <Input 
-            placeholder="Search students..." 
-            className="pl-10 h-11 bg-white border-slate-200 shadow-sm rounded-xl"
-            value={searchQuery}
-            onChange={(e) => setSearchQuery(e.target.value)}
-          />
-        </div>
-        <Tabs value={yearFilter} onValueChange={setYearFilter}>
-          <TabsList className="bg-white border border-slate-200 shadow-sm p-1 rounded-xl overflow-x-auto">
-           <TabsTrigger value="all" className="data-[state=active]:bg-gradient-to-r data-[state=active]:from-indigo-500 data-[state=active]:to-violet-500 data-[state=active]:text-white transition-all">All ({students.length})</TabsTrigger>
-           {allowedProgrammes.includes('DP') && (
-             <>
-               <TabsTrigger value="DP1" className="data-[state=active]:bg-gradient-to-r data-[state=active]:from-blue-500 data-[state=active]:to-cyan-500 data-[state=active]:text-white transition-all">DP1 ({dp1Count})</TabsTrigger>
-               <TabsTrigger value="DP2" className="data-[state=active]:bg-gradient-to-r data-[state=active]:from-violet-500 data-[state=active]:to-purple-500 data-[state=active]:text-white transition-all">DP2 ({dp2Count})</TabsTrigger>
-             </>
-           )}
-           {allowedProgrammes.includes('MYP') && (
-             <>
-               <TabsTrigger value="MYP1" className="data-[state=active]:bg-gradient-to-r data-[state=active]:from-purple-500 data-[state=active]:to-fuchsia-500 data-[state=active]:text-white transition-all">MYP1 ({mypCounts.MYP1})</TabsTrigger>
-               <TabsTrigger value="MYP2" className="data-[state=active]:bg-gradient-to-r data-[state=active]:from-purple-500 data-[state=active]:to-fuchsia-500 data-[state=active]:text-white transition-all">MYP2 ({mypCounts.MYP2})</TabsTrigger>
-               <TabsTrigger value="MYP3" className="data-[state=active]:bg-gradient-to-r data-[state=active]:from-purple-500 data-[state=active]:to-fuchsia-500 data-[state=active]:text-white transition-all">MYP3 ({mypCounts.MYP3})</TabsTrigger>
-               <TabsTrigger value="MYP4" className="data-[state=active]:bg-gradient-to-r data-[state=active]:from-purple-500 data-[state=active]:to-fuchsia-500 data-[state=active]:text-white transition-all">MYP4 ({mypCounts.MYP4})</TabsTrigger>
-               <TabsTrigger value="MYP5" className="data-[state=active]:bg-gradient-to-r data-[state=active]:from-purple-500 data-[state=active]:to-fuchsia-500 data-[state=active]:text-white transition-all">MYP5 ({mypCounts.MYP5})</TabsTrigger>
-             </>
-           )}
-           {allowedProgrammes.includes('PYP') && (
-             <>
-               <TabsTrigger value="PYP-A" className="data-[state=active]:bg-gradient-to-r data-[state=active]:from-teal-500 data-[state=active]:to-cyan-500 data-[state=active]:text-white transition-all">PYP A ({pypCounts['PYP-A']})</TabsTrigger>
-               <TabsTrigger value="PYP-B" className="data-[state=active]:bg-gradient-to-r data-[state=active]:from-teal-500 data-[state=active]:to-cyan-500 data-[state=active]:text-white transition-all">PYP B ({pypCounts['PYP-B']})</TabsTrigger>
-               <TabsTrigger value="PYP-C" className="data-[state=active]:bg-gradient-to-r data-[state=active]:from-teal-500 data-[state=active]:to-cyan-500 data-[state=active]:text-white transition-all">PYP C ({pypCounts['PYP-C']})</TabsTrigger>
-               <TabsTrigger value="PYP-D" className="data-[state=active]:bg-gradient-to-r data-[state=active]:from-teal-500 data-[state=active]:to-cyan-500 data-[state=active]:text-white transition-all">PYP D ({pypCounts['PYP-D']})</TabsTrigger>
-               <TabsTrigger value="PYP-E" className="data-[state=active]:bg-gradient-to-r data-[state=active]:from-teal-500 data-[state=active]:to-cyan-500 data-[state=active]:text-white transition-all">PYP E ({pypCounts['PYP-E']})</TabsTrigger>
-               <TabsTrigger value="PYP-F" className="data-[state=active]:bg-gradient-to-r data-[state=active]:from-teal-500 data-[state=active]:to-cyan-500 data-[state=active]:text-white transition-all">PYP F ({pypCounts['PYP-F']})</TabsTrigger>
-             </>
-           )}
-          </TabsList>
-        </Tabs>
-      </div>
+      <StudentsStatsBar
+        searchQuery={searchQuery}
+        setSearchQuery={setSearchQuery}
+        yearFilter={yearFilter}
+        setYearFilter={setYearFilter}
+        students={students}
+        allowedProgrammes={allowedProgrammes}
+        dp1Count={dp1Count}
+        dp2Count={dp2Count}
+        mypCounts={mypCounts}
+        pypCounts={pypCounts}
+      />
 
       {filteredStudents.length === 0 && !isLoading ? (
         <EmptyState 
@@ -1053,134 +928,13 @@ Return ONLY students array, no other text.`,
           ))}
         </div>
       ) : (
-        <motion.div 
-          className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4"
-          initial={{ opacity: 0 }}
-          animate={{ opacity: 1 }}
-        >
-          {filteredStudents.map((student, index) => {
-            const normalizeYearGroup = (yg, prog) => {
-              if (!yg) return yg;
-              if (prog === 'PYP' && yg.toLowerCase().includes('pyp')) return yg;
-              return yg;
-            };
-
-            const programmeColors = {
-              DP: {
-                border: 'border-l-4 border-l-blue-500',
-                avatar: 'from-blue-500 to-cyan-500',
-                badge: 'bg-blue-100 text-blue-700',
-                header: 'from-blue-50 to-cyan-50'
-              },
-              MYP: {
-                border: 'border-l-4 border-l-purple-500',
-                avatar: 'from-purple-500 to-fuchsia-600',
-                badge: 'bg-purple-100 text-purple-700',
-                header: 'from-purple-50 to-fuchsia-50'
-              },
-              PYP: {
-                border: 'border-l-4 border-l-teal-500',
-                avatar: 'from-teal-500 to-cyan-500',
-                badge: 'bg-teal-100 text-teal-700',
-                header: 'from-teal-50 to-cyan-50'
-              }
-            };
-
-            const colors = programmeColors[student.ib_programme] || programmeColors.DP;
-
-            return (
-              <motion.div
-                key={student.id}
-                initial={{ opacity: 0, y: 20 }}
-                animate={{ opacity: 1, y: 0 }}
-                transition={{ delay: index * 0.05 }}
-                whileHover={{ scale: 1.05, y: -8, transition: { duration: 0.2 } }}
-              >
-                <Card className="border-0 shadow-sm hover:shadow-md transition-shadow bg-white rounded-xl overflow-hidden flex flex-col h-full">
-                  <div className={`h-1.5 w-full ${colors.border.replace('border-l-4 border-l-', 'bg-')}`} />
-                  <CardContent className="p-4 flex flex-col flex-1">
-                    <div className="flex items-start justify-between mb-4">
-                      <div className="flex items-center gap-3 flex-1 min-w-0">
-                        <div className={`w-10 h-10 rounded-lg ${colors.border.replace('border-l-4 border-l-', 'bg-')} flex items-center justify-center text-white font-semibold text-base flex-shrink-0`}>
-                          {student.full_name?.split(' ').map(n => n[0]).join('').slice(0, 2)}
-                        </div>
-                        <div className="min-w-0 flex-1">
-                          <h3 className="font-bold text-slate-900 text-base truncate">
-                            <Link to={`${createPageUrl('StudentProfile')}?id=${student.id}`} className="hover:text-blue-600 hover:underline">
-                              {student.full_name}
-                            </Link>
-                          </h3>
-                          <p className="text-xs text-slate-500 truncate">{student.student_id || student.email}</p>
-                        </div>
-                      </div>
-                      <DropdownMenu>
-                        <DropdownMenuTrigger asChild>
-                          <Button variant="ghost" size="icon" className="h-8 w-8 -mr-2 text-slate-400 hover:text-slate-600">
-                            <MoreHorizontal className="w-5 h-5" />
-                          </Button>
-                        </DropdownMenuTrigger>
-                        <DropdownMenuContent align="end">
-                          <DropdownMenuItem onClick={() => handleEdit(student)}>
-                            <Pencil className="w-4 h-4 mr-2" />
-                            Edit
-                          </DropdownMenuItem>
-                          <DropdownMenuItem 
-                            className="text-rose-600"
-                            onClick={() => deleteMutation.mutate(student.id)}
-                          >
-                            <Trash2 className="w-4 h-4 mr-2" />
-                            Delete
-                          </DropdownMenuItem>
-                        </DropdownMenuContent>
-                      </DropdownMenu>
-                    </div>
-
-                    {student.subject_choices && student.subject_choices.length > 0 && (
-                      <div className="mb-4">
-                        {student.ib_programme === 'DP' ? (
-                          <div className="flex gap-2">
-                            <Badge variant="secondary" className="bg-slate-100 text-slate-700 border-0 font-medium">
-                              {getSubjectInfo(student.subject_choices).hl} HL
-                            </Badge>
-                            <Badge variant="secondary" className="bg-slate-100 text-slate-700 border-0 font-medium">
-                              {getSubjectInfo(student.subject_choices).sl} SL
-                            </Badge>
-                          </div>
-                        ) : (
-                          <div className="flex flex-wrap gap-1.5">
-                            {student.subject_choices.slice(0, 3).map((choice, i) => {
-                              const subject = subjects.find(s => s.id === choice.subject_id);
-                              return subject ? (
-                                <Badge key={i} variant="secondary" className="bg-slate-100 text-slate-700 border-0 text-xs font-medium">
-                                  {subject.name}
-                                </Badge>
-                              ) : null;
-                            })}
-                            {student.subject_choices.length > 3 && (
-                              <Badge variant="secondary" className="bg-slate-100 text-slate-600 border-0 text-xs font-medium">
-                                +{student.subject_choices.length - 3}
-                              </Badge>
-                            )}
-                          </div>
-                        )}
-                      </div>
-                    )}
-
-                    <div className="flex items-center justify-between mt-auto pt-4 border-t border-slate-50">
-                      <div className="flex items-center gap-2 text-slate-500">
-                        <GraduationCap className="w-4 h-4" />
-                        <span className="text-sm">{normalizeYearGroup(student.year_group, student.ib_programme)}</span>
-                      </div>
-                      <Badge className={`${colors.border.replace('border-l-4 border-l-', 'bg-')} text-white border-0 hover:${colors.border.replace('border-l-4 border-l-', 'bg-')} rounded-md px-2 py-0.5 text-xs font-medium`}>
-                        {student.ib_programme}
-                      </Badge>
-                    </div>
-                  </CardContent>
-                </Card>
-              </motion.div>
-            );
-          })}
-        </motion.div>
+        <StudentCardGrid
+          students={filteredStudents}
+          subjects={subjects}
+          getSubjectInfo={getSubjectInfo}
+          onEdit={handleEdit}
+          onDelete={(id) => deleteMutation.mutate(id)}
+        />
       )}
 
       <Dialog open={isDialogOpen} onOpenChange={(open) => { if (!open) resetForm(); }}>
