@@ -105,10 +105,11 @@ export default function Settings() {
   const { data: schools = [], isLoading } = useQuery({
     queryKey: ['schools', user?.school_id],
     enabled: !!user?.school_id,
-    queryFn: () => base44.entities.School.filter({ id: user.school_id }),
+    queryFn: () => base44.entities.School.filter({ school_id: user.school_id }),
   });
 
   const school = schools[0];
+  const schoolRecordId = school?.id || user?.school_id;
   const sharedTier = getTierLimits(school?.subscription_tier);
   const currentTier = school?.subscription_tier ? TIERS[school.subscription_tier] : null;
   const tierStudentLimit = sharedTier?.studentLimit ?? currentTier?.limits?.students ?? null;
@@ -181,7 +182,7 @@ export default function Settings() {
   }, [queryClient, stripeNoticeShown]);
 
   const createSchoolMutation = useMutation({
-    mutationFn: (data) => base44.entities.School.create(data),
+    mutationFn: (data) => base44.entities.School.create({ ...data, school_id: user?.school_id }),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['schools'] });
       setSaved(true);
@@ -223,8 +224,8 @@ export default function Settings() {
     }
     setIsSaving(true);
     try {
-      if (school) {
-        await updateSchoolMutation.mutateAsync({ id: school.id, data: formData });
+      if (schoolRecordId) {
+        await updateSchoolMutation.mutateAsync({ id: schoolRecordId, data: formData });
       } else {
         await createSchoolMutation.mutateAsync(formData);
       }
