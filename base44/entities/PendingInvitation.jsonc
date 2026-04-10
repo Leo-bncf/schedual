@@ -1,0 +1,57 @@
+{
+  "name": "PendingInvitation",
+  "type": "object",
+  "properties": {
+    "email": {
+      "type": "string",
+      "description": "Email address of invited user"
+    },
+    "school_id": {
+      "type": "string",
+      "description": "School they're being invited to"
+    },
+    "invited_by": {
+      "type": "string",
+      "description": "Email of admin who sent invite"
+    },
+    "expires_at": {
+      "type": "string",
+      "format": "date-time",
+      "description": "Invitation expiry (30 days)"
+    }
+  },
+  "required": [
+    "email",
+    "school_id",
+    "invited_by"
+  ],
+  "rls": {
+    "create": {
+      "user_condition": {
+        "role": "admin"
+      }
+    },
+    "read": {
+      "$or": [
+        {
+          "user_condition": {
+            "role": "admin"
+          }
+        },
+        {
+          "data.email": "{{user.email}}"
+        }
+      ]
+    },
+    "update": {
+      "user_condition": {
+        "role": "admin"
+      }
+    },
+    "delete": {
+      "user_condition": {
+        "role": "admin"
+      }
+    }
+  }
+}

@@ -1,0 +1,53 @@
+{
+  "name": "LoginSession",
+  "type": "object",
+  "properties": {
+    "user_email": {
+      "type": "string",
+      "description": "Email of the logged-in user"
+    },
+    "session_token": {
+      "type": "string",
+      "description": "Unique session identifier"
+    },
+    "csrf_token": {
+      "type": "string",
+      "description": "CSRF protection token"
+    },
+    "verified": {
+      "type": "boolean",
+      "default": false,
+      "description": "Whether this session has been 2FA verified"
+    },
+    "ip_address": {
+      "type": "string",
+      "description": "IP address of the login"
+    },
+    "user_agent": {
+      "type": "string",
+      "description": "Browser user agent"
+    },
+    "expires_at": {
+      "type": "string",
+      "format": "date-time",
+      "description": "Session expiration (24 hours)"
+    }
+  },
+  "required": [
+    "user_email",
+    "session_token",
+    "expires_at"
+  ],
+  "rls": {
+    "read": {
+      "data.user_email": "{{user.email}}"
+    },
+    "create": true,
+    "update": {
+      "data.user_email": "{{user.email}}"
+    },
+    "delete": {
+      "data.user_email": "{{user.email}}"
+    }
+  }
+}

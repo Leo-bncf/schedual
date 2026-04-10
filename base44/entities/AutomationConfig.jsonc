@@ -1,0 +1,62 @@
+{
+  "name": "AutomationConfig",
+  "type": "object",
+  "properties": {
+    "key": {
+      "type": "string",
+      "description": "Singleton config key"
+    },
+    "welcome_email_enabled": {
+      "type": "boolean",
+      "default": true
+    },
+    "welcome_email_delay_hours": {
+      "type": "number",
+      "default": 0
+    },
+    "setup_reminder_enabled": {
+      "type": "boolean",
+      "default": true
+    },
+    "setup_reminder_delay_hours": {
+      "type": "number",
+      "default": 48
+    },
+    "recipient_mode": {
+      "type": "string",
+      "enum": [
+        "school_admin"
+      ],
+      "default": "school_admin"
+    },
+    "is_active": {
+      "type": "boolean",
+      "default": true
+    }
+  },
+  "required": [
+    "key"
+  ],
+  "rls": {
+    "read": {
+      "user_condition": {
+        "role": "admin"
+      }
+    },
+    "create": {
+      "user_condition": {
+        "role": "admin"
+      }
+    },
+    "update": {
+      "user_condition": {
+        "role": "admin"
+      }
+    },
+    "delete": {
+      "user_condition": {
+        "role": "admin"
+      }
+    }
+  }
+}

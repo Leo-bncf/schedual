@@ -1,0 +1,51 @@
+{
+  "name": "EmailVerificationCode",
+  "type": "object",
+  "properties": {
+    "user_email": {
+      "type": "string",
+      "description": "Email address of the user"
+    },
+    "code_hash": {
+      "type": "string",
+      "description": "SHA-256 hash of the verification code"
+    },
+    "expires_at": {
+      "type": "string",
+      "format": "date-time",
+      "description": "When the code expires"
+    },
+    "attempts": {
+      "type": "number",
+      "default": 0,
+      "description": "Number of verification attempts"
+    },
+    "verified": {
+      "type": "boolean",
+      "default": false,
+      "description": "Whether code has been verified"
+    },
+    "locked_until": {
+      "type": "string",
+      "format": "date-time",
+      "description": "Account locked until this time after 5 failed attempts"
+    }
+  },
+  "required": [
+    "user_email",
+    "code_hash",
+    "expires_at"
+  ],
+  "rls": {
+    "read": {
+      "data.user_email": "{{user.email}}"
+    },
+    "create": true,
+    "update": {
+      "data.user_email": "{{user.email}}"
+    },
+    "delete": {
+      "data.user_email": "{{user.email}}"
+    }
+  }
+}
