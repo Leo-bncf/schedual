@@ -105,11 +105,11 @@ export default function Settings() {
   const { data: schools = [], isLoading } = useQuery({
     queryKey: ['schools', user?.school_id],
     enabled: !!user?.school_id,
-    queryFn: () => base44.entities.School.filter({ school_id: user.school_id }),
+    queryFn: () => base44.entities.School.filter({ id: user.school_id }),
   });
 
   const school = schools[0];
-  const schoolRecordId = school?.id || user?.school_id;
+  const schoolRecordId = school?.id;
   const sharedTier = getTierLimits(school?.subscription_tier);
   const currentTier = school?.subscription_tier ? TIERS[school.subscription_tier] : null;
   const tierStudentLimit = sharedTier?.studentLimit ?? currentTier?.limits?.students ?? null;
@@ -183,6 +183,9 @@ export default function Settings() {
 
   const createSchoolMutation = useMutation({
     mutationFn: (data) => base44.entities.School.create({ ...data, school_id: user?.school_id }),
+    onError: (error) => {
+      toast.error(error?.message || 'Unable to create school settings.');
+    },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['schools'] });
       setSaved(true);
@@ -219,7 +222,7 @@ export default function Settings() {
 
   const handleSave = async () => {
     if (!formData.name || !formData.code) {
-      alert('Please fill in School Name and School Code');
+      toast.error('Please fill in School Name and School Code');
       return;
     }
     setIsSaving(true);
@@ -227,11 +230,11 @@ export default function Settings() {
       if (schoolRecordId) {
         await updateSchoolMutation.mutateAsync({ id: schoolRecordId, data: formData });
       } else {
-        await createSchoolMutation.mutateAsync(formData);
+        throw new Error('School record not found for this account.');
       }
     } catch (error) {
       console.error('Error saving school:', error);
-      alert('Failed to save school settings. Please try again.');
+      toast.error(error?.message || 'Failed to save school settings. Please try again.');
     }
     setIsSaving(false);
   };
@@ -485,7 +488,7 @@ export default function Settings() {
                 <div className="space-y-2">
                   <Label className="text-sm font-semibold">School ID</Label>
                   <div className="p-4 rounded-lg bg-gradient-to-r from-slate-50 to-slate-100 border-2 border-slate-200">
-                    <p className="text-sm font-mono text-slate-900 font-semibold mb-2">{school?.school_id || 'Not available'}</p>
+                    <p className="text-sm font-mono text-slate-900 font-semibold mb-2">{school?.id || 'Not available'}</p>
                     <div className="flex items-start gap-2 text-xs text-slate-600">
                       <Info className="w-3 h-3 mt-0.5 flex-shrink-0" />
                       <p>This unique ID is used internally for data imports and integrations. Keep it secure and only share with authorized personnel.</p>

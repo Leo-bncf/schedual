@@ -199,7 +199,7 @@ export default function StudentProfile() {
               subjects={subjects}
               teachers={teachers}
               periodsPerDay={school?.periods_per_day || 10}
-              dayStartTime={school?.day_start_time || '08:00'}
+              dayStartTime={school?.school_start_time || school?.day_start_time || '08:00'}
               dayEndTime={school?.day_end_time || '18:00'}
               periodDurationMinutes={school?.period_duration_minutes || 60}
               scheduleSettings={school}

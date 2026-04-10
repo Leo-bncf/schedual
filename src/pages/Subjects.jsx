@@ -254,7 +254,7 @@ export default function Subjects() {
       data.standard_hours_per_week = hasSpecialWeeklyHours
         ? Number(formData.standard_hours_per_week || 0)
         : Number(formData.sessions_per_week || 0) * Number(formData.hours_per_session || 0);
-      data.combine_dp1_dp2 = normalizedCode === 'TEST' ? !!formData.combine_dp1_dp2 : false;
+      data.combine_dp1_dp2 = !!formData.combine_dp1_dp2;
     } else if (formData.ib_level === 'DP') {
       data.is_core = false;
       data.ib_group = String(formData.ib_group);

@@ -59,7 +59,7 @@ export default function TimetableGrid({
       .filter(Boolean)
       .sort()[0];
 
-    const fallback = formatClockTime(dayStartTime || scheduleSettings?.day_start_time || '08:00');
+    const fallback = formatClockTime(dayStartTime || scheduleSettings?.school_start_time || scheduleSettings?.day_start_time || '08:00');
     const [hours, minutes] = String(firstTimeslot || fallback).split(':').map(Number);
     return (hours * 60) + minutes;
   }, [timeslots, dayStartTime, scheduleSettings]);

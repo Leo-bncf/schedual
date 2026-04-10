@@ -191,7 +191,7 @@ export default function StudentScheduleView({
                   subjects={subjects}
                   teachers={teachers}
                   periodsPerDay={scheduleSettings?.periods_per_day || 10}
-                  dayStartTime={scheduleSettings?.day_start_time || '08:00'}
+                  dayStartTime={scheduleSettings?.school_start_time || scheduleSettings?.day_start_time || '08:00'}
                   dayEndTime={scheduleSettings?.day_end_time || '18:00'}
                   periodDurationMinutes={scheduleSettings?.period_duration_minutes || 60}
                   scheduleSettings={scheduleSettings}
