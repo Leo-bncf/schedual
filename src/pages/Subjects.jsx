@@ -263,6 +263,7 @@ export default function Subjects() {
       data.standard_hours_per_week = 0;
       data.sessions_per_week = 0;
       data.hours_per_session = 0;
+      data.combine_dp1_dp2 = !!formData.combine_dp1_dp2;
     } else {
       data.is_core = false;
       data.available_levels = [];
