@@ -13,6 +13,8 @@ import PageHeader from '../components/ui-custom/PageHeader';
 import DataTable from '../components/ui-custom/DataTable';
 
 export default function UserManagement() {
+  const getUserSchoolId = (user) => user?.school_id || user?.data?.school_id || null;
+  const getUserRole = (user) => user?.role || user?.data?.role || 'user';
   const [isDialogOpen, setIsDialogOpen] = useState(false);
   const [formData, setFormData] = useState({
     email: '',
@@ -84,7 +86,7 @@ export default function UserManagement() {
       header: 'School',
       accessor: 'school_id',
       cell: (user) => {
-        const school = schools.find(s => s.id === user.school_id);
+        const school = schools.find(s => s.id === getUserSchoolId(user));
         return school ? school.name : <Badge variant="outline">Not Assigned</Badge>;
       }
     },
@@ -92,8 +94,8 @@ export default function UserManagement() {
       header: 'Role',
       accessor: 'role',
       cell: (user) => (
-        <Badge className={user.role === 'admin' ? 'bg-purple-100 text-purple-700' : 'bg-slate-100 text-slate-700'}>
-          {user.role}
+        <Badge className={getUserRole(user) === 'admin' ? 'bg-purple-100 text-purple-700' : 'bg-slate-100 text-slate-700'}>
+          {getUserRole(user)}
         </Badge>
       )
     },
@@ -109,8 +111,8 @@ export default function UserManagement() {
               setFormData({
                 email: user.email,
                 full_name: user.full_name,
-                school_id: user.school_id || '',
-                role: user.role || 'user'
+                school_id: getUserSchoolId(user) || '',
+                role: getUserRole(user)
               });
               setIsDialogOpen(true);
             }}

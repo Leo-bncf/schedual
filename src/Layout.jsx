@@ -69,8 +69,11 @@ export default function Layout({ children, currentPageName }) {
 
 
 
-  // Role definitions - school_id alone determines school admin access
-  const isSchoolAdmin = (userData) => !!userData?.school_id && !isSuperAdmin;
+  const getUserSchoolId = (userData) => userData?.school_id || userData?.data?.school_id || null;
+  const getUserRole = (userData) => userData?.role || userData?.data?.role || 'user';
+
+  // Role definitions - school assignment determines school admin access unless superadmin
+  const isSchoolAdmin = (userData) => !!getUserSchoolId(userData) && !isSuperAdmin;
 
   // Suppress browser 403 errors in console by handling them silently
   useEffect(() => {
@@ -128,7 +131,7 @@ export default function Layout({ children, currentPageName }) {
         }
 
         // If user has no school yet after payment, refresh the auth session once.
-        if (!userData?.school_id) {
+        if (!getUserSchoolId(userData)) {
           const params = new URLSearchParams(window.location.search);
           const stripeStatus = params.get('stripe');
           if (stripeStatus === 'success') {

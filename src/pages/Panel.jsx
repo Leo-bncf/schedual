@@ -293,8 +293,11 @@ export default function Panel() {
     }
   };
 
+  const getUserSchoolId = (user) => user?.school_id || user?.data?.school_id || null;
+  const getUserRole = (user) => user?.role || user?.data?.role || 'user';
+
   const getSchoolStats = (schoolId) => {
-    const users = allUsers.filter(u => u.school_id === schoolId).length;
+    const users = allUsers.filter(u => getUserSchoolId(u) === schoolId).length;
     const teachers = allTeachers.filter(t => t.school_id === schoolId).length;
     const students = allStudents.filter(s => s.school_id === schoolId).length;
     const schedules = allSchedules.filter(s => s.school_id === schoolId).length;
@@ -418,16 +421,16 @@ export default function Panel() {
     {
       header: 'School',
       cell: (row) => {
-        const school = schools.find(s => s.id === row.school_id);
+        const school = schools.find(s => s.id === getUserSchoolId(row));
         return school ? school.name : <Badge variant="outline">Unassigned</Badge>;
       }
     },
     {
       header: 'Role',
       cell: (row) => (
-        <Badge className={row.role === 'admin' ? 'bg-blue-100 text-blue-900 border-0' : 'bg-slate-100 text-slate-600 border-0'}>
-          {row.role === 'admin' ? <Crown className="w-3 h-3 mr-1" /> : null}
-          {row.role}
+        <Badge className={getUserRole(row) === 'admin' ? 'bg-blue-100 text-blue-900 border-0' : 'bg-slate-100 text-slate-600 border-0'}>
+          {getUserRole(row) === 'admin' ? <Crown className="w-3 h-3 mr-1" /> : null}
+          {getUserRole(row)}
         </Badge>
       )
     },
@@ -435,7 +438,7 @@ export default function Panel() {
       header: '',
       cell: (row) => (
         <div className="flex gap-2">
-          {!row.school_id && (
+          {!getUserSchoolId(row) && (
             <Button
               variant="default"
               size="sm"
@@ -463,8 +466,8 @@ export default function Panel() {
                 onClick={() => {
                   setUserFormData({
                     email: row.email,
-                    school_id: row.school_id || '',
-                    role: row.role || 'user'
+                    school_id: getUserSchoolId(row) || '',
+                    role: getUserRole(row)
                   });
                   setIsUserDialogOpen(true);
                 }}
@@ -486,7 +489,7 @@ export default function Panel() {
     }
   ];
 
-  const totalUsers = allUsers.filter(u => u.school_id).length; // Only users assigned to schools
+  const totalUsers = allUsers.filter(u => getUserSchoolId(u)).length; // Only users assigned to schools
   const totalTeachers = allTeachers.length;
   const totalStudents = allStudents.length;
 
@@ -506,7 +509,7 @@ export default function Panel() {
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
         <StatCard title="Total Schools" value={schools.length} icon={Building2} />
         <StatCard title="Total Users" value={totalUsers} icon={Users} />
-        <StatCard title="Unassigned Users" value={allUsers.filter(u => !u.school_id).length} icon={Users} />
+        <StatCard title="Unassigned Users" value={allUsers.filter(u => !getUserSchoolId(u)).length} icon={Users} />
       </div>
 
       <Card className="border-0 bg-gradient-to-r from-blue-600 via-indigo-600 to-violet-600 text-white shadow-xl">
@@ -883,7 +886,7 @@ export default function Panel() {
                 <div>
                   <p className="text-xs text-slate-500">Admins used</p>
                   <p className="text-lg font-semibold text-slate-900">
-                    {allUsers.filter(u => u.school_id === seatsTargetSchool.id && u.role === 'admin').length}
+                    {allUsers.filter(u => getUserSchoolId(u) === seatsTargetSchool.id && getUserRole(u) === 'admin').length}
                   </p>
                 </div>
                 <div>
