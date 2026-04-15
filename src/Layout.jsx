@@ -56,11 +56,8 @@ const navigation = [
 ];
 
 export default function Layout({ children, currentPageName }) {
-  // Public pages render immediately without authentication
   const publicPages = ['Landing', 'PrivacyPolicy', 'TermsOfUse', 'ContactUs', 'FAQ', 'DataSecurity', 'About', 'Solutions', 'Demo'];
-  if (publicPages.includes(currentPageName)) {
-    return <>{children}</>;
-  }
+  const isPublicPage = publicPages.includes(currentPageName);
 
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const [user, setUser] = useState(null);
@@ -154,7 +151,9 @@ export default function Layout({ children, currentPageName }) {
     loadAuth();
   }, []);
 
-
+  if (isPublicPage) {
+    return <>{children}</>;
+  }
 
   if (isLoading) {
     return (
