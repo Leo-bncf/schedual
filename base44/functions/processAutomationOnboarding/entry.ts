@@ -41,6 +41,18 @@ async function createLog(base44, payload) {
 Deno.serve(async (req) => {
   try {
     const base44 = createClientFromRequest(req);
+    const user = await base44.auth.me();
+    if (!user) {
+      return Response.json({ error: 'Unauthorized' }, { status: 401 });
+    }
+    const superAdminEmails = String(Deno.env.get('SUPER_ADMIN_EMAILS') || '')
+      .split(',')
+      .map((email) => email.trim().toLowerCase())
+      .filter(Boolean);
+    const isSuperAdmin = superAdminEmails.includes(String(user.email || '').trim().toLowerCase());
+    if (user?.role !== 'admin' && !isSuperAdmin) {
+      return Response.json({ error: 'Forbidden' }, { status: 403 });
+    }
     const config = await ensureConfig(base44);
 
     if (!config.is_active) {

@@ -1,3 +1,4 @@
+import { createClientFromRequest } from 'npm:@base44/sdk@0.8.25';
 import Stripe from 'npm:stripe@18.1.1';
 
 const stripe = new Stripe(Deno.env.get('STRIPE_SECRET_KEY'));
@@ -10,16 +11,27 @@ const TIER_PRICE_IDS = {
 
 Deno.serve(async (req) => {
   try {
+    const base44 = createClientFromRequest(req);
+    const user = await base44.auth.me().catch(() => null);
     const body = await req.json();
     const { priceId, tier, userId, userEmail } = body || {};
 
+    if (!user) {
+      return Response.json({ error: 'Unauthorized' }, { status: 401 });
+    }
     if (!userId || !userEmail) {
       return Response.json({ error: 'Missing checkout details' }, { status: 400 });
+    }
+    if (String(userId) !== String(user.id)) {
+      return Response.json({ error: 'Forbidden: invalid user id' }, { status: 403 });
     }
 
     const normalizedEmail = String(userEmail).trim().toLowerCase();
     if (!normalizedEmail || !normalizedEmail.includes('@')) {
       return Response.json({ error: 'Invalid user email' }, { status: 400 });
+    }
+    if (normalizedEmail !== String(user.email || '').trim().toLowerCase()) {
+      return Response.json({ error: 'Forbidden: invalid user email' }, { status: 403 });
     }
 
     if (!priceId || !tier || !userId || !userEmail) {

@@ -12,10 +12,17 @@ function hashCode(code) {
 Deno.serve(async (req) => {
   try {
     const base44 = createClientFromRequest(req);
+    const user = await base44.auth.me();
+    if (!user) {
+      return Response.json({ error: 'Unauthorized' }, { status: 401 });
+    }
     const { email } = await req.json();
 
     if (!email || !email.includes('@')) {
       return Response.json({ error: 'Valid email is required' }, { status: 400 });
+    }
+    if (String(email).trim().toLowerCase() !== String(user.email || '').trim().toLowerCase()) {
+      return Response.json({ error: 'Forbidden: invalid email' }, { status: 403 });
     }
 
     // Check if there's a recent code (rate limiting)

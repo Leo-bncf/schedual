@@ -14,15 +14,15 @@ Deno.serve(async (req) => {
     const providedSchoolId = body.school_id;
 
     const user = await base44.auth.me();
-    if (!user && !providedSchoolId) {
+    if (!user?.school_id) {
       return Response.json({ error: 'Unauthorized', code: 'NO_USER' }, { status: 401 });
+    }
+    if (user?.role !== 'admin') {
+      return Response.json({ error: 'Forbidden: Admin access required' }, { status: 403 });
     }
 
     const client = base44;
-    const school_id = providedSchoolId || user?.school_id;
-    if (!school_id) {
-      return Response.json({ error: 'Forbidden: user missing school_id', code: 'NO_SCHOOL_ON_USER' }, { status: 403 });
-    }
+    const school_id = user.school_id;
 
     // Fetch core subjects for DP
     const subjects = await client.entities.Subject.filter({ school_id, is_active: true });
