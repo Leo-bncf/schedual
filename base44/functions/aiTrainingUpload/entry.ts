@@ -5,13 +5,17 @@ Deno.serve(async (req) => {
     const base44 = createClientFromRequest(req);
     const user = await base44.auth.me();
 
+    if (!user) {
+      return Response.json({ error: 'Unauthorized' }, { status: 401 });
+    }
+
     const { action, ...params } = await req.json();
     
-    // Check super admin for write operations only
+    // Check super admin for all privileged operations, including list
     const { data: superAdminCheck } = await base44.functions.invoke('getSuperAdminEmails');
     const isSuperAdmin = superAdminCheck?.isSuperAdmin;
     
-    if (['upload', 'updateField', 'approve'].includes(action) && !isSuperAdmin) {
+    if (['upload', 'list', 'updateField', 'approve'].includes(action) && !isSuperAdmin) {
       return Response.json({ error: 'Unauthorized - Super Admin access required' }, { status: 403 });
     }
 
