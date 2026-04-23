@@ -34,6 +34,8 @@ export default function LandingHeader() {
     }
   };
 
+  const isSuperAdmin = (user?.role || user?.data?.role) === 'super_admin';
+
   return (
     <header className="fixed top-0 left-0 right-0 z-50">
       {/* Top dark blue band - hidden when scrolled */}
@@ -90,9 +92,9 @@ export default function LandingHeader() {
           {/* CTA Buttons */}
           <div className="flex items-center gap-2">
             {isAuthenticated ? (
-              <Link to={createPageUrl(['leo.bancroft34@icloud.com', 'erik.gerbst@gmail.com'].includes(user?.email?.toLowerCase()) ? 'Panel' : 'Dashboard')}>
+              <Link to={createPageUrl(isSuperAdmin ? 'Panel' : 'Dashboard')}>
                 <Button className="bg-blue-900 hover:bg-blue-800 h-10 px-6 rounded-full">
-                  {['leo.bancroft34@icloud.com', 'erik.gerbst@gmail.com'].includes(user?.email?.toLowerCase()) ? 'Go to Panel' : 'Go to Dashboard'}
+                  {isSuperAdmin ? 'Go to Panel' : 'Go to Dashboard'}
                 </Button>
               </Link>
             ) : (

@@ -17,8 +17,13 @@ Deno.serve(async (req) => {
     }
 
     // Send email notification to support
+    const supportInbox = (Deno.env.get('SUPER_ADMIN_EMAILS') || '').split(',').map(email => email.trim()).filter(Boolean)[0];
+    if (!supportInbox) {
+      return Response.json({ error: 'Support inbox not configured' }, { status: 500 });
+    }
+
     await base44.integrations.Core.SendEmail({
-      to: 'support@schedual-pro.com',
+      to: supportInbox,
       subject: `New Demo Request from ${school}`,
       body: `
         <div style="margin:0;padding:32px 16px;background:#f8fafc;font-family:Arial,sans-serif;color:#0f172a;">

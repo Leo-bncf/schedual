@@ -3,6 +3,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Shield, Mail, MapPin, Building } from 'lucide-react';
 import LandingHeader from '../components/landing/LandingHeader';
 import LandingFooter from '../components/landing/LandingFooter';
+import { SUPPORT_EMAIL } from '@/lib/publicAppConfig';
 
 export default function PrivacyPolicy() {
   return (
@@ -54,7 +55,7 @@ export default function PrivacyPolicy() {
                 </div>
                 <div className="flex items-center gap-3">
                   <Mail className="w-5 h-5 text-indigo-600" />
-                  <span className="text-slate-900">Contact email: support@schedual-pro.com</span>
+                  <span className="text-slate-900">Contact email: {SUPPORT_EMAIL}</span>
                 </div>
               </div>
             </section>
@@ -206,7 +207,7 @@ export default function PrivacyPolicy() {
                 <li>Withdraw consent at any time</li>
               </ul>
               <p className="text-slate-700 leading-8 mt-4">
-                Requests can be submitted to <a href="mailto:support@schedual-pro.com" className="text-indigo-600 hover:text-indigo-700 font-medium">support@schedual-pro.com</a>.
+                Requests can be submitted to <a href={`mailto:${SUPPORT_EMAIL}`} className="text-indigo-600 hover:text-indigo-700 font-medium">{SUPPORT_EMAIL}</a>.
               </p>
             </section>
 
@@ -243,11 +244,11 @@ export default function PrivacyPolicy() {
                 If you have any questions or concerns about how we handle your personal data, please contact us:
               </p>
               <a 
-                href="mailto:support@schedual-pro.com" 
+                href={`mailto:${SUPPORT_EMAIL}`} 
                 className="inline-flex items-center gap-2 text-indigo-600 hover:text-indigo-700 font-medium"
               >
                 <Mail className="w-4 h-4" />
-                support@schedual-pro.com
+                {SUPPORT_EMAIL}
               </a>
             </CardContent>
           </Card>

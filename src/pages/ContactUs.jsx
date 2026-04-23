@@ -3,6 +3,7 @@ import { Card, CardContent } from "@/components/ui/card";
 import { Mail, MessageCircle, Clock, ArrowRight, ShieldCheck } from 'lucide-react';
 import LandingHeader from '../components/landing/LandingHeader';
 import LandingFooter from '../components/landing/LandingFooter';
+import { SUPPORT_EMAIL } from '@/lib/publicAppConfig';
 
 const supportCards = [
   {
@@ -65,12 +66,12 @@ export default function ContactUs() {
                       <Mail className="h-7 w-7 text-white" />
                     </div>
                     <p className="text-sm uppercase tracking-[0.2em] text-blue-200">Email support</p>
-                    <h2 className="mt-3 text-2xl font-semibold">support@schedual-pro.com</h2>
+                    <h2 className="mt-3 text-2xl font-semibold">{SUPPORT_EMAIL}</h2>
                     <p className="mt-3 text-sm leading-7 text-blue-50/85">
                       Send us an email anytime and we’ll get back to you as soon as possible.
                     </p>
                     <a
-                      href="mailto:support@schedual-pro.com"
+                      href={`mailto:${SUPPORT_EMAIL}`}
                       className="mt-6 inline-flex w-full items-center justify-center gap-2 rounded-xl bg-white px-5 py-3 text-base font-semibold text-blue-950 transition-colors hover:bg-blue-50"
                     >
                       Email support now
