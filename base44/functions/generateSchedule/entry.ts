@@ -788,20 +788,15 @@ Deno.serve(async (req) => {
   try {
     const base44 = createClientFromRequest(req);
     const user = await base44.auth.me();
+    const schoolId = user?.school_id || user?.data?.school_id;
     const role = user?.role || user?.data?.role;
-    const userSchoolId = user?.school_id || user?.data?.school_id;
-    const superAdminEmails = String(Deno.env.get('SUPER_ADMIN_EMAILS') || '')
-      .split(',')
-      .map((email) => email.trim().toLowerCase())
-      .filter(Boolean);
-    const isSuperAdmin = superAdminEmails.includes(String(user?.email || '').toLowerCase());
 
-    if (!user) {
+    if (!user || !schoolId) {
       return Response.json({ error: 'Unauthorized' }, { status: 401 });
     }
 
-    if (role !== 'admin' && !isSuperAdmin) {
-      return Response.json({ error: 'Forbidden: Admin or SuperAdmin access required' }, { status: 403 });
+    if (role !== 'admin') {
+      return Response.json({ error: 'Forbidden: Admin access required' }, { status: 403 });
     }
 
     if (!OPTAPLANNER_API_KEY) {
@@ -815,28 +810,14 @@ Deno.serve(async (req) => {
       return Response.json({ error: 'Missing schedule_version_id' }, { status: 400 });
     }
 
-    const scheduleVersion = isSuperAdmin
-      ? await base44.asServiceRole.entities.ScheduleVersion.get(schedule_version_id)
-      : await base44.entities.ScheduleVersion.get(schedule_version_id);
-    const schoolId = scheduleVersion?.school_id || userSchoolId;
-
-    if (!schoolId) {
-      return Response.json({ error: 'School not found for this schedule version' }, { status: 404 });
-    }
-
-    if (!isSuperAdmin && userSchoolId !== schoolId) {
-      return Response.json({ error: 'Forbidden: This schedule version does not belong to your school' }, { status: 403 });
-    }
-
-    const entityClient = isSuperAdmin ? base44.asServiceRole.entities : base44.entities;
     const [schools, students, teachers, subjects, rooms, teachingGroups, scheduleVersions] = await Promise.all([
       base44.asServiceRole.entities.School.filter({ id: schoolId }, '-created_date', 10),
-      entityClient.Student.filter({ school_id: schoolId }, '-created_date', 500),
-      entityClient.Teacher.filter({ school_id: schoolId }, '-created_date', 500),
-      entityClient.Subject.filter({ school_id: schoolId }, '-created_date', 500),
-      entityClient.Room.filter({ school_id: schoolId }, '-created_date', 500),
-      entityClient.TeachingGroup.filter({ school_id: schoolId }, '-created_date', 1000),
-      entityClient.ScheduleVersion.filter({ school_id: schoolId }, '-created_date', 1000),
+      base44.entities.Student.filter({ school_id: schoolId }, '-created_date', 500),
+      base44.entities.Teacher.filter({ school_id: schoolId }, '-created_date', 500),
+      base44.entities.Subject.filter({ school_id: schoolId }, '-created_date', 500),
+      base44.entities.Room.filter({ school_id: schoolId }, '-created_date', 500),
+      base44.entities.TeachingGroup.filter({ school_id: schoolId }, '-created_date', 1000),
+      base44.entities.ScheduleVersion.filter({ school_id: schoolId }, '-created_date', 1000),
     ]);
 
     const school = schools[0];
@@ -1015,24 +996,21 @@ Deno.serve(async (req) => {
       });
     }
 
-    const scheduleSlotClient = isSuperAdmin ? base44.asServiceRole.entities.ScheduleSlot : base44.entities.ScheduleSlot;
-    const scheduleVersionClient = isSuperAdmin ? base44.asServiceRole.entities.ScheduleVersion : base44.entities.ScheduleVersion;
-
-    const existingVersionSlots = await scheduleSlotClient.filter({ schedule_version: schedule_version_id }, '-created_date', 1000);
+    const existingVersionSlots = await base44.entities.ScheduleSlot.filter({ schedule_version: schedule_version_id }, '-created_date', 1000);
     console.log(`[generateSchedule] Found ${existingVersionSlots.length} existing slots for version ${schedule_version_id}`);
     for (let i = 0; i < existingVersionSlots.length; i += 50) {
       await Promise.all(
-        existingVersionSlots.slice(i, i + 50).map((slot) => scheduleSlotClient.delete(slot.id))
+        existingVersionSlots.slice(i, i + 50).map((slot) => base44.entities.ScheduleSlot.delete(slot.id))
       );
     }
     console.log(`[generateSchedule] Cleared ${existingVersionSlots.length} existing slots for version ${schedule_version_id}`);
 
     const BATCH = 50;
     for (let i = 0; i < slotsToPersist.length; i += BATCH) {
-      await scheduleSlotClient.bulkCreate(slotsToPersist.slice(i, i + BATCH));
+      await base44.entities.ScheduleSlot.bulkCreate(slotsToPersist.slice(i, i + BATCH));
     }
 
-    await scheduleVersionClient.update(schedule_version_id, {
+    await base44.entities.ScheduleVersion.update(schedule_version_id, {
       generated_at: new Date().toISOString(),
       generation_params: { 
         programmes: [...programmes],
