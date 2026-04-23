@@ -9,19 +9,26 @@ Deno.serve(async (req) => {
   const startTime = Date.now();
   
   try {
-    const bearerToken = req.headers.get('authorization')?.replace('Bearer ', '') || '';
-    const expectedToken = Deno.env.get('WEBHOOK_BEARER_TOKEN');
+    const base44 = createClientFromRequest(req);
+    const user = await base44.auth.me();
 
-    if (!expectedToken || bearerToken !== expectedToken) {
+    if (!user) {
       return Response.json({
         ok: false,
         error: 'UNAUTHORIZED',
-        message: 'Invalid or missing bearer token',
+        message: 'Authentication required',
         elapsedMs: Date.now() - startTime
       }, { status: 401 });
     }
 
-    const base44 = createClientFromRequest(req);
+    if (user.role !== 'admin') {
+      return Response.json({
+        ok: false,
+        error: 'FORBIDDEN',
+        message: 'Admin access required',
+        elapsedMs: Date.now() - startTime
+      }, { status: 403 });
+    }
 
     const [teachingGroups, teachers] = await Promise.all([
       base44.asServiceRole.entities.TeachingGroup.list(),
@@ -34,7 +41,8 @@ Deno.serve(async (req) => {
       ok: true,
       message: 'assignTeachers runtime is healthy',
       checks: {
-        bearer_token: true,
+        authenticated_user: true,
+        admin_access: true,
         db_read: true,
         service_role: canUseServiceRole
       },
