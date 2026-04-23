@@ -1,0 +1,83 @@
+{
+  "name": "AITrainingData",
+  "type": "object",
+  "properties": {
+    "agent_name": {
+      "type": "string",
+      "enum": [
+        "student_importer",
+        "teacher_importer",
+        "room_importer",
+        "subject_importer"
+      ],
+      "description": "Which AI agent this training data is for"
+    },
+    "file_url": {
+      "type": "string",
+      "description": "URL of the uploaded training document"
+    },
+    "file_name": {
+      "type": "string",
+      "description": "Original filename"
+    },
+    "extracted_data": {
+      "type": "object",
+      "description": "Raw data extracted by the AI"
+    },
+    "field_feedback": {
+      "type": "object",
+      "description": "Field-by-field corrections: {field_path: {correct: boolean, corrected_value: any, notes: string}}"
+    },
+    "overall_status": {
+      "type": "string",
+      "enum": [
+        "pending_review",
+        "approved",
+        "rejected",
+        "partially_approved"
+      ],
+      "default": "pending_review",
+      "description": "Overall review status"
+    },
+    "reviewed_by": {
+      "type": "string",
+      "description": "Email of admin who reviewed"
+    },
+    "reviewed_at": {
+      "type": "string",
+      "format": "date-time",
+      "description": "When it was reviewed"
+    },
+    "training_notes": {
+      "type": "string",
+      "description": "Additional notes from the reviewer"
+    }
+  },
+  "required": [
+    "agent_name",
+    "file_url",
+    "extracted_data"
+  ],
+  "rls": {
+    "create": {
+      "user_condition": {
+        "role": "admin"
+      }
+    },
+    "read": {
+      "user_condition": {
+        "role": "admin"
+      }
+    },
+    "update": {
+      "user_condition": {
+        "role": "admin"
+      }
+    },
+    "delete": {
+      "user_condition": {
+        "role": "admin"
+      }
+    }
+  }
+}

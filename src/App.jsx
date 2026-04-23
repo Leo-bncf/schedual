@@ -4,7 +4,7 @@ import { queryClientInstance } from '@/lib/query-client'
 import VisualEditAgent from '@/lib/VisualEditAgent'
 import NavigationTracker from '@/lib/NavigationTracker'
 import { pagesConfig } from './pages.config'
-import { BrowserRouter as Router, Route, Routes } from 'react-router-dom';
+import { BrowserRouter as Router, Route, Routes, useLocation } from 'react-router-dom';
 import PageNotFound from './lib/PageNotFound';
 import { AuthProvider, useAuth } from '@/lib/AuthContext';
 import UserNotRegisteredError from '@/components/UserNotRegisteredError';
@@ -26,8 +26,46 @@ const LayoutWrapper = ({ children, currentPageName }) => Layout ?
   <Layout currentPageName={currentPageName}>{children}</Layout>
   : <>{children}</>;
 
+const publicRoutePaths = new Set(['/', '/Landing', '/PrivacyPolicy', '/TermsOfUse', '/ContactUs', '/FAQ', '/DataSecurity', '/About', '/Solutions', '/Demo']);
+
 const AuthenticatedApp = () => {
   const { isLoadingAuth, isLoadingPublicSettings, authError, navigateToLogin } = useAuth();
+  const location = useLocation();
+  const isPublicRoute = publicRoutePaths.has(location.pathname);
+
+  // Public routes should render without forcing login
+  if (isPublicRoute && isLoadingPublicSettings) {
+    return (
+      <Routes>
+        <Route path="/" element={
+          <LayoutWrapper currentPageName={mainPageKey}>
+            <MainPage />
+          </LayoutWrapper>
+        } />
+        {Object.entries(Pages).map(([path, Page]) => (
+          <Route
+            key={path}
+            path={`/${path}`}
+            element={
+              <LayoutWrapper currentPageName={path}>
+                <Page />
+              </LayoutWrapper>
+            }
+          />
+        ))}
+        <Route path="/AnalyticsAdmin" element={<LayoutWrapper currentPageName="AnalyticsAdmin"><AnalyticsAdmin /></LayoutWrapper>} />
+        <Route path="/AutomationAdmin" element={<LayoutWrapper currentPageName="AutomationAdmin"><AutomationAdmin /></LayoutWrapper>} />
+        <Route path="/SessionActivityAdmin" element={<LayoutWrapper currentPageName="SessionActivityAdmin"><SessionActivityAdmin /></LayoutWrapper>} />
+        <Route path="/AITrainingAdmin" element={<LayoutWrapper currentPageName="AITrainingAdmin"><AITrainingAdmin /></LayoutWrapper>} />
+        <Route path="/PaymentSuccess" element={<LayoutWrapper currentPageName="PaymentSuccess"><PaymentSuccess /></LayoutWrapper>} />
+        <Route path="/About" element={<LayoutWrapper currentPageName="About"><About /></LayoutWrapper>} />
+        <Route path="/Solutions" element={<LayoutWrapper currentPageName="Solutions"><Solutions /></LayoutWrapper>} />
+        <Route path="/Demo" element={<LayoutWrapper currentPageName="Demo"><Demo /></LayoutWrapper>} />
+        <Route path="/ScholrIntegration" element={<LayoutWrapper currentPageName="ScholrIntegration"><ScholrIntegration /></LayoutWrapper>} />
+        <Route path="*" element={<PageNotFound />} />
+      </Routes>
+    );
+  }
 
   // Show loading spinner while checking app public settings or auth
   if (isLoadingPublicSettings || isLoadingAuth) {
@@ -43,9 +81,12 @@ const AuthenticatedApp = () => {
     if (authError.type === 'user_not_registered') {
       return <UserNotRegisteredError />;
     } else if (authError.type === 'auth_required') {
-      // Redirect to login automatically
-      navigateToLogin();
-      return null;
+      if (isPublicRoute) {
+        // Allow public pages to render without login
+      } else {
+        navigateToLogin();
+        return null;
+      }
     }
   }
 
