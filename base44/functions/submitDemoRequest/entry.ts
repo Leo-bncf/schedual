@@ -3,7 +3,18 @@ import { createClientFromRequest } from 'npm:@base44/sdk@0.8.6';
 Deno.serve(async (req) => {
   try {
     const base44 = createClientFromRequest(req);
+    const user = await base44.auth.me();
+    if (!user) {
+      return Response.json({ error: 'Unauthorized' }, { status: 401 });
+    }
     const { name, email, school, message } = await req.json();
+
+    if (!name || !email || !school) {
+      return Response.json({ error: 'Missing required fields' }, { status: 400 });
+    }
+    if (String(email).trim().toLowerCase() !== String(user.email || '').trim().toLowerCase()) {
+      return Response.json({ error: 'Forbidden: invalid email' }, { status: 403 });
+    }
 
     // Send email notification to support
     await base44.integrations.Core.SendEmail({
