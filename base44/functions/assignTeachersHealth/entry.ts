@@ -9,52 +9,36 @@ Deno.serve(async (req) => {
   const startTime = Date.now();
   
   try {
-    // Test 1: Auth
+    const bearerToken = req.headers.get('authorization')?.replace('Bearer ', '') || '';
+    const expectedToken = Deno.env.get('WEBHOOK_BEARER_TOKEN');
+
+    if (!expectedToken || bearerToken !== expectedToken) {
+      return Response.json({
+        ok: false,
+        error: 'UNAUTHORIZED',
+        message: 'Invalid or missing bearer token',
+        elapsedMs: Date.now() - startTime
+      }, { status: 401 });
+    }
+
     const base44 = createClientFromRequest(req);
-    const user = await base44.auth.me();
-    
-    if (!user) {
-      return Response.json({
-        ok: false,
-        error: 'AUTH_FAILED',
-        message: 'Authentication check failed - no user',
-        elapsedMs: Date.now() - startTime
-      });
-    }
-    
-    // Test 2: DB read
-    const school_id = user.school_id;
-    if (!school_id) {
-      return Response.json({
-        ok: false,
-        error: 'NO_SCHOOL',
-        message: 'User has no school_id assigned',
-        user: { id: user.id, email: user.email },
-        elapsedMs: Date.now() - startTime
-      });
-    }
-    
-    // Test 3: Entity queries
+
     const [teachingGroups, teachers] = await Promise.all([
-      base44.entities.TeachingGroup.filter({ school_id, is_active: true }),
-      base44.entities.Teacher.filter({ school_id, is_active: true })
+      base44.asServiceRole.entities.TeachingGroup.list(),
+      base44.asServiceRole.entities.Teacher.list()
     ]);
     
-    // Test 4: Service role check
     const canUseServiceRole = !!base44.asServiceRole;
     
     return Response.json({
       ok: true,
       message: 'assignTeachers runtime is healthy',
       checks: {
-        auth: true,
-        school_id: true,
+        bearer_token: true,
         db_read: true,
         service_role: canUseServiceRole
       },
       data: {
-        user_id: user.id,
-        school_id,
         teaching_groups_count: teachingGroups.length,
         teachers_count: teachers.length
       },
