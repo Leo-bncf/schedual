@@ -17,11 +17,6 @@ Deno.serve(async (req) => {
         }
 
         return Response.json({ error: 'Account deletion requires a fresh authenticated flow and cannot be completed with password text confirmation alone.' }, { status: 400 });
-
-        return Response.json({ 
-            success: true,
-            message: 'Account deleted successfully' 
-        });
     } catch (error) {
         console.error('Delete account error:', error);
         return Response.json({ 
