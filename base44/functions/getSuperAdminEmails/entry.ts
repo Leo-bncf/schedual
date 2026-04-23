@@ -20,9 +20,16 @@ Deno.serve(async (req) => {
     // Check if current user is SuperAdmin
     const isSuperAdmin = superAdminEmails.includes((user.email || '').toLowerCase());
 
+    if (!isSuperAdmin) {
+      return Response.json({
+        isSuperAdmin: false,
+        error: 'Forbidden'
+      }, { status: 403 });
+    }
+
     return Response.json({ 
-      isSuperAdmin,
-      superAdminEmails: isSuperAdmin ? superAdminEmails : []
+      isSuperAdmin: true,
+      superAdminEmails
     });
   } catch (error) {
     console.error('Error in getSuperAdminEmails:', error);
