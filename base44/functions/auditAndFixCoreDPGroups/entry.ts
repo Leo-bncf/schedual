@@ -10,8 +10,12 @@ Deno.serve(async (req) => {
     }
 
     const base44 = createClientFromRequest(req);
+    const user = await base44.auth.me();
+    if (user?.role !== 'admin') {
+      return Response.json({ error: 'Forbidden: Admin access required' }, { status: 403 });
+    }
     const body = await req.json().catch(() => ({}));
-    const school_id = body?.school_id || body?.schoolId || null;
+    const school_id = body?.school_id || body?.schoolId || user.school_id || null;
 
     if (!school_id) {
       return Response.json({ error: 'school_id required in payload' }, { status: 400 });

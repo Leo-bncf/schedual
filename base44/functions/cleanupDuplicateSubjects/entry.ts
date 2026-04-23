@@ -1,13 +1,18 @@
 import { createClientFromRequest } from 'npm:@base44/sdk@0.8.6';
-import { getUserSchoolId } from './securityHelper.js';
 
 Deno.serve(async (req) => {
   try {
     const base44 = createClientFromRequest(req);
     const user = await base44.auth.me();
     if (!user) return Response.json({ error: 'Unauthorized' }, { status: 401 });
+    if (user?.role !== 'admin') {
+      return Response.json({ error: 'Forbidden: Admin access required' }, { status: 403 });
+    }
 
-    const schoolId = await getUserSchoolId(base44);
+    const schoolId = user.school_id || user.data?.school_id;
+    if (!schoolId) {
+      return Response.json({ error: 'Unauthorized' }, { status: 401 });
+    }
     const students = await base44.entities.Student.filter({ school_id: schoolId, ib_programme: 'DP' });
 
     let fixed = 0;

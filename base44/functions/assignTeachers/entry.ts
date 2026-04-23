@@ -98,6 +98,14 @@ Deno.serve(async (req) => {
       }, { status: 401 });
     }
 
+    if (user?.role !== 'admin') {
+      return Response.json({
+        success: false,
+        error: 'FORBIDDEN',
+        message: 'Admin access required'
+      }, { status: 403 });
+    }
+
     // VALIDATION 4: Extract and validate school_id
     stage = 'validate_params';
     const school_id = body?.school_id || user.school_id;

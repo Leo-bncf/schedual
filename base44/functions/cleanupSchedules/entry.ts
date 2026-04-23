@@ -8,6 +8,9 @@ Deno.serve(async (req) => {
     if (!user?.school_id) {
       return Response.json({ error: 'Unauthorized' }, { status: 401 });
     }
+    if (user?.role !== 'admin') {
+      return Response.json({ error: 'Forbidden: Admin access required' }, { status: 403 });
+    }
 
     // Delete all schedule slots for this school
     const slots = await base44.entities.ScheduleSlot.filter({ school_id: user.school_id });

@@ -116,8 +116,7 @@ export default function Layout({ children, currentPageName }) {
           isSuperAdminUser = data?.isSuperAdmin || false;
         } catch (adminErr) {
           console.error('Error fetching super admin status:', adminErr);
-          const hardAllowed = ["erik.gerbst@gmail.com", "leo.bancroft34@icloud.com"];
-          isSuperAdminUser = hardAllowed.includes(userData?.email?.toLowerCase());
+          isSuperAdminUser = false;
         }
         setIsSuperAdmin(isSuperAdminUser);
 
