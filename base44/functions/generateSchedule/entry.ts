@@ -1,6 +1,6 @@
 import { createClientFromRequest } from 'npm:@base44/sdk@0.8.20';
 
-const OPTAPLANNER_API_KEY = Deno.env.get('OPTAPLANNER_API_KEY') || 'ib-scheduler-987654321';
+const OPTAPLANNER_API_KEY = Deno.env.get('OPTAPLANNER_API_KEY');
 
 // Build ingest URL: strip trailing slash, append /base44/ingest if not already present
 function getIngestUrl() {
@@ -786,9 +786,19 @@ Deno.serve(async (req) => {
     const base44 = createClientFromRequest(req);
     const user = await base44.auth.me();
     const schoolId = user?.school_id || user?.data?.school_id;
+    const role = user?.role || user?.data?.role;
 
-    if (!schoolId) {
+    if (!user || !schoolId) {
       return Response.json({ error: 'Unauthorized' }, { status: 401 });
+    }
+
+    if (role !== 'admin') {
+      return Response.json({ error: 'Forbidden: Admin access required' }, { status: 403 });
+    }
+
+    if (!OPTAPLANNER_API_KEY) {
+      console.error('[generateSchedule] Missing OPTAPLANNER_API_KEY');
+      return Response.json({ error: 'Solver API key not configured' }, { status: 500 });
     }
 
     const { schedule_version_id } = await req.json();

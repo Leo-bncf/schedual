@@ -14,8 +14,17 @@ Deno.serve(async (req) => {
     }
 
     const base44 = createClientFromRequest(req);
-    let user = null;
-    try { user = await base44.auth.me(); } catch (_) { user = null; }
+    const user = await base44.auth.me();
+    const schoolIdFromUser = user?.school_id || user?.data?.school_id;
+    const role = user?.role || user?.data?.role;
+
+    if (!user || !schoolIdFromUser) {
+      return Response.json({ error: 'Unauthorized' }, { status: 401 });
+    }
+
+    if (role !== 'admin') {
+      return Response.json({ error: 'Forbidden: Admin access required' }, { status: 403 });
+    }
 
     // Allow limited service-mode bypass (no persistence) when explicitly requested
     const body = await req.json().catch(() => ({}));

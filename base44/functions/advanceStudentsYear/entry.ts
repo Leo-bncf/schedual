@@ -9,6 +9,10 @@ Deno.serve(async (req) => {
       return Response.json({ error: 'Unauthorized' }, { status: 401 });
     }
 
+    if ((user?.role || user?.data?.role) !== 'admin') {
+      return Response.json({ error: 'Forbidden: Admin access required' }, { status: 403 });
+    }
+
     // Get all students for this school
     const students = await base44.entities.Student.filter({ school_id: user.school_id });
     

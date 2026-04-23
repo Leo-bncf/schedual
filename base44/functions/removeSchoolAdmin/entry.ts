@@ -17,6 +17,10 @@ Deno.serve(async (req) => {
       return Response.json({ error: 'No school assigned' }, { status: 403 });
     }
 
+    if ((currentUser.role || currentUser.data?.role) !== 'admin') {
+      return Response.json({ error: 'Forbidden: Admin access required' }, { status: 403 });
+    }
+
     const { admin_id } = await req.json();
 
     if (!admin_id) {

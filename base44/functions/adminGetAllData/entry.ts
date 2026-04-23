@@ -16,10 +16,9 @@ Deno.serve(async (req) => {
       .split(',')
       .map(email => email.trim().toLowerCase())
       .filter(email => email.length > 0);
-    const hardAllowed = ["leo.bancroft34@icloud.com"];
 
     // Check if current user is SuperAdmin
-    const isSuperAdmin = hardAllowed.includes((user.email || '').toLowerCase()) || superAdminEmails.includes((user.email || '').toLowerCase());
+    const isSuperAdmin = superAdminEmails.includes((user.email || '').toLowerCase());
     
     if (!isSuperAdmin) {
       return Response.json({ error: 'Forbidden: SuperAdmin access required' }, { status: 403 });

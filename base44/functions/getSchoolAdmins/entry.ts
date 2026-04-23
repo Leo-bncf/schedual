@@ -17,6 +17,10 @@ Deno.serve(async (req) => {
       return Response.json({ error: 'Unauthorized' }, { status: 401 });
     }
 
+    if ((currentUser.role || currentUser.data?.role) !== 'admin') {
+      return Response.json({ error: 'Forbidden: Admin access required' }, { status: 403 });
+    }
+
     const admins = await base44.asServiceRole.entities.User.filter({
       school_id: schoolId,
       role: 'admin'
