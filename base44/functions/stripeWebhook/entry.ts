@@ -49,9 +49,9 @@ function getTierSettings(tierId, existingSettings = {}) {
 
 function getTierIdFromPriceId(priceId) {
   const priceToTier = {
-    price_1THYLAD8slkoqOiBqzij9LlB: 'tier1',
-    price_1THYLAD8slkoqOiBI0rA7cCR: 'tier2',
-    price_1THYLAD8slkoqOiBQCaKAj2z: 'tier3',
+    [Deno.env.get('STRIPE_PRICE_ID_TIER1')]: 'tier1',
+    [Deno.env.get('STRIPE_PRICE_ID_TIER2')]: 'tier2',
+    [Deno.env.get('STRIPE_PRICE_ID_TIER3')]: 'tier3',
   };
 
   return priceToTier[priceId] || null;

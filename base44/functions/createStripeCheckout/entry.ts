@@ -4,9 +4,9 @@ import Stripe from 'npm:stripe@18.1.1';
 const stripe = new Stripe(Deno.env.get('STRIPE_SECRET_KEY'));
 
 const TIER_PRICE_IDS = {
-  tier1: 'price_1THYLAD8slkoqOiBqzij9LlB',
-  tier2: 'price_1THYLAD8slkoqOiBI0rA7cCR',
-  tier3: 'price_1THYLAD8slkoqOiBQCaKAj2z',
+  tier1: Deno.env.get('STRIPE_PRICE_ID_TIER1'),
+  tier2: Deno.env.get('STRIPE_PRICE_ID_TIER2'),
+  tier3: Deno.env.get('STRIPE_PRICE_ID_TIER3'),
 };
 
 Deno.serve(async (req) => {
@@ -39,7 +39,10 @@ Deno.serve(async (req) => {
     }
 
     const expectedPriceId = TIER_PRICE_IDS[tier];
-    if (!expectedPriceId || priceId !== expectedPriceId) {
+    if (!expectedPriceId) {
+      return Response.json({ error: 'Stripe price is not configured for this tier' }, { status: 500 });
+    }
+    if (priceId !== expectedPriceId) {
       return Response.json({ error: 'Invalid tier price selection' }, { status: 400 });
     }
 

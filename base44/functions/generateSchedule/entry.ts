@@ -4,7 +4,10 @@ const OPTAPLANNER_API_KEY = Deno.env.get('OPTAPLANNER_API_KEY');
 
 // Build ingest URL: strip trailing slash, append /base44/ingest if not already present
 function getIngestUrl() {
-  const ep = (Deno.env.get('OPTAPLANNER_ENDPOINT') || 'http://87.106.27.27:8080').replace(/\/$/, '');
+  const ep = (Deno.env.get('OPTAPLANNER_ENDPOINT') || '').replace(/\/$/, '');
+  if (!ep) {
+    throw new Error('OPTAPLANNER_ENDPOINT is not configured');
+  }
   const url = ep.endsWith('/base44/ingest') ? ep : `${ep}/base44/ingest`;
   console.log(`[OptaPlanner] Ingest URL: ${url}`);
   return url;
