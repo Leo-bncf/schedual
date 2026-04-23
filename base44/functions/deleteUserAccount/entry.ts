@@ -1,12 +1,8 @@
 import { createClientFromRequest } from 'npm:@base44/sdk@0.8.6';
-import { validateCSRF } from './csrfHelper.js';
 
 Deno.serve(async (req) => {
     try {
         const base44 = createClientFromRequest(req);
-        
-        // Validate CSRF
-        await validateCSRF(req, base44);
         
         const user = await base44.auth.me();
 
@@ -16,13 +12,11 @@ Deno.serve(async (req) => {
 
         const { confirmPassword } = await req.json();
         
-        // Require password confirmation for deletion
         if (!confirmPassword) {
             return Response.json({ error: 'Password confirmation required' }, { status: 400 });
         }
 
-        // Delete the user using service role
-        await base44.asServiceRole.entities.User.delete(user.id);
+        return Response.json({ error: 'Account deletion requires a fresh authenticated flow and cannot be completed with password text confirmation alone.' }, { status: 400 });
 
         return Response.json({ 
             success: true,

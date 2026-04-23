@@ -11,6 +11,9 @@ Deno.serve(async (req) => {
     if (!user.school_id) {
       return Response.json({ error: 'Your account is not linked to a school' }, { status: 400 });
     }
+    if (user?.role !== 'admin') {
+      return Response.json({ error: 'Forbidden: Admin access required' }, { status: 403 });
+    }
 
     const body = await req.json().catch(() => ({}));
     const studentIds = Array.isArray(body?.studentIds) ? body.studentIds.filter(Boolean) : [];

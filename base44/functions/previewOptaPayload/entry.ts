@@ -295,12 +295,15 @@ Deno.serve(async (req) => {
     const base44 = createClientFromRequest(req);
     const user = await base44.auth.me().catch(() => null);
 
-    const body = await req.json().catch(() => ({}));
-    const schoolId = body.school_id || user?.school_id;
-
-    if (!schoolId) {
-      return Response.json({ error: 'school_id is required' }, { status: 400 });
+    if (!user?.school_id) {
+      return Response.json({ error: 'Unauthorized' }, { status: 401 });
     }
+    if (user?.role !== 'admin') {
+      return Response.json({ error: 'Forbidden: Admin access required' }, { status: 403 });
+    }
+
+    const body = await req.json().catch(() => ({}));
+    const schoolId = user.school_id;
 
     const [schools, students, teachers, subjects, rooms, teachingGroups, scheduleVersions] = await Promise.all([
       base44.asServiceRole.entities.School.filter({ id: schoolId }, '-created_date', 10),

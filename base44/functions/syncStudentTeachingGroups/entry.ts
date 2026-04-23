@@ -29,6 +29,13 @@ Deno.serve(async (req) => {
         details: 'User not authenticated or missing school_id'
       }, { status: 401 });
     }
+    if (user?.role !== 'admin') {
+      return Response.json({
+        success: false,
+        error: 'Forbidden: Admin access required',
+        stage: 'auth'
+      }, { status: 403 });
+    }
 
     school_id = user.school_id;
     

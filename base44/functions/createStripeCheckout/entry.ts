@@ -13,6 +13,15 @@ Deno.serve(async (req) => {
     const body = await req.json();
     const { priceId, tier, userId, userEmail } = body || {};
 
+    if (!userId || !userEmail) {
+      return Response.json({ error: 'Missing checkout details' }, { status: 400 });
+    }
+
+    const normalizedEmail = String(userEmail).trim().toLowerCase();
+    if (!normalizedEmail || !normalizedEmail.includes('@')) {
+      return Response.json({ error: 'Invalid user email' }, { status: 400 });
+    }
+
     if (!priceId || !tier || !userId || !userEmail) {
       return Response.json({ error: 'Missing checkout details' }, { status: 400 });
     }
@@ -35,12 +44,13 @@ Deno.serve(async (req) => {
       line_items: [{ price: expectedPriceId, quantity: 1 }],
       success_url: `${origin}/PaymentSuccess?session_id={CHECKOUT_SESSION_ID}`,
       cancel_url: `${origin}/Settings?stripe=cancelled`,
-      customer_email: userEmail,
+      customer_email: normalizedEmail,
+      client_reference_id: String(userId),
       metadata: {
         base44_app_id: Deno.env.get('BASE44_APP_ID'),
         tier,
-        user_id: userId,
-        user_email: userEmail,
+        user_id: String(userId),
+        user_email: normalizedEmail,
         price_id: expectedPriceId,
       },
     });

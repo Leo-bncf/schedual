@@ -260,6 +260,10 @@ Deno.serve(async (req) => {
     const base44 = createClientFromRequest(req);
     const user = await base44.auth.me().catch(() => null);
 
+    if (!user?.school_id) {
+      return Response.json({ error: 'Unauthorized' }, { status: 401 });
+    }
+
     const body = await req.json().catch(() => ({}));
     const { type, student_id, teacher_id, schedule_version_id } = body;
 
@@ -267,12 +271,8 @@ Deno.serve(async (req) => {
       return Response.json({ error: 'type, schedule_version_id and target id are required' }, { status: 400 });
     }
 
-    const schoolId = user?.school_id || body.school_id;
-    if (!schoolId) {
-      return Response.json({ error: 'Unauthorized' }, { status: 401 });
-    }
-
-    const entityApi = user?.school_id ? base44.entities : base44.asServiceRole.entities;
+    const schoolId = user.school_id;
+    const entityApi = base44.entities;
     const [schools, scheduleVersions, subjects, teachers, rooms, groups] = await Promise.all([
       entityApi.School.filter({ id: schoolId }),
       entityApi.ScheduleVersion.filter({ id: schedule_version_id }),
