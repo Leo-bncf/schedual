@@ -11,31 +11,16 @@ const TIER_PRICE_IDS = {
 
 Deno.serve(async (req) => {
   try {
-    const base44 = createClientFromRequest(req);
-    const user = await base44.auth.me().catch(() => null);
+    createClientFromRequest(req);
     const body = await req.json();
-    const { priceId, tier, userId, userEmail } = body || {};
+    const { priceId, tier, userEmail } = body || {};
 
-    if (!user) {
-      return Response.json({ error: 'Unauthorized' }, { status: 401 });
-    }
-    if (!userId || !userEmail) {
+    const normalizedEmail = String(userEmail || '').trim().toLowerCase();
+    if (!priceId || !tier || !normalizedEmail) {
       return Response.json({ error: 'Missing checkout details' }, { status: 400 });
     }
-    if (String(userId) !== String(user.id)) {
-      return Response.json({ error: 'Forbidden: invalid user id' }, { status: 403 });
-    }
-
-    const normalizedEmail = String(userEmail).trim().toLowerCase();
-    if (!normalizedEmail || !normalizedEmail.includes('@')) {
+    if (!normalizedEmail.includes('@')) {
       return Response.json({ error: 'Invalid user email' }, { status: 400 });
-    }
-    if (normalizedEmail !== String(user.email || '').trim().toLowerCase()) {
-      return Response.json({ error: 'Forbidden: invalid user email' }, { status: 403 });
-    }
-
-    if (!priceId || !tier || !userId || !userEmail) {
-      return Response.json({ error: 'Missing checkout details' }, { status: 400 });
     }
 
     const expectedPriceId = TIER_PRICE_IDS[tier];
@@ -60,11 +45,9 @@ Deno.serve(async (req) => {
       success_url: `${origin}/PaymentSuccess?session_id={CHECKOUT_SESSION_ID}`,
       cancel_url: `${origin}/Settings?stripe=cancelled`,
       customer_email: normalizedEmail,
-      client_reference_id: String(userId),
       metadata: {
         base44_app_id: Deno.env.get('BASE44_APP_ID'),
         tier,
-        user_id: String(userId),
         user_email: normalizedEmail,
         price_id: expectedPriceId,
       },

@@ -72,8 +72,10 @@ async function ensureSchoolForUser(base44, user, session) {
     ? new Date(session.subscription_details.current_period_end * 1000).toISOString()
     : null;
 
-  if (user.school_id) {
-    const userSchools = await base44.asServiceRole.entities.School.filter({ id: user.school_id });
+  const userSchoolId = user.school_id || user.data?.school_id;
+
+  if (userSchoolId) {
+    const userSchools = await base44.asServiceRole.entities.School.filter({ id: userSchoolId });
     const userSchool = userSchools[0];
 
     if (userSchool) {
@@ -140,11 +142,6 @@ async function ensureSchoolForUser(base44, user, session) {
 Deno.serve(async (req) => {
   try {
     const base44 = createClientFromRequest(req);
-    const user = await base44.auth.me();
-
-    if (!user) {
-      return Response.json({ error: 'Unauthorized' }, { status: 401 });
-    }
 
     const { sessionId } = await req.json();
     if (!sessionId) {
@@ -159,9 +156,15 @@ Deno.serve(async (req) => {
       return Response.json({ error: 'Stripe session is not paid yet' }, { status: 400 });
     }
 
-    const sessionEmail = session.customer_details?.email || session.customer_email || null;
-    if (sessionEmail && sessionEmail.toLowerCase() !== user.email?.toLowerCase()) {
-      return Response.json({ error: 'This payment does not belong to the current user' }, { status: 403 });
+    const sessionEmail = session.customer_details?.email || session.customer_email || session.metadata?.user_email || null;
+    if (!sessionEmail) {
+      return Response.json({ error: 'Missing customer email on Stripe session' }, { status: 400 });
+    }
+
+    const users = await base44.asServiceRole.entities.User.filter({ email: sessionEmail.toLowerCase() });
+    const user = users[0];
+    if (!user) {
+      return Response.json({ error: 'No user found for this payment email' }, { status: 404 });
     }
 
     const result = await ensureSchoolForUser(base44, user, session);

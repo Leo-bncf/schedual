@@ -43,13 +43,17 @@ export default function PricingSection() {
     }
 
     const user = await base44.auth.me();
+    if (!user?.email) {
+      alert('Please sign in with a valid email before checkout.');
+      return;
+    }
+
     setLoading(true);
 
     try {
       const response = await base44.functions.invoke('createStripeCheckout', {
         priceId,
         tier: 'tier2',
-        userId: user.id,
         userEmail: user.email,
       });
 
