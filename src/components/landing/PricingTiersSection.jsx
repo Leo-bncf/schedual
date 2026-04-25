@@ -153,6 +153,7 @@ export default function PricingTiersSection() {
 
     const isAuthenticated = await base44.auth.isAuthenticated();
     if (!isAuthenticated) {
+      alert('You need to sign in before buying a plan.');
       base44.auth.redirectToLogin(window.location.href);
       return;
     }
@@ -194,10 +195,10 @@ export default function PricingTiersSection() {
             Choose your school tier
           </div>
           <h2 className="text-4xl font-bold tracking-tight text-slate-900 sm:text-5xl">
-            Cleaner pricing, same checkout flow
+            Choose your plan and buy securely
           </h2>
           <p className="mt-4 text-lg text-slate-600">
-            Pick a plan and continue to secure checkout. Your school limits for students, schedule versions, admin seats, and support all follow the selected tier.
+            Sign in, pick a plan, and continue to secure checkout. Your school limits for students, schedule versions, admin seats, and support all follow the selected tier.
           </p>
         </div>
 
@@ -307,7 +308,7 @@ export default function PricingTiersSection() {
                 transition={{ duration: 0.28, delay: 0.34 }}
                 className="mt-8 rounded-2xl border border-blue-300/20 bg-white/10 p-4 backdrop-blur-sm"
               >
-                <p className="text-sm text-sky-100">Already have an account? You’ll go straight to payment. New user? You’ll create your account first.</p>
+                <p className="text-sm text-sky-100">You need an account and must be signed in before going to payment.</p>
               </motion.div>
 
               <motion.div

@@ -110,7 +110,7 @@ export default function LandingHeader() {
                   onClick={() => base44.auth.redirectToLogin('/Dashboard')}
                   className="bg-blue-900 hover:bg-blue-800 h-10 px-6 rounded-full"
                 >
-                  Sign Up
+                  Sign in to buy
                 </Button>
               </>
             )}

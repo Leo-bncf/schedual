@@ -23,7 +23,7 @@ export default function PaymentSuccess() {
       try {
         await base44.functions.invoke('confirmStripeCheckout', { sessionId });
         setStatus('success');
-        setMessage('Payment confirmed. Your school access is now ready.');
+        setMessage('Payment confirmed. Redirecting you to your account settings.');
       } catch (error) {
         setStatus('error');
         setMessage(error?.response?.data?.error || error.message || 'Unable to confirm your payment.');
