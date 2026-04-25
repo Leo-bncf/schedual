@@ -34,7 +34,7 @@ export default function PaymentSuccess() {
   }, []);
 
   if (status === 'success') {
-    return <Navigate to="/Dashboard" replace />;
+    return <Navigate to="/Settings?stripe=success" replace />;
   }
 
   return (
