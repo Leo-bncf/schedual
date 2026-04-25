@@ -40,9 +40,10 @@ Deno.serve(async (req) => {
     }
 
     const admin = adminToRemove[0];
+    const adminSchoolId = admin.school_id || admin.data?.school_id;
 
     // Verify the admin belongs to the same school
-    if (admin.school_id !== schoolId) {
+    if (adminSchoolId !== schoolId) {
       return Response.json({ error: 'Admin does not belong to your school' }, { status: 403 });
     }
 

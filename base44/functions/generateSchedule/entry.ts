@@ -787,7 +787,9 @@ function parseResponseToSlots({ responseData, payload, scheduleVersionId, school
 Deno.serve(async (req) => {
   try {
     const base44 = createClientFromRequest(req);
-    const user = await base44.auth.me();
+    const authUser = await base44.auth.me();
+    const dbUsers = authUser ? await base44.asServiceRole.entities.User.filter({ id: authUser.id }) : [];
+    const user = dbUsers[0] || authUser;
     const schoolId = user?.school_id || user?.data?.school_id;
     const role = user?.role || user?.data?.role;
 

@@ -4,20 +4,28 @@ Deno.serve(async (req) => {
   try {
     const base44 = createClientFromRequest(req);
     
-    const user = await base44.auth.me();
-    if (!user) {
+    const authUser = await base44.auth.me();
+    if (!authUser) {
       return Response.json({ error: 'Unauthorized' }, { status: 401 });
     }
 
+    const dbUsers = await base44.asServiceRole.entities.User.filter({ id: authUser.id });
+    const user = dbUsers[0] || authUser;
+
     const { subject, description, priority } = await req.json();
+    const schoolId = user.school_id || user.data?.school_id;
 
     if (!subject || !description) {
       return Response.json({ error: 'Subject and description are required' }, { status: 400 });
     }
 
+    if (!schoolId) {
+      return Response.json({ error: 'No school assigned' }, { status: 403 });
+    }
+
     // Create ticket using service role
     const ticket = await base44.asServiceRole.entities.SupportTicket.create({
-      school_id: user.school_id,
+      school_id: schoolId,
       user_email: user.email,
       user_name: user.full_name,
       subject,
@@ -67,7 +75,7 @@ Deno.serve(async (req) => {
                       </tr>
                       <tr>
                         <td style="color: #64748b; padding: 4px 0;"><strong>School ID:</strong></td>
-                        <td style="color: #1e293b; padding: 4px 0;">${user.school_id || 'N/A'}</td>
+                        <td style="color: #1e293b; padding: 4px 0;">${schoolId || 'N/A'}</td>
                       </tr>
                       <tr>
                         <td style="color: #64748b; padding: 4px 0;"><strong>Ticket ID:</strong></td>

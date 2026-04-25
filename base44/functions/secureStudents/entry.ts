@@ -1,5 +1,35 @@
-import { createClientFromRequest } from 'npm:@base44/sdk@0.8.6';
-import { requireSchoolAdmin, verifySchoolOwnership, addSchoolFilter } from './authHelpers.js';
+import { createClientFromRequest } from 'npm:@base44/sdk@0.8.25';
+
+async function requireSchoolAdmin(base44) {
+  const user = await base44.auth.me();
+
+  if (!user) {
+    throw new Error('Unauthorized - not authenticated');
+  }
+
+  const school_id = user.school_id || user.data?.school_id;
+  if (!school_id) {
+    throw new Error('Forbidden - no school assigned');
+  }
+
+  return {
+    ...user,
+    school_id,
+  };
+}
+
+function verifySchoolOwnership(user, dataSchoolId) {
+  if (user.school_id !== dataSchoolId) {
+    throw new Error('Forbidden - cannot access data from another school');
+  }
+}
+
+function addSchoolFilter(user, query = {}) {
+  return {
+    ...query,
+    school_id: user.school_id,
+  };
+}
 
 Deno.serve(async (req) => {
   try {

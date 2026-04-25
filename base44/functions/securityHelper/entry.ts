@@ -24,8 +24,10 @@ export async function validateSchoolAccess(base44, entitySchoolId) {
     console.error('SuperAdmin check failed:', error);
   }
 
+  const userSchoolId = user.school_id || user.data?.school_id;
+
   // Regular users must match school_id
-  if (user.school_id !== entitySchoolId) {
+  if (userSchoolId !== entitySchoolId) {
     throw new Error('Unauthorized: Cannot access data from other schools');
   }
 
@@ -50,8 +52,10 @@ export async function filterByUserSchool(base44, entities) {
     console.error('SuperAdmin check failed:', error);
   }
 
+  const userSchoolId = user.school_id || user.data?.school_id;
+
   // Filter to user's school only
-  return entities.filter(entity => entity.school_id === user.school_id);
+  return entities.filter(entity => entity.school_id === userSchoolId);
 }
 
 /**
@@ -63,9 +67,11 @@ export async function getUserSchoolId(base44) {
     throw new Error('Unauthorized: Not authenticated');
   }
 
-  if (!user.school_id) {
+  const userSchoolId = user.school_id || user.data?.school_id;
+
+  if (!userSchoolId) {
     throw new Error('User not assigned to a school');
   }
 
-  return user.school_id;
+  return userSchoolId;
 }

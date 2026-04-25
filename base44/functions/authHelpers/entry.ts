@@ -9,16 +9,24 @@
  */
 export async function requireSchoolAdmin(base44) {
   const user = await base44.auth.me();
-  
+
   if (!user) {
     throw new Error('Unauthorized - not authenticated');
   }
-  
-  if (!user.school_id) {
+
+  const school_id = user.school_id || user.data?.school_id;
+  if (!school_id) {
     throw new Error('Forbidden - no school assigned');
   }
-  
-  return user;
+
+  return {
+    ...user,
+    school_id,
+    data: {
+      ...(user.data || {}),
+      school_id,
+    },
+  };
 }
 
 /**
