@@ -78,13 +78,16 @@ async function ensureSchoolForCustomer(base44, session) {
     throw new Error('Missing customer email, tier, or Stripe customer id');
   }
 
-  const users = await base44.asServiceRole.entities.User.filter({ email: customerEmail });
+  const normalizedEmail = customerEmail.toLowerCase();
+  const users = await base44.asServiceRole.entities.User.filter({ email: normalizedEmail });
   if (users.length === 0) {
     console.error('[stripeWebhook] No Base44 user found for paid customer', customerEmail);
     return { linkedUser: false, schoolId: null };
   }
 
   const user = users[0];
+  const userSchoolId = user.school_id || user.data?.school_id;
+  const userRole = user.role || user.data?.role;
   const existingSchools = await base44.asServiceRole.entities.School.filter({ stripe_customer_id: stripeCustomerId });
   const matchingSchool = existingSchools[0];
   const limits = getTierDefinition(tier);
@@ -103,15 +106,15 @@ async function ensureSchoolForCustomer(base44, session) {
       school_id: matchingSchool.school_id || buildSchoolId(stripeCustomerId),
     });
 
-    if (user.school_id !== matchingSchool.id) {
+    if (userSchoolId !== matchingSchool.id || userRole !== 'user') {
       await base44.asServiceRole.entities.User.update(user.id, { school_id: matchingSchool.id, role: 'user' });
     }
 
     return { linkedUser: true, schoolId: matchingSchool.id };
   }
 
-  if (user.school_id) {
-    const userSchools = await base44.asServiceRole.entities.School.filter({ id: user.school_id });
+  if (userSchoolId) {
+    const userSchools = await base44.asServiceRole.entities.School.filter({ id: userSchoolId });
     const userSchool = userSchools[0];
     if (userSchool) {
       await base44.asServiceRole.entities.School.update(userSchool.id, {
@@ -125,7 +128,7 @@ async function ensureSchoolForCustomer(base44, session) {
         settings: getTierSettings(tier, userSchool.settings),
         school_id: userSchool.school_id || buildSchoolId(stripeCustomerId),
       });
-      if (user.role !== 'user') {
+      if (userRole !== 'user') {
         await base44.asServiceRole.entities.User.update(user.id, { role: 'user' });
       }
       return { linkedUser: true, schoolId: userSchool.id };
