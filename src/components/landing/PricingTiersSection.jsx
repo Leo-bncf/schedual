@@ -45,7 +45,7 @@ const TIERS = {
   tier2: {
     ...TIER_LIMITS.tier2,
     price: TIER_LIMITS.tier2.priceLabel,
-    priceId: 'price_1THYLAD8slkoqOiBI0rA7cCR',
+    priceId: 'price_1THYJwD8slkoqOiB4xj0R5dJ',
     subtitle: 'Best for growing schools that need flexibility, multiple admin users, and desktop access on Mac, Windows, and Linux',
     rules: [
       `Up to ${TIER_LIMITS.tier2.studentLimit} students`,
@@ -67,7 +67,7 @@ const TIERS = {
   tier3: {
     ...TIER_LIMITS.tier3,
     price: TIER_LIMITS.tier3.priceLabel,
-    priceId: 'price_1THYLAD8slkoqOiBQCaKAj2z',
+    priceId: 'price_1THYKoD8slkoqOiB5yO9t2nQ',
     subtitle: 'Best for large schools that need scale, speed, and premium support',
     rules: [
       `Up to ${TIER_LIMITS.tier3.studentLimit} students`,
