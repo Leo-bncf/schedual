@@ -140,21 +140,27 @@ Deno.serve(async (req) => {
     });
 
     // 4) Rebuild scheduling problem and pull breakdown
-    const { data: build } = await base44.asServiceRole.functions.invoke('buildSchedulingProblem', {
+    const { data: build } = await base44.asServiceRole.functions.invoke('previewOptaPayload', {
       schedule_version_id: `audit_${school_id}`,
-      school_id,
     });
 
-    const lessonsCreatedBySubject = build?.stats?.lessonsCreatedBySubject || build?.problem?.lessons?.reduce((acc, l) => {
+    const lessonsCreatedBySubject = build?.summary ? {} : (build?.payload?.lessons?.reduce((acc, l) => {
       const code = norm(l.subject || '');
       acc[code] = (acc[code] || 0) + 1;
       return acc;
-    }, {}) || {};
+    }, {}) || {});
+
+    const previewLessons = build?.filtered?.lessons || build?.payload?.lessons || [];
+    const countedBreakdown = previewLessons.reduce((acc, lesson) => {
+      const code = norm(lesson.subject || '');
+      acc[code] = (acc[code] || 0) + 1;
+      return acc;
+    }, {});
 
     const breakdown = {
-      TOK: lessonsCreatedBySubject['TOK'] || 0,
-      CAS: lessonsCreatedBySubject['CAS'] || 0,
-      EE: lessonsCreatedBySubject['EE'] || 0,
+      TOK: countedBreakdown['TOK'] || 0,
+      CAS: countedBreakdown['CAS'] || 0,
+      EE: countedBreakdown['EE'] || 0,
     };
 
     return Response.json({

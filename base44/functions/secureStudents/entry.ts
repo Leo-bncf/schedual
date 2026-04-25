@@ -1,20 +1,28 @@
 import { createClientFromRequest } from 'npm:@base44/sdk@0.8.25';
 
 async function requireSchoolAdmin(base44) {
-  const user = await base44.auth.me();
+  const authUser = await base44.auth.me();
 
-  if (!user) {
+  if (!authUser) {
     throw new Error('Unauthorized - not authenticated');
   }
 
+  const dbUsers = await base44.asServiceRole.entities.User.filter({ id: authUser.id });
+  const user = dbUsers[0] || authUser;
   const school_id = user.school_id || user.data?.school_id;
+  const role = user.role || user.data?.role;
+
   if (!school_id) {
     throw new Error('Forbidden - no school assigned');
+  }
+  if (role !== 'admin') {
+    throw new Error('Forbidden - admin access required');
   }
 
   return {
     ...user,
     school_id,
+    role,
   };
 }
 

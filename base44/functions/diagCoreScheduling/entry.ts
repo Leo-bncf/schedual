@@ -117,9 +117,19 @@ Deno.serve(async (req) => {
     // Build scheduling problem (try function; fallback to local build if forbidden)
     let problem, stats;
     try {
-      const buildRes = await base44.asServiceRole.functions.invoke('buildSchedulingProblem', { schedule_version_id, school_id, dp_target_periods_per_day: 9 });
-      problem = buildRes.data.problem;
-      stats = buildRes.data.stats || {};
+      const buildRes = await base44.asServiceRole.functions.invoke('previewOptaPayload', { schedule_version_id });
+      const preview = buildRes.data;
+      problem = {
+        lessons: preview?.payload?.lessons || preview?.filtered?.lessons || [],
+        timeslots: [],
+      };
+      stats = {
+        lessonsCreatedBySubject: (preview?.payload?.lessons || preview?.filtered?.lessons || []).reduce((acc, l) => {
+          const code = norm(l.subject || '');
+          acc[code] = (acc[code] || 0) + 1;
+          return acc;
+        }, {}),
+      };
     } catch (e) {
       // Local fallback (no persistence)
       let schoolArr = await base44.asServiceRole.entities.School.filter({ id: school_id });
@@ -395,7 +405,7 @@ Deno.serve(async (req) => {
     // Optionally run solver and then compute inserted counts per subject
     let insertedCountBySubject = null;
     if (run_solver) {
-      await base44.asServiceRole.functions.invoke('callORToolScheduler', { schedule_version_id, school_id }); // FIX: Use service role + pass school_id
+      await base44.asServiceRole.functions.invoke('generateSchedule', { schedule_version_id });
       const allSlots = await client.entities.ScheduleSlot.filter({ school_id, schedule_version: schedule_version_id });
       const codeBySubjectId = {};
       Object.entries(subjectIdByCode).forEach(([code, id]) => { codeBySubjectId[id] = code; });
