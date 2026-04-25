@@ -38,12 +38,16 @@ function extractYearGroupScope(slot, slotGroup) {
 Deno.serve(async (req) => {
   try {
     const base44 = createClientFromRequest(req);
-    const user = await base44.auth.me();
+    const authUser = await base44.auth.me();
+    const dbUsers = authUser ? await base44.asServiceRole.entities.User.filter({ id: authUser.id }) : [];
+    const user = dbUsers[0] || authUser;
+    const schoolId = user?.school_id || user?.data?.school_id;
+    const role = user?.role || user?.data?.role;
 
-    if (!user?.school_id) {
+    if (!user || !schoolId) {
       return Response.json({ error: 'Unauthorized' }, { status: 401 });
     }
-    if (user?.role !== 'admin') {
+    if (role !== 'admin') {
       return Response.json({ error: 'Forbidden: Admin access required' }, { status: 403 });
     }
 
@@ -61,11 +65,11 @@ Deno.serve(async (req) => {
 
     const [allSlots, teachingGroups, subjects] = await Promise.all([
       base44.entities.ScheduleSlot.filter({
-        school_id: user.school_id,
+        school_id: schoolId,
         schedule_version: schedule_version_id,
       }, '-created_date', 1000),
-      base44.entities.TeachingGroup.filter({ school_id: user.school_id }, '-created_date', 500),
-      base44.entities.Subject.filter({ school_id: user.school_id }, '-created_date', 500),
+      base44.entities.TeachingGroup.filter({ school_id: schoolId }, '-created_date', 500),
+      base44.entities.Subject.filter({ school_id: schoolId }, '-created_date', 500),
     ]);
 
     const tgById = {};

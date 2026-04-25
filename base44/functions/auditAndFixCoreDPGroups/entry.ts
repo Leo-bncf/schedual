@@ -10,12 +10,16 @@ Deno.serve(async (req) => {
     }
 
     const base44 = createClientFromRequest(req);
-    const user = await base44.auth.me();
-    if (user?.role !== 'admin') {
+    const authUser = await base44.auth.me();
+    const dbUsers = authUser ? await base44.asServiceRole.entities.User.filter({ id: authUser.id }) : [];
+    const user = dbUsers[0] || authUser;
+    const userSchoolId = user?.school_id || user?.data?.school_id;
+    const role = user?.role || user?.data?.role;
+    if (role !== 'admin') {
       return Response.json({ error: 'Forbidden: Admin access required' }, { status: 403 });
     }
     const body = await req.json().catch(() => ({}));
-    const school_id = body?.school_id || body?.schoolId || user.school_id || null;
+    const school_id = body?.school_id || body?.schoolId || userSchoolId || null;
 
     if (!school_id) {
       return Response.json({ error: 'school_id required in payload' }, { status: 400 });

@@ -4,18 +4,22 @@ Deno.serve(async (req) => {
   try {
     const base44 = createClientFromRequest(req);
     
-    const user = await base44.auth.me();
+    const authUser = await base44.auth.me();
+    const dbUsers = authUser ? await base44.asServiceRole.entities.User.filter({ id: authUser.id }) : [];
+    const user = dbUsers[0] || authUser;
+    const schoolId = user?.school_id || user?.data?.school_id;
+    const role = user?.role || user?.data?.role;
     if (!user) {
       return Response.json({ error: 'Unauthorized' }, { status: 401 });
     }
-    if (user?.role !== 'admin') {
+    if (role !== 'admin') {
       return Response.json({ error: 'Forbidden: Admin access required' }, { status: 403 });
     }
 
-    console.log('🔍 Starting debug - user school_id:', user.school_id);
+    console.log('🔍 Starting debug - user school_id:', schoolId);
 
     const results = {
-      user_school_id: user.school_id,
+      user_school_id: schoolId,
       steps: []
     };
 
@@ -33,7 +37,7 @@ Deno.serve(async (req) => {
     let createdId = null;
     try {
       const newSubject = await base44.asServiceRole.entities.Subject.create({
-        school_id: user.school_id,
+        school_id: schoolId,
         name: "DEBUG TEST " + Date.now(),
         code: "DBG" + Date.now(),
         ib_level: "DP",

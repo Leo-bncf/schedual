@@ -19,9 +19,12 @@ Deno.serve(async (req) => {
   try {
     stage = 'auth';
     const base44 = createClientFromRequest(req);
-    const user = await base44.auth.me();
+    const authUser = await base44.auth.me();
+    const dbUsers = authUser ? await base44.asServiceRole.entities.User.filter({ id: authUser.id }) : [];
+    const user = dbUsers[0] || authUser;
+    const role = user?.role || user?.data?.role;
     
-    if (!user?.school_id) {
+    if (!user?.school_id && !user?.data?.school_id) {
       return Response.json({ 
         success: false,
         error: 'Unauthorized',
@@ -29,7 +32,7 @@ Deno.serve(async (req) => {
         details: 'User not authenticated or missing school_id'
       }, { status: 401 });
     }
-    if (user?.role !== 'admin') {
+    if (role !== 'admin') {
       return Response.json({
         success: false,
         error: 'Forbidden: Admin access required',
@@ -37,7 +40,7 @@ Deno.serve(async (req) => {
       }, { status: 403 });
     }
 
-    school_id = user.school_id;
+    school_id = user.school_id || user.data?.school_id;
     
     stage = 'fetch_data';
     console.log(`[syncStudentTeachingGroups] Starting sync for school_id=${school_id}`);

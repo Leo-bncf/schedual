@@ -293,17 +293,20 @@ function buildDPPayload({ schoolId, scheduleVersionId, school, students, teacher
 Deno.serve(async (req) => {
   try {
     const base44 = createClientFromRequest(req);
-    const user = await base44.auth.me().catch(() => null);
+    const authUser = await base44.auth.me().catch(() => null);
+    const dbUsers = authUser ? await base44.asServiceRole.entities.User.filter({ id: authUser.id }) : [];
+    const user = dbUsers[0] || authUser;
+    const schoolId = user?.school_id || user?.data?.school_id;
+    const role = user?.role || user?.data?.role;
 
-    if (!user?.school_id) {
+    if (!user || !schoolId) {
       return Response.json({ error: 'Unauthorized' }, { status: 401 });
     }
-    if (user?.role !== 'admin') {
+    if (role !== 'admin') {
       return Response.json({ error: 'Forbidden: Admin access required' }, { status: 403 });
     }
 
     const body = await req.json().catch(() => ({}));
-    const schoolId = user.school_id;
 
     const [schools, students, teachers, subjects, rooms, teachingGroups, scheduleVersions] = await Promise.all([
       base44.asServiceRole.entities.School.filter({ id: schoolId }, '-created_date', 10),

@@ -3,17 +3,21 @@ import { createClientFromRequest } from 'npm:@base44/sdk@0.8.6';
 Deno.serve(async (req) => {
   try {
     const base44 = createClientFromRequest(req);
-    const user = await base44.auth.me();
+    const authUser = await base44.auth.me();
+    const dbUsers = authUser ? await base44.asServiceRole.entities.User.filter({ id: authUser.id }) : [];
+    const user = dbUsers[0] || authUser;
+    const userSchoolId = user?.school_id || user?.data?.school_id;
+    const role = user?.role || user?.data?.role;
     if (!user) {
       return Response.json({ error: 'Unauthorized' }, { status: 401 });
     }
-    if (user?.role !== 'admin') {
+    if (role !== 'admin') {
       return Response.json({ error: 'Forbidden: Admin access required' }, { status: 403 });
     }
 
     const body = await req.json().catch(() => ({}));
     const name = (body?.name || '').trim();
-    const targetSchoolId = body?.school_id || user.school_id;
+    const targetSchoolId = body?.school_id || userSchoolId;
     const programme = body?.ib_programme || 'DP';
     const yearGroup = body?.year_group || 'DP1';
 

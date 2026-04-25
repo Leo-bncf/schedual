@@ -88,9 +88,13 @@ Deno.serve(async (req) => {
     // VALIDATION 3: Auth
     stage = 'auth';
     const base44 = createClientFromRequest(req);
-    const user = await base44.auth.me();
+    const authUser = await base44.auth.me();
+    const dbUsers = authUser ? await base44.asServiceRole.entities.User.filter({ id: authUser.id }) : [];
+    const user = dbUsers[0] || authUser;
+    const userSchoolId = user?.school_id || user?.data?.school_id;
+    const role = user?.role || user?.data?.role;
 
-    if (!user || !user.school_id) {
+    if (!user || !userSchoolId) {
       return Response.json({ 
         success: false,
         error: 'UNAUTHORIZED',
@@ -98,7 +102,7 @@ Deno.serve(async (req) => {
       }, { status: 401 });
     }
 
-    if (user?.role !== 'admin') {
+    if (role !== 'admin') {
       return Response.json({
         success: false,
         error: 'FORBIDDEN',
@@ -108,7 +112,7 @@ Deno.serve(async (req) => {
 
     // VALIDATION 4: Extract and validate school_id
     stage = 'validate_params';
-    const school_id = body?.school_id || user.school_id;
+    const school_id = body?.school_id || userSchoolId;
     const requestedGroupIds = Array.isArray(body?.teaching_group_ids) ? body.teaching_group_ids : null;
     const mode = body?.mode || null;
 
@@ -120,7 +124,7 @@ Deno.serve(async (req) => {
     });
 
     // Cross-school access check
-    if (school_id !== user.school_id) {
+    if (school_id !== userSchoolId) {
       return Response.json({
         success: false,
         error: 'FORBIDDEN',

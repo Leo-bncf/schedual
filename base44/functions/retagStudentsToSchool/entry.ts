@@ -3,15 +3,19 @@ import { createClientFromRequest } from 'npm:@base44/sdk@0.8.6';
 Deno.serve(async (req) => {
   try {
     const base44 = createClientFromRequest(req);
-    const user = await base44.auth.me();
+    const authUser = await base44.auth.me();
+    const dbUsers = authUser ? await base44.asServiceRole.entities.User.filter({ id: authUser.id }) : [];
+    const user = dbUsers[0] || authUser;
+    const schoolId = user?.school_id || user?.data?.school_id;
+    const role = user?.role || user?.data?.role;
 
     if (!user) {
       return Response.json({ error: 'Unauthorized' }, { status: 401 });
     }
-    if (!user.school_id) {
+    if (!schoolId) {
       return Response.json({ error: 'Your account is not linked to a school' }, { status: 400 });
     }
-    if (user?.role !== 'admin') {
+    if (role !== 'admin') {
       return Response.json({ error: 'Forbidden: Admin access required' }, { status: 403 });
     }
 
@@ -22,7 +26,7 @@ Deno.serve(async (req) => {
       return Response.json({ error: 'No student IDs provided' }, { status: 400 });
     }
 
-    const targetSchoolId = user.school_id;
+    const targetSchoolId = schoolId;
 
     let updated = 0;
     let skipped = 0;

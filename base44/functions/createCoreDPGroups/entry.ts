@@ -13,16 +13,19 @@ Deno.serve(async (req) => {
     const body = bodyText ? JSON.parse(bodyText) : {};
     const providedSchoolId = body.school_id;
 
-    const user = await base44.auth.me();
-    if (!user?.school_id) {
+    const authUser = await base44.auth.me();
+    const dbUsers = authUser ? await base44.asServiceRole.entities.User.filter({ id: authUser.id }) : [];
+    const user = dbUsers[0] || authUser;
+    const school_id = user?.school_id || user?.data?.school_id;
+    const role = user?.role || user?.data?.role;
+    if (!user || !school_id) {
       return Response.json({ error: 'Unauthorized', code: 'NO_USER' }, { status: 401 });
     }
-    if (user?.role !== 'admin') {
+    if (role !== 'admin') {
       return Response.json({ error: 'Forbidden: Admin access required' }, { status: 403 });
     }
 
     const client = base44;
-    const school_id = user.school_id;
 
     // Fetch core subjects for DP
     const subjects = await client.entities.Subject.filter({ school_id, is_active: true });

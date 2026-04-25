@@ -3,16 +3,18 @@ import { createClientFromRequest } from 'npm:@base44/sdk@0.8.6';
 Deno.serve(async (req) => {
   try {
     const base44 = createClientFromRequest(req);
-    const user = await base44.auth.me();
+    const authUser = await base44.auth.me();
+    const dbUsers = authUser ? await base44.asServiceRole.entities.User.filter({ id: authUser.id }) : [];
+    const user = dbUsers[0] || authUser;
+    const schoolId = user?.school_id || user?.data?.school_id;
+    const role = user?.role || user?.data?.role;
 
-    if (!user || !user.school_id) {
+    if (!user || !schoolId) {
       return Response.json({ error: 'Unauthorized' }, { status: 401 });
     }
-    if (user?.role !== 'admin') {
+    if (role !== 'admin') {
       return Response.json({ error: 'Forbidden: Admin access required' }, { status: 403 });
     }
-
-    const schoolId = user.school_id;
 
     // Get all students without ClassGroups
     const allStudents = await base44.entities.Student.filter({ school_id: schoolId });

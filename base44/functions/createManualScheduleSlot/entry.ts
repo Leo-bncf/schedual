@@ -34,12 +34,16 @@ function getSlotStudentIds(slot, groupMap) {
 Deno.serve(async (req) => {
   try {
     const base44 = createClientFromRequest(req);
-    const user = await base44.auth.me();
+    const authUser = await base44.auth.me();
+    const dbUsers = authUser ? await base44.asServiceRole.entities.User.filter({ id: authUser.id }) : [];
+    const user = dbUsers[0] || authUser;
+    const schoolId = user?.school_id || user?.data?.school_id;
+    const role = user?.role || user?.data?.role;
 
-    if (!user?.school_id) {
+    if (!user || !schoolId) {
       return Response.json({ error: 'Unauthorized' }, { status: 401 });
     }
-    if (user?.role !== 'admin') {
+    if (role !== 'admin') {
       return Response.json({ error: 'Forbidden: Admin access required' }, { status: 403 });
     }
 
@@ -66,18 +70,18 @@ Deno.serve(async (req) => {
     }
 
     const [version] = await base44.asServiceRole.entities.ScheduleVersion.filter({ id: schedule_version });
-    if (!version || version.school_id !== user.school_id) {
+    if (!version || version.school_id !== schoolId) {
       return Response.json({ error: 'Schedule version not found' }, { status: 404 });
     }
 
     const [groups, classGroups, students, teachers, rooms, subjects, allSlots] = await Promise.all([
-      base44.asServiceRole.entities.TeachingGroup.filter({ school_id: user.school_id }, '-created_date', 1000),
-      base44.asServiceRole.entities.ClassGroup.filter({ school_id: user.school_id }, '-created_date', 500),
-      base44.asServiceRole.entities.Student.filter({ school_id: user.school_id }, '-created_date', 1000),
-      base44.asServiceRole.entities.Teacher.filter({ school_id: user.school_id }, '-created_date', 500),
-      base44.asServiceRole.entities.Room.filter({ school_id: user.school_id }, '-created_date', 500),
-      base44.asServiceRole.entities.Subject.filter({ school_id: user.school_id }, '-created_date', 500),
-      base44.asServiceRole.entities.ScheduleSlot.filter({ school_id: user.school_id, schedule_version }, '-created_date', 2000),
+      base44.asServiceRole.entities.TeachingGroup.filter({ school_id: schoolId }, '-created_date', 1000),
+      base44.asServiceRole.entities.ClassGroup.filter({ school_id: schoolId }, '-created_date', 500),
+      base44.asServiceRole.entities.Student.filter({ school_id: schoolId }, '-created_date', 1000),
+      base44.asServiceRole.entities.Teacher.filter({ school_id: schoolId }, '-created_date', 500),
+      base44.asServiceRole.entities.Room.filter({ school_id: schoolId }, '-created_date', 500),
+      base44.asServiceRole.entities.Subject.filter({ school_id: schoolId }, '-created_date', 500),
+      base44.asServiceRole.entities.ScheduleSlot.filter({ school_id: schoolId, schedule_version }, '-created_date', 2000),
     ]);
 
     const subject = subjects.find((item) => item.id === subject_id);
@@ -129,7 +133,7 @@ Deno.serve(async (req) => {
     }
 
     const finalSlot = {
-      school_id: user.school_id,
+      school_id: schoolId,
       schedule_version,
       day: normalizeDay(day),
       period: Number(period),
