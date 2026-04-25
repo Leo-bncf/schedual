@@ -1,4 +1,4 @@
-import { createClientFromRequest } from 'npm:@base44/sdk@0.8.6';
+import { createClientFromRequest } from 'npm:@base44/sdk@0.8.25';
 
 Deno.serve(async (req) => {
   try {
@@ -13,6 +13,7 @@ Deno.serve(async (req) => {
     const user = dbUsers[0] || authUser;
 
     const { subject, description, priority } = await req.json();
+    const normalizedPriority = priority || 'medium';
     const schoolId = user.school_id || user.data?.school_id;
 
     if (!subject || !description) {
@@ -30,7 +31,7 @@ Deno.serve(async (req) => {
       user_name: user.full_name,
       subject,
       description,
-      priority: priority || 'medium',
+      priority: normalizedPriority,
       status: 'open'
     });
 
@@ -51,7 +52,7 @@ Deno.serve(async (req) => {
         Promise.all(adminEmails.map(adminEmail =>
           base44.asServiceRole.integrations.Core.SendEmail({
             to: adminEmail,
-            subject: `[${priority.toUpperCase()}] New Support Ticket: ${subject}`,
+            subject: `[${normalizedPriority.toUpperCase()}] New Support Ticket: ${subject}`,
             body: `
               <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto;">
                 <div style="background: #1e3a8a; color: white; padding: 20px; border-radius: 8px 8px 0 0;">
@@ -60,8 +61,8 @@ Deno.serve(async (req) => {
                 <div style="background: #f8fafc; padding: 20px; border: 1px solid #e2e8f0;">
                   <div style="background: white; padding: 20px; border-radius: 8px; margin-bottom: 16px;">
                     <h3 style="color: #1e293b; margin-top: 0;">${subject}</h3>
-                    <span style="background: ${priorityColors[priority]}; color: white; padding: 4px 12px; border-radius: 4px; font-size: 12px; font-weight: 600; text-transform: uppercase;">
-                      ${priority}
+                    <span style="background: ${priorityColors[normalizedPriority]}; color: white; padding: 4px 12px; border-radius: 4px; font-size: 12px; font-weight: 600; text-transform: uppercase;">
+                      ${normalizedPriority}
                     </span>
                     <div style="color: #475569; font-size: 14px; line-height: 1.6; margin-top: 16px; white-space: pre-wrap;">
                       ${description}

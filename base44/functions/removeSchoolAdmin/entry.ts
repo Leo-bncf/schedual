@@ -1,4 +1,4 @@
-import { createClientFromRequest } from 'npm:@base44/sdk@0.8.6';
+import { createClientFromRequest } from 'npm:@base44/sdk@0.8.25';
 
 Deno.serve(async (req) => {
   try {
@@ -47,8 +47,8 @@ Deno.serve(async (req) => {
       return Response.json({ error: 'Admin does not belong to your school' }, { status: 403 });
     }
 
-    // Remove school assignment
-    await base44.asServiceRole.entities.User.update(admin_id, { school_id: null });
+    // Remove school assignment and drop admin role
+    await base44.asServiceRole.entities.User.update(admin_id, { school_id: null, role: 'user' });
 
     return Response.json({ 
       success: true,
