@@ -827,6 +827,11 @@ Deno.serve(async (req) => {
       return Response.json({ error: 'School not found' }, { status: 404 });
     }
 
+    const ACTIVE_SUBSCRIPTION_STATUSES = ['active', 'trialing', 'past_due'];
+    if (!ACTIVE_SUBSCRIPTION_STATUSES.includes(school.subscription_status)) {
+      return Response.json({ error: 'Your subscription is not active. Please renew your plan to generate schedules.' }, { status: 403 });
+    }
+
     const generationLimits = {
       tier1: 3,
       tier2: null,

@@ -36,6 +36,15 @@ Deno.serve(async (req) => {
       base44.entities.ScheduleVersion.filter({ school_id }, '-created_date', 1000),
     ]);
 
+    if (!school) {
+      return Response.json({ error: 'School not found' }, { status: 404 });
+    }
+
+    const ACTIVE_SUBSCRIPTION_STATUSES = ['active', 'trialing', 'past_due'];
+    if (!ACTIVE_SUBSCRIPTION_STATUSES.includes((school as any).subscription_status)) {
+      return Response.json({ error: 'Your subscription is not active. Please renew your plan to generate schedules.' }, { status: 403 });
+    }
+
     // Enforce generation limit
     const GENERATION_LIMITS: Record<string, number | null> = { tier1: 3, tier2: null, tier3: null };
     const generationLimit = GENERATION_LIMITS[(school as any)?.subscription_tier] ?? 3;

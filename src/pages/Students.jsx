@@ -74,7 +74,7 @@ export default function Students() {
   });
   const school = schoolRecords[0];
 
-  const allowedProgrammes = ['PYP', 'MYP', 'DP'];
+  const allowedProgrammes = school?.subscription_tier === 'tier1' ? ['MYP'] : ['PYP', 'MYP', 'DP'];
   const tierConfig = getTierLimits(school?.subscription_tier);
   const maxStudents = getStudentLimit(school?.subscription_tier);
 
