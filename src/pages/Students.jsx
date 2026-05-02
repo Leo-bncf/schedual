@@ -92,7 +92,15 @@ export default function Students() {
 
   const { data: rawStudents = [], isLoading } = useQuery({
     queryKey: ['students', schoolId],
-    queryFn: () => base44.entities.Student.filter({ school_id: schoolId }, '-created_date', 500),
+    queryFn: async () => {
+      // Use secureStudents (asServiceRole) to bypass JWT-role RLS issue.
+      // Student read RLS requires user.role==='admin' in JWT, but base44 doesn't
+      // update JWT claims when the DB role is changed — so direct entity queries
+      // return 0 for newly-promoted admins. secureStudents verifies school ownership
+      // server-side and returns the full list reliably.
+      const { data: res } = await base44.functions.invoke('secureStudents', { action: 'list' });
+      return res?.data || [];
+    },
     enabled: !!schoolId,
   });
 
@@ -154,7 +162,11 @@ export default function Students() {
   });
 
   const updateMutation = useMutation({
-    mutationFn: ({ id, data }) => base44.entities.Student.update(id, data),
+    mutationFn: async ({ id, data }) => {
+      const { data: res } = await base44.functions.invoke('secureStudents', { action: 'update', student_id: id, data });
+      if (!res?.success) throw new Error(res?.error || 'Failed to update student');
+      return res.data;
+    },
     onSuccess: () => {
       toast.success('Student updated successfully');
       queryClient.invalidateQueries({ queryKey: ['students', schoolId] });
@@ -166,7 +178,10 @@ export default function Students() {
   });
 
   const deleteMutation = useMutation({
-    mutationFn: (id) => base44.entities.Student.delete(id),
+    mutationFn: async (id) => {
+      const { data: res } = await base44.functions.invoke('secureStudents', { action: 'delete', student_id: id });
+      if (!res?.success) throw new Error(res?.error || 'Failed to delete student');
+    },
     onSuccess: () => {
       toast.success('Student deleted');
       queryClient.invalidateQueries({ queryKey: ['students', schoolId] });
