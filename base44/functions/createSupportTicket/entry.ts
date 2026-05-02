@@ -1,5 +1,9 @@
 import { createClientFromRequest } from 'npm:@base44/sdk@0.8.25';
 
+function esc(str: string): string {
+  return String(str ?? '').replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;').replace(/'/g, '&#39;');
+}
+
 Deno.serve(async (req) => {
   try {
     const base44 = createClientFromRequest(req);
@@ -60,19 +64,19 @@ Deno.serve(async (req) => {
                 </div>
                 <div style="background: #f8fafc; padding: 20px; border: 1px solid #e2e8f0;">
                   <div style="background: white; padding: 20px; border-radius: 8px; margin-bottom: 16px;">
-                    <h3 style="color: #1e293b; margin-top: 0;">${subject}</h3>
+                    <h3 style="color: #1e293b; margin-top: 0;">${esc(subject)}</h3>
                     <span style="background: ${priorityColors[normalizedPriority]}; color: white; padding: 4px 12px; border-radius: 4px; font-size: 12px; font-weight: 600; text-transform: uppercase;">
                       ${normalizedPriority}
                     </span>
                     <div style="color: #475569; font-size: 14px; line-height: 1.6; margin-top: 16px; white-space: pre-wrap;">
-                      ${description}
+                      ${esc(description)}
                     </div>
                   </div>
                   <div style="background: white; padding: 16px; border-radius: 8px;">
                     <table style="width: 100%; font-size: 14px;">
                       <tr>
                         <td style="color: #64748b; padding: 4px 0;"><strong>From:</strong></td>
-                        <td style="color: #1e293b; padding: 4px 0;">${user.full_name} (${user.email})</td>
+                        <td style="color: #1e293b; padding: 4px 0;">${esc(user.full_name)} (${esc(user.email)})</td>
                       </tr>
                       <tr>
                         <td style="color: #64748b; padding: 4px 0;"><strong>School ID:</strong></td>
