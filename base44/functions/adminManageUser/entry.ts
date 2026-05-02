@@ -1,4 +1,18 @@
-import { createClientFromRequest } from 'npm:@base44/sdk@0.8.6';
+import { createClientFromRequest } from 'npm:@base44/sdk@0.8.25';
+async function logAction(base44, actorEmail: string, action: string, entityId: string, metadata: Record<string, unknown> = {}) {
+  try {
+    await base44.asServiceRole.entities.AuditLog.create({
+      user_email: actorEmail,
+      action,
+      entity_type: 'User',
+      entity_id: entityId,
+      metadata,
+    });
+  } catch (e) {
+    console.warn('[audit] Failed to write audit log:', e.message);
+  }
+}
+
 function getAdminSeatLimit(tierId, fallback = 3) {
   const tierMap = {
     tier1: 1,
@@ -64,20 +78,22 @@ Deno.serve(async (req) => {
           Object.entries(data).filter(([key]) => ALLOWED_USER_FIELDS.includes(key))
         );
         await base44.asServiceRole.entities.User.update(userId, safeData);
-        
-        // If school_id was just assigned or changed, user needs to logout/login to refresh JWT
+        logAction(base44, user.email, 'assign_user', userId, { changes: Object.keys(safeData), school_id: data.school_id });
+
         if (previousUser.length > 0 && previousUser[0].school_id !== data.school_id && data.school_id) {
-          return Response.json({ 
-            success: true, 
+          return Response.json({
+            success: true,
             requiresReauth: true,
             message: 'School assigned. User must log out and log back in to access school features.'
           });
         }
-        
+
         return Response.json({ success: true });
 
       case 'delete':
+        const [targetUser] = await base44.asServiceRole.entities.User.filter({ id: userId });
         await base44.asServiceRole.entities.User.delete(userId);
+        logAction(base44, user.email, 'delete_user', userId, { email: targetUser?.email });
         return Response.json({ success: true });
 
       case 'list':

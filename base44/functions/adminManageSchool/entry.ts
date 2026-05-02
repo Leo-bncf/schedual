@@ -1,4 +1,5 @@
-import { createClientFromRequest } from 'npm:@base44/sdk@0.8.6';
+import { createClientFromRequest } from 'npm:@base44/sdk@0.8.25';
+
 function getTierDefinition(tierId) {
   const tierMap = {
     tier1: {
@@ -43,6 +44,77 @@ function getTierSettings(tierId, existingSettings = {}) {
   };
 }
 
+async function cascadeDeleteSchool(base44, schoolId: string) {
+  const svc = base44.asServiceRole;
+
+  // Delete dependent entities in safe order (slots before versions, etc.)
+  const entityNames = [
+    'ScheduleSlot',
+    'OptimizationRun',
+    'ConflictReport',
+    'ScheduleVersion',
+    'TeachingGroup',
+    'ClassGroup',
+    'Constraint',
+    'Subject',
+    'Room',
+    'Student',
+    'Teacher',
+    'PendingInvitation',
+    'SupportTicket',
+    'AuditLog',
+  ];
+
+  for (const entityName of entityNames) {
+    try {
+      const records = await svc.entities[entityName].filter({ school_id: schoolId });
+      for (let i = 0; i < records.length; i += 20) {
+        await Promise.all(
+          records.slice(i, i + 20).map((r) => svc.entities[entityName].delete(r.id))
+        );
+      }
+      if (records.length > 0) {
+        console.log(`[cascade] Deleted ${records.length} ${entityName} records for school ${schoolId}`);
+      }
+    } catch (e) {
+      console.warn(`[cascade] Failed to delete ${entityName} for school ${schoolId}:`, e.message);
+    }
+  }
+
+  // Unassign users — preserve their accounts, just remove school membership
+  try {
+    const users = await svc.entities.User.filter({ school_id: schoolId });
+    for (let i = 0; i < users.length; i += 20) {
+      await Promise.all(
+        users.slice(i, i + 20).map((u) =>
+          svc.entities.User.update(u.id, { school_id: null, role: 'user' })
+        )
+      );
+    }
+    if (users.length > 0) {
+      console.log(`[cascade] Unassigned ${users.length} users from school ${schoolId}`);
+    }
+  } catch (e) {
+    console.warn(`[cascade] Failed to unassign users for school ${schoolId}:`, e.message);
+  }
+
+  await svc.entities.School.delete(schoolId);
+}
+
+async function logAction(base44, actorEmail: string, action: string, entityType: string, entityId: string, metadata: Record<string, unknown> = {}) {
+  try {
+    await base44.asServiceRole.entities.AuditLog.create({
+      user_email: actorEmail,
+      action,
+      entity_type: entityType,
+      entity_id: entityId,
+      metadata,
+    });
+  } catch (e) {
+    console.warn('[audit] Failed to write audit log:', e.message);
+  }
+}
+
 Deno.serve(async (req) => {
   try {
     const base44 = createClientFromRequest(req);
@@ -56,7 +128,6 @@ Deno.serve(async (req) => {
     const { action, data, id, schoolId, query } = body || {};
     const resolvedId = id || schoolId;
 
-    // Superadmin check (with hard-allow override)
     const superAdminEmailsStr = Deno.env.get('SUPER_ADMIN_EMAILS') || '';
     const superAdminEmails = superAdminEmailsStr
       .split(',')
@@ -72,7 +143,6 @@ Deno.serve(async (req) => {
       return Response.json({ error: 'Missing action' }, { status: 400 });
     }
 
-    // Use service role to bypass RLS for admin operations
     const svc = base44.asServiceRole.entities.School;
 
     if (action === 'list') {
@@ -90,6 +160,7 @@ Deno.serve(async (req) => {
         max_admin_seats: limits.max_admin_seats,
         settings: getTierSettings(tier, data.settings || {}),
       });
+      logAction(base44, user.email, 'create_school', 'School', created.id, { name: created.name, tier });
       return Response.json({ success: true, school: created });
     }
 
@@ -107,12 +178,17 @@ Deno.serve(async (req) => {
       }
 
       const updated = await svc.update(resolvedId, nextData);
+      logAction(base44, user.email, 'update_school', 'School', resolvedId, { changes: Object.keys(data) });
       return Response.json({ success: true, school: updated });
     }
 
     if (action === 'delete') {
       if (!resolvedId) return Response.json({ error: 'Missing id' }, { status: 400 });
-      await svc.delete(resolvedId);
+      const [school] = await svc.filter({ id: resolvedId });
+      const schoolName = school?.name || resolvedId;
+      await cascadeDeleteSchool(base44, resolvedId);
+      // Log after deletion since AuditLog for this school was also deleted; use no school_id
+      logAction(base44, user.email, 'delete_school', 'School', resolvedId, { name: schoolName });
       return Response.json({ success: true });
     }
 

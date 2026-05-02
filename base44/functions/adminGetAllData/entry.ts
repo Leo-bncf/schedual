@@ -1,4 +1,4 @@
-import { createClientFromRequest } from 'npm:@base44/sdk@0.8.4';
+import { createClientFromRequest } from 'npm:@base44/sdk@0.8.25';
 
 Deno.serve(async (req) => {
   try {
@@ -26,13 +26,11 @@ Deno.serve(async (req) => {
 
     const { entityType } = await req.json();
 
-    // Validate entity type
-    const allowedEntities = ['Teacher', 'Student', 'ScheduleVersion'];
+    const allowedEntities = ['Teacher', 'Student', 'ScheduleVersion', 'LoginSession', 'AuditLog'];
     if (!allowedEntities.includes(entityType)) {
       return Response.json({ error: 'Invalid entity type' }, { status: 400 });
     }
 
-    // Use service role to bypass RLS
     const records = await base44.asServiceRole.entities[entityType].list();
     
     return Response.json({ success: true, records });

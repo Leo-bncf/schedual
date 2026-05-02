@@ -30,7 +30,12 @@
         "dismiss_ai_suggestion",
         "run_optimization",
         "resolve_conflict",
-        "update_settings"
+        "update_settings",
+        "create_school",
+        "update_school",
+        "delete_school",
+        "assign_user",
+        "delete_user"
       ]
     },
     "entity_type": {
@@ -57,7 +62,6 @@
     }
   },
   "required": [
-    "school_id",
     "action"
   ],
   "rls": {
