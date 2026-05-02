@@ -22,8 +22,10 @@ Deno.serve(async (req) => {
       return Response.json({ error: 'Unauthorized' }, { status: 401 });
     }
 
-    if (role !== 'admin') {
-      return Response.json({ error: 'Forbidden: Admin access required' }, { status: 403 });
+    const superAdminEmails = String(Deno.env.get('SUPER_ADMIN_EMAILS') || '')
+      .split(',').map((e: string) => e.trim().toLowerCase()).filter(Boolean);
+    if (!superAdminEmails.includes((user?.email || '').toLowerCase())) {
+      return Response.json({ error: 'Forbidden: SuperAdmin access required' }, { status: 403 });
     }
 
     // Allow limited service-mode bypass (no persistence) when explicitly requested

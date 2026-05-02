@@ -12,20 +12,17 @@ Deno.serve(async (req) => {
     if (!user) {
       return Response.json({ error: 'Unauthorized' }, { status: 401 });
     }
-    if (role !== 'admin') {
-      return Response.json({ error: 'Forbidden: Admin access required' }, { status: 403 });
+    const superAdminEmails = String(Deno.env.get('SUPER_ADMIN_EMAILS') || '')
+      .split(',').map((e: string) => e.trim().toLowerCase()).filter(Boolean);
+    if (!superAdminEmails.includes((user?.email || '').toLowerCase())) {
+      return Response.json({ error: 'Forbidden: SuperAdmin access required' }, { status: 403 });
     }
 
     const body = await req.json().catch(() => ({}));
-    const explicitSchoolId = body?.school_id || null;
-    const schoolId = explicitSchoolId || userSchoolId;
+    const schoolId = body?.school_id || userSchoolId;
 
     if (!schoolId) {
       return Response.json({ error: 'No school_id on user/session' }, { status: 400 });
-    }
-
-    if (explicitSchoolId && user?.role !== 'admin' && explicitSchoolId !== user.school_id) {
-      return Response.json({ error: 'Forbidden: cannot diagnose another school' }, { status: 403 });
     }
 
     // Fetch data with service role to avoid RLS masking

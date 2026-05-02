@@ -9,12 +9,8 @@ Deno.serve(async (req) => {
       return Response.json({ error: 'Forbidden: Admin access required' }, { status: 403 });
     }
 
-    const body = await req.json().catch(() => ({}));
-    const targetSchoolId = body?.school_id || user.school_id;
-    if (!targetSchoolId) return Response.json({ error: 'Missing school_id' }, { status: 400 });
-    if (body?.school_id && user?.role !== 'admin' && body.school_id !== user.school_id) {
-      return Response.json({ error: 'Forbidden: cannot seed another school' }, { status: 403 });
-    }
+    const targetSchoolId = user.school_id;
+    if (!targetSchoolId) return Response.json({ error: 'No school assigned to your account' }, { status: 400 });
 
     const existing = await base44.asServiceRole.entities.Student.filter({ school_id: targetSchoolId }, '-created_date', 1).catch(() => []);
     if (existing.length > 0) {

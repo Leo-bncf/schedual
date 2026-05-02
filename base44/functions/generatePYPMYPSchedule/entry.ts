@@ -27,13 +27,22 @@ Deno.serve(async (req) => {
     }
 
     // Fetch data
-    const [school, classGroups, subjects, teachers, rooms] = await Promise.all([
-      base44.entities.School.filter({ id: school_id }).then(data => data[0]),
+    const [school, classGroups, subjects, teachers, rooms, scheduleVersions] = await Promise.all([
+      base44.entities.School.filter({ id: school_id }).then((data: any[]) => data[0]),
       base44.entities.ClassGroup.filter({ school_id, ib_programme: level }),
       base44.entities.Subject.filter({ school_id, ib_level: level }),
       base44.entities.Teacher.filter({ school_id, is_active: true }),
-      base44.entities.Room.filter({ school_id, is_active: true })
+      base44.entities.Room.filter({ school_id, is_active: true }),
+      base44.entities.ScheduleVersion.filter({ school_id }, '-created_date', 1000),
     ]);
+
+    // Enforce generation limit
+    const GENERATION_LIMITS: Record<string, number | null> = { tier1: 3, tier2: null, tier3: null };
+    const generationLimit = GENERATION_LIMITS[(school as any)?.subscription_tier] ?? 3;
+    const generatedCount = (scheduleVersions as any[]).filter((v: any) => v.generated_at).length;
+    if (generationLimit !== null && generatedCount >= generationLimit) {
+      return Response.json({ error: `Generation limit reached for your tier (${generatedCount}/${generationLimit})` }, { status: 400 });
+    }
 
     if (classGroups.length === 0) {
       return Response.json({ 
