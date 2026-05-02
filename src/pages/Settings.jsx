@@ -163,7 +163,12 @@ export default function Settings() {
     setIsSaving(true);
     try {
       if (schoolRecordId) {
-        await updateSchoolMutation.mutateAsync({ id: schoolRecordId, data: formData });
+        const updatePayload = { ...formData };
+        // Auto-generate school_id if it was never set
+        if (!school?.school_id) {
+          updatePayload.school_id = `SCH-${(school?.code || 'SCH').toUpperCase().replace(/[^A-Z0-9]/g, '').slice(0, 6)}-${Date.now().toString().slice(-4)}`;
+        }
+        await updateSchoolMutation.mutateAsync({ id: schoolRecordId, data: updatePayload });
       } else {
         throw new Error('School record not found for this account.');
       }

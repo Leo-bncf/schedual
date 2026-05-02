@@ -172,7 +172,7 @@ export default function Schedules() {
   const createVersionMutation = useMutation({
     mutationFn: async (data) => {
       if (!resolvedSchoolId) throw new Error('No school assigned');
-      const res = await base44.functions.invoke('createScheduleVersion', data);
+      const { data: res } = await base44.functions.invoke('createScheduleVersion', data);
       if (!res?.success) throw new Error(res?.error || 'Failed to create version');
       return res.data;
     },
