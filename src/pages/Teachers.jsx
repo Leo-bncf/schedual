@@ -20,6 +20,7 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { Plus, Upload, Loader2, BookOpen } from 'lucide-react';
+import { toast } from 'sonner';
 import { motion } from 'framer-motion';
 import PageHeader from '../components/ui-custom/PageHeader';
 import EmptyState from '../components/ui-custom/EmptyState';
@@ -82,23 +83,37 @@ export default function Teachers() {
       if (!schoolId) throw new Error('No school assigned');
       return base44.entities.Teacher.create({ ...data, school_id: schoolId });
     },
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['teachers'] });
+    onSuccess: (created) => {
+      toast.success(`${created?.full_name || 'Teacher'} added successfully`);
+      queryClient.invalidateQueries({ queryKey: ['teachers', schoolId] });
       resetForm();
     },
+    onError: (error) => {
+      toast.error(error?.message || 'Failed to save teacher');
+    }
   });
 
   const updateMutation = useMutation({
     mutationFn: ({ id, data }) => base44.entities.Teacher.update(id, data),
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['teachers'] });
+      toast.success('Teacher updated successfully');
+      queryClient.invalidateQueries({ queryKey: ['teachers', schoolId] });
       resetForm();
     },
+    onError: (error) => {
+      toast.error(error?.message || 'Failed to update teacher');
+    }
   });
 
   const deleteMutation = useMutation({
     mutationFn: (id) => base44.entities.Teacher.delete(id),
-    onSuccess: () => queryClient.invalidateQueries({ queryKey: ['teachers'] }),
+    onSuccess: () => {
+      toast.success('Teacher deleted');
+      queryClient.invalidateQueries({ queryKey: ['teachers', schoolId] });
+    },
+    onError: (error) => {
+      toast.error(error?.message || 'Failed to delete teacher');
+    }
   });
 
   const resetForm = () => {
@@ -156,7 +171,7 @@ export default function Teachers() {
     if (!file) return;
 
     if (!schoolId) {
-      alert('No school assigned. Please set up your school in Settings first.');
+      toast.error('No school assigned. Please configure your school in Settings first.');
       return;
     }
 
@@ -366,7 +381,7 @@ Example: {"full_name": "John Smith", "email": "john@school.com", "subjects": ["P
         totalTeachers: 0,
         error: error?.message || 'An unknown error occurred'
       });
-      alert('Failed to process file: ' + (error?.message || 'Unknown error'));
+      toast.error(error?.message || 'Failed to process file');
     }
   };
 

@@ -21,6 +21,7 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { Plus, GraduationCap, Upload, Loader2 } from 'lucide-react';
+import { toast } from 'sonner';
 import { motion } from 'framer-motion';
 import PageHeader from '../components/ui-custom/PageHeader';
 import EmptyState from '../components/ui-custom/EmptyState';
@@ -138,48 +139,39 @@ export default function Students() {
   const createMutation = useMutation({
     mutationFn: async (data) => {
       if (!schoolId) throw new Error('No school assigned');
-      const created = await base44.entities.Student.create({ ...data, school_id: schoolId });
-      return created;
+      return base44.entities.Student.create({ ...data, school_id: schoolId });
     },
     onSuccess: (created) => {
-      (async () => {
-        try {
-          const verify = await base44.entities.Student.filter({ id: created?.id });
-          if (!Array.isArray(verify) || verify.length === 0) {
-            console.warn('Post-save verify: record not visible yet, forcing refetch');
-          }
-        } catch (e) {
-          console.error('Post-save verify failed', e);
-        }
-      })();
-      alert(`Saved student ${created?.full_name || ''} (#${created?.id}) in school ${schoolId}`);
+      toast.success(`${created?.full_name || 'Student'} added successfully`);
       queryClient.invalidateQueries({ queryKey: ['students', schoolId] });
-      queryClient.invalidateQueries({ queryKey: ['students'] });
       resetForm();
     },
     onError: (error) => {
-      alert(`Save failed: ${error?.message || 'Unknown error'}`);
+      toast.error(error?.message || 'Failed to save student');
     }
   });
 
   const updateMutation = useMutation({
     mutationFn: ({ id, data }) => base44.entities.Student.update(id, data),
     onSuccess: () => {
+      toast.success('Student updated successfully');
       queryClient.invalidateQueries({ queryKey: ['students', schoolId] });
-      queryClient.invalidateQueries({ queryKey: ['students'] });
       resetForm();
     },
     onError: (error) => {
-      alert(`Update failed: ${error?.message || 'Unknown error'}`);
+      toast.error(error?.message || 'Failed to update student');
     }
   });
 
   const deleteMutation = useMutation({
     mutationFn: (id) => base44.entities.Student.delete(id),
     onSuccess: () => {
+      toast.success('Student deleted');
       queryClient.invalidateQueries({ queryKey: ['students', schoolId] });
-      queryClient.invalidateQueries({ queryKey: ['students'] });
     },
+    onError: (error) => {
+      toast.error(error?.message || 'Failed to delete student');
+    }
   });
 
   const resetForm = () => {
@@ -217,12 +209,12 @@ export default function Students() {
     e.preventDefault();
 
     if (!allowedProgrammes.includes(formData.ib_programme)) {
-      alert(`Your plan does not allow creating ${formData.ib_programme} students.`);
+      toast.error(`Your plan does not allow creating ${formData.ib_programme} students.`);
       return;
     }
 
     if (!editingStudent && students.length >= maxStudents) {
-      alert(`Student limit reached for your subscription tier (${maxStudents}). Please upgrade your plan to add more students.`);
+      toast.error(`Student limit reached (${maxStudents} on your plan). Please upgrade to add more students.`);
       return;
     }
     
@@ -320,7 +312,7 @@ export default function Students() {
     if (!file) return;
 
     if (!schoolId) {
-      alert('No school assigned. Please set up your school in Settings first.');
+      toast.error('No school assigned. Please set up your school in Settings first.');
       return;
     }
 
@@ -844,7 +836,7 @@ Return ONLY students array, no other text.`,
         totalStudents: 0,
         error: error?.message || 'An unknown error occurred'
       });
-      alert('Failed to process file: ' + (error?.message || 'Unknown error'));
+      toast.error(error?.message || 'Failed to process file');
     }
   };
 

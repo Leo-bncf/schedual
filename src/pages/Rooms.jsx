@@ -15,6 +15,16 @@ import {
   DialogFooter,
 } from "@/components/ui/dialog";
 import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
+import {
   Select,
   SelectContent,
   SelectItem,
@@ -22,6 +32,7 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { Plus, Search, Building2, Users, MoreHorizontal, Pencil, Trash2, FlaskConical, Palette, Monitor, Music, BookOpen, Dumbbell, Upload, Loader2 } from 'lucide-react';
+import { toast } from 'sonner';
 import { motion, AnimatePresence } from 'framer-motion';
 import {
   DropdownMenu,
@@ -90,23 +101,41 @@ export default function Rooms() {
       if (!schoolId) throw new Error('No school assigned');
       return base44.entities.Room.create({ ...data, school_id: schoolId });
     },
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['rooms'] });
+    onSuccess: (created) => {
+      toast.success(`${created?.name || 'Room'} added successfully`);
+      queryClient.invalidateQueries({ queryKey: ['rooms', schoolId] });
       resetForm();
     },
+    onError: (error) => {
+      toast.error(error?.message || 'Failed to save room');
+    }
   });
 
   const updateMutation = useMutation({
     mutationFn: ({ id, data }) => base44.entities.Room.update(id, data),
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['rooms'] });
+      toast.success('Room updated successfully');
+      queryClient.invalidateQueries({ queryKey: ['rooms', schoolId] });
       resetForm();
     },
+    onError: (error) => {
+      toast.error(error?.message || 'Failed to update room');
+    }
   });
+
+  const [deleteConfirmId, setDeleteConfirmId] = useState(null);
 
   const deleteMutation = useMutation({
     mutationFn: (id) => base44.entities.Room.delete(id),
-    onSuccess: () => queryClient.invalidateQueries({ queryKey: ['rooms'] }),
+    onSuccess: () => {
+      toast.success('Room deleted');
+      queryClient.invalidateQueries({ queryKey: ['rooms', schoolId] });
+      setDeleteConfirmId(null);
+    },
+    onError: (error) => {
+      toast.error(error?.message || 'Failed to delete room');
+      setDeleteConfirmId(null);
+    }
   });
 
   const resetForm = () => {
@@ -169,7 +198,7 @@ export default function Rooms() {
     const currentSchoolId = user?.school_id;
     
     if (!currentSchoolId) {
-      alert('No school assigned. Please set up your school in Settings first.');
+      toast.error('No school assigned. Please configure your school in Settings first.');
       return;
     }
 
@@ -300,7 +329,7 @@ ${trainingFeedback ? `LESSONS FROM ADMIN FEEDBACK:\n${trainingFeedback}\n\n` : '
         totalRooms: 0,
         error: error?.message || 'An unknown error occurred'
       });
-      alert('Failed to process file: ' + (error?.message || 'Unknown error'));
+      toast.error(error?.message || 'Failed to process file');
     }
   };
 
@@ -458,7 +487,7 @@ ${trainingFeedback ? `LESSONS FROM ADMIN FEEDBACK:\n${trainingFeedback}\n\n` : '
                           <DropdownMenuItem onClick={() => handleEdit(room)}>
                             <Pencil className="w-4 h-4 mr-2" /> Edit
                           </DropdownMenuItem>
-                          <DropdownMenuItem className="text-rose-600" onClick={() => deleteMutation.mutate(room.id)}>
+                          <DropdownMenuItem className="text-rose-600" onClick={() => setDeleteConfirmId(room.id)}>
                             <Trash2 className="w-4 h-4 mr-2" /> Delete
                           </DropdownMenuItem>
                         </DropdownMenuContent>
@@ -582,7 +611,7 @@ ${trainingFeedback ? `LESSONS FROM ADMIN FEEDBACK:\n${trainingFeedback}\n\n` : '
         entityType="Rooms"
       />
 
-      <DragDropUploadDialog 
+      <DragDropUploadDialog
         open={showUploadDialog}
         onOpenChange={setShowUploadDialog}
         onUpload={(file) => {
@@ -592,6 +621,26 @@ ${trainingFeedback ? `LESSONS FROM ADMIN FEEDBACK:\n${trainingFeedback}\n\n` : '
         title="Import Rooms"
         description="Upload a document or paste to extract room data"
       />
+
+      <AlertDialog open={!!deleteConfirmId} onOpenChange={(open) => { if (!open) setDeleteConfirmId(null); }}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Delete room?</AlertDialogTitle>
+            <AlertDialogDescription>
+              This will permanently delete <strong>{rooms.find(r => r.id === deleteConfirmId)?.name}</strong>. Any schedule slots using this room will be affected. This cannot be undone.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Cancel</AlertDialogCancel>
+            <AlertDialogAction
+              className="bg-rose-600 hover:bg-rose-700"
+              onClick={() => deleteMutation.mutate(deleteConfirmId)}
+            >
+              Delete
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </div>
   );
 }

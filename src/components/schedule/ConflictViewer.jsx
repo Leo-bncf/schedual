@@ -1,6 +1,7 @@
 import React from 'react';
-import { useQuery } from '@tanstack/react-query';
+import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { base44 } from '@/api/base44Client';
+import { toast } from 'sonner';
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -71,14 +72,34 @@ export default function ConflictViewer({ scheduleVersionId }) {
   });
   const schoolId = user?.school_id;
 
+  const queryClient = useQueryClient();
+
   const { data: conflicts = [], isLoading } = useQuery({
     queryKey: ['conflicts', scheduleVersionId],
     queryFn: () => base44.entities.ConflictReport.filter({
       schedule_version_id: scheduleVersionId,
-      status: { $ne: 'resolved' }
+      status: { $nin: ['resolved', 'ignored'] }
     }),
     enabled: !!scheduleVersionId,
     staleTime: 30000,
+  });
+
+  const resolveMutation = useMutation({
+    mutationFn: (id) => base44.entities.ConflictReport.update(id, { status: 'resolved' }),
+    onSuccess: () => {
+      toast.success('Conflict marked as resolved');
+      queryClient.invalidateQueries({ queryKey: ['conflicts', scheduleVersionId] });
+    },
+    onError: (error) => toast.error(error?.message || 'Failed to resolve conflict'),
+  });
+
+  const ignoreMutation = useMutation({
+    mutationFn: (id) => base44.entities.ConflictReport.update(id, { status: 'ignored' }),
+    onSuccess: () => {
+      toast.success('Conflict ignored');
+      queryClient.invalidateQueries({ queryKey: ['conflicts', scheduleVersionId] });
+    },
+    onError: (error) => toast.error(error?.message || 'Failed to ignore conflict'),
   });
 
   const { data: teachers = [] } = useQuery({
@@ -253,24 +274,20 @@ export default function ConflictViewer({ scheduleVersionId }) {
                     )}
 
                     <div className="flex gap-2 pt-2">
-                      <Button 
-                        size="sm" 
+                      <Button
+                        size="sm"
                         variant="outline"
-                        onClick={() => {
-                          // TODO: Implement resolution logic
-                          console.log('Resolve conflict:', conflict.id);
-                        }}
+                        disabled={resolveMutation.isPending || ignoreMutation.isPending}
+                        onClick={() => resolveMutation.mutate(conflict.id)}
                       >
                         <CheckCircle className="w-3 h-3 mr-1" />
                         Mark Resolved
                       </Button>
-                      <Button 
-                        size="sm" 
+                      <Button
+                        size="sm"
                         variant="outline"
-                        onClick={() => {
-                          // TODO: Implement ignore logic
-                          console.log('Ignore conflict:', conflict.id);
-                        }}
+                        disabled={resolveMutation.isPending || ignoreMutation.isPending}
+                        onClick={() => ignoreMutation.mutate(conflict.id)}
                       >
                         Ignore
                       </Button>

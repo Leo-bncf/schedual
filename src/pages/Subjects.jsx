@@ -24,6 +24,7 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { Plus, BookOpen, FlaskConical, Palette, Calculator, Globe, Languages, FileText, Upload, Loader2, Sparkles } from 'lucide-react';
+import { toast } from 'sonner';
 import { motion } from 'framer-motion';
 import PageHeader from '../components/ui-custom/PageHeader';
 import EmptyState from '../components/ui-custom/EmptyState';
@@ -132,29 +133,30 @@ export default function Subjects() {
       resetForm();
     },
     onError: (error) => {
-      console.error('Create subject error:', error);
-      alert('Failed to create subject: ' + (error.message || 'Unknown error'));
+      toast.error(error.message || 'Failed to create subject');
     }
   });
 
   const updateMutation = useMutation({
     mutationFn: ({ id, data }) => base44.entities.Subject.update(id, data),
     onSuccess: () => {
+      toast.success('Subject updated successfully');
       queryClient.invalidateQueries({ queryKey: ['subjects', schoolId] });
       resetForm();
     },
     onError: (error) => {
-      console.error('Update subject error:', error);
-      alert('Failed to update subject: ' + (error.message || 'Unknown error'));
+      toast.error(error.message || 'Failed to update subject');
     }
   });
 
   const deleteMutation = useMutation({
     mutationFn: (id) => base44.entities.Subject.delete(id),
-    onSuccess: () => queryClient.invalidateQueries({ queryKey: ['subjects', schoolId] }),
+    onSuccess: () => {
+      toast.success('Subject deleted');
+      queryClient.invalidateQueries({ queryKey: ['subjects', schoolId] });
+    },
     onError: (error) => {
-      console.error('Delete subject error:', error);
-      alert('Failed to delete subject: ' + (error.message || 'Unknown error'));
+      toast.error(error.message || 'Failed to delete subject');
     }
   });
 
@@ -218,7 +220,7 @@ export default function Subjects() {
       const slHours = parseFloat(formData.hoursPerWeekSL) || 0;
 
       if (hlHours <= 0 || slHours <= 0) {
-        alert('DP subjects require both HL and SL hours to be greater than 0 for schedule generation.');
+        toast.error('DP subjects require both HL and SL hours to be greater than 0 for schedule generation.');
         return;
       }
     }
@@ -227,7 +229,7 @@ export default function Subjects() {
     const hasSpecialSessionPattern = Number(formData.sessions_per_week || 0) > 0 && Number(formData.hours_per_session || 0) > 0;
 
     if (isSpecialDp && !hasSpecialWeeklyHours && !hasSpecialSessionPattern) {
-      alert('Special DP subjects need either hours per week or a sessions-per-week pattern.');
+      toast.error('Special DP subjects need either hours per week or a sessions-per-week pattern.');
       return;
     }
 
@@ -304,7 +306,7 @@ export default function Subjects() {
     if (!file) return;
 
     if (!schoolId) {
-      alert('No school assigned. Please set up your school in Settings first.');
+      toast.error('No school assigned. Please configure your school in Settings first.');
       return;
     }
 
@@ -432,7 +434,7 @@ ${trainingFeedback ? `LESSONS FROM ADMIN FEEDBACK:\n${trainingFeedback}\n\n` : '
         totalSubjects: 0,
         error: error?.message || 'An unknown error occurred'
       });
-      alert('Failed to process file: ' + (error?.message || 'Unknown error'));
+      toast.error(error?.message || 'Failed to process file');
     }
   };
 
