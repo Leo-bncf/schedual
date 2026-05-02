@@ -11,7 +11,8 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { Building2, Users, GraduationCap, Plus, Pencil, Trash2, Crown, MoreHorizontal, Brain, BarChart3, Bot, ShieldCheck, Search, TrendingUp, Activity, Eye, AlertTriangle } from 'lucide-react';
+import { Building2, Users, Plus, Pencil, Trash2, Crown, MoreHorizontal, BarChart3, ShieldCheck, Search, TrendingUp, Activity, Eye, AlertTriangle, Mail, Send } from 'lucide-react';
+import { Textarea } from "@/components/ui/textarea";
 import AgentTrainingSection from '../components/ai-training/AgentTrainingSection';
 import AutomationDashboard from '../components/admin/AutomationDashboard';
 import AnalyticsDashboard from '../components/admin/AnalyticsDashboard';
@@ -19,9 +20,6 @@ import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigge
 import PageHeader from '../components/ui-custom/PageHeader';
 import StatCard from '../components/ui-custom/StatCard';
 import DataTable from '../components/ui-custom/DataTable';
-
-// Adjust these to match your actual pricing
-const TIER_MRR = { tier1: 99, tier2: 199, tier3: 399 };
 
 export default function Panel() {
   const [isSchoolDialogOpen, setIsSchoolDialogOpen] = useState(false);
@@ -52,6 +50,10 @@ export default function Panel() {
   // Search
   const [schoolSearch, setSchoolSearch] = useState('');
   const [userSearch, setUserSearch] = useState('');
+
+  // Broadcast email
+  const [isBroadcastOpen, setIsBroadcastOpen] = useState(false);
+  const [broadcastForm, setBroadcastForm] = useState({ subject: '', message: '', target_status: 'active' });
 
   const queryClient = useQueryClient();
   const location = useLocation();
@@ -113,6 +115,15 @@ export default function Panel() {
         return data.records || [];
       } catch { return []; }
     },
+  });
+
+  const { data: stripePrices, isLoading: loadingPrices } = useQuery({
+    queryKey: ['stripePrices'],
+    queryFn: async () => {
+      const { data } = await base44.functions.invoke('adminGetStripePrices');
+      return data.prices || {};
+    },
+    staleTime: 10 * 60 * 1000, // cache 10 min — prices don't change often
   });
 
   // ─── Mutations ────────────────────────────────────────────────────────────
@@ -227,6 +238,17 @@ export default function Panel() {
     onError: (error) => toast.error('Failed to delete user: ' + (error.message || 'Unknown error'))
   });
 
+  const broadcastMutation = useMutation({
+    mutationFn: (form) => base44.functions.invoke('adminBroadcastEmail', form),
+    onSuccess: (response) => {
+      const { sent, total } = response.data || {};
+      toast.success(`Sent to ${sent} of ${total} admin email${total !== 1 ? 's' : ''}`);
+      setIsBroadcastOpen(false);
+      setBroadcastForm({ subject: '', message: '', target_status: 'active' });
+    },
+    onError: (error) => toast.error('Broadcast failed: ' + (error.message || 'Unknown error'))
+  });
+
   // ─── Helpers ──────────────────────────────────────────────────────────────
 
   const resetSchoolForm = () => {
@@ -290,14 +312,33 @@ export default function Panel() {
     schedules: allSchedules.filter(s => s.school_id === schoolId).length,
   });
 
-  // ─── Revenue calculations ─────────────────────────────────────────────────
+  // ─── Revenue calculations (real Stripe prices) ──────────────────────────���─
 
   const activeSchools = useMemo(() => schools.filter(s => s.subscription_status === 'active'), [schools]);
   const pausedSchools = useMemo(() => schools.filter(s => s.subscription_status === 'paused'), [schools]);
-  const mrr = useMemo(() =>
-    activeSchools.reduce((acc, s) => acc + (TIER_MRR[s.subscription_tier] || TIER_MRR.tier2), 0),
-    [activeSchools]
-  );
+
+  // monthly_cents from Stripe, divided by 100 to get the display amount
+  const tierMonthlyCents = useMemo(() => ({
+    tier1: stripePrices?.tier1?.monthly_cents ?? null,
+    tier2: stripePrices?.tier2?.monthly_cents ?? null,
+    tier3: stripePrices?.tier3?.monthly_cents ?? null,
+  }), [stripePrices]);
+
+  // Use first non-null currency found, default to 'eur'
+  const currency = useMemo(() => {
+    const c = Object.values(stripePrices || {}).find(p => p?.currency)?.currency;
+    return c || 'eur';
+  }, [stripePrices]);
+
+  const formatMoney = (cents) => {
+    if (cents == null) return '—';
+    return new Intl.NumberFormat('en', { style: 'currency', currency: currency.toUpperCase(), minimumFractionDigits: 0 }).format(cents / 100);
+  };
+
+  const mrr = useMemo(() => {
+    if (!stripePrices) return null;
+    return activeSchools.reduce((acc, s) => acc + (tierMonthlyCents[s.subscription_tier] ?? 0), 0);
+  }, [activeSchools, tierMonthlyCents, stripePrices]);
 
   // ─── Filtered data ────────────────────────────────────────────────────────
 
@@ -505,8 +546,9 @@ export default function Panel() {
     {
       header: 'MRR',
       cell: (row) => {
-        if (row.subscription_status !== 'active') return <span className="text-slate-400">€0</span>;
-        return <span className="font-medium text-emerald-700">€{(TIER_MRR[row.subscription_tier] || 0).toLocaleString()}</span>;
+        if (row.subscription_status !== 'active') return <span className="text-slate-400">—</span>;
+        const cents = tierMonthlyCents[row.subscription_tier];
+        return <span className="font-medium text-emerald-700">{cents != null ? formatMoney(cents) : '—'}</span>;
       }
     },
     {
@@ -567,23 +609,51 @@ export default function Panel() {
 
   const confirmTarget = deleteConfirm?.type === 'school' ? deleteConfirm?.item?.name : deleteConfirm?.item?.email;
 
+  // How many admin emails will receive the broadcast
+  const broadcastRecipientCount = useMemo(() => {
+    const targetSchoolIds = new Set(
+      schools
+        .filter(s => broadcastForm.target_status === 'all' || s.subscription_status === broadcastForm.target_status)
+        .map(s => s.id)
+    );
+    const adminEmails = new Set(
+      allUsers
+        .filter(u => {
+          const sid = getUserSchoolId(u);
+          return sid && targetSchoolIds.has(sid) && getUserRole(u) === 'admin' && u.email;
+        })
+        .map(u => u.email)
+    );
+    return adminEmails.size;
+  }, [schools, allUsers, broadcastForm.target_status]);
+
   return (
     <div className="space-y-6">
       <PageHeader
         title={<div className="flex items-center gap-2"><Crown className="w-6 h-6 text-amber-500" /> Admin Panel</div>}
         description="Manage all schools, users, and platform-wide settings"
         actions={
-          <Button onClick={() => setIsSchoolDialogOpen(true)} className="bg-indigo-600 hover:bg-indigo-700">
-            <Plus className="w-4 h-4 mr-2" />
-            Add School
-          </Button>
+          <div className="flex gap-2">
+            <Button variant="outline" onClick={() => setIsBroadcastOpen(true)}>
+              <Mail className="w-4 h-4 mr-2" />
+              Send Announcement
+            </Button>
+            <Button onClick={() => setIsSchoolDialogOpen(true)} className="bg-indigo-600 hover:bg-indigo-700">
+              <Plus className="w-4 h-4 mr-2" />
+              Add School
+            </Button>
+          </div>
         }
       />
 
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
         <StatCard title="Total Schools" value={schools.length} icon={Building2} />
         <StatCard title="Active Schools" value={activeSchools.length} icon={Activity} />
-        <StatCard title="Est. MRR" value={`€${mrr.toLocaleString()}`} icon={TrendingUp} />
+        <StatCard
+          title="MRR"
+          value={loadingPrices ? '…' : mrr != null ? formatMoney(mrr * 100) : '—'}
+          icon={TrendingUp}
+        />
         <StatCard title="Unassigned Users" value={allUsers.filter(u => !getUserSchoolId(u)).length} icon={Users} />
       </div>
 
@@ -705,11 +775,15 @@ export default function Panel() {
           <div className="space-y-6">
             <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
               <StatCard title="Active Schools" value={activeSchools.length} icon={Building2} />
-              <StatCard title="Est. MRR" value={`€${mrr.toLocaleString()}`} icon={TrendingUp} />
+              <StatCard
+                title="MRR"
+                value={loadingPrices ? '…' : mrr != null ? formatMoney(mrr * 100) : '—'}
+                icon={TrendingUp}
+              />
               <StatCard title="Paused Schools" value={pausedSchools.length} icon={Activity} />
               <StatCard
                 title="Avg / School"
-                value={activeSchools.length > 0 ? `€${Math.round(mrr / activeSchools.length)}` : '€0'}
+                value={loadingPrices ? '…' : (mrr != null && activeSchools.length > 0) ? formatMoney((mrr / activeSchools.length) * 100) : '—'}
                 icon={BarChart3}
               />
             </div>
@@ -720,14 +794,23 @@ export default function Panel() {
                 <CardContent className="space-y-4">
                   {['tier1', 'tier2', 'tier3'].map(tier => {
                     const count = activeSchools.filter(s => s.subscription_tier === tier).length;
-                    const revenue = count * (TIER_MRR[tier] || 0);
+                    const monthlyCents = tierMonthlyCents[tier];
+                    const revenueCents = count * (monthlyCents ?? 0);
                     const pct = activeSchools.length > 0 ? Math.round((count / activeSchools.length) * 100) : 0;
                     const labels = { tier1: 'Starter', tier2: 'Growth', tier3: 'Scale' };
+                    const priceLabel = loadingPrices ? '…' : monthlyCents != null ? formatMoney(monthlyCents) + '/mo' : '—';
                     return (
                       <div key={tier}>
                         <div className="flex justify-between text-sm mb-1">
-                          <span className="font-medium">{labels[tier]} <span className="text-slate-400 font-normal">({tier})</span></span>
-                          <span className="text-slate-500">{count} school{count !== 1 ? 's' : ''} · <span className="font-medium text-slate-700">€{revenue.toLocaleString()}/mo</span></span>
+                          <span className="font-medium">
+                            {labels[tier]} <span className="text-slate-400 font-normal">({tier} · {priceLabel})</span>
+                          </span>
+                          <span className="text-slate-500">
+                            {count} school{count !== 1 ? 's' : ''} ·{' '}
+                            <span className="font-medium text-slate-700">
+                              {loadingPrices ? '…' : formatMoney(revenueCents)}/mo
+                            </span>
+                          </span>
                         </div>
                         <div className="w-full bg-slate-100 rounded-full h-2">
                           <div className="bg-indigo-500 h-2 rounded-full transition-all" style={{ width: `${pct}%` }} />
@@ -735,7 +818,6 @@ export default function Panel() {
                       </div>
                     );
                   })}
-                  <p className="text-xs text-slate-400 pt-2">* Prices configured in Panel.jsx TIER_MRR constant</p>
                 </CardContent>
               </Card>
 
@@ -1059,6 +1141,66 @@ export default function Panel() {
               </Button>
             </DialogFooter>
           </form>
+        </DialogContent>
+      </Dialog>
+
+      {/* ── Broadcast Email Dialog ─────────────────────────────────────────── */}
+      <Dialog open={isBroadcastOpen} onOpenChange={(open) => { if (!open) setIsBroadcastOpen(false); }}>
+        <DialogContent className="sm:max-w-lg">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2">
+              <Send className="w-5 h-5 text-indigo-600" />
+              Send Announcement to Clients
+            </DialogTitle>
+            <DialogDescription>
+              Sends a branded email to all admin users of the selected schools.
+            </DialogDescription>
+          </DialogHeader>
+          <div className="space-y-4">
+            <div className="space-y-2">
+              <Label>Audience</Label>
+              <Select
+                value={broadcastForm.target_status}
+                onValueChange={(v) => setBroadcastForm({ ...broadcastForm, target_status: v })}
+              >
+                <SelectTrigger><SelectValue /></SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="active">Active subscribers only</SelectItem>
+                  <SelectItem value="all">All schools (active + paused)</SelectItem>
+                </SelectContent>
+              </Select>
+              <p className="text-xs text-slate-500">
+                {broadcastRecipientCount} admin email{broadcastRecipientCount !== 1 ? 's' : ''} will receive this message
+              </p>
+            </div>
+            <div className="space-y-2">
+              <Label>Subject *</Label>
+              <Input
+                value={broadcastForm.subject}
+                onChange={(e) => setBroadcastForm({ ...broadcastForm, subject: e.target.value })}
+                placeholder="e.g. New feature: Advanced constraints"
+              />
+            </div>
+            <div className="space-y-2">
+              <Label>Message *</Label>
+              <Textarea
+                value={broadcastForm.message}
+                onChange={(e) => setBroadcastForm({ ...broadcastForm, message: e.target.value })}
+                placeholder="Write your announcement here…"
+                rows={6}
+              />
+            </div>
+          </div>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setIsBroadcastOpen(false)}>Cancel</Button>
+            <Button
+              className="bg-indigo-600 hover:bg-indigo-700"
+              disabled={!broadcastForm.subject || !broadcastForm.message || broadcastRecipientCount === 0 || broadcastMutation.isPending}
+              onClick={() => broadcastMutation.mutate(broadcastForm)}
+            >
+              {broadcastMutation.isPending ? 'Sending…' : `Send to ${broadcastRecipientCount} recipient${broadcastRecipientCount !== 1 ? 's' : ''}`}
+            </Button>
+          </DialogFooter>
         </DialogContent>
       </Dialog>
 
