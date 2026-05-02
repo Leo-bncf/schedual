@@ -92,7 +92,8 @@ Deno.serve(async (req) => {
     }
 
     await base44.asServiceRole.entities.User.update(existingUser.id, {
-      school_id: schoolId
+      school_id: schoolId,
+      role: 'admin'
     });
 
     await base44.integrations.Core.SendEmail({

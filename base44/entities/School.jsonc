@@ -217,19 +217,10 @@
       }
     },
     "read": {
-      "$or": [
-        {
-          "data.id": "{{user.data.school_id}}"
-        },
-        {
-          "user_condition": {
-            "role": "admin"
-          }
-        }
-      ]
+      "data.id": "{{user.data.school_id}}"
     },
     "update": {
-      "$or": [
+      "$and": [
         {
           "data.id": "{{user.data.school_id}}"
         },

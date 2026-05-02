@@ -91,8 +91,8 @@ async function ensureSchoolForUser(base44, user, session) {
         school_id: userSchool.school_id || buildSchoolId(stripeCustomerId),
       });
 
-      if (user.role !== 'user') {
-        await base44.asServiceRole.entities.User.update(user.id, { role: 'user' });
+      if (user.role !== 'admin') {
+        await base44.asServiceRole.entities.User.update(user.id, { role: 'admin' });
       }
 
       return { schoolId: userSchool.id, created: false };
@@ -115,7 +115,7 @@ async function ensureSchoolForUser(base44, user, session) {
       school_id: matchingSchool.school_id || buildSchoolId(stripeCustomerId),
     });
 
-    await base44.asServiceRole.entities.User.update(user.id, { school_id: matchingSchool.id, role: 'user' });
+    await base44.asServiceRole.entities.User.update(user.id, { school_id: matchingSchool.id, role: 'admin' });
     return { schoolId: matchingSchool.id, created: false };
   }
 
@@ -135,7 +135,7 @@ async function ensureSchoolForUser(base44, user, session) {
     settings: getTierSettings(tier, {}),
   });
 
-  await base44.asServiceRole.entities.User.update(user.id, { school_id: createdSchool.id, role: 'user' });
+  await base44.asServiceRole.entities.User.update(user.id, { school_id: createdSchool.id, role: 'admin' });
   return { schoolId: createdSchool.id, created: true };
 }
 

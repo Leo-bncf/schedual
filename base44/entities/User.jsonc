@@ -7,5 +7,15 @@
       "description": "Reference to school"
     }
   },
-  "required": []
+  "required": [],
+  "rls": {
+    "create": false,
+    "read": {
+      "data.id": "{{user.id}}"
+    },
+    "update": {
+      "data.id": "{{user.id}}"
+    },
+    "delete": false
+  }
 }

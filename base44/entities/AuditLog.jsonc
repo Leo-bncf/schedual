@@ -61,7 +61,18 @@
     "action"
   ],
   "rls": {
-    "create": true,
+    "create": {
+      "$and": [
+        {
+          "data.school_id": "{{user.data.school_id}}"
+        },
+        {
+          "user_condition": {
+            "role": "admin"
+          }
+        }
+      ]
+    },
     "read": {
       "$and": [
         {
