@@ -170,15 +170,20 @@ export default function Schedules() {
     enabled: !!resolvedSchoolId,
   });
   const createVersionMutation = useMutation({
-    mutationFn: (data) => {
+    mutationFn: async (data) => {
       if (!resolvedSchoolId) throw new Error('No school assigned');
-      return base44.entities.ScheduleVersion.create({ ...data, school_id: resolvedSchoolId, status: 'draft' });
+      const res = await base44.functions.invoke('createScheduleVersion', data);
+      if (!res?.success) throw new Error(res?.error || 'Failed to create version');
+      return res.data;
     },
     onSuccess: (newVersion) => {
       queryClient.invalidateQueries({ queryKey: ['scheduleVersions'] });
       setIsDialogOpen(false);
       setSelectedVersion(newVersion);
       setFormData({ name: '', academic_year: '2024-2025', term: 'Fall' });
+    },
+    onError: (error) => {
+      toast.error(error?.message || 'Failed to create version');
     },
   });
 

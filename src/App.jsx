@@ -8,6 +8,7 @@ import { BrowserRouter as Router, Route, Routes, useLocation } from 'react-route
 import PageNotFound from './lib/PageNotFound';
 import { AuthProvider, useAuth } from '@/lib/AuthContext';
 import UserNotRegisteredError from '@/components/UserNotRegisteredError';
+import SubscriptionGate from '@/components/auth/SubscriptionGate';
 import AnalyticsAdmin from './pages/AnalyticsAdmin';
 import AutomationAdmin from './pages/AutomationAdmin';
 import SessionActivityAdmin from './pages/SessionActivityAdmin';
@@ -92,6 +93,7 @@ const AuthenticatedApp = () => {
 
   // Render the main app
   return (
+    <SubscriptionGate>
     <Routes>
       <Route path="/" element={
         <LayoutWrapper currentPageName={mainPageKey}>
@@ -120,6 +122,7 @@ const AuthenticatedApp = () => {
       <Route path="/ScholrIntegration" element={<LayoutWrapper currentPageName="ScholrIntegration"><ScholrIntegration /></LayoutWrapper>} />
       <Route path="*" element={<PageNotFound />} />
     </Routes>
+    </SubscriptionGate>
   );
 };
 

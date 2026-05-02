@@ -139,7 +139,9 @@ export default function Students() {
   const createMutation = useMutation({
     mutationFn: async (data) => {
       if (!schoolId) throw new Error('No school assigned');
-      return base44.entities.Student.create({ ...data, school_id: schoolId });
+      const res = await base44.functions.invoke('secureStudents', { action: 'create', data: { ...data, school_id: schoolId } });
+      if (!res?.success) throw new Error(res?.error || 'Failed to create student');
+      return res.data;
     },
     onSuccess: (created) => {
       toast.success(`${created?.full_name || 'Student'} added successfully`);
