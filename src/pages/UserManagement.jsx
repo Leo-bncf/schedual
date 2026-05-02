@@ -26,28 +26,36 @@ export default function UserManagement() {
   const queryClient = useQueryClient();
 
   const { data: users = [], isLoading: loadingUsers } = useQuery({
-    queryKey: ['users'],
-    queryFn: () => base44.entities.User.list(),
+    queryKey: ['adminUsers'],
+    queryFn: async () => {
+      const res = await base44.functions.invoke('adminManageUser', { action: 'list' });
+      return res?.data?.users || [];
+    },
   });
 
   const { data: schools = [] } = useQuery({
-    queryKey: ['schools'],
-    queryFn: () => base44.entities.School.list(),
+    queryKey: ['adminSchools'],
+    queryFn: async () => {
+      const res = await base44.functions.invoke('adminManageSchool', { action: 'list' });
+      return res?.data?.schools || [];
+    },
   });
 
   const updateUserMutation = useMutation({
-    mutationFn: ({ id, data }) => base44.entities.User.update(id, data),
+    mutationFn: ({ id, data }) =>
+      base44.functions.invoke('adminManageUser', { action: 'update', userId: id, data }),
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['users'] });
+      queryClient.invalidateQueries({ queryKey: ['adminUsers'] });
       setIsDialogOpen(false);
       setFormData({ email: '', full_name: '', school_id: '', role: 'user' });
     },
   });
 
   const deleteUserMutation = useMutation({
-    mutationFn: (id) => base44.entities.User.delete(id),
+    mutationFn: (id) =>
+      base44.functions.invoke('adminManageUser', { action: 'delete', userId: id }),
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['users'] });
+      queryClient.invalidateQueries({ queryKey: ['adminUsers'] });
     },
   });
 
