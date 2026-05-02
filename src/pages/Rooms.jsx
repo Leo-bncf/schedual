@@ -81,7 +81,7 @@ export default function Rooms() {
 
   const { data: rooms = [], isLoading } = useQuery({
     queryKey: ['rooms', schoolId],
-    queryFn: () => base44.entities.Room.list(),
+    queryFn: () => base44.entities.Room.filter({ school_id: schoolId }),
     enabled: !!schoolId,
   });
 

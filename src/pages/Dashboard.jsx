@@ -31,31 +31,31 @@ export default function Dashboard() {
 
   const { data: teachers = [], isLoading: loadingTeachers } = useQuery({
     queryKey: ['teachers', user?.school_id],
-    queryFn: () => base44.entities.Teacher.list(),
+    queryFn: () => base44.entities.Teacher.filter({ school_id: user?.school_id }),
     enabled: !!user?.school_id,
   });
 
   const { data: students = [], isLoading: loadingStudents } = useQuery({
     queryKey: ['students', user?.school_id],
-    queryFn: () => base44.entities.Student.list(),
+    queryFn: () => base44.entities.Student.filter({ school_id: user?.school_id }),
     enabled: !!user?.school_id,
   });
 
   const { data: subjects = [], isLoading: loadingSubjects } = useQuery({
     queryKey: ['subjects', user?.school_id],
-    queryFn: () => base44.entities.Subject.list(),
+    queryFn: () => base44.entities.Subject.filter({ school_id: user?.school_id }),
     enabled: !!user?.school_id,
   });
 
   const { data: rooms = [], isLoading: loadingRooms } = useQuery({
     queryKey: ['rooms', user?.school_id],
-    queryFn: () => base44.entities.Room.list(),
+    queryFn: () => base44.entities.Room.filter({ school_id: user?.school_id }),
     enabled: !!user?.school_id,
   });
 
   const { data: scheduleVersions = [], isLoading: loadingSchedules } = useQuery({
     queryKey: ['scheduleVersions', user?.school_id],
-    queryFn: () => base44.entities.ScheduleVersion.list('-created_date', 5),
+    queryFn: () => base44.entities.ScheduleVersion.filter({ school_id: user?.school_id }, '-created_date', 5),
     enabled: !!user?.school_id,
   });
 

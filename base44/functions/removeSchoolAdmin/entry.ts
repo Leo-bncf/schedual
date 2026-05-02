@@ -47,6 +47,12 @@ Deno.serve(async (req) => {
       return Response.json({ error: 'Admin does not belong to your school' }, { status: 403 });
     }
 
+    // Prevent removing the last admin of the school
+    const allAdmins = await base44.asServiceRole.entities.User.filter({ school_id: schoolId, role: 'admin' });
+    if (allAdmins.length <= 1) {
+      return Response.json({ error: 'Cannot remove the last administrator of the school' }, { status: 400 });
+    }
+
     // Remove school assignment and drop admin role
     await base44.asServiceRole.entities.User.update(admin_id, { school_id: null, role: 'user' });
 

@@ -120,7 +120,7 @@ export default function Students() {
 
   const { data: subjects = [] } = useQuery({
     queryKey: ['subjects', schoolId],
-    queryFn: () => base44.entities.Subject.list(),
+    queryFn: () => base44.entities.Subject.filter({ school_id: schoolId }),
     enabled: !!schoolId,
   });
 
@@ -633,7 +633,7 @@ Return ONLY students array, no other text.`,
       setUploadState(prev => ({ ...prev, stage: 'creating', totalStudents: studentsData.length, progress: `Creating ${studentsData.length} students...` }));
 
       // Fetch subjects to match names to IDs
-      const subjectsList = await base44.entities.Subject.list();
+      const subjectsList = await base44.entities.Subject.filter({ school_id: schoolId });
 
       // Get ALL subjects for auto-assignment
       const programmeSubjects = await base44.entities.Subject.filter({ school_id: schoolId });
