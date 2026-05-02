@@ -12,14 +12,15 @@ export default function StudentProfile() {
   const urlParams = new URLSearchParams(window.location.search);
   const studentId = urlParams.get('id');
 
-  const { data: user } = useQuery({ queryKey: ['currentUser'], queryFn: () => base44.auth.me() });
+  const { data: user, isLoading: isUserLoading } = useQuery({ queryKey: ['currentUser'], queryFn: () => base44.auth.me() });
   const schoolId = user?.school_id;
 
-  const { data: studentRecords = [], isLoading } = useQuery({
-    queryKey: ['student', studentId],
-    queryFn: () => base44.entities.Student.filter({ id: studentId }),
-    enabled: !!studentId,
+  const { data: studentRecords = [], isLoading: isStudentLoading } = useQuery({
+    queryKey: ['student', studentId, schoolId],
+    queryFn: () => base44.entities.Student.filter({ id: studentId, school_id: schoolId }),
+    enabled: !!studentId && !!schoolId,
   });
+  const isLoading = isUserLoading || isStudentLoading;
   const student = studentRecords[0];
 
   const { data: school } = useQuery({

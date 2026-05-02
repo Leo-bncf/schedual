@@ -67,13 +67,13 @@ export default function Teachers() {
 
   const { data: teachers = [], isLoading } = useQuery({
     queryKey: ['teachers', schoolId],
-    queryFn: () => base44.entities.Teacher.list(),
+    queryFn: () => base44.entities.Teacher.filter({ school_id: schoolId }),
     enabled: !!schoolId,
   });
 
   const { data: subjects = [] } = useQuery({
     queryKey: ['subjects', schoolId],
-    queryFn: () => base44.entities.Subject.list(),
+    queryFn: () => base44.entities.Subject.filter({ school_id: schoolId }),
     enabled: !!schoolId,
   });
 
@@ -244,7 +244,7 @@ Example: {"full_name": "John Smith", "email": "john@school.com", "subjects": ["P
       setUploadState(prev => ({ ...prev, stage: 'creating', totalTeachers: teachersData.length, progress: `Creating ${teachersData.length} teachers...` }));
 
       // Fetch all subjects to match names to IDs
-      const allSubjects = await base44.entities.Subject.list();
+      const allSubjects = await base44.entities.Subject.filter({ school_id: schoolId });
 
       const teachersToCreate = teachersData.map(teacher => {
         // Match subject names to IDs with improved fuzzy matching

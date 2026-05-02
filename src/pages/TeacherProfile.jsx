@@ -17,14 +17,15 @@ export default function TeacherProfile() {
   const urlParams = new URLSearchParams(window.location.search);
   const teacherId = urlParams.get('id');
 
-  const { data: user } = useQuery({ queryKey: ['currentUser'], queryFn: () => base44.auth.me() });
+  const { data: user, isLoading: isUserLoading } = useQuery({ queryKey: ['currentUser'], queryFn: () => base44.auth.me() });
   const schoolId = user?.school_id;
 
-  const { data: teacherRecords = [], isLoading } = useQuery({
-    queryKey: ['teacher', teacherId],
-    queryFn: () => base44.entities.Teacher.filter({ id: teacherId }),
-    enabled: !!teacherId,
+  const { data: teacherRecords = [], isLoading: isTeacherLoading } = useQuery({
+    queryKey: ['teacher', teacherId, schoolId],
+    queryFn: () => base44.entities.Teacher.filter({ id: teacherId, school_id: schoolId }),
+    enabled: !!teacherId && !!schoolId,
   });
+  const isLoading = isUserLoading || isTeacherLoading;
   const teacher = teacherRecords[0];
 
   const { data: school } = useQuery({

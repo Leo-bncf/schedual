@@ -27,13 +27,20 @@ export default function Constraints() {
 
   const queryClient = useQueryClient();
 
+  const { data: user } = useQuery({
+    queryKey: ['currentUser'],
+    queryFn: () => base44.auth.me(),
+  });
+  const schoolId = user?.school_id;
+
   const { data: constraints = [], isLoading } = useQuery({
-    queryKey: ['constraints'],
-    queryFn: () => base44.entities.Constraint.list(),
+    queryKey: ['constraints', schoolId],
+    queryFn: () => base44.entities.Constraint.filter({ school_id: schoolId }),
+    enabled: !!schoolId,
   });
 
   const createMutation = useMutation({
-    mutationFn: (data) => base44.entities.Constraint.create({ ...data, source: 'admin' }),
+    mutationFn: (data) => base44.entities.Constraint.create({ ...data, school_id: schoolId, source: 'admin' }),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['constraints'] });
       setIsDialogOpen(false);

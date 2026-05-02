@@ -59,7 +59,11 @@ Deno.serve(async (req) => {
           }
         }
 
-        await base44.asServiceRole.entities.User.update(userId, data);
+        const ALLOWED_USER_FIELDS = ['role', 'school_id', 'is_active', 'full_name', 'email'];
+        const safeData = Object.fromEntries(
+          Object.entries(data).filter(([key]) => ALLOWED_USER_FIELDS.includes(key))
+        );
+        await base44.asServiceRole.entities.User.update(userId, safeData);
         
         // If school_id was just assigned or changed, user needs to logout/login to refresh JWT
         if (previousUser.length > 0 && previousUser[0].school_id !== data.school_id && data.school_id) {
