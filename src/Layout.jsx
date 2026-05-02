@@ -22,6 +22,7 @@ import {
 } from 'lucide-react';
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
+import { toast } from 'sonner';
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -96,9 +97,9 @@ export default function Layout({ children, currentPageName }) {
         try {
           const { data: inviteData } = await base44.functions.invoke('checkPendingInvitations');
           if (inviteData?.schoolAssigned) {
-            // School was just assigned - force logout to refresh JWT token with new school_id
-            alert('Welcome! Your school has been set up. Please log in again to access your dashboard.');
-            base44.auth.logout(window.location.pathname);
+            // Force re-login so the SDK issues a fresh JWT with the new school_id + role:'admin'
+            toast.success('Welcome! Your school has been set up. Signing you back in…');
+            setTimeout(() => base44.auth.logout(window.location.pathname), 1500);
             return;
           }
         } catch (inviteError) {

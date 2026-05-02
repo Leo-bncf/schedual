@@ -109,8 +109,9 @@ export default function Subjects() {
   const getAllowedProgrammes = (s) => {
     const tier = s?.subscription_tier;
     if (tier === 'tier1') return ['MYP'];
-    if (tier === 'tier2' || tier === 'tier3') return ['PYP','MYP','DP'];
-    return ['MYP'];
+    if (tier === 'tier2' || tier === 'tier3') return ['PYP', 'MYP', 'DP'];
+    // Unknown/null tier: show all so data is never hidden while school loads
+    return ['PYP', 'MYP', 'DP'];
   };
   const allowedProgrammes = getAllowedProgrammes(school);
   const normalizedFormCode = getSubjectCode(formData.code);

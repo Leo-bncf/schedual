@@ -1,5 +1,4 @@
 import React, { useEffect, useState } from 'react';
-import { Navigate } from 'react-router-dom';
 import { base44 } from '@/api/base44Client';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -24,6 +23,9 @@ export default function PaymentSuccess() {
         await base44.functions.invoke('confirmStripeCheckout', { sessionId });
         setStatus('success');
         setMessage('Payment confirmed. Redirecting you to your account settings.');
+        // Hard reload so the SDK re-issues a fresh JWT that includes school_id + role:'admin'.
+        // A client-side Navigate() keeps the stale token, breaking RLS for school-scoped queries.
+        window.location.href = '/Settings?stripe=success';
       } catch (error) {
         setStatus('error');
         setMessage(error?.response?.data?.error || error.message || 'Unable to confirm your payment.');
@@ -32,10 +34,6 @@ export default function PaymentSuccess() {
 
     runConfirmation();
   }, []);
-
-  if (status === 'success') {
-    return <Navigate to="/Settings?stripe=success" replace />;
-  }
 
   return (
     <div className="min-h-screen flex items-center justify-center bg-slate-50 px-4">
