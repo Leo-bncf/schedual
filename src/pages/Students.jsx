@@ -90,19 +90,22 @@ export default function Students() {
     }
   }, [school]);
 
-  const { data: rawStudents = [], isLoading } = useQuery({
+  const { data: rawStudents = [], isLoading, isError, error: studentsError } = useQuery({
     queryKey: ['students', schoolId],
     queryFn: async () => {
-      // Use secureStudents (asServiceRole) to bypass JWT-role RLS issue.
-      // Student read RLS requires user.role==='admin' in JWT, but base44 doesn't
-      // update JWT claims when the DB role is changed — so direct entity queries
-      // return 0 for newly-promoted admins. secureStudents verifies school ownership
-      // server-side and returns the full list reliably.
       const { data: res } = await base44.functions.invoke('secureStudents', { action: 'list' });
+      if (res?.success === false) throw new Error(res?.error || 'Failed to load students');
       return res?.data || [];
     },
     enabled: !!schoolId,
+    retry: 1,
   });
+
+  useEffect(() => {
+    if (isError && studentsError) {
+      toast.error(`Could not load students: ${studentsError.message}`);
+    }
+  }, [isError, studentsError]);
 
   // Auto-normalize PYP year groups on display
   const students = rawStudents.map(student => {

@@ -9,17 +9,19 @@ export async function requireAuthenticatedUser(req) {
   return { base44, user };
 }
 
-export async function getCurrentUserRecord(base44, user) {
-  const rows = await base44.asServiceRole.entities.User.filter({ id: user.id });
-  return rows[0] || user;
+export async function getCurrentUserRecord(base44, authUser) {
+  const rows = await base44.asServiceRole.entities.User.filter({ id: authUser.id });
+  return rows[0] || authUser;
 }
 
-export function getSchoolId(userRecord) {
-  return userRecord?.school_id || userRecord?.data?.school_id || null;
+export function getSchoolId(userRecord, jwtUser?) {
+  return userRecord?.school_id || userRecord?.data?.school_id ||
+         jwtUser?.school_id || jwtUser?.data?.school_id || null;
 }
 
-export function getRole(userRecord) {
-  return userRecord?.role || userRecord?.data?.role || null;
+export function getRole(userRecord, jwtUser?) {
+  return userRecord?.role || userRecord?.data?.role ||
+         jwtUser?.role || jwtUser?.data?.role || null;
 }
 
 export function getSuperAdminEmails() {
@@ -38,10 +40,12 @@ export async function requireAdmin(req) {
   const { base44, user, error } = await requireAuthenticatedUser(req);
   if (error) return { error };
   const userRecord = await getCurrentUserRecord(base44, user);
-  if (getRole(userRecord) !== 'admin' || !getSchoolId(userRecord)) {
-    return { error: Response.json({ error: 'Forbidden: Admin access required' }, { status: 403 }) };
+  const role = getRole(userRecord, user);
+  const schoolId = getSchoolId(userRecord, user);
+  if (role !== 'admin' || !schoolId) {
+    return { error: Response.json({ error: `Forbidden: Admin access required (role: ${role ?? 'none'})` }, { status: 403 }) };
   }
-  return { base44, user: userRecord, schoolId: getSchoolId(userRecord) };
+  return { base44, user: userRecord, schoolId };
 }
 
 export async function requireSuperAdmin(req) {

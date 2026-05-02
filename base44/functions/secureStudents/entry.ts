@@ -7,23 +7,27 @@ async function requireSchoolAdmin(base44) {
     throw new Error('Unauthorized - not authenticated');
   }
 
+  // Fetch fresh DB record (bypasses JWT staleness for school_id/role)
   const dbUsers = await base44.asServiceRole.entities.User.filter({ id: authUser.id });
-  const user = dbUsers[0] || authUser;
-  const school_id = user.school_id || user.data?.school_id;
-  const role = user.role || user.data?.role;
+  const dbUser = dbUsers[0] || null;
+
+  // Prefer DB values (authoritative), fall back to JWT claims for resilience
+  const school_id =
+    dbUser?.school_id || dbUser?.data?.school_id ||
+    authUser.school_id || authUser.data?.school_id;
+
+  const role =
+    dbUser?.role || dbUser?.data?.role ||
+    authUser.role || authUser.data?.role;
 
   if (!school_id) {
     throw new Error('Forbidden - no school assigned');
   }
   if (role !== 'admin') {
-    throw new Error('Forbidden - admin access required');
+    throw new Error(`Forbidden - admin access required (current role: ${role ?? 'none'})`);
   }
 
-  return {
-    ...user,
-    school_id,
-    role,
-  };
+  return { school_id, role };
 }
 
 function verifySchoolOwnership(user, dataSchoolId) {
