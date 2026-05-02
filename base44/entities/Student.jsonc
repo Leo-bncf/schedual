@@ -132,7 +132,14 @@
           "data.user_id": "{{user.id}}"
         },
         {
-          "data.email": "{{user.email}}"
+          "$and": [
+            {
+              "data.email": "{{user.email}}"
+            },
+            {
+              "data.school_id": "{{user.data.school_id}}"
+            }
+          ]
         },
         {
           "$and": [

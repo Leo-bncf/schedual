@@ -10,11 +10,12 @@ Deno.serve(async (req) => {
     }
 
     const { action, ...params } = await req.json();
-    
-    // Check super admin for all privileged operations, including list
-    const { data: superAdminCheck } = await base44.functions.invoke('getSuperAdminEmails');
-    const isSuperAdmin = superAdminCheck?.isSuperAdmin;
-    
+
+    // Check super admin directly from env (avoids recursive function call that caused 500 errors)
+    const superAdminEmails = (Deno.env.get('SUPER_ADMIN_EMAILS') || '')
+      .split(',').map((e: string) => e.trim().toLowerCase()).filter(Boolean);
+    const isSuperAdmin = superAdminEmails.includes((user.email || '').toLowerCase());
+
     if (['upload', 'list', 'updateField', 'approve'].includes(action) && !isSuperAdmin) {
       return Response.json({ error: 'Unauthorized - Super Admin access required' }, { status: 403 });
     }
