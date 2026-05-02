@@ -38,18 +38,23 @@
   ],
   "rls": {
     "create": {
-      "data.school_id": "{{user.data.school_id}}"
+      "$and": [
+        { "data.school_id": "{{user.data.school_id}}" },
+        { "user_condition": { "role": "admin" } }
+      ]
     },
     "read": {
-      "user_condition": {
-        "role": "admin"
-      }
+      "$and": [
+        { "data.school_id": "{{user.data.school_id}}" },
+        { "user_condition": { "role": "admin" } }
+      ]
     },
     "update": false,
     "delete": {
-      "user_condition": {
-        "role": "admin"
-      }
+      "$and": [
+        { "data.school_id": "{{user.data.school_id}}" },
+        { "user_condition": { "role": "admin" } }
+      ]
     }
   }
 }
