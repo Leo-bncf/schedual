@@ -88,9 +88,8 @@ Deno.serve(async (req) => {
         const currentStudents = await base44.asServiceRole.entities.Student.filter({ school_id: user.school_id });
         const currentCount = currentStudents.length;
 
-        let maxStudents = 300; // Tier 1
-        if (school.subscription_tier === 'tier2') maxStudents = 800;
-        if (school.subscription_tier === 'tier3') maxStudents = 999999;
+        const STUDENT_LIMITS = { tier1: 200, tier2: 600, tier3: 1200 };
+        let maxStudents = STUDENT_LIMITS[school.subscription_tier] ?? 200;
 
         if (currentCount >= maxStudents) {
           return Response.json({ 

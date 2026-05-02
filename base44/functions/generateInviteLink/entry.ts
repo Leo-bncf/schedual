@@ -27,6 +27,30 @@ Deno.serve(async (req) => {
       return Response.json({ error: 'Valid email is required' }, { status: 400 });
     }
 
+    // Check admin seat limit for this school's subscription tier
+    const schools = await base44.asServiceRole.entities.School.filter({ id: schoolId });
+    const school = schools[0];
+    if (!school) {
+      return Response.json({ error: 'School not found' }, { status: 404 });
+    }
+
+    const ADMIN_SEAT_LIMITS: Record<string, number | null> = { tier1: 1, tier2: 3, tier3: null };
+    const maxAdminSeats = ADMIN_SEAT_LIMITS[school.subscription_tier as string] ?? 1;
+
+    if (maxAdminSeats !== null) {
+      const [currentAdmins, allPendingInvites] = await Promise.all([
+        base44.asServiceRole.entities.User.filter({ school_id: schoolId, role: 'admin' }),
+        base44.asServiceRole.entities.PendingInvitation.filter({ school_id: schoolId }),
+      ]);
+      // Don't count an existing invite for this same email (re-invite is allowed)
+      const otherPendingCount = allPendingInvites.filter((inv: any) => inv.email !== email).length;
+      if (currentAdmins.length + otherPendingCount >= maxAdminSeats) {
+        return Response.json({
+          error: `Admin seat limit reached (${maxAdminSeats} seat${maxAdminSeats === 1 ? '' : 's'} on your plan). Remove an existing admin or upgrade to add more.`
+        }, { status: 400 });
+      }
+    }
+
     // Check if user already exists and is assigned to a school
     const existingUsers = await base44.asServiceRole.entities.User.filter({ email });
     if (existingUsers.length > 0) {

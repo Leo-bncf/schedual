@@ -109,7 +109,7 @@ export default function Subjects() {
     const tier = s?.subscription_tier;
     if (tier === 'tier1') return ['MYP'];
     if (tier === 'tier2' || tier === 'tier3') return ['PYP','MYP','DP'];
-    return ['PYP','MYP','DP'];
+    return ['MYP'];
   };
   const allowedProgrammes = getAllowedProgrammes(school);
   const normalizedFormCode = getSubjectCode(formData.code);

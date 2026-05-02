@@ -65,9 +65,15 @@ const SEVERITY_CONFIG = {
 };
 
 export default function ConflictViewer({ scheduleVersionId }) {
+  const { data: user } = useQuery({
+    queryKey: ['currentUser'],
+    queryFn: () => base44.auth.me(),
+  });
+  const schoolId = user?.school_id;
+
   const { data: conflicts = [], isLoading } = useQuery({
     queryKey: ['conflicts', scheduleVersionId],
-    queryFn: () => base44.entities.ConflictReport.filter({ 
+    queryFn: () => base44.entities.ConflictReport.filter({
       schedule_version_id: scheduleVersionId,
       status: { $ne: 'resolved' }
     }),
@@ -76,20 +82,23 @@ export default function ConflictViewer({ scheduleVersionId }) {
   });
 
   const { data: teachers = [] } = useQuery({
-    queryKey: ['teachers'],
-    queryFn: () => base44.entities.Teacher.list(),
+    queryKey: ['teachers', schoolId],
+    queryFn: () => base44.entities.Teacher.filter({ school_id: schoolId }),
+    enabled: !!schoolId,
     staleTime: 60000,
   });
 
   const { data: students = [] } = useQuery({
-    queryKey: ['students'],
-    queryFn: () => base44.entities.Student.list(),
+    queryKey: ['students', schoolId],
+    queryFn: () => base44.entities.Student.filter({ school_id: schoolId }),
+    enabled: !!schoolId,
     staleTime: 60000,
   });
 
   const { data: rooms = [] } = useQuery({
-    queryKey: ['rooms'],
-    queryFn: () => base44.entities.Room.list(),
+    queryKey: ['rooms', schoolId],
+    queryFn: () => base44.entities.Room.filter({ school_id: schoolId }),
+    enabled: !!schoolId,
     staleTime: 60000,
   });
 
@@ -101,14 +110,16 @@ export default function ConflictViewer({ scheduleVersionId }) {
   });
 
   const { data: teachingGroups = [] } = useQuery({
-    queryKey: ['teachingGroups'],
-    queryFn: () => base44.entities.TeachingGroup.list(),
+    queryKey: ['teachingGroups', schoolId],
+    queryFn: () => base44.entities.TeachingGroup.filter({ school_id: schoolId }),
+    enabled: !!schoolId,
     staleTime: 60000,
   });
 
   const { data: subjects = [] } = useQuery({
-    queryKey: ['subjects'],
-    queryFn: () => base44.entities.Subject.list(),
+    queryKey: ['subjects', schoolId],
+    queryFn: () => base44.entities.Subject.filter({ school_id: schoolId }),
+    enabled: !!schoolId,
     staleTime: 60000,
   });
 
