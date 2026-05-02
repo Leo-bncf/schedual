@@ -60,12 +60,18 @@ Deno.serve(async (req) => {
       return Response.json({ error: 'School not found' }, { status: 404 });
     }
 
-    const currentAdmins = await base44.asServiceRole.entities.User.filter({ school_id: schoolId, role: 'admin' });
+    const [currentAdmins, pendingInvites] = await Promise.all([
+      base44.asServiceRole.entities.User.filter({ school_id: schoolId, role: 'admin' }),
+      base44.asServiceRole.entities.PendingInvitation.filter({ school_id: schoolId }),
+    ]);
     const maxSeats = getAdminSeatLimit(school.subscription_tier, school.max_admin_seats ?? 3);
+    // Count pending invites that aren't for this email (re-inviting existing is allowed)
+    const pendingCount = pendingInvites.filter((inv: any) => inv.email !== email).length;
+    const effectiveCount = currentAdmins.length + pendingCount;
 
-    if (maxSeats !== null && currentAdmins.length >= maxSeats) {
+    if (maxSeats !== null && effectiveCount >= maxSeats) {
       return Response.json({
-        error: `Maximum admin seats reached (${currentAdmins.length}/${maxSeats}) for your current tier.`
+        error: `Admin seat limit reached (${effectiveCount}/${maxSeats}) for your current plan. This includes ${pendingCount} pending invitation(s).`
       }, { status: 400 });
     }
 

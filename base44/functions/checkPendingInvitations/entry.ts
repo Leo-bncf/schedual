@@ -77,9 +77,10 @@ Deno.serve(async (req) => {
       });
     }
 
-    // Assign user to school
+    // Assign user to school and grant admin role
     await base44.asServiceRole.entities.User.update(user.id, {
-      school_id: bestInvite.school_id
+      school_id: bestInvite.school_id,
+      role: 'admin',
     });
 
     // Delete pending invitation

@@ -3,6 +3,7 @@ import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { base44 } from '@/api/base44Client';
 import { Button } from "@/components/ui/button";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from "@/components/ui/alert-dialog";
 import { Building2, Bell, Save, Loader2, CheckCircle, Users, GraduationCap, Zap, Link as LinkIcon } from 'lucide-react';
 import PageHeader from '../components/ui-custom/PageHeader';
 import YearAdvancement from '../components/settings/YearAdvancement';
@@ -28,6 +29,7 @@ export default function Settings() {
   const [showInviteLink, setShowInviteLink] = useState(false);
   const [showTierOptions, setShowTierOptions] = useState(false);
   const [showAddOns, setShowAddOns] = useState(false);
+  const [pendingRemoveAdmin, setPendingRemoveAdmin] = useState(null);
   const queryClient = useQueryClient();
 
   const { data: user } = useQuery({
@@ -248,21 +250,7 @@ export default function Settings() {
             effectiveAdminSeatLimit={effectiveAdminSeatLimit}
             user={user}
             onInvite={() => setInviteDialogOpen(true)}
-            onRemoveAdmin={async (admin) => {
-              if (confirm(`Remove ${admin.full_name || admin.email} as administrator?\n\nThey will lose all access to school management. This action cannot be undone.`)) {
-                try {
-                  const { data } = await base44.functions.invoke('removeSchoolAdmin', { admin_id: admin.id });
-                  if (data.success) {
-                    queryClient.invalidateQueries({ queryKey: ['schoolAdmins'] });
-                    toast.success('Administrator removed successfully');
-                  } else {
-                    toast.error(data.error || 'Failed to remove administrator');
-                  }
-                } catch (error) {
-                  toast.error(error.message || 'Failed to remove administrator');
-                }
-              }
-            }}
+            onRemoveAdmin={(admin) => setPendingRemoveAdmin(admin)}
           />
         </TabsContent>
 
@@ -314,6 +302,40 @@ export default function Settings() {
         effectiveAdminSeatLimit={effectiveAdminSeatLimit}
         schoolAdmins={schoolAdmins}
       />
+
+      <AlertDialog open={!!pendingRemoveAdmin} onOpenChange={(open) => { if (!open) setPendingRemoveAdmin(null); }}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Remove administrator?</AlertDialogTitle>
+            <AlertDialogDescription>
+              <strong>{pendingRemoveAdmin?.full_name || pendingRemoveAdmin?.email}</strong> will immediately lose all access to school management. This cannot be undone.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Cancel</AlertDialogCancel>
+            <AlertDialogAction
+              className="bg-rose-600 hover:bg-rose-700"
+              onClick={async () => {
+                try {
+                  const { data } = await base44.functions.invoke('removeSchoolAdmin', { admin_id: pendingRemoveAdmin.id });
+                  if (data.success) {
+                    queryClient.invalidateQueries({ queryKey: ['schoolAdmins'] });
+                    toast.success('Administrator removed successfully');
+                  } else {
+                    toast.error(data.error || 'Failed to remove administrator');
+                  }
+                } catch (error) {
+                  toast.error(error.message || 'Failed to remove administrator');
+                } finally {
+                  setPendingRemoveAdmin(null);
+                }
+              }}
+            >
+              Remove
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </div>
   );
 }

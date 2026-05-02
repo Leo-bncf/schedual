@@ -63,8 +63,6 @@ Deno.serve(async (req) => {
       }
     }
 
-    // Generate secure token
-    const token = crypto.randomUUID();
     const expiresAt = new Date(Date.now() + 30 * 24 * 60 * 60 * 1000); // 30 days
 
     // Create or update pending invitation
