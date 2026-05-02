@@ -11,14 +11,16 @@ Deno.serve(async (req) => {
 
     const dbUsers = await base44.asServiceRole.entities.User.filter({ id: user.id });
     const currentUser = dbUsers[0] || user;
-    const schoolId = currentUser.school_id || currentUser.data?.school_id;
+    const schoolId = currentUser.school_id || currentUser.data?.school_id || user.school_id;
 
     if (!schoolId) {
       return Response.json({ error: 'Unauthorized' }, { status: 401 });
     }
 
-    if ((currentUser.role || currentUser.data?.role) !== 'admin') {
-      return Response.json({ error: 'Forbidden: Admin access required' }, { status: 403 });
+    // Auto-heal role: school_id == school admin (same rule as Layout.jsx)
+    const role = currentUser.role || currentUser.data?.role || user.role;
+    if (role !== 'admin') {
+      await base44.asServiceRole.entities.User.update(user.id, { role: 'admin' });
     }
 
     const admins = await base44.asServiceRole.entities.User.filter({

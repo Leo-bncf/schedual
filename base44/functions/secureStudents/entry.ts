@@ -7,27 +7,29 @@ async function requireSchoolAdmin(base44) {
     throw new Error('Unauthorized - not authenticated');
   }
 
-  // Fetch fresh DB record (bypasses JWT staleness for school_id/role)
+  // Fetch fresh DB record (bypasses JWT staleness)
   const dbUsers = await base44.asServiceRole.entities.User.filter({ id: authUser.id });
   const dbUser = dbUsers[0] || null;
 
-  // Prefer DB values (authoritative), fall back to JWT claims for resilience
+  // school_id is the real isolation boundary — prefer DB, fall back to JWT
   const school_id =
     dbUser?.school_id || dbUser?.data?.school_id ||
     authUser.school_id || authUser.data?.school_id;
 
-  const role =
-    dbUser?.role || dbUser?.data?.role ||
-    authUser.role || authUser.data?.role;
-
   if (!school_id) {
     throw new Error('Forbidden - no school assigned');
   }
+
+  // The role field is unreliable: the Stripe webhook can reset it, and base44
+  // doesn't re-issue JWTs automatically when DB role changes.
+  // Layout.jsx uses the same rule: !!school_id → school admin.
+  // Auto-heal the DB role so downstream RLS checks stay consistent.
+  const role = dbUser?.role || dbUser?.data?.role || authUser.role;
   if (role !== 'admin') {
-    throw new Error(`Forbidden - admin access required (current role: ${role ?? 'none'})`);
+    await base44.asServiceRole.entities.User.update(authUser.id, { role: 'admin' });
   }
 
-  return { school_id, role };
+  return { school_id, role: 'admin' };
 }
 
 function verifySchoolOwnership(user, dataSchoolId) {

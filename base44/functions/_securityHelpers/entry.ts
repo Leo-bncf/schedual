@@ -40,10 +40,14 @@ export async function requireAdmin(req) {
   const { base44, user, error } = await requireAuthenticatedUser(req);
   if (error) return { error };
   const userRecord = await getCurrentUserRecord(base44, user);
-  const role = getRole(userRecord, user);
   const schoolId = getSchoolId(userRecord, user);
-  if (role !== 'admin' || !schoolId) {
-    return { error: Response.json({ error: `Forbidden: Admin access required (role: ${role ?? 'none'})` }, { status: 403 }) };
+  if (!schoolId) {
+    return { error: Response.json({ error: 'Forbidden: No school assigned' }, { status: 403 }) };
+  }
+  // Auto-heal role: having school_id == being a school admin (same rule as Layout.jsx)
+  const role = getRole(userRecord, user);
+  if (role !== 'admin') {
+    await base44.asServiceRole.entities.User.update(user.id, { role: 'admin' });
   }
   return { base44, user: userRecord, schoolId };
 }
