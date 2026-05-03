@@ -44,7 +44,6 @@ export default function Settings() {
   });
 
   const school = schools[0];
-  const schoolRecordId = school?.id;
   const sharedTier = getTierLimits(school?.subscription_tier);
   const currentTier = school?.subscription_tier ? TIERS[school.subscription_tier] : null;
   const tierStudentLimit = sharedTier?.studentLimit ?? currentTier?.limits?.students ?? null;
@@ -116,24 +115,19 @@ export default function Settings() {
     setStripeNoticeShown(true);
   }, [queryClient, stripeNoticeShown]);
 
-  const createSchoolMutation = useMutation({
-    mutationFn: (data) => base44.entities.School.create({ ...data, school_id: user?.school_id }),
-    onError: (error) => {
-      toast.error(error?.message || 'Unable to create school settings.');
-    },
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['schools'] });
-      setSaved(true);
-      setTimeout(() => setSaved(false), 2000);
-    },
-  });
-
   const updateSchoolMutation = useMutation({
-    mutationFn: ({ id, data }) => base44.entities.School.update(id, data),
+    mutationFn: async ({ data }) => {
+      const response = await base44.functions.invoke('secureSchool', { action: 'update', data });
+      if (response.data?.success === false) throw new Error(response.data.error || 'Failed to update school');
+      return response.data;
+    },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['schools'] });
       setSaved(true);
       setTimeout(() => setSaved(false), 2000);
+    },
+    onError: (error) => {
+      toast.error(error?.message || 'Failed to save school settings.');
     },
   });
 
@@ -162,16 +156,11 @@ export default function Settings() {
     }
     setIsSaving(true);
     try {
-      if (schoolRecordId) {
-        const updatePayload = { ...formData };
-        // Auto-generate school_id if it was never set
-        if (!school?.school_id) {
-          updatePayload.school_id = `SCH-${(school?.code || 'SCH').toUpperCase().replace(/[^A-Z0-9]/g, '').slice(0, 6)}-${Date.now().toString().slice(-4)}`;
-        }
-        await updateSchoolMutation.mutateAsync({ id: schoolRecordId, data: updatePayload });
-      } else {
-        throw new Error('School record not found for this account.');
+      const updatePayload = { ...formData };
+      if (!school?.school_id) {
+        updatePayload.school_id = `SCH-${(school?.code || 'SCH').toUpperCase().replace(/[^A-Z0-9]/g, '').slice(0, 6)}-${Date.now().toString().slice(-4)}`;
       }
+      await updateSchoolMutation.mutateAsync({ data: updatePayload });
     } catch (error) {
       console.error('Error saving school:', error);
       toast.error(error?.message || 'Failed to save school settings. Please try again.');

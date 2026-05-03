@@ -19,16 +19,14 @@ export default function YearAdvancement() {
   const [confirmDialogOpen, setConfirmDialogOpen] = useState(false);
   const queryClient = useQueryClient();
 
-  const { data: user } = useQuery({
-    queryKey: ['currentUser'],
-    queryFn: () => base44.auth.me(),
-  });
-  const schoolId = user?.school_id;
-
   const { data: students = [] } = useQuery({
-    queryKey: ['students', schoolId],
-    queryFn: () => base44.entities.Student.filter({ school_id: schoolId }),
-    enabled: !!schoolId,
+    queryKey: ['students'],
+    queryFn: async () => {
+      const { data } = await base44.functions.invoke('secureStudents', { action: 'list' });
+      if (data?.success === false) throw new Error(data.error || 'Failed to load students');
+      // Only count active students — graduated ones are is_active: false
+      return (data?.data || []).filter(s => s.is_active !== false);
+    },
   });
 
   const advanceYearMutation = useMutation({
