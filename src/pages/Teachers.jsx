@@ -19,7 +19,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import { Plus, Upload, Loader2, BookOpen } from 'lucide-react';
+import { Plus, Upload, Loader2, BookOpen, Trash2, Clock } from 'lucide-react';
 import { toast } from 'sonner';
 import { motion } from 'framer-motion';
 import PageHeader from '../components/ui-custom/PageHeader';
@@ -31,6 +31,55 @@ import UploadProgressDialog from '../components/upload/UploadProgressDialog';
 import DragDropUploadDialog from '../components/upload/DragDropUploadDialog';
 
 const DAYS = ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday'];
+
+function AvailabilityBlockAdder({ onAdd }) {
+  const [day, setDay] = useState('Monday');
+  const [startTime, setStartTime] = useState('08:00');
+  const [endTime, setEndTime] = useState('10:00');
+
+  const handleAdd = () => {
+    if (!day || !startTime || !endTime) return;
+    onAdd({ day, type: 'time_range', start_time: startTime, end_time: endTime });
+  };
+
+  return (
+    <div className="flex items-end gap-2 flex-wrap">
+      <div className="space-y-1">
+        <Label className="text-xs text-slate-500">Day</Label>
+        <Select value={day} onValueChange={setDay}>
+          <SelectTrigger className="h-8 text-xs w-28">
+            <SelectValue />
+          </SelectTrigger>
+          <SelectContent>
+            {DAYS.map(d => <SelectItem key={d} value={d} className="text-xs">{d}</SelectItem>)}
+          </SelectContent>
+        </Select>
+      </div>
+      <div className="space-y-1">
+        <Label className="text-xs text-slate-500">From</Label>
+        <Input
+          type="time"
+          value={startTime}
+          onChange={e => setStartTime(e.target.value)}
+          className="h-8 text-xs w-24"
+        />
+      </div>
+      <div className="space-y-1">
+        <Label className="text-xs text-slate-500">To</Label>
+        <Input
+          type="time"
+          value={endTime}
+          onChange={e => setEndTime(e.target.value)}
+          className="h-8 text-xs w-24"
+        />
+      </div>
+      <Button type="button" variant="outline" size="sm" onClick={handleAdd} className="h-8 text-xs">
+        <Plus className="w-3 h-3 mr-1" />
+        Add Block
+      </Button>
+    </div>
+  );
+}
 
 export default function Teachers() {
   const [isDialogOpen, setIsDialogOpen] = useState(false);
@@ -54,6 +103,7 @@ export default function Teachers() {
     preferred_free_day: '',
     subjects: [],
     qualifications: [],
+    unavailable_slots: [],
     is_active: true
   });
 
@@ -135,6 +185,7 @@ export default function Teachers() {
       preferred_free_day: '',
       subjects: [],
       qualifications: [],
+      unavailable_slots: [],
       is_active: true
     });
     setEditingTeacher(null);
@@ -152,6 +203,7 @@ export default function Teachers() {
       preferred_free_day: teacher.preferred_free_day || '',
       subjects: teacher.subjects || [],
       qualifications: teacher.qualifications || [],
+      unavailable_slots: teacher.unavailable_slots || [],
       is_active: teacher.is_active !== false
     });
     setIsDialogOpen(true);
@@ -542,18 +594,53 @@ Example: {"full_name": "John Smith", "email": "john@school.com", "subjects": ["P
             </div>
 
             <div className="border-t border-slate-200 pt-6">
-              <QualificationManager 
+              <QualificationManager
                 subjects={subjects}
                 qualifications={formData.qualifications}
                 onChange={(quals) => {
                   // Update qualifications
                   setFormData({ ...formData, qualifications: quals });
-                  
+
                   // Sync subjects array with qualifications
                   const subjectIds = quals.map(q => q.subject_id);
                   setFormData(prev => ({ ...prev, subjects: subjectIds, qualifications: quals }));
                 }}
               />
+
+              {/* ── Teacher Availability ───────────────────────────────── */}
+              <div className="space-y-3">
+                <div className="flex items-center gap-2">
+                  <Clock className="w-4 h-4 text-slate-500" />
+                  <Label className="text-sm font-semibold text-slate-700">Unavailable Times</Label>
+                </div>
+                <p className="text-xs text-slate-500">Block time periods when this teacher cannot be scheduled.</p>
+
+                {(formData.unavailable_slots || []).map((slot, idx) => (
+                  <div key={idx} className="flex items-center gap-2 p-2 bg-amber-50 rounded-lg border border-amber-200">
+                    <span className="text-xs font-medium text-amber-800 w-24 flex-shrink-0">{slot.day}</span>
+                    <span className="text-xs text-amber-700">{slot.start_time} – {slot.end_time}</span>
+                    <Button
+                      type="button"
+                      variant="ghost"
+                      size="sm"
+                      className="ml-auto h-6 w-6 p-0 text-amber-600 hover:text-rose-600"
+                      onClick={() => {
+                        const updated = formData.unavailable_slots.filter((_, i) => i !== idx);
+                        setFormData({ ...formData, unavailable_slots: updated });
+                      }}
+                    >
+                      <Trash2 className="w-3.5 h-3.5" />
+                    </Button>
+                  </div>
+                ))}
+
+                <AvailabilityBlockAdder
+                  onAdd={(block) => setFormData(prev => ({
+                    ...prev,
+                    unavailable_slots: [...(prev.unavailable_slots || []), block]
+                  }))}
+                />
+              </div>
             </div>
 
             <DialogFooter className="gap-2 sm:gap-0">

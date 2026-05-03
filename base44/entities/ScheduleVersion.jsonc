@@ -36,6 +36,10 @@
       "type": "number",
       "default": 0
     },
+    "conflict_details": {
+      "type": "object",
+      "description": "Detailed conflict breakdown from OptaPlanner (hardConstraintsBreakdown, violatingConstraints, studentOverlapSamples)"
+    },
     "warnings_count": {
       "type": "number",
       "default": 0

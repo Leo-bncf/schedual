@@ -44,6 +44,7 @@ import TimetableGrid from '../components/schedule/TimetableGrid';
 import ExportTimetableButton from '../components/schedule/ExportTimetableButton';
 import SearchableEntitySelect from '../components/schedule/SearchableEntitySelect';
 import StudentScheduleView from '../components/schedule/StudentScheduleView';
+import SolveConflictPanel from '../components/schedule/SolveConflictPanel';
 import { getGenerationLimit, getSavedVersionsLimit } from '@/lib/tierLimits';
 
 export default function Schedules() {
@@ -677,6 +678,11 @@ export default function Schedules() {
                 <p className="text-sm text-red-500 mt-3">{genError}</p>
               )}
             </Card>
+
+            {/* ── Conflict Breakdown Panel ─────────────────────────── */}
+            {selectedVersion && (selectedVersion.conflicts_count > 0 || selectedVersion.conflict_details) && (
+              <SolveConflictPanel selectedVersion={selectedVersion} />
+            )}
             
             <Card className="border border-slate-200 shadow-sm">
               <CardHeader className="border-b border-slate-100 bg-slate-50/50">

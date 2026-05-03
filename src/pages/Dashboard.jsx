@@ -138,7 +138,15 @@ export default function Dashboard() {
                   </PieChart>
                 </ResponsiveContainer>
               ) : (
-                 <div className="flex items-center justify-center h-full text-sm text-slate-400">No student data</div>
+                <div className="flex flex-col items-center justify-center h-full gap-3">
+                  <p className="text-sm text-slate-400">No students yet</p>
+                  <Link to={createPageUrl('Students')}>
+                    <Button size="sm" variant="outline" className="rounded-full text-xs h-8">
+                      <GraduationCap className="w-3.5 h-3.5 mr-1.5" />
+                      Add Students
+                    </Button>
+                  </Link>
+                </div>
               )}
             </div>
             <div className="flex justify-center gap-6 mt-4 pt-4 border-t border-slate-100">
@@ -180,7 +188,15 @@ export default function Dashboard() {
                   ))}
                 </div>
               ) : (
-                <div className="text-sm text-slate-500 text-center">Teacher load data unavailable</div>
+                <div className="flex flex-col items-center gap-3 text-center">
+                  <p className="text-sm text-slate-400">No teachers yet</p>
+                  <Link to={createPageUrl('Teachers')}>
+                    <Button size="sm" variant="outline" className="rounded-full text-xs h-8">
+                      <Users className="w-3.5 h-3.5 mr-1.5" />
+                      Add Teachers
+                    </Button>
+                  </Link>
+                </div>
               )}
             </div>
             <div className="mt-8 pt-4 border-t border-slate-100">

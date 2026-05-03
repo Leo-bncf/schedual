@@ -15,7 +15,37 @@ function getIngestUrl() {
 
 // ─── Helpers ─────────────────────────────────────────────────────────────────
 
-function buildTeacherMap(teachers) {
+function timeToMins(hhmm) {
+  if (!hhmm) return 0;
+  const [h, m] = hhmm.split(':').map(Number);
+  return (h || 0) * 60 + (m || 0);
+}
+
+const DAY_TO_UPPER = {
+  Monday: 'MONDAY', Tuesday: 'TUESDAY', Wednesday: 'WEDNESDAY',
+  Thursday: 'THURSDAY', Friday: 'FRIDAY',
+};
+
+function buildUnavailableSlotIds(unavailableSlots, solverTimeslots) {
+  if (!unavailableSlots?.length || !solverTimeslots?.length) return [];
+  const ids = [];
+  for (const block of unavailableSlots) {
+    const dayUpper = DAY_TO_UPPER[block.day] || block.day?.toUpperCase();
+    for (const ts of solverTimeslots) {
+      if (ts.dayOfWeek !== dayUpper) continue;
+      if (block.type === 'time_range' && block.start_time && block.end_time) {
+        const tsStart = timeToMins(ts.startTime);
+        const tsEnd = timeToMins(ts.endTime);
+        const blkStart = timeToMins(block.start_time);
+        const blkEnd = timeToMins(block.end_time);
+        if (tsStart < blkEnd && tsEnd > blkStart) ids.push(ts.id);
+      }
+    }
+  }
+  return ids;
+}
+
+function buildTeacherMap(teachers, solverTimeslots = []) {
   const map = new Map(); // base44Id -> numericId
   const list = [];
   teachers.filter(t => t.is_active !== false).forEach((t, idx) => {
@@ -24,7 +54,7 @@ function buildTeacherMap(teachers) {
     list.push({
       id: numericId,
       name: t.full_name,
-      unavailableSlotIds: [],
+      unavailableSlotIds: buildUnavailableSlotIds(t.unavailable_slots, solverTimeslots),
       externalId: t.id,
     });
   });
@@ -119,8 +149,8 @@ function buildSolverTimeslots(school) {
 
 // ─── PYP / MYP cohort_payload builder ────────────────────────────────────────
 
-function buildCohortPayload({ programType, schoolId, scheduleVersionId, school, students, teachers, subjects, rooms, teachingGroups }) {
-  const { teacherList, teacherMap } = buildTeacherMap(teachers);
+function buildCohortPayload({ programType, schoolId, scheduleVersionId, school, students, teachers, subjects, rooms, teachingGroups, solverTimeslots = [] }) {
+  const { teacherList, teacherMap } = buildTeacherMap(teachers, solverTimeslots);
   const { roomList } = buildRoomMap(rooms);
   const scheduleSettings = buildScheduleSettings(school);
   const periodDuration = scheduleSettings.periodDurationMinutes || 60;
@@ -193,8 +223,8 @@ function buildCohortPayload({ programType, schoolId, scheduleVersionId, school, 
 
 // ─── DP individual_payload builder ───────────────────────────────────────────
 
-function buildDPPayload({ schoolId, scheduleVersionId, school, students, teachers, subjects, rooms, teachingGroups }) {
-  const { teacherList, teacherMap } = buildTeacherMap(teachers);
+function buildDPPayload({ schoolId, scheduleVersionId, school, students, teachers, subjects, rooms, teachingGroups, solverTimeslots = [] }) {
+  const { teacherList, teacherMap } = buildTeacherMap(teachers, solverTimeslots);
   const { roomList } = buildRoomMap(rooms);
   const scheduleSettings = buildScheduleSettings(school);
   const periodDuration = scheduleSettings.periodDurationMinutes || 60;
@@ -882,6 +912,9 @@ Deno.serve(async (req) => {
     const solverTimeslots = buildSolverTimeslots(schoolRecord);
     console.log(`[generateSchedule] Built ${solverTimeslots.length} solverTimeslots from school schedule`);
 
+    // Inject solverTimeslots into common so payload builders can compute unavailableSlotIds
+    common.solverTimeslots = solverTimeslots;
+
     // ── Send ONE payload at a time and reject anything inconsistent ──
     let totalSlotsInserted = 0;
     const failedProgrammes = [];
@@ -938,7 +971,12 @@ Deno.serve(async (req) => {
           stage: solveStage,
           reason_code: reasonCode,
           blocker,
-          error: errorBits.join(' | ')
+          error: errorBits.join(' | '),
+          conflictsCount,
+          hardConstraintsBreakdown: result.data?.hardConstraintsBreakdown || null,
+          violatingConstraints: result.data?.violatingConstraints || null,
+          studentOverlapSamples: result.data?.studentOverlapSamples || null,
+          hardScore: result.data?.hardScore ?? null,
         });
         continue;
       }
@@ -991,6 +1029,24 @@ Deno.serve(async (req) => {
 
     if (failedProgrammes.length > 0 || successProgrammes.length === 0) {
       const primaryFailure = failedProgrammes[0] || null;
+      // Persist conflict details so the UI can show what went wrong
+      try {
+        await base44.asServiceRole.entities.ScheduleVersion.update(schedule_version_id, {
+          conflicts_count: primaryFailure?.conflictsCount ?? 1,
+          conflict_details: {
+            failed: failedProgrammes,
+            primaryStage: primaryFailure?.stage || 'SOLVE',
+            primaryCode: primaryFailure?.reason_code || 'SOLUTION_INFEASIBLE',
+            primaryBlocker: primaryFailure?.blocker || null,
+            hardConstraintsBreakdown: primaryFailure?.hardConstraintsBreakdown || null,
+            violatingConstraints: primaryFailure?.violatingConstraints || null,
+            studentOverlapSamples: primaryFailure?.studentOverlapSamples || null,
+            solvedAt: new Date().toISOString(),
+          },
+        });
+      } catch (e) {
+        console.warn('[generateSchedule] Could not persist conflict_details:', e.message);
+      }
       return Response.json({
         ok: false,
         stage: primaryFailure?.stage || 'SOLVE',
@@ -1019,7 +1075,9 @@ Deno.serve(async (req) => {
 
     await base44.asServiceRole.entities.ScheduleVersion.update(schedule_version_id, {
       generated_at: new Date().toISOString(),
-      generation_params: { 
+      conflicts_count: 0,
+      conflict_details: null,
+      generation_params: {
         programmes: [...programmes],
         solverTimeslots: solverTimeslots
       },
