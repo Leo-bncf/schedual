@@ -187,19 +187,25 @@ Deno.serve(async (req) => {
         const schools = await base44.asServiceRole.entities.School.filter({ stripe_customer_id: customerId });
         const school = schools[0];
         if (school) {
+          // Derive tier from the current subscription price so upgrades/downgrades via
+          // the Stripe customer portal are reflected immediately
+          const activePriceId = subscription.items?.data?.[0]?.price?.id ?? null;
+          const derivedTier = getTierIdFromPriceId(activePriceId);
+          const tierLimits = derivedTier ? getTierDefinition(derivedTier) : null;
+
           await base44.asServiceRole.entities.School.update(school.id, {
             subscription_status: subscription.status,
             stripe_subscription_id: typeof subscription.id === 'string' ? subscription.id : school.stripe_subscription_id,
-            subscription_current_period_end: subscription.current_period_end ? new Date(subscription.current_period_end * 1000).toISOString() : school.subscription_current_period_end,
+            subscription_current_period_end: subscription.current_period_end
+              ? new Date(subscription.current_period_end * 1000).toISOString()
+              : school.subscription_current_period_end,
             school_id: school.school_id || buildSchoolId(customerId),
-            settings: {
-              ...(school.settings || {}),
-              support_level: school.settings?.support_level || null,
-              onboarding_call_included: school.settings?.onboarding_call_included || false,
-              generation_limit: school.settings?.generation_limit ?? null,
-              saved_versions_limit: school.settings?.saved_versions_limit ?? null,
-              student_count_limit: school.settings?.student_count_limit ?? null,
-            },
+            // Only update tier / limits when we can confidently map the price
+            ...(derivedTier && tierLimits ? {
+              subscription_tier: derivedTier,
+              max_admin_seats: tierLimits.max_admin_seats,
+              settings: getTierSettings(derivedTier, school.settings),
+            } : {}),
           });
         }
       }

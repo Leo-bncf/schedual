@@ -11,11 +11,15 @@ const TIER_PRICE_IDS = {
 
 Deno.serve(async (req) => {
   try {
-    createClientFromRequest(req);
-    const body = await req.json();
-    const { tier, userEmail } = body || {};
+    const base44 = createClientFromRequest(req);
+    const user = await base44.auth.me();
+    if (!user) return Response.json({ error: 'Unauthorized' }, { status: 401 });
 
-    const normalizedEmail = String(userEmail || '').trim().toLowerCase();
+    const body = await req.json();
+    const { tier } = body || {};
+
+    // Always use the authenticated user's own email — never trust client-supplied email
+    const normalizedEmail = String(user.email || '').trim().toLowerCase();
     if (!tier || !normalizedEmail) {
       return Response.json({ error: 'Missing checkout details' }, { status: 400 });
     }

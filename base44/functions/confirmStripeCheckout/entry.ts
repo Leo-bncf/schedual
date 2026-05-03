@@ -68,8 +68,9 @@ async function ensureSchoolForUser(base44, user, session) {
   }
 
   const limits = getTierDefinition(tier);
-  const periodEnd = session.subscription_details?.current_period_end
-    ? new Date(session.subscription_details.current_period_end * 1000).toISOString()
+  const stripeSubscription = session.subscription && typeof session.subscription === 'object' ? session.subscription : null;
+  const periodEnd = stripeSubscription?.current_period_end
+    ? new Date(stripeSubscription.current_period_end * 1000).toISOString()
     : null;
 
   const userSchoolId = user.school_id || user.data?.school_id;
@@ -142,6 +143,8 @@ async function ensureSchoolForUser(base44, user, session) {
 Deno.serve(async (req) => {
   try {
     const base44 = createClientFromRequest(req);
+    const authUser = await base44.auth.me();
+    if (!authUser) return Response.json({ error: 'Unauthorized' }, { status: 401 });
 
     const { sessionId } = await req.json();
     if (!sessionId) {
@@ -156,9 +159,13 @@ Deno.serve(async (req) => {
       return Response.json({ error: 'Stripe session is not paid yet' }, { status: 400 });
     }
 
+    // Verify the session belongs to the authenticated user
     const sessionEmail = session.customer_details?.email || session.customer_email || session.metadata?.user_email || null;
     if (!sessionEmail) {
       return Response.json({ error: 'Missing customer email on Stripe session' }, { status: 400 });
+    }
+    if (sessionEmail.toLowerCase() !== String(authUser.email || '').toLowerCase()) {
+      return Response.json({ error: 'Forbidden: session does not belong to this user' }, { status: 403 });
     }
 
     const users = await base44.asServiceRole.entities.User.filter({ email: sessionEmail.toLowerCase() });
