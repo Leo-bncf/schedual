@@ -54,10 +54,7 @@ Deno.serve(async (req) => {
     if (codeHash !== record.code_hash) {
       if (attempts >= MAX_ATTEMPTS) {
         const lockedUntil = new Date(Date.now() + LOCK_DURATION_MS).toISOString();
-        await base44.asServiceRole.entities.EmailVerificationCode.update(record.id, {
-          attempts,
-          locked_until: lockedUntil,
-        });
+        await base44.asServiceRole.entities.EmailVerificationCode.update(record.id, { attempts, locked_until: lockedUntil });
         return Response.json({
           error: 'Too many failed attempts. Account locked for 15 minutes.',
           retryAfter: LOCK_DURATION_MS / 1000,
@@ -70,12 +67,30 @@ Deno.serve(async (req) => {
       }, { status: 400 });
     }
 
+    // Code is correct — mark verified
     await base44.asServiceRole.entities.EmailVerificationCode.update(record.id, { verified: true });
 
-    // Mark user email as verified
+    if (record.pending_email) {
+      // This is an email change confirmation — swap the email
+      const newEmail = record.pending_email;
+
+      // Double-check new email is still available
+      const conflict = await base44.asServiceRole.entities.User.filter({ email: newEmail });
+      if (conflict.length > 0) {
+        return Response.json({ error: 'New email is no longer available' }, { status: 409 });
+      }
+
+      // Update user email in DB and auth
+      await base44.asServiceRole.entities.User.update(user.id, { email: newEmail });
+      await base44.auth.updateMe({ email: newEmail, email_verified: true });
+
+      return Response.json({ success: true, emailChanged: true, newEmail });
+    }
+
+    // Standard email verification — just mark account verified
     await base44.auth.updateMe({ email_verified: true });
 
-    return Response.json({ success: true });
+    return Response.json({ success: true, emailChanged: false });
   } catch (error) {
     console.error('[verifyEmailCode] error:', error);
     return Response.json({ error: error.message }, { status: 500 });

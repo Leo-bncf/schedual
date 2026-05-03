@@ -19,6 +19,8 @@ export default function AccountManager() {
   const queryClient = useQueryClient();
   const [isEditingName, setIsEditingName] = useState(false);
   const [isEditingEmail, setIsEditingEmail] = useState(false);
+  const [emailChangePending, setEmailChangePending] = useState(false);
+  const [emailConfirmCode, setEmailConfirmCode] = useState('');
   const [isEditingPassword, setIsEditingPassword] = useState(false);
   const [show2FASetup, setShow2FASetup] = useState(false);
   const [isToggling2FA, setIsToggling2FA] = useState(false);
@@ -62,17 +64,38 @@ export default function AccountManager() {
 
   const updateEmailMutation = useMutation({
     mutationFn: async (newEmail) => {
-      // This would require backend implementation
-      await base44.functions.invoke('updateUserEmail', { newEmail });
+      const { data } = await base44.functions.invoke('updateUserEmail', { newEmail });
+      if (data?.error) throw new Error(data.error);
+      return data;
+    },
+    onSuccess: () => {
+      setEmailChangePending(true);
+      toast.success('Verification code sent to your new email address');
+    },
+    onError: (error) => {
+      toast.error(error.message || 'Failed to send verification');
+    }
+  });
+
+  const confirmEmailMutation = useMutation({
+    mutationFn: async (code) => {
+      const { data } = await base44.functions.invoke('verifyEmailCode', {
+        email: user?.email,
+        code,
+      });
+      if (data?.error) throw new Error(data.error);
+      return data;
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['currentUser'] });
       setIsEditingEmail(false);
-      setFormData({ ...formData, newEmail: '' });
-      toast.success('Email updated successfully');
+      setEmailChangePending(false);
+      setEmailConfirmCode('');
+      setFormData(f => ({ ...f, newEmail: '' }));
+      toast.success('Email address updated successfully');
     },
     onError: (error) => {
-      toast.error(error.message || 'Failed to update email');
+      toast.error(error.message || 'Incorrect code');
     }
   });
 
@@ -286,30 +309,67 @@ export default function AccountManager() {
               </div>
 
               {isEditingEmail ? (
-                <div className="space-y-3">
-                  <Label htmlFor="new_email">New Email Address</Label>
-                  <Input
-                    id="new_email"
-                    type="email"
-                    placeholder="Enter new email"
-                    value={formData.newEmail}
-                    onChange={(e) => setFormData({ ...formData, newEmail: e.target.value })}
-                  />
-                  <div className="flex gap-2">
-                    <Button onClick={handleUpdateEmail} disabled={updateEmailMutation.isPending} className="bg-blue-900 hover:bg-blue-800">
-                      Update Email
-                    </Button>
-                    <Button 
-                      variant="outline" 
-                      onClick={() => {
-                        setIsEditingEmail(false);
-                        setFormData({ ...formData, newEmail: '' });
-                      }}
-                    >
-                      Cancel
-                    </Button>
+                emailChangePending ? (
+                  <div className="space-y-3">
+                    <p className="text-sm text-slate-600">
+                      A 6-digit code was sent to <strong>{formData.newEmail}</strong>. Enter it below to confirm.
+                    </p>
+                    <Input
+                      type="text"
+                      inputMode="numeric"
+                      maxLength={6}
+                      placeholder="000000"
+                      value={emailConfirmCode}
+                      onChange={(e) => setEmailConfirmCode(e.target.value.replace(/\D/g, ''))}
+                      className="font-mono tracking-widest text-center text-xl"
+                    />
+                    <div className="flex gap-2">
+                      <Button
+                        onClick={() => confirmEmailMutation.mutate(emailConfirmCode)}
+                        disabled={confirmEmailMutation.isPending || emailConfirmCode.length !== 6}
+                        className="bg-blue-900 hover:bg-blue-800"
+                      >
+                        {confirmEmailMutation.isPending ? 'Verifying...' : 'Confirm'}
+                      </Button>
+                      <Button
+                        variant="outline"
+                        onClick={() => {
+                          setIsEditingEmail(false);
+                          setEmailChangePending(false);
+                          setEmailConfirmCode('');
+                          setFormData(f => ({ ...f, newEmail: '' }));
+                        }}
+                      >
+                        Cancel
+                      </Button>
+                    </div>
                   </div>
-                </div>
+                ) : (
+                  <div className="space-y-3">
+                    <Label htmlFor="new_email">New Email Address</Label>
+                    <Input
+                      id="new_email"
+                      type="email"
+                      placeholder="Enter new email"
+                      value={formData.newEmail}
+                      onChange={(e) => setFormData({ ...formData, newEmail: e.target.value })}
+                    />
+                    <div className="flex gap-2">
+                      <Button onClick={handleUpdateEmail} disabled={updateEmailMutation.isPending} className="bg-blue-900 hover:bg-blue-800">
+                        {updateEmailMutation.isPending ? 'Sending...' : 'Send Confirmation'}
+                      </Button>
+                      <Button
+                        variant="outline"
+                        onClick={() => {
+                          setIsEditingEmail(false);
+                          setFormData(f => ({ ...f, newEmail: '' }));
+                        }}
+                      >
+                        Cancel
+                      </Button>
+                    </div>
+                  </div>
+                )
               ) : (
                 <Button variant="outline" onClick={() => setIsEditingEmail(true)}>
                   Change Email

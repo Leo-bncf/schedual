@@ -29,6 +29,10 @@
       "type": "string",
       "format": "date-time",
       "description": "Account locked until this time after 5 failed attempts"
+    },
+    "pending_email": {
+      "type": "string",
+      "description": "New email address pending confirmation (set during email change flow)"
     }
   },
   "required": [

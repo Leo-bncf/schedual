@@ -91,7 +91,10 @@ async function ensureSchoolForCustomer(base44, session) {
   const existingSchools = await base44.asServiceRole.entities.School.filter({ stripe_customer_id: stripeCustomerId });
   const matchingSchool = existingSchools[0];
   const limits = getTierDefinition(tier);
-  const periodEnd = session.expires_at ? new Date(session.expires_at * 1000).toISOString() : null;
+  const stripeSubscription = session.subscription && typeof session.subscription === 'object' ? session.subscription : null;
+  const periodEnd = stripeSubscription?.current_period_end
+    ? new Date(stripeSubscription.current_period_end * 1000).toISOString()
+    : null;
 
   if (matchingSchool) {
     await base44.asServiceRole.entities.School.update(matchingSchool.id, {
@@ -171,7 +174,7 @@ Deno.serve(async (req) => {
     if (event.type === 'checkout.session.completed') {
       const rawSession = event.data.object;
       const session = await stripe.checkout.sessions.retrieve(rawSession.id, {
-        expand: ['line_items.data.price'],
+        expand: ['line_items.data.price', 'subscription'],
       });
       const result = await ensureSchoolForCustomer(base44, session);
       console.log('[stripeWebhook] checkout.session.completed processed', result);
