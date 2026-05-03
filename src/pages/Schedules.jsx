@@ -250,7 +250,7 @@ export default function Schedules() {
   });
 
   const handlePreviewPayload = async () => {
-    if (!selectedVersion || !schoolId) return;
+    if (!selectedVersion || !resolvedSchoolId) return;
 
     setIsPayloadLoading(true);
     try {

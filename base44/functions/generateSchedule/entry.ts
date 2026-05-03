@@ -842,15 +842,18 @@ Deno.serve(async (req) => {
       return Response.json({ error: 'Missing schedule_version_id' }, { status: 400 });
     }
 
+    // Fetch all entities — use explicit school_id filter to ensure correct scoping.
+    // TeachingGroups can be numerous; fetch up to 2000 to avoid truncation.
     const [schools, students, teachers, subjects, rooms, teachingGroups, scheduleVersions] = await Promise.all([
       base44.asServiceRole.entities.School.filter({ id: schoolId }, '-created_date', 10),
-      base44.asServiceRole.entities.Student.filter({ school_id: schoolId }, '-created_date', 500),
+      base44.asServiceRole.entities.Student.filter({ school_id: schoolId }, '-created_date', 2000),
       base44.asServiceRole.entities.Teacher.filter({ school_id: schoolId }, '-created_date', 500),
       base44.asServiceRole.entities.Subject.filter({ school_id: schoolId }, '-created_date', 500),
       base44.asServiceRole.entities.Room.filter({ school_id: schoolId }, '-created_date', 500),
-      base44.asServiceRole.entities.TeachingGroup.filter({ school_id: schoolId }, '-created_date', 1000),
+      base44.asServiceRole.entities.TeachingGroup.filter({ school_id: schoolId }, '-created_date', 2000),
       base44.asServiceRole.entities.ScheduleVersion.filter({ school_id: schoolId }, '-created_date', 1000),
     ]);
+    console.log(`[generateSchedule] Raw student fetch: ${students.length} students for school ${schoolId}`);
 
     const school = schools[0];
     if (!school) {
@@ -889,8 +892,13 @@ Deno.serve(async (req) => {
     const [schoolRecord] = schools;
     console.log(`[generateSchedule] School: ${schoolRecord.name}, Students: ${students.length}, Teachers: ${teachers.length}`);
 
-    const programmes = new Set(students.filter(s => s.is_active !== false).map(s => s.ib_programme).filter(Boolean));
+    const activeStudents = students.filter(s => s.is_active !== false);
+    const programmes = new Set(activeStudents.map(s => s.ib_programme).filter(Boolean));
+    console.log(`[generateSchedule] Active students: ${activeStudents.length}, total fetched: ${students.length}`);
     console.log(`[generateSchedule] Programmes with students: ${[...programmes].join(', ')}`);
+    if (activeStudents.length > 0 && programmes.size === 0) {
+      console.warn(`[generateSchedule] Students exist but none have ib_programme set! Sample: ${JSON.stringify(activeStudents.slice(0, 3).map(s => ({ id: s.id, ib_programme: s.ib_programme, is_active: s.is_active })))}`);
+    }
 
     const common = { schoolId, scheduleVersionId: schedule_version_id, school: schoolRecord, students, teachers, subjects, rooms, teachingGroups };
 
