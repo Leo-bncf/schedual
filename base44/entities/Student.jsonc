@@ -110,8 +110,7 @@
   },
   "required": [
     "school_id",
-    "full_name",
-    "ib_programme"
+    "full_name"
   ],
   "rls": {
     "create": {
@@ -132,14 +131,7 @@
           "data.user_id": "{{user.id}}"
         },
         {
-          "$and": [
-            {
-              "data.email": "{{user.email}}"
-            },
-            {
-              "data.school_id": "{{user.data.school_id}}"
-            }
-          ]
+          "data.email": "{{user.email}}"
         },
         {
           "$and": [
