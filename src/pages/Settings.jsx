@@ -38,9 +38,12 @@ export default function Settings() {
   });
 
   const { data: schools = [], isLoading } = useQuery({
-    queryKey: ['schools', user?.school_id],
-    enabled: !!user?.school_id,
-    queryFn: () => base44.entities.School.filter({ id: user.school_id }),
+    queryKey: ['schools'],
+    queryFn: async () => {
+      const { data } = await base44.functions.invoke('secureSchool', { action: 'get' });
+      if (data?.success === false) throw new Error(data.error || 'Failed to load school');
+      return data?.data ? [data.data] : [];
+    },
   });
 
   const school = schools[0];
@@ -52,12 +55,11 @@ export default function Settings() {
   const effectiveAdminSeatLimit = tierAdminSeatLimit;
 
   const { data: schoolAdmins = [], isLoading: isLoadingAdmins } = useQuery({
-    queryKey: ['schoolAdmins', user?.school_id],
+    queryKey: ['schoolAdmins'],
     queryFn: async () => {
       const { data } = await base44.functions.invoke('getSchoolAdmins');
       return data?.admins || [];
     },
-    enabled: !!user?.school_id,
   });
 
   const [formData, setFormData] = useState({
