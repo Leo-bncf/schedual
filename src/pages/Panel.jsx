@@ -11,7 +11,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { Building2, Users, Plus, Pencil, Trash2, Crown, MoreHorizontal, BarChart3, ShieldCheck, Search, TrendingUp, Activity, Eye, AlertTriangle, Mail, Send } from 'lucide-react';
+import { Building2, Users, Plus, Pencil, Trash2, Crown, MoreHorizontal, BarChart3, ShieldCheck, Search, TrendingUp, Activity, Eye, AlertTriangle, Mail, Send, Cpu, RefreshCw, CheckCircle2, XCircle, Clock } from 'lucide-react';
 import { Textarea } from "@/components/ui/textarea";
 import AgentTrainingSection from '../components/ai-training/AgentTrainingSection';
 import AutomationDashboard from '../components/admin/AutomationDashboard';
@@ -123,7 +123,17 @@ export default function Panel() {
       const { data } = await base44.functions.invoke('adminGetStripePrices');
       return data.prices || {};
     },
-    staleTime: 10 * 60 * 1000, // cache 10 min — prices don't change often
+    staleTime: 10 * 60 * 1000,
+  });
+
+  const { data: optaStatus, isLoading: loadingOpta, refetch: refetchOpta, dataUpdatedAt: optaUpdatedAt } = useQuery({
+    queryKey: ['optaPlannerStatus'],
+    queryFn: async () => {
+      const { data } = await base44.functions.invoke('adminOptaPlannerStatus');
+      return data;
+    },
+    refetchInterval: 30 * 1000, // poll every 30s while tab is open
+    staleTime: 25 * 1000,
   });
 
   // ─── Mutations ────────────────────────────────────────────────────────────
@@ -693,7 +703,7 @@ export default function Panel() {
       </Card>
 
       <Tabs value={activeTab} onValueChange={(value) => navigate(`?tab=${value}`)} className="space-y-6">
-        <TabsList className="grid h-auto w-full grid-cols-2 gap-3 rounded-3xl bg-transparent p-0 lg:grid-cols-4">
+        <TabsList className="grid h-auto w-full grid-cols-2 gap-3 rounded-3xl bg-transparent p-0 lg:grid-cols-5">
           <TabsTrigger value="schools" className="group rounded-2xl border border-slate-200 bg-white px-4 py-4 text-left data-[state=active]:border-blue-200 data-[state=active]:bg-blue-50 data-[state=active]:text-blue-900 data-[state=active]:shadow-sm">
             <div className="flex items-start gap-3">
               <div className="rounded-xl bg-slate-100 p-2 text-slate-600 group-data-[state=active]:bg-blue-100 group-data-[state=active]:text-blue-700"><Building2 className="w-4 h-4" /></div>
@@ -716,6 +726,21 @@ export default function Panel() {
             <div className="flex items-start gap-3">
               <div className="rounded-xl bg-slate-100 p-2 text-slate-600 group-data-[state=active]:bg-blue-100 group-data-[state=active]:text-blue-700"><ShieldCheck className="w-4 h-4" /></div>
               <div><div className="font-semibold">Audit Log</div><div className="text-xs text-slate-500">Action history</div></div>
+            </div>
+          </TabsTrigger>
+          <TabsTrigger value="solver" className="group rounded-2xl border border-slate-200 bg-white px-4 py-4 text-left data-[state=active]:border-blue-200 data-[state=active]:bg-blue-50 data-[state=active]:text-blue-900 data-[state=active]:shadow-sm">
+            <div className="flex items-start gap-3">
+              <div className="rounded-xl bg-slate-100 p-2 text-slate-600 group-data-[state=active]:bg-blue-100 group-data-[state=active]:text-blue-700">
+                <Cpu className="w-4 h-4" />
+              </div>
+              <div>
+                <div className="flex items-center gap-1.5 font-semibold">
+                  Solver
+                  {optaStatus?.health?.ok === true && <span className="inline-block w-2 h-2 rounded-full bg-emerald-500" />}
+                  {optaStatus?.health?.ok === false && <span className="inline-block w-2 h-2 rounded-full bg-rose-500" />}
+                </div>
+                <div className="text-xs text-slate-500">OptaPlanner</div>
+              </div>
             </div>
           </TabsTrigger>
         </TabsList>
@@ -870,6 +895,192 @@ export default function Panel() {
               <DataTable columns={auditColumns} data={sortedAuditLogs} isLoading={loadingAudit} />
             </CardContent>
           </Card>
+        </TabsContent>
+
+        {/* ── Solver ────────────────────────────────────────────────────── */}
+        <TabsContent value="solver">
+          <div className="space-y-6">
+            {/* Header row */}
+            <div className="flex items-center justify-between">
+              <div>
+                <h3 className="text-lg font-semibold text-slate-900">OptaPlanner Service</h3>
+                {optaUpdatedAt > 0 && (
+                  <p className="text-xs text-slate-400 mt-0.5">
+                    Last checked {new Date(optaUpdatedAt).toLocaleTimeString()} · auto-refreshes every 30s
+                  </p>
+                )}
+              </div>
+              <Button variant="outline" size="sm" onClick={() => refetchOpta()} disabled={loadingOpta}>
+                <RefreshCw className={`w-4 h-4 mr-2 ${loadingOpta ? 'animate-spin' : ''}`} />
+                Refresh
+              </Button>
+            </div>
+
+            {/* Status cards */}
+            {loadingOpta && !optaStatus ? (
+              <div className="text-center py-12 text-slate-400">Checking server…</div>
+            ) : (
+              <>
+                <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+                  {/* Health */}
+                  <Card className={`border-2 ${optaStatus?.health?.ok ? 'border-emerald-200 bg-emerald-50' : 'border-rose-200 bg-rose-50'}`}>
+                    <CardContent className="p-5 flex items-center gap-4">
+                      {optaStatus?.health?.ok
+                        ? <CheckCircle2 className="w-8 h-8 text-emerald-500 shrink-0" />
+                        : <XCircle className="w-8 h-8 text-rose-500 shrink-0" />
+                      }
+                      <div>
+                        <p className={`font-semibold ${optaStatus?.health?.ok ? 'text-emerald-800' : 'text-rose-800'}`}>
+                          {optaStatus?.health?.ok ? 'Online' : 'Unreachable'}
+                        </p>
+                        <p className="text-xs text-slate-500 mt-0.5">
+                          {optaStatus?.health?.error ?? optaStatus?.health?.data?.service ?? 'Health endpoint'}
+                        </p>
+                      </div>
+                    </CardContent>
+                  </Card>
+
+                  {/* Response time */}
+                  <Card className="border-0 shadow-sm">
+                    <CardContent className="p-5 flex items-center gap-4">
+                      <Clock className="w-8 h-8 text-indigo-400 shrink-0" />
+                      <div>
+                        <p className="font-semibold text-slate-900">
+                          {optaStatus?.health?.ms != null ? `${optaStatus.health.ms} ms` : '—'}
+                        </p>
+                        <p className="text-xs text-slate-500">Response time</p>
+                      </div>
+                    </CardContent>
+                  </Card>
+
+                  {/* Version */}
+                  <Card className="border-0 shadow-sm">
+                    <CardContent className="p-5 flex items-center gap-4">
+                      <Cpu className="w-8 h-8 text-slate-400 shrink-0" />
+                      <div>
+                        <p className="font-semibold text-slate-900">
+                          {optaStatus?.version?.data?.version ?? optaStatus?.version?.error ?? '—'}
+                        </p>
+                        <p className="text-xs text-slate-500">
+                          {optaStatus?.version?.data?.commit
+                            ? `Commit ${String(optaStatus.version.data.commit).slice(0, 7)}`
+                            : 'Version'}
+                        </p>
+                      </div>
+                    </CardContent>
+                  </Card>
+                </div>
+
+                <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+                  {/* Solver config */}
+                  {optaStatus?.version?.data && (
+                    <Card className="border-0 shadow-sm">
+                      <CardHeader><CardTitle className="text-base">Server Config</CardTitle></CardHeader>
+                      <CardContent>
+                        <dl className="space-y-2 text-sm">
+                          {Object.entries(optaStatus.version.data).map(([k, v]) => (
+                            <div key={k} className="flex justify-between">
+                              <dt className="text-slate-500">{k}</dt>
+                              <dd className="font-medium text-slate-900 text-right max-w-[60%] truncate">{String(v)}</dd>
+                            </div>
+                          ))}
+                        </dl>
+                      </CardContent>
+                    </Card>
+                  )}
+
+                  {/* Active constraints */}
+                  {optaStatus?.solver_info?.data && (
+                    <Card className="border-0 shadow-sm">
+                      <CardHeader><CardTitle className="text-base">Active Constraints</CardTitle></CardHeader>
+                      <CardContent className="space-y-3">
+                        {(() => {
+                          const info = optaStatus.solver_info.data;
+                          const constraints = info.constraints ?? info.hardConstraints
+                            ? [
+                                ...(info.hardConstraints ?? []).map(c => ({ ...c, type: 'HARD' })),
+                                ...(info.softConstraints ?? []).map(c => ({ ...c, type: 'SOFT' })),
+                              ]
+                            : Array.isArray(info) ? info : [];
+
+                          if (constraints.length === 0) {
+                            return (
+                              <pre className="text-xs text-slate-500 whitespace-pre-wrap overflow-auto max-h-48">
+                                {JSON.stringify(info, null, 2)}
+                              </pre>
+                            );
+                          }
+
+                          return constraints.map((c, i) => (
+                            <div key={i} className="flex items-start justify-between gap-2">
+                              <div className="flex items-center gap-2">
+                                <Badge className={`shrink-0 border-0 text-xs ${c.type === 'HARD' ? 'bg-rose-100 text-rose-700' : 'bg-amber-100 text-amber-700'}`}>
+                                  {c.type ?? 'SOFT'}
+                                </Badge>
+                                <span className="text-sm text-slate-700">{c.name ?? c.id ?? c}</span>
+                              </div>
+                              {c.weight != null && (
+                                <span className="text-xs text-slate-400 shrink-0">{c.weight}</span>
+                              )}
+                            </div>
+                          ));
+                        })()}
+                      </CardContent>
+                    </Card>
+                  )}
+                </div>
+
+                {/* Solve history */}
+                {optaStatus?.solve_history?.length > 0 && (
+                  <Card className="border-0 shadow-sm">
+                    <CardHeader><CardTitle className="text-base">Recent Solve History</CardTitle></CardHeader>
+                    <CardContent className="p-0">
+                      <DataTable
+                        columns={[
+                          {
+                            header: 'School',
+                            cell: (row) => {
+                              const school = schools.find(s => s.id === row.school_id);
+                              return <span className="font-medium">{school?.name ?? row.school_id?.slice(0, 8) ?? '—'}</span>;
+                            }
+                          },
+                          {
+                            header: 'Generated',
+                            cell: (row) => (
+                              <span className="text-sm text-slate-500">
+                                {row.generated_at ? new Date(row.generated_at).toLocaleString() : '—'}
+                              </span>
+                            )
+                          },
+                          {
+                            header: 'Programmes',
+                            cell: (row) => (
+                              <div className="flex gap-1 flex-wrap">
+                                {(row.programmes ?? []).map(p => (
+                                  <Badge key={p} variant="outline" className="text-xs">{p}</Badge>
+                                ))}
+                              </div>
+                            )
+                          },
+                          {
+                            header: 'Timeslots',
+                            cell: (row) => <span className="text-sm">{row.solver_timeslots ?? '—'}</span>
+                          },
+                          {
+                            header: 'Result',
+                            cell: (row) => (
+                              <span className="text-xs text-slate-500 truncate max-w-xs block">{row.notes ?? '—'}</span>
+                            )
+                          },
+                        ]}
+                        data={optaStatus.solve_history}
+                      />
+                    </CardContent>
+                  </Card>
+                )}
+              </>
+            )}
+          </div>
         </TabsContent>
       </Tabs>
 
