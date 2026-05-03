@@ -69,10 +69,10 @@ export default function Settings() {
     address: '',
     timezone: 'UTC',
     academic_year: '2024-2025',
-    periods_per_day: 8,
+    periods_per_day: 10,
     period_duration_minutes: 60,
-    days_per_week: 5,
-    school_start_time: '08:00',
+    days_of_week: ['MONDAY', 'TUESDAY', 'WEDNESDAY', 'THURSDAY', 'FRIDAY'],
+    day_start_time: '08:00',
     settings: {}
   });
 
@@ -85,10 +85,10 @@ export default function Settings() {
         address: school.address || '',
         timezone: school.timezone || 'UTC',
         academic_year: school.academic_year || '2024-2025',
-        periods_per_day: school.periods_per_day || 8,
+        periods_per_day: school.periods_per_day || 10,
         period_duration_minutes: school.period_duration_minutes || 60,
-        days_per_week: school.days_per_week || 5,
-        school_start_time: school.school_start_time || '08:00',
+        days_of_week: school.days_of_week || ['MONDAY', 'TUESDAY', 'WEDNESDAY', 'THURSDAY', 'FRIDAY'],
+        day_start_time: school.day_start_time || school.school_start_time || '08:00',
         settings: school.settings || {}
       });
     }
@@ -158,7 +158,12 @@ export default function Settings() {
     }
     setIsSaving(true);
     try {
-      const updatePayload = { ...formData };
+      const updatePayload = {
+        ...formData,
+        // Keep legacy fields in sync so all parts of the app see the same values
+        school_start_time: formData.day_start_time,
+        days_per_week: formData.days_of_week.length,
+      };
       if (!school?.school_id) {
         updatePayload.school_id = `SCH-${(school?.code || 'SCH').toUpperCase().replace(/[^A-Z0-9]/g, '').slice(0, 6)}-${Date.now().toString().slice(-4)}`;
       }

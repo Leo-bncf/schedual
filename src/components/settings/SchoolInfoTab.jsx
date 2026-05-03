@@ -3,7 +3,15 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { Building2, Calendar, Clock, Globe, Hash, Info, MapPin, School, Shield } from 'lucide-react';
+import { Building2, Calendar, CalendarDays, Clock, Globe, Hash, Info, MapPin, School, Shield } from 'lucide-react';
+
+const ALL_DAYS = [
+  { value: 'MONDAY', label: 'Mon' },
+  { value: 'TUESDAY', label: 'Tue' },
+  { value: 'WEDNESDAY', label: 'Wed' },
+  { value: 'THURSDAY', label: 'Thu' },
+  { value: 'FRIDAY', label: 'Fri' },
+];
 import { TIMEZONES } from '@/components/settings/SettingsConstants';
 
 export default function SchoolInfoTab({ formData, setFormData, school }) {
@@ -125,6 +133,86 @@ export default function SchoolInfoTab({ formData, setFormData, school }) {
               </Label>
               <Input id="period_duration_minutes" type="number" min="15" step="5" value={formData.period_duration_minutes} onChange={(e) => setFormData({ ...formData, period_duration_minutes: Number(e.target.value || 60) })} className="h-11" />
               <p className="text-xs text-slate-500">Example: 60, 55, 45 minutes. This value applies to all blocks.</p>
+            </div>
+          </div>
+        </CardContent>
+      </Card>
+
+      <Card className="border-0 shadow-sm bg-white rounded-xl">
+        <CardHeader className="bg-gradient-to-r from-rose-50 to-pink-50 rounded-t-xl">
+          <div className="flex items-center gap-3">
+            <div className="p-2 rounded-lg bg-rose-100">
+              <CalendarDays className="w-5 h-5 text-rose-700" />
+            </div>
+            <div>
+              <CardTitle className="text-lg">Schedule Configuration</CardTitle>
+              <CardDescription>Core settings used when generating timetables</CardDescription>
+            </div>
+          </div>
+        </CardHeader>
+        <CardContent className="pt-6">
+          <div className="grid gap-6 sm:grid-cols-2">
+            <div className="space-y-2">
+              <Label htmlFor="day_start_time" className="flex items-center gap-2 text-sm font-semibold">
+                <Clock className="w-4 h-4 text-rose-600" />
+                School Day Start Time
+              </Label>
+              <Input
+                id="day_start_time"
+                type="time"
+                value={formData.day_start_time}
+                onChange={(e) => setFormData({ ...formData, day_start_time: e.target.value })}
+                className="h-11"
+              />
+              <p className="text-xs text-slate-500">First block of the day begins at this time</p>
+            </div>
+            <div className="space-y-2">
+              <Label htmlFor="periods_per_day" className="flex items-center gap-2 text-sm font-semibold">
+                <Hash className="w-4 h-4 text-rose-600" />
+                Periods Per Day
+              </Label>
+              <Input
+                id="periods_per_day"
+                type="number"
+                min="1"
+                max="20"
+                value={formData.periods_per_day}
+                onChange={(e) => setFormData({ ...formData, periods_per_day: Number(e.target.value || 10) })}
+                className="h-11"
+              />
+              <p className="text-xs text-slate-500">Number of teaching periods in a school day</p>
+            </div>
+            <div className="sm:col-span-2 space-y-2">
+              <Label className="flex items-center gap-2 text-sm font-semibold">
+                <CalendarDays className="w-4 h-4 text-rose-600" />
+                Teaching Days
+              </Label>
+              <div className="flex flex-wrap gap-2">
+                {ALL_DAYS.map((day) => {
+                  const active = formData.days_of_week?.includes(day.value);
+                  return (
+                    <button
+                      key={day.value}
+                      type="button"
+                      onClick={() => {
+                        const current = formData.days_of_week || [];
+                        const next = active
+                          ? current.filter((d) => d !== day.value)
+                          : [...current, day.value].sort((a, b) => ALL_DAYS.findIndex(x => x.value === a) - ALL_DAYS.findIndex(x => x.value === b));
+                        if (next.length > 0) setFormData({ ...formData, days_of_week: next });
+                      }}
+                      className={`px-4 py-2 rounded-lg text-sm font-medium border-2 transition-colors ${
+                        active
+                          ? 'bg-rose-600 text-white border-rose-600'
+                          : 'bg-white text-slate-600 border-slate-200 hover:border-rose-300'
+                      }`}
+                    >
+                      {day.label}
+                    </button>
+                  );
+                })}
+              </div>
+              <p className="text-xs text-slate-500">Select the days your school operates</p>
             </div>
           </div>
         </CardContent>
