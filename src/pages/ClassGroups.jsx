@@ -41,7 +41,16 @@ export default function ClassGroups() {
     queryFn: () => base44.auth.me(),
   });
 
-  const schoolId = user?.school_id;
+  const { data: schools = [] } = useQuery({
+    queryKey: ['schools'],
+    queryFn: async () => {
+      const { data } = await base44.functions.invoke('secureSchool', { action: 'get' });
+      if (data?.success === false) throw new Error(data.error || 'Failed to load school');
+      return data?.data ? [data.data] : [];
+    },
+  });
+
+  const schoolId = schools[0]?.id || user?.school_id || user?.data?.school_id;
 
   const { data: classGroups = [], isLoading } = useQuery({
     queryKey: ['classGroups', schoolId],

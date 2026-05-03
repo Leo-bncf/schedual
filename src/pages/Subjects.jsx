@@ -84,14 +84,17 @@ export default function Subjects() {
     queryFn: () => base44.auth.me(),
   });
 
-  const schoolId = user?.school_id;
-
-  const { data: schoolRecords = [] } = useQuery({
-    queryKey: ['school', schoolId],
-    queryFn: () => base44.entities.School.filter({ id: schoolId }),
-    enabled: !!schoolId,
+  const { data: schools = [] } = useQuery({
+    queryKey: ['schools'],
+    queryFn: async () => {
+      const { data } = await base44.functions.invoke('secureSchool', { action: 'get' });
+      if (data?.success === false) throw new Error(data.error || 'Failed to load school');
+      return data?.data ? [data.data] : [];
+    },
   });
-  const school = schoolRecords[0];
+
+  const school = schools[0] || null;
+  const schoolId = school?.id || user?.school_id || user?.data?.school_id;
 
   const { data: teachers = [] } = useQuery({
     queryKey: ['teachers', schoolId],

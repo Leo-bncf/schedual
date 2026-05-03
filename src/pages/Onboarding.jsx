@@ -16,41 +16,44 @@ export default function Onboarding() {
   });
 
   const { data: schools = [] } = useQuery({
-    queryKey: ['schools', user?.school_id],
-    queryFn: () => base44.entities.School.filter({ id: user?.school_id }),
-    enabled: !!user?.school_id,
+    queryKey: ['schools'],
+    queryFn: async () => {
+      const { data } = await base44.functions.invoke('secureSchool', { action: 'get' });
+      if (data?.success === false) throw new Error(data.error || 'Failed to load school');
+      return data?.data ? [data.data] : [];
+    },
   });
 
+  const schoolId = schools[0]?.id || user?.school_id || user?.data?.school_id;
+
   const { data: subjects = [] } = useQuery({
-    queryKey: ['subjects', user?.school_id],
-    queryFn: () => base44.entities.Subject.filter({ school_id: user?.school_id }),
-    enabled: !!user?.school_id,
+    queryKey: ['subjects', schoolId],
+    queryFn: () => base44.entities.Subject.filter({ school_id: schoolId }),
+    enabled: !!schoolId,
   });
 
   const { data: teachers = [] } = useQuery({
-    queryKey: ['teachers', user?.school_id],
-    queryFn: () => base44.entities.Teacher.filter({ school_id: user?.school_id }),
-    enabled: !!user?.school_id,
+    queryKey: ['teachers', schoolId],
+    queryFn: () => base44.entities.Teacher.filter({ school_id: schoolId }),
+    enabled: !!schoolId,
   });
 
   const { data: students = [] } = useQuery({
-    queryKey: ['students', user?.school_id],
-    queryFn: () => base44.entities.Student.filter({ school_id: user?.school_id }),
-    enabled: !!user?.school_id,
+    queryKey: ['students', schoolId],
+    queryFn: () => base44.entities.Student.filter({ school_id: schoolId }),
+    enabled: !!schoolId,
   });
 
   const { data: rooms = [] } = useQuery({
-    queryKey: ['rooms', user?.school_id],
-    queryFn: () => base44.entities.Room.filter({ school_id: user?.school_id }),
-    enabled: !!user?.school_id,
+    queryKey: ['rooms', schoolId],
+    queryFn: () => base44.entities.Room.filter({ school_id: schoolId }),
+    enabled: !!schoolId,
   });
 
-
-
   const { data: classGroups = [] } = useQuery({
-    queryKey: ['classGroups', user?.school_id],
-    queryFn: () => base44.entities.ClassGroup.filter({ school_id: user?.school_id }),
-    enabled: !!user?.school_id,
+    queryKey: ['classGroups', schoolId],
+    queryFn: () => base44.entities.ClassGroup.filter({ school_id: schoolId }),
+    enabled: !!schoolId,
   });
 
   const steps = [
