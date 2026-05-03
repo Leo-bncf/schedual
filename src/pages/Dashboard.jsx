@@ -29,34 +29,45 @@ export default function Dashboard() {
     queryFn: () => base44.auth.me(),
   });
 
+  const { data: schools = [] } = useQuery({
+    queryKey: ['schools'],
+    queryFn: async () => {
+      const { data } = await base44.functions.invoke('secureSchool', { action: 'get' });
+      if (data?.success === false) throw new Error(data.error || 'Failed to load school');
+      return data?.data ? [data.data] : [];
+    },
+  });
+
+  const schoolId = schools[0]?.id || user?.school_id || user?.data?.school_id;
+
   const { data: teachers = [], isLoading: loadingTeachers } = useQuery({
-    queryKey: ['teachers', user?.school_id],
-    queryFn: () => base44.entities.Teacher.filter({ school_id: user?.school_id }),
-    enabled: !!user?.school_id,
+    queryKey: ['teachers', schoolId],
+    queryFn: () => base44.entities.Teacher.filter({ school_id: schoolId }),
+    enabled: !!schoolId,
   });
 
   const { data: students = [], isLoading: loadingStudents } = useQuery({
-    queryKey: ['students', user?.school_id],
-    queryFn: () => base44.entities.Student.filter({ school_id: user?.school_id }),
-    enabled: !!user?.school_id,
+    queryKey: ['students', schoolId],
+    queryFn: () => base44.entities.Student.filter({ school_id: schoolId }),
+    enabled: !!schoolId,
   });
 
   const { data: subjects = [], isLoading: loadingSubjects } = useQuery({
-    queryKey: ['subjects', user?.school_id],
-    queryFn: () => base44.entities.Subject.filter({ school_id: user?.school_id }),
-    enabled: !!user?.school_id,
+    queryKey: ['subjects', schoolId],
+    queryFn: () => base44.entities.Subject.filter({ school_id: schoolId }),
+    enabled: !!schoolId,
   });
 
   const { data: rooms = [], isLoading: loadingRooms } = useQuery({
-    queryKey: ['rooms', user?.school_id],
-    queryFn: () => base44.entities.Room.filter({ school_id: user?.school_id }),
-    enabled: !!user?.school_id,
+    queryKey: ['rooms', schoolId],
+    queryFn: () => base44.entities.Room.filter({ school_id: schoolId }),
+    enabled: !!schoolId,
   });
 
   const { data: scheduleVersions = [], isLoading: loadingSchedules } = useQuery({
-    queryKey: ['scheduleVersions', user?.school_id],
-    queryFn: () => base44.entities.ScheduleVersion.filter({ school_id: user?.school_id }, '-created_date', 5),
-    enabled: !!user?.school_id,
+    queryKey: ['scheduleVersions', schoolId],
+    queryFn: () => base44.entities.ScheduleVersion.filter({ school_id: schoolId }, '-created_date', 5),
+    enabled: !!schoolId,
   });
 
 

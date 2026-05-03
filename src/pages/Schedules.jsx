@@ -96,16 +96,17 @@ export default function Schedules() {
     queryFn: () => base44.auth.me(),
   });
 
-  const schoolId = user?.school_id || user?.data?.school_id;
-
-  const { data: school } = useQuery({
-    queryKey: ['school', schoolId],
-    queryFn: () => base44.entities.School.filter({ id: schoolId }),
-    enabled: !!schoolId,
-    select: (data) => data[0]
+  const { data: schools = [] } = useQuery({
+    queryKey: ['schools'],
+    queryFn: async () => {
+      const { data } = await base44.functions.invoke('secureSchool', { action: 'get' });
+      if (data?.success === false) throw new Error(data.error || 'Failed to load school');
+      return data?.data ? [data.data] : [];
+    },
   });
 
-  const resolvedSchoolId = school?.id || schoolId;
+  const school = schools[0] || null;
+  const resolvedSchoolId = school?.id || user?.school_id || user?.data?.school_id;
   const { data: scheduleVersions = [] } = useQuery({
     queryKey: ['scheduleVersions', resolvedSchoolId],
     queryFn: () => base44.entities.ScheduleVersion.filter({ school_id: resolvedSchoolId }, '-created_date'),
