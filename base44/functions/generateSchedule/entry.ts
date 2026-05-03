@@ -893,14 +893,39 @@ Deno.serve(async (req) => {
     console.log(`[generateSchedule] School: ${schoolRecord.name}, Students: ${students.length}, Teachers: ${teachers.length}`);
 
     const activeStudents = students.filter(s => s.is_active !== false);
-    const programmes = new Set(activeStudents.map(s => s.ib_programme).filter(Boolean));
     console.log(`[generateSchedule] Active students: ${activeStudents.length}, total fetched: ${students.length}`);
+
+    // Infer ib_programme from year_group if not explicitly set
+    const inferProgrammeFromYearGroup = (yearGroup) => {
+      if (!yearGroup) return null;
+      const yg = String(yearGroup).toUpperCase();
+      if (yg.startsWith('DP')) return 'DP';
+      if (yg.startsWith('MYP')) return 'MYP';
+      if (yg.startsWith('PYP')) return 'PYP';
+      return null;
+    };
+
+    const studentsWithProgramme = activeStudents.map(s => ({
+      ...s,
+      ib_programme: s.ib_programme || inferProgrammeFromYearGroup(s.year_group),
+    }));
+
+    const programmes = new Set(studentsWithProgramme.map(s => s.ib_programme).filter(Boolean));
     console.log(`[generateSchedule] Programmes with students: ${[...programmes].join(', ')}`);
     if (activeStudents.length > 0 && programmes.size === 0) {
-      console.warn(`[generateSchedule] Students exist but none have ib_programme set! Sample: ${JSON.stringify(activeStudents.slice(0, 3).map(s => ({ id: s.id, ib_programme: s.ib_programme, is_active: s.is_active })))}`);
+      console.warn(`[generateSchedule] Students exist but none have ib_programme set! Sample: ${JSON.stringify(activeStudents.slice(0, 3).map(s => ({ id: s.id, ib_programme: s.ib_programme, year_group: s.year_group, is_active: s.is_active })))}`);
     }
 
-    const common = { schoolId, scheduleVersionId: schedule_version_id, school: schoolRecord, students, teachers, subjects, rooms, teachingGroups };
+    // Also infer programmes from teachingGroups if still empty (e.g. no students enrolled yet)
+    if (programmes.size === 0 && teachingGroups.length > 0) {
+      for (const tg of teachingGroups) {
+        const inferred = inferProgrammeFromYearGroup(tg.year_group);
+        if (inferred) programmes.add(inferred);
+      }
+      console.log(`[generateSchedule] Inferred programmes from teachingGroups: ${[...programmes].join(', ')}`);
+    }
+
+    const common = { schoolId, scheduleVersionId: schedule_version_id, school: schoolRecord, students: studentsWithProgramme, teachers, subjects, rooms, teachingGroups };
 
     // Build payloads — ONE per programme
     const payloadsToRun = [];
