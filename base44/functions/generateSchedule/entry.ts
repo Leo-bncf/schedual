@@ -382,7 +382,9 @@ function buildDPPayload({ schoolId, scheduleVersionId, school, students, teacher
     const sessionMinutesPerWeek = Number(subject.sessions_per_week || 0) * Number(subject.hours_per_session || 0) * 60;
     const minutesPerWeek = isStandardLevel
       ? Math.max(tgMinutesPerWeek, standardHoursMinutes, sessionMinutesPerWeek)
-      : (level === 'HL' ? Number(subject.hoursPerWeekHL || 0) : Number(subject.hoursPerWeekSL || 0)) * 60;
+      : level === 'HL'
+        ? (Number(subject.hoursPerWeekHL || 0) * 60) || Number(subject.hl_minutes_per_week_default || 300)
+        : (Number(subject.hoursPerWeekSL || 0) * 60) || Number(subject.sl_minutes_per_week_default || 180);
     const periodsPerWeek = Math.max(1, Math.ceil(minutesPerWeek / periodDuration));
     const teacherId = bucketTgs.reduce((acc, tg) => acc || (tg.teacher_id ? (teacherMap.get(tg.teacher_id) ?? null) : null), null)
       || (subject.supervisor_teacher_id ? (teacherMap.get(subject.supervisor_teacher_id) ?? null) : null);
@@ -400,12 +402,15 @@ function buildDPPayload({ schoolId, scheduleVersionId, school, students, teacher
       return hasChoice ? studentMap.get(base44Id) : null;
     }).filter(Boolean);
 
+    const preferredRoomNumericId = repTg?.preferred_room_id ? (roomMap.get(repTg.preferred_room_id) ?? null) : null;
     teachingGroupsPayload.push({
       id: teachingGroupId,
       section_id: sectionId,
       student_group: studentGroup,
       subject_id: subjectId,
       level,
+      block_id: repTg?.block_id || null,
+      preferred_room_id: preferredRoomNumericId,
     });
 
     for (let i = 0; i < periodsPerWeek; i++) {
@@ -935,7 +940,11 @@ Deno.serve(async (req) => {
       return Response.json({ error: 'No students found in any IB programme. Please ensure students have an IB programme (DP/MYP/PYP) and year group (e.g. DP1, MYP3) assigned before generating a schedule.' }, { status: 400 });
     }
 
-    const common = { schoolId, scheduleVersionId: schedule_version_id, school: schoolRecord, students: studentsWithProgramme, teachers, subjects, rooms, teachingGroups, requestConstraints };
+    // Build solverTimeslots FIRST — payload builders need it to populate teacher unavailableSlotIds
+    const solverTimeslots = buildSolverTimeslots(schoolRecord);
+    console.log(`[generateSchedule] Built ${solverTimeslots.length} solverTimeslots from school schedule`);
+
+    const common = { schoolId, scheduleVersionId: schedule_version_id, school: schoolRecord, students: studentsWithProgramme, teachers, subjects, rooms, teachingGroups, requestConstraints, solverTimeslots };
 
     // Build payloads — ONE per programme
     const payloadsToRun = [];
@@ -950,13 +959,6 @@ Deno.serve(async (req) => {
     // Build maps once for reverse-lookup during slot parsing
     const { teacherMap } = buildTeacherMap(teachers);
     const { roomMap } = buildRoomMap(rooms);
-
-    // ── Build solverTimeslots from school config ──
-    const solverTimeslots = buildSolverTimeslots(schoolRecord);
-    console.log(`[generateSchedule] Built ${solverTimeslots.length} solverTimeslots from school schedule`);
-
-    // Inject solverTimeslots into common so payload builders can compute unavailableSlotIds
-    common.solverTimeslots = solverTimeslots;
 
     // ── Send ONE payload at a time and reject anything inconsistent ──
     let totalSlotsInserted = 0;
