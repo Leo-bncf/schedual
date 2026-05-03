@@ -74,6 +74,7 @@ export default function Schedules() {
   const [searchTeacher, setSearchTeacher] = useState('');
   const [overviewFilterType, setOverviewFilterType] = useState('all');
   const [isFixingSubjects, setIsFixingSubjects] = useState(false);
+  const [isRepairingStudents, setIsRepairingStudents] = useState(false);
   const [overviewFilterId, setOverviewFilterId] = useState('all');
   const [formData, setFormData] = useState({
     name: '',
@@ -458,6 +459,26 @@ export default function Schedules() {
             <p className="text-sm text-slate-500 mt-1">Manage and generate timetables</p>
           </div>
           <div className="flex items-center gap-2">
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={async () => {
+                setIsRepairingStudents(true);
+                try {
+                  const res = await base44.functions.invoke('repairStudentProgrammes', {});
+                  alert(res.data?.message || 'Done');
+                } catch(e) {
+                  alert('Error: ' + e.message);
+                } finally {
+                  setIsRepairingStudents(false);
+                }
+              }}
+              disabled={isRepairingStudents}
+              className="gap-2 border-blue-200 hover:bg-blue-50"
+            >
+              {isRepairingStudents ? <Loader2 className="w-4 h-4 animate-spin text-blue-600" /> : <Sparkles className="w-4 h-4 text-blue-600" />}
+              <span className="text-blue-700">Fix Student Programmes</span>
+            </Button>
             {subjects.length > 0 && subjects.some(s => !s.school_id) && (
               <Button 
                 variant="outline" 
