@@ -111,7 +111,7 @@ export default function Panel() {
     subscription_status: 'active',
     contact_email: '',
     country: '',
-    admin_slots: 1,
+    max_admin_seats: 1,
   });
 
   // User assign dialog
@@ -419,7 +419,7 @@ export default function Panel() {
       subscription_status: 'active',
       contact_email: '',
       country: '',
-      admin_slots: 1,
+      max_admin_seats: 1,
     });
     setEditingSchool(null);
   };
@@ -433,7 +433,7 @@ export default function Panel() {
       subscription_status: school.subscription_status ?? 'active',
       contact_email: school.contact_email ?? '',
       country: school.country ?? '',
-      admin_slots: school.admin_slots ?? 1,
+      max_admin_seats: school.max_admin_seats ?? 1,
     });
     setIsSchoolDialogOpen(true);
   };
@@ -444,9 +444,9 @@ export default function Panel() {
       return;
     }
     if (editingSchool) {
-      schoolMutation.mutate({ action: 'update', payload: { id: editingSchool.id, ...schoolFormData } });
+      schoolMutation.mutate({ action: 'update', payload: { id: editingSchool.id, data: schoolFormData } });
     } else {
-      schoolMutation.mutate({ action: 'create', payload: schoolFormData });
+      schoolMutation.mutate({ action: 'create', payload: { data: schoolFormData } });
     }
   };
 
@@ -471,7 +471,7 @@ export default function Panel() {
     if (type === 'school') {
       schoolMutation.mutate({ action: 'delete', payload: { id: item.id } });
     } else {
-      userMutation.mutate({ action: 'delete', payload: { id: item.id } });
+      userMutation.mutate({ action: 'delete', payload: { userId: item.id } });
     }
     setDeleteConfirm(null);
     setConfirmNameInput('');
@@ -484,7 +484,7 @@ export default function Panel() {
     }
     userMutation.mutate({
       action: 'update',
-      payload: { id: assigningUser.id, school_id: userFormData.school_id },
+      payload: { userId: assigningUser.id, data: { school_id: userFormData.school_id, role: 'admin' } },
     });
     setAssigningUser(null);
     setUserFormData({ school_id: '' });
@@ -504,8 +504,8 @@ export default function Panel() {
       if (newSchoolId && targetUser) {
         await base44.functions.invoke('adminManageUser', {
           action: 'update',
-          id: targetUser.id,
-          school_id: newSchoolId,
+          userId: targetUser.id,
+          data: { school_id: newSchoolId, role: 'admin' },
         });
       }
       queryClient.invalidateQueries({ queryKey: ['adminSchools'] });
@@ -521,11 +521,12 @@ export default function Panel() {
 
   const handleAddSeats = () => {
     if (!seatsTargetSchool) return;
+    const newSeats = (seatsTargetSchool.max_admin_seats ?? 1) + Number(seatsToAdd);
     schoolMutation.mutate({
       action: 'update',
       payload: {
         id: seatsTargetSchool.id,
-        admin_slots: (seatsTargetSchool.admin_slots ?? 1) + Number(seatsToAdd),
+        data: { max_admin_seats: newSeats },
       },
     });
     setIsSeatsDialogOpen(false);
@@ -537,7 +538,7 @@ export default function Panel() {
     const next = school.subscription_status === 'active' ? 'paused' : 'active';
     schoolMutation.mutate({
       action: 'update',
-      payload: { id: school.id, subscription_status: next },
+      payload: { id: school.id, data: { subscription_status: next } },
     });
   };
 
@@ -1131,28 +1132,24 @@ export default function Panel() {
                         data={solveHistory}
                         columns={[
                           {
-                            header: 'ID',
-                            cell: (r) => <span className="font-mono text-xs text-slate-600">{shortId(r.id ?? r.solveId)}</span>,
+                            header: 'Generated',
+                            cell: (r) => <span className="text-xs text-slate-500">{r.generated_at ? new Date(r.generated_at).toLocaleString() : '—'}</span>,
                           },
                           {
-                            header: 'Status',
+                            header: 'Notes',
+                            cell: (r) => <span className="text-xs text-slate-600">{r.notes ?? '—'}</span>,
+                          },
+                          {
+                            header: 'Programmes',
                             cell: (r) => (
-                              <Badge className={`text-xs ${r.status === 'SOLVED' ? 'bg-emerald-100 text-emerald-700' : 'bg-slate-100 text-slate-600'}`}>
-                                {r.status ?? '—'}
-                              </Badge>
+                              <span className="text-xs text-slate-600">
+                                {Array.isArray(r.programmes) ? r.programmes.join(', ') : r.programmes ?? '—'}
+                              </span>
                             ),
                           },
                           {
-                            header: 'Started',
-                            cell: (r) => <span className="text-xs text-slate-500">{r.startedAt ?? r.started_at ?? '—'}</span>,
-                          },
-                          {
-                            header: 'Duration',
-                            cell: (r) => <span className="text-xs text-slate-500">{r.duration != null ? `${r.duration}s` : '—'}</span>,
-                          },
-                          {
-                            header: 'Score',
-                            cell: (r) => <span className="font-mono text-xs text-slate-700">{r.score ?? '—'}</span>,
+                            header: 'Slots',
+                            cell: (r) => <span className="text-xs text-slate-500">{Array.isArray(r.solver_timeslots) ? r.solver_timeslots.length : '—'}</span>,
                           },
                         ]}
                         emptyMessage="No solve runs recorded yet"
@@ -1458,12 +1455,12 @@ export default function Panel() {
               </div>
             </div>
             <div className="space-y-1.5">
-              <Label>Admin Slots</Label>
+              <Label>Admin Seats</Label>
               <Input
                 type="number"
                 min={1}
-                value={schoolFormData.admin_slots}
-                onChange={e => setSchoolFormData(f => ({ ...f, admin_slots: Number(e.target.value) }))}
+                value={schoolFormData.max_admin_seats}
+                onChange={e => setSchoolFormData(f => ({ ...f, max_admin_seats: Number(e.target.value) }))}
               />
             </div>
           </div>
@@ -1621,7 +1618,7 @@ export default function Panel() {
             <DialogTitle>Add Admin Slots</DialogTitle>
             <DialogDescription>
               Add additional admin slots to <strong>{seatsTargetSchool?.name}</strong>.
-              Current slots: <strong>{seatsTargetSchool?.admin_slots ?? 1}</strong>
+              Current slots: <strong>{seatsTargetSchool?.max_admin_seats ?? 1}</strong>
             </DialogDescription>
           </DialogHeader>
           <div className="py-2 space-y-1.5">
@@ -1728,7 +1725,7 @@ export default function Panel() {
                   ['Contact', drilldown.contact_email],
                   ['Tier', drilldown.subscription_tier],
                   ['Status', drilldown.subscription_status],
-                  ['Admin Slots', drilldown.admin_slots],
+                  ['Admin Seats', drilldown.max_admin_seats],
                   ['MRR', stripePrices != null ? formatMoney(tierMonthlyCents[drilldown.subscription_tier] ?? 0, currency) : null],
                 ]
                   .filter(([, v]) => v != null && v !== '')

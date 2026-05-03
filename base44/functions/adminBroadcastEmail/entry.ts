@@ -26,7 +26,7 @@ Deno.serve(async (req) => {
     const allSchools = await base44.asServiceRole.entities.School.list();
     const targetSchools = target_status && target_status !== 'all'
       ? allSchools.filter((s: any) => s.subscription_status === target_status)
-      : allSchools.filter((s: any) => s.subscription_status === 'active');
+      : allSchools;
 
     const targetSchoolIds = new Set(targetSchools.map((s: any) => s.id));
 

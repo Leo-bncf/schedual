@@ -26,7 +26,7 @@ Deno.serve(async (req) => {
       return Response.json({ error: 'Support inbox not configured' }, { status: 500 });
     }
 
-    await base44.integrations.Core.SendEmail({
+    await base44.asServiceRole.integrations.Core.SendEmail({
       to: supportInbox,
       subject: `New Demo Request from ${esc(school)}`,
       body: `
