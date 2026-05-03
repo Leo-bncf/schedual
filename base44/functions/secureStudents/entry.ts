@@ -56,7 +56,7 @@ Deno.serve(async (req) => {
       case 'list': {
         // Only list students from user's school
         const filteredQuery = addSchoolFilter(user, query);
-        const students = await base44.asServiceRole.entities.Student.filter(filteredQuery);
+        const students = await base44.asServiceRole.entities.Student.filter(filteredQuery, '-created_date', 2000);
         return Response.json({ success: true, data: students });
       }
       

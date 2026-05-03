@@ -925,6 +925,13 @@ Deno.serve(async (req) => {
       console.log(`[generateSchedule] Inferred programmes from teachingGroups: ${[...programmes].join(', ')}`);
     }
 
+    if (programmes.size === 0) {
+      const sampleStudents = activeStudents.slice(0, 5).map(s => ({ id: s.id, ib_programme: s.ib_programme, year_group: s.year_group }));
+      const sampleTGs = teachingGroups.slice(0, 5).map(t => ({ id: t.id, year_group: t.year_group }));
+      console.error(`[generateSchedule] No programmes found. Students sample: ${JSON.stringify(sampleStudents)}, TeachingGroups sample: ${JSON.stringify(sampleTGs)}`);
+      return Response.json({ error: 'No students found in any IB programme. Please ensure students have an IB programme (DP/MYP/PYP) and year group (e.g. DP1, MYP3) assigned before generating a schedule.' }, { status: 400 });
+    }
+
     const common = { schoolId, scheduleVersionId: schedule_version_id, school: schoolRecord, students: studentsWithProgramme, teachers, subjects, rooms, teachingGroups };
 
     // Build payloads — ONE per programme
