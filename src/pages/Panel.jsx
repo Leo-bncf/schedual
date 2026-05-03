@@ -1,4 +1,4 @@
-import React, { useState, useMemo } from 'react';
+import React, { useState, useMemo, useRef, useEffect } from 'react';
 import { useLocation, useNavigate } from 'react-router-dom';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { base44 } from '@/api/base44Client';
@@ -7,288 +7,446 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Badge } from "@/components/ui/badge";
+import { Textarea } from "@/components/ui/textarea";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { Building2, Users, Plus, Pencil, Trash2, Crown, MoreHorizontal, BarChart3, ShieldCheck, Search, TrendingUp, Activity, Eye, AlertTriangle, Mail, Send, Cpu, RefreshCw, CheckCircle2, XCircle, Clock } from 'lucide-react';
-import { Textarea } from "@/components/ui/textarea";
-import AgentTrainingSection from '../components/ai-training/AgentTrainingSection';
-import AutomationDashboard from '../components/admin/AutomationDashboard';
-import AnalyticsDashboard from '../components/admin/AnalyticsDashboard';
-import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
+import { Building2, Users, Plus, Pencil, Trash2, Crown, MoreHorizontal, BarChart3, ShieldCheck, Search, TrendingUp, Activity, Eye, AlertTriangle, Mail, Send, Cpu, RefreshCw, CheckCircle2, XCircle, Clock, Terminal, Wifi, WifiOff } from 'lucide-react';
 import PageHeader from '../components/ui-custom/PageHeader';
 import StatCard from '../components/ui-custom/StatCard';
 import DataTable from '../components/ui-custom/DataTable';
+import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
+
+// ---------------------------------------------------------------------------
+// Helpers
+// ---------------------------------------------------------------------------
+
+const formatMoney = (cents, currency = 'eur') => {
+  if (cents == null) return '—';
+  return Intl.NumberFormat('en', {
+    style: 'currency',
+    currency: currency.toUpperCase(),
+    minimumFractionDigits: 0,
+  }).format(cents / 100);
+};
+
+const getUserSchoolId = (u) => u?.school_id ?? u?.schoolId ?? null;
+const getUserRole = (u) => u?.role ?? u?.user_role ?? null;
+
+const TIER_COLORS = {
+  tier1: 'bg-slate-100 text-slate-700',
+  tier2: 'bg-blue-100 text-blue-700',
+  tier3: 'bg-purple-100 text-purple-700',
+};
+
+const STATUS_COLORS = {
+  active: 'bg-emerald-100 text-emerald-700',
+  paused: 'bg-amber-100 text-amber-700',
+  trial: 'bg-sky-100 text-sky-700',
+  cancelled: 'bg-red-100 text-red-700',
+};
+
+const ACTION_TERMINAL_COLORS = {
+  create_school: 'text-emerald-400',
+  update_school: 'text-blue-400',
+  delete_school: 'text-rose-400',
+  assign_user: 'text-indigo-400',
+  delete_user: 'text-rose-400',
+  default: 'text-slate-400',
+};
+
+function getActionColor(action) {
+  const key = action?.toLowerCase?.() ?? '';
+  return ACTION_TERMINAL_COLORS[key] ?? ACTION_TERMINAL_COLORS.default;
+}
+
+function formatLogTimestamp(ts) {
+  if (!ts) return '—';
+  try {
+    const d = new Date(ts);
+    return d.toLocaleString('en-CA', { hour12: false }).replace(',', '');
+  } catch {
+    return ts;
+  }
+}
+
+function formatTime(ts) {
+  if (!ts) return '';
+  try {
+    return new Date(ts).toLocaleTimeString('en-GB');
+  } catch {
+    return '';
+  }
+}
+
+function shortId(id) {
+  if (!id) return '—';
+  return String(id).slice(0, 8);
+}
+
+// ---------------------------------------------------------------------------
+// Panel component
+// ---------------------------------------------------------------------------
 
 export default function Panel() {
-  const [isSchoolDialogOpen, setIsSchoolDialogOpen] = useState(false);
-  const [isUserDialogOpen, setIsUserDialogOpen] = useState(false);
-  const [isCreateSchoolForUserOpen, setIsCreateSchoolForUserOpen] = useState(false);
-  const [editingSchool, setEditingSchool] = useState(null);
-  const [schoolFormData, setSchoolFormData] = useState({
-    name: '', code: '', ib_school_code: '', address: '',
-    timezone: 'UTC', academic_year: '2024-2025', stripe_customer_id: ''
-  });
-  const [userFormData, setUserFormData] = useState({ email: '', school_id: '', role: 'user' });
-  const [newSchoolFormData, setNewSchoolFormData] = useState({
-    name: '', code: '', ib_school_code: '', address: '',
-    timezone: 'UTC', academic_year: '2024-2025', user_email: '', user_role: 'admin'
-  });
+  const navigate = useNavigate();
+  const location = useLocation();
+  const queryClient = useQueryClient();
 
-  const [isSeatsDialogOpen, setIsSeatsDialogOpen] = useState(false);
-  const [seatsTargetSchool, setSeatsTargetSchool] = useState(null);
-  const [seatsToAdd, setSeatsToAdd] = useState(1);
-
-  // Delete confirmation
-  const [deleteConfirm, setDeleteConfirm] = useState(null); // { type: 'school'|'user', item }
-  const [confirmNameInput, setConfirmNameInput] = useState('');
-
-  // School drill-down
-  const [drilldown, setDrilldown] = useState(null);
+  // Active tab
+  const [activeTab, setActiveTab] = useState('schools');
 
   // Search
   const [schoolSearch, setSchoolSearch] = useState('');
   const [userSearch, setUserSearch] = useState('');
 
-  // Broadcast email
-  const [isBroadcastOpen, setIsBroadcastOpen] = useState(false);
-  const [broadcastForm, setBroadcastForm] = useState({ subject: '', message: '', target_status: 'active' });
+  // School dialog
+  const [isSchoolDialogOpen, setIsSchoolDialogOpen] = useState(false);
+  const [editingSchool, setEditingSchool] = useState(null);
+  const [schoolFormData, setSchoolFormData] = useState({
+    name: '',
+    ib_code: '',
+    subscription_tier: 'tier1',
+    subscription_status: 'active',
+    contact_email: '',
+    country: '',
+    admin_slots: 1,
+  });
 
-  const queryClient = useQueryClient();
-  const location = useLocation();
-  const navigate = useNavigate();
-  const activeTab = new URLSearchParams(location.search).get('tab') || 'schools';
+  // User assign dialog
+  const [isUserDialogOpen, setIsUserDialogOpen] = useState(false);
+  const [userFormData, setUserFormData] = useState({ school_id: '' });
+  const [assigningUser, setAssigningUser] = useState(null);
 
-  const { data: schools = [], isLoading: loadingSchools } = useQuery({
-    queryKey: ['allSchools'],
+  // Create school for user
+  const [isCreateSchoolForUserOpen, setIsCreateSchoolForUserOpen] = useState(false);
+  const [newSchoolFormData, setNewSchoolFormData] = useState({
+    name: '',
+    ib_code: '',
+    subscription_tier: 'tier1',
+    contact_email: '',
+    country: '',
+  });
+  const [targetUser, setTargetUser] = useState(null);
+
+  // Add admin slots
+  const [isSeatsDialogOpen, setIsSeatsDialogOpen] = useState(false);
+  const [seatsTargetSchool, setSeatsTargetSchool] = useState(null);
+  const [seatsToAdd, setSeatsToAdd] = useState(1);
+
+  // Delete confirm
+  const [deleteConfirm, setDeleteConfirm] = useState(null); // { type: 'school'|'user', item }
+  const [confirmNameInput, setConfirmNameInput] = useState('');
+
+  // School drilldown
+  const [drilldown, setDrilldown] = useState(null);
+
+  // Email form (replaces broadcast dialog)
+  const [emailForm, setEmailForm] = useState({
+    subject: '',
+    message: '',
+    target_status: 'active',
+  });
+
+  // Logs terminal ref for auto-scroll
+  const logsEndRef = useRef(null);
+
+  // ---------------------------------------------------------------------------
+  // Queries
+  // ---------------------------------------------------------------------------
+
+  const { data: schoolsData, isLoading: loadingSchools } = useQuery({
+    queryKey: ['adminSchools'],
     queryFn: async () => {
       const { data } = await base44.functions.invoke('adminManageSchool', { action: 'list' });
-      return data.schools || [];
+      return data?.schools ?? [];
     },
-    refetchInterval: 5000,
+    staleTime: 30_000,
   });
+  const schools = schoolsData ?? [];
 
-  const { data: allUsers = [] } = useQuery({
-    queryKey: ['allUsers'],
+  const { data: usersData, isLoading: loadingUsers } = useQuery({
+    queryKey: ['adminUsers'],
     queryFn: async () => {
       const { data } = await base44.functions.invoke('adminManageUser', { action: 'list' });
-      return data.users || [];
+      return data?.users ?? [];
     },
+    staleTime: 30_000,
   });
+  const allUsers = usersData ?? [];
 
-  const { data: allTeachers = [] } = useQuery({
-    queryKey: ['allTeachers'],
+  const { data: stripePrices } = useQuery({
+    queryKey: ['adminStripePrices'],
     queryFn: async () => {
-      try {
-        const { data } = await base44.functions.invoke('adminGetAllData', { entityType: 'Teacher' });
-        return data.records || [];
-      } catch { return []; }
+      const { data } = await base44.functions.invoke('adminGetStripePrices');
+      return data?.prices ?? null;
     },
+    staleTime: 5 * 60_000,
   });
 
-  const { data: allStudents = [] } = useQuery({
-    queryKey: ['allStudents'],
+  const { data: teachersData } = useQuery({
+    queryKey: ['adminTeachers'],
     queryFn: async () => {
-      try {
-        const { data } = await base44.functions.invoke('adminGetAllData', { entityType: 'Student' });
-        return data.records || [];
-      } catch { return []; }
+      const { data } = await base44.functions.invoke('adminGetAllData', { entityType: 'Teacher' });
+      return data?.records ?? [];
     },
+    staleTime: 60_000,
   });
+  const allTeachers = teachersData ?? [];
 
-  const { data: allSchedules = [] } = useQuery({
-    queryKey: ['allSchedules'],
+  const { data: studentsData } = useQuery({
+    queryKey: ['adminStudents'],
     queryFn: async () => {
-      try {
-        const { data } = await base44.functions.invoke('adminGetAllData', { entityType: 'ScheduleVersion' });
-        return data.records || [];
-      } catch { return []; }
+      const { data } = await base44.functions.invoke('adminGetAllData', { entityType: 'Student' });
+      return data?.records ?? [];
     },
+    staleTime: 60_000,
+  });
+  const allStudents = studentsData ?? [];
+
+  const {
+    data: optaStatus,
+    isLoading: loadingOpta,
+    isError: optaIsError,
+    error: optaErr,
+    refetch: refetchOpta,
+    dataUpdatedAt: optaUpdatedAt,
+  } = useQuery({
+    queryKey: ['optaPlannerStatus'],
+    queryFn: async () => {
+      const { data } = await base44.functions.invoke('adminOptaPlannerStatus');
+      if (!data || data.error) throw new Error(data?.error || 'Failed to connect to OptaPlanner service');
+      return data;
+    },
+    refetchInterval: 30_000,
+    staleTime: 25_000,
+    retry: 1,
   });
 
-  const { data: auditLogs = [], isLoading: loadingAudit } = useQuery({
+  const {
+    data: auditLogs = [],
+    isLoading: loadingAudit,
+    dataUpdatedAt: logsUpdatedAt,
+  } = useQuery({
     queryKey: ['auditLogs'],
     queryFn: async () => {
       try {
         const { data } = await base44.functions.invoke('adminGetAllData', { entityType: 'AuditLog' });
-        return data.records || [];
-      } catch { return []; }
+        return data?.records ?? [];
+      } catch {
+        return [];
+      }
     },
+    refetchInterval: 10_000,
   });
 
-  const { data: stripePrices, isLoading: loadingPrices } = useQuery({
-    queryKey: ['stripePrices'],
-    queryFn: async () => {
-      const { data } = await base44.functions.invoke('adminGetStripePrices');
-      return data.prices || {};
-    },
-    staleTime: 10 * 60 * 1000,
+  // ---------------------------------------------------------------------------
+  // Derived data
+  // ---------------------------------------------------------------------------
+
+  const activeSchools = useMemo(() => schools.filter(s => s.subscription_status === 'active'), [schools]);
+  const pausedSchools = useMemo(() => schools.filter(s => s.subscription_status === 'paused'), [schools]);
+
+  const tierMonthlyCents = useMemo(() => {
+    if (!stripePrices) return {};
+    return {
+      tier1: stripePrices.tier1?.monthly_cents ?? 0,
+      tier2: stripePrices.tier2?.monthly_cents ?? 0,
+      tier3: stripePrices.tier3?.monthly_cents ?? 0,
+    };
+  }, [stripePrices]);
+
+  const currency = stripePrices?.tier1?.currency ?? 'eur';
+
+  // mrr is in CENTS — formatMoney(mrr) divides by 100 internally. Do NOT multiply by 100.
+  const mrr = useMemo(() => {
+    if (!stripePrices) return null;
+    return activeSchools.reduce((acc, s) => acc + (tierMonthlyCents[s.subscription_tier] ?? 0), 0);
+  }, [activeSchools, tierMonthlyCents, stripePrices]);
+
+  const getSchoolStats = (schoolId) => ({
+    teachers: allTeachers.filter(t => t.school_id === schoolId).length,
+    students: allStudents.filter(s => s.school_id === schoolId).length,
+    users: allUsers.filter(u => getUserSchoolId(u) === schoolId).length,
   });
 
-  const { data: optaStatus, isLoading: loadingOpta, refetch: refetchOpta, dataUpdatedAt: optaUpdatedAt } = useQuery({
-    queryKey: ['optaPlannerStatus'],
-    queryFn: async () => {
-      const { data } = await base44.functions.invoke('adminOptaPlannerStatus');
+  const filteredSchools = useMemo(() => {
+    const q = schoolSearch.toLowerCase();
+    return schools.filter(s =>
+      !q ||
+      s.name?.toLowerCase().includes(q) ||
+      s.ib_code?.toLowerCase().includes(q)
+    );
+  }, [schools, schoolSearch]);
+
+  const filteredUsers = useMemo(() => {
+    const q = userSearch.toLowerCase();
+    return allUsers.filter(u =>
+      !q ||
+      u.email?.toLowerCase().includes(q) ||
+      u.full_name?.toLowerCase().includes(q)
+    );
+  }, [allUsers, userSearch]);
+
+  const unassignedUsers = useMemo(() => allUsers.filter(u => !getUserSchoolId(u)), [allUsers]);
+
+  // Broadcast recipient count — filter by school_id presence, not role (roles may be stale in DB)
+  const recipientSchoolIds = useMemo(() => {
+    return new Set(
+      schools
+        .filter(s =>
+          emailForm.target_status === 'all'
+            ? ['active', 'paused'].includes(s.subscription_status)
+            : s.subscription_status === emailForm.target_status
+        )
+        .map(s => s.id)
+    );
+  }, [schools, emailForm.target_status]);
+
+  const broadcastRecipientCount = useMemo(() => {
+    const emails = new Set(
+      allUsers
+        .filter(u => {
+          const sid = getUserSchoolId(u);
+          return sid && recipientSchoolIds.has(sid) && u.email;
+        })
+        .map(u => u.email)
+    );
+    return emails.size;
+  }, [allUsers, recipientSchoolIds]);
+
+  const recipientSchoolCount = recipientSchoolIds.size;
+
+  // Tier breakdown for revenue tab
+  const tierBreakdown = useMemo(() => {
+    const counts = { tier1: 0, tier2: 0, tier3: 0 };
+    activeSchools.forEach(s => {
+      if (counts[s.subscription_tier] !== undefined) counts[s.subscription_tier]++;
+    });
+    return counts;
+  }, [activeSchools]);
+
+  // OptaPlanner derived — operator-precedence-safe constraint extraction
+  const solverInfo = useMemo(() => {
+    const info = optaStatus?.solver_info?.data;
+    if (!info) return { hard: [], soft: [], constraints: [] };
+    const hard = info.hardConstraints ?? (Array.isArray(info.constraints) ? info.constraints.filter(c => c.type === 'HARD') : []);
+    const soft = info.softConstraints ?? (Array.isArray(info.constraints) ? info.constraints.filter(c => c.type === 'SOFT') : []);
+    const constraints = [
+      ...hard.map(c => ({ ...c, type: 'HARD' })),
+      ...soft.map(c => ({ ...c, type: 'SOFT' })),
+    ];
+    return { hard, soft, constraints };
+  }, [optaStatus]);
+
+  const solveHistory = useMemo(() => optaStatus?.solve_history ?? [], [optaStatus]);
+
+  // Sorted audit logs newest-first
+  const sortedLogs = useMemo(() => {
+    return [...auditLogs].sort((a, b) => {
+      const ta = new Date(a.created_at ?? a.timestamp ?? 0).getTime();
+      const tb = new Date(b.created_at ?? b.timestamp ?? 0).getTime();
+      return tb - ta;
+    });
+  }, [auditLogs]);
+
+  // Auto-scroll logs terminal to bottom when new entries arrive
+  useEffect(() => {
+    if (logsEndRef.current) {
+      logsEndRef.current.scrollIntoView({ behavior: 'smooth' });
+    }
+  }, [sortedLogs.length]);
+
+  // ---------------------------------------------------------------------------
+  // Mutations
+  // ---------------------------------------------------------------------------
+
+  const schoolMutation = useMutation({
+    mutationFn: async ({ action, payload }) => {
+      const { data } = await base44.functions.invoke('adminManageSchool', { action, ...payload });
       return data;
     },
-    refetchInterval: 30 * 1000, // poll every 30s while tab is open
-    staleTime: 25 * 1000,
-  });
-
-  // ─── Mutations ────────────────────────────────────────────────────────────
-
-  const createSchoolMutation = useMutation({
-    mutationFn: (data) => base44.functions.invoke('adminManageSchool', { action: 'create', data }),
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['allSchools'] });
-      queryClient.invalidateQueries({ queryKey: ['auditLogs'] });
+    onSuccess: (_, { action }) => {
+      queryClient.invalidateQueries({ queryKey: ['adminSchools'] });
+      const label = action === 'create' ? 'created' : action === 'update' ? 'updated' : 'deleted';
+      toast.success(`School ${label} successfully`);
       setIsSchoolDialogOpen(false);
       resetSchoolForm();
-      toast.success('School created successfully');
     },
-    onError: (error) => {
-      const msg = error?.response?.data?.error || error?.data?.error || error.message;
-      toast.error('Failed to create school: ' + msg);
-    }
+    onError: (err) => toast.error(err.message ?? 'School operation failed'),
   });
 
-  const createSchoolForUserMutation = useMutation({
-    mutationFn: async (data) => {
-      const { data: result } = await base44.functions.invoke('adminManageSchool', {
-        action: 'create',
-        data: {
-          name: data.name, code: data.code, ib_school_code: data.ib_school_code,
-          address: data.address, timezone: data.timezone, academic_year: data.academic_year
-        }
-      });
-      const user = allUsers.find(u => u.email === data.user_email);
-      if (user && result.school) {
-        const updateResponse = await base44.functions.invoke('adminManageUser', {
-          action: 'update', userId: user.id,
-          data: { school_id: result.school.id }
-        });
-        return { school: result.school, requiresReauth: updateResponse.data?.requiresReauth, userEmail: data.user_email };
-      }
-      return { school: result.school };
+  const userMutation = useMutation({
+    mutationFn: async ({ action, payload }) => {
+      const { data } = await base44.functions.invoke('adminManageUser', { action, ...payload });
+      return data;
     },
-    onSuccess: (data) => {
-      queryClient.invalidateQueries({ queryKey: ['allSchools'] });
-      queryClient.invalidateQueries({ queryKey: ['allUsers'] });
-      queryClient.invalidateQueries({ queryKey: ['auditLogs'] });
-      setIsCreateSchoolForUserOpen(false);
-      setNewSchoolFormData({ name: '', code: '', ib_school_code: '', address: '', timezone: 'UTC', academic_year: '2024-2025', user_email: '', user_role: 'admin' });
-      toast.success('School created' + (data.requiresReauth ? ` — ${data.userEmail} must log out and back in` : ''));
-    },
-    onError: (error) => {
-      toast.error('Failed: ' + (error.message || 'Unknown error'));
-    }
-  });
-
-  const updateSchoolMutation = useMutation({
-    mutationFn: async ({ id, data }) => {
-      const response = await base44.functions.invoke('adminManageSchool', { action: 'update', schoolId: id, data });
-      return response.data;
-    },
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['allSchools'] });
-      queryClient.invalidateQueries({ queryKey: ['auditLogs'] });
-      setIsSchoolDialogOpen(false);
-      resetSchoolForm();
-      toast.success('School updated');
-    },
-    onError: (error) => {
-      const msg = error?.response?.data?.error || error?.data?.error || error.message;
-      toast.error('Failed to update school: ' + msg);
-    }
-  });
-
-  const deleteSchoolMutation = useMutation({
-    mutationFn: async (id) => {
-      const response = await base44.functions.invoke('adminManageSchool', { action: 'delete', schoolId: id });
-      return response.data;
-    },
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['allSchools'] });
-      queryClient.invalidateQueries({ queryKey: ['allUsers'] });
-      queryClient.invalidateQueries({ queryKey: ['allStudents'] });
-      queryClient.invalidateQueries({ queryKey: ['allTeachers'] });
-      queryClient.invalidateQueries({ queryKey: ['auditLogs'] });
-      toast.success('School and all its data deleted');
-    },
-    onError: (error) => toast.error('Failed to delete school: ' + (error.message || 'Unknown error'))
-  });
-
-  const updateUserMutation = useMutation({
-    mutationFn: ({ id, data }) => base44.functions.invoke('adminManageUser', { action: 'update', userId: id, data }),
-    onSuccess: (response) => {
-      queryClient.invalidateQueries({ queryKey: ['allUsers'] });
-      queryClient.invalidateQueries({ queryKey: ['auditLogs'] });
+    onSuccess: (_, { action }) => {
+      queryClient.invalidateQueries({ queryKey: ['adminUsers'] });
+      toast.success(`User ${action === 'delete' ? 'deleted' : 'updated'} successfully`);
       setIsUserDialogOpen(false);
-      setUserFormData({ email: '', school_id: '', role: 'user' });
-      if (response.data?.requiresReauth) {
-        toast.success('User updated — they must log out and back in to access their school dashboard');
-      } else {
-        toast.success('User updated');
-      }
     },
-    onError: (error) => {
-      const msg = error?.response?.data?.error || error?.data?.error || error.message;
-      toast.error('Failed to update user: ' + msg);
-    }
-  });
-
-  const deleteUserMutation = useMutation({
-    mutationFn: (id) => base44.functions.invoke('adminManageUser', { action: 'delete', userId: id }),
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['allUsers'] });
-      queryClient.invalidateQueries({ queryKey: ['auditLogs'] });
-      toast.success('User deleted');
-    },
-    onError: (error) => toast.error('Failed to delete user: ' + (error.message || 'Unknown error'))
+    onError: (err) => toast.error(err.message ?? 'User operation failed'),
   });
 
   const broadcastMutation = useMutation({
-    mutationFn: (form) => base44.functions.invoke('adminBroadcastEmail', form),
-    onSuccess: (response) => {
-      const { sent, total } = response.data || {};
-      toast.success(`Sent to ${sent} of ${total} admin email${total !== 1 ? 's' : ''}`);
-      setIsBroadcastOpen(false);
-      setBroadcastForm({ subject: '', message: '', target_status: 'active' });
+    mutationFn: async (form) => {
+      const { data } = await base44.functions.invoke('adminBroadcastEmail', {
+        subject: form.subject,
+        message: form.message,
+        target_status: form.target_status,
+      });
+      return data;
     },
-    onError: (error) => toast.error('Broadcast failed: ' + (error.message || 'Unknown error'))
+    onSuccess: (data) => {
+      const { sent, total } = data || {};
+      toast.success(`Broadcast sent! ${sent ?? '?'} of ${total ?? '?'} emails delivered.`);
+      setEmailForm({ subject: '', message: '', target_status: 'active' });
+    },
+    onError: (err) => toast.error(err.message ?? 'Broadcast failed'),
   });
 
-  // ─── Helpers ──────────────────────────────────────────────────────────────
+  // ---------------------------------------------------------------------------
+  // Handlers
+  // ---------------------------------------------------------------------------
 
   const resetSchoolForm = () => {
-    setSchoolFormData({ name: '', code: '', ib_school_code: '', address: '', timezone: 'UTC', academic_year: '2024-2025', stripe_customer_id: '' });
+    setSchoolFormData({
+      name: '',
+      ib_code: '',
+      subscription_tier: 'tier1',
+      subscription_status: 'active',
+      contact_email: '',
+      country: '',
+      admin_slots: 1,
+    });
     setEditingSchool(null);
   };
 
   const handleEditSchool = (school) => {
     setEditingSchool(school);
     setSchoolFormData({
-      name: school.name || '', code: school.code || '', ib_school_code: school.ib_school_code || '',
-      address: school.address || '', timezone: school.timezone || 'UTC',
-      academic_year: school.academic_year || '2024-2025', stripe_customer_id: school.stripe_customer_id || ''
+      name: school.name ?? '',
+      ib_code: school.ib_code ?? '',
+      subscription_tier: school.subscription_tier ?? 'tier1',
+      subscription_status: school.subscription_status ?? 'active',
+      contact_email: school.contact_email ?? '',
+      country: school.country ?? '',
+      admin_slots: school.admin_slots ?? 1,
     });
     setIsSchoolDialogOpen(true);
   };
 
-  const handleSchoolSubmit = (e) => {
-    e.preventDefault();
-    if (editingSchool) {
-      updateSchoolMutation.mutate({ id: editingSchool.id, data: schoolFormData });
-    } else {
-      createSchoolMutation.mutate(schoolFormData);
+  const handleSchoolSubmit = () => {
+    if (!schoolFormData.name.trim()) {
+      toast.error('School name is required');
+      return;
     }
-  };
-
-  const handleUserAssign = () => {
-    const user = allUsers.find(u => u.email === userFormData.email);
-    if (user) {
-      updateUserMutation.mutate({ id: user.id, data: { school_id: userFormData.school_id, role: userFormData.role } });
+    if (editingSchool) {
+      schoolMutation.mutate({ action: 'update', payload: { id: editingSchool.id, ...schoolFormData } });
+    } else {
+      schoolMutation.mutate({ action: 'create', payload: schoolFormData });
     }
   };
 
@@ -303,542 +461,481 @@ export default function Panel() {
   };
 
   const handleConfirmDelete = () => {
-    if (deleteConfirm.type === 'school') {
-      deleteSchoolMutation.mutate(deleteConfirm.item.id);
+    if (!deleteConfirm) return;
+    const { type, item } = deleteConfirm;
+    const expectedName = type === 'school' ? item.name : (item.full_name ?? item.email);
+    if (confirmNameInput.trim() !== expectedName) {
+      toast.error('Name does not match');
+      return;
+    }
+    if (type === 'school') {
+      schoolMutation.mutate({ action: 'delete', payload: { id: item.id } });
     } else {
-      deleteUserMutation.mutate(deleteConfirm.item.id);
+      userMutation.mutate({ action: 'delete', payload: { id: item.id } });
     }
     setDeleteConfirm(null);
     setConfirmNameInput('');
   };
 
-  const getUserSchoolId = (user) => user?.school_id || user?.data?.school_id || null;
-  const getUserRole = (user) => user?.role || user?.data?.role || 'user';
-
-  const getSchoolStats = (schoolId) => ({
-    users: allUsers.filter(u => getUserSchoolId(u) === schoolId).length,
-    teachers: allTeachers.filter(t => t.school_id === schoolId).length,
-    students: allStudents.filter(s => s.school_id === schoolId).length,
-    schedules: allSchedules.filter(s => s.school_id === schoolId).length,
-  });
-
-  // ─── Revenue calculations (real Stripe prices) ──────────────────────────���─
-
-  const activeSchools = useMemo(() => schools.filter(s => s.subscription_status === 'active'), [schools]);
-  const pausedSchools = useMemo(() => schools.filter(s => s.subscription_status === 'paused'), [schools]);
-
-  // monthly_cents from Stripe, divided by 100 to get the display amount
-  const tierMonthlyCents = useMemo(() => ({
-    tier1: stripePrices?.tier1?.monthly_cents ?? null,
-    tier2: stripePrices?.tier2?.monthly_cents ?? null,
-    tier3: stripePrices?.tier3?.monthly_cents ?? null,
-  }), [stripePrices]);
-
-  // Use first non-null currency found, default to 'eur'
-  const currency = useMemo(() => {
-    const c = Object.values(stripePrices || {}).find(p => p?.currency)?.currency;
-    return c || 'eur';
-  }, [stripePrices]);
-
-  const formatMoney = (cents) => {
-    if (cents == null) return '—';
-    return new Intl.NumberFormat('en', { style: 'currency', currency: currency.toUpperCase(), minimumFractionDigits: 0 }).format(cents / 100);
+  const handleUserAssign = () => {
+    if (!assigningUser || !userFormData.school_id) {
+      toast.error('Please select a school');
+      return;
+    }
+    userMutation.mutate({
+      action: 'update',
+      payload: { id: assigningUser.id, school_id: userFormData.school_id },
+    });
+    setAssigningUser(null);
+    setUserFormData({ school_id: '' });
   };
 
-  const mrr = useMemo(() => {
-    if (!stripePrices) return null;
-    return activeSchools.reduce((acc, s) => acc + (tierMonthlyCents[s.subscription_tier] ?? 0), 0);
-  }, [activeSchools, tierMonthlyCents, stripePrices]);
+  const handleCreateSchoolForUser = async () => {
+    if (!newSchoolFormData.name.trim()) {
+      toast.error('School name is required');
+      return;
+    }
+    try {
+      const { data } = await base44.functions.invoke('adminManageSchool', {
+        action: 'create',
+        ...newSchoolFormData,
+      });
+      const newSchoolId = data?.school?.id ?? data?.id;
+      if (newSchoolId && targetUser) {
+        await base44.functions.invoke('adminManageUser', {
+          action: 'update',
+          id: targetUser.id,
+          school_id: newSchoolId,
+        });
+      }
+      queryClient.invalidateQueries({ queryKey: ['adminSchools'] });
+      queryClient.invalidateQueries({ queryKey: ['adminUsers'] });
+      toast.success('School created and user assigned');
+      setIsCreateSchoolForUserOpen(false);
+      setTargetUser(null);
+      setNewSchoolFormData({ name: '', ib_code: '', subscription_tier: 'tier1', contact_email: '', country: '' });
+    } catch (err) {
+      toast.error(err.message ?? 'Failed to create school');
+    }
+  };
 
-  // ─── Filtered data ────────────────────────────────────────────────────────
+  const handleAddSeats = () => {
+    if (!seatsTargetSchool) return;
+    schoolMutation.mutate({
+      action: 'update',
+      payload: {
+        id: seatsTargetSchool.id,
+        admin_slots: (seatsTargetSchool.admin_slots ?? 1) + Number(seatsToAdd),
+      },
+    });
+    setIsSeatsDialogOpen(false);
+    setSeatsTargetSchool(null);
+    setSeatsToAdd(1);
+  };
 
-  const filteredSchools = useMemo(() => {
-    if (!schoolSearch) return schools;
-    const q = schoolSearch.toLowerCase();
-    return schools.filter(s =>
-      s.name?.toLowerCase().includes(q) ||
-      s.code?.toLowerCase().includes(q) ||
-      s.ib_school_code?.toLowerCase().includes(q)
-    );
-  }, [schools, schoolSearch]);
+  const handleToggleSchoolStatus = (school) => {
+    const next = school.subscription_status === 'active' ? 'paused' : 'active';
+    schoolMutation.mutate({
+      action: 'update',
+      payload: { id: school.id, subscription_status: next },
+    });
+  };
 
-  const filteredUsers = useMemo(() => {
-    if (!userSearch) return allUsers;
-    const q = userSearch.toLowerCase();
-    return allUsers.filter(u =>
-      u.email?.toLowerCase().includes(q) ||
-      u.full_name?.toLowerCase().includes(q)
-    );
-  }, [allUsers, userSearch]);
-
-  const sortedAuditLogs = useMemo(() =>
-    [...auditLogs].sort((a, b) => new Date(b.created_date) - new Date(a.created_date)).slice(0, 200),
-    [auditLogs]
-  );
-
-  // ─── Table columns ────────────────────────────────────────────────────────
+  // ---------------------------------------------------------------------------
+  // Table column definitions
+  // ---------------------------------------------------------------------------
 
   const schoolColumns = [
     {
       header: 'School',
-      cell: (row) => (
+      cell: (s) => (
         <div>
-          <div className="flex items-center gap-2">
-            <p className="font-medium text-slate-900">{row.name}</p>
-            {row.subscription_status === 'active'
-              ? <Badge className="bg-emerald-100 text-emerald-700 border-0 text-xs">Active</Badge>
-              : <Badge variant="outline" className="text-slate-600 text-xs">{row.subscription_status || 'Inactive'}</Badge>
-            }
-          </div>
-          <p className="text-sm text-slate-500">{row.code}</p>
+          <p className="font-medium text-slate-900">{s.name}</p>
+          <Badge className={`mt-1 text-xs ${STATUS_COLORS[s.subscription_status] ?? 'bg-slate-100 text-slate-600'}`}>
+            {s.subscription_status}
+          </Badge>
         </div>
-      )
+      ),
     },
-    { header: 'IB Code', cell: (row) => row.ib_school_code || '-' },
-    { header: 'Tier', cell: (row) => <Badge variant="outline">{row.subscription_tier || '-'}</Badge> },
+    {
+      header: 'IB Code',
+      cell: (s) => <span className="font-mono text-sm text-slate-600">{s.ib_code ?? '—'}</span>,
+    },
+    {
+      header: 'Tier',
+      cell: (s) => (
+        <Badge className={`text-xs ${TIER_COLORS[s.subscription_tier] ?? 'bg-slate-100 text-slate-600'}`}>
+          {s.subscription_tier}
+        </Badge>
+      ),
+    },
     {
       header: 'Users',
-      cell: (row) => <Badge variant="outline">{getSchoolStats(row.id).users} users</Badge>
+      cell: (s) => getSchoolStats(s.id).users,
     },
     {
       header: 'Teachers',
-      cell: (row) => <span className="text-slate-600">{getSchoolStats(row.id).teachers}</span>
+      cell: (s) => getSchoolStats(s.id).teachers,
     },
     {
       header: 'Students',
-      cell: (row) => <span className="text-slate-600">{getSchoolStats(row.id).students}</span>
+      cell: (s) => getSchoolStats(s.id).students,
     },
     {
-      header: '',
-      cell: (row) => (
+      header: 'Actions',
+      cell: (s) => (
         <div className="flex items-center gap-1">
-          <Button variant="ghost" size="icon" onClick={() => setDrilldown(row)} title="View details">
-            <Eye className="w-4 h-4" />
+          <Button variant="ghost" size="icon" className="h-8 w-8" onClick={() => setDrilldown(s)}>
+            <Eye className="h-4 w-4" />
           </Button>
           <DropdownMenu>
             <DropdownMenuTrigger asChild>
-              <Button variant="ghost" size="icon">
-                <MoreHorizontal className="w-4 h-4" />
+              <Button variant="ghost" size="icon" className="h-8 w-8">
+                <MoreHorizontal className="h-4 w-4" />
               </Button>
             </DropdownMenuTrigger>
             <DropdownMenuContent align="end">
-              <DropdownMenuItem onClick={() => handleEditSchool(row)}>
-                <Pencil className="w-4 h-4 mr-2" />
-                Edit Details
+              <DropdownMenuItem onClick={() => handleEditSchool(s)}>
+                <Pencil className="mr-2 h-4 w-4" /> Edit
               </DropdownMenuItem>
-              <DropdownMenuItem onClick={() => { setSeatsTargetSchool(row); setSeatsToAdd(1); setIsSeatsDialogOpen(true); }}>
-                <Users className="w-4 h-4 mr-2" />
-                Add Admin Slots
+              <DropdownMenuItem onClick={() => { setSeatsTargetSchool(s); setSeatsToAdd(1); setIsSeatsDialogOpen(true); }}>
+                <Plus className="mr-2 h-4 w-4" /> Add Admin Slots
               </DropdownMenuItem>
-              <DropdownMenuItem
-                onClick={() => {
-                  const activating = row.subscription_status !== 'active';
-                  const newStatus = activating ? 'active' : 'paused';
-                  const now = new Date();
-                  const nextYear = new Date(now);
-                  nextYear.setFullYear(now.getFullYear() + 1);
-                  const updates = { subscription_status: newStatus };
-                  if (activating) {
-                    updates.subscription_tier = row.subscription_tier || 'tier2';
-                    updates.subscription_start_date = row.subscription_start_date || now.toISOString();
-                    updates.subscription_current_period_end = nextYear.toISOString();
-                  }
-                  updateSchoolMutation.mutate({ id: row.id, data: updates });
-                }}
-              >
-                {row.subscription_status === 'active' ? '⏸️ Pause Subscription' : '✓ Activate Subscription'}
+              <DropdownMenuItem onClick={() => handleToggleSchoolStatus(s)}>
+                <Activity className="mr-2 h-4 w-4" />
+                {s.subscription_status === 'active' ? 'Pause' : 'Activate'}
               </DropdownMenuItem>
-              <DropdownMenuItem className="text-rose-600" onClick={() => handleDeleteSchool(row)}>
-                <Trash2 className="w-4 h-4 mr-2" />
-                Delete School
+              <DropdownMenuItem className="text-rose-600" onClick={() => handleDeleteSchool(s)}>
+                <Trash2 className="mr-2 h-4 w-4" /> Delete
               </DropdownMenuItem>
             </DropdownMenuContent>
           </DropdownMenu>
         </div>
-      )
-    }
+      ),
+    },
   ];
 
   const userColumns = [
     {
       header: 'User',
-      cell: (row) => (
+      cell: (u) => (
         <div>
-          <p className="font-medium text-slate-900">{row.full_name}</p>
-          <p className="text-sm text-slate-500">{row.email}</p>
+          <p className="font-medium text-slate-900">{u.full_name ?? u.email}</p>
+          <p className="text-xs text-slate-500">{u.email}</p>
         </div>
-      )
+      ),
     },
     {
       header: 'School',
-      cell: (row) => {
-        const school = schools.find(s => s.id === getUserSchoolId(row));
-        return school ? school.name : <Badge variant="outline">Unassigned</Badge>;
-      }
+      cell: (u) => {
+        const sid = getUserSchoolId(u);
+        const school = schools.find(s => s.id === sid);
+        return school
+          ? <span className="text-sm text-slate-700">{school.name}</span>
+          : <Badge className="bg-slate-100 text-slate-500 text-xs">Unassigned</Badge>;
+      },
     },
     {
       header: 'Role',
-      cell: (row) => (
-        <Badge className={getUserRole(row) === 'admin' ? 'bg-blue-100 text-blue-900 border-0' : 'bg-slate-100 text-slate-600 border-0'}>
-          {getUserRole(row) === 'admin' ? <Crown className="w-3 h-3 mr-1" /> : null}
-          {getUserRole(row)}
-        </Badge>
-      )
-    },
-    {
-      header: '',
-      cell: (row) => (
-        <div className="flex gap-2">
-          {!getUserSchoolId(row) && (
-            <Button
-              variant="default" size="sm"
-              className="bg-blue-900 hover:bg-blue-800"
-              onClick={() => {
-                setNewSchoolFormData({ ...newSchoolFormData, user_email: row.email });
-                setIsCreateSchoolForUserOpen(true);
-              }}
-            >
-              <Plus className="w-3 h-3 mr-1" />
-              Create School
-            </Button>
-          )}
-          <DropdownMenu>
-            <DropdownMenuTrigger asChild>
-              <Button variant="outline" size="sm">
-                <MoreHorizontal className="w-4 h-4" />
-              </Button>
-            </DropdownMenuTrigger>
-            <DropdownMenuContent align="end">
-              <DropdownMenuItem
-                onClick={() => {
-                  setUserFormData({ email: row.email, school_id: getUserSchoolId(row) || '', role: getUserRole(row) });
-                  setIsUserDialogOpen(true);
-                }}
-              >
-                <Pencil className="w-4 h-4 mr-2" />
-                Assign to School
-              </DropdownMenuItem>
-              <DropdownMenuItem className="text-rose-600" onClick={() => handleDeleteUser(row)}>
-                <Trash2 className="w-4 h-4 mr-2" />
-                Delete User
-              </DropdownMenuItem>
-            </DropdownMenuContent>
-          </DropdownMenu>
-        </div>
-      )
-    }
-  ];
-
-  const subscriptionColumns = [
-    {
-      header: 'School',
-      cell: (row) => <div><p className="font-medium">{row.name}</p><p className="text-xs text-slate-500">{row.code}</p></div>
-    },
-    {
-      header: 'Status',
-      cell: (row) => {
-        const colors = {
-          active: 'bg-emerald-100 text-emerald-700',
-          paused: 'bg-amber-100 text-amber-700',
-          canceled: 'bg-rose-100 text-rose-700',
-        };
+      cell: (u) => {
+        const role = getUserRole(u);
         return (
-          <Badge className={`border-0 ${colors[row.subscription_status] || 'bg-slate-100 text-slate-600'}`}>
-            {row.subscription_status || 'incomplete'}
+          <Badge className={`text-xs ${role === 'admin' ? 'bg-purple-100 text-purple-700' : 'bg-slate-100 text-slate-600'}`}>
+            {role ?? 'user'}
           </Badge>
         );
-      }
+      },
+    },
+    {
+      header: 'Actions',
+      cell: (u) => {
+        const sid = getUserSchoolId(u);
+        return (
+          <div className="flex items-center gap-1">
+            {!sid && (
+              <Button
+                variant="outline"
+                size="sm"
+                className="h-7 text-xs"
+                onClick={() => { setTargetUser(u); setIsCreateSchoolForUserOpen(true); }}
+              >
+                <Plus className="mr-1 h-3 w-3" /> Create School
+              </Button>
+            )}
+            <DropdownMenu>
+              <DropdownMenuTrigger asChild>
+                <Button variant="ghost" size="icon" className="h-8 w-8">
+                  <MoreHorizontal className="h-4 w-4" />
+                </Button>
+              </DropdownMenuTrigger>
+              <DropdownMenuContent align="end">
+                <DropdownMenuItem onClick={() => {
+                  setAssigningUser(u);
+                  setUserFormData({ school_id: '' });
+                  setIsUserDialogOpen(true);
+                }}>
+                  <Building2 className="mr-2 h-4 w-4" /> Assign to School
+                </DropdownMenuItem>
+                <DropdownMenuItem className="text-rose-600" onClick={() => handleDeleteUser(u)}>
+                  <Trash2 className="mr-2 h-4 w-4" /> Delete
+                </DropdownMenuItem>
+              </DropdownMenuContent>
+            </DropdownMenu>
+          </div>
+        );
+      },
+    },
+  ];
+
+  // ---------------------------------------------------------------------------
+  // Revenue helpers
+  // ---------------------------------------------------------------------------
+
+  const subscriptionRows = useMemo(() => {
+    return schools.map(s => ({
+      ...s,
+      monthly_revenue: tierMonthlyCents[s.subscription_tier] ?? 0,
+    }));
+  }, [schools, tierMonthlyCents]);
+
+  const revenueColumns = [
+    {
+      header: 'School',
+      cell: (s) => <span className="font-medium text-slate-900">{s.name}</span>,
     },
     {
       header: 'Tier',
-      cell: (row) => <Badge variant="outline">{row.subscription_tier || '-'}</Badge>
+      cell: (s) => (
+        <Badge className={`text-xs ${TIER_COLORS[s.subscription_tier] ?? 'bg-slate-100 text-slate-600'}`}>
+          {s.subscription_tier}
+        </Badge>
+      ),
+    },
+    {
+      header: 'Status',
+      cell: (s) => (
+        <Badge className={`text-xs ${STATUS_COLORS[s.subscription_status] ?? 'bg-slate-100 text-slate-600'}`}>
+          {s.subscription_status}
+        </Badge>
+      ),
     },
     {
       header: 'MRR',
-      cell: (row) => {
-        if (row.subscription_status !== 'active') return <span className="text-slate-400">—</span>;
-        const cents = tierMonthlyCents[row.subscription_tier];
-        return <span className="font-medium text-emerald-700">{cents != null ? formatMoney(cents) : '—'}</span>;
-      }
+      cell: (s) => formatMoney(s.monthly_revenue, currency),
     },
-    {
-      header: 'Renewal',
-      cell: (row) => row.subscription_current_period_end
-        ? new Date(row.subscription_current_period_end).toLocaleDateString()
-        : '-'
-    }
   ];
 
-  const ACTION_COLORS = {
-    create_school: 'bg-emerald-100 text-emerald-700',
-    update_school: 'bg-blue-100 text-blue-700',
-    delete_school: 'bg-rose-100 text-rose-700',
-    assign_user: 'bg-indigo-100 text-indigo-700',
-    delete_user: 'bg-rose-100 text-rose-700',
-    create_schedule: 'bg-emerald-100 text-emerald-700',
-    delete_schedule: 'bg-rose-100 text-rose-700',
-    run_optimization: 'bg-violet-100 text-violet-700',
-  };
-
-  const auditColumns = [
-    {
-      header: 'Date',
-      cell: (row) => <span className="text-sm text-slate-500">{row.created_date ? new Date(row.created_date).toLocaleString() : '-'}</span>
-    },
-    {
-      header: 'Actor',
-      cell: (row) => <span className="text-sm font-medium">{row.user_email || '-'}</span>
-    },
-    {
-      header: 'Action',
-      cell: (row) => (
-        <Badge className={`border-0 text-xs ${ACTION_COLORS[row.action] || 'bg-slate-100 text-slate-600'}`}>
-          {row.action}
-        </Badge>
-      )
-    },
-    {
-      header: 'Entity',
-      cell: (row) => (
-        <span className="text-sm text-slate-600">
-          {row.entity_type}{row.entity_id ? ` · ${row.entity_id.slice(0, 8)}…` : ''}
-        </span>
-      )
-    },
-    {
-      header: 'Details',
-      cell: (row) => row.metadata
-        ? <span className="text-xs text-slate-400 truncate max-w-xs block">{JSON.stringify(row.metadata)}</span>
-        : null
-    }
-  ];
-
-  const totalUsers = allUsers.filter(u => getUserSchoolId(u)).length;
-  const totalTeachers = allTeachers.length;
-  const totalStudents = allStudents.length;
-
-  const confirmTarget = deleteConfirm?.type === 'school' ? deleteConfirm?.item?.name : deleteConfirm?.item?.email;
-
-  // How many admin emails will receive the broadcast
-  const broadcastRecipientCount = useMemo(() => {
-    const targetSchoolIds = new Set(
-      schools
-        .filter(s => broadcastForm.target_status === 'all' || s.subscription_status === broadcastForm.target_status)
-        .map(s => s.id)
-    );
-    const adminEmails = new Set(
-      allUsers
-        .filter(u => {
-          const sid = getUserSchoolId(u);
-          return sid && targetSchoolIds.has(sid) && getUserRole(u) === 'admin' && u.email;
-        })
-        .map(u => u.email)
-    );
-    return adminEmails.size;
-  }, [schools, allUsers, broadcastForm.target_status]);
+  // ---------------------------------------------------------------------------
+  // Render
+  // ---------------------------------------------------------------------------
 
   return (
-    <div className="space-y-6">
-      <PageHeader
-        title={<div className="flex items-center gap-2"><Crown className="w-6 h-6 text-amber-500" /> Admin Panel</div>}
-        description="Manage all schools, users, and platform-wide settings"
-        actions={
-          <div className="flex gap-2">
-            <Button variant="outline" onClick={() => setIsBroadcastOpen(true)}>
-              <Mail className="w-4 h-4 mr-2" />
-              Send Announcement
-            </Button>
-            <Button onClick={() => setIsSchoolDialogOpen(true)} className="bg-indigo-600 hover:bg-indigo-700">
-              <Plus className="w-4 h-4 mr-2" />
-              Add School
-            </Button>
-          </div>
-        }
-      />
-
-      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
-        <StatCard title="Total Schools" value={schools.length} icon={Building2} />
-        <StatCard title="Active Schools" value={activeSchools.length} icon={Activity} />
-        <StatCard
-          title="MRR"
-          value={loadingPrices ? '…' : mrr != null ? formatMoney(mrr * 100) : '—'}
-          icon={TrendingUp}
+    <div className="min-h-screen bg-slate-50">
+      <div className="mx-auto max-w-7xl px-4 py-8 sm:px-6 lg:px-8">
+        <PageHeader
+          title="Super Admin Panel"
+          subtitle="Manage schools, users, revenue and system health"
+          icon={<ShieldCheck className="h-6 w-6 text-indigo-600" />}
         />
-        <StatCard title="Unassigned Users" value={allUsers.filter(u => !getUserSchoolId(u)).length} icon={Users} />
-      </div>
 
-      <Card className="border-0 bg-gradient-to-r from-blue-600 via-indigo-600 to-violet-600 text-white shadow-xl">
-        <CardContent className="p-6 md:p-8">
-          <div className="flex flex-col gap-6 lg:flex-row lg:items-end lg:justify-between">
-            <div>
-              <div className="inline-flex items-center gap-2 rounded-full bg-white/15 px-3 py-1 text-xs font-medium text-blue-50">
-                <Crown className="w-3.5 h-3.5" />
-                Super Admin Workspace
-              </div>
-              <h2 className="mt-4 text-3xl font-bold tracking-tight">Platform control center</h2>
-              <p className="mt-2 max-w-2xl text-sm text-blue-50/90">
-                Manage schools, users, analytics, automation and platform operations from one modern dashboard.
-              </p>
-            </div>
-            <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">
-              <div className="rounded-2xl bg-white/10 px-4 py-3 backdrop-blur-sm">
-                <div className="text-xs text-blue-100">Schools</div>
-                <div className="mt-1 text-2xl font-semibold">{schools.length}</div>
-              </div>
-              <div className="rounded-2xl bg-white/10 px-4 py-3 backdrop-blur-sm">
-                <div className="text-xs text-blue-100">Users</div>
-                <div className="mt-1 text-2xl font-semibold">{totalUsers}</div>
-              </div>
-              <div className="rounded-2xl bg-white/10 px-4 py-3 backdrop-blur-sm">
-                <div className="text-xs text-blue-100">Teachers</div>
-                <div className="mt-1 text-2xl font-semibold">{totalTeachers}</div>
-              </div>
-              <div className="rounded-2xl bg-white/10 px-4 py-3 backdrop-blur-sm">
-                <div className="text-xs text-blue-100">Students</div>
-                <div className="mt-1 text-2xl font-semibold">{totalStudents}</div>
-              </div>
-            </div>
-          </div>
-        </CardContent>
-      </Card>
+        <Tabs value={activeTab} onValueChange={setActiveTab} className="mt-8">
+          {/* Tab list */}
+          <TabsList className="grid h-auto w-full grid-cols-3 gap-2 rounded-3xl bg-transparent p-0 lg:grid-cols-6">
+            {/* Schools */}
+            <TabsTrigger
+              value="schools"
+              className="flex items-center gap-1.5 rounded-2xl border border-slate-200 bg-white px-3 py-2.5 text-sm font-medium data-[state=active]:border-indigo-300 data-[state=active]:bg-indigo-50 data-[state=active]:text-indigo-700"
+            >
+              <Building2 className="h-4 w-4 shrink-0" />
+              <span>Schools</span>
+              {schools.length > 0 && (
+                <span className="rounded-full bg-slate-200 px-1.5 py-0.5 text-xs font-semibold text-slate-700">
+                  {schools.length}
+                </span>
+              )}
+            </TabsTrigger>
 
-      <Tabs value={activeTab} onValueChange={(value) => navigate(`?tab=${value}`)} className="space-y-6">
-        <TabsList className="grid h-auto w-full grid-cols-2 gap-3 rounded-3xl bg-transparent p-0 lg:grid-cols-5">
-          <TabsTrigger value="schools" className="group rounded-2xl border border-slate-200 bg-white px-4 py-4 text-left data-[state=active]:border-blue-200 data-[state=active]:bg-blue-50 data-[state=active]:text-blue-900 data-[state=active]:shadow-sm">
-            <div className="flex items-start gap-3">
-              <div className="rounded-xl bg-slate-100 p-2 text-slate-600 group-data-[state=active]:bg-blue-100 group-data-[state=active]:text-blue-700"><Building2 className="w-4 h-4" /></div>
-              <div><div className="font-semibold">Schools</div><div className="text-xs text-slate-500">Manage clients</div></div>
-            </div>
-          </TabsTrigger>
-          <TabsTrigger value="users" className="group rounded-2xl border border-slate-200 bg-white px-4 py-4 text-left data-[state=active]:border-blue-200 data-[state=active]:bg-blue-50 data-[state=active]:text-blue-900 data-[state=active]:shadow-sm">
-            <div className="flex items-start gap-3">
-              <div className="rounded-xl bg-slate-100 p-2 text-slate-600 group-data-[state=active]:bg-blue-100 group-data-[state=active]:text-blue-700"><Users className="w-4 h-4" /></div>
-              <div><div className="font-semibold">Users</div><div className="text-xs text-slate-500">Assignments & roles</div></div>
-            </div>
-          </TabsTrigger>
-          <TabsTrigger value="revenue" className="group rounded-2xl border border-slate-200 bg-white px-4 py-4 text-left data-[state=active]:border-blue-200 data-[state=active]:bg-blue-50 data-[state=active]:text-blue-900 data-[state=active]:shadow-sm">
-            <div className="flex items-start gap-3">
-              <div className="rounded-xl bg-slate-100 p-2 text-slate-600 group-data-[state=active]:bg-blue-100 group-data-[state=active]:text-blue-700"><TrendingUp className="w-4 h-4" /></div>
-              <div><div className="font-semibold">Revenue</div><div className="text-xs text-slate-500">MRR & tiers</div></div>
-            </div>
-          </TabsTrigger>
-          <TabsTrigger value="auditlog" className="group rounded-2xl border border-slate-200 bg-white px-4 py-4 text-left data-[state=active]:border-blue-200 data-[state=active]:bg-blue-50 data-[state=active]:text-blue-900 data-[state=active]:shadow-sm">
-            <div className="flex items-start gap-3">
-              <div className="rounded-xl bg-slate-100 p-2 text-slate-600 group-data-[state=active]:bg-blue-100 group-data-[state=active]:text-blue-700"><ShieldCheck className="w-4 h-4" /></div>
-              <div><div className="font-semibold">Audit Log</div><div className="text-xs text-slate-500">Action history</div></div>
-            </div>
-          </TabsTrigger>
-          <TabsTrigger value="solver" className="group rounded-2xl border border-slate-200 bg-white px-4 py-4 text-left data-[state=active]:border-blue-200 data-[state=active]:bg-blue-50 data-[state=active]:text-blue-900 data-[state=active]:shadow-sm">
-            <div className="flex items-start gap-3">
-              <div className="rounded-xl bg-slate-100 p-2 text-slate-600 group-data-[state=active]:bg-blue-100 group-data-[state=active]:text-blue-700">
-                <Cpu className="w-4 h-4" />
+            {/* Users */}
+            <TabsTrigger
+              value="users"
+              className="flex items-center gap-1.5 rounded-2xl border border-slate-200 bg-white px-3 py-2.5 text-sm font-medium data-[state=active]:border-indigo-300 data-[state=active]:bg-indigo-50 data-[state=active]:text-indigo-700"
+            >
+              <Users className="h-4 w-4 shrink-0" />
+              <span>Users</span>
+              {unassignedUsers.length > 0 && (
+                <span className="rounded-full bg-amber-200 px-1.5 py-0.5 text-xs font-semibold text-amber-800">
+                  {unassignedUsers.length}
+                </span>
+              )}
+            </TabsTrigger>
+
+            {/* Revenue */}
+            <TabsTrigger
+              value="revenue"
+              className="flex items-center gap-1.5 rounded-2xl border border-slate-200 bg-white px-3 py-2.5 text-sm font-medium data-[state=active]:border-indigo-300 data-[state=active]:bg-indigo-50 data-[state=active]:text-indigo-700"
+            >
+              <TrendingUp className="h-4 w-4 shrink-0" />
+              <span>Revenue</span>
+            </TabsTrigger>
+
+            {/* Solver — colored dot indicator */}
+            <TabsTrigger
+              value="solver"
+              className="flex items-center gap-1.5 rounded-2xl border border-slate-200 bg-white px-3 py-2.5 text-sm font-medium data-[state=active]:border-indigo-300 data-[state=active]:bg-indigo-50 data-[state=active]:text-indigo-700"
+            >
+              <Cpu className="h-4 w-4 shrink-0" />
+              <span>Solver</span>
+              <span className={`h-2 w-2 rounded-full shrink-0 ${
+                optaIsError
+                  ? 'bg-rose-500'
+                  : optaStatus?.health?.ok
+                    ? 'bg-emerald-500'
+                    : 'bg-slate-300'
+              }`} />
+            </TabsTrigger>
+
+            {/* Logs */}
+            <TabsTrigger
+              value="logs"
+              className="flex items-center gap-1.5 rounded-2xl border border-slate-200 bg-white px-3 py-2.5 text-sm font-medium data-[state=active]:border-indigo-300 data-[state=active]:bg-indigo-50 data-[state=active]:text-indigo-700"
+            >
+              <Terminal className="h-4 w-4 shrink-0" />
+              <span>Logs</span>
+              {auditLogs.length > 0 && (
+                <span className="rounded-full bg-slate-200 px-1.5 py-0.5 text-xs font-semibold text-slate-700">
+                  {auditLogs.length}
+                </span>
+              )}
+            </TabsTrigger>
+
+            {/* Emails */}
+            <TabsTrigger
+              value="emails"
+              className="flex items-center gap-1.5 rounded-2xl border border-slate-200 bg-white px-3 py-2.5 text-sm font-medium data-[state=active]:border-indigo-300 data-[state=active]:bg-indigo-50 data-[state=active]:text-indigo-700"
+            >
+              <Mail className="h-4 w-4 shrink-0" />
+              <span>Emails</span>
+            </TabsTrigger>
+          </TabsList>
+
+          {/* -------------------------------------------------------------- */}
+          {/* SCHOOLS TAB                                                     */}
+          {/* -------------------------------------------------------------- */}
+          <TabsContent value="schools" className="mt-6">
+            <div className="mb-4 flex items-center justify-between gap-4">
+              <div className="relative flex-1 max-w-sm">
+                <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-slate-400" />
+                <Input
+                  placeholder="Search schools..."
+                  value={schoolSearch}
+                  onChange={e => setSchoolSearch(e.target.value)}
+                  className="pl-9"
+                />
               </div>
-              <div>
-                <div className="flex items-center gap-1.5 font-semibold">
-                  Solver
-                  {optaStatus?.health?.ok === true && <span className="inline-block w-2 h-2 rounded-full bg-emerald-500" />}
-                  {optaStatus?.health?.ok === false && <span className="inline-block w-2 h-2 rounded-full bg-rose-500" />}
-                </div>
-                <div className="text-xs text-slate-500">OptaPlanner</div>
+              <Button
+                onClick={() => { resetSchoolForm(); setIsSchoolDialogOpen(true); }}
+                className="bg-indigo-600 hover:bg-indigo-700 text-white"
+              >
+                <Plus className="mr-2 h-4 w-4" /> Add School
+              </Button>
+            </div>
+            <DataTable
+              data={filteredSchools}
+              columns={schoolColumns}
+              isLoading={loadingSchools}
+              emptyMessage="No schools found"
+            />
+          </TabsContent>
+
+          {/* -------------------------------------------------------------- */}
+          {/* USERS TAB                                                       */}
+          {/* -------------------------------------------------------------- */}
+          <TabsContent value="users" className="mt-6">
+            {unassignedUsers.length > 0 && (
+              <Card className="mb-4 border-amber-200 bg-amber-50">
+                <CardContent className="flex items-center gap-3 py-3">
+                  <AlertTriangle className="h-5 w-5 text-amber-600 shrink-0" />
+                  <p className="text-sm text-amber-800">
+                    <span className="font-semibold">{unassignedUsers.length} user{unassignedUsers.length !== 1 ? 's' : ''}</span>
+                    {' '}without a school assignment. Review and assign below.
+                  </p>
+                </CardContent>
+              </Card>
+            )}
+            <div className="mb-4 flex items-center gap-4">
+              <div className="relative flex-1 max-w-sm">
+                <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-slate-400" />
+                <Input
+                  placeholder="Search users..."
+                  value={userSearch}
+                  onChange={e => setUserSearch(e.target.value)}
+                  className="pl-9"
+                />
               </div>
             </div>
-          </TabsTrigger>
-        </TabsList>
+            <DataTable
+              data={filteredUsers}
+              columns={userColumns}
+              isLoading={loadingUsers}
+              emptyMessage="No users found"
+            />
+          </TabsContent>
 
-        {/* ── Schools ───────────────────────────────────────────────────── */}
-        <TabsContent value="schools">
-          <div className="space-y-3">
-            <div className="relative">
-              <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400" />
-              <Input
-                className="pl-9"
-                placeholder="Search schools by name or code…"
-                value={schoolSearch}
-                onChange={(e) => setSchoolSearch(e.target.value)}
-              />
-            </div>
-            <Card className="border-0 shadow-sm">
-              <CardContent className="p-0">
-                <DataTable columns={schoolColumns} data={filteredSchools} isLoading={loadingSchools} />
-              </CardContent>
-            </Card>
-          </div>
-        </TabsContent>
-
-        {/* ── Users ─────────────────────────────────────────────────────── */}
-        <TabsContent value="users">
-          <div className="space-y-4">
-            <Card className="bg-blue-50 border-blue-200">
-              <CardContent className="p-4">
-                <h4 className="font-semibold text-blue-900 mb-2">📋 Workflow for new clients:</h4>
-                <ol className="text-sm text-blue-800 space-y-1 list-decimal list-inside">
-                  <li>User signs up / logs in to the platform</li>
-                  <li>Find them below and click "Create School"</li>
-                  <li>Fill in school details — they're auto-assigned as admin</li>
-                </ol>
-              </CardContent>
-            </Card>
-            <div className="relative">
-              <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400" />
-              <Input
-                className="pl-9"
-                placeholder="Search users by name or email…"
-                value={userSearch}
-                onChange={(e) => setUserSearch(e.target.value)}
-              />
-            </div>
-            <Card className="border-0 shadow-sm">
-              <CardContent className="p-0">
-                <DataTable columns={userColumns} data={filteredUsers} />
-              </CardContent>
-            </Card>
-          </div>
-        </TabsContent>
-
-        {/* ── Revenue ───────────────────────────────────────────────────── */}
-        <TabsContent value="revenue">
-          <div className="space-y-6">
-            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
-              <StatCard title="Active Schools" value={activeSchools.length} icon={Building2} />
+          {/* -------------------------------------------------------------- */}
+          {/* REVENUE TAB                                                     */}
+          {/* -------------------------------------------------------------- */}
+          <TabsContent value="revenue" className="mt-6 space-y-6">
+            {/* Stat cards — MRR fixed: formatMoney(mrr) not formatMoney(mrr * 100) */}
+            <div className="grid grid-cols-2 gap-4 lg:grid-cols-4">
               <StatCard
-                title="MRR"
-                value={loadingPrices ? '…' : mrr != null ? formatMoney(mrr * 100) : '—'}
-                icon={TrendingUp}
+                title="Active Schools"
+                value={activeSchools.length}
+                icon={<Building2 className="h-5 w-5 text-emerald-600" />}
               />
-              <StatCard title="Paused Schools" value={pausedSchools.length} icon={Activity} />
+              <StatCard
+                title="Monthly Revenue"
+                value={mrr != null ? formatMoney(mrr, currency) : '—'}
+                icon={<TrendingUp className="h-5 w-5 text-indigo-600" />}
+              />
+              <StatCard
+                title="Paused Schools"
+                value={pausedSchools.length}
+                icon={<Activity className="h-5 w-5 text-amber-600" />}
+              />
               <StatCard
                 title="Avg / School"
-                value={loadingPrices ? '…' : (mrr != null && activeSchools.length > 0) ? formatMoney((mrr / activeSchools.length) * 100) : '—'}
-                icon={BarChart3}
+                value={
+                  mrr != null && activeSchools.length > 0
+                    ? formatMoney(Math.round(mrr / activeSchools.length), currency)
+                    : '—'
+                }
+                icon={<BarChart3 className="h-5 w-5 text-blue-600" />}
               />
             </div>
 
-            <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-              <Card className="border-0 shadow-sm">
-                <CardHeader><CardTitle>Tier Breakdown</CardTitle></CardHeader>
-                <CardContent className="space-y-4">
-                  {['tier1', 'tier2', 'tier3'].map(tier => {
-                    const count = activeSchools.filter(s => s.subscription_tier === tier).length;
-                    const monthlyCents = tierMonthlyCents[tier];
-                    const revenueCents = count * (monthlyCents ?? 0);
+            {/* Breakdown cards */}
+            <div className="grid gap-4 lg:grid-cols-2">
+              <Card>
+                <CardHeader>
+                  <CardTitle className="text-base">Tier Distribution (Active Schools)</CardTitle>
+                </CardHeader>
+                <CardContent className="space-y-3">
+                  {(['tier1', 'tier2', 'tier3']).map(tier => {
+                    const count = tierBreakdown[tier] ?? 0;
                     const pct = activeSchools.length > 0 ? Math.round((count / activeSchools.length) * 100) : 0;
-                    const labels = { tier1: 'Starter', tier2: 'Growth', tier3: 'Scale' };
-                    const priceLabel = loadingPrices ? '…' : monthlyCents != null ? formatMoney(monthlyCents) + '/mo' : '—';
                     return (
                       <div key={tier}>
-                        <div className="flex justify-between text-sm mb-1">
-                          <span className="font-medium">
-                            {labels[tier]} <span className="text-slate-400 font-normal">({tier} · {priceLabel})</span>
-                          </span>
+                        <div className="mb-1 flex justify-between text-sm">
+                          <span className="font-medium capitalize">{tier}</span>
                           <span className="text-slate-500">
-                            {count} school{count !== 1 ? 's' : ''} ·{' '}
-                            <span className="font-medium text-slate-700">
-                              {loadingPrices ? '…' : formatMoney(revenueCents)}/mo
-                            </span>
+                            {count} school{count !== 1 ? 's' : ''} · {formatMoney(tierMonthlyCents[tier] ?? 0, currency)}/mo
                           </span>
                         </div>
-                        <div className="w-full bg-slate-100 rounded-full h-2">
-                          <div className="bg-indigo-500 h-2 rounded-full transition-all" style={{ width: `${pct}%` }} />
+                        <div className="h-2 rounded-full bg-slate-100">
+                          <div
+                            className="h-2 rounded-full bg-indigo-500 transition-all"
+                            style={{ width: `${pct}%` }}
+                          />
                         </div>
                       </div>
                     );
@@ -846,25 +943,31 @@ export default function Panel() {
                 </CardContent>
               </Card>
 
-              <Card className="border-0 shadow-sm">
-                <CardHeader><CardTitle>Subscription Status</CardTitle></CardHeader>
+              <Card>
+                <CardHeader>
+                  <CardTitle className="text-base">Subscription Status</CardTitle>
+                </CardHeader>
                 <CardContent className="space-y-3">
-                  {[
-                    { status: 'active', label: 'Active', color: 'bg-emerald-500' },
-                    { status: 'paused', label: 'Paused', color: 'bg-amber-500' },
-                    { status: 'canceled', label: 'Canceled', color: 'bg-rose-500' },
-                    { status: 'incomplete', label: 'Incomplete / Trial', color: 'bg-slate-400' },
-                  ].map(({ status, label, color }) => {
-                    const count = schools.filter(s => (s.subscription_status || 'incomplete') === status).length;
+                  {(['active', 'paused', 'trial', 'cancelled']).map(status => {
+                    const count = schools.filter(s => s.subscription_status === status).length;
                     const pct = schools.length > 0 ? Math.round((count / schools.length) * 100) : 0;
+                    const barColor = {
+                      active: 'bg-emerald-500',
+                      paused: 'bg-amber-500',
+                      trial: 'bg-sky-500',
+                      cancelled: 'bg-rose-500',
+                    }[status] ?? 'bg-slate-400';
                     return (
                       <div key={status}>
-                        <div className="flex justify-between text-sm mb-1">
-                          <span className="font-medium">{label}</span>
-                          <span className="text-slate-500">{count} ({pct}%)</span>
+                        <div className="mb-1 flex justify-between text-sm">
+                          <span className="font-medium capitalize">{status}</span>
+                          <span className="text-slate-500">{count} school{count !== 1 ? 's' : ''}</span>
                         </div>
-                        <div className="w-full bg-slate-100 rounded-full h-2">
-                          <div className={`${color} h-2 rounded-full transition-all`} style={{ width: `${pct}%` }} />
+                        <div className="h-2 rounded-full bg-slate-100">
+                          <div
+                            className={`h-2 rounded-full transition-all ${barColor}`}
+                            style={{ width: `${pct}%` }}
+                          />
                         </div>
                       </div>
                     );
@@ -873,585 +976,778 @@ export default function Panel() {
               </Card>
             </div>
 
-            <Card className="border-0 shadow-sm">
-              <CardHeader><CardTitle>All Subscriptions</CardTitle></CardHeader>
+            {/* Subscriptions table */}
+            <Card>
+              <CardHeader>
+                <CardTitle className="text-base">All Subscriptions</CardTitle>
+              </CardHeader>
               <CardContent className="p-0">
-                <DataTable columns={subscriptionColumns} data={schools} />
+                <DataTable
+                  data={subscriptionRows}
+                  columns={revenueColumns}
+                  isLoading={loadingSchools}
+                  emptyMessage="No subscription data"
+                />
               </CardContent>
             </Card>
-          </div>
-        </TabsContent>
+          </TabsContent>
 
-        {/* ── Audit Log ─────────────────────────────────────────────────── */}
-        <TabsContent value="auditlog">
-          <Card className="border-0 shadow-sm">
-            <CardHeader>
-              <div className="flex items-center justify-between">
-                <CardTitle>Action History</CardTitle>
-                <span className="text-sm text-slate-400">Last {sortedAuditLogs.length} entries</span>
-              </div>
-            </CardHeader>
-            <CardContent className="p-0">
-              <DataTable columns={auditColumns} data={sortedAuditLogs} isLoading={loadingAudit} />
-            </CardContent>
-          </Card>
-        </TabsContent>
-
-        {/* ── Solver ────────────────────────────────────────────────────── */}
-        <TabsContent value="solver">
-          <div className="space-y-6">
-            {/* Header row */}
-            <div className="flex items-center justify-between">
+          {/* -------------------------------------------------------------- */}
+          {/* SOLVER TAB                                                      */}
+          {/* -------------------------------------------------------------- */}
+          <TabsContent value="solver" className="mt-6 space-y-6">
+            {/* Header */}
+            <div className="flex items-start justify-between gap-4">
               <div>
-                <h3 className="text-lg font-semibold text-slate-900">OptaPlanner Service</h3>
+                <h2 className="text-lg font-semibold text-slate-900">OptaPlanner Status</h2>
+                {optaStatus?.base_url && (
+                  <p className="mt-0.5 font-mono text-xs text-slate-400">{optaStatus.base_url}</p>
+                )}
                 {optaUpdatedAt > 0 && (
-                  <p className="text-xs text-slate-400 mt-0.5">
-                    Last checked {new Date(optaUpdatedAt).toLocaleTimeString()} · auto-refreshes every 30s
+                  <p className="mt-0.5 text-xs text-slate-400">
+                    Last checked {formatTime(optaUpdatedAt)}
                   </p>
                 )}
               </div>
               <Button variant="outline" size="sm" onClick={() => refetchOpta()} disabled={loadingOpta}>
-                <RefreshCw className={`w-4 h-4 mr-2 ${loadingOpta ? 'animate-spin' : ''}`} />
+                <RefreshCw className={`mr-2 h-4 w-4 ${loadingOpta ? 'animate-spin' : ''}`} />
                 Refresh
               </Button>
             </div>
 
-            {/* Status cards */}
-            {loadingOpta && !optaStatus ? (
-              <div className="text-center py-12 text-slate-400">Checking server…</div>
-            ) : (
+            {/* Error banner — shown when query throws */}
+            {optaIsError && (
+              <div className="flex items-start gap-3 rounded-xl border border-rose-200 bg-rose-50 p-4">
+                <XCircle className="mt-0.5 h-5 w-5 shrink-0 text-rose-500" />
+                <div>
+                  <p className="font-medium text-rose-800">Could not reach OptaPlanner service</p>
+                  <p className="mt-1 text-sm text-rose-600">
+                    {optaErr?.message ?? 'An unknown error occurred'}
+                  </p>
+                </div>
+              </div>
+            )}
+
+            {!optaIsError && (
               <>
-                <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
-                  {/* Health */}
-                  <Card className={`border-2 ${optaStatus?.health?.ok ? 'border-emerald-200 bg-emerald-50' : 'border-rose-200 bg-rose-50'}`}>
-                    <CardContent className="p-5 flex items-center gap-4">
+                {/* Health stat cards */}
+                <div className="grid gap-4 sm:grid-cols-3">
+                  <Card>
+                    <CardContent className="flex items-center gap-4 py-5">
                       {optaStatus?.health?.ok
-                        ? <CheckCircle2 className="w-8 h-8 text-emerald-500 shrink-0" />
-                        : <XCircle className="w-8 h-8 text-rose-500 shrink-0" />
-                      }
+                        ? <Wifi className="h-8 w-8 text-emerald-500" />
+                        : <WifiOff className="h-8 w-8 text-rose-400" />}
                       <div>
-                        <p className={`font-semibold ${optaStatus?.health?.ok ? 'text-emerald-800' : 'text-rose-800'}`}>
-                          {optaStatus?.health?.ok ? 'Online' : 'Unreachable'}
+                        <p className="text-xs font-medium uppercase tracking-wide text-slate-400">Health</p>
+                        <p className={`text-lg font-bold ${optaStatus?.health?.ok ? 'text-emerald-600' : 'text-rose-600'}`}>
+                          {optaStatus?.health?.ok ? 'Online' : optaStatus ? 'Unreachable' : '—'}
                         </p>
-                        <p className="text-xs text-slate-500 mt-0.5">
-                          {optaStatus?.health?.error ?? optaStatus?.health?.data?.service ?? 'Health endpoint'}
-                        </p>
+                        {optaStatus?.health?.error && (
+                          <p className="mt-0.5 text-xs text-rose-500">{optaStatus.health.error}</p>
+                        )}
                       </div>
                     </CardContent>
                   </Card>
 
-                  {/* Response time */}
-                  <Card className="border-0 shadow-sm">
-                    <CardContent className="p-5 flex items-center gap-4">
-                      <Clock className="w-8 h-8 text-indigo-400 shrink-0" />
+                  <Card>
+                    <CardContent className="flex items-center gap-4 py-5">
+                      <Clock className="h-8 w-8 text-blue-500" />
                       <div>
-                        <p className="font-semibold text-slate-900">
+                        <p className="text-xs font-medium uppercase tracking-wide text-slate-400">Response Time</p>
+                        <p className="text-lg font-bold text-slate-800">
                           {optaStatus?.health?.ms != null ? `${optaStatus.health.ms} ms` : '—'}
                         </p>
-                        <p className="text-xs text-slate-500">Response time</p>
                       </div>
                     </CardContent>
                   </Card>
 
-                  {/* Version */}
-                  <Card className="border-0 shadow-sm">
-                    <CardContent className="p-5 flex items-center gap-4">
-                      <Cpu className="w-8 h-8 text-slate-400 shrink-0" />
+                  <Card>
+                    <CardContent className="flex items-center gap-4 py-5">
+                      <CheckCircle2 className={`h-8 w-8 ${optaStatus?.version?.ok ? 'text-emerald-500' : 'text-slate-300'}`} />
                       <div>
-                        <p className="font-semibold text-slate-900">
-                          {optaStatus?.version?.data?.version ?? optaStatus?.version?.error ?? '—'}
-                        </p>
-                        <p className="text-xs text-slate-500">
-                          {optaStatus?.version?.data?.commit
-                            ? `Commit ${String(optaStatus.version.data.commit).slice(0, 7)}`
-                            : 'Version'}
+                        <p className="text-xs font-medium uppercase tracking-wide text-slate-400">Version</p>
+                        <p className="text-lg font-bold text-slate-800">
+                          {optaStatus?.version?.data?.version ?? '—'}
                         </p>
                       </div>
                     </CardContent>
                   </Card>
                 </div>
 
-                <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-                  {/* Solver config */}
-                  {optaStatus?.version?.data && (
-                    <Card className="border-0 shadow-sm">
-                      <CardHeader><CardTitle className="text-base">Server Config</CardTitle></CardHeader>
-                      <CardContent>
-                        <dl className="space-y-2 text-sm">
-                          {Object.entries(optaStatus.version.data).map(([k, v]) => (
-                            <div key={k} className="flex justify-between">
-                              <dt className="text-slate-500">{k}</dt>
-                              <dd className="font-medium text-slate-900 text-right max-w-[60%] truncate">{String(v)}</dd>
-                            </div>
-                          ))}
-                        </dl>
-                      </CardContent>
-                    </Card>
-                  )}
+                {/* Server config */}
+                <Card>
+                  <CardHeader>
+                    <CardTitle className="text-base">Server Configuration</CardTitle>
+                  </CardHeader>
+                  <CardContent>
+                    {optaStatus?.version?.data && Object.keys(optaStatus.version.data).length > 0 ? (
+                      <dl className="grid grid-cols-2 gap-x-6 gap-y-3 sm:grid-cols-3">
+                        {Object.entries(optaStatus.version.data).map(([k, v]) => (
+                          <div key={k}>
+                            <dt className="text-xs font-medium uppercase tracking-wide text-slate-400">{k}</dt>
+                            <dd className="mt-0.5 font-mono text-sm text-slate-800">{String(v)}</dd>
+                          </div>
+                        ))}
+                      </dl>
+                    ) : (
+                      <p className="text-sm italic text-slate-400">No version data — server may be unreachable</p>
+                    )}
+                  </CardContent>
+                </Card>
 
-                  {/* Active constraints */}
-                  {optaStatus?.solver_info?.data && (
-                    <Card className="border-0 shadow-sm">
-                      <CardHeader><CardTitle className="text-base">Active Constraints</CardTitle></CardHeader>
-                      <CardContent className="space-y-3">
-                        {(() => {
-                          const info = optaStatus.solver_info.data;
-                          const constraints = info.constraints ?? info.hardConstraints
-                            ? [
-                                ...(info.hardConstraints ?? []).map(c => ({ ...c, type: 'HARD' })),
-                                ...(info.softConstraints ?? []).map(c => ({ ...c, type: 'SOFT' })),
-                              ]
-                            : Array.isArray(info) ? info : [];
-
-                          if (constraints.length === 0) {
-                            return (
-                              <pre className="text-xs text-slate-500 whitespace-pre-wrap overflow-auto max-h-48">
-                                {JSON.stringify(info, null, 2)}
-                              </pre>
-                            );
-                          }
-
-                          return constraints.map((c, i) => (
-                            <div key={i} className="flex items-start justify-between gap-2">
-                              <div className="flex items-center gap-2">
-                                <Badge className={`shrink-0 border-0 text-xs ${c.type === 'HARD' ? 'bg-rose-100 text-rose-700' : 'bg-amber-100 text-amber-700'}`}>
-                                  {c.type ?? 'SOFT'}
-                                </Badge>
-                                <span className="text-sm text-slate-700">{c.name ?? c.id ?? c}</span>
-                              </div>
-                              {c.weight != null && (
-                                <span className="text-xs text-slate-400 shrink-0">{c.weight}</span>
-                              )}
-                            </div>
-                          ));
-                        })()}
-                      </CardContent>
-                    </Card>
-                  )}
-                </div>
+                {/* Active constraints */}
+                <Card>
+                  <CardHeader>
+                    <CardTitle className="text-base">Active Constraints</CardTitle>
+                  </CardHeader>
+                  <CardContent>
+                    {solverInfo.constraints.length > 0 ? (
+                      <div className="space-y-2">
+                        {solverInfo.constraints.map((c, i) => (
+                          <div key={i} className="flex items-center justify-between rounded-lg border border-slate-100 bg-slate-50 px-3 py-2">
+                            <span className="text-sm font-medium text-slate-800">
+                              {c.name ?? c.id ?? `Constraint ${i + 1}`}
+                            </span>
+                            <Badge className={`text-xs ${c.type === 'HARD' ? 'bg-rose-100 text-rose-700' : 'bg-amber-100 text-amber-700'}`}>
+                              {c.type}
+                            </Badge>
+                          </div>
+                        ))}
+                      </div>
+                    ) : (
+                      <p className="text-sm italic text-slate-400">No constraints data — server may be unreachable</p>
+                    )}
+                  </CardContent>
+                </Card>
 
                 {/* Solve history */}
-                {optaStatus?.solve_history?.length > 0 && (
-                  <Card className="border-0 shadow-sm">
-                    <CardHeader><CardTitle className="text-base">Recent Solve History</CardTitle></CardHeader>
-                    <CardContent className="p-0">
+                <Card>
+                  <CardHeader>
+                    <CardTitle className="text-base">Solve History</CardTitle>
+                  </CardHeader>
+                  <CardContent className="p-0">
+                    {solveHistory.length > 0 ? (
                       <DataTable
+                        data={solveHistory}
                         columns={[
                           {
-                            header: 'School',
-                            cell: (row) => {
-                              const school = schools.find(s => s.id === row.school_id);
-                              return <span className="font-medium">{school?.name ?? row.school_id?.slice(0, 8) ?? '—'}</span>;
-                            }
+                            header: 'ID',
+                            cell: (r) => <span className="font-mono text-xs text-slate-600">{shortId(r.id ?? r.solveId)}</span>,
                           },
                           {
-                            header: 'Generated',
-                            cell: (row) => (
-                              <span className="text-sm text-slate-500">
-                                {row.generated_at ? new Date(row.generated_at).toLocaleString() : '—'}
-                              </span>
-                            )
+                            header: 'Status',
+                            cell: (r) => (
+                              <Badge className={`text-xs ${r.status === 'SOLVED' ? 'bg-emerald-100 text-emerald-700' : 'bg-slate-100 text-slate-600'}`}>
+                                {r.status ?? '—'}
+                              </Badge>
+                            ),
                           },
                           {
-                            header: 'Programmes',
-                            cell: (row) => (
-                              <div className="flex gap-1 flex-wrap">
-                                {(row.programmes ?? []).map(p => (
-                                  <Badge key={p} variant="outline" className="text-xs">{p}</Badge>
-                                ))}
-                              </div>
-                            )
+                            header: 'Started',
+                            cell: (r) => <span className="text-xs text-slate-500">{r.startedAt ?? r.started_at ?? '—'}</span>,
                           },
                           {
-                            header: 'Timeslots',
-                            cell: (row) => <span className="text-sm">{row.solver_timeslots ?? '—'}</span>
+                            header: 'Duration',
+                            cell: (r) => <span className="text-xs text-slate-500">{r.duration != null ? `${r.duration}s` : '—'}</span>,
                           },
                           {
-                            header: 'Result',
-                            cell: (row) => (
-                              <span className="text-xs text-slate-500 truncate max-w-xs block">{row.notes ?? '—'}</span>
-                            )
+                            header: 'Score',
+                            cell: (r) => <span className="font-mono text-xs text-slate-700">{r.score ?? '—'}</span>,
                           },
                         ]}
-                        data={optaStatus.solve_history}
+                        emptyMessage="No solve runs recorded yet"
                       />
-                    </CardContent>
-                  </Card>
-                )}
+                    ) : (
+                      <div className="px-6 py-8 text-center text-sm italic text-slate-400">
+                        No solve runs recorded yet
+                      </div>
+                    )}
+                  </CardContent>
+                </Card>
               </>
             )}
-          </div>
-        </TabsContent>
-      </Tabs>
+          </TabsContent>
 
-      {/* ── Delete Confirmation Dialog ──────────────────────────────────────── */}
-      <Dialog open={!!deleteConfirm} onOpenChange={(open) => { if (!open) { setDeleteConfirm(null); setConfirmNameInput(''); } }}>
-        <DialogContent className="sm:max-w-md">
+          {/* -------------------------------------------------------------- */}
+          {/* LOGS TAB                                                        */}
+          {/* -------------------------------------------------------------- */}
+          <TabsContent value="logs" className="mt-6 space-y-4">
+            <div className="flex items-center justify-between">
+              <div>
+                <h2 className="text-lg font-semibold text-slate-900">System Logs</h2>
+                <p className="mt-0.5 flex items-center gap-1.5 text-xs text-slate-400">
+                  <span className="inline-block h-1.5 w-1.5 rounded-full bg-emerald-500 animate-pulse" />
+                  Live — updates every 10s
+                </p>
+              </div>
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={() => queryClient.invalidateQueries({ queryKey: ['auditLogs'] })}
+                disabled={loadingAudit}
+              >
+                <RefreshCw className={`mr-2 h-4 w-4 ${loadingAudit ? 'animate-spin' : ''}`} />
+                Refresh
+              </Button>
+            </div>
+
+            {/* Stats line */}
+            <div className="flex items-center gap-2 text-xs text-slate-400">
+              <span className="font-medium text-slate-600">{auditLogs.length} events</span>
+              <span>·</span>
+              <span>Last updated {logsUpdatedAt > 0 ? formatTime(logsUpdatedAt) : '—'}</span>
+            </div>
+
+            {/* Terminal */}
+            <div className="h-[500px] overflow-y-auto rounded-2xl bg-slate-950 p-4 font-mono text-xs leading-relaxed">
+              {loadingAudit && auditLogs.length === 0 ? (
+                <p className="text-slate-500">Loading logs...</p>
+              ) : sortedLogs.length === 0 ? (
+                <p className="text-slate-500">No log entries found.</p>
+              ) : (
+                sortedLogs.map((log, i) => {
+                  const action = log.action ?? log.event_type ?? log.type ?? '';
+                  const actor = log.actor_email ?? log.user_email ?? log.performed_by ?? '—';
+                  const entityId = log.entity_id ?? log.resource_id ?? log.target_id ?? '';
+                  const ts = log.created_at ?? log.timestamp ?? '';
+                  const meta = log.metadata ?? log.details ?? log.extra ?? null;
+                  const metaStr = meta ? ` ${JSON.stringify(meta)}` : '';
+                  const actionColor = getActionColor(action);
+
+                  return (
+                    <div
+                      key={log.id ?? i}
+                      className="flex flex-wrap items-baseline gap-x-1 rounded px-1 py-0.5 transition-colors hover:bg-slate-900"
+                    >
+                      <span className="text-slate-500">[{formatLogTimestamp(ts)}]</span>
+                      <span className={`font-semibold ${actionColor}`}>[{action || 'EVENT'}]</span>
+                      <span className="text-blue-300">{actor}</span>
+                      <span className="text-slate-400">→</span>
+                      <span className="text-slate-300">{shortId(entityId)}</span>
+                      {metaStr && (
+                        <span className="break-all text-slate-500">{metaStr}</span>
+                      )}
+                    </div>
+                  );
+                })
+              )}
+              {/* Auto-scroll anchor — scrolled to on new entries */}
+              <div ref={logsEndRef} />
+            </div>
+          </TabsContent>
+
+          {/* -------------------------------------------------------------- */}
+          {/* EMAILS TAB                                                      */}
+          {/* -------------------------------------------------------------- */}
+          <TabsContent value="emails" className="mt-6">
+            <div className="mb-6">
+              <h2 className="text-lg font-semibold text-slate-900">Broadcast Email</h2>
+              <p className="mt-1 text-sm text-slate-500">
+                Send a message to administrators across your schools.
+              </p>
+            </div>
+
+            <div className="grid gap-6 lg:grid-cols-5">
+              {/* Form — 3 cols */}
+              <div className="space-y-4 lg:col-span-3">
+                <Card>
+                  <CardContent className="space-y-5 pt-6">
+                    {/* Audience */}
+                    <div className="space-y-1.5">
+                      <Label htmlFor="email-audience">Audience</Label>
+                      <Select
+                        value={emailForm.target_status}
+                        onValueChange={v => setEmailForm(f => ({ ...f, target_status: v }))}
+                      >
+                        <SelectTrigger id="email-audience">
+                          <SelectValue />
+                        </SelectTrigger>
+                        <SelectContent>
+                          <SelectItem value="active">Active subscribers only</SelectItem>
+                          <SelectItem value="all">All schools (active + paused)</SelectItem>
+                        </SelectContent>
+                      </Select>
+                    </div>
+
+                    {/* Subject */}
+                    <div className="space-y-1.5">
+                      <Label htmlFor="email-subject">Subject</Label>
+                      <Input
+                        id="email-subject"
+                        placeholder="e.g. Important update from Schedual"
+                        value={emailForm.subject}
+                        onChange={e => setEmailForm(f => ({ ...f, subject: e.target.value }))}
+                      />
+                    </div>
+
+                    {/* Message */}
+                    <div className="space-y-1.5">
+                      <Label htmlFor="email-message">Message</Label>
+                      <Textarea
+                        id="email-message"
+                        placeholder="Write your message here..."
+                        rows={8}
+                        value={emailForm.message}
+                        onChange={e => setEmailForm(f => ({ ...f, message: e.target.value }))}
+                        className="resize-none"
+                      />
+                    </div>
+
+                    {/* Send button */}
+                    <Button
+                      className="w-full bg-indigo-600 text-white hover:bg-indigo-700"
+                      disabled={
+                        broadcastMutation.isPending ||
+                        !emailForm.subject.trim() ||
+                        !emailForm.message.trim() ||
+                        broadcastRecipientCount === 0
+                      }
+                      onClick={() => broadcastMutation.mutate(emailForm)}
+                    >
+                      {broadcastMutation.isPending ? (
+                        <RefreshCw className="mr-2 h-4 w-4 animate-spin" />
+                      ) : (
+                        <Send className="mr-2 h-4 w-4" />
+                      )}
+                      {broadcastMutation.isPending ? 'Sending...' : 'Send Broadcast'}
+                    </Button>
+                  </CardContent>
+                </Card>
+              </div>
+
+              {/* Preview — 2 cols */}
+              <div className="space-y-4 lg:col-span-2">
+                <Card className="border-indigo-100 bg-indigo-50">
+                  <CardHeader>
+                    <CardTitle className="flex items-center gap-2 text-base text-indigo-800">
+                      <Users className="h-4 w-4" />
+                      Recipient Preview
+                    </CardTitle>
+                  </CardHeader>
+                  <CardContent className="space-y-3">
+                    <p className="text-3xl font-bold text-indigo-700">{broadcastRecipientCount}</p>
+                    <p className="text-sm text-indigo-600">
+                      admin{broadcastRecipientCount !== 1 ? 's' : ''} across{' '}
+                      <span className="font-semibold">{recipientSchoolCount}</span>{' '}
+                      school{recipientSchoolCount !== 1 ? 's' : ''} will receive this email
+                    </p>
+                    <div className="border-t border-indigo-200 pt-3">
+                      <p className="mb-2 text-xs font-medium uppercase tracking-wide text-indigo-500">
+                        Audience
+                      </p>
+                      <Badge className="bg-indigo-100 text-indigo-700 text-xs">
+                        {emailForm.target_status === 'all'
+                          ? 'Active + Paused schools'
+                          : 'Active subscribers only'}
+                      </Badge>
+                    </div>
+                    {broadcastRecipientCount === 0 && (
+                      <div className="flex items-center gap-2 rounded-lg border border-amber-200 bg-amber-50 p-2">
+                        <AlertTriangle className="h-4 w-4 shrink-0 text-amber-500" />
+                        <p className="text-xs text-amber-700">
+                          No matching recipients found for the selected audience.
+                        </p>
+                      </div>
+                    )}
+                  </CardContent>
+                </Card>
+
+                <Card>
+                  <CardHeader>
+                    <CardTitle className="text-sm text-slate-500">Tips</CardTitle>
+                  </CardHeader>
+                  <CardContent className="space-y-2">
+                    <p className="text-xs text-slate-500">
+                      Keep subject lines under 60 characters for best deliverability.
+                    </p>
+                    <p className="text-xs text-slate-500">
+                      Plain text messages have higher open rates.
+                    </p>
+                    <p className="text-xs text-slate-500">
+                      The backend authenticates recipients independently of this preview count.
+                    </p>
+                  </CardContent>
+                </Card>
+              </div>
+            </div>
+          </TabsContent>
+        </Tabs>
+      </div>
+
+      {/* ------------------------------------------------------------------ */}
+      {/* DIALOGS                                                             */}
+      {/* ------------------------------------------------------------------ */}
+
+      {/* School create / edit */}
+      <Dialog
+        open={isSchoolDialogOpen}
+        onOpenChange={v => { setIsSchoolDialogOpen(v); if (!v) resetSchoolForm(); }}
+      >
+        <DialogContent className="max-w-lg">
           <DialogHeader>
-            <DialogTitle className="flex items-center gap-2 text-rose-600">
-              <AlertTriangle className="w-5 h-5" />
-              {deleteConfirm?.type === 'school' ? 'Delete School' : 'Delete User'}
-            </DialogTitle>
-            <DialogDescription className="space-y-2">
-              <span className="block">
-                {deleteConfirm?.type === 'school'
-                  ? 'This will permanently delete the school and all its data — students, teachers, subjects, rooms, and schedules. Users will be unassigned but their accounts are kept.'
-                  : 'This will permanently delete the user account.'
-                }
-              </span>
-              <span className="block">
-                Type <strong className="text-slate-900">{confirmTarget}</strong> to confirm.
-              </span>
+            <DialogTitle>{editingSchool ? 'Edit School' : 'Add School'}</DialogTitle>
+            <DialogDescription>
+              {editingSchool ? 'Update school details below.' : 'Fill in the details to add a new school.'}
             </DialogDescription>
           </DialogHeader>
-          <Input
-            value={confirmNameInput}
-            onChange={(e) => setConfirmNameInput(e.target.value)}
-            placeholder={confirmTarget}
-            className="border-rose-200 focus-visible:ring-rose-400"
-          />
+          <div className="space-y-4 py-2">
+            <div className="space-y-1.5">
+              <Label>School Name *</Label>
+              <Input
+                value={schoolFormData.name}
+                onChange={e => setSchoolFormData(f => ({ ...f, name: e.target.value }))}
+                placeholder="International School of..."
+              />
+            </div>
+            <div className="grid grid-cols-2 gap-4">
+              <div className="space-y-1.5">
+                <Label>IB Code</Label>
+                <Input
+                  value={schoolFormData.ib_code}
+                  onChange={e => setSchoolFormData(f => ({ ...f, ib_code: e.target.value }))}
+                  placeholder="e.g. 000123"
+                />
+              </div>
+              <div className="space-y-1.5">
+                <Label>Country</Label>
+                <Input
+                  value={schoolFormData.country}
+                  onChange={e => setSchoolFormData(f => ({ ...f, country: e.target.value }))}
+                  placeholder="e.g. France"
+                />
+              </div>
+            </div>
+            <div className="space-y-1.5">
+              <Label>Contact Email</Label>
+              <Input
+                type="email"
+                value={schoolFormData.contact_email}
+                onChange={e => setSchoolFormData(f => ({ ...f, contact_email: e.target.value }))}
+                placeholder="admin@school.edu"
+              />
+            </div>
+            <div className="grid grid-cols-2 gap-4">
+              <div className="space-y-1.5">
+                <Label>Subscription Tier</Label>
+                <Select
+                  value={schoolFormData.subscription_tier}
+                  onValueChange={v => setSchoolFormData(f => ({ ...f, subscription_tier: v }))}
+                >
+                  <SelectTrigger><SelectValue /></SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="tier1">Tier 1</SelectItem>
+                    <SelectItem value="tier2">Tier 2</SelectItem>
+                    <SelectItem value="tier3">Tier 3</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+              <div className="space-y-1.5">
+                <Label>Status</Label>
+                <Select
+                  value={schoolFormData.subscription_status}
+                  onValueChange={v => setSchoolFormData(f => ({ ...f, subscription_status: v }))}
+                >
+                  <SelectTrigger><SelectValue /></SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="active">Active</SelectItem>
+                    <SelectItem value="paused">Paused</SelectItem>
+                    <SelectItem value="trial">Trial</SelectItem>
+                    <SelectItem value="cancelled">Cancelled</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+            </div>
+            <div className="space-y-1.5">
+              <Label>Admin Slots</Label>
+              <Input
+                type="number"
+                min={1}
+                value={schoolFormData.admin_slots}
+                onChange={e => setSchoolFormData(f => ({ ...f, admin_slots: Number(e.target.value) }))}
+              />
+            </div>
+          </div>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => { setIsSchoolDialogOpen(false); resetSchoolForm(); }}>
+              Cancel
+            </Button>
+            <Button
+              onClick={handleSchoolSubmit}
+              disabled={schoolMutation.isPending}
+              className="bg-indigo-600 text-white hover:bg-indigo-700"
+            >
+              {schoolMutation.isPending ? 'Saving...' : editingSchool ? 'Save Changes' : 'Create School'}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* Assign user to school */}
+      <Dialog
+        open={isUserDialogOpen}
+        onOpenChange={v => {
+          setIsUserDialogOpen(v);
+          if (!v) { setAssigningUser(null); setUserFormData({ school_id: '' }); }
+        }}
+      >
+        <DialogContent className="max-w-sm">
+          <DialogHeader>
+            <DialogTitle>Assign to School</DialogTitle>
+            <DialogDescription>
+              Select a school to assign{' '}
+              <strong>{assigningUser?.full_name ?? assigningUser?.email}</strong> to.
+            </DialogDescription>
+          </DialogHeader>
+          <div className="py-2">
+            <Select
+              value={userFormData.school_id}
+              onValueChange={v => setUserFormData({ school_id: v })}
+            >
+              <SelectTrigger>
+                <SelectValue placeholder="Select a school..." />
+              </SelectTrigger>
+              <SelectContent>
+                {schools.map(s => (
+                  <SelectItem key={s.id} value={s.id}>{s.name}</SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          </div>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setIsUserDialogOpen(false)}>Cancel</Button>
+            <Button
+              onClick={handleUserAssign}
+              disabled={!userFormData.school_id || userMutation.isPending}
+              className="bg-indigo-600 text-white hover:bg-indigo-700"
+            >
+              {userMutation.isPending ? 'Assigning...' : 'Assign'}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* Create school for user */}
+      <Dialog
+        open={isCreateSchoolForUserOpen}
+        onOpenChange={v => {
+          setIsCreateSchoolForUserOpen(v);
+          if (!v) {
+            setTargetUser(null);
+            setNewSchoolFormData({ name: '', ib_code: '', subscription_tier: 'tier1', contact_email: '', country: '' });
+          }
+        }}
+      >
+        <DialogContent className="max-w-lg">
+          <DialogHeader>
+            <DialogTitle>Create School for User</DialogTitle>
+            <DialogDescription>
+              A new school will be created and{' '}
+              <strong>{targetUser?.full_name ?? targetUser?.email}</strong> will be assigned as its administrator.
+            </DialogDescription>
+          </DialogHeader>
+          <div className="space-y-4 py-2">
+            <div className="space-y-1.5">
+              <Label>School Name *</Label>
+              <Input
+                value={newSchoolFormData.name}
+                onChange={e => setNewSchoolFormData(f => ({ ...f, name: e.target.value }))}
+                placeholder="International School of..."
+              />
+            </div>
+            <div className="grid grid-cols-2 gap-4">
+              <div className="space-y-1.5">
+                <Label>IB Code</Label>
+                <Input
+                  value={newSchoolFormData.ib_code}
+                  onChange={e => setNewSchoolFormData(f => ({ ...f, ib_code: e.target.value }))}
+                  placeholder="000123"
+                />
+              </div>
+              <div className="space-y-1.5">
+                <Label>Country</Label>
+                <Input
+                  value={newSchoolFormData.country}
+                  onChange={e => setNewSchoolFormData(f => ({ ...f, country: e.target.value }))}
+                  placeholder="France"
+                />
+              </div>
+            </div>
+            <div className="space-y-1.5">
+              <Label>Contact Email</Label>
+              <Input
+                type="email"
+                value={newSchoolFormData.contact_email}
+                onChange={e => setNewSchoolFormData(f => ({ ...f, contact_email: e.target.value }))}
+                placeholder="admin@school.edu"
+              />
+            </div>
+            <div className="space-y-1.5">
+              <Label>Subscription Tier</Label>
+              <Select
+                value={newSchoolFormData.subscription_tier}
+                onValueChange={v => setNewSchoolFormData(f => ({ ...f, subscription_tier: v }))}
+              >
+                <SelectTrigger><SelectValue /></SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="tier1">Tier 1</SelectItem>
+                  <SelectItem value="tier2">Tier 2</SelectItem>
+                  <SelectItem value="tier3">Tier 3</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+          </div>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setIsCreateSchoolForUserOpen(false)}>Cancel</Button>
+            <Button
+              onClick={handleCreateSchoolForUser}
+              className="bg-indigo-600 text-white hover:bg-indigo-700"
+            >
+              Create &amp; Assign
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* Add admin slots */}
+      <Dialog
+        open={isSeatsDialogOpen}
+        onOpenChange={v => {
+          setIsSeatsDialogOpen(v);
+          if (!v) { setSeatsTargetSchool(null); setSeatsToAdd(1); }
+        }}
+      >
+        <DialogContent className="max-w-sm">
+          <DialogHeader>
+            <DialogTitle>Add Admin Slots</DialogTitle>
+            <DialogDescription>
+              Add additional admin slots to <strong>{seatsTargetSchool?.name}</strong>.
+              Current slots: <strong>{seatsTargetSchool?.admin_slots ?? 1}</strong>
+            </DialogDescription>
+          </DialogHeader>
+          <div className="py-2 space-y-1.5">
+            <Label>Slots to Add</Label>
+            <Input
+              type="number"
+              min={1}
+              max={50}
+              value={seatsToAdd}
+              onChange={e => setSeatsToAdd(Number(e.target.value))}
+            />
+          </div>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setIsSeatsDialogOpen(false)}>Cancel</Button>
+            <Button
+              onClick={handleAddSeats}
+              disabled={schoolMutation.isPending}
+              className="bg-indigo-600 text-white hover:bg-indigo-700"
+            >
+              {schoolMutation.isPending ? 'Saving...' : `Add ${seatsToAdd} Slot${seatsToAdd !== 1 ? 's' : ''}`}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* Delete confirmation — type name to confirm */}
+      <Dialog
+        open={!!deleteConfirm}
+        onOpenChange={v => { if (!v) { setDeleteConfirm(null); setConfirmNameInput(''); } }}
+      >
+        <DialogContent className="max-w-sm">
+          <DialogHeader>
+            <DialogTitle className="text-rose-700">Confirm Deletion</DialogTitle>
+            <DialogDescription>
+              This action is irreversible. Type{' '}
+              <strong className="text-slate-900">
+                {deleteConfirm?.type === 'school'
+                  ? deleteConfirm.item.name
+                  : deleteConfirm?.item?.full_name ?? deleteConfirm?.item?.email}
+              </strong>{' '}
+              to confirm.
+            </DialogDescription>
+          </DialogHeader>
+          <div className="py-2">
+            <Input
+              value={confirmNameInput}
+              onChange={e => setConfirmNameInput(e.target.value)}
+              placeholder="Type name to confirm..."
+            />
+          </div>
           <DialogFooter>
             <Button variant="outline" onClick={() => { setDeleteConfirm(null); setConfirmNameInput(''); }}>
               Cancel
             </Button>
             <Button
               variant="destructive"
-              disabled={confirmNameInput !== confirmTarget || deleteSchoolMutation.isPending || deleteUserMutation.isPending}
+              disabled={
+                confirmNameInput.trim() !==
+                  (deleteConfirm?.type === 'school'
+                    ? deleteConfirm?.item?.name
+                    : deleteConfirm?.item?.full_name ?? deleteConfirm?.item?.email) ||
+                schoolMutation.isPending ||
+                userMutation.isPending
+              }
               onClick={handleConfirmDelete}
             >
-              Delete permanently
+              Delete
             </Button>
           </DialogFooter>
         </DialogContent>
       </Dialog>
 
-      {/* ── School Drill-down Dialog ────────────────────────────────────────── */}
-      <Dialog open={!!drilldown} onOpenChange={(open) => { if (!open) setDrilldown(null); }}>
-        <DialogContent className="sm:max-w-2xl">
-          <DialogHeader>
-            <DialogTitle className="flex items-center gap-2">
-              <Building2 className="w-5 h-5 text-indigo-600" />
-              {drilldown?.name}
-              {drilldown?.subscription_status === 'active'
-                ? <Badge className="bg-emerald-100 text-emerald-700 border-0">Active</Badge>
-                : <Badge variant="outline">{drilldown?.subscription_status || 'Inactive'}</Badge>
-              }
-            </DialogTitle>
-          </DialogHeader>
-          {drilldown && (() => {
-            const stats = getSchoolStats(drilldown.id);
-            const admins = allUsers.filter(u => getUserSchoolId(u) === drilldown.id);
-            return (
-              <div className="space-y-5">
-                <div className="grid grid-cols-2 sm:grid-cols-3 gap-4 text-sm">
-                  {[
-                    { label: 'School Code', value: drilldown.code || '-' },
-                    { label: 'IB Code', value: drilldown.ib_school_code || '-' },
-                    { label: 'Timezone', value: drilldown.timezone || '-' },
-                    { label: 'Academic Year', value: drilldown.academic_year || '-' },
-                    { label: 'Tier', value: drilldown.subscription_tier || '-' },
-                    { label: 'Renewal', value: drilldown.subscription_current_period_end ? new Date(drilldown.subscription_current_period_end).toLocaleDateString() : '-' },
-                  ].map(({ label, value }) => (
-                    <div key={label} className="bg-slate-50 rounded-xl p-3">
-                      <p className="text-xs text-slate-500 mb-1">{label}</p>
-                      <p className="font-medium text-slate-900">{value}</p>
-                    </div>
-                  ))}
-                </div>
-
-                <div className="grid grid-cols-4 gap-3">
-                  {[
-                    { label: 'Admins', value: stats.users },
-                    { label: 'Teachers', value: stats.teachers },
-                    { label: 'Students', value: stats.students },
-                    { label: 'Schedules', value: stats.schedules },
-                  ].map(({ label, value }) => (
-                    <div key={label} className="bg-indigo-50 rounded-xl p-3 text-center">
-                      <p className="text-2xl font-bold text-indigo-700">{value}</p>
-                      <p className="text-xs text-indigo-500 mt-1">{label}</p>
-                    </div>
-                  ))}
-                </div>
-
-                {admins.length > 0 && (
-                  <div>
-                    <p className="text-sm font-semibold text-slate-700 mb-2">Admin Users</p>
-                    <div className="space-y-2">
-                      {admins.map(u => (
-                        <div key={u.id} className="flex items-center gap-2 px-3 py-2 bg-slate-50 rounded-xl">
-                          <Badge className={getUserRole(u) === 'admin' ? 'bg-blue-100 text-blue-900 border-0 text-xs' : 'bg-slate-100 text-slate-600 border-0 text-xs'}>
-                            {getUserRole(u)}
-                          </Badge>
-                          <span className="font-medium text-sm">{u.full_name}</span>
-                          <span className="text-slate-400 text-sm">·</span>
-                          <span className="text-slate-500 text-sm">{u.email}</span>
-                        </div>
-                      ))}
-                    </div>
+      {/* School drilldown */}
+      <Dialog open={!!drilldown} onOpenChange={v => { if (!v) setDrilldown(null); }}>
+        {drilldown && (
+          <DialogContent className="max-w-lg">
+            <DialogHeader>
+              <DialogTitle className="flex items-center gap-2">
+                <Building2 className="h-5 w-5 text-indigo-600" />
+                {drilldown.name}
+              </DialogTitle>
+              <DialogDescription>School details and statistics</DialogDescription>
+            </DialogHeader>
+            <div className="space-y-4 py-2">
+              {/* Quick stats */}
+              <div className="grid grid-cols-3 gap-3">
+                {[
+                  { label: 'Users', value: getSchoolStats(drilldown.id).users },
+                  { label: 'Teachers', value: getSchoolStats(drilldown.id).teachers },
+                  { label: 'Students', value: getSchoolStats(drilldown.id).students },
+                ].map(({ label, value }) => (
+                  <div key={label} className="rounded-xl border border-slate-100 bg-slate-50 p-3 text-center">
+                    <p className="text-2xl font-bold text-slate-900">{value}</p>
+                    <p className="mt-0.5 text-xs text-slate-500">{label}</p>
                   </div>
-                )}
+                ))}
               </div>
-            );
-          })()}
-        </DialogContent>
-      </Dialog>
 
-      {/* ── Edit / Create School Dialog ─────────────────────────────────────── */}
-      <Dialog open={isSchoolDialogOpen} onOpenChange={(open) => { if (!open) resetSchoolForm(); setIsSchoolDialogOpen(open); }}>
-        <DialogContent className="sm:max-w-lg">
-          <DialogHeader>
-            <DialogTitle>{editingSchool ? 'Edit School' : 'Create New School'}</DialogTitle>
-            <DialogDescription>
-              {editingSchool ? 'Update school information.' : 'Add a new client school to the platform.'}
-            </DialogDescription>
-          </DialogHeader>
-          <form onSubmit={handleSchoolSubmit} className="space-y-4">
-            <div className="grid grid-cols-2 gap-4">
-              <div className="space-y-2">
-                <Label htmlFor="name">School Name *</Label>
-                <Input id="name" value={schoolFormData.name} onChange={(e) => setSchoolFormData({ ...schoolFormData, name: e.target.value })} required />
-              </div>
-              <div className="space-y-2">
-                <Label htmlFor="code">School Code *</Label>
-                <Input id="code" value={schoolFormData.code} onChange={(e) => setSchoolFormData({ ...schoolFormData, code: e.target.value })} required />
-              </div>
-            </div>
-            <div className="space-y-2">
-              <Label htmlFor="ib_school_code">IB School Code</Label>
-              <Input id="ib_school_code" value={schoolFormData.ib_school_code} onChange={(e) => setSchoolFormData({ ...schoolFormData, ib_school_code: e.target.value })} />
-            </div>
-            <div className="space-y-2">
-              <Label htmlFor="address">Address</Label>
-              <Input id="address" value={schoolFormData.address} onChange={(e) => setSchoolFormData({ ...schoolFormData, address: e.target.value })} />
-            </div>
-            <div className="grid grid-cols-2 gap-4">
-              <div className="space-y-2">
-                <Label>Timezone</Label>
-                <Select value={schoolFormData.timezone} onValueChange={(v) => setSchoolFormData({ ...schoolFormData, timezone: v })}>
-                  <SelectTrigger><SelectValue /></SelectTrigger>
-                  <SelectContent>
-                    {['UTC', 'America/New_York', 'Europe/London', 'Europe/Paris', 'Asia/Dubai'].map(tz => (
-                      <SelectItem key={tz} value={tz}>{tz}</SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-              </div>
-              <div className="space-y-2">
-                <Label>Academic Year</Label>
-                <Select value={schoolFormData.academic_year} onValueChange={(v) => setSchoolFormData({ ...schoolFormData, academic_year: v })}>
-                  <SelectTrigger><SelectValue /></SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="2024-2025">2024-2025</SelectItem>
-                    <SelectItem value="2025-2026">2025-2026</SelectItem>
-                  </SelectContent>
-                </Select>
-              </div>
+              {/* Detail fields */}
+              <dl className="space-y-2 text-sm">
+                {[
+                  ['IB Code', drilldown.ib_code],
+                  ['Country', drilldown.country],
+                  ['Contact', drilldown.contact_email],
+                  ['Tier', drilldown.subscription_tier],
+                  ['Status', drilldown.subscription_status],
+                  ['Admin Slots', drilldown.admin_slots],
+                  ['MRR', stripePrices != null ? formatMoney(tierMonthlyCents[drilldown.subscription_tier] ?? 0, currency) : null],
+                ]
+                  .filter(([, v]) => v != null && v !== '')
+                  .map(([k, v]) => (
+                    <div key={k} className="flex justify-between border-b border-slate-50 pb-1">
+                      <dt className="text-slate-400">{k}</dt>
+                      <dd className="font-medium text-slate-800">{String(v)}</dd>
+                    </div>
+                  ))}
+              </dl>
             </div>
             <DialogFooter>
-              <Button type="button" variant="outline" onClick={() => { resetSchoolForm(); setIsSchoolDialogOpen(false); }}>Cancel</Button>
-              <Button type="submit" className="bg-indigo-600 hover:bg-indigo-700">
-                {editingSchool ? 'Save Changes' : 'Create School'}
+              <Button variant="outline" onClick={() => { handleEditSchool(drilldown); setDrilldown(null); }}>
+                <Pencil className="mr-2 h-4 w-4" /> Edit School
               </Button>
+              <Button onClick={() => setDrilldown(null)}>Close</Button>
             </DialogFooter>
-          </form>
-        </DialogContent>
-      </Dialog>
-
-      {/* ── Assign User Dialog ──────────────────────────────────────────────── */}
-      <Dialog open={isUserDialogOpen} onOpenChange={setIsUserDialogOpen}>
-        <DialogContent className="sm:max-w-md">
-          <DialogHeader>
-            <DialogTitle>Assign User to School</DialogTitle>
-            <DialogDescription>Update user's school assignment and role</DialogDescription>
-          </DialogHeader>
-          <div className="space-y-4">
-            <div className="space-y-2">
-              <Label>User Email *</Label>
-              <Input type="email" value={userFormData.email} onChange={(e) => setUserFormData({ ...userFormData, email: e.target.value })} />
-            </div>
-            <div className="space-y-2">
-              <Label>School *</Label>
-              <Select value={userFormData.school_id} onValueChange={(v) => setUserFormData({ ...userFormData, school_id: v })}>
-                <SelectTrigger><SelectValue placeholder="Select school…" /></SelectTrigger>
-                <SelectContent>
-                  {schools.map(s => <SelectItem key={s.id} value={s.id}>{s.name}</SelectItem>)}
-                </SelectContent>
-              </Select>
-            </div>
-            <div className="space-y-2">
-              <Label>Role</Label>
-              <Select value={userFormData.role} onValueChange={(v) => setUserFormData({ ...userFormData, role: v })}>
-                <SelectTrigger><SelectValue /></SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="user">User</SelectItem>
-                  <SelectItem value="admin">Admin</SelectItem>
-                </SelectContent>
-              </Select>
-            </div>
-          </div>
-          <DialogFooter>
-            <Button variant="outline" onClick={() => setIsUserDialogOpen(false)}>Cancel</Button>
-            <Button onClick={handleUserAssign} className="bg-indigo-600 hover:bg-indigo-700">Assign</Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
-
-      {/* ── Create School for User Dialog ───────────────────────────────────── */}
-      <Dialog open={isCreateSchoolForUserOpen} onOpenChange={setIsCreateSchoolForUserOpen}>
-        <DialogContent className="sm:max-w-lg">
-          <DialogHeader>
-            <DialogTitle>Create School for User</DialogTitle>
-            <DialogDescription>Create a new school and assign {newSchoolFormData.user_email} as the admin</DialogDescription>
-          </DialogHeader>
-          <form onSubmit={(e) => { e.preventDefault(); createSchoolForUserMutation.mutate(newSchoolFormData); }} className="space-y-4">
-            <div className="grid grid-cols-2 gap-4">
-              <div className="space-y-2">
-                <Label>School Name *</Label>
-                <Input value={newSchoolFormData.name} onChange={(e) => setNewSchoolFormData({ ...newSchoolFormData, name: e.target.value })} required />
-              </div>
-              <div className="space-y-2">
-                <Label>School Code *</Label>
-                <Input value={newSchoolFormData.code} onChange={(e) => setNewSchoolFormData({ ...newSchoolFormData, code: e.target.value })} required />
-              </div>
-            </div>
-            <div className="space-y-2">
-              <Label>IB School Code</Label>
-              <Input value={newSchoolFormData.ib_school_code} onChange={(e) => setNewSchoolFormData({ ...newSchoolFormData, ib_school_code: e.target.value })} />
-            </div>
-            <div className="space-y-2">
-              <Label>Address</Label>
-              <Input value={newSchoolFormData.address} onChange={(e) => setNewSchoolFormData({ ...newSchoolFormData, address: e.target.value })} />
-            </div>
-            <div className="grid grid-cols-2 gap-4">
-              <div className="space-y-2">
-                <Label>Timezone</Label>
-                <Select value={newSchoolFormData.timezone} onValueChange={(v) => setNewSchoolFormData({ ...newSchoolFormData, timezone: v })}>
-                  <SelectTrigger><SelectValue /></SelectTrigger>
-                  <SelectContent>
-                    {['UTC', 'America/New_York', 'Europe/London', 'Europe/Paris', 'Asia/Dubai'].map(tz => (
-                      <SelectItem key={tz} value={tz}>{tz}</SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-              </div>
-              <div className="space-y-2">
-                <Label>Academic Year</Label>
-                <Select value={newSchoolFormData.academic_year} onValueChange={(v) => setNewSchoolFormData({ ...newSchoolFormData, academic_year: v })}>
-                  <SelectTrigger><SelectValue /></SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="2024-2025">2024-2025</SelectItem>
-                    <SelectItem value="2025-2026">2025-2026</SelectItem>
-                  </SelectContent>
-                </Select>
-              </div>
-            </div>
-            <DialogFooter>
-              <Button type="button" variant="outline" onClick={() => setIsCreateSchoolForUserOpen(false)}>Cancel</Button>
-              <Button type="submit" className="bg-indigo-600 hover:bg-indigo-700" disabled={createSchoolForUserMutation.isPending}>
-                Create School & Assign User
-              </Button>
-            </DialogFooter>
-          </form>
-        </DialogContent>
-      </Dialog>
-
-      {/* ── Broadcast Email Dialog ─────────────────────────────────────────── */}
-      <Dialog open={isBroadcastOpen} onOpenChange={(open) => { if (!open) setIsBroadcastOpen(false); }}>
-        <DialogContent className="sm:max-w-lg">
-          <DialogHeader>
-            <DialogTitle className="flex items-center gap-2">
-              <Send className="w-5 h-5 text-indigo-600" />
-              Send Announcement to Clients
-            </DialogTitle>
-            <DialogDescription>
-              Sends a branded email to all admin users of the selected schools.
-            </DialogDescription>
-          </DialogHeader>
-          <div className="space-y-4">
-            <div className="space-y-2">
-              <Label>Audience</Label>
-              <Select
-                value={broadcastForm.target_status}
-                onValueChange={(v) => setBroadcastForm({ ...broadcastForm, target_status: v })}
-              >
-                <SelectTrigger><SelectValue /></SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="active">Active subscribers only</SelectItem>
-                  <SelectItem value="all">All schools (active + paused)</SelectItem>
-                </SelectContent>
-              </Select>
-              <p className="text-xs text-slate-500">
-                {broadcastRecipientCount} admin email{broadcastRecipientCount !== 1 ? 's' : ''} will receive this message
-              </p>
-            </div>
-            <div className="space-y-2">
-              <Label>Subject *</Label>
-              <Input
-                value={broadcastForm.subject}
-                onChange={(e) => setBroadcastForm({ ...broadcastForm, subject: e.target.value })}
-                placeholder="e.g. New feature: Advanced constraints"
-              />
-            </div>
-            <div className="space-y-2">
-              <Label>Message *</Label>
-              <Textarea
-                value={broadcastForm.message}
-                onChange={(e) => setBroadcastForm({ ...broadcastForm, message: e.target.value })}
-                placeholder="Write your announcement here…"
-                rows={6}
-              />
-            </div>
-          </div>
-          <DialogFooter>
-            <Button variant="outline" onClick={() => setIsBroadcastOpen(false)}>Cancel</Button>
-            <Button
-              className="bg-indigo-600 hover:bg-indigo-700"
-              disabled={!broadcastForm.subject || !broadcastForm.message || broadcastRecipientCount === 0 || broadcastMutation.isPending}
-              onClick={() => broadcastMutation.mutate(broadcastForm)}
-            >
-              {broadcastMutation.isPending ? 'Sending…' : `Send to ${broadcastRecipientCount} recipient${broadcastRecipientCount !== 1 ? 's' : ''}`}
-            </Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
-
-      {/* ── Add Admin Slots Dialog ──────────────────────────────────────────── */}
-      <Dialog open={isSeatsDialogOpen} onOpenChange={setIsSeatsDialogOpen}>
-        <DialogContent className="sm:max-w-md">
-          <DialogHeader>
-            <DialogTitle>Add Admin Slots</DialogTitle>
-            <DialogDescription>Increase the admin seat limit for {seatsTargetSchool?.name || 'this school'}.</DialogDescription>
-          </DialogHeader>
-          {seatsTargetSchool && (
-            <div className="space-y-4">
-              <div className="grid grid-cols-3 gap-4">
-                <div><p className="text-xs text-slate-500">Current limit</p><p className="text-lg font-semibold">{seatsTargetSchool.max_admin_seats ?? 0}</p></div>
-                <div><p className="text-xs text-slate-500">Admins used</p><p className="text-lg font-semibold">{allUsers.filter(u => getUserSchoolId(u) === seatsTargetSchool.id && getUserRole(u) === 'admin').length}</p></div>
-                <div><p className="text-xs text-slate-500">New total</p><p className="text-lg font-semibold">{(seatsTargetSchool.max_admin_seats ?? 0) + (Number(seatsToAdd) || 0)}</p></div>
-              </div>
-              <div className="space-y-2">
-                <Label>Add slots</Label>
-                <Input type="number" min={1} value={seatsToAdd} onChange={(e) => setSeatsToAdd(Number(e.target.value) || 1)} />
-              </div>
-            </div>
-          )}
-          <DialogFooter>
-            <Button variant="outline" onClick={() => setIsSeatsDialogOpen(false)}>Cancel</Button>
-            <Button
-              onClick={() => {
-                const current = seatsTargetSchool?.max_admin_seats ?? 0;
-                updateSchoolMutation.mutate({ id: seatsTargetSchool.id, data: { max_admin_seats: current + (Number(seatsToAdd) || 0) } });
-                setIsSeatsDialogOpen(false);
-                setSeatsTargetSchool(null);
-                setSeatsToAdd(1);
-              }}
-              className="bg-indigo-600 hover:bg-indigo-700"
-              disabled={!seatsTargetSchool || (Number(seatsToAdd) || 0) < 1}
-            >
-              Update
-            </Button>
-          </DialogFooter>
-        </DialogContent>
+          </DialogContent>
+        )}
       </Dialog>
     </div>
   );
