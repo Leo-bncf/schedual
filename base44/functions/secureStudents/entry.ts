@@ -83,11 +83,19 @@ Deno.serve(async (req) => {
           return Response.json({ success: false, error: 'data required' }, { status: 400 });
         }
 
-        // Fetch school to check limits
+        // Fetch school to check subscription and limits
         const schools = await base44.asServiceRole.entities.School.filter({ id: user.school_id });
         const school = schools[0];
         if (!school) {
           return Response.json({ success: false, error: 'School not found' }, { status: 404 });
+        }
+
+        const ACTIVE_STATUSES = ['active', 'trialing', 'past_due'];
+        if (!ACTIVE_STATUSES.includes(school.subscription_status)) {
+          return Response.json({
+            success: false,
+            error: 'Your subscription is not active. Please renew your plan to add students.',
+          }, { status: 403 });
         }
 
         // Get current student count

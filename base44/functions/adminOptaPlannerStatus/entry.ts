@@ -1,6 +1,5 @@
 import { createClientFromRequest } from 'npm:@base44/sdk@0.8.25';
 
-// Strip the ingest path to get the base URL
 function getBaseUrl(): string {
   const raw = Deno.env.get('OPTAPLANNER_ENDPOINT') || '';
   return raw.replace(/\/$/, '').replace(/\/base44\/ingest$/, '');
@@ -41,11 +40,15 @@ Deno.serve(async (req) => {
       return Response.json({ error: 'OPTAPLANNER_ENDPOINT is not configured' }, { status: 500 });
     }
 
-    // Call all three info endpoints in parallel
-    const [health, version, solverInfo] = await Promise.all([
+    // Derive metrics server URL — same host as OptaPlanner, port 8081
+    const metricsBase = base.replace(/:(\d+)$/, ':8081');
+
+    // Call all endpoints in parallel
+    const [health, version, solverInfo, sysMetrics] = await Promise.all([
       fetchEndpoint(`${base}/health`, apiKey),
       fetchEndpoint(`${base}/version`, apiKey),
       fetchEndpoint(`${base}/solver-info`, apiKey),
+      fetchEndpoint(`${metricsBase}/metrics`, apiKey),
     ]);
 
     // Pull recent solve history from ScheduleVersion records
@@ -73,6 +76,7 @@ Deno.serve(async (req) => {
       health,
       version,
       solver_info: solverInfo,
+      sys_metrics: sysMetrics,
       solve_history: solveHistory,
     });
   } catch (error) {

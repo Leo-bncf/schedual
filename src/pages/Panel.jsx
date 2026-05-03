@@ -12,7 +12,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { Building2, Users, Plus, Pencil, Trash2, Crown, MoreHorizontal, BarChart3, ShieldCheck, Search, TrendingUp, Activity, Eye, AlertTriangle, Mail, Send, Cpu, RefreshCw, CheckCircle2, XCircle, Clock, Terminal, Wifi, WifiOff } from 'lucide-react';
+import { Building2, Users, Plus, Pencil, Trash2, Crown, MoreHorizontal, BarChart3, ShieldCheck, Search, TrendingUp, Activity, Eye, AlertTriangle, Mail, Send, Cpu, RefreshCw, CheckCircle2, XCircle, Clock, Terminal, Wifi, WifiOff, HardDrive, Server } from 'lucide-react';
 import PageHeader from '../components/ui-custom/PageHeader';
 import StatCard from '../components/ui-custom/StatCard';
 import DataTable from '../components/ui-custom/DataTable';
@@ -1074,6 +1074,73 @@ export default function Panel() {
                     </CardContent>
                   </Card>
                 </div>
+
+                {/* Server performance cards */}
+                {(() => {
+                  const m = optaStatus?.sys_metrics?.data;
+                  const cpuPct = m?.cpu_percent ?? null;
+                  const memPct = m?.memory?.percent ?? null;
+                  const memUsed = m?.memory?.used_mb ?? null;
+                  const memTotal = m?.memory?.total_mb ?? null;
+                  const jvmRss = m?.jvm?.rss_mb ?? null;
+                  const jvmPeak = m?.jvm?.peak_mb ?? null;
+                  if (!m) return null;
+                  const cpuColor = cpuPct > 80 ? 'text-rose-600' : cpuPct > 50 ? 'text-amber-600' : 'text-emerald-600';
+                  const memColor = memPct > 80 ? 'text-rose-600' : memPct > 60 ? 'text-amber-600' : 'text-emerald-600';
+                  return (
+                    <div className="grid gap-4 sm:grid-cols-3">
+                      <Card>
+                        <CardContent className="flex items-center gap-4 py-5">
+                          <Cpu className="h-8 w-8 text-violet-500 shrink-0" />
+                          <div className="min-w-0 flex-1">
+                            <p className="text-xs font-medium uppercase tracking-wide text-slate-400">CPU Usage</p>
+                            <p className={`text-lg font-bold ${cpuColor}`}>
+                              {cpuPct != null ? `${cpuPct}%` : '—'}
+                            </p>
+                            <div className="mt-1.5 h-1.5 w-full rounded-full bg-slate-100">
+                              <div className={`h-1.5 rounded-full ${cpuPct > 80 ? 'bg-rose-500' : cpuPct > 50 ? 'bg-amber-500' : 'bg-emerald-500'}`}
+                                   style={{ width: `${Math.min(cpuPct ?? 0, 100)}%` }} />
+                            </div>
+                          </div>
+                        </CardContent>
+                      </Card>
+
+                      <Card>
+                        <CardContent className="flex items-center gap-4 py-5">
+                          <HardDrive className="h-8 w-8 text-blue-500 shrink-0" />
+                          <div className="min-w-0 flex-1">
+                            <p className="text-xs font-medium uppercase tracking-wide text-slate-400">System RAM</p>
+                            <p className={`text-lg font-bold ${memColor}`}>
+                              {memPct != null ? `${memPct}%` : '—'}
+                            </p>
+                            <p className="text-xs text-slate-400">
+                              {memUsed != null ? `${Math.round(memUsed)} / ${Math.round(memTotal)} MB` : ''}
+                            </p>
+                            <div className="mt-1 h-1.5 w-full rounded-full bg-slate-100">
+                              <div className={`h-1.5 rounded-full ${memPct > 80 ? 'bg-rose-500' : memPct > 60 ? 'bg-amber-500' : 'bg-blue-500'}`}
+                                   style={{ width: `${Math.min(memPct ?? 0, 100)}%` }} />
+                            </div>
+                          </div>
+                        </CardContent>
+                      </Card>
+
+                      <Card>
+                        <CardContent className="flex items-center gap-4 py-5">
+                          <Server className="h-8 w-8 text-indigo-500 shrink-0" />
+                          <div className="min-w-0 flex-1">
+                            <p className="text-xs font-medium uppercase tracking-wide text-slate-400">JVM Heap (RSS)</p>
+                            <p className="text-lg font-bold text-slate-800">
+                              {jvmRss != null ? `${Math.round(jvmRss)} MB` : '—'}
+                            </p>
+                            <p className="text-xs text-slate-400">
+                              {jvmPeak != null ? `Peak: ${Math.round(jvmPeak)} MB` : ''}
+                            </p>
+                          </div>
+                        </CardContent>
+                      </Card>
+                    </div>
+                  );
+                })()}
 
                 {/* Server config */}
                 <Card>

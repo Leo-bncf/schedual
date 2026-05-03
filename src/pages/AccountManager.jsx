@@ -41,13 +41,12 @@ export default function AccountManager() {
   });
 
   const { data: school } = useQuery({
-    queryKey: ['userSchool', user?.school_id],
+    queryKey: ['schools'],
     queryFn: async () => {
-      if (!user?.school_id) return null;
-      const schools = await base44.entities.School.filter({ id: user.school_id });
-      return schools[0] || null;
+      const { data } = await base44.functions.invoke('secureSchool', { action: 'get' });
+      return data || null;
     },
-    enabled: !!user?.school_id
+    enabled: !!user,
   });
 
   const updateNameMutation = useMutation({
