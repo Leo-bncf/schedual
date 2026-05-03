@@ -91,7 +91,7 @@ function buildScheduleSettings(school) {
   return {
     periodDurationMinutes: getSolverSlotDurationMinutes(school),
     dayStartTime: school.day_start_time || '08:00',
-    dayEndTime: school.day_end_time || '17:00',
+    dayEndTime: school.day_end_time || '18:00',
     daysOfWeek: school.days_of_week || ['MONDAY', 'TUESDAY', 'WEDNESDAY', 'THURSDAY', 'FRIDAY'],
     breaks: school.breaks || [],
   };
@@ -668,6 +668,7 @@ async function sendToOptaPlanner(payload) {
       'X-API-Key': OPTAPLANNER_API_KEY,
     },
     body: JSON.stringify(payload),
+    signal: AbortSignal.timeout(300_000), // 5-minute ceiling; solver should finish well before this
   });
 
   const text = await res.text();
