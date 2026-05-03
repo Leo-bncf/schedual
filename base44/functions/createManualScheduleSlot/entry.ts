@@ -116,9 +116,17 @@ Deno.serve(async (req) => {
 
     if (teacher_id) {
       const teacher = teacherMap.get(teacher_id);
-      const canTeach = teacher?.subjects?.includes(subject_id) || teacher?.qualifications?.some((q) => q.subject_id === subject_id);
-      if (!teacher || !canTeach) {
-        return Response.json({ error: 'Selected teacher cannot teach this subject' }, { status: 400 });
+      if (!teacher) {
+        return Response.json({ error: 'Selected teacher not found' }, { status: 400 });
+      }
+      // Only check subject qualification when the teacher has subjects explicitly listed;
+      // if neither subjects nor qualifications are populated, allow the assignment.
+      const hasSubjectData = teacher?.subjects?.length > 0 || teacher?.qualifications?.length > 0;
+      if (hasSubjectData) {
+        const canTeach = teacher?.subjects?.includes(subject_id) || teacher?.qualifications?.some((q) => q.subject_id === subject_id);
+        if (!canTeach) {
+          return Response.json({ error: 'Selected teacher is not qualified to teach this subject' }, { status: 400 });
+        }
       }
     }
 

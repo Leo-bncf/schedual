@@ -149,7 +149,7 @@ function buildSolverTimeslots(school) {
 
 // ─── PYP / MYP cohort_payload builder ────────────────────────────────────────
 
-function buildCohortPayload({ programType, schoolId, scheduleVersionId, school, students, teachers, subjects, rooms, teachingGroups, solverTimeslots = [] }) {
+function buildCohortPayload({ programType, schoolId, scheduleVersionId, school, students, teachers, subjects, rooms, teachingGroups, solverTimeslots = [], requestConstraints = {} }) {
   const { teacherList, teacherMap } = buildTeacherMap(teachers, solverTimeslots);
   const { roomList } = buildRoomMap(rooms);
   const scheduleSettings = buildScheduleSettings(school);
@@ -217,13 +217,14 @@ function buildCohortPayload({ programType, schoolId, scheduleVersionId, school, 
       spreadAcrossDaysPerTeachingGroupSection: true,
       avoidSamePeriodRepetition: true,
       avoidTeacherLatePeriods: true,
+      ...requestConstraints,
     },
   };
 }
 
 // ─── DP individual_payload builder ───────────────────────────────────────────
 
-function buildDPPayload({ schoolId, scheduleVersionId, school, students, teachers, subjects, rooms, teachingGroups, solverTimeslots = [] }) {
+function buildDPPayload({ schoolId, scheduleVersionId, school, students, teachers, subjects, rooms, teachingGroups, solverTimeslots = [], requestConstraints = {} }) {
   const { teacherList, teacherMap } = buildTeacherMap(teachers, solverTimeslots);
   const { roomList } = buildRoomMap(rooms);
   const scheduleSettings = buildScheduleSettings(school);
@@ -480,6 +481,7 @@ function buildDPPayload({ schoolId, scheduleVersionId, school, students, teacher
       spreadAcrossDaysPerTeachingGroupSection: true,
       avoidSamePeriodRepetition: true,
       avoidTeacherLatePeriods: true,
+      ...requestConstraints,
     },
   };
 }
@@ -836,7 +838,7 @@ Deno.serve(async (req) => {
       return Response.json({ error: 'Solver API key not configured' }, { status: 500 });
     }
 
-    const { schedule_version_id } = await req.json();
+    const { schedule_version_id, constraints: requestConstraints = {} } = await req.json();
 
     if (!schedule_version_id) {
       return Response.json({ error: 'Missing schedule_version_id' }, { status: 400 });
@@ -932,7 +934,7 @@ Deno.serve(async (req) => {
       return Response.json({ error: 'No students found in any IB programme. Please ensure students have an IB programme (DP/MYP/PYP) and year group (e.g. DP1, MYP3) assigned before generating a schedule.' }, { status: 400 });
     }
 
-    const common = { schoolId, scheduleVersionId: schedule_version_id, school: schoolRecord, students: studentsWithProgramme, teachers, subjects, rooms, teachingGroups };
+    const common = { schoolId, scheduleVersionId: schedule_version_id, school: schoolRecord, students: studentsWithProgramme, teachers, subjects, rooms, teachingGroups, requestConstraints };
 
     // Build payloads — ONE per programme
     const payloadsToRun = [];

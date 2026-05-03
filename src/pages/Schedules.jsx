@@ -279,6 +279,11 @@ export default function Schedules() {
     try {
       const response = await base44.functions.invoke('generateSchedule', {
         schedule_version_id: selectedVersion.id,
+        constraints: {
+          maxSameSubjectPerDay: constraints.maxSameSubjectPerDayHardEnabled ? constraints.maxSameSubjectPerDayLimit : null,
+          allowFlexibleWeeklyCounts: constraints.allowFlexibleWeeklyCounts,
+          relaxStudentGroupConflicts: constraints.relaxStudentGroupConflicts,
+        },
       });
 
       const data = response?.data ?? response;
@@ -1364,7 +1369,7 @@ export default function Schedules() {
                 subject_id: manualLessonForm.subject_id,
                 day: manualLessonForm.day,
                 period: Number(manualLessonForm.period),
-                timeslot_id: availableTimeslots.find((slot, index) => normalizeSearch(String(slot.dayOfWeek || '')) === normalizeSearch(manualLessonForm.day) && (index + 1) === Number(manualLessonForm.period))?.id || null,
+                timeslot_id: availableTimeslots.filter((slot) => normalizeSearch(String(slot.dayOfWeek || '')) === normalizeSearch(manualLessonForm.day))[Number(manualLessonForm.period) - 1]?.id ?? null,
                 teacher_id: manualLessonForm.teacher_id === 'unassigned' ? null : manualLessonForm.teacher_id,
                 room_id: manualLessonForm.room_id === 'unassigned' ? null : manualLessonForm.room_id,
                 classgroup_id: manualLessonForm.classgroup_id === 'none' ? null : manualLessonForm.classgroup_id,
