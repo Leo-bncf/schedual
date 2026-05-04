@@ -20,6 +20,7 @@ import {
   Upload,
   FileText
 } from 'lucide-react';
+import SchedualLogo from '@/components/SchedualLogo';
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { toast } from 'sonner';
@@ -221,11 +222,8 @@ export default function Layout({ children, currentPageName }) {
           <div className="flex flex-col h-full">
             {/* Logo */}
             <div className="flex items-center justify-between h-20 px-6 border-b border-slate-100">
-            <Link to={createPageUrl('Landing')} className="flex items-center gap-3">
-              <div className="w-9 h-9 rounded-xl bg-gradient-to-br from-blue-900 to-blue-800 flex items-center justify-center">
-                <Calendar className="w-5 h-5 text-white" />
-              </div>
-              <span className="text-lg font-semibold text-slate-900">Schedual</span>
+            <Link to={createPageUrl('Landing')}>
+              <SchedualLogo size="sm" />
             </Link>
             <Button 
               variant="ghost" 

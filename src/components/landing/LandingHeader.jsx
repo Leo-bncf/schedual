@@ -1,9 +1,9 @@
 import React, { useState, useEffect } from 'react';
 import { Link } from 'react-router-dom';
 import { Button } from "@/components/ui/button";
-import { Calendar } from 'lucide-react';
 import { base44 } from '@/api/base44Client';
 import { createPageUrl } from '../../utils';
+import SchedualLogo from '../SchedualLogo';
 
 export default function LandingHeader() {
   const [isAuthenticated, setIsAuthenticated] = useState(false);
@@ -41,8 +41,8 @@ export default function LandingHeader() {
       {/* Top dark blue band - hidden when scrolled */}
       <div className={`bg-gradient-to-r from-blue-950 via-blue-900 to-blue-950 transition-all duration-300 ${isScrolled ? 'h-0 opacity-0' : 'h-14'} overflow-hidden`}>
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 h-full flex items-center justify-between">
-          <Link to={createPageUrl('Landing')} className="text-white/80 text-base hover:text-white transition-colors">
-            Schedual
+          <Link to={createPageUrl('Landing')} className="flex items-center">
+            <SchedualLogo size="sm" dark={true} />
           </Link>
           <div className="flex items-center gap-6 text-sm">
             <Link to={createPageUrl('PrivacyPolicy')} className="text-white/70 hover:text-white transition-colors">
@@ -63,11 +63,8 @@ export default function LandingHeader() {
         <div className={`bg-white/50 backdrop-blur-lg border border-slate-200/50 rounded-full transition-all duration-300 w-full max-w-6xl mx-4 ${isScrolled ? 'shadow-lg' : 'shadow-md'}`}>
           <div className="flex items-center justify-between gap-10 h-14 px-8">
           {/* Logo */}
-          <Link to={createPageUrl('Landing')} className="flex items-center gap-2">
-            <div className="w-7 h-7 rounded-lg bg-gradient-to-br from-blue-900 to-blue-800 flex items-center justify-center">
-              <Calendar className="w-4 h-4 text-white" />
-            </div>
-            <span className="text-base font-semibold text-slate-900">Schedual</span>
+          <Link to={createPageUrl('Landing')}>
+            <SchedualLogo size="sm" />
           </Link>
 
           {/* Navigation */}

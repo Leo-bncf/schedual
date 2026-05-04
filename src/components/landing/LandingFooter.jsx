@@ -1,7 +1,7 @@
 import React from 'react';
 import { Link } from 'react-router-dom';
-import { Calendar } from 'lucide-react';
 import { createPageUrl } from '../../utils';
+import SchedualLogo from '../SchedualLogo';
 
 export default function LandingFooter() {
   const landingUrl = createPageUrl('Landing');
@@ -15,11 +15,8 @@ export default function LandingFooter() {
         <div className="grid md:grid-cols-4 gap-8 mb-8">
           {/* Brand */}
           <div>
-            <Link to={landingUrl} className="flex items-center gap-3 mb-4 w-fit">
-              <div className="w-9 h-9 rounded-xl bg-gradient-to-br from-blue-700 to-blue-600 flex items-center justify-center">
-                <Calendar className="w-5 h-5 text-white" />
-              </div>
-              <span className="text-lg font-semibold text-white">Schedual</span>
+            <Link to={landingUrl} className="mb-4 w-fit block">
+              <SchedualLogo size="md" dark={true} />
             </Link>
             <p className="text-sm text-white/80">
               Scheduling software for IB schools. Keep timetable setup clearer, more structured, and easier to manage.
