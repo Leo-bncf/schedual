@@ -485,8 +485,8 @@ export default function Schedules() {
               <span className="text-blue-700">Fix Student Programmes</span>
             </Button>
             {subjects.length > 0 && subjects.some(s => !s.school_id) && (
-              <Button 
-                variant="outline" 
+              <Button
+                variant="outline"
                 size="sm"
                 onClick={async () => {
                   const res = await base44.functions.invoke('fixSubjectSchoolIds', {});
@@ -497,6 +497,21 @@ export default function Schedules() {
               >
                 <AlertCircle className="w-4 h-4 text-amber-600" />
                 <span className="text-amber-700">Fix Subject Permissions</span>
+              </Button>
+            )}
+            {students.length === 0 && (
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={async () => {
+                  const res = await base44.functions.invoke('fixStudentSchoolIds', {});
+                  alert(res.data?.message || `Fixed ${res.data?.fixed ?? 0} students`);
+                  window.location.reload();
+                }}
+                className="gap-2 border-amber-200 hover:bg-amber-50"
+              >
+                <AlertCircle className="w-4 h-4 text-amber-600" />
+                <span className="text-amber-700">Recover Students</span>
               </Button>
             )}
             <Button 

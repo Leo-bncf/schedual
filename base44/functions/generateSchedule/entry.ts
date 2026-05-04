@@ -101,7 +101,7 @@ function buildScheduleSettings(school) {
 function buildSolverTimeslots(school) {
   const daysOfWeek = school.days_of_week || ['MONDAY', 'TUESDAY', 'WEDNESDAY', 'THURSDAY', 'FRIDAY'];
   const dayStartTime = school.day_start_time || '08:00';
-  const dayEndTime = school.day_end_time || '17:00';
+  const dayEndTime = school.day_end_time || '18:00';
   const periodDurationMinutes = getSolverSlotDurationMinutes(school);
   const breaks = school.breaks || [];
 
@@ -226,7 +226,7 @@ function buildCohortPayload({ programType, schoolId, scheduleVersionId, school, 
 
 function buildDPPayload({ schoolId, scheduleVersionId, school, students, teachers, subjects, rooms, teachingGroups, solverTimeslots = [], requestConstraints = {} }) {
   const { teacherList, teacherMap } = buildTeacherMap(teachers, solverTimeslots);
-  const { roomList } = buildRoomMap(rooms);
+  const { roomList, roomMap } = buildRoomMap(rooms);
   const scheduleSettings = buildScheduleSettings(school);
   const periodDuration = scheduleSettings.periodDurationMinutes || 60;
 
@@ -868,33 +868,27 @@ Deno.serve(async (req) => {
       return Response.json({ error: 'School not found' }, { status: 404 });
     }
 
-    const ACTIVE_SUBSCRIPTION_STATUSES = ['active', 'trialing', 'past_due'];
-    if (!ACTIVE_SUBSCRIPTION_STATUSES.includes(school.subscription_status)) {
+    const BLOCKED_SUBSCRIPTION_STATUSES = ['canceled', 'unpaid', 'incomplete_expired', 'paused'];
+    if (school.subscription_status && BLOCKED_SUBSCRIPTION_STATUSES.includes(school.subscription_status)) {
       return Response.json({ error: 'Your subscription is not active. Please renew your plan to generate schedules.' }, { status: 403 });
     }
 
-    const generationLimits = {
-      tier1: 3,
-      tier2: null,
-      tier3: null,
-    };
-    const generationLimit = generationLimits[school.subscription_tier] ?? 3;
-    const generatedCount = scheduleVersions.filter((version) => version.generated_at).length;
+    // Only enforce generation/student limits for schools with an explicitly set subscription tier.
+    // Schools without a tier (set up outside Stripe) are treated as unlimited.
+    if (school.subscription_tier) {
+      const generationLimits = { tier1: 3, tier2: null, tier3: null };
+      const generationLimit = generationLimits[school.subscription_tier] ?? null;
+      const generatedCount = scheduleVersions.filter((version) => version.generated_at).length;
+      if (generationLimit !== null && generatedCount >= generationLimit) {
+        return Response.json({ error: `Generation limit reached for your tier (${generatedCount}/${generationLimit})` }, { status: 400 });
+      }
 
-    if (generationLimit !== null && generatedCount >= generationLimit) {
-      return Response.json({ error: `Generation limit reached for your tier (${generatedCount}/${generationLimit})` }, { status: 400 });
-    }
-
-    const studentLimits = {
-      tier1: 200,
-      tier2: 600,
-      tier3: 1200,
-    };
-    const studentLimit = studentLimits[school.subscription_tier] ?? 200;
-    const activeStudentCount = students.filter((student) => student.is_active !== false).length;
-
-    if (activeStudentCount > studentLimit) {
-      return Response.json({ error: `Student limit exceeded for your tier (${activeStudentCount}/${studentLimit})` }, { status: 400 });
+      const studentLimits = { tier1: 200, tier2: 600, tier3: 1200 };
+      const studentLimit = studentLimits[school.subscription_tier] ?? null;
+      const activeStudentCount = students.filter((student) => student.is_active !== false).length;
+      if (studentLimit !== null && activeStudentCount > studentLimit) {
+        return Response.json({ error: `Student limit exceeded for your tier (${activeStudentCount}/${studentLimit})` }, { status: 400 });
+      }
     }
 
     const [schoolRecord] = schools;
@@ -953,7 +947,12 @@ Deno.serve(async (req) => {
     if (programmes.has('DP'))  payloadsToRun.push(buildDPPayload(common));
 
     if (payloadsToRun.length === 0) {
-      return Response.json({ error: 'No students found in any IB programme' }, { status: 400 });
+      const allStudents = await base44.asServiceRole.entities.Student.filter({}, '-created_date', 100);
+      const uniqueSchoolIds = [...new Set(allStudents.map(s => s.school_id).filter(Boolean))];
+      console.log(`[generateSchedule] No IB students for school_id=${schoolId}. Total in DB: ${allStudents.length}. School IDs: ${uniqueSchoolIds.join(',')}`);
+      return Response.json({
+        error: `No students found in any IB programme (school_id=${schoolId}, total_in_db=${allStudents.length}, school_ids_on_students=${uniqueSchoolIds.join('|') || 'none'})`,
+      }, { status: 400 });
     }
 
     // Build maps once for reverse-lookup during slot parsing

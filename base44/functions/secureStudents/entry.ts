@@ -53,10 +53,53 @@ Deno.serve(async (req) => {
     const { action, student_id, data, query = {} } = await req.json();
     
     switch (action) {
+      case 'diagnose': {
+        // Returns diagnostic info to identify school_id mismatches
+        const authUser = await base44.auth.me();
+        const dbUsers = await base44.asServiceRole.entities.User.filter({ id: authUser.id });
+        const dbUser = dbUsers[0] || null;
+        const allStudents = await base44.asServiceRole.entities.Student.filter({}, '-created_date', 2000);
+        const schoolStudents = await base44.asServiceRole.entities.Student.filter({ school_id: user.school_id }, '-created_date', 2000);
+        const uniqueSchoolIds = [...new Set(allStudents.map(s => s.school_id).filter(Boolean))];
+        return Response.json({
+          success: true,
+          resolved_school_id: user.school_id,
+          db_user_school_id: dbUser?.school_id || dbUser?.data?.school_id || null,
+          jwt_school_id: authUser.school_id || authUser.data?.school_id || null,
+          students_matching_school: schoolStudents.length,
+          total_students_all_schools: allStudents.length,
+          unique_school_ids_in_students: uniqueSchoolIds,
+          sample_students: allStudents.slice(0, 3).map(s => ({ id: s.id, school_id: s.school_id, name: s.full_name })),
+        });
+      }
+
       case 'list': {
-        // Only list students from user's school
         const filteredQuery = addSchoolFilter(user, query);
-        const students = await base44.asServiceRole.entities.Student.filter(filteredQuery, '-created_date', 2000);
+        let students = await base44.asServiceRole.entities.Student.filter(filteredQuery, '-created_date', 2000);
+
+        // Auto-repair school_id mismatch: if 0 students found but students exist in DB under a different school_id,
+        // re-link them to this school (same heuristic as fixStudentSchoolIds function).
+        if (students.length === 0) {
+          const allStudents = await base44.asServiceRole.entities.Student.list();
+          const unlinked = allStudents.filter(s => s.school_id !== user.school_id);
+          if (unlinked.length > 0) {
+            console.log(`[secureStudents:list] Auto-repairing ${unlinked.length} students from mismatched school_id to ${user.school_id}`);
+            const classGroups = await base44.asServiceRole.entities.ClassGroup.filter({ school_id: user.school_id }, '-created_date', 500);
+            const teachingGroups = await base44.asServiceRole.entities.TeachingGroup.filter({ school_id: user.school_id }, '-created_date', 1000);
+            const linkedIds = new Set([
+              ...classGroups.flatMap(cg => cg.student_ids || []),
+              ...teachingGroups.flatMap(tg => tg.student_ids || []),
+            ]);
+            // Use class/teaching group membership as heuristic; fall back to all unlinked if no matches
+            const toRepair = linkedIds.size > 0 ? unlinked.filter(s => linkedIds.has(s.id)) : unlinked;
+            for (const s of toRepair) {
+              await base44.asServiceRole.entities.Student.update(s.id, { school_id: user.school_id });
+            }
+            students = await base44.asServiceRole.entities.Student.filter(filteredQuery, '-created_date', 2000);
+            console.log(`[secureStudents:list] Repaired ${toRepair.length} students. Now returning ${students.length}`);
+          }
+        }
+
         return Response.json({ success: true, data: students });
       }
       
@@ -90,34 +133,36 @@ Deno.serve(async (req) => {
           return Response.json({ success: false, error: 'School not found' }, { status: 404 });
         }
 
-        const ACTIVE_STATUSES = ['active', 'trialing', 'past_due'];
-        if (!ACTIVE_STATUSES.includes(school.subscription_status)) {
+        const BLOCKED_STATUSES = ['canceled', 'unpaid', 'incomplete_expired', 'paused'];
+        if (school.subscription_status && BLOCKED_STATUSES.includes(school.subscription_status)) {
           return Response.json({
             success: false,
             error: 'Your subscription is not active. Please renew your plan to add students.',
           }, { status: 403 });
         }
 
-        // Get current student count
-        const currentStudents = await base44.asServiceRole.entities.Student.filter({ school_id: user.school_id });
-        const currentCount = currentStudents.length;
+        // Only enforce limits for schools with an explicitly set subscription tier.
+        if (school.subscription_tier) {
+          const currentStudents = await base44.asServiceRole.entities.Student.filter({ school_id: user.school_id }, '-created_date', 2000);
+          const currentCount = currentStudents.length;
 
-        const STUDENT_LIMITS = { tier1: 200, tier2: 600, tier3: 1200 };
-        let maxStudents = STUDENT_LIMITS[school.subscription_tier] ?? 200;
+          const STUDENT_LIMITS = { tier1: 200, tier2: 600, tier3: 1200 };
+          const maxStudents = STUDENT_LIMITS[school.subscription_tier] ?? null;
 
-        if (currentCount >= maxStudents) {
-          return Response.json({ 
-            success: false, 
-            error: `Student limit reached for your subscription tier (${maxStudents}). Please upgrade your plan.` 
-          }, { status: 400 });
-        }
-        
-        const allowedProgrammes = school.subscription_tier === 'tier1' ? ['MYP'] : ['PYP', 'MYP', 'DP'];
-        if (!allowedProgrammes.includes(data.ib_programme)) {
-          return Response.json({ 
-            success: false, 
-            error: `Your plan does not allow creating ${data.ib_programme} students.` 
-          }, { status: 400 });
+          if (maxStudents !== null && currentCount >= maxStudents) {
+            return Response.json({
+              success: false,
+              error: `Student limit reached for your subscription tier (${maxStudents}). Please upgrade your plan.`
+            }, { status: 400 });
+          }
+
+          const allowedProgrammes = school.subscription_tier === 'tier1' ? ['MYP'] : ['PYP', 'MYP', 'DP'];
+          if (!allowedProgrammes.includes(data.ib_programme)) {
+            return Response.json({
+              success: false,
+              error: `Your plan does not allow creating ${data.ib_programme} students.`
+            }, { status: 400 });
+          }
         }
 
         // Force user's school_id
@@ -172,6 +217,33 @@ Deno.serve(async (req) => {
         return Response.json({ success: true });
       }
       
+      case 'repair_school_id': {
+        // Finds students whose school_id doesn't match user's school_id and reassigns them.
+        // Only reassigns students that belong to a school_id specified in from_school_id,
+        // or ALL students with null/undefined school_id if no from_school_id given.
+        const { from_school_id, dry_run = true } = data || {};
+        const allStudents = await base44.asServiceRole.entities.Student.filter({}, '-created_date', 2000);
+        const toRepair = allStudents.filter(s => {
+          if (from_school_id) return s.school_id === from_school_id;
+          return !s.school_id || s.school_id !== user.school_id;
+        });
+        if (dry_run) {
+          return Response.json({
+            success: true,
+            dry_run: true,
+            would_repair: toRepair.length,
+            target_school_id: user.school_id,
+            affected_ids: toRepair.map(s => s.id),
+          });
+        }
+        let repaired = 0;
+        for (const s of toRepair) {
+          await base44.asServiceRole.entities.Student.update(s.id, { school_id: user.school_id });
+          repaired++;
+        }
+        return Response.json({ success: true, repaired, target_school_id: user.school_id });
+      }
+
       default:
         return Response.json({ success: false, error: 'Invalid action' }, { status: 400 });
     }

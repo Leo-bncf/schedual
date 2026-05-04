@@ -38,6 +38,7 @@ export default function Students() {
   const [editingStudent, setEditingStudent] = useState(null);
   const [searchQuery, setSearchQuery] = useState('');
   const [yearFilter, setYearFilter] = useState('all');
+  const [isRepairing, setIsRepairing] = useState(false);
   const [uploadState, setUploadState] = useState({
     isUploading: false,
     stage: 'uploading',
@@ -185,6 +186,23 @@ export default function Students() {
       toast.error(error?.message || 'Failed to delete student');
     }
   });
+
+  const handleRepair = async () => {
+    setIsRepairing(true);
+    try {
+      const { data: res } = await base44.functions.invoke('fixStudentSchoolIds', {});
+      if (res?.ok) {
+        toast.success(res.message || `Fixed ${res.fixed} student records.`);
+        queryClient.invalidateQueries({ queryKey: ['students', schoolId] });
+      } else {
+        toast.error(res?.error || 'Repair failed');
+      }
+    } catch (err) {
+      toast.error('Repair failed: ' + err.message);
+    } finally {
+      setIsRepairing(false);
+    }
+  };
 
   const resetForm = () => {
     setFormData({
@@ -861,7 +879,18 @@ Return ONLY students array, no other text.`,
         description="Manage IB Diploma students and their subject choices"
         actions={
           <div className="flex gap-2">
-            <Button 
+            <Button
+              type="button"
+              variant="outline"
+              size="sm"
+              onClick={handleRepair}
+              disabled={isRepairing}
+              className="text-amber-700 border-amber-300 hover:bg-amber-50"
+            >
+              {isRepairing ? <><Loader2 className="w-3 h-3 mr-1 animate-spin" />Recovering...</> : 'Recover Students'}
+            </Button>
+
+            <Button
               type="button"
               variant="outline"
               onClick={() => setShowUploadDialog(true)}
@@ -918,13 +947,24 @@ Return ONLY students array, no other text.`,
       />
 
       {filteredStudents.length === 0 && !isLoading ? (
-        <EmptyState 
-          icon={GraduationCap}
-          title="No students yet"
-          description="Add students and their IB subject choices."
-          action={() => setIsDialogOpen(true)}
-          actionLabel="Add Student"
-        />
+        <div>
+          <EmptyState
+            icon={GraduationCap}
+            title="No students yet"
+            description="Add students and their IB subject choices."
+            action={() => setIsDialogOpen(true)}
+            actionLabel="Add Student"
+          />
+          {rawStudents.length === 0 && !isError && (
+            <div className="mt-4 p-4 bg-amber-50 border border-amber-200 rounded-xl max-w-lg mx-auto text-sm">
+              <p className="font-medium text-amber-800 mb-1">Students not showing up?</p>
+              <p className="text-amber-700 mb-3">If you previously added students and they've disappeared, there may be a school data link issue. Click to recover them.</p>
+              <Button size="sm" onClick={handleRepair} disabled={isRepairing} className="bg-amber-600 hover:bg-amber-700 text-white">
+                {isRepairing ? <><Loader2 className="w-3 h-3 mr-1 animate-spin" />Recovering...</> : 'Recover Students'}
+              </Button>
+            </div>
+          )}
+        </div>
       ) : isLoading ? (
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
           {[1, 2, 3, 4, 5, 6].map(i => (
