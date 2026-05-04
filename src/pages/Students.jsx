@@ -38,7 +38,6 @@ export default function Students() {
   const [editingStudent, setEditingStudent] = useState(null);
   const [searchQuery, setSearchQuery] = useState('');
   const [yearFilter, setYearFilter] = useState('all');
-  const [isRepairing, setIsRepairing] = useState(false);
   const [uploadState, setUploadState] = useState({
     isUploading: false,
     stage: 'uploading',
@@ -96,11 +95,7 @@ export default function Students() {
 
   const { data: rawStudents = [], isLoading, isError, error: studentsError } = useQuery({
     queryKey: ['students', schoolId],
-    queryFn: async () => {
-      const { data: res } = await base44.functions.invoke('secureStudents', { action: 'list' });
-      if (res?.success === false) throw new Error(res?.error || 'Failed to load students');
-      return res?.data || [];
-    },
+    queryFn: () => base44.entities.Student.filter({ school_id: schoolId }, '-created_date', 2000),
     enabled: !!schoolId,
     retry: 1,
   });
@@ -141,12 +136,7 @@ export default function Students() {
   });
 
   const createMutation = useMutation({
-    mutationFn: async (data) => {
-      if (!schoolId) throw new Error('No school assigned');
-      const { data: res } = await base44.functions.invoke('secureStudents', { action: 'create', data: { ...data, school_id: schoolId } });
-      if (!res?.success) throw new Error(res?.error || 'Failed to create student');
-      return res.data;
-    },
+    mutationFn: (data) => base44.entities.Student.create({ ...data, school_id: schoolId }),
     onSuccess: (created) => {
       toast.success(`${created?.full_name || 'Student'} added successfully`);
       queryClient.invalidateQueries({ queryKey: ['students', schoolId] });
@@ -158,11 +148,7 @@ export default function Students() {
   });
 
   const updateMutation = useMutation({
-    mutationFn: async ({ id, data }) => {
-      const { data: res } = await base44.functions.invoke('secureStudents', { action: 'update', student_id: id, data });
-      if (!res?.success) throw new Error(res?.error || 'Failed to update student');
-      return res.data;
-    },
+    mutationFn: ({ id, data }) => base44.entities.Student.update(id, data),
     onSuccess: () => {
       toast.success('Student updated successfully');
       queryClient.invalidateQueries({ queryKey: ['students', schoolId] });
@@ -174,10 +160,7 @@ export default function Students() {
   });
 
   const deleteMutation = useMutation({
-    mutationFn: async (id) => {
-      const { data: res } = await base44.functions.invoke('secureStudents', { action: 'delete', student_id: id });
-      if (!res?.success) throw new Error(res?.error || 'Failed to delete student');
-    },
+    mutationFn: (id) => base44.entities.Student.delete(id),
     onSuccess: () => {
       toast.success('Student deleted');
       queryClient.invalidateQueries({ queryKey: ['students', schoolId] });
@@ -186,23 +169,6 @@ export default function Students() {
       toast.error(error?.message || 'Failed to delete student');
     }
   });
-
-  const handleRepair = async () => {
-    setIsRepairing(true);
-    try {
-      const { data: res } = await base44.functions.invoke('fixStudentSchoolIds', {});
-      if (res?.ok) {
-        toast.success(res.message || `Fixed ${res.fixed} student records.`);
-        queryClient.invalidateQueries({ queryKey: ['students', schoolId] });
-      } else {
-        toast.error(res?.error || 'Repair failed');
-      }
-    } catch (err) {
-      toast.error('Repair failed: ' + err.message);
-    } finally {
-      setIsRepairing(false);
-    }
-  };
 
   const resetForm = () => {
     setFormData({
@@ -882,17 +848,6 @@ Return ONLY students array, no other text.`,
             <Button
               type="button"
               variant="outline"
-              size="sm"
-              onClick={handleRepair}
-              disabled={isRepairing}
-              className="text-amber-700 border-amber-300 hover:bg-amber-50"
-            >
-              {isRepairing ? <><Loader2 className="w-3 h-3 mr-1 animate-spin" />Recovering...</> : 'Recover Students'}
-            </Button>
-
-            <Button
-              type="button"
-              variant="outline"
               onClick={() => setShowUploadDialog(true)}
               disabled={uploadState.isUploading}
             >
@@ -947,24 +902,13 @@ Return ONLY students array, no other text.`,
       />
 
       {filteredStudents.length === 0 && !isLoading ? (
-        <div>
-          <EmptyState
-            icon={GraduationCap}
-            title="No students yet"
-            description="Add students and their IB subject choices."
-            action={() => setIsDialogOpen(true)}
-            actionLabel="Add Student"
-          />
-          {rawStudents.length === 0 && !isError && (
-            <div className="mt-4 p-4 bg-amber-50 border border-amber-200 rounded-xl max-w-lg mx-auto text-sm">
-              <p className="font-medium text-amber-800 mb-1">Students not showing up?</p>
-              <p className="text-amber-700 mb-3">If you previously added students and they've disappeared, there may be a school data link issue. Click to recover them.</p>
-              <Button size="sm" onClick={handleRepair} disabled={isRepairing} className="bg-amber-600 hover:bg-amber-700 text-white">
-                {isRepairing ? <><Loader2 className="w-3 h-3 mr-1 animate-spin" />Recovering...</> : 'Recover Students'}
-              </Button>
-            </div>
-          )}
-        </div>
+        <EmptyState
+          icon={GraduationCap}
+          title="No students yet"
+          description="Add students and their IB subject choices."
+          action={() => setIsDialogOpen(true)}
+          actionLabel="Add Student"
+        />
       ) : isLoading ? (
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
           {[1, 2, 3, 4, 5, 6].map(i => (
